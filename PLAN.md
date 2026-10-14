@@ -2440,7 +2440,7 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
       `#![deny(missing_docs)]`; turn the root `Cargo.toml` into a virtual workspace: `[workspace] resolver = "3"`,
       `members = ["crates/*", "xtask"]` (with an empty `xtask` binary crate), `[workspace.package]` (edition 2024,
       `rust-version = "1.89"`, authors, `license = "MIT OR Apache-2.0"`), `[workspace.lints]`.
-- [ ] **M0-04** `.config/nextest.toml` with the `ci` profile ([architecture §11.1](docs/plan/architecture.md#111-layers));
+- [x] **M0-04** `.config/nextest.toml` with the `ci` profile ([architecture §11.1](docs/plan/architecture.md#111-layers));
       its filter, which excludes the `e2e`, `interop`, `core_oracle` and `ledger_emu` targets, lands in M0-08 with the
       targets it names.
 - [ ] **M0-05** `rust-toolchain.toml` (current stable), `.cargo/config.toml` alias `xtask = "run -p xtask --"`.
