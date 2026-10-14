@@ -2443,7 +2443,7 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
 - [x] **M0-04** `.config/nextest.toml` with the `ci` profile ([architecture §11.1](docs/plan/architecture.md#111-layers));
       its filter, which excludes the `e2e`, `interop`, `core_oracle` and `ledger_emu` targets, lands in M0-08 with the
       targets it names.
-- [ ] **M0-05** `rust-toolchain.toml` (current stable), `.cargo/config.toml` alias `xtask = "run -p xtask --"`.
+- [x] **M0-05** `rust-toolchain.toml` (current stable), `.cargo/config.toml` alias `xtask = "run -p xtask --"`.
 - [ ] **M0-06** `upstream.toml` with `[monorepo]`, `[core]` and `[parity]` at the M0 tag, the newest final monorepo
       release that finney runs and whose `:vS` localnet image is published ([§10.3](#103-a-pin-bump-step-by-step)
       step 1): `v478` / `850f2755…` on 2026-10-13, the commit this plan's evidence was checked at, whose `sdk/` equals
