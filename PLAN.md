@@ -2436,7 +2436,7 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
       file declares `license = "(MIT OR Apache-2.0) AND Apache-2.0"`, a set that `xtask parity check` derives from the
       `rs` column of `parity/map.toml` and from the files that carry the attribution header (M0-13). Track `Cargo.lock`
       (CI runs `--locked` and the lock test parses it).
-- [ ] **M0-03** Workspace: move the package to `crates/rtao/` (the facade), delete the placeholder `add`, add
+- [x] **M0-03** Workspace: move the package to `crates/rtao/` (the facade), delete the placeholder `add`, add
       `#![deny(missing_docs)]`; turn the root `Cargo.toml` into a virtual workspace: `[workspace] resolver = "3"`,
       `members = ["crates/*", "xtask"]` (with an empty `xtask` binary crate), `[workspace.package]` (edition 2024,
       `rust-version = "1.89"`, authors, `license = "MIT OR Apache-2.0"`), `[workspace.lints]`.
