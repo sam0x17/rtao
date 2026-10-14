@@ -1,0 +1,13 @@
+[package]
+name = "design-tagpin"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v477", default-features = false }
+
+[patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v477" }
+
+# standalone: not a member of the rtao workspace
+[workspace]
