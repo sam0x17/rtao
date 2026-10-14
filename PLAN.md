@@ -2426,7 +2426,7 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
       [research J §8](docs/plan/research/J-ledger-ci-shim.md#8-core-patch-prototype): its diff against `v477`, the
       checks it passed in the monorepo workspace and its emulator run; the review branch carries the same change on
       monorepo `main`.
-- [ ] **M0-02** Relicense the skeleton to `MIT OR Apache-2.0` (Q1, [§14.1](#141-decisions-answered-2026-10-13)): set
+- [x] **M0-02** Relicense the skeleton to `MIT OR Apache-2.0` (Q1, [§14.1](#141-decisions-answered-2026-10-13)): set
       `license = "MIT OR Apache-2.0"` in `Cargo.toml`; add `LICENSE-MIT`, `LICENSE-APACHE` (the Apache-2.0 text, which
       also meets Apache-2.0 §4(a) for derived material) and `NOTICE` (attribution for the vendored and derived
       RaoFoundation/subtensor material; upstream ships no NOTICE); state the per-file attribution rule in CONTRIBUTING:
@@ -2875,6 +2875,7 @@ with its link, a wait on a prerequisite or on the user.
 
 | Date | Step or milestone | Event |
 |---|---|---|
+| 2026-10-14 | M0-01 | Requested §12.13's external prerequisites; continuing independent steps while the response and PR-U17 validation are pending (execution rules 3 and 6). Task-scoped temporary root recorded in `docs/execution/state.md`. |
 | 2026-10-13 | — | Plan v2: the user's decisions recorded (§14.1), time estimates removed, step IDs and numbered exit checks added |
 | 2026-10-13 | — | Q17 resolved by research ([research J](docs/plan/research/J-ledger-ci-shim.md)): the Speculos emulator lane and transcript replay (M7-09, M7-10), PR-U17 to file in M0, the device run limited to what the emulator cannot cover (M7-11) |
 | 2026-10-13 | — | Plan v2 cold read: M1-03 fetches the finney metadata that regen reads; M2-08's `Policy` equivalence pairs land with their intents (M2-12, M4-06); M0-01 files PR-U17; the issue outside the monorepo needs the user's approval (C4, M9-04); merging release-plz's release PR is a stop-and-ask point; required checks join branch protection as their jobs appear (§12.13) |

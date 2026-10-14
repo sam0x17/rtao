@@ -1,0 +1,15 @@
+rtao
+Copyright (c) 2026 sam0x17
+
+Original rtao material is licensed under MIT OR Apache-2.0.
+
+rtao uses and derives material from RaoFoundation/subtensor
+(https://github.com/RaoFoundation/subtensor), licensed under Apache-2.0.
+Upstream copyright and attribution notices are preserved in copied assets.
+Derived Rust files identify their upstream path, commit and modifications in
+their attribution header. Such files remain subject to Apache-2.0; packages
+containing them declare (MIT OR Apache-2.0) AND Apache-2.0.
+
+Vendored assets and their source commits and hashes will be listed here when
+imported by cargo xtask import-upstream. No upstream assets have been vendored
+at this step.
