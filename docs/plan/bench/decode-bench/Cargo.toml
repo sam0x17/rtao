@@ -1,0 +1,22 @@
+[package]
+name = "design-bench"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git", rev = "850f2755bb05a3851f948489f0ab27b0645cebce", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.7.5", features = ["derive"] }
+scale-info = { version = "2.11.6", features = ["decode"] }
+frame-metadata = { version = "23.0.1", features = ["current", "decode"] }
+scale-value = "0.18.2"
+scale-decode = { version = "0.16.2", features = ["derive"] }
+hex = "0.4"
+
+[patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", rev = "850f2755bb05a3851f948489f0ab27b0645cebce" }
+
+[profile.release]
+debug = false
+
+# standalone: not a member of the rtao workspace
+[workspace]

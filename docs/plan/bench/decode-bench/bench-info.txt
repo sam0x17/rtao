@@ -1,0 +1,4 @@
+V15 metadata: 400688 bytes
+bittensor-core Runtime::parse (V15, spec 477): 1.03 ms avg (560)
+V15 extrinsic version 4 ; extensions: ["CheckNonZeroSender", "CheckSpecVersion", "CheckTxVersion", "CheckGenesis", "CheckMortality", "CheckNonce", "CheckWeight", "ChargeTransactionPayment", "SudoTransactionExtension", "CheckShieldedTxValidity", "SubtensorTransactionExtension", "DrandPriority", "CheckMetadataHash"]
+pallets 28 ; apis 25 ; is_v15 true
