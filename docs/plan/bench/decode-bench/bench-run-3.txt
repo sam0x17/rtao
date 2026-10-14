@@ -1,0 +1,38 @@
+V15 metadata: 400688 bytes
+bittensor-core Runtime::parse (V15, spec 477): 0.98 ms avg (560)
+
+finney netuid 1: 49859 bytes SCALE, 256 UIDs
+  A bittensor-core Runtime::decode_id -> Value median      329.8 us   p10      325.3 us      151.2 MB/s
+  B scale-value decode_as_type -> Value        median      910.8 us   p10      898.8 us       54.7 MB/s
+  C parity-scale-codec derive (owned, typed)   median       29.8 us   p10       29.1 us     1671.3 MB/s
+  D scale-decode DecodeAsType (subxt static)   median     1380.2 us   p10     1367.4 us       36.1 MB/s
+  D2 DecodeAsType, [u8;32] keys, hot fields only median      775.5 us   p10      736.7 us       64.3 MB/s
+  E borrowed columnar view (rtao proposal)     median        6.5 us   p10        6.5 us     7621.4 MB/s
+  (ss58-encode every hotkey+coldkey once: 158.4 us)
+
+finney netuid 3: 48248 bytes SCALE, 256 UIDs
+  A bittensor-core Runtime::decode_id -> Value median      326.3 us   p10      323.8 us      147.9 MB/s
+  B scale-value decode_as_type -> Value        median      876.3 us   p10      869.6 us       55.1 MB/s
+  C parity-scale-codec derive (owned, typed)   median       29.6 us   p10       29.4 us     1628.6 MB/s
+  D scale-decode DecodeAsType (subxt static)   median     1363.5 us   p10     1334.9 us       35.4 MB/s
+  D2 DecodeAsType, [u8;32] keys, hot fields only median      765.8 us   p10      727.0 us       63.0 MB/s
+  E borrowed columnar view (rtao proposal)     median        6.6 us   p10        6.5 us     7329.2 MB/s
+  (ss58-encode every hotkey+coldkey once: 151.6 us)
+
+finney netuid 64: 51231 bytes SCALE, 256 UIDs
+  A bittensor-core Runtime::decode_id -> Value median      354.5 us   p10      327.2 us      144.5 MB/s
+  B scale-value decode_as_type -> Value        median      921.8 us   p10      915.8 us       55.6 MB/s
+  C parity-scale-codec derive (owned, typed)   median       32.8 us   p10       31.2 us     1564.3 MB/s
+  D scale-decode DecodeAsType (subxt static)   median     1430.9 us   p10     1394.0 us       35.8 MB/s
+  D2 DecodeAsType, [u8;32] keys, hot fields only median      752.2 us   p10      739.3 us       68.1 MB/s
+  E borrowed columnar view (rtao proposal)     median        6.4 us   p10        6.3 us     8036.2 MB/s
+  (ss58-encode every hotkey+coldkey once: 142.9 us)
+
+synthetic 2,500 UIDs (from netuid 1): 408250 bytes SCALE, 2500 UIDs
+  A bittensor-core Runtime::decode_id -> Value median     2683.1 us   p10     2597.4 us      152.2 MB/s
+  B scale-value decode_as_type -> Value        median     7312.0 us   p10     7241.5 us       55.8 MB/s
+  C parity-scale-codec derive (owned, typed)   median      261.3 us   p10      257.0 us     1562.2 MB/s
+  D scale-decode DecodeAsType (subxt static)   median    11000.6 us   p10    10897.5 us       37.1 MB/s
+  D2 DecodeAsType, [u8;32] keys, hot fields only median     6481.6 us   p10     6448.4 us       63.0 MB/s
+  E borrowed columnar view (rtao proposal)     median       57.1 us   p10       57.0 us     7151.9 MB/s
+  (ss58-encode every hotkey+coldkey once: 1273.0 us)

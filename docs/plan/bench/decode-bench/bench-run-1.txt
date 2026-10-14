@@ -1,0 +1,12 @@
+V15 metadata: 400688 bytes
+bittensor-core Runtime::parse (V15, spec 477): 0.99 ms avg (560)
+
+finney netuid 1: 49859 bytes SCALE, 256 UIDs
+  A bittensor-core Runtime::decode_id -> Value median      326.5 us   p10      323.5 us      152.7 MB/s
+  B scale-value decode_as_type -> Value        median      899.3 us   p10      891.6 us       55.4 MB/s
+  C parity-scale-codec derive (owned, typed)   median       28.9 us   p10       28.6 us     1724.2 MB/s
+  D scale-decode DecodeAsType (subxt static)   median     1419.4 us   p10     1381.8 us       35.1 MB/s
+
+thread 'main' (5655801) panicked at src/main.rs:90:93:
+range end index 32 out of range for slice of length 16
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
