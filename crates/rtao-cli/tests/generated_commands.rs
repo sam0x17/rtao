@@ -1080,16 +1080,18 @@ async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_repl
     )
     .await?;
     assert_eq!(request.args["amount_tao"], json!("1.000000001"));
-    let messages = messages.lock().map_err(|_| "messages")?;
-    let hint = messages
-        .iter()
-        .position(|s| s.contains("free balance of") && s.contains("1000.000000000"))
-        .ok_or("live free balance hint")?;
-    let prompt = messages
-        .iter()
-        .position(|s| s.starts_with("  amount-tao"))
-        .ok_or("amount prompt")?;
-    assert!(hint < prompt);
+    {
+        let messages = messages.lock().map_err(|_| "messages")?;
+        let hint = messages
+            .iter()
+            .position(|s| s.contains("free balance of") && s.contains("1000.000000000"))
+            .ok_or("live free balance hint")?;
+        let prompt = messages
+            .iter()
+            .position(|s| s.starts_with("  amount-tao"))
+            .ok_or("amount prompt")?;
+        assert!(hint < prompt);
+    }
     assert!(
         history
             .replay_command(&["rtao".into(), "tx".into(), "transfer".into()])
@@ -1104,7 +1106,6 @@ async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_repl
             .submissions
             .is_empty()
     );
-    drop(messages);
     client.close().await;
     Ok(())
 }
