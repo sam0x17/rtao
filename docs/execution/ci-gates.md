@@ -161,3 +161,12 @@ and generates compatibility source reports. This is not a Mac build or
 native-platform coverage. It uploads only three small report files for
 review, with three-day retention, and cannot push a commit. Normal pushes
 continue running the unchanged checks against the committed source reports.
+
+The first refresh job succeeded, but artifact review rejected its inflated
+counts: CI's `CARGO_TERM_COLOR=always` decorated Cargo's `(*)` marker, so the
+counter treated repeated rows as distinct package identities. Removing only
+that formatting in an independent read-only check recovers the original
+225/361/365/416 counts, with no added packages. The captured command now
+forces `CARGO_TERM_COLOR=never`; the parser rejects terminal formatting,
+and the existing package-identity regression includes the colored duplicate.
+Regenerate the reports from the corrected producer before adopting them.
