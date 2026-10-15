@@ -774,12 +774,19 @@ pub(crate) fn parse_cache_key(value: &str) -> Option<BigInt> {
         decimal.push('-');
     }
     let mut previous_digit = false;
+    let mut digits = 0;
     for character in value.chars() {
         if character == '_' && previous_digit {
             previous_digit = false;
             continue;
         }
         if get_general_category(character) != GeneralCategory::DecimalNumber {
+            return None;
+        }
+        // CPython's default decimal-int limit counts digits, including leading
+        // zeros, while excluding signs, whitespace and underscore separators.
+        digits += 1;
+        if digits > 4_300 {
             return None;
         }
         let mut start = u32::from(character);
@@ -1568,6 +1575,28 @@ mod tests {
         for key in ["1__2", "1_", "_1", "\u{1c}1", "1.0", "", "\u{10d41}"] {
             assert_eq!(parse_cache_key(key), None, "{key:?}");
         }
+    }
+
+    #[test]
+    fn cache_integer_strings_keep_pythons_decimal_digit_limit() {
+        for count in [4_300, 4_301] {
+            for input in [
+                "0".repeat(count),
+                format!("\u{2003}-{}\u{a0}", "٠_".repeat(count - 1) + "٠"),
+            ] {
+                assert_eq!(
+                    parse_cache_key(&input),
+                    (count == 4_300).then_some(BigInt::from(0)),
+                    "{count} digits"
+                );
+            }
+        }
+        let mut boundary = "1".to_owned();
+        boundary.push_str(&"0".repeat(4_299));
+        assert_eq!(
+            parse_cache_key(&boundary),
+            Some(BigInt::from(10).pow(4_299))
+        );
     }
 
     #[tokio::test]

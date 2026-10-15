@@ -149,6 +149,7 @@ struct Shared {
     connector: Arc<Connector>,
     runtime: BlockingRuntime,
     client: tokio::sync::Mutex<Option<Client>>,
+    token_symbols: Mutex<BTreeMap<NetUid, String>>,
     policy: Mutex<Option<Policy>>,
     // Held through cleanup and worker shutdown. Repeated callers receive the
     // same recorded result, rather than observing an early closed flag.
@@ -183,10 +184,12 @@ impl Shared {
             return Ok(client.clone());
         }
         let client = (self.connector)(self.config.clone()).await?;
+        let symbols = client.token_symbols().await;
         if self.closed.load(Ordering::Acquire) {
             client.close().await;
             return Err(BlockingError::Closed.into());
         }
+        *self.token_symbols.lock().map_err(|_| Error::Poisoned)? = symbols;
         *slot = Some(client.clone());
         Ok(client)
     }
@@ -423,6 +426,7 @@ impl SyncClient {
                     connector: Arc::new(move |config| Box::pin(connector(config))),
                     runtime: BlockingRuntime::new(),
                     client: tokio::sync::Mutex::new(None),
+                    token_symbols: Mutex::new(BTreeMap::new()),
                     policy: Mutex::new(None),
                     close_state: Mutex::new(None),
                     closed: AtomicBool::new(false),
@@ -1057,9 +1061,22 @@ macro_rules! common_reads {
                 })
             }
 
-            /// Tag a checked native u64 amount with its chain denomination.
+            /// Tag a native amount with the connected token symbol, without I/O.
             pub fn balance(&self, rao: u64, netuid: NetUid) -> DynBalance {
-                DynBalance::from_rao(rao, netuid)
+                let amount = DynBalance::from_rao(rao, netuid);
+                if netuid == NetUid::ROOT {
+                    return amount;
+                }
+                let symbols = self
+                    .view
+                    .shared
+                    .token_symbols
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
+                match symbols.get(&netuid) {
+                    Some(symbol) => amount.with_symbol(symbol.clone()),
+                    None => amount,
+                }
             }
 
             /// Query live storage by pallet and item name.
@@ -1675,6 +1692,11 @@ impl WeightsKeySource for WeightsWallet {
         let wallet = match self {
             Self::Default => rtao_wallet::Wallet::default_wallet()?,
             Self::Named { name, hotkey } => {
+                let name = if name.is_empty() {
+                    "default".into()
+                } else {
+                    name
+                };
                 if name.contains('/') && hotkey.is_some() {
                     return Err(rtao_wallet::WalletError::InvalidName(
                         "give the hotkey either in the wallet name ('cold/hot') or as an explicit hotkey, not both".into(),
@@ -1813,6 +1835,65 @@ mod tests {
             Err(Error::Runtime(BlockingError::Closed))
         ));
         assert_eq!(starts.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn balance_factories_keep_cached_symbols_without_starting_cold_work_or_rpc() {
+        let (client, chain, starts) = setup();
+        let netuid = NetUid(3);
+        let rao = 1_000_000_001;
+        assert_eq!(
+            client.balance(rao, netuid).to_string(),
+            DynBalance::from_rao(rao, netuid).to_string()
+        );
+        assert!(chain.requests().is_empty());
+        assert_eq!(starts.load(Ordering::SeqCst), 0);
+        assert!(!client.is_started());
+        chain.mutate_state(|state| {
+            state
+                .seed_typed(
+                    "SubtensorModule",
+                    "TokenSymbol",
+                    (NetUid::ROOT,),
+                    b"root symbol is ignored".to_vec(),
+                )
+                .unwrap();
+            state
+                .seed_typed(
+                    "SubtensorModule",
+                    "TokenSymbol",
+                    (netuid,),
+                    "λ".as_bytes().to_vec(),
+                )
+                .unwrap();
+        });
+        client.connect().unwrap();
+        let snapshot = client.at(BlockRef::Best).unwrap();
+        let requests = chain.requests().len();
+        for value in [client.balance(rao, netuid), snapshot.balance(rao, netuid)] {
+            assert_eq!(value.rao, rao);
+            assert_eq!(value.netuid, netuid);
+            assert_eq!(value.to_string(), "1.000000001λ");
+        }
+        for value in [
+            client.balance(rao, NetUid::ROOT),
+            snapshot.balance(rao, NetUid::ROOT),
+        ] {
+            assert!(value.symbol.is_none());
+            assert_eq!(value.to_string(), "τ1.000000001");
+        }
+        for value in [
+            client.balance(rao, NetUid(42)),
+            snapshot.balance(rao, NetUid(42)),
+        ] {
+            assert_eq!(
+                value.to_string(),
+                DynBalance::from_rao(rao, NetUid(42)).to_string()
+            );
+        }
+        assert_eq!(chain.requests().len(), requests);
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        client.close().unwrap();
     }
 
     #[test]
@@ -2097,6 +2178,15 @@ mod tests {
         let default = ().into_weights_keys().unwrap();
         assert_eq!(default.reference().name(), "default");
         assert_eq!(default.reference().hotkey_name(), "default");
+        let empty = "".into_weights_keys().unwrap();
+        assert_eq!(empty.reference(), default.reference());
+        let explicit = WeightsWallet::named("")
+            .with_hotkey("validator")
+            .unwrap()
+            .into_weights_keys()
+            .unwrap();
+        assert_eq!(explicit.reference().name(), "default");
+        assert_eq!(explicit.reference().hotkey_name(), "validator");
         let named = WeightsWallet::named("weights-helper-nonexistent-wallet")
             .with_hotkey("validator")
             .unwrap()
