@@ -35,6 +35,18 @@ page server. For mortal shield approvals, warm up the camera before preparing
 the two signatures; the phone and operator still need to finish within the
 signed era. `vault::scan_vault_address` supports address scans separately.
 
+Vault and extension browser opening share the explicit browser choice,
+environment fallback and executable aliases. Launching returns after spawning;
+closing a signing session leaves the browser application open. Unix uses a
+separate process group and the system launcher when no chosen executable is
+available. Python's additional `webbrowser` backends and `BROWSER` handling
+are outside this native launcher API.
+
+The QR helper selects one numeric, alphanumeric or byte segment with error
+correction M and a four-module quiet zone. Binary UOS frames use byte mode.
+The helper preserves decoded bytes; SVG serialization and masks may differ
+between encoders.
+
 The `extension` library exposes `BridgeServer`, `BridgeClient`, account
 selection and `ExtensionSigner`. Daemon startup is explicit. CLI commands
 `misc extension bridge`, `accounts` and `stop` use compatible token/PID paths.

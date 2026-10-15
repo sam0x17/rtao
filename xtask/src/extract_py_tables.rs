@@ -185,6 +185,13 @@ pub(super) fn render(tables: &Value) -> Result<String> {
     )?;
     out.push_str(&header(&warning)?);
     out.push_str(&format!("/// Exact Python coldkey fee-routing warning.\npub const COLDKEY_FEE_WARNING: &str = {};\n\n",rust_string(warning["value"].as_str().context("fee warning missing")?)));
+    // File-level origins precede the array so rustfmt keeps the canonical
+    // headers at column zero, where the attribution checker reads them.
+    for (path, table) in tables.as_object().context("Python module corpus missing")? {
+        if path != "sdk/python/bittensor/basket_index_data.py" {
+            out.push_str(&header(table)?);
+        }
+    }
     out.push_str("/// Chain classification and transaction rejection tables shared with Python.\npub use crate::errors::{NAME_TO_CODE,CUSTOM_TRANSACTION_ERRORS,INVALID_TRANSACTION_ERRORS,DISPATCH_ERRORS,SUBSTRING_FALLBACK};\n\n/// Python's fee-routing mirror, checked against the authoritative runtime.\npub use crate::rt::COLDKEY_PAYS_FEE_CALLS;\n\n/// A lossless resolved Python declaration, including exact integer/container tags.\n#[derive(Clone, Copy, Debug, Eq, PartialEq)]\npub struct PythonTable {\n/// Monorepo source path.\npub path: &'static str,\n/// Python declaration name.\npub name: &'static str,\n/// Exact canonical extractor representation.\npub value_json: &'static str,\n/// Authenticated Git blob identity.\npub blob: &'static str,\n/// Declaration start line.\npub line: u32,\n/// Declaration end line.\npub end_line: u32,\n}\n\n/// Shared named Python constants, intent defaults and class variables.\n/// Frozen basket display tuples are generated into rtao-cli only.\npub static PYTHON_TABLES: &[PythonTable] = &[\n");
     for (path, table) in tables.as_object().context("Python module corpus missing")? {
         // Neuron builds compile this catalog. Keep the historical display

@@ -1,6 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional source at the same commit/license: sdk/python/bittensor/intents/_root_claim_fee.py.
-// Test source at the same commit/license: sdk/python/tests/unit/test_root_claim_fee.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/_root_claim_fee.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_root_claim_fee.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Fail-closed root-claim admission and reserve, with optional yield previews.
 
 use std::collections::{BTreeMap, BTreeSet};
