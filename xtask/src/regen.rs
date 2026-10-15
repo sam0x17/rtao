@@ -1,5 +1,7 @@
 //! Regenerate the name-based chain surface from immutable pinned V15/V16 inputs.
 
+#[path = "regen_basket_index.rs"]
+mod basket_index;
 #[path = "regen_crosscheck.rs"]
 mod crosscheck;
 #[path = "regen_emit.rs"]
@@ -414,6 +416,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
         namespaces::run(&root, &pins, check)?;
         reads::run(&root, check)?;
         intents::run(&root, &ir, &mapper, check)?;
+        basket_index::run(&root, &pins, check)?;
     }
     Ok(())
 }

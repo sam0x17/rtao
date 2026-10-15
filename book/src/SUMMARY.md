@@ -8,5 +8,6 @@
 - [MEV shield](mev-shield.md)
 - [Multisig and external signing](multisig.md)
 - [Transaction reference](tx-reference.md)
+- [Generated reference](reference.md)
 - [Release verification](releases.md)
 - [Python and Rust API index](api-index.md)

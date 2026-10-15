@@ -23,8 +23,10 @@ printf '%s\n' '<!doctype html><html lang="en"><meta charset="utf-8"><meta http-e
 cargo run --locked -p xtask -- docs --llms --out "$scratch"
 cargo run --locked -p xtask -- docs --llms --out "$scratch" --check
 cp -R book "$scratch/book-source"
-cp "$scratch/api-index.md" "$scratch/book-source/src/api-index.md"
-cp "$scratch/tx-reference.md" "$scratch/book-source/src/tx-reference.md"
+# Generated SUMMARY owns all reference chapters, including nested chain errors.
+for name in api-index.md tx-reference.md reference.md compat.md SUMMARY.md llms.txt llms-full.txt reference-manifest.json tx query errors hyperparameters catalog; do
+  cp -R "$scratch/$name" "$scratch/book-source/src/"
+done
 mdbook build "$scratch/book-source" --dest-dir "$scratch/book-html"
 cp -R "$CARGO_TARGET_DIR/doc" "$scratch/book-html/api"
 cp "$scratch/llms.txt" "$dist/llms.txt"
