@@ -81,7 +81,7 @@ pinning_tests = [
   "rtao_core_ext::keyfile_json::tests::redacted_errors_expose_only_the_selected_static_input_label",
   "rtao_core_ext::keyfile_json::tests::missing_keyfile_field_errors_redact_unknown_input_key_names",
 ]
-upstream_report = "Filed secret URI disclosure as subtensor #3252. Current/MSRV constructor, keyfile differential and error-chain evidence is in docs/execution/m2-secret-boundaries.md. Dependency-owned signing objects and serde parser allocations remain separate open risks."
+upstream_report = "Filed secret URI disclosure as subtensor #3252. Historical constructor evidence and the independently reviewed bounded keyfile parser repair are in docs/execution/m2-secret-boundaries.md. Parser compilation and regression execution remain pending; opaque dependency-owned signing objects remain an open risk."
 upstream_link = "https://github.com/RaoFoundation/subtensor/issues/3252"
 
 [[divergences]]
@@ -98,15 +98,16 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-037"
-upstream_symbol = "bittensor.wallets._read_password"
+upstream_symbol = "bittensor.wallets._read_password / keyfile plaintext codec"
 python_behavior = "Password-file resolution reads the whole selected file without a size or regular-file bound."
-rtao_behavior = "Password and keyfile readers require regular opened descriptors and cap content at 16 MiB. Regular symlink targets, password precedence, UTF-8 validation and whole-file trimming remain supported."
+rtao_behavior = "Password and keyfile readers require regular opened descriptors and cap content at 16 MiB. The direct plaintext codec also caps JSON and historical raw forms at 16 MiB. Regular symlink targets, password precedence, UTF-8 validation and whole-file trimming remain supported."
 class = "stricter"
 rationale = "A special file can retain an offloaded worker, and an oversized password file can exhaust process memory. Bound the selected input before buffering under the fail-closed and resource-bounded design principles."
 decision = "PLAN.md execution rule 5; M2-S05 (2026-10-14)"
 pinning_tests = [
   "rtao_wallet::password::tests::password_files_reject_oversize_nonregular_and_invalid_utf8",
   "rtao_wallet::files::read_security_tests::bounded_wallet_reads_reject_large_and_nonregular_files",
+  "rtao_core_ext::keyfile_json::tests::direct_keyfile_limit_refuses_oversized_historical_text_and_callbacks_but_accepts_boundary_json",
 ]
 upstream_report = "Local input-budget policy; rationale and validation are in docs/security/m2.md and docs/execution/m2-wallet.md."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/wallets.py"

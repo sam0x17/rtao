@@ -23,7 +23,7 @@ use std::{
     },
 };
 use tokio::sync::Mutex;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroizing;
 
 const MAX_KEYFILE_BYTES: u64 = 16 * 1024 * 1024;
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
@@ -490,69 +490,35 @@ pub(crate) fn public_info(path: &Path) -> Result<PublicKeyInfo, WalletError> {
     if keyfile_json::keyfile_data_is_encrypted(&bytes) {
         return Err(WalletError::PublicKeyUnavailable(path.to_owned()));
     }
-    let value = PublicJson(
-        serde_json::from_slice(&bytes)
-            .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()))?,
-    );
-    let crypto_type = value
-        .0
-        .get("cryptoType")
-        .and_then(|value| match value {
-            serde_json::Value::Number(number) => number.to_string().parse::<u8>().ok(),
-            serde_json::Value::String(text) => text.trim().parse::<u8>().ok(),
-            _ => None,
-        })
-        .unwrap_or(1);
-    let crypto_type = CryptoType::try_from(crypto_type).map_err(|_| {
-        WalletError::Core(rtao_core::CoreError::Crypto(
-            "unsupported public keyfile crypto type".into(),
-        ))
-    })?;
-    if let Some(address) = value
-        .0
-        .get("ss58Address")
-        .or_else(|| value.0.get(" ss58Address"))
-        .and_then(serde_json::Value::as_str)
-    {
-        return address
-            .parse()
-            .map(|account| PublicKeyInfo {
-                account,
-                crypto_type,
-            })
-            .map_err(WalletError::from);
-    }
-    if let Some(key) = value
-        .0
-        .get("publicKey")
-        .or_else(|| value.0.get("accountId"))
-        .and_then(serde_json::Value::as_str)
-    {
-        let bytes = hex::decode(key.strip_prefix("0x").unwrap_or(key))
-            .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()))?;
-        return bytes
-            .try_into()
-            .map(|bytes| PublicKeyInfo {
-                account: AccountId(bytes),
-                crypto_type,
-            })
-            .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()));
-    }
-    Err(WalletError::PublicKeyUnavailable(path.to_owned()))
-}
-struct PublicJson(serde_json::Value);
-impl Drop for PublicJson {
-    fn drop(&mut self) {
-        fn clear(value: &mut serde_json::Value) {
-            match value {
-                serde_json::Value::String(text) => text.zeroize(),
-                serde_json::Value::Array(values) => values.iter_mut().for_each(clear),
-                serde_json::Value::Object(values) => values.values_mut().for_each(clear),
-                _ => {}
-            }
+    keyfile_json::with_public_keyfile_fields(&bytes, |crypto_type, address, public| {
+        let crypto_type = CryptoType::try_from(crypto_type).map_err(|_| {
+            WalletError::Core(rtao_core::CoreError::Crypto(
+                "unsupported public keyfile crypto type".into(),
+            ))
+        })?;
+        if let Some(address) = address {
+            return address
+                .parse()
+                .map(|account| PublicKeyInfo {
+                    account,
+                    crypto_type,
+                })
+                .map_err(WalletError::from);
         }
-        clear(&mut self.0);
-    }
+        if let Some(key) = public {
+            let bytes = hex::decode(key.strip_prefix("0x").unwrap_or(key))
+                .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()))?;
+            return bytes
+                .try_into()
+                .map(|bytes| PublicKeyInfo {
+                    account: AccountId(bytes),
+                    crypto_type,
+                })
+                .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()));
+        }
+        Err(WalletError::PublicKeyUnavailable(path.to_owned()))
+    })
+    .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()))?
 }
 fn preflight(path: &Path, overwrite: Overwrite) -> Result<(), WalletError> {
     match fs::symlink_metadata(path) {
@@ -702,6 +668,64 @@ mod read_security_tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::testsupport::TempRoot;
+
+    #[test]
+    fn plaintext_hotkey_public_fallback_validates_whole_json_and_preserves_alias_precedence() {
+        let root = TempRoot::new();
+        let path = root.path().join("public-fallback-hotkey");
+        let file = HotkeyFile::new(&path);
+        let account = AccountId([7; 32]);
+        let address = account.to_string();
+        // These invalid recovery fields must never reach a key constructor.
+        // Escaped unknown keys and values share the secret-aware parse path.
+        let input = format!(
+            r#"{{"ss58Address":"invalid first address","ss58\u0041ddress":"{address}","cryptoType":"\u00200\u0020","secretPhrase":"invalid\u0020recovery","secretSeed":"invalid","private\u0020field":"disposable\u0020secret"}}"#,
+        );
+        fs::write(&path, &input).unwrap();
+        assert_eq!(
+            file.public_info().unwrap(),
+            PublicKeyInfo {
+                account,
+                crypto_type: CryptoType::Ed25519
+            }
+        );
+        for malformed in [
+            format!("{input} trailing"),
+            format!("{},\"partial\":", &input[..input.len() - 1]),
+        ] {
+            fs::write(&path, malformed).unwrap();
+            assert!(matches!(
+                file.public_info(),
+                Err(WalletError::PublicKeyUnavailable(_))
+            ));
+        }
+        fs::write(&path, format!(r#"{{"ss58Address":null," ss58Address":"{address}","publicKey":false,"accountId":"{}"}}"#, hex::encode(account.0))).unwrap();
+        assert!(matches!(
+            file.public_info(),
+            Err(WalletError::PublicKeyUnavailable(_))
+        ));
+        fs::write(
+            &path,
+            format!(r#"{{" ss58Address":"{address}","cryptoType":0}}"#),
+        )
+        .unwrap();
+        assert_eq!(file.public_info().unwrap().account, account);
+        fs::write(
+            &path,
+            format!(r#"{{"accountId":"0x{}"}}"#, hex::encode(account.0)),
+        )
+        .unwrap();
+        assert_eq!(file.public_info().unwrap().account, account);
+        fs::write(
+            &path,
+            format!(r#"{{"ss58Address":"{address}","cryptoType":99}}"#),
+        )
+        .unwrap();
+        assert_eq!(
+            file.public_info().unwrap_err().to_string(),
+            "crypto error: unsupported public keyfile crypto type"
+        );
+    }
 
     #[test]
     fn bounded_wallet_reads_reject_large_and_nonregular_files() {
