@@ -261,7 +261,7 @@ async fn mine(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rtao::primitives::{H256, NetUid, TaoBalance};
+    use rtao::primitives::{Balance, H256, NetUid, Tao};
     use rtao::tx::ChainError;
     use rtao_intents::pow::registration_prefix;
     use serde_json::Map;
@@ -317,7 +317,7 @@ mod tests {
         receipt.extrinsic_id = Some("100-1".into());
         assert!(!retriable_pool_rejection(&receipt));
         let mut receipt = rejection.clone();
-        receipt.fee = Some(TaoBalance(0));
+        receipt.fee = Some(Balance::<Tao>::ZERO);
         assert!(!retriable_pool_rejection(&receipt));
         let mut receipt = rejection.clone();
         receipt.fate_unknown = Some(H256([2; 32]));
