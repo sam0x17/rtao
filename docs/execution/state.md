@@ -11,59 +11,54 @@ is required. Historical successes below do not establish current CI success.
 
 Only `.github/workflows/pr.yml` remains active. The eleven earlier
 infrastructure, scheduled, oracle and release workflows are inactive drafts
-in `.github/deferred-workflows/`. No GitHub workflow was dispatched during
-this cleanup, and no current hosted success is claimed.
+in `.github/deferred-workflows/`. No workflow was dispatched during
+the cleanup itself. Subsequent client checkpoints use hosted CI as recorded below.
 
 ## Current client checkpoint, 2026-10-15
 
-Canonical source implements 20 of 83 intents and 38 of 102 reads. Owner
-orchestration/proxy routing and its example are pushed. Recovered CLI machinery,
-config/tools/explain handlers and their binary routing are pushed in `642623b`.
-The remaining command families and offline SDK remain incomplete; their source
-candidates are in private recovery. The tx/query candidate has three proven
-source defects and missing generated APIs; see
-[m4-generated-review.md](m4-generated-review.md). No milestone exit is claimed.
+Pushed source through `3aaabc7` contains 20 of 83 intents and 40 of 102
+read implementations. Generated dispatch still advertises 38 reads until the
+hosted regeneration is reviewed and adopted. No milestone exit is claimed.
 
-`1e672ac` prevents completed multisig approvals from inheriting inner owner
-rate-limit retries and corrects initial oracle staging for Q30's optional hosted
-refresh. Its five non-check jobs passed. Check caught a missing ViewExt import
-in a test fixture, corrected in `642623b`. The latter's checks are at
-https://github.com/sam0x17/rtao/actions/runs/38683260786: MSRV, supply, no-host and
-semver and features passed. Its main check is superseded by the next client
-checkpoint, including the report adoption below and the doctor fixtures.
-No current all-job success is claimed.
+The binary routes generated transactions/queries, config/tools/explain,
+weights/axon, wallet management, subnet registration/metagraph views and the
+implemented hparams commands. Sequential `trim-null` is not advertised yet;
+its shared SDK session and CLI recovery integration remain in progress.
+M5 strict call-byte import is committed, including bounded metadata traversal,
+nested Option/sequence preservation and canonical re-encoding. The broader
+offline signing API, multisig book and call-cache work remains incomplete.
 
-Hosted report generation
-https://github.com/sam0x17/rtao/actions/runs/38683267312 succeeded on `642623b`.
-Artifact `11949225713` (39,662 bytes) matched API SHA-256
-`6ceb152f7febcc4ce40bf56eec777a4e2fc8a8351d5dc849fbe03cc0b37d7e22`.
-Review checked exactly four regular files, all 23 dependency-input hashes,
-clean source identity and unchanged package sets/counts (225/361/365/416).
-The 1,535-row parity matrix adds only D-041/D-042 and their regression references.
-All other parity families are unchanged. Adopted the four generated files byte
-for byte; no generated hashes or counts were edited. Runtime validation remains
-null/empty. The reports measure Apple-target dependency graphs on Linux, without
-native Mac coverage. Earlier `71f28d2` reports were also verified; the original
-colored-output artifact was rejected.
+The latest completed normal run on `2331a32`,
+[38690012949](https://github.com/sam0x17/rtao/actions/runs/38690012949), failed
+compilation because a recovered read used a typed-balance method on a wire
+balance. Commit `e79b6ac` fixes that field access. Earlier CLI fixture
+compilation/Clippy failures are corrected in `9c84e81`, `2e79b66` and
+`b322577`. The normal run on `3aaabc7` is
+[38690242483](https://github.com/sam0x17/rtao/actions/runs/38690242483).
+There is no current all-green test result; nextest and doctests must pass on
+the final source before acceptance.
 
-The CLI lockfile was resolved offline with eight additions and no existing
-package upgrades. No local compilation or test ran. License wording includes
-Q1's required PSF/Unicode obligations; approved BLS and dormant advisory guards
-remain intact. Source formatting and whitespace checks pass. Combined source
-acceptance still needs normal hosted checks after report adoption. The M0
-source audit also adds real doctor binary fixtures and a plain captured-tree
-fix; see [m0-readiness.md](m0-readiness.md). The latest normal run for the
-checkpoint is listed in the [main workflow history](https://github.com/sam0x17/rtao/actions/workflows/pr.yml?query=branch%3Amain).
+Hosted report/code generation on `3aaabc7` is
+[38690259736](https://github.com/sam0x17/rtao/actions/runs/38690259736).
+Its output is still unadopted. The workflow now retains read interfaces and
+namespace methods as well as availability metadata. Verify the exact source,
+ZIP digests, allowed regular paths, dependency hashes, pending-set changes and
+runtime coverage fields before adopting any artifact. Future manifest changes
+require another report refresh. Generated reports establish declared source
+coverage and graph identity, not executed runtime or native Mac coverage.
 
-No active temporary root remains. Audited and removed
-`target/client-ci-20261015`: 14 regular JSON/Markdown/ZIP files, 868,469 bytes.
-Process, open-file, launchd/configuration and symlink/dependency checks found no
-live use. Generated source is retained in Git and the bounded CLI adoption
-record is private at `.local/recovery/2026-10-14/cli-adoption.json`.
-There were no virtual environments, installed services or remote scratch.
-The unrelated remote CFG process was left alone. Target returned to 547,192 KiB
-(534 MiB), its preserved pre-existing debug output. Wallets, shared caches and
-backup snapshots remain untouched.
+Prior verified artifact adoptions remain recorded in
+`.local/recovery/2026-10-14/generated-adoption.json` and
+`.local/recovery/2026-10-14/parity-adoption.json`. Runtime validation is
+null/empty. The report measures Apple-target dependency graphs on Linux.
+
+No local compilation, test, Python process, mining or wallet operation ran
+in this continuation. Local work was source review, formatting and bounded
+Cargo lock resolution. All artifact and archive reads used memory. No active
+temporary root remains; the preserved target output has not been rebuilt.
+Wallets, shared caches and backups remain untouched. See
+[m0-acceptance-audit.md](m0-acceptance-audit.md) for remaining M0 acceptance
+work and [disk-cleanup.md](disk-cleanup.md) for the removal inventory.
 
 ## Disk cleanup completed
 
