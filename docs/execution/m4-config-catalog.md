@@ -7,9 +7,10 @@ reach the output renderer. These commands use local files and authenticated
 catalogs without opening a chain connection or unlocking a signer.
 
 `tools` retains all 83 upstream records and their nine original fields, then
-adds D-029's `rust` object. The current binary reports null Rust metadata;
-generated transaction commands must supply verified type and command metadata
-when adopted. `explain` preserves semantic explanations, dispatch errors,
+adds D-029's `rust` object. Tx/query integration now supplies metadata from the
+verified hosted generated interfaces and keeps pending CLI invocations null.
+Its combined build and tests still need hosted validation.
+`explain` preserves semantic explanations, dispatch errors,
 pallet-qualified names, duplicate chain-error names and runtime declaration
 order. Its output uses the existing single diagnostic renderer.
 
@@ -23,6 +24,8 @@ Existing Apache source attribution and authenticated generated catalogs cover
 these ports; no generator output or license declaration changes.
 
 Source inspection and installed `rustfmt` checks are the local validation.
-Hosted CI must run the 16 command fixtures and four binary fixtures with the
-combined source. No local build or test ran, and M4-10 remains incomplete:
-generated `tx`/`query` and other planned command work are still pending.
+Hosted CI must run the command and binary-routing fixtures with the combined
+source. No local build or test ran, and M4-10 remains incomplete. Tx/query
+integration is prepared without compilation or test acceptance; see
+[m4-generated-review.md](m4-generated-review.md). Other planned command work
+remains pending.

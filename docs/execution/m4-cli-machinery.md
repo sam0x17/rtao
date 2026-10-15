@@ -1,10 +1,12 @@
 # M4 CLI machinery
 
 The recovered CLI source adds command builders, flag tiers, context, prompts,
-output, logging, read-only books and raw-call execution. The binary dispatches
-`call`, `config`, `tools` and `explain`, and retains the offline `doctor` checks.
-Other command families still need builder and dispatcher integration. This adoption
-does not complete M4 or establish passing checks for the combined source.
+output, logging, read-only books and raw-call execution. The committed entrypoint
+registers `call`, `config`, `tools` and `explain`, and retains the offline `doctor`
+checks. Tx/query and context integration now includes verified hosted generated
+APIs; weights, axon and implemented hyperparameter routes await normal hosted
+checks. Other command families remain
+incomplete. This source does not complete M4 or establish passing combined checks.
 
 The ports identify upstream commit
 `850f2755bb05a3851f948489f0ab27b0645cebce` in their attribution headers. Book name
@@ -67,9 +69,12 @@ factories are injectable; unavailable backends refuse explicitly. Their command
 integration remains later work, and Q30 defers hardware/browser rehearsals.
 
 `Output` preserves parsed JSON values and existing plan, receipt and error
-shapes. Native balances use explicit display adapters where read JSON expects
-a Python Balance string. Diagnostics and tracing go to stderr. `BITTENSOR_LOG`
-overrides the verbosity ladder; ordinary debug verbosity omits raw frames.
+shapes. The prepared context uses `plan_and_preflight_dyn` to obtain the plan
+and structural facts from the same snapshot and call, then includes those facts
+in human review. This integration has not compiled or run. Native balances use
+explicit display adapters where read JSON expects a Python Balance string.
+Diagnostics and tracing go to stderr. `BITTENSOR_LOG` overrides the verbosity
+ladder; ordinary debug verbosity omits raw frames.
 
 Book files have a 16 MiB limit; programmatic JSON and multisig reference
 recursion have a depth limit of 128. Oversized inputs refuse rather than change
@@ -91,6 +96,8 @@ Q30; native Keychain and device acceptance remain deferred and unverified.
 
 Recovery member hashes and adoption paths are recorded under
 `.local/recovery/2026-10-14/cli-adoption.json`. Command-family integration and
-applicable hosted checks remain follow-up work. The generated parity matrix
-must include the registered divergences. Replay strings use `rtao`; comparison
-with Python's embedded `btcli` name requires the recorded replacement rule.
+applicable hosted checks remain pending. D-041 and D-042 are registered and
+included in the checked-in parity matrix. The prepared tx/query corrections and
+remaining gaps are recorded in [m4-generated-review.md](m4-generated-review.md).
+Replay strings use `rtao`; comparison with Python's embedded `btcli` name requires
+the recorded replacement rule.

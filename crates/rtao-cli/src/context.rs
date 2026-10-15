@@ -5,7 +5,7 @@ use crate::{
     books::{Books, FsAccountLookup, NameResolver},
     error::CliError,
     globals::Globals,
-    output::{Output, OutputOptions},
+    output::{Output, OutputOptions, ReviewSection},
     prompt::Terminal,
 };
 use rtao::{
@@ -355,21 +355,45 @@ impl AppContext {
         replay: Option<&str>,
         hooks: Option<&dyn SubmissionHooks>,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+        self.submit_with_keys_options(
+            client,
+            intent,
+            keys,
+            SubmissionOptions {
+                wait_for_finalization,
+                replay,
+                hooks,
+                period: None,
+                execution: None,
+            },
+        )
+        .await
+    }
+    /// Inject keys while preserving every semantic execution option and hook.
+    pub async fn submit_with_keys_options(
+        &self,
+        client: &Client,
+        intent: &dyn DynIntent,
+        keys: &dyn DynKeySource,
+        options: SubmissionOptions<'_>,
+    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
         let outcome = self
             .perform_submission(
                 client,
                 intent,
                 keys,
                 SubmissionControl {
-                    wait_for_finalization,
+                    wait_for_finalization: options.wait_for_finalization,
                     replan_owner_rate_limit: true,
-                    replay,
-                    hooks,
+                    replay: options.replay,
+                    hooks: options.hooks,
+                    period: options.period,
+                    execution: options.execution,
                     factory: None,
                 },
             )
             .await?;
-        self.finish_submission(intent, outcome, hooks).await
+        self.finish_submission(intent, outcome, options.hooks).await
     }
     async fn finish_submission(
         &self,
@@ -417,6 +441,13 @@ impl AppContext {
         let spec = intent.semantic_intent_dyn().spec();
         let mut choice =
             self.resolve_mev_shield(spec.mev_shield_default, spec.mev_shield_required, spec.name)?;
+        if let Some(period) = control.period {
+            if !(4..=65_536).contains(&period) || !period.is_power_of_two() {
+                return Err(CliError::input(
+                    "--period must be a power of two between 4 and 65536 blocks",
+                ));
+            }
+        }
         let payer: AccountId = match intent.spec().signer {
             "hotkey" => keys.hotkey_address(),
             _ => keys.coldkey_address(),
@@ -428,18 +459,47 @@ impl AppContext {
                 .preflight_shield_fee(client, payer, choice, spec.mev_shield_required, spec.name)
                 .await?;
         }
-        let mut plan = executor
-            .plan_dyn(
-                intent,
-                keys,
-                &PlanOptions {
-                    proxy_for,
-                    force_proxy_type,
-                    ..Default::default()
-                },
-            )
+        if control.period.is_some() || (!self.globals.dry_run && control.execution.is_some()) {
+            choice = self
+                .honor_shield(client, payer, choice, spec.mev_shield_required, spec.name)
+                .await?;
+            if choice.enabled
+                && control
+                    .period
+                    .is_some_and(|period| !matches!(period, 4 | 8))
+            {
+                return Err(CliError::input("MEV shield period must be 4 or 8 blocks"));
+            }
+        }
+        let plan_options = PlanOptions {
+            proxy_for,
+            force_proxy_type,
+            ..Default::default()
+        };
+        // Strict SDK planning validates PoW freshness. Actual direct requests
+        // can refresh public work first; previews never start CPU workers and
+        // saved multisig rounds retain their already reviewed call bytes.
+        let prepared = if !self.globals.dry_run && !choice.enabled {
+            match control.execution {
+                Some(execution) => {
+                    execution
+                        .prepare(client, intent, keys, &plan_options)
+                        .await?
+                }
+                None => None,
+            }
+        } else {
+            None
+        };
+        let intent = prepared.as_deref().unwrap_or(intent);
+        let (mut plan, preflight) = executor
+            .plan_and_preflight_dyn(intent, keys, &plan_options)
             .await
             .map_err(|e| CliError::failure(e.to_string()))?;
+        if let Some(period) = control.period {
+            plan.effects
+                .push(format!("mortal transaction period: {period} blocks"));
+        }
         if self.globals.dry_run {
             if choice.enabled {
                 plan.effects.push("submitted MEV-shielded: the call stays encrypted in the mempool until the block author decrypts and executes it".into());
@@ -476,6 +536,61 @@ impl AppContext {
         let choice = self
             .honor_shield(client, payer, choice, spec.mev_shield_required, spec.name)
             .await?;
+        let mut transaction = vec![
+            ("signer".into(), serde_json::json!(plan.signer_address)),
+            ("role".into(), serde_json::json!(plan.signer.as_str())),
+            ("MEV shield".into(), serde_json::json!(choice.enabled)),
+        ];
+        if let Some(proxy) = proxy_for {
+            transaction.push(("proxy for".into(), serde_json::json!(proxy)));
+        }
+        if let Some(period) = control.period {
+            transaction.push(("period (blocks)".into(), serde_json::json!(period)));
+        }
+        if let Some(fee) = plan.fee {
+            transaction.push((
+                "estimated fee (TAO)".into(),
+                serde_json::json!(fee.to_decimal_string()),
+            ));
+        }
+        let args = plan
+            .args
+            .as_object()
+            .map(|args| {
+                args.iter()
+                    .map(|(name, value)| (name.clone(), value.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        self.output
+            .transaction_card(&[
+                ReviewSection {
+                    title: plan.summary.clone(),
+                    rows: args,
+                },
+                ReviewSection {
+                    title: "Transaction".into(),
+                    rows: transaction,
+                },
+                ReviewSection {
+                    title: preflight.facts_title.as_str().into(),
+                    rows: preflight
+                        .facts
+                        .into_iter()
+                        .map(|(name, value)| (name, Value::String(value)))
+                        .collect(),
+                },
+                ReviewSection {
+                    title: "Effects".into(),
+                    rows: plan
+                        .effects
+                        .iter()
+                        .enumerate()
+                        .map(|(i, effect)| ((i + 1).to_string(), serde_json::json!(effect)))
+                        .collect(),
+                },
+            ])
+            .map_err(|error| CliError::failure(error.to_string()))?;
         self.confirm(&format!("{}?", intent.summary_dyn()))?;
         let acquired = match &control.factory {
             Some(binding) => Some(binding.factory.source(self, binding.selection).await?),
@@ -483,6 +598,7 @@ impl AppContext {
         };
         let signing = acquired.as_deref().unwrap_or(keys);
         let opts = ExecuteOptions {
+            period: control.period.or(ExecuteOptions::default().period),
             proxy_for,
             force_proxy_type,
             wait_for_finalization: control.wait_for_finalization,
@@ -513,11 +629,18 @@ impl AppContext {
                         intent,
                         signing,
                         &ShieldOptions {
+                            period: if control.period == Some(4) {
+                                rtao::client::ShieldPeriod::P4
+                            } else {
+                                rtao::client::ShieldPeriod::P8
+                            },
                             execute: opts.clone(),
                             ..Default::default()
                         },
                     )
                     .await
+            } else if let Some(execution) = control.execution {
+                return execution.execute(client, intent, signing, &opts).await;
             } else {
                 executor.execute_dyn(intent, signing, &opts).await
             }
@@ -552,8 +675,10 @@ struct ApprovalFactory<'a> {
     selection: &'a crate::call::SigningSelection,
 }
 struct SubmissionControl<'a> {
-    wait_for_finalization: bool,
     replan_owner_rate_limit: bool,
+    period: Option<u32>,
+    execution: Option<&'a dyn SubmissionExecution>,
+    wait_for_finalization: bool,
     replay: Option<&'a str>,
     hooks: Option<&'a dyn SubmissionHooks>,
     factory: Option<ApprovalFactory<'a>>,
@@ -584,12 +709,42 @@ pub trait SubmissionHooks: Send + Sync {
 /// Shared command submission settings, including durable recovery callbacks.
 #[derive(Clone, Copy, Default)]
 pub struct SubmissionOptions<'a> {
+    /// Optional explicit D030 mortal era; absent retains the existing defaults.
+    pub period: Option<u32>,
+    /// Optional public preparation and semantic execution strategy.
+    /// Saved multisig rounds retain their exact reviewed inner call instead.
+    pub execution: Option<&'a dyn SubmissionExecution>,
     /// Wait for finalized inclusion instead of in-block inclusion.
     pub wait_for_finalization: bool,
     /// Optional command displayed with a preview.
     pub replay: Option<&'a str>,
     /// Hooks applied to every submitted approval, but never to a preview.
     pub hooks: Option<&'a dyn SubmissionHooks>,
+}
+/// Public proof preparation and semantic execution after confirmation.
+/// Shielded and saved multisig dispatch keep their ordinary executor.
+pub trait SubmissionExecution: Send + Sync {
+    /// Refresh public proof materials before strict planning on an actual run.
+    /// Called without an unlock capability; omitted for previews and retained
+    /// multisig calls. The registration target and dispatch origin must remain
+    /// unchanged. The returned intent is both reviewed and executed.
+    fn prepare<'a>(
+        &'a self,
+        _client: &'a Client,
+        _intent: &'a dyn DynIntent,
+        _public: &'a dyn rtao::signer::KeyView,
+        _options: &'a PlanOptions,
+    ) -> rtao::signer::BoxFuture<'a, Result<Option<Box<dyn DynIntent>>, CliError>> {
+        Box::pin(async { Ok(None) })
+    }
+    /// Execute the reviewed semantic target with the selected signing source.
+    fn execute<'a>(
+        &'a self,
+        client: &'a Client,
+        intent: &'a dyn DynIntent,
+        keys: &'a dyn DynKeySource,
+        options: &'a ExecuteOptions,
+    ) -> rtao::signer::BoxFuture<'a, Result<rtao::tx::ExtrinsicResult, CliError>>;
 }
 fn json_truthy(value: &Value) -> bool {
     match value {
@@ -1190,6 +1345,8 @@ impl AppContext {
             client,
             intent,
             SubmissionOptions {
+                period: None,
+                execution: None,
                 wait_for_finalization,
                 replay,
                 hooks: None,
@@ -1264,6 +1421,8 @@ impl AppContext {
                 intent,
                 keys.as_ref(),
                 SubmissionControl {
+                    period: options.period,
+                    execution: options.execution,
                     wait_for_finalization: options.wait_for_finalization,
                     replan_owner_rate_limit: true,
                     replay: options.replay,
@@ -1496,6 +1655,8 @@ impl AppContext {
             client,
             intent,
             SubmissionOptions {
+                period: None,
+                execution: None,
                 wait_for_finalization,
                 replay,
                 hooks: None,
@@ -1589,6 +1750,8 @@ impl AppContext {
                         &adapter,
                         &public,
                         SubmissionControl {
+                            period: options.period,
+                            execution: None,
                             wait_for_finalization: options.wait_for_finalization,
                             // A failed inner call can consume the pending operation.
                             // Retrying this approval could open a new one (D-041).

@@ -136,11 +136,89 @@ fn tools_binary_emits_complete_json_with_unavailable_commands_unadvertised() -> 
     for (row, source) in rows.iter().zip(&rtao_catalog::INTENTS) {
         assert_eq!(row["name"], source.name);
         assert_eq!(row.as_object().ok_or("tool object")?.len(), 10);
-        assert_eq!(
-            row["rust"],
-            json!({"type":null,"role":null,"output":null,"cli":null})
-        );
+        let metadata = rtao_intents::interface_metadata()
+            .into_iter()
+            .find(|metadata| metadata.name == source.name)
+            .ok_or("intent metadata")?;
+        if metadata.compiled {
+            assert!(row["rust"]["type"].is_string());
+            assert!(row["rust"]["role"].is_string());
+            assert!(row["rust"]["output"].is_string());
+        } else {
+            assert!(row["rust"]["type"].is_null());
+            assert!(row["rust"]["role"].is_null());
+            assert!(row["rust"]["output"].is_null());
+        }
+        if metadata.compiled && metadata.implemented {
+            assert_eq!(
+                row["rust"]["cli"],
+                format!("rtao tx {}", source.name.replace('_', "-"))
+            );
+        } else {
+            assert!(row["rust"]["cli"].is_null());
+        }
     }
+    let transfer = rows
+        .iter()
+        .find(|row| row["name"] == "transfer")
+        .ok_or("transfer tool")?;
+    assert_eq!(
+        transfer["rust"]["type"],
+        std::any::type_name::<rtao_intents::Transfer>()
+    );
+    assert_eq!(
+        transfer["rust"]["role"],
+        std::any::type_name::<<rtao_intents::Transfer as rtao::tx::IntentInterface>::Role>()
+    );
+    assert_eq!(
+        transfer["rust"]["output"],
+        std::any::type_name::<<rtao_intents::Transfer as rtao::tx::IntentInterface>::Output>()
+    );
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
+    Ok(())
+}
+
+#[test]
+fn generated_binary_registers_implemented_operations_and_rejects_pending_commands() -> TestResult {
+    let root = Root::new()?;
+    for (family, present) in [
+        ("tx", "set-weights"),
+        ("query", "balances"),
+        ("weights", "reveal"),
+        ("axon", "reset"),
+        ("hparams", "mechanisms"),
+    ] {
+        let output = root.command().args([family, "--help"]).output()?;
+        assert!(output.status.success());
+        assert!(output.stderr.is_empty());
+        assert!(String::from_utf8(output.stdout)?.contains(present));
+    }
+    let unavailable = root
+        .command()
+        .args(["tx", "add-stake", "--help"])
+        .output()?;
+    assert_eq!(unavailable.status.code(), Some(2));
+    assert!(unavailable.stdout.is_empty());
+    assert!(String::from_utf8(unavailable.stderr)?.contains("add-stake"));
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
+    Ok(())
+}
+
+#[test]
+fn generated_binary_missing_inputs_emit_one_json_error_before_connection() -> TestResult {
+    let root = Root::new()?;
+    let output = root
+        .command()
+        .args(["tx", "transfer", "--json", "--quiet"])
+        .output()?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let diagnostic: Value = serde_json::from_slice(&output.stderr)?;
+    assert!(
+        diagnostic["error"]
+            .as_str()
+            .is_some_and(|message| !message.is_empty())
+    );
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }

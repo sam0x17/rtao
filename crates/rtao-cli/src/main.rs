@@ -6,7 +6,7 @@ mod doctor;
 
 use rtao_cli::{
     application,
-    commands::{catalog, config},
+    commands::{axon, catalog, config, generated, hparams, weights},
     context::AppContext,
     error::CliError,
     output::DiagnosticContext,
@@ -78,6 +78,11 @@ async fn run() -> Result<(), CliError> {
         config::command(),
         catalog::tools_command(),
         catalog::explain_command(),
+        generated::tx_command()?,
+        generated::query_command()?,
+        weights::command(),
+        axon::command(),
+        hparams::command()?,
     ]);
     if argv.len() == 1 || argv.get(1).is_some_and(|arg| arg == "help") {
         print!("{}", command.render_long_help());
@@ -97,7 +102,7 @@ async fn run() -> Result<(), CliError> {
     };
     let terminal: SharedTerminal = Arc::new(Mutex::new(Box::new(LiveTerminal)));
     let mut prompting = terminal.clone();
-    let invocation = application::parse_with_prompts(command, argv, &context, &mut prompting)?;
+    let mut invocation = application::parse_with_prompts(command, argv, &context, &mut prompting)?;
     let Some((name, matches)) = invocation.matches.subcommand() else {
         return Err(CliError::input("missing command"));
     };
@@ -118,15 +123,31 @@ async fn run() -> Result<(), CliError> {
     while let Some((_, child)) = leaf.subcommand() {
         leaf = child;
     }
-    let reserved: &[&str] = if name == "call" {
-        &["signer_backend"]
-    } else {
-        &[]
+    let reserved = match name {
+        "call" => vec!["signer_backend"],
+        "tx" => generated::intent_reserved(
+            &matches
+                .subcommand()
+                .ok_or_else(|| CliError::input("missing transaction"))?
+                .0
+                .replace('-', "_"),
+        )?,
+        "query" => generated::read_reserved(
+            matches
+                .subcommand()
+                .ok_or_else(|| CliError::input("missing query"))?
+                .0
+                .replace('-', "_")
+                .parse()
+                .map_err(|error| CliError::input(format!("{error}")))?,
+        ),
+        "hparams" => hparams::reserved(matches)?,
+        _ => Vec::new(),
     };
     let mut app = AppContext::from_store(
         &invocation.matches,
         leaf,
-        reserved,
+        &reserved,
         &store,
         &home,
         |name| env::var(name).ok(),
@@ -141,15 +162,155 @@ async fn run() -> Result<(), CliError> {
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect::<Vec<_>>();
     let replay = invocation.history.replay_command(&replay_args);
-    let result = match name {
-        "call" => rtao_cli::call::run(&mut app, matches, &replay).await,
-        "config" => config::run(&store, &app.output, matches).await,
-        // Generated tx commands will supply their verified Rust metadata when
-        // adopted. Null Rust fields keep unavailable commands unadvertised.
-        "tools" => catalog::run_tools(&app.output, &[]),
-        "explain" => catalog::run_explain(&app.output, matches),
-        _ => Err(CliError::input(format!("unknown command {name:?}"))),
-    };
+    let result = async {
+        match name {
+            "call" => rtao_cli::call::run(&mut app, matches, &replay).await,
+            "config" => config::run(&store, &app.output, matches).await,
+            "tools" => catalog::run_tools(&app.output, &generated::rust_tools()?),
+            "explain" => catalog::run_explain(&app.output, matches),
+            "weights" | "axon" => {
+                let request = if name == "weights" {
+                    weights::request(matches)?
+                } else {
+                    axon::request(matches)?
+                };
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        generated::execute_tx(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
+            "hparams" => {
+                let parsed = if !app.prompt_context().interactive(&app.terminal) {
+                    Some(hparams::Request::from_matches(
+                        &mut app,
+                        matches,
+                        &mut invocation.history,
+                    )?)
+                } else {
+                    None
+                };
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        let request = match parsed {
+                            Some(request) => request,
+                            None => {
+                                hparams::Request::from_matches_with_client(
+                                    app_ref, &client, matches, history,
+                                )
+                                .await?
+                            }
+                        };
+                        let replay = history.replay_command(&replay_args);
+                        hparams::execute(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
+            "tx" => {
+                let op = matches
+                    .subcommand()
+                    .ok_or_else(|| CliError::input("missing transaction"))?
+                    .0
+                    .replace('-', "_");
+                let parsed = if !app.prompt_context().interactive(&app.terminal) {
+                    Some(generated::TxRequest::from_matches(
+                        &mut app,
+                        &op,
+                        leaf,
+                        &mut invocation.history,
+                    )?)
+                } else {
+                    None
+                };
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        let request = match parsed {
+                            Some(request) => request,
+                            None => {
+                                generated::TxRequest::from_matches_with_client(
+                                    app_ref, &client, &op, leaf, history,
+                                )
+                                .await?
+                            }
+                        };
+                        let replay = history.replay_command(&replay_args);
+                        generated::execute_tx(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
+            "query" => {
+                let read = matches
+                    .subcommand()
+                    .ok_or_else(|| CliError::input("missing query"))?
+                    .0
+                    .replace('-', "_")
+                    .parse()
+                    .map_err(|error| CliError::input(format!("{error}")))?;
+                let request = generated::QueryRequest::from_matches(
+                    &app,
+                    read,
+                    leaf,
+                    &mut invocation.history,
+                )?;
+                let runner = app.clone();
+                let output = app.output.clone();
+                runner
+                    .run(|client| async move {
+                        generated::execute_query(&client, &request, &output)
+                            .await
+                            .map(|_| ())
+                    })
+                    .await
+            }
+            _ => Err(CliError::input(format!("unknown command {name:?}"))),
+        }
+    }
+    .await;
     if let Err(error) = &result
         && !error.message.is_empty()
     {

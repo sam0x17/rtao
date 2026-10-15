@@ -283,6 +283,270 @@ async fn real_execution_unlocks_once_and_renders_one_canonical_receipt() -> Test
     client.close().await;
     Ok(())
 }
+
+#[derive(Default)]
+struct SnapshotFacts {
+    builds: AtomicUsize,
+    previews: AtomicUsize,
+    reviewed_call: Mutex<Option<String>>,
+}
+impl IntentInterface for SnapshotFacts {
+    const SPEC: &'static rtao_catalog::IntentSpec = Preview::SPEC;
+    type Role = Coldkey;
+    type Origin = Signed;
+    type Output = ();
+    const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] = Preview::WRAPS;
+    fn to_json(&self) -> Value {
+        json!({"op": "add_stake"})
+    }
+}
+impl Intent for SnapshotFacts {
+    fn summary(&self) -> String {
+        "review one call and its facts".into()
+    }
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let build = self.builds.fetch_add(1, Ordering::SeqCst) + 1;
+        let value =
+            u8::try_from(build).map_err(|_| IntentError::validation("too many fixture builds"))?;
+        Ok(rtao_runtime::calls::system::remark(vec![value])
+            .compose(cx.runtime)?
+            .into())
+    }
+    async fn preflight<V: View + ?Sized>(
+        &self,
+        cx: &PreflightCx<'_, V>,
+    ) -> Result<IntentPreflight, IntentError> {
+        self.previews.fetch_add(1, Ordering::SeqCst);
+        let call = format!("0x{}", hex::encode(cx.call.as_bytes()));
+        *self
+            .reviewed_call
+            .lock()
+            .map_err(|_| IntentError::validation("fixture lock poisoned"))? = Some(call.clone());
+        Ok(IntentPreflight {
+            facts_title: rtao::tx::FactsTitle::Custom("Authenticated call facts".into()),
+            facts: vec![("reviewed bytes".into(), call)],
+            ..Default::default()
+        })
+    }
+}
+
+#[tokio::test]
+async fn review_facts_share_one_build_and_preflight_with_the_reviewed_call() -> TestResult {
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let intent = SnapshotFacts::default();
+    let (plan, preview) = rtao::Executor::new(client.clone())
+        .plan_and_preflight_dyn(&intent, &keys, &Default::default())
+        .await?;
+    assert_eq!(intent.builds.load(Ordering::SeqCst), 1);
+    assert_eq!(intent.previews.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        preview.facts,
+        vec![(
+            "reviewed bytes".into(),
+            format!("0x{}", hex::encode(plan.call().as_bytes()))
+        )]
+    );
+    assert_eq!(preview.facts_title.as_str(), "Authenticated call facts");
+
+    let intent = SnapshotFacts::default();
+    let (ctx, sink, _) = context(&["--no-mev-shield"])?;
+    *ctx.terminal.lock().map_err(|_| "terminal")? = Box::new(TerminalFixture {
+        tty: true,
+        lines: VecDeque::from(["no".into()]),
+        reads: Arc::new(AtomicUsize::new(0)),
+    });
+    assert!(
+        ctx.submit_with(&client, &intent, &keys, false, None)
+            .await
+            .is_err()
+    );
+    assert_eq!(intent.builds.load(Ordering::SeqCst), 1);
+    assert_eq!(intent.previews.load(Ordering::SeqCst), 1);
+    let reviewed = intent
+        .reviewed_call
+        .lock()
+        .map_err(|_| "reviewed call")?
+        .clone()
+        .ok_or("missing reviewed call")?;
+    let rendered = sink.text(Stream::Stdout)?;
+    assert!(rendered.contains("Authenticated call facts"));
+    assert!(rendered.contains("reviewed bytes"));
+    assert!(rendered.contains(&reviewed));
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(
+        chain
+            .state()
+            .lock()
+            .map_err(|_| "state")?
+            .submissions
+            .is_empty()
+    );
+    client.close().await;
+    Ok(())
+}
+
+struct ExpiringProxyProofKeys {
+    keys: Keys,
+    chain: FakeChain,
+}
+impl KeyView for ExpiringProxyProofKeys {
+    fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+        self.keys.coldkey_address()
+    }
+    fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+        self.keys.hotkey_address()
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+        self.keys.hotkey_public_key()
+    }
+}
+impl DynKeySource for ExpiringProxyProofKeys {
+    fn signer_for<'a>(
+        &'a self,
+        role: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+        Box::pin(async move {
+            // The reviewed work is valid at height 100 and expires while the
+            // delegate unlocks. A cached signer prevents a second such delay.
+            self.chain
+                .advance(5)
+                .map_err(|error| SignerError::KeyView(error.to_string()))?;
+            self.keys.signer_for(role).await
+        })
+    }
+}
+
+#[tokio::test]
+async fn late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock() -> TestResult {
+    use rtao::primitives::NetUid;
+    use rtao_cli::{commands::generated, context::SubmissionOptions};
+    use rtao_intents::pow::registration_prefix;
+
+    fn arg<'a>(call: &'a Value, name: &str) -> Option<&'a Value> {
+        call["call_args"]
+            .as_array()?
+            .iter()
+            .find(|arg| arg["name"] == name)
+            .map(|arg| &arg["value"])
+    }
+
+    let keys = Keys {
+        key: KeypairSigner::from_seed(&[19; 32], CryptoType::Ed25519)?,
+        unlocks: Arc::new(AtomicUsize::new(0)),
+    };
+    let delegate = keys.key.account();
+    let owner = AccountId([48; 32]);
+    let hotkey = AccountId([47; 32]);
+    assert_ne!(delegate, owner);
+    assert_ne!(delegate, hotkey);
+    let mut state = FakeState::new(FakeState::try_default()?.runtime);
+    state.set_finalized(98)?;
+    state.seed_python(
+        "System",
+        "Account",
+        &[json!(delegate)],
+        json!({"data":{"free":1_000_000_000_000u64}}),
+    )?;
+    let netuid = NetUid(1);
+    for item in ["NetworksAdded", "NetworkPowRegistrationAllowed"] {
+        state.seed_typed("SubtensorModule", item, (netuid,), true)?;
+    }
+    for (item, value) in [
+        ("Difficulty", 1),
+        ("MinDifficulty", 1),
+        ("MaxDifficulty", u64::MAX),
+    ] {
+        state.seed_typed("SubtensorModule", item, (netuid,), value)?;
+    }
+    for (item, value) in [
+        ("MaxAllowedUids", 16u16),
+        ("MaxRegistrationsPerBlock", 1u16),
+        ("RegistrationsThisBlock", 0u16),
+    ] {
+        state.seed_typed("SubtensorModule", item, (netuid,), value)?;
+    }
+    let chain = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+    let original_hash = client.rpc().block_hash(100).await?.ok_or("original hash")?;
+    let prefix = registration_prefix(netuid, original_hash, hotkey, owner)?;
+    let work = rtao::core::pow::seal(&prefix, 0)?;
+    let request = generated::TxRequest {
+        op: "pow_register",
+        args: serde_json::Map::from_iter([
+            ("netuid".into(), json!(netuid)),
+            ("hotkey_ss58".into(), json!(hotkey)),
+            ("work_block".into(), json!(100)),
+            ("nonce".into(), json!(0)),
+            ("work_hex".into(), json!(hex::encode(work))),
+            ("mining_workers".into(), json!(1)),
+            ("mining_timeout".into(), json!(10)),
+        ]),
+        period: None,
+    };
+    let owner_flag = owner.to_string();
+    let (ctx, _, _) = context(&[
+        "--yes",
+        "--json",
+        "--no-mev-shield",
+        "--proxy-for",
+        &owner_flag,
+    ])?;
+    let unlocks = keys.unlocks.clone();
+    let keys = ExpiringProxyProofKeys {
+        keys,
+        chain: chain.clone(),
+    };
+    let result = generated::execute_tx_with_keys(
+        &ctx,
+        &client,
+        &request,
+        &keys,
+        SubmissionOptions::default(),
+    )
+    .await?
+    .ok_or("receipt")?;
+    assert!(result.success);
+    assert_eq!(result.data["proxy_for"], json!(owner));
+    assert_eq!(unlocks.load(Ordering::SeqCst), 1);
+    let submissions = chain
+        .state()
+        .lock()
+        .map_err(|_| "state")?
+        .submissions
+        .clone();
+    assert_eq!(submissions.len(), 1);
+    let runtime = client.refresh_runtime().await?;
+    let decoded =
+        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
+            .to_json();
+    let proxy = &decoded["call"];
+    assert_eq!(proxy["call_module"], json!("Proxy"));
+    assert_eq!(proxy["call_function"], json!("proxy"));
+    assert_eq!(arg(proxy, "real"), Some(&json!(owner)));
+    let call = arg(proxy, "call").ok_or("inner call")?;
+    assert_eq!(call["call_function"], json!("pow_register"));
+    assert_eq!(arg(call, "hotkey"), Some(&json!(hotkey)));
+    assert_eq!(arg(call, "work_block"), Some(&json!(105)));
+    let nonce = arg(call, "nonce").and_then(Value::as_u64).ok_or("nonce")?;
+    let hash = client.rpc().block_hash(105).await?.ok_or("fresh hash")?;
+    let prefix = registration_prefix(netuid, hash, hotkey, owner)?;
+    let expected = rtao::core::pow::seal(&prefix, nonce)?;
+    assert_eq!(
+        arg(call, "work"),
+        Some(
+            &rtao::core::DynValue::new(rtao::core::codec::Value::Bytes(expected.to_vec()))
+                .to_json()
+        )
+    );
+    let wrong_prefix = registration_prefix(netuid, hash, hotkey, delegate)?;
+    assert_ne!(expected, rtao::core::pow::seal(&wrong_prefix, nonce)?);
+    client.close().await;
+    Ok(())
+}
 #[test]
 fn only_literal_config_false_blocks_required_shield_and_off_disables_endpoints() -> TestResult {
     let (mut ctx, _, _) = context(&[])?;

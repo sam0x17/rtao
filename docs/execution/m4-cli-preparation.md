@@ -1,6 +1,8 @@
-The recovered CLI machinery is now in canonical source. Its entrypoint dispatches
-`call`, `doctor`, `config`, `tools` and `explain`; other command families still
-need integration. See
+The recovered CLI machinery is in canonical source. Its committed entrypoint
+registers `call`, `doctor`, `config`, `tools` and `explain`. Transaction/query
+and context integration now includes verified hosted generated interfaces;
+weights, axon and implemented hyperparameter routes are added for hosted checks.
+Other command families remain incomplete. See
 [m4-cli-machinery.md](m4-cli-machinery.md) for the adopted behavior, safety fixes
 and validation limits. This adoption adds no intent/read coverage and does not
 complete M4. Owner orchestration is also present in canonical source; its current
@@ -19,16 +21,22 @@ and encodes `Some(expected)`. Saved semantic approvals also disable owner-rate
 replanning, because a final approval can consume pending state when its inner
 owner call fails. The new-opening receipt inference assumes the runtime uses
 System block heights and extrinsic indices. The separate runtime source guard
-has not been adopted, so future runtime pins need source review. D-041 and D-042 are registered
-with regression sources; hosted validation is pending. No new upstream filing
-is claimed.
+has not been adopted, so future runtime pins need source review. D-041 and D-042
+are registered with regression sources and included in the checked-in parity
+matrix. Combined hosted validation is pending. No new upstream filing is claimed.
 
 Config/catalog handlers and their binary routing are adopted; see
-[m4-config-catalog.md](m4-config-catalog.md). Generated transaction/query and
-wallet/weights/axon candidates remain in the recovery archive. Their command builders and dispatch handlers must
-be reviewed against the adopted machinery before integration. Prepared source
-and historical isolated results do not establish acceptance of the combined code.
-The separate M5 offline candidate also remains provisional.
+[m4-config-catalog.md](m4-config-catalog.md). Corrected transaction/query source
+now resolves plural account arrays, separates pending behavior from feature
+availability and preserves the effective origin during late PoW refresh.
+Plural name resolution is registered as additive D-043 in the working tree;
+its parity matrix refresh awaits hosted generation and adoption. The prepared
+human review includes preflight facts from the same snapshot and call as its plan.
+External backend factories and rich staking pickers remain incomplete; see
+[m4-generated-review.md](m4-generated-review.md). Wallet and subnet source is
+being prepared without local builds; the separate M5 offline candidate remains
+provisional. Prepared source and historical isolated results do not establish
+acceptance of the combined code.
 
 Q30 supersedes the old local validation campaign. Applicable client tests and
 builds run on free hosted `ubuntu-latest` CI. Do not restore the retired
