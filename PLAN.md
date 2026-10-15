@@ -1490,9 +1490,10 @@ a new upstream release does not force a local infrastructure campaign (Q30).
   `concepts` (links to upstream raw markdown, not copies), `migration` (v11 Python → rtao generated from
   `parity/map.toml`; v10 Python → rtao; the core's blocking client → rtao; the divergence register), `reference`,
   `parity`, `compat`.
-- **Generated reference** (`xtask regen`): `tx/<op>.md`, `query/<read>.md`, `errors/<code>.md`,
+- **Generated reference** (`xtask docs` in hosted CI): `tx/<op>.md`, `query/<read>.md`, `errors/<code>.md`,
   `errors/chain/<Name>.md`, `hyperparameters/<name>.md`, following upstream's page templates with a `## Rust` section;
-  `regen --check` keeps them current. Pages cite sources as path plus item, without line anchors, so line shifts in
+  `docs --check` keeps the hosted artifact current without storing another generated documentation tree locally.
+  Pages cite sources as path plus item, without line anchors, so line shifts in
   runtime or pallet files change no page.
 - **Catalogs** in upstream's schema plus a `rust` object per entry (type, role, output, CLI line, or read method), so
   tools that consume upstream's catalogs read rtao's unchanged.
