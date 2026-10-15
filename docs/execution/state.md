@@ -28,6 +28,14 @@ changed wording, real duplicates and unrelated mappings. The basket generator's
 header order also needs hosted regeneration/adoption. Another ordinary hosted
 run must execute this source. No local build or test ran.
 
+Generation [38721766957](https://github.com/sam0x17/rtao/actions/runs/38721766957)
+at `65d4811` succeeds. Both archive digests, seventeen exact regular members
+and all 23 committed dependency inputs are verified before adoption. Its only
+generated-code change swaps the two basket header lines; all other generated
+interfaces and the entire parity inventory are unchanged. Role inventories
+remain 225/361/365/416 with core host disabled for core, validator and miner.
+The next normal run also includes the separately reviewed shield repair below.
+
 Source adds the remaining 62 reads and the blocking facade. All five read
 groups have fixture source and independent source reviews. Generation run
 [38715060741](https://github.com/sam0x17/rtao/actions/runs/38715060741) at
