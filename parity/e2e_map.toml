@@ -275,10 +275,10 @@ pending = "M5"
 pending = "M5"
 
 [tests."test_leases_read"]
-pending = "M6"
+rtao = "rtao_reads::m6_delegation::leases_preserve_cost_precision_perpetual_expiry_and_map_order"
 
 [tests."test_metagraph_fast_path_matches_runtime"]
-pending = "M6"
+rtao = "rtao_reads::m6_accounts::neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum"
 
 [tests."test_mev_shield_next_key_is_mlkem768"]
 pending = "M4"
@@ -311,7 +311,7 @@ pending = "M2"
 pending = "M5"
 
 [tests."test_quote_stake_slippage_and_fee"]
-pending = "M6"
+rtao = "rtao_reads::m6_staking::quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding"
 
 [tests."test_reads_catalog_nonempty"]
 rtao = "e2e::test_reads_catalog_nonempty"
@@ -332,7 +332,7 @@ pending = "M5"
 pending = "M4"
 
 [tests."test_subnets_all_batched"]
-pending = "M6"
+rtao = "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows"
 
 [tests."test_timelocked_commitment_reveals_plaintext"]
 pending = "M7"

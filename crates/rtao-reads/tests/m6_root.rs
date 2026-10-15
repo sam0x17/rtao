@@ -505,6 +505,7 @@ async fn turnover_bucket_uses_integer_refills_and_clamps_excess_availability() {
 }
 
 #[tokio::test]
+// upstream-e2e: sdk/bittensor-core/tests/e2e.rs::test_subnets_all_batched
 async fn subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows() {
     let (client, chain) = client(seed()).await;
     let before = chain.requests().len();
