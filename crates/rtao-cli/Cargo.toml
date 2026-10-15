@@ -22,7 +22,7 @@ rtao = { workspace = true, features = ["client", "reads", "tx", "intents", "wall
 rtao-catalog.workspace = true
 rtao-runtime.workspace = true
 rtao-rpc.workspace = true
-rtao-intents = { workspace = true, features = ["weights", "serving", "registration", "governance", "hyperparameters", "identity", "transfer"] }
+rtao-intents = { workspace = true, features = ["weights", "serving", "registration", "pow", "governance", "hyperparameters", "identity", "transfer"] }
 toml_edit.workspace = true
 serde_json.workspace = true
 serde.workspace = true
