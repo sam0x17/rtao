@@ -2295,6 +2295,14 @@ pub static PYTHON_TABLES: &[PythonTable] = &[
         end_line: 43,
     },
     PythonTable {
+        path: "sdk/python/bittensor/evm/networks.py",
+        name: "_WS_TO_LABEL",
+        value_json: "{\"dict\":[[\"wss://entrypoint-finney.opentensor.ai:443\",\"finney\"],[\"wss://lite.chain.opentensor.ai:443\",\"finney\"],[\"wss://test.finney.opentensor.ai:443\",\"test\"],[\"ws://127.0.0.1:9944\",\"local\"]]}",
+        blob: "e9ee94d16ddb1b89bf94dd94ec63f1484b5d06d7",
+        line: 48,
+        end_line: 53,
+    },
+    PythonTable {
         path: "sdk/python/bittensor/executor.py",
         name: "_MAX_SHIELDED_CIPHERTEXT_BYTES",
         value_json: "8192",
