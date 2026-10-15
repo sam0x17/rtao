@@ -362,6 +362,7 @@ impl Environment {
             .env("PATH", &self.path)
             .env("RTAO_TEMP_ROOT", &self.temporary)
             .env("TMPDIR", self.temporary.join("tmp"))
+            .env("RTAO_TEST_TMPDIR", self.temporary.join("tmp"))
             .env("CARGO_TARGET_DIR", self.temporary.join("build"))
             .env("CARGO_INCREMENTAL", "0")
             .env("CARGO_PROFILE_DEV_DEBUG", "0")

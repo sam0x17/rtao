@@ -1582,15 +1582,16 @@ mod tests {
                 package.join("LICENSE-PSF"),
                 include_bytes!("../../crates/rtao-primitives/LICENSE-PSF"),
             )?;
-            let notice = if self.0.join("NOTICE").is_file() {
+            let mut notice = if self.0.join("NOTICE").is_file() {
                 fs::read_to_string(self.0.join("NOTICE"))?
             } else {
                 include_str!("../../NOTICE").to_owned()
             };
-            fs::write(
-                self.0.join("NOTICE"),
-                format!("{notice}\n{}", cli_psf::NOTICE),
-            )?;
+            if !notice.contains(cli_psf::NOTICE) {
+                notice.push('\n');
+                notice.push_str(cli_psf::NOTICE);
+            }
+            fs::write(self.0.join("NOTICE"), notice)?;
             Ok(())
         }
     }
@@ -1640,8 +1641,18 @@ mod tests {
         for relative in ["crates/rtao-cli/LICENSE-PSF", "NOTICE"] {
             let fixture = Fixture::new()?;
             fixture.cli_psf()?;
+            check_licenses(&fixture.0, &[])?;
             let path = fixture.0.join(relative);
             let original = fs::read(&path)?;
+            if relative == "NOTICE" {
+                assert_eq!(
+                    std::str::from_utf8(&original)?
+                        .matches(cli_psf::NOTICE)
+                        .count(),
+                    1,
+                    "fixture must contain exactly one CLI notice for mutation"
+                );
+            }
             fs::remove_file(&path)?;
             assert!(
                 check_licenses(&fixture.0, &[]).is_err(),

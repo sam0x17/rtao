@@ -236,3 +236,20 @@ All 23 current input hashes and the unchanged package inventories were checked.
 The parity matrix changes only by adding D-041/D-042 with unverified oracle
 status; compatibility validation remains null/empty. The four outputs were
 adopted byte for byte. Normal check acceptance remains separate.
+
+## First complete hosted test enumeration
+
+Run [38684286794](https://github.com/sam0x17/rtao/actions/runs/38684286794)
+at `0fbf9bc` passed MSRV, features, no-host, supply and semver. The main job
+passed its source, generation, Clippy and dependency gates, then ran 1,678 tests:
+1,659 passed and 19 failed, with four other tests skipped. Doctests did not run
+because nextest failed. This is not M0 acceptance.
+
+Eighteen owner-pruning tests required `RTAO_TEST_TMPDIR`; the runner supplied
+only `RTAO_TEMP_ROOT` and `TMPDIR`. The shared gate environment now points the
+test variable at the same disposable `tmp` directory. The remaining failure
+was the CLI PSF mutation fixture: it appended a second full NOTICE section,
+so mutating one copy left another valid copy. The fixture now appends the
+section only when absent, verifies its initial validity and requires exactly
+one copy before mutation. The production attribution gate is unchanged.
+Both repairs need the next hosted test run; no local build or test was run.
