@@ -476,8 +476,9 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                         if dep.name == "rtao-core" && enabled == "offload" {
                             ensure!(
                                 matches!(owner, "rtao-client" | "rtao-wallet")
-                                    || (owner == "rtao-signer" && feature == "ledger"),
-                                "{owner}/{feature} enables offload outside client, wallet or signer/ledger"
+                                    || (owner == "rtao-signer"
+                                        && matches!(feature.as_str(), "ledger" | "vault")),
+                                "{owner}/{feature} enables offload outside client, wallet or signer/ledger|vault"
                             );
                         }
                     }
@@ -1328,6 +1329,28 @@ mod tests {
             seam.kind = "dev".into();
         }
         check_declarations(&[facade, package("rtao-client")], &workspace)?;
+        Ok(())
+    }
+
+    #[test]
+    fn signer_offload_is_limited_to_device_and_vault_cpu_work() -> Result<()> {
+        let workspace: DocumentMut = "[workspace]\n".parse()?;
+        let mut signer = package("rtao-signer");
+        signer.dependencies.push(dep("rtao-core"));
+        for feature in ["ledger", "vault"] {
+            signer.features.clear();
+            signer
+                .features
+                .insert(feature.into(), vec!["rtao-core/offload".into()]);
+            check_declarations(std::slice::from_ref(&signer), &workspace)?;
+        }
+        for feature in ["default", "extension", "test-util"] {
+            signer.features.clear();
+            signer
+                .features
+                .insert(feature.into(), vec!["rtao-core/offload".into()]);
+            ensure!(check_declarations(std::slice::from_ref(&signer), &workspace).is_err());
+        }
         Ok(())
     }
 
