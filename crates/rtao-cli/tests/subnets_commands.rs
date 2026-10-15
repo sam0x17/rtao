@@ -503,3 +503,296 @@ fn human_metagraph_spot_price_rounds_the_integer_quotient_once() -> TestResult {
     );
     Ok(())
 }
+
+#[test]
+fn inspection_arguments_match_python_and_hparams_alias_stays_hidden() -> TestResult {
+    for mut args in [
+        vec!["rtao", "s", "list"],
+        vec!["rtao", "subnets", "show", "7"],
+        vec!["rtao", "subnets", "hparams", "7", "--name", "kappa"],
+        vec!["rtao", "subnets", "burn-cost", "0"],
+        vec!["rtao", "subnets", "create-cost"],
+        vec!["rtao", "subnets", "price", "--netuid", "7"],
+        vec!["rtao", "subnets", "conviction", "--netuid", "7", "--all"],
+    ] {
+        args.push("--json");
+        let parsed = parse(&args)?;
+        let (mut ctx, _) = context(&parsed)?;
+        assert!(ctx.globals.json);
+        let Request::Inspect(request) = Request::from_matches(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?
+        else {
+            return Err("expected inspection".into());
+        };
+        if args.contains(&"hparams") {
+            assert_eq!(request.command, "hyperparameters");
+            assert_eq!(request.name.as_deref(), Some("kappa"));
+        }
+        if args.contains(&"--all") {
+            assert!(request.all);
+        }
+    }
+    for args in [
+        vec!["rtao", "subnets", "show", "--netuid", "7"],
+        vec!["rtao", "subnets", "price", "7"],
+        vec!["rtao", "subnets", "show", "4096"],
+        vec!["rtao", "subnets", "show", "-1"],
+    ] {
+        assert!(parse(&args).is_err());
+    }
+    let mut command = subnets::command()?;
+    let help = command.render_long_help().to_string();
+    assert!(help.contains("hyperparameters"));
+    assert!(!help.contains("hparams"));
+    let parsed = parse(&[
+        "rtao",
+        "--network",
+        "finney",
+        "subnets",
+        "show",
+        "7",
+        "--network",
+        "test",
+        "--json",
+    ])?;
+    let (ctx, _) = context(&parsed)?;
+    assert_eq!(ctx.globals.network, "test");
+    assert!(ctx.globals.json);
+    Ok(())
+}
+
+#[test]
+fn registration_age_and_conviction_eta_keep_gate_boundaries() {
+    assert_eq!(subnets::registered_note(10, 10), None);
+    assert_eq!(subnets::registered_note(11, 10), None);
+    assert_eq!(
+        subnets::registered_note(10, 11).as_deref(),
+        Some("just now")
+    );
+    assert_eq!(subnets::registered_note(10, 15).as_deref(), Some("~1m ago"));
+    assert_eq!(
+        subnets::registered_note(0, 7200).as_deref(),
+        Some("~1d ago")
+    );
+    assert_eq!(subnets::conviction_eta(None), "won't clear 18%");
+    assert_eq!(subnets::conviction_eta(Some(0)), "above 18%");
+    assert_eq!(subnets::conviction_eta(Some(1)), "18% in ~1m");
+    assert_eq!(subnets::conviction_eta(Some(300)), "18% in ~1h");
+    assert_eq!(subnets::conviction_eta(Some(7200)), "18% in ~1d");
+}
+
+#[tokio::test]
+async fn inspection_cost_and_price_use_real_reads_without_author_calls() -> TestResult {
+    let mut state = FakeState::try_default()?;
+    state.seed_python("SubtensorModule", "NetworksAdded", &[json!(7)], json!(true))?;
+    state.seed_python(
+        "SubtensorModule",
+        "Burn",
+        &[json!(7)],
+        json!(1_500_000_000u64),
+    )?;
+    state.seed_runtime(
+        "SubnetRegistrationRuntimeApi",
+        "get_network_registration_cost",
+        json!(2_000_000_001u64),
+    )?;
+    state.seed_runtime(
+        "SwapRuntimeApi",
+        "current_alpha_price",
+        json!(9_007_199_254_740_993u64),
+    )?;
+    let chain = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+    for (args, expected) in [
+        (
+            vec!["rtao", "subnets", "burn-cost", "7", "--json"],
+            json!({"burn_cost":"τ1.500000000","tao":1.5}),
+        ),
+        (
+            vec!["rtao", "subnets", "create-cost", "--json"],
+            json!({"create_cost":"τ2.000000001","tao":2.000000001}),
+        ),
+        (
+            vec!["rtao", "subnets", "price", "--netuid", "7", "--json"],
+            json!({"netuid":7,"price_rao":9_007_199_254_740_993u64,"tao_per_alpha":rtao::primitives::pyfmt::rao_to_f64(9_007_199_254_740_993)}),
+        ),
+    ] {
+        let parsed = parse(&args)?;
+        let (mut ctx, sink) = context(&parsed)?;
+        let request = Request::from_matches(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?;
+        subnets::execute(
+            &mut ctx,
+            &client,
+            &request,
+            SubmissionOptions::default(),
+            None,
+            &mut PromptHistory::default(),
+        )
+        .await?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            expected
+        );
+    }
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|r| r.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[test]
+fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
+    use rtao::primitives::DynBalance;
+    use rtao::reads::reads::m6_locks::{ConvictionEntry, SubnetConvictions};
+    let netuid = NetUid(7);
+    let balance = |rao| DynBalance::from_rao(rao, netuid);
+    let key = AccountId([21; 32]);
+    let data = SubnetConvictions {
+        netuid,
+        block: 100,
+        alpha_out: balance(10_000_000_000),
+        protocol_alpha: balance(0),
+        alpha_burned: balance(0),
+        eligible_alpha: balance(10_000_000_000),
+        threshold_alpha: balance(1_800_000_000),
+        total_locked_alpha: balance(1),
+        total_conviction_alpha: balance(1),
+        leader_hotkey: Some(key),
+        leader_blocks_to_threshold: None,
+        unlock_rate: 100,
+        maturity_rate: 50,
+        owner_hotkey: Some(key),
+        registered_at: 1,
+        ownership_changeable_at_block: 2_628_001,
+        hotkeys: vec![ConvictionEntry {
+            hotkey: key,
+            is_owner: true,
+            locked_alpha: balance(1),
+            conviction_alpha: balance(1),
+            pct_of_threshold: Some(1.0 / 1_800_000_000.0),
+            blocks_to_threshold: None,
+        }],
+    };
+    let sink = MemorySink::default();
+    let output = Output::new(
+        OutputOptions {
+            json_mode: true,
+            quiet: false,
+            network: None,
+        },
+        Arc::new(sink.clone()),
+    );
+    subnets::render_convictions(&output, &data, false)?;
+    let actual: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+    assert_eq!(actual["hotkeys"][0]["hotkey"], json!(key));
+    assert_eq!(actual["hotkeys"][0]["locked_alpha"], json!(0.000000001));
+    assert_eq!(actual["hotkeys"][0]["blocks_to_threshold"], Value::Null);
+    assert!(actual.get("protocol_alpha").is_none());
+    let human = MemorySink::default();
+    let output = Output::new(
+        OutputOptions {
+            json_mode: false,
+            quiet: false,
+            network: None,
+        },
+        Arc::new(human.clone()),
+    );
+    subnets::render_convictions(&output, &data, false)?;
+    let text = human.text(Stream::Stdout)?;
+    assert!(text.contains("1 negligible locks hidden"));
+    assert!(text.contains("gate is per-hotkey"));
+    assert!(text.contains("won't clear 18%"));
+    let all = MemorySink::default();
+    let output = Output::new(
+        OutputOptions {
+            json_mode: false,
+            quiet: false,
+            network: None,
+        },
+        Arc::new(all.clone()),
+    );
+    subnets::render_convictions(&output, &data, true)?;
+    assert!(
+        !all.text(Stream::Stdout)?
+            .contains("negligible locks hidden")
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn subnet_list_orders_emissions_then_native_netuid_and_root_has_no_pool() -> TestResult {
+    let mut state = FakeState::try_default()?;
+    for (id, emission) in [(0, 5_000_000u64), (1, 2_000_000), (2, 2_000_000)] {
+        for (name, value) in [
+            ("NetworksAdded", json!(true)),
+            ("Tempo", json!(10)),
+            ("Burn", json!(1_000_000_000u64)),
+            ("SubnetworkN", json!(id + 1)),
+            ("MaxAllowedUids", json!(256)),
+            ("SubnetTaoInEmission", json!(emission)),
+        ] {
+            state.seed_python("SubtensorModule", name, &[json!(id)], value)?;
+        }
+    }
+    state.seed_runtime("SwapRuntimeApi","current_alpha_price_all",json!([{"netuid":0,"price":1_000_000_000},{"netuid":1,"price":500_000_000},{"netuid":2,"price":250_000_000}]))?;
+    let chain = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+    let parsed = parse(&["rtao", "subnets", "list", "--json"])?;
+    let (mut ctx, sink) = context(&parsed)?;
+    let request = Request::from_matches(
+        &mut ctx,
+        parsed.subcommand().ok_or("group")?.1,
+        &mut PromptHistory::default(),
+    )?;
+    subnets::execute(
+        &mut ctx,
+        &client,
+        &request,
+        SubmissionOptions::default(),
+        None,
+        &mut PromptHistory::default(),
+    )
+    .await?;
+    let records: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+    assert_eq!(
+        records
+            .as_array()
+            .ok_or("records")?
+            .iter()
+            .map(|v| v["netuid"].clone())
+            .collect::<Vec<_>>(),
+        vec![json!(0), json!(1), json!(2)]
+    );
+    assert_eq!(records[0]["price_tao_per_alpha"], Value::Null);
+    assert_eq!(records[0]["emission_tao_per_day"], Value::Null);
+    assert_eq!(records[1]["price_tao_per_alpha"], json!(0.5));
+    assert_eq!(records[1]["emission_tao_per_day"], json!(14.4));
+    assert_eq!(records[1]["url"], Value::Null);
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|r| r.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}

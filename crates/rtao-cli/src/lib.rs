@@ -27,6 +27,8 @@ pub mod output;
 pub mod process;
 /// Terminal prompts and missing-input handling.
 pub mod prompt;
+/// Root fund pricing, public positions and shared presentation helpers.
+pub mod root_helpers;
 /// Argv-secret warnings and clipboard handling.
 pub mod secrets;
 

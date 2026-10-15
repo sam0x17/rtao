@@ -1,0 +1,408 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/lock.py and collateral.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+//! Lock/collateral argument semantics without nodes or wallet unlocking.
+use rtao_cli::{
+    application,
+    books::Books,
+    commands::{collateral, conviction},
+    context::AppContext,
+    globals::Globals,
+    prompt::{PromptError, PromptHistory, Terminal},
+};
+use serde_json::{Map, json};
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
+type Result = std::result::Result<(), Box<dyn std::error::Error>>;
+struct NoTerminal;
+impl Terminal for NoTerminal {
+    fn stdin_is_tty(&self) -> bool {
+        false
+    }
+    fn stderr_is_tty(&self) -> bool {
+        false
+    }
+    fn read_line(&mut self, _: &str) -> std::result::Result<String, PromptError> {
+        Err(PromptError::Unavailable)
+    }
+    fn read_secret(
+        &mut self,
+        _: &str,
+    ) -> std::result::Result<rtao::wallet::SecretString, PromptError> {
+        Err(PromptError::Unavailable)
+    }
+    fn message(&mut self, _: &str) -> std::result::Result<(), PromptError> {
+        Ok(())
+    }
+}
+fn tree() -> std::result::Result<clap::Command, rtao_cli::error::CliError> {
+    Ok(application::command_tree([
+        conviction::command()?,
+        collateral::command()?,
+    ]))
+}
+fn context(
+    parsed: &clap::ArgMatches,
+) -> std::result::Result<AppContext, Box<dyn std::error::Error>> {
+    let (family, group) = parsed.subcommand().ok_or("family")?;
+    let leaf = group.subcommand().ok_or("leaf")?.1;
+    let config = Map::new();
+    let mut globals =
+        Globals::resolve(parsed, &config, Path::new("/isolated/no-wallet"), |_| None)?;
+    let reserved = if family == "conviction" {
+        conviction::reserved(group)?
+    } else {
+        collateral::reserved(group)?
+    };
+    globals.apply_with_env(leaf, &reserved, |_| None)?;
+    Ok(AppContext::new(
+        globals,
+        config,
+        Books::default(),
+        Arc::new(Mutex::new(Box::new(NoTerminal))),
+    ))
+}
+#[test]
+fn mode_and_accept_require_one_unambiguous_choice() -> Result {
+    for args in [
+        vec!["rtao", "conviction", "mode", "--netuid", "3"],
+        vec![
+            "rtao",
+            "conviction",
+            "mode",
+            "--netuid",
+            "3",
+            "--perpetual",
+            "--decaying",
+        ],
+        vec!["rtao", "conviction", "accept"],
+        vec!["rtao", "conviction", "accept", "--allow", "--reject"],
+    ] {
+        assert!(tree()?.try_get_matches_from(args).is_err());
+    }
+    for (name, flag, enabled) in [
+        ("mode", "--perpetual", true),
+        ("mode", "--decaying", false),
+        ("accept", "--allow", false),
+        ("accept", "--reject", true),
+    ] {
+        let mut args = vec!["rtao", "conviction", name, flag];
+        if name == "mode" {
+            args.extend(["--netuid", "3"])
+        }
+        let parsed = tree()?.try_get_matches_from(args)?;
+        let mut ctx = context(&parsed)?;
+        let tx = conviction::tx_requests(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?;
+        assert_eq!(tx.len(), 1);
+        assert_eq!(
+            tx[0].op,
+            if name == "mode" {
+                "set_perpetual_lock"
+            } else {
+                "set_reject_locked_alpha"
+            }
+        );
+        assert_eq!(tx[0].args["enabled"], json!(enabled));
+    }
+    Ok(())
+}
+#[test]
+fn perpetual_add_prepares_mode_before_lock_and_preserves_exact_amount() -> Result {
+    let parsed = tree()?.try_get_matches_from([
+        "rtao",
+        "conviction",
+        "add",
+        "--netuid",
+        "3",
+        "--amount",
+        "0.000000001",
+        "--perpetual",
+        "--period",
+        "64",
+        "--hotkey",
+        &rtao::primitives::AccountId([1; 32]).to_string(),
+    ])?;
+    let mut ctx = context(&parsed)?;
+    let tx = conviction::tx_requests(
+        &mut ctx,
+        parsed.subcommand().ok_or("group")?.1,
+        &mut PromptHistory::default(),
+    )?;
+    assert_eq!(tx.len(), 2);
+    assert_eq!(tx[0].op, "set_perpetual_lock");
+    assert_eq!(tx[1].op, "lock_stake");
+    assert_eq!(
+        tx[0].args,
+        json!({"netuid":3,"enabled":true})
+            .as_object()
+            .ok_or("args")?
+            .clone()
+    );
+    assert_eq!(tx[1].args["amount_alpha"], json!("0.000000001"));
+    assert!(tx.iter().all(|t| t.period == Some(64)));
+    Ok(())
+}
+#[test]
+fn collateral_all_and_floor_alias_use_semantic_intents() -> Result {
+    for (args, op, field, value) in [
+        (
+            vec!["rtao", "collateral", "add", "--netuid", "3", "--all"],
+            "add_collateral",
+            "amount_alpha",
+            "all",
+        ),
+        (
+            vec![
+                "rtao",
+                "collateral",
+                "set-min",
+                "--netuid",
+                "3",
+                "--amount",
+                "0",
+            ],
+            "set_min_collateral",
+            "min_alpha",
+            "0",
+        ),
+    ] {
+        let mut args = args;
+        let hotkey = rtao::primitives::AccountId([1; 32]).to_string();
+        args.extend(["--hotkey", hotkey.as_str()]);
+        let parsed = tree()?.try_get_matches_from(args)?;
+        let mut ctx = context(&parsed)?;
+        let tx = collateral::tx_requests(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?;
+        assert_eq!(tx.len(), 1);
+        assert_eq!(tx[0].op, op);
+        assert_eq!(tx[0].args[field], json!(value));
+    }
+    Ok(())
+}
+#[test]
+fn reads_have_required_subnet_and_optional_coldkey() -> Result {
+    let parsed = tree()?.try_get_matches_from([
+        "rtao",
+        "collateral",
+        "show",
+        "--netuid",
+        "3",
+        "--hotkey",
+        "named",
+    ])?;
+    let leaf = parsed
+        .subcommand()
+        .ok_or("group")?
+        .1
+        .subcommand()
+        .ok_or("leaf")?
+        .1;
+    assert!(leaf.get_one::<String>("coldkey_ss58").is_none());
+    assert!(
+        tree()?
+            .try_get_matches_from(["rtao", "collateral", "list"])
+            .is_err()
+    );
+    assert!(
+        tree()?
+            .try_get_matches_from(["rtao", "conviction", "targeting"])
+            .is_err()
+    );
+    assert!(
+        tree()?
+            .try_get_matches_from(["rtao", "conviction", "list", "--dust"])
+            .is_ok()
+    );
+    Ok(())
+}
+
+async fn fake_client()
+-> std::result::Result<(rtao::client::Client, rtao_testkit::FakeChain), Box<dyn std::error::Error>>
+{
+    use rtao::{
+        client::{Client, ClientConfig, Network},
+        primitives::AccountId,
+    };
+    use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+    let cold = AccountId([7; 32]);
+    let hot = AccountId([8; 32]);
+    let other = AccountId([9; 32]);
+    let mut state = FakeState::try_default()?;
+    for (item, keys, value) in [
+        ("AccountFlags", vec![json!(cold)], json!(1)),
+        ("Owner", vec![json!(hot)], json!(cold)),
+        (
+            "IdentitiesV2",
+            vec![json!(cold)],
+            json!({"name":"chain owner","url":""}),
+        ),
+        (
+            "Lock",
+            vec![json!(cold), json!(1), json!(hot)],
+            json!({"locked_mass":100,"conviction":{"bits":0},"last_update":0}),
+        ),
+        (
+            "LockingColdkeys",
+            vec![json!(1), json!(hot), json!(cold)],
+            json!(null),
+        ),
+        ("DecayingLock", vec![json!(cold), json!(1)], json!(false)),
+        (
+            "MinerCollateral",
+            vec![json!(1), json!(hot), json!(cold)],
+            json!({"locked":300,"min_locked":100,"earned":17,"drain_ratio":{"bits":0}}),
+        ),
+        (
+            "MinerCollateral",
+            vec![json!(1), json!(hot), json!(other)],
+            json!({"locked":150,"min_locked":200,"earned":0,"drain_ratio":{"bits":0}}),
+        ),
+        ("CollateralLockShare", vec![json!(1)], json!(0)),
+        ("CollateralDrainRatio", vec![json!(1)], json!({"bits":0})),
+    ] {
+        state.seed_python("SubtensorModule", item, &keys, value)?;
+    }
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_coldkey_lock",
+        json!({"locked_mass":100,"conviction":{"bits":0},"last_update":0}),
+    )?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_hotkey_conviction",
+        json!({"bits":42u128<<64}),
+    )?;
+    state.seed_runtime(
+        "SwapRuntimeApi",
+        "current_alpha_price_all",
+        json!([{"netuid":1,"price":1_000_000_000}]),
+    )?;
+    let chain = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    Ok((
+        Client::from_rpc(RpcClient::new(chain.clone()), config).await?,
+        chain,
+    ))
+}
+fn captured(ctx: &mut AppContext, json_mode: bool) -> rtao_cli::output::MemorySink {
+    use rtao_cli::output::{MemorySink, Output, OutputOptions};
+    let sink = MemorySink::default();
+    ctx.output = Output::new(
+        OutputOptions {
+            json_mode,
+            quiet: false,
+            network: None,
+        },
+        Arc::new(sink.clone()),
+    );
+    sink
+}
+#[tokio::test]
+async fn public_reads_preserve_records_owner_default_and_never_submit() -> Result {
+    use rtao::primitives::AccountId;
+    use rtao_cli::output::Stream;
+    let (client, chain) = fake_client().await?;
+    let cold = AccountId([7; 32]).to_string();
+    let hot = AccountId([8; 32]).to_string();
+    let other = AccountId([9; 32]).to_string();
+    for (family, command, extra) in [
+        ("conviction", "list", vec!["--coldkey", cold.as_str()]),
+        ("conviction", "show", vec!["--coldkey", cold.as_str()]),
+        ("conviction", "targeting", vec!["--hotkey", hot.as_str()]),
+        ("collateral", "show", vec!["--hotkey", hot.as_str()]),
+        (
+            "collateral",
+            "show",
+            vec!["--hotkey", hot.as_str(), "--coldkey", other.as_str()],
+        ),
+        ("collateral", "list", vec![]),
+    ] {
+        let mut args = vec!["rtao", family, command, "--netuid", "1"];
+        args.extend(extra);
+        let parsed = tree()?.try_get_matches_from(args)?;
+        let group = parsed.subcommand().ok_or("group")?.1;
+        let mut ctx = context(&parsed)?;
+        if family == "conviction" && command == "targeting" {
+            // Python ignores empty contact labels; they must not suppress
+            // the coldkey's published identity in machine records.
+            ctx.books.addresses = vec![json!({"address":cold,"name":""})];
+        }
+        let sink = captured(&mut ctx, true);
+        if family == "conviction" {
+            let request = conviction::prepare_read(&mut ctx, group, &mut PromptHistory::default())?;
+            conviction::execute_prepared_read(&ctx, &client, &request).await?;
+        } else {
+            let request = collateral::prepare_read(&mut ctx, group, &mut PromptHistory::default())?;
+            collateral::execute_prepared_read(&ctx, &client, &request).await?;
+        }
+        let payload: serde_json::Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        if family == "conviction" && command == "list" {
+            assert_eq!(payload[0]["locked_amount"], json!(0.0000001));
+            assert_eq!(payload[0]["hotkey"], json!(hot));
+        }
+        if family == "conviction" && command == "targeting" {
+            assert_eq!(payload[0]["name"], json!("chain owner"));
+        }
+        if family == "conviction" && command == "show" {
+            assert!(payload["lock"].is_object());
+            assert!(payload["conviction"].is_object());
+        }
+        if family == "collateral" && command == "show" {
+            let explicit = group
+                .subcommand()
+                .ok_or("leaf")?
+                .1
+                .get_one::<String>("coldkey_ss58")
+                .is_some();
+            assert_eq!(
+                payload["collateral"]["coldkey"],
+                json!(if explicit {
+                    other.as_str()
+                } else {
+                    cold.as_str()
+                })
+            );
+            assert!(payload["policy"].is_object());
+        }
+    }
+    assert!(chain.mutate_state(|s| s.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+#[tokio::test]
+async fn empty_human_lock_view_still_reports_acceptance_and_dust() -> Result {
+    use rtao_cli::output::Stream;
+    let (client, chain) = fake_client().await?;
+    let cold = rtao::primitives::AccountId([7; 32]).to_string();
+    let parsed =
+        tree()?.try_get_matches_from(["rtao", "conviction", "list", "--coldkey", cold.as_str()])?;
+    let mut ctx = context(&parsed)?;
+    let sink = captured(&mut ctx, false);
+    let request = conviction::prepare_read(
+        &mut ctx,
+        parsed.subcommand().ok_or("group")?.1,
+        &mut PromptHistory::default(),
+    )?;
+    conviction::execute_prepared_read(&ctx, &client, &request).await?;
+    let output = format!(
+        "{}{}",
+        sink.text(Stream::Stdout)?,
+        sink.text(Stream::Stderr)?
+    );
+    assert!(output.contains("none"));
+    assert!(output.contains("1 dust subnet hidden"));
+    assert!(output.contains("incoming locked alpha: accepted"));
+    assert!(chain.mutate_state(|s| s.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
