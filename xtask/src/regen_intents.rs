@@ -436,6 +436,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             )
         } else if spec.name == "set_children" {
             "crate::children::children_json(self)".to_owned()
+        } else if spec.name == "swap_basket_many" {
+            "crate::staking_baskets::many_json(self)".to_owned()
+        } else if spec.name == "fund_evm_key" {
+            "crate::evm::fund_json(self)".to_owned()
         } else {
             format!("crate::args_with_op({:?},self)", spec.name)
         };
@@ -624,6 +628,14 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         } else if spec.name == "set_children" {
             format!(
                 "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::children::canonical_children(&mut intent.children)?;"
+            )
+        } else if spec.name == "swap_basket_many" {
+            format!(
+                "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::staking_baskets::canonical_legs(&mut intent.legs)?;"
+            )
+        } else if spec.name == "fund_evm_key" {
+            format!(
+                "crate::evm::canonicalize_fund_input(&mut args)?; let intent:super::interfaces::{class}=serde_json::from_value(args)?;"
             )
         } else {
             format!("let intent:super::interfaces::{class}=serde_json::from_value(args)?;")

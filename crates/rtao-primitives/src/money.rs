@@ -628,8 +628,8 @@ impl Money {
     /// Exact decimal token amount for Python's intent serialization.
     pub fn to_decimal_string(&self) -> String {
         match self {
-            Self::Untagged { rao } => decimal_string(*rao),
-            Self::Tagged(balance) => balance.to_decimal_string(),
+            Self::Untagged { rao } => money_decimal_string(*rao),
+            Self::Tagged(balance) => money_decimal_string(balance.rao),
         }
     }
 
@@ -777,6 +777,14 @@ fn decimal_string(rao: u64) -> String {
     let integer = rao.checked_div(RAO_PER_TAO).unwrap_or_default();
     let fraction = rao.checked_rem(RAO_PER_TAO).unwrap_or_default();
     format!("{integer}.{fraction:09}")
+}
+
+// Python Intent._encode uses format(balance.decimal, "f"). Integer division
+// by 10^9 in Decimal retains only significant fractional digits; presentation
+// strings for balances still use their separate fixed-nine-digit formatter.
+fn money_decimal_string(rao: u64) -> String {
+    let text = decimal_string(rao);
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 fn parse_decimal(input: &str) -> Result<u64, UnitError> {
@@ -960,7 +968,9 @@ mod serde_impl {
     impl Serialize for ResolvedAmount {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             match self {
-                Self::Exact(balance) => serializer.serialize_str(&balance.to_decimal_string()),
+                Self::Exact(balance) => {
+                    serializer.serialize_str(&money_decimal_string(balance.rao))
+                }
                 Self::All => serializer.serialize_str("all"),
             }
         }
@@ -1370,6 +1380,29 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn native_balance_keeps_valid_chain_json() -> Result<(), Box<dyn std::error::Error>> {
+        // Pinned intents/base.py::_encode and Balance.decimal define amount
+        // strings independently of fixed-nine-place human balance displays.
+        for (rao, expected) in [
+            (0, "0"),
+            (1, "0.000000001"),
+            (10, "0.00000001"),
+            (100_000_000, "0.1"),
+            (1_000_000_000, "1"),
+            (1_250_000_000, "1.25"),
+            (u64::MAX, "18446744073.709551615"),
+        ] {
+            for money in [
+                Money::from_rao(rao),
+                Money::Tagged(DynBalance::from_rao(rao, NetUid(42))),
+            ] {
+                assert_eq!(serde_json::to_value(&money)?, expected);
+                assert_eq!(serde_json::to_value(Amount::Exact(money))?, expected);
+            }
+            assert_eq!(
+                serde_json::to_value(ResolvedAmount::Exact(DynBalance::from_rao(rao, NetUid(42))))?,
+                expected
+            );
+        }
         let money = Money::parse("18446744073.709551615")?;
         let encoded = serde_json::to_string(&money)?;
         assert_eq!(encoded, "\"18446744073.709551615\"");
