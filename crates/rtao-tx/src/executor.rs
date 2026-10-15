@@ -921,15 +921,10 @@ impl Executor {
                 ChainError::from_pool(&error),
                 None,
             )),
-            Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown { hash })) => {
-                Ok(ExtrinsicResult::rejected(
-                    ChainError::new(
-                        rtao_rpc::SubmitError::FateUnknown { hash }.to_string(),
-                        None,
-                    ),
-                    Some(rtao_primitives::H256(hash.0)),
-                ))
-            }
+            Err(error) if error.unknown_fate_hash().is_some() => Ok(ExtrinsicResult::rejected(
+                ChainError::new(error.to_string(), None),
+                error.unknown_fate_hash(),
+            )),
             Err(SubmitFailure::Expired { expiry, .. }) => Ok(ExtrinsicResult::rejected(
                 ChainError::with_code(
                     format!("mortal transaction expired at block {expiry} without inclusion"),
@@ -1123,13 +1118,10 @@ impl Executor {
                         None,
                     ));
                 }
-                Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown { hash })) => {
+                Err(error) if error.unknown_fate_hash().is_some() => {
                     return Ok(ExtrinsicResult::rejected(
-                        ChainError::new(
-                            rtao_rpc::SubmitError::FateUnknown { hash }.to_string(),
-                            None,
-                        ),
-                        Some(rtao_primitives::H256(hash.0)),
+                        ChainError::new(error.to_string(), None),
+                        error.unknown_fate_hash(),
                     ));
                 }
                 Err(SubmitFailure::Expired { hash: _, expiry }) => {

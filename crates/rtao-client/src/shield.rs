@@ -4,13 +4,15 @@
 use crate::{
     BlockRef, CallBytes, Client, ClientError, ExtrinsicReport, Mortality, Period, SubmitFailure,
     SubmitOptions, ViewExt, Wait,
-    submit::{OperationLimit, SubmissionLimits, submission_timeout_error, unknown_fate},
+    submit::{
+        OperationLimit, SubmissionAttempt, SubmissionLimits, submission_attempt_error, unknown_fate,
+    },
 };
 use rtao_core::CoreError;
 use rtao_primitives::{AccountId, Balance, CryptoType, H256, Tao};
 use rtao_signer::{SignPurpose, Signer};
 use serde_json::json;
-use std::{sync::OnceLock, time::Duration};
+use std::time::Duration;
 
 /// The only mortal periods accepted by the runtime's shield mortality check.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -154,7 +156,7 @@ impl Client {
             Wait::Inclusion
         };
         let limits = SubmissionLimits::new(&submit)?;
-        let attempted_hash = OnceLock::new();
+        let attempted_hash = SubmissionAttempt::default();
         let operation = async {
             limits.admission.run(self, self.ensure_signing()).await?;
             if let Some(max_fee) = opts.max_fee {
@@ -289,9 +291,8 @@ impl Client {
                     drop(carrier_lease);
                     drop(inner_lease.take());
                     let error =
-                        submission_timeout_error(self, signer.account(), error, &attempted_hash);
-                    if (submit.reconcile && unknown_fate(&error))
-                        || matches!(error, SubmitFailure::Retracted { .. })
+                        submission_attempt_error(self, signer.account(), error, &attempted_hash);
+                    if (submit.reconcile && unknown_fate(&error)) || attempted_hash.was_retracted()
                     {
                         limits.full.check(self)?;
                         self.reconcile(hash, unsigned.submission_head(), unsigned.expiry())
@@ -359,7 +360,7 @@ impl Client {
             Ok(report)
         };
         limits.full.run(self, operation).await.map_err(|error| {
-            submission_timeout_error(self, signer.account(), error, &attempted_hash)
+            submission_attempt_error(self, signer.account(), error, &attempted_hash)
         })
     }
 
