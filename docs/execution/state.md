@@ -16,6 +16,17 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Run [38759055202](https://github.com/sam0x17/rtao/actions/runs/38759055202)
+is terminal: all five supporting jobs, main compilation and strict Clippy pass.
+Parity stops before tests on D055's incorrect `client::tests` module path.
+The unchanged fixture is declared in `client::attempt_budget_tests`; correct
+only its registered witness path. Its body preserves completed oversized-body
+refusals across both timing boundaries, without sleeps or retries. Evidence is
+`check-38759055202.json`, with the full raw-log digest. Do not infer nextest,
+doctest or docs success. Compatibility refresh `38761443333` at `a9a7ea5`
+predates this register correction; its matrix cannot be adopted as current.
+The corrected source requires a fresh hosted report followed by normal CI.
+
 Normal run [38759055202](https://github.com/sam0x17/rtao/actions/runs/38759055202)
 at `4000bd0` passes all five supporting jobs; main check remains in progress at
 inspection. The final corrected reveal-parser rereview finds no remaining
