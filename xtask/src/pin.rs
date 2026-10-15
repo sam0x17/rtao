@@ -36,6 +36,7 @@ struct Options {
     dry_run: bool,
     prepare_candidate: bool,
     resolve_only: bool,
+    prepare_cache: bool,
 }
 
 fn options(args: Vec<String>) -> Result<Options> {
@@ -69,6 +70,7 @@ fn options(args: Vec<String>) -> Result<Options> {
             "--dry-run" if !result.dry_run => result.dry_run = true,
             "--prepare-candidate" if !result.prepare_candidate => result.prepare_candidate = true,
             "--resolve-only" if !result.resolve_only => result.resolve_only = true,
+            "--prepare-cache" if !result.prepare_cache => result.prepare_cache = true,
             _ => bail!("unknown pin argument {arg:?}"),
         }
     }
@@ -116,6 +118,19 @@ fn options(args: Vec<String>) -> Result<Options> {
     ensure!(
         !result.resolve_only || (result.check && result.parity.is_some()),
         "--resolve-only requires --parity <vN|auto> --check"
+    );
+    ensure!(
+        !result.prepare_cache
+            || (result.check
+                && !result.networks
+                && result.parity.is_none()
+                && result.core_branch.is_none()
+                && !result.force
+                && !result.plan
+                && !result.dry_run
+                && !result.prepare_candidate
+                && !result.resolve_only),
+        "--prepare-cache requires plain --check and cannot change pins"
     );
     Ok(result)
 }
@@ -186,6 +201,9 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
         );
         let pins = current.as_ref().context("canary pins missing")?;
         let repo = cached_repo(root)?;
+        if opts.prepare_cache {
+            prepare_check_cache(&repo, pins)?;
+        }
         verify_pin_identity(&repo, pins)?;
         crate::core_canary::verify(root, pins)?;
         crate::metadata_pin::verify(root, pins)?;
@@ -373,6 +391,9 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
     } else {
         let current = current
             .context("upstream.toml is missing; bootstrap with pin --parity auto --check")?;
+        if opts.prepare_cache {
+            prepare_check_cache(&repo, &current)?;
+        }
         verify_pin_identity(&repo, &current)?;
         verify_manifest(root, &current)?;
         crate::metadata_pin::verify(root, &current)?;
@@ -381,6 +402,19 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
         println!(
             "Committed core and parity pins, manifests, fingerprint, metadata and Cargo.lock verified"
         );
+    }
+    Ok(())
+}
+
+// The upstream core projection follows the upstream lock, which can contain
+// versions absent from rtao's separate lock. Fetch that exact source graph
+// before offline verification on a fresh runner, without changing either pin.
+fn prepare_check_cache(repo: &Path, pins: &DocumentMut) -> Result<()> {
+    let core = pin_string(pins, "core", "commit")?;
+    let parity = pin_string(pins, "parity", "commit")?;
+    crate::fingerprint::prepare_source_cache(repo, core)?;
+    if parity != core {
+        crate::fingerprint::prepare_source_cache(repo, parity)?;
     }
     Ok(())
 }
@@ -1322,6 +1356,15 @@ mod tests {
             .is_err()
         );
         ensure!(options(vec!["--check".into(), "--unknown".into()]).is_err());
+        assert!(options(vec!["--check".into(), "--prepare-cache".into()])?.prepare_cache);
+        for arguments in [
+            vec!["--prepare-cache"],
+            vec!["--prepare-cache", "--check", "--networks"],
+            vec!["--prepare-cache", "--check", "--parity", "v478"],
+            vec!["--prepare-cache", "--check", "--prepare-cache"],
+        ] {
+            assert!(options(arguments.into_iter().map(str::to_owned).collect()).is_err());
+        }
         Ok(())
     }
 

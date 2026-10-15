@@ -130,3 +130,24 @@ symlink-target inspection and virtual-environment discovery found no live
 dependencies. The pinned tools, advisory cache and shared build cache were
 retained during that earlier verification. Q30's completed cleanup has since
 removed the retired task root in full.
+
+## First hosted runner findings, 2026-10-15
+
+Checkpoint `450c914335daa6a5da76a6c30908186e84f05e6e` starts the real six-job
+workflow at https://github.com/sam0x17/rtao/actions/runs/38680556857.
+The check and no-host jobs compiled the native client but exposed missing
+source caches before their offline graph checks:
+
+- The upstream core projection follows upstream's separate lock, which needs
+  `bitcoin-internals` through an older `bitcoin_hashes` than the workspace.
+  A workspace-only fetch cannot prepare that graph. The check job now calls
+  `pin --check --prepare-cache` to fetch the exact committed core/parity
+  projection before the unchanged offline `pin --check`. The mode cannot
+  change pins or combine with release/network/candidate modes.
+- The no-host job compiled its two selected profiles, then its all-target
+  dependency audit needed optional `aes-ctr` sources not used by those builds.
+  It now fetches the locked workspace graph before running the audit.
+
+These repairs prepare disposable hosted caches; they retain all source,
+identity, lock and offline checks. Formatting and source review pass. Their
+current Rust tests and the complete jobs still need the next hosted run.

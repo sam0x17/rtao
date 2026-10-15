@@ -121,6 +121,9 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
         "check" => {
             let mut steps = vec![
                 xtask(&["import-upstream", "--verify-only"]),
+                // The upstream core has its own pinned lock. Workspace fetch
+                // alone cannot populate every version needed by its projection.
+                xtask(&["pin", "--check", "--prepare-cache"]),
                 xtask(&["pin", "--check"]),
                 cargo(&["fmt", "--all", "--check"]),
                 cargo(&[
