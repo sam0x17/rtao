@@ -507,7 +507,6 @@ async fn receipt_snapshot(
     if success {
         assert!(result.error.is_none());
     } else {
-        assert!(result.events.is_empty());
         assert_eq!(
             result
                 .error
@@ -523,8 +522,8 @@ async fn receipt_snapshot(
             result.block_hash.context("resolved receipt hash")?,
         ))
         .await?;
-    // The Python-shaped facade omits failed events. Preserve the failure
-    // receipt assertion against actual decoded events at its pinned block.
+    // D-023 retains failed receipt events for native multisig/recovery checks.
+    // Compare both outcomes with actual decoded events at the pinned block.
     let events = snapshot.events().await?;
     assert!(events.records().iter().any(|event| event.matches(
         "System",
@@ -534,9 +533,7 @@ async fn receipt_snapshot(
             "ExtrinsicFailed"
         }
     )));
-    if success {
-        assert_eq!(result.events.as_slice(), events.records());
-    }
+    assert_eq!(result.events.as_slice(), events.records());
     assert_ne!(snapshot.block().hash, before.block().hash);
     assert_eq!(
         snapshot.block().number,

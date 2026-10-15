@@ -508,6 +508,20 @@ async fn collateral_list_preserves_order_full_json_and_renders_nonempty_and_empt
             json!({"locked":500,"min_locked":400,"earned":23,"drain_ratio":{"bits":2u128<<64}}),
         )?;
         state.seed_python("SubtensorModule", "Uids", &[json!(1), json!(hot)], json!(4))?;
+        // FakeState's imported Python defaults return UID 0 for unknown keys.
+        // This position explicitly represents a deregistered hotkey.
+        let entry = state
+            .runtime
+            .storage_entry("SubtensorModule", "Uids")
+            .ok_or("Uids metadata")?;
+        let key = state.runtime.storage_key(
+            entry,
+            &[
+                rtao::core::codec::Value::Uint(1),
+                rtao::core::codec::Value::Str(retired.to_string()),
+            ],
+        )?;
+        state.seed_encoded(key, None);
         Ok(())
     })?;
     let expected = json!([

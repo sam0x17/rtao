@@ -1002,6 +1002,18 @@ async fn finalized_pending_approval_retains_one_journal_and_requires_same_timepo
     assert!(error.to_string().contains("remaining approvals"));
     assert_eq!(session.report().batches, 0);
     let recorded: Json = serde_json::from_slice(&fs::read(&f.recovery)?)?;
+    assert_eq!(
+        recorded["receipt"]["block_hash"],
+        json!(format!(
+            "0x{}",
+            hex::encode(
+                receipt
+                    .block_hash
+                    .ok_or_else(|| anyhow::anyhow!("receipt hash"))?
+                    .0
+            )
+        ))
+    );
     assert_eq!(recorded["approval_confirmed"], json!(true));
     assert_eq!(recorded["receipt"]["inclusion"], json!("Finalized"));
     assert_eq!(
@@ -1065,6 +1077,30 @@ async fn finalized_pending_approval_retains_one_journal_and_requires_same_timepo
     assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 2);
     f.owner.client().close().await;
     Ok(())
+}
+
+#[test]
+fn retained_receipt_hash_accepts_current_hex_and_legacy_arrays_but_refuses_malformed_values() {
+    let bytes: [u8; 32] =
+        std::array::from_fn(|index| u8::try_from(index).expect("32-byte position"));
+    for value in [json!(format!("0x{}", hex::encode(bytes))), json!(bytes)] {
+        assert_eq!(receipt_block_hash(&value), Some(H256(bytes)));
+    }
+    for value in [
+        Json::Null,
+        json!({"hash":bytes}),
+        json!(hex::encode(bytes)),
+        json!(format!("0x{}", "gg".repeat(32))),
+        json!(format!("0x{}", "00".repeat(31))),
+        json!(format!("0x{}", "00".repeat(33))),
+        json!(vec![0; 31]),
+        json!(vec![0; 33]),
+        json!(vec![256; 32]),
+        json!(vec![-1; 32]),
+        json!(vec![1.0; 32]),
+    ] {
+        assert_eq!(receipt_block_hash(&value), None, "{value}");
+    }
 }
 
 struct CountingSigner {

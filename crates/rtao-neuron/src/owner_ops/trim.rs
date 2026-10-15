@@ -1213,8 +1213,8 @@ impl SubmissionJournal {
         {
             return Err(self.unresolved());
         }
-        let hash: H256 = serde_json::from_value(record["receipt"]["block_hash"].clone())
-            .map_err(|_| self.unresolved())?;
+        let hash = receipt_block_hash(&record["receipt"]["block_hash"])
+            .ok_or_else(|| self.unresolved())?;
         let included = client.at(BlockRef::Hash(hash)).await?;
         let finalized = client.at(BlockRef::Finalized).await?;
         let canonical = client.at(BlockRef::Number(included.block().number)).await?;
@@ -1550,6 +1550,28 @@ fn multisig_identity(record: &Json) -> Result<(AccountId, [u8; 32]), TxError> {
         .try_into()
         .map_err(|_| invalid("retained multisig call hash must have 32 bytes"))?;
     Ok((account, hash))
+}
+
+// Current Python-shaped results use hex; older journals used H256's raw
+// serde array. Accept both exact encodings without relaxing finality checks.
+fn receipt_block_hash(value: &Json) -> Option<H256> {
+    let mut bytes = [0u8; 32];
+    if let Some(text) = value.as_str() {
+        let text = text.strip_prefix("0x")?;
+        if text.len() != 64 {
+            return None;
+        }
+        hex::decode_to_slice(text, &mut bytes).ok()?;
+    } else {
+        let values = value.as_array()?;
+        if values.len() != bytes.len() {
+            return None;
+        }
+        for (byte, value) in bytes.iter_mut().zip(values) {
+            *byte = u8::try_from(value.as_u64()?).ok()?;
+        }
+    }
+    Some(H256(bytes))
 }
 
 fn event_account(event: &rtao_client::EventRecord, name: &str) -> Option<AccountId> {

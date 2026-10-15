@@ -724,7 +724,11 @@ fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
     );
     subnets::render_convictions(&output, &data, false)?;
     let text = human.text(Stream::Stdout)?;
-    assert!(text.contains("1 negligible locks hidden"));
+    assert_eq!(
+        human.text(Stream::Stderr)?,
+        "Lock alpha with `rtao conviction add --netuid 7 --amount <alpha>`. Estimates assume constant rates and alpha accounting. Ownership also requires the one-year age gate. Unlock half-life ~0d; maturity half-life ~0d.\n1 negligible lock hidden (pass `--all` to show)\n"
+    );
+    assert!(!text.contains("negligible lock"));
     assert!(text.contains("gate is per-hotkey"));
     assert!(text.contains("won't clear 18%"));
     let all = MemorySink::default();
@@ -741,6 +745,7 @@ fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
         !all.text(Stream::Stdout)?
             .contains("negligible locks hidden")
     );
+    assert!(!all.text(Stream::Stderr)?.contains("negligible lock"));
     Ok(())
 }
 
