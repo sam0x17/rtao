@@ -1,9 +1,10 @@
 # M5-02 lock, collateral, leasing, EVM, basket and root-claim source
 
-The next candidate batch implements seventeen operations: four lock, two
+The batch implements seventeen operations: four lock, two
 collateral, two leasing, two EVM, five basket/configuration and two root-claim
-intents. Generated integration and hosted compilation/tests remain pending.
-These candidates are not yet included in the integrated count of 49/83.
+intents. Verified hosted output is adopted unchanged, bringing declared
+implementation coverage to 66/83 intents. Ordinary hosted compilation/tests
+and milestone acceptance remain pending.
 
 The reference commit is `850f2755bb05a3851f948489f0ab27b0645cebce`.
 GitHub source identities were authenticated against the exact vendored bytes:
@@ -58,3 +59,21 @@ fixtures cover zero, whole units, fractions, tagged amounts and u64::MAX.
 No local build, test, Python process, scratch root, node, wallet operation or
 upstream filing ran. Source inspection and formatting cannot establish hosted
 test success, fresh oracle interoperability or milestone acceptance.
+
+Hosted generation
+[38702003174](https://github.com/sam0x17/rtao/actions/runs/38702003174)
+at `7d842e95945bab2d5fc0e537c4bd668a79abc6e6` succeeded. Review verified
+fourteen exact regular-file archive members, digests/sizes, all 23 dependency
+hashes and unchanged role package sets/counts 225/361/365/416. Generated
+changes are exactly seventeen pending removals and availability changes,
+eleven call-map additions, two constructor hooks and two normalized JSON
+interfaces. Only those seventeen intent statuses change in the matrix;
+other interface and matrix families remain byte-for-byte unchanged.
+
+The generated ZIP is 91,676 bytes, SHA-256
+`775e73b20106c40121719163af4c84061fbf8817b5798c42ac316acd9b2da2ac`.
+The report ZIP is 40,301 bytes, SHA-256
+`79dc6aa200f6645dbccdb02293363ed2789a124a6e777a905be38a008af1daaf`.
+The bounded private proof is
+`.local/recovery/2026-10-14/m5-lock-basket-claim-adoption.json`.
+No runtime or oracle validation claim is added by these generated artifacts.
