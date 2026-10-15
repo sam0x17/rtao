@@ -1,4 +1,5 @@
-//! Raw lockfile audits with exact exceptions limited to dormant dependencies.
+//! Raw lockfile audits with dormant vulnerability exceptions and reviewed
+//! informational maintenance notices.
 
 use std::{
     collections::BTreeSet,
@@ -9,6 +10,7 @@ use std::{
 
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value as Json, json};
+use sha2::{Digest, Sha256};
 use toml_edit::DocumentMut;
 
 const ADVISORY: &str = "RUSTSEC-2026-0253";
@@ -17,6 +19,14 @@ const CHECKSUM: &str = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b
 const FIXED: &str = "0.18.2";
 const RUZSTD_ADVISORY: &str = "RUSTSEC-2026-0344";
 const RUZSTD_CHECKSUM: &str = "a7c1c839d570d835527c9a5e4db7cb2198683a988cb9d7293fc8674e6bd58fc8";
+const PROC_MACRO_ADVISORY: &str = "RUSTSEC-2026-0173";
+const PROC_MACRO_CHECKSUM: &str =
+    "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802";
+const SUBXT_CHECKSUM: &str = "c5a67bfdccc607684ec2db8dbff6dbfcb72fa0ba10608698d9cc0b3cc452ebe5";
+const SUBXT_MACRO_CHECKSUM: &str =
+    "77d22d8350ef5f6b455f09b211be9468c47499778e8d18615a00c12143f7f400";
+const PROC_MACRO_DESCRIPTION: &str =
+    "2f735d4ab46291cc8340d0ab166530ea0ea94959736ef7dc13cc932d6f6913c9";
 
 struct DormantException {
     name: &'static str,
@@ -108,6 +118,7 @@ fn lock_identities(text: &str) -> Result<BTreeSet<Identity>> {
     let packages = lock["package"]
         .as_array_of_tables()
         .context("lockfile missing packages")?;
+    proc_macro_maintenance_chain(packages)?;
     let mut identities = BTreeSet::new();
     for package in packages {
         let identity = Identity {
@@ -139,6 +150,70 @@ fn lock_identities(text: &str) -> Result<BTreeSet<Identity>> {
     }
     ensure!(!identities.is_empty(), "empty lockfile");
     Ok(identities)
+}
+
+// Unlike the dormant exceptions, this is an active build dependency of the
+// optional Subxt adapter. Its reviewed parent chain is pinned until upstream
+// replaces the abandoned diagnostic helper. See supply-proc-macro-error2.md.
+fn proc_macro_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<()> {
+    if !packages
+        .iter()
+        .any(|package| package["name"].as_str() == Some("proc-macro-error2"))
+    {
+        return Ok(());
+    }
+    for (name, version, checksum) in [
+        ("proc-macro-error2", "2.0.1", PROC_MACRO_CHECKSUM),
+        ("subxt-macro", "0.51.1", SUBXT_MACRO_CHECKSUM),
+        ("subxt", "0.51.1", SUBXT_CHECKSUM),
+    ] {
+        let matching: Vec<_> = packages
+            .iter()
+            .filter(|package| package["name"].as_str() == Some(name))
+            .collect();
+        ensure!(
+            matching.len() == 1,
+            "reviewed maintenance chain changed: {name}"
+        );
+        let package = matching[0];
+        ensure!(
+            package["version"].as_str() == Some(version)
+                && package["source"].as_str() == Some(SOURCE)
+                && package["checksum"].as_str() == Some(checksum),
+            "reviewed maintenance dependency identity changed: {name}"
+        );
+    }
+    for (child, version, parent) in [
+        ("proc-macro-error2", "2.0.1", "subxt-macro"),
+        ("subxt-macro", "0.51.1", "subxt"),
+    ] {
+        let mut parents = Vec::new();
+        for package in packages {
+            let Some(dependencies) = package.get("dependencies") else {
+                continue;
+            };
+            for dependency in dependencies
+                .as_array()
+                .context("invalid lock dependency list")?
+            {
+                let dependency = dependency.as_str().context("invalid lock dependency")?;
+                if dependency.split_whitespace().next() == Some(child) {
+                    ensure!(
+                        dependency == child
+                            || dependency == format!("{child} {version}")
+                            || dependency == format!("{child} {version} ({SOURCE})"),
+                        "reviewed maintenance edge identity changed: {dependency}"
+                    );
+                    parents.push(package["name"].as_str().context("missing parent name")?);
+                }
+            }
+        }
+        ensure!(
+            parents.as_slice() == [parent],
+            "reviewed maintenance parent changed for {child}: {parents:?}"
+        );
+    }
+    Ok(())
 }
 
 fn object_keys(value: &Json, expected: &[&str]) -> Result<()> {
@@ -239,6 +314,66 @@ fn audit_finding(value: &Json, kind: Option<&str>, locks: &BTreeSet<Identity>) -
             "{id} version ranges changed; investigate before extending the exception"
         );
         return Ok(true);
+    }
+    if id == PROC_MACRO_ADVISORY {
+        ensure!(
+            kind == Some("unmaintained")
+                && identity.name == "proc-macro-error2"
+                && identity.version == "2.0.1"
+                && identity.source.as_deref() == Some(SOURCE)
+                && identity.checksum.as_deref() == Some(PROC_MACRO_CHECKSUM),
+            "reviewed maintenance finding identity or classification changed"
+        );
+        object_keys(&value["versions"], &["patched", "unaffected"])?;
+        ensure!(
+            value["versions"]["patched"] == json!([])
+                && value["versions"]["unaffected"] == json!([])
+                && value["affected"] == Json::Null,
+            "reviewed maintenance finding affected scope changed"
+        );
+        object_keys(
+            advisory,
+            &[
+                "id",
+                "package",
+                "title",
+                "description",
+                "date",
+                "aliases",
+                "related",
+                "collection",
+                "categories",
+                "keywords",
+                "cvss",
+                "informational",
+                "references",
+                "source",
+                "url",
+                "withdrawn",
+                "license",
+                "expect-deleted",
+            ],
+        )?;
+        ensure!(
+            advisory["cvss"] == Json::Null
+                && advisory["source"] == Json::Null
+                && advisory["categories"] == json!([])
+                && advisory["keywords"] == json!([])
+                && advisory["aliases"] == json!([])
+                && advisory["related"] == json!([])
+                && advisory["references"] == json!([])
+                && advisory["date"] == "2026-06-07"
+                && advisory["title"] == "proc-macro-error2 is unmaintained"
+                && advisory["url"] == "https://github.com/GnomedDev/proc-macro-error-2/issues/17"
+                && advisory["license"] == "CC0-1.0"
+                && advisory["expect-deleted"] == json!(false)
+                && format!(
+                    "{:x}",
+                    Sha256::digest(field(advisory, "description")?.as_bytes())
+                ) == PROC_MACRO_DESCRIPTION,
+            "reviewed maintenance advisory scope or severity changed"
+        );
+        return Ok(false);
     }
     ensure!(
         kind == Some("unmaintained") && MAINTENANCE.contains(&(id, identity.name.as_str())),
@@ -784,7 +919,7 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
         .collect::<Result<Vec<_>>>()?;
     for (label, audit) in ["workspace", "fuzz"].iter().zip(audits) {
         println!(
-            "supply: {label}: {} exact dormant advisory findings; {} retained maintenance notices; active affected dependencies absent from every checked graph",
+            "supply: {label}: {} exact dormant advisory findings; {} retained maintenance notices; affected dormant exception versions absent from every checked graph",
             audit.exceptions, audit.maintenance
         );
     }
@@ -819,6 +954,173 @@ mod tests {
             "settings": {"target_arch": [], "target_os": [], "severity": null, "ignore": [], "informational_warnings": ["unmaintained", "unsound", "notice"]},
             "vulnerabilities": {"found": false, "count": 0, "list": []},
             "warnings": {"unsound": [finding(Some("unsound"))]}})
+    }
+
+    fn proc_macro_lock() -> String {
+        format!(
+            "{}\n[[package]]\nname = 'proc-macro-error2'\nversion = '2.0.1'\nsource = '{SOURCE}'\nchecksum = '{PROC_MACRO_CHECKSUM}'\n\n[[package]]\nname = 'subxt-macro'\nversion = '0.51.1'\nsource = '{SOURCE}'\nchecksum = '{SUBXT_MACRO_CHECKSUM}'\ndependencies = ['proc-macro-error2']\n\n[[package]]\nname = 'subxt'\nversion = '0.51.1'\nsource = '{SOURCE}'\nchecksum = '{SUBXT_CHECKSUM}'\ndependencies = ['subxt-macro']\n",
+            lock()
+        )
+    }
+
+    fn proc_macro_report() -> Result<Json> {
+        let mut report = report();
+        report["lockfile"]["dependency-count"] = json!(4);
+        // Actual unfiltered hosted cargo-audit finding, retained independently
+        // from the classifier's constants. See the execution evidence document.
+        let finding: Json = serde_json::from_str(include_str!(
+            "../tests/fixtures/supply/proc-macro-error2.json"
+        ))?;
+        report["warnings"]["unmaintained"] = json!([finding]);
+        Ok(report)
+    }
+
+    #[test]
+    fn active_proc_macro_maintenance_notice_stays_visible_and_nonblocking() -> Result<()> {
+        let locks = lock_identities(&proc_macro_lock())?;
+        let report = proc_macro_report()?;
+        ensure!(
+            validate_audit(&report, &locks)?
+                == Audit {
+                    exceptions: 1,
+                    maintenance: 1,
+                    failing_status: true,
+                }
+        );
+        check_graph(
+            "rtao v0.1.0\nsubxt v0.51.1\nsubxt-macro v0.51.1\nproc-macro-error2 v2.0.1\n",
+            &["rtao".into()],
+        )?;
+        #[cfg(unix)]
+        {
+            let terminal = format!(
+                "      Loaded 1300 security advisories\n    Scanning Cargo.lock for vulnerabilities (4 crate dependencies)\nID:        {ADVISORY}\nID:        {PROC_MACRO_ADVISORY}\nerror: 1 denied warning found!\n"
+            );
+            ensure!(
+                raw_audit(1, &terminal, &report)?
+                    .validate(&locks)?
+                    .maintenance
+                    == 1
+            );
+            ensure!(
+                raw_audit(1, &terminal.replace(PROC_MACRO_ADVISORY, ""), &report)?
+                    .validate(&locks)
+                    .is_err()
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn proc_macro_notice_cannot_hide_a_vulnerability_or_new_advisory() -> Result<()> {
+        let locks = lock_identities(&proc_macro_lock())?;
+        let original = proc_macro_report()?;
+        let mut vulnerability = original.clone();
+        let mut finding = vulnerability["warnings"]["unmaintained"][0].take();
+        finding
+            .as_object_mut()
+            .context("fixture warning is not an object")?
+            .remove("kind");
+        finding["advisory"]["informational"] = Json::Null;
+        vulnerability["warnings"]["unmaintained"] = json!([]);
+        vulnerability["vulnerabilities"] = json!({"found": true, "count": 1, "list": [finding]});
+        ensure!(validate_audit(&vulnerability, &locks).is_err());
+        for kind in ["unsound", "notice"] {
+            let mut report = original.clone();
+            let mut warning = report["warnings"]["unmaintained"][0].take();
+            warning["kind"] = json!(kind);
+            warning["advisory"]["informational"] = json!(kind);
+            report["warnings"]["unmaintained"] = json!([]);
+            report["warnings"][kind] = json!([warning]);
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        let mut new_advisory = original;
+        new_advisory["warnings"]["unmaintained"][0]["advisory"]["id"] = json!("RUSTSEC-2099-9999");
+        ensure!(validate_audit(&new_advisory, &locks).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn proc_macro_notice_rejects_changed_identity_even_when_audited() -> Result<()> {
+        let locks = lock_identities(&proc_macro_lock())?;
+        let original = proc_macro_report()?;
+        for (key, value) in [
+            ("name", "another-package"),
+            ("version", "2.0.2"),
+            ("source", "git+https://example.test/proc-macro-error2#1234"),
+            ("checksum", "changed-checksum"),
+        ] {
+            let mut report = original.clone();
+            let finding = &mut report["warnings"]["unmaintained"][0];
+            let old = json_identity(&finding["package"])?;
+            finding["package"][key] = json!(value);
+            if key == "name" {
+                finding["advisory"]["package"] = json!(value);
+            }
+            let mut updated_locks = locks.clone();
+            updated_locks.remove(&old);
+            updated_locks.insert(json_identity(&finding["package"])?);
+            ensure!(validate_audit(&report, &updated_locks).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn proc_macro_notice_rejects_scope_severity_and_description_changes() -> Result<()> {
+        let locks = lock_identities(&proc_macro_lock())?;
+        let original = proc_macro_report()?;
+        for (key, value) in [
+            (
+                "cvss",
+                json!("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"),
+            ),
+            ("categories", json!(["denial-of-service"])),
+            ("aliases", json!(["CVE-2099-1234"])),
+            ("description", json!("A newly reported correctness issue")),
+            ("severity", json!("high")),
+        ] {
+            let mut report = original.clone();
+            report["warnings"]["unmaintained"][0]["advisory"][key] = value;
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        for (key, value) in [
+            ("patched", json!([">=2.0.2"])),
+            ("unaffected", json!(["<2.0.1"])),
+        ] {
+            let mut report = original.clone();
+            report["warnings"]["unmaintained"][0]["versions"][key] = value;
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        let mut report = original;
+        report["warnings"]["unmaintained"][0]["affected"] =
+            json!({"functions": {"helper::entry_point": ["*"]}});
+        ensure!(validate_audit(&report, &locks).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn proc_macro_maintenance_chain_must_keep_reviewed_packages_and_edges() -> Result<()> {
+        let original = proc_macro_lock();
+        for changed in [
+            original.replace("2.0.1", "2.0.2"),
+            original.replace(PROC_MACRO_CHECKSUM, "changed"),
+            original.replace(SUBXT_CHECKSUM, "changed"),
+            original.replace(SUBXT_MACRO_CHECKSUM, "changed"),
+            original.replace("0.51.1", "0.51.2"),
+            original.replace(SOURCE, "git+https://example.test/changed#1234"),
+            original.replace("dependencies = ['proc-macro-error2']", "dependencies = []"),
+            original.replace(
+                "dependencies = ['proc-macro-error2']",
+                "dependencies = ['proc-macro-error2 2.0.2']",
+            ),
+            original.replace("dependencies = ['subxt-macro']", "dependencies = []"),
+            format!(
+                "{original}\n[[package]]\nname = 'new-parent'\nversion = '1.0.0'\ndependencies = ['proc-macro-error2']\n"
+            ),
+        ] {
+            ensure!(lock_identities(&changed).is_err());
+        }
+        Ok(())
     }
 
     #[cfg(unix)]

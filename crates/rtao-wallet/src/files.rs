@@ -198,7 +198,7 @@ impl FileState {
                     "decrypted message is not valid UTF-8".into(),
                 ))
             })?;
-            Ok(SecretString::new(text.to_owned().into()))
+            Ok(SecretString::new(text.to_owned()))
         })
         .await
         .map_err(|_| WalletError::Blocking("message decryption task failed".into()))?

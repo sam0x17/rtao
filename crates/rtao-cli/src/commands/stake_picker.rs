@@ -249,7 +249,8 @@ fn sort_candidates(candidates: &mut [NameCandidate]) {
     candidates.sort_by(|a, b| {
         let (aw, ah) = a.name.split_once('/').unwrap_or((&a.name, ""));
         let (bw, bh) = b.name.split_once('/').unwrap_or((&b.name, ""));
-        super::wallet::natural_cmp(aw, bw).then_with(|| super::wallet::natural_cmp(ah, bh))
+        crate::commands::wallet::natural_cmp(aw, bw)
+            .then_with(|| crate::commands::wallet::natural_cmp(ah, bh))
     });
 }
 fn local_names(ctx: &AppContext) -> Result<BTreeMap<AccountId, String>, CliError> {

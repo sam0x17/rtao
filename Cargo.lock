@@ -1497,7 +1497,7 @@ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 [[package]]
 name = "bittensor-core"
 version = "0.1.0"
-source = "git+https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755bb05a3851f948489f0ab27b0645cebce"
+source = "git+https://github.com/sam0x17/subtensor.git?rev=eafe84e8a97376e7902118ebb204b9c53e3df55e#eafe84e8a97376e7902118ebb204b9c53e3df55e"
 dependencies = [
  "ansible-vault",
  "ark-serialize 0.4.2",
