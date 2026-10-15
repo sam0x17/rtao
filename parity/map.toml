@@ -2931,12 +2931,12 @@ notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pyte
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_intent_prompts.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
-kind = "oracle-only"
-synced_blob = "pending"
+rs = ["crates/rtao-cli/src/intent_prompts.rs"]
+kind = "ported"
+synced_blob = "d8ede60f005a88eef9f0fbb9dbb2b30f63a19a5b"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-15: both complete three-field fixtures retain exact initial fields, resulting order and picker/decorator assertions. StakeTarget and StakeSource flows replace Python custom callables; ordinary amount flow plus active free_balance decorator preserves the decorated amount ask. Independent source review clears both exact fixture ports. These are authored native assertions; current hosted execution and Python pytest remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_null_pruning.py"
@@ -2994,12 +2994,12 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_facades.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["crates/rtao/tests/facade_contract.rs","xtask/src/facade_contract_tests.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "b6ea3e5a59ba943a1caa8a7762d49921bb5c761a"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: all five complete source tests reviewed. Typed witnesses cover all 34 Client and 11 Snapshot public async operations; authenticated AST discovery compares every ordered Python parameter and refuses unreviewed inheritance, with native owned arguments, explicit options/results and zero-argument method adaptations recorded. Namespace AST coverage checks all generated and curated async/read twins, excluding only pure binding helpers. Shared namespace inventory and existing actual blocking cold/fake-read fixtures retain pure member and worker-delegation behavior; runtime injection of arbitrary Python attributes has no native proxy counterpart. Exact cold finney identity/close is authored. Independent source review only; current hosted execution and Python pytest remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_fee_filters.py"
@@ -3111,12 +3111,12 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_reads_table.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
-kind = "oracle-only"
-synced_blob = "pending"
+rs = ["crates/rtao-reads/tests/catalog_samples.rs"]
+kind = "ported"
+synced_blob = "d2f332a664f1a7cbd050b86ccfc0b5e016c72a94"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The optional oracle imports read-fixture helpers from this module but does not execute its pytest assertions. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-15: all nine test functions and all 102 parameter groups reviewed against authentic READ_SAMPLES. Complete registry/catalog/declared-parameter checks, actual head and snapshot dispatch, exact amount/scalar/absence/slot spots exist in catalog_samples.rs. Native SCALE FakeChain seeds adapt 17 available source APIs, explicitly absent retired APIs and valid structured defaults; no live runtime or matching Python RPC transcript is claimed. Source review only; current hosted compilation/execution and independent Python pytest remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_root_claim_fee.py"
@@ -3138,12 +3138,12 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_shape_corpus.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
-kind = "oracle-only"
-synced_blob = "pending"
+rs = ["crates/rtao-testkit/tests/corpus.rs"]
+kind = "ported"
+synced_blob = "bc7bfa3c89e66f6af8d0e6fa282f95e961fc699b"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-15: both complete source tests reviewed. Actual registry inventory, strictly greater than 95 percent coverage and every retained expected shape are checked. A single ordered decode_batch call uses exact scale_info type strings for all 2899 committed samples; every sample also replays below the host threshold and exact64/65 prefixes check boundary batches. Scalar strict/nested and primitive visitor checks remain. Committed recording is spec461 from shared bittensor-core, not a fresh independent Python/spec478 oracle; Rust JSON/typed representation replaces PyO3 objects. Current hosted compilation/execution and Python pytest remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_slippage_protection.py"
@@ -3183,12 +3183,12 @@ notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pyte
 
 [[file]]
 py = "sdk/python/tests/unit/test_v446_accounting_and_commitments.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["crates/rtao-reads/src/commitments.rs","crates/rtao-reads/src/reads/m6_locks.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "55945565fc3c4e199015b334fc197a0f2f107d10"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: complete two-test module matches the exact eligible-alpha vectors and failed commitment netuid42/block100/reveal123/queried110 fixture. Actual commitment status, is_revealed, value and reveals_at outputs are asserted; sequential saturating u64 subtraction implements the approved native D-035 input domain. Typed status/fallible time replace Python objects; canonical test origins and exact source span retained. Current hosted execution and Python pytest remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_wallet_compat.py"

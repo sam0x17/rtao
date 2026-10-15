@@ -144,6 +144,11 @@ pub(crate) fn oracle_history_for_test(
 }
 
 #[cfg(test)]
+pub(crate) fn dispatch_baseline_for_test(root: &Path, sha: &str) -> Result<String> {
+    state::dispatch_baseline(root, sha)
+}
+
+#[cfg(test)]
 pub(crate) fn oracle_history_for_event(
     root: &Path,
     event: &serde_json::Value,

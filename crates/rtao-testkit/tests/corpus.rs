@@ -1,10 +1,11 @@
-//! Replay every pinned shape and every sample covered by primitive visitors.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_shape_corpus.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+//! Replay every pinned shape through scalar and batch codecs and primitive visitors.
 
 use std::{collections::BTreeSet, error::Error, path::PathBuf};
 
 use rtao_core::{
     DynValue,
-    codec::{Value, decode::Cursor},
+    codec::{Value, batch::PARALLEL_THRESHOLD, decode::Cursor},
     runtime::{Runtime, TypeSpec},
 };
 use rtao_primitives::{
@@ -75,6 +76,7 @@ fn decode_sample(runtime: &Runtime, ty: &ShapeType, sample: &ShapeSample) -> Res
     Ok(value)
 }
 
+// pyt: sdk/python/tests/unit/test_shape_corpus.py::test_corpus_exists_and_covers_registry
 #[test]
 fn corpus_replay() -> Result {
     let fixture = Golden::load(fixture_path("golden.json"))?;
@@ -89,6 +91,21 @@ fn corpus_replay() -> Result {
     }
     assert_eq!(corpus.types.len(), corpus.types_covered);
     assert_eq!(runtime.types.types.len(), corpus.types_total);
+    assert!(corpus.types_total > 0, "recorded registry is empty");
+    let covered_percent = corpus
+        .types_covered
+        .checked_mul(100)
+        .ok_or("covered type percentage overflows usize")?;
+    let required_percent = corpus
+        .types_total
+        .checked_mul(95)
+        .ok_or("registry type percentage overflows usize")?;
+    assert!(
+        covered_percent > required_percent,
+        "{} of {} recorded types must cover more than 95% of the registry",
+        corpus.types_covered,
+        corpus.types_total
+    );
     let mut covered = BTreeSet::new();
     let mut samples = 0usize;
     let mut failures = Vec::new();
@@ -135,6 +152,95 @@ fn corpus_replay() -> Result {
             .collect::<Vec<_>>()
             .join("\n")
     );
+    Ok(())
+}
+
+fn check_batch_shapes(
+    runtime: &Runtime,
+    type_strings: &[String],
+    datas: &[Vec<u8>],
+    samples: &[(u32, usize, &serde_json::Value)],
+    context: &str,
+) -> Result {
+    let decoded = runtime.decode_batch(type_strings, datas)?;
+    assert_eq!(decoded.len(), samples.len(), "{context} output count");
+    let mut failures = Vec::new();
+    for ((type_id, index, expected), value) in samples.iter().zip(decoded) {
+        let actual = DynValue::new(value).to_json();
+        if let Err(error) = json::compare(expected, &actual) {
+            failures.push(format!(
+                "type {type_id} sample {index}: {error}; expected {expected}, actual {actual}"
+            ));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{context}: {} of {} shape samples failed:\n{}",
+        failures.len(),
+        samples.len(),
+        failures
+            .iter()
+            .take(10)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+    Ok(())
+}
+
+// pyt: sdk/python/tests/unit/test_shape_corpus.py::test_decoded_shapes_match_corpus
+#[test]
+fn corpus_batch_replay() -> Result {
+    let runtime = Golden::load(fixture_path("golden.json"))?.runtime()?;
+    let corpus = ShapeCorpus::load(fixture_path("corpus.json"))?;
+    let mut type_strings = Vec::new();
+    let mut datas = Vec::new();
+    let mut samples = Vec::new();
+    for ty in &corpus.types {
+        for (index, sample) in ty.samples.iter().enumerate() {
+            type_strings.push(format!("scale_info::{}", ty.id));
+            datas.push(decode_hex(&sample.scale_hex)?);
+            samples.push((ty.id, index, &sample.decoded));
+        }
+    }
+    if std::env::var_os("RTAO_RECORDED_ROOT").is_none() {
+        assert_eq!(samples.len(), 2899);
+        assert!(samples.len() > PARALLEL_THRESHOLD);
+    }
+    assert!(
+        !samples.is_empty(),
+        "recorded shape corpus contains no samples"
+    );
+    // This is the Python test's single ordered call, including consecutive
+    // repeated type strings. Every expected value comes from the recording.
+    check_batch_shapes(&runtime, &type_strings, &datas, &samples, "full corpus")?;
+
+    // Revisit every sample below the host fan-out threshold, checking both
+    // paths against the recording rather than against each other's output.
+    let serial_chunk = PARALLEL_THRESHOLD
+        .checked_sub(1)
+        .filter(|size| *size > 0)
+        .ok_or("batch threshold must exceed one")?;
+    for ((type_strings, datas), samples) in type_strings
+        .chunks(serial_chunk)
+        .zip(datas.chunks(serial_chunk))
+        .zip(samples.chunks(serial_chunk))
+    {
+        check_batch_shapes(&runtime, type_strings, datas, samples, "serial chunk")?;
+    }
+    // Host builds select rayon at the threshold; portable builds use the
+    // same public API serially. These assertions make no scheduling claim.
+    for count in [PARALLEL_THRESHOLD, PARALLEL_THRESHOLD + 1] {
+        if samples.len() >= count {
+            check_batch_shapes(
+                &runtime,
+                &type_strings[..count],
+                &datas[..count],
+                &samples[..count],
+                &format!("threshold batch of {count}"),
+            )?;
+        }
+    }
     Ok(())
 }
 
