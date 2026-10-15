@@ -168,36 +168,6 @@ impl rtao_tx::Intent for super::interfaces::ClearColdkeySwapAnnouncement {
         self
     }
 }
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::ContributeCrowdloan {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("contribute_crowdloan"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::CreateCrowdloan {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("create_crowdloan"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "proxy")]
 impl rtao_tx::Intent for super::interfaces::CreatePureProxy {
     fn summary(&self) -> String {
@@ -243,21 +213,6 @@ impl rtao_tx::Intent for super::interfaces::DisputeColdkeySwap {
         self
     }
 }
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::DissolveCrowdloan {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("dissolve_crowdloan"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "evm")]
 impl rtao_tx::Intent for super::interfaces::EvmWithdraw {
     fn summary(&self) -> String {
@@ -285,21 +240,6 @@ impl rtao_tx::Intent for super::interfaces::ExecuteProxyAnnounced {
         Err(rtao_tx::IntentError::NotYetPorted(
             "execute_proxy_announced",
         ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::FinalizeCrowdloan {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("finalize_crowdloan"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
@@ -470,21 +410,6 @@ impl rtao_tx::Intent for super::interfaces::MultisigThreshold1 {
         self
     }
 }
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::RefundCrowdloan {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("refund_crowdloan"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "leasing")]
 impl rtao_tx::Intent for super::interfaces::RegisterLeasedNetwork {
     fn summary(&self) -> String {
@@ -607,23 +532,6 @@ impl rtao_tx::Intent for super::interfaces::SetChildren {
         self
     }
 }
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::SetCrowdloanMaxContribution {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "set_crowdloan_max_contribution",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "identity")]
 impl rtao_tx::Intent for super::interfaces::SetIdentity {
     fn summary(&self) -> String {
@@ -680,40 +588,6 @@ impl rtao_tx::Intent for super::interfaces::SetRejectLockedAlpha {
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted(
             "set_reject_locked_alpha",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "root")]
-impl rtao_tx::Intent for super::interfaces::SetRootClaimThreshold {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "set_root_claim_threshold",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "root")]
-impl rtao_tx::Intent for super::interfaces::SetSubnetEmissionEnabled {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "set_subnet_emission_enabled",
         ))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
@@ -895,68 +769,6 @@ impl rtao_tx::Intent for super::interfaces::UnstakeAllAlpha {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("unstake_all_alpha"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::UpdateCrowdloanCap {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("update_crowdloan_cap"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::UpdateCrowdloanEnd {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("update_crowdloan_end"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::UpdateCrowdloanMinContribution {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "update_crowdloan_min_contribution",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "crowdloan")]
-impl rtao_tx::Intent for super::interfaces::WithdrawCrowdloan {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("withdraw_crowdloan"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self

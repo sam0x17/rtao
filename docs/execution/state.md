@@ -16,11 +16,12 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Current source prepares 32 of 83 intents and 40 of 102 reads. The twelve
-newer crowdloan/root intent ports need hosted regeneration and combined
-validation; see [m5-crowdloan-root.md](m5-crowdloan-root.md). The generated read
-interfaces and dispatch for both M5 owner reads are adopted. No milestone
-exit or current all-job success is claimed.
+Source through `70fca29` implements 32 of 83 intents and 40 of 102 reads.
+The twelve newer crowdloan/root intent ports have verified hosted generated
+dispatch and availability metadata, with combined validation still pending;
+see [m5-crowdloan-root.md](m5-crowdloan-root.md). The generated read interfaces
+and dispatch for both M5 owner reads are adopted. No milestone exit or current
+all-job success is claimed.
 
 The binary routes generated transactions/queries, config/tools/explain,
 weights/axon, wallet management, subnet registration/metagraph views and the M4
@@ -63,6 +64,12 @@ D-044/D-045 regression references. Private bounded records are
 [38692634551](https://github.com/sam0x17/rtao/actions/runs/38692634551)
 was verified and adopted in `a9c720c`, covering the CLI owner feature and sha2
 dependency. Its proof is `m4-pruning-adoption.json` in the same recovery directory.
+Hosted generation
+[38694967521](https://github.com/sam0x17/rtao/actions/runs/38694967521)
+at `70fca29` was verified and adopted unchanged. Exact archive paths/digests,
+all 23 dependency inputs, unchanged role inventories, twelve pending-body
+removals, nine pass-through additions, the pre-serde guard and matching matrix
+changes were checked. Its proof is `m5-crowdloan-root-adoption.json`.
 Runtime validation remains null/empty; Linux graph measurement does not
 establish native Mac, hardware, oracle or chain interoperability coverage.
 
