@@ -30,7 +30,7 @@ use crate::{
         AccountLookup, FsAccountLookup, NameResolver, is_bittensor_address,
         read_public_json_for_update, split_signatory_refs, write_public_json,
     },
-    call_names::resolve_builder_params,
+    call_names::{GeneratedCallSchema, report_resolved_account, resolve_builder_params_with},
     context::AppContext,
     error::CliError,
     globals::{Tier, with_globals},
@@ -374,8 +374,23 @@ impl RawCallRequest {
         } else {
             "--args"
         };
-        let params =
-            resolve_builder_params(&names, &target, &params, hint).map_err(public_input)?;
+        let mut output_error = None;
+        let params = resolve_builder_params_with(
+            &names,
+            &GeneratedCallSchema,
+            &target,
+            &params,
+            hint,
+            &mut |param, resolved| {
+                if output_error.is_none() {
+                    output_error = report_resolved_account(&ctx.output, param, resolved).err();
+                }
+            },
+        );
+        if let Some(error) = output_error {
+            return Err(public_failure(error));
+        }
+        let params = params.map_err(public_input)?;
         let proxy_for = ctx.dispatch_proxy(None)?;
         let force_proxy_type = ctx
             .globals

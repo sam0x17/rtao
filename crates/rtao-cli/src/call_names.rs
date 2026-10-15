@@ -9,6 +9,7 @@ use serde_json::{Map, Value};
 use crate::books::{
     MAX_NAME_RESOLUTION_DEPTH, NameResolver, ResolvedAddress, is_bittensor_address,
 };
+use crate::output::{Output, OutputError};
 
 const SIGNATORY_FIELDS: [&str; 2] = ["other_signatories", "signatories"];
 const CALL_SPEC_KEYS: [[&str; 3]; 2] = [
@@ -124,6 +125,23 @@ pub fn resolve_intent_args_with(
     let param_hint = param_hint.filter(|hint| !hint.is_empty());
     validate_json_nesting(args, param_hint.unwrap_or("--args"))?;
     IntentResolver { names, report }.args(args, param_hint)
+}
+
+// Match call_names.py's successful named lookup side effects in both CLI
+// callers. Explicit ss58 strings bypass the resolver callback entirely.
+pub(crate) fn report_resolved_account(
+    output: &Output,
+    param: &str,
+    resolved: &ResolvedAddress,
+) -> Result<(), OutputError> {
+    if let Some(name) = &resolved.name {
+        output.name_address(&resolved.address, name)?;
+    }
+    output.classify_address(&resolved.address, resolved.kind)?;
+    output.message(&format!(
+        "{param}: resolved {} to {}",
+        resolved.source, resolved.address
+    ))
 }
 
 // Text input already uses serde_json's nesting guard. This iterative check

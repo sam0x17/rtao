@@ -18,7 +18,7 @@ use rtao::{
 };
 use rtao_cli::{
     application::command_tree,
-    books::Books,
+    books::{AccountKind, Books},
     call::{
         self, FsRawCallCache, MultisigCallSpec, MultisigFollowup, RawCallCache, RawCallRequest,
         RawMultisig, RawSignerFactory, SigningSelection,
@@ -1364,6 +1364,87 @@ async fn args_file_and_shared_cache_preserve_other_entries_and_cleanup_replaceme
     );
     assert_eq!(std::fs::read_dir(&temp.0)?.count(), 2);
     assert!(call::load_params(Some("{}"), Some(&args)).is_err());
+    Ok(())
+}
+
+#[test]
+fn raw_nested_names_register_labels_kinds_and_public_resolution_messages() -> TestResult {
+    let coldkey = AccountId([7; 32]);
+    let hotkey = AccountId([8; 32]);
+    let raw = AccountId([9; 32]);
+    let args = json!({"calls":[
+        {"Balances":{"transfer_keep_alive":{"dest":"contact","value":1}}},
+        {"SubtensorModule":{"add_stake":{"hotkey":"operator","netuid":1,"amount_staked":1}}},
+        {"Balances":{"transfer_keep_alive":{"dest":raw,"value":1}}}
+    ]})
+    .to_string();
+    for mode in [None, Some("--json"), Some("--quiet")] {
+        let mut flags = vec!["--yes"];
+        flags.extend(mode);
+        let (mut ctx, sink) = context(&flags)?;
+        ctx.books = Books::from_values(
+            json!([{"name":"contact","address":coldkey},{"name":"operator","address":hotkey}]),
+            json!([]),
+            json!([]),
+        );
+        let mut argv = vec![
+            "rtao",
+            "call",
+            "Utility.batch_all",
+            "--args",
+            &args,
+            "--yes",
+        ];
+        argv.extend(mode);
+        let parsed = command_tree([call::command()]).try_get_matches_from(argv)?;
+        let request = RawCallRequest::from_matches(&ctx, parsed.subcommand().ok_or("call")?.1)?;
+        assert_eq!(
+            request.params["calls"][0]["Balances"]["transfer_keep_alive"]["dest"],
+            json!(coldkey)
+        );
+        assert_eq!(
+            request.params["calls"][1]["SubtensorModule"]["add_stake"]["hotkey"],
+            json!(hotkey)
+        );
+        assert_eq!(
+            request.params["calls"][2]["Balances"]["transfer_keep_alive"]["dest"],
+            json!(raw)
+        );
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&coldkey.to_string())
+                .map(String::as_str),
+            Some("contact")
+        );
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&hotkey.to_string())
+                .map(String::as_str),
+            Some("operator")
+        );
+        assert_eq!(
+            ctx.output.address_kinds()?.get(&coldkey.to_string()),
+            Some(&AccountKind::Coldkey)
+        );
+        assert_eq!(
+            ctx.output.address_kinds()?.get(&hotkey.to_string()),
+            Some(&AccountKind::Hotkey)
+        );
+        assert!(!ctx.output.address_kinds()?.contains_key(&raw.to_string()));
+        assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        assert_eq!(
+            sink.text(Stream::Stderr)?,
+            if mode.is_none() {
+                format!(
+                    "dest: resolved address-book entry 'contact' to {coldkey}\nhotkey: resolved address-book entry 'operator' to {hotkey}\n"
+                )
+            } else {
+                String::new()
+            }
+        );
+    }
     Ok(())
 }
 

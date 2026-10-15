@@ -154,6 +154,38 @@ mod tests {
     }
 
     #[test]
+    fn exported_preset_map_has_exact_chain_facts_and_independent_values() {
+        let current_local_url = std::env::var("BT_EVM_ENDPOINT")
+            .ok()
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "http://127.0.0.1:9944".into());
+        let mut networks = evm_networks();
+        assert_eq!(
+            networks.keys().copied().collect::<Vec<_>>(),
+            ["finney", "local", "test"]
+        );
+        for (name, chain_id, url) in [
+            ("finney", Some(964), "https://lite.chain.opentensor.ai"),
+            ("test", Some(945), "https://test.chain.opentensor.ai"),
+            ("local", None, current_local_url.as_str()),
+        ] {
+            let network = &networks[name];
+            assert_eq!(network.name, name);
+            assert_eq!(network.chain_id, chain_id);
+            assert_eq!(network.rpc_url, url);
+            assert_eq!(network.currency_symbol, "TAO");
+            assert_eq!(network.evm_decimals, 18);
+        }
+        // A caller can change its returned map without modifying subsequent
+        // calls, unlike Python's mutable module-level dictionary.
+        networks.get_mut("finney").unwrap().rpc_url = "http://edited.invalid".into();
+        networks.remove("test");
+        let fresh = evm_networks();
+        assert_eq!(fresh.len(), 3);
+        assert_eq!(fresh["finney"].rpc_url, "https://lite.chain.opentensor.ai");
+    }
+
+    #[test]
     fn local_environment_is_injectable_and_empty_means_unset() {
         for input in ["local", "ws://127.0.0.1:9944"] {
             for unset in [None, Some(String::new())] {

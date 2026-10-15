@@ -77,6 +77,38 @@ selects machine-readable output. The [transaction reference](tx-reference.md)
 lists catalog operations and their feature requirements. The
 [API index](api-index.md) maps Python names to Rust.
 
+## Generic keyfiles
+
+`rtao_wallet::Keyfile` reads or writes one explicit path, including a public-only
+keyfile. It does not assign a signing role or create a companion file. Use
+`ColdkeyFile` or `HotkeyFile` when an operation needs a role-checked signing
+source. File reads are capped at 16 MiB; writes are atomic and owner-only, with
+explicit overwrite permission instead of an implicit terminal confirmation.
+Writes refuse symlink targets and symlinked parent paths. Reads support only
+regular files, including regular symlink targets. Encrypted reads and writes
+require the `rtao-wallet/encrypted` feature.
+
+`Keyfile::get_keypair` selects a nonempty explicit password, then this file's
+encoded `BT_PW_...` variable, then an enabled hidden-input callback. The public
+`resolve_key_password` function accepts `KeyPasswordSources` for the same
+resolution with a custom variable name, prompt message and confirmation policy.
+The SDK never prompts by default. Wallet-wide variables, password files and
+native dialogs belong to the separate `PasswordSources` wallet policy.
+
+The generic `set_keypair` honors `WriteOptions.encrypt` even when a password is
+present. `WriteOptions::coldkey()` requests encryption; `WriteOptions::hotkey()`
+requests plaintext. A new encryption password comes from explicit input or an
+enabled confirming prompt. Saving it to the environment happens only after a
+successful file write.
+
+Python changes its global process environment when saving a keyfile password.
+The Rust SDK mutates an explicitly owned `KeyfileEnvironment` instead. Its
+default `KeyfileEnvironmentOverlay` reads existing process variables, keeps
+new values in memory and masks removed values. Clones share that overlay;
+independently constructed keyfiles can share it through `KeyPasswordSources`.
+This avoids unsafe process-environment mutation in a multithreaded application.
+Saved values use Python's reversible XOR/base64 encoding and remain secrets.
+
 ## Development and coverage
 
 Source review and formatting stay local. Substantial builds, tests, dependency

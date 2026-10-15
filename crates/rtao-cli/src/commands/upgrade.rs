@@ -759,12 +759,12 @@ async fn submit_verified(
         ));
     }
     let layer = chain::sudo_layer(&snapshot, reviewed_sudo, finalizing.hash()).await?;
-    if let Some(expected) = reviewed_when {
-        if layer.as_ref().is_none_or(|layer| &layer.when != expected) {
-            return Err(failure(
-                "the sudo proposal opening changed since review; rerun upgrade sign",
-            ));
-        }
+    if let Some(expected) = reviewed_when
+        && layer.as_ref().is_none_or(|layer| &layer.when != expected)
+    {
+        return Err(failure(
+            "the sudo proposal opening changed since review; rerun upgrade sign",
+        ));
     }
     if layer
         .as_ref()

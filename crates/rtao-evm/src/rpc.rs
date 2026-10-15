@@ -660,13 +660,6 @@ mod tests {
                 delay: Duration::ZERO,
             }
         }
-
-        fn envelope(value: Value) -> Self {
-            Self {
-                payload: Payload::Envelope(value),
-                ..Self::result(Value::Null)
-            }
-        }
     }
 
     async fn read_request(stream: &mut TcpStream) -> Value {

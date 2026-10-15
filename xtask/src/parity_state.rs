@@ -494,6 +494,7 @@ pub(super) fn exports(root: &Path, index: &Index, strict: bool) -> Result<Value>
                 "export {symbol} needs an explicit Rust/CLI/n-a home"
             );
             let pending = row.get("pending").and_then(Item::as_str);
+            export_tests(row, symbol, index, pending.is_some())?;
             ensure!(
                 !strict || pending.is_none(),
                 "strict export parity refuses {symbol} pending"
@@ -534,6 +535,29 @@ pub(super) fn exports(root: &Path, index: &Index, strict: bool) -> Result<Value>
     )
 }
 
+fn export_tests(row: &Table, symbol: &str, index: &Index, pending: bool) -> Result<()> {
+    let Some(tests) = row.get("pinning_tests") else {
+        ensure!(pending, "reviewed export {symbol} needs pinning_tests");
+        return Ok(());
+    };
+    let tests = tests
+        .as_array()
+        .with_context(|| format!("export {symbol} pinning_tests must be an array"))?;
+    ensure!(
+        !tests.is_empty(),
+        "export {symbol} needs a nonempty fixture list"
+    );
+    let mut seen = BTreeSet::new();
+    for test in tests {
+        let test = test
+            .as_str()
+            .with_context(|| format!("export {symbol} fixture must be a test name"))?;
+        ensure!(seen.insert(test), "export {symbol} repeats fixture {test}");
+        divergence_test(index, test).with_context(|| format!("export {symbol} fixture {test}"))?;
+    }
+    Ok(())
+}
+
 pub(super) fn divergence_test(index: &Index, test: &str) -> Result<()> {
     // The required check lane runs nextest --workspace --all-features. Use
     // that exact source index, as pending-intent evidence already does. A
@@ -553,6 +577,10 @@ pub(super) fn divergence_test(index: &Index, test: &str) -> Result<()> {
     Ok(())
 }
 
+fn optional_m10_divergence(id: &str, milestone: &str, class: &str) -> bool {
+    id == "D-031" && milestone == "M10" && class == "addition"
+}
+
 pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Value> {
     let map = document(root, "parity/divergences.toml")?;
     let rows = map
@@ -562,6 +590,7 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
     let mut seen = BTreeSet::new();
     let mut pending = 0;
     let mut active = 0;
+    let mut deferred_optional = 0;
     for row in rows {
         let string = |name: &str| {
             row.get(name)
@@ -610,7 +639,12 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
         match status {
             "pending" => {
                 pending += 1;
-                ensure!(!strict, "strict divergence parity refuses {id} pending");
+                let optional = optional_m10_divergence(id, string("milestone")?, string("class")?);
+                deferred_optional += usize::from(optional);
+                ensure!(
+                    !strict || optional,
+                    "strict divergence parity refuses {id} pending"
+                );
                 ensure!(
                     string("milestone")?.starts_with('M'),
                     "pending divergence milestone missing"
@@ -636,7 +670,8 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
         "Appendix C divergence register incomplete: {:?}",
         expected.difference(&seen).collect::<Vec<_>>()
     );
-    Ok(json!({"total":seen.len(),"active":active,"pending":pending,"withdrawn":1}))
+    Ok(json!({"total":seen.len(),"active":active,"pending":pending,
+        "deferred_optional":deferred_optional,"scope":"through-M9","withdrawn":1}))
 }
 
 // These ordinary fake-chain tests preserve the named upstream read assertions.
@@ -999,7 +1034,53 @@ fn document_pins(root: &Path) -> Result<DocumentMut> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn strict_client_scope_defers_only_the_named_optional_m10_addition() {
+        assert!(super::optional_m10_divergence("D-031", "M10", "addition"));
+        for (id, milestone, class) in [
+            ("D-031", "M8", "addition"),
+            ("D-034", "M10", "addition"),
+            ("D-031", "M10", "kept"),
+            ("D-031", "M9", "addition"),
+        ] {
+            assert!(!super::optional_m10_divergence(id, milestone, class));
+        }
+    }
+
     use super::*;
+
+    #[test]
+    fn reviewed_exports_require_existing_all_feature_fixtures_without_claiming_execution()
+    -> Result<()> {
+        let mut row = Table::new();
+        let mut index = Index::default();
+        assert!(export_tests(&row, "bittensor.example", &index, false).is_err());
+        export_tests(&row, "bittensor.example", &index, true)?;
+        row["pinning_tests"] = value(toml_edit::Array::new());
+        assert!(export_tests(&row, "bittensor.example", &index, false).is_err());
+        let test = "rtao_example::tests::preserves_public_result";
+        let mut tests = toml_edit::Array::new();
+        tests.push(test);
+        row["pinning_tests"] = value(tests.clone());
+        index.tests.insert(test.into());
+        index
+            .test_bodies
+            .insert(test.into(), "assert_eq!(result, expected);".into());
+        assert!(export_tests(&row, "bittensor.example", &index, false).is_err());
+        index.feature_tests.insert(test.into());
+        assert!(export_tests(&row, "bittensor.example", &index, false).is_err());
+        index
+            .feature_test_bodies
+            .insert(test.into(), "assert_eq!(result, expected);".into());
+        export_tests(&row, "bittensor.example", &index, false)?;
+        tests.push(test);
+        row["pinning_tests"] = value(tests);
+        assert!(export_tests(&row, "bittensor.example", &index, false).is_err());
+        row["pinning_tests"] = value("not-an-array");
+        assert!(export_tests(&row, "bittensor.example", &index, false).is_err());
+        Ok(())
+    }
+
     #[test]
     fn pending_reads_ignore_private_helpers_but_reject_duplicate_public_entrypoints() -> Result<()>
     {

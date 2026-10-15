@@ -418,6 +418,77 @@ fn public_import_encrypts_and_unlocks_without_exposing_plaintext_on_disk() {
 }
 
 #[test]
+fn public_creation_stores_fresh_independent_encrypted_accounts_and_preserves_native_keys() {
+    let root = tempfile::tempdir().unwrap();
+    let wallet = root.path().join("native-wallet");
+    fs::create_dir_all(wallet.join("hotkeys")).unwrap();
+    let coldkey = wallet.join("coldkey");
+    let hotkey = wallet.join("hotkeys/validator");
+    // These deliberately are not decodable native keys: EVM creation must
+    // neither read native secret material nor depend on it being unlocked.
+    fs::write(&coldkey, b"native-coldkey-preserved").unwrap();
+    fs::write(&hotkey, b"native-hotkey-preserved").unwrap();
+    let options = EvmKeyOptions {
+        name: "generated".into(),
+        wallet_name: "native-wallet".into(),
+        wallet_path: root.path().into(),
+        password: Some(Zeroizing::new("creation-password".into())),
+        ..Default::default()
+    };
+    let info = create_evm_key(&options, None).unwrap();
+    assert_eq!(info.name, "generated");
+    assert_eq!(info.path, wallet.join("evmkeys/generated"));
+    assert_eq!(info.address.len(), 42);
+    assert_eq!(info.ss58_mirror, h160_to_ss58(&info.address).unwrap());
+    assert_eq!(
+        get_evm_key_info(&options.name, &options.wallet_name, &options.wallet_path).unwrap(),
+        info
+    );
+    let encrypted_bytes = fs::read(&info.path).unwrap();
+    let encrypted_text = std::str::from_utf8(&encrypted_bytes).unwrap();
+    let document: Value = serde_json::from_slice(&encrypted_bytes).unwrap();
+    assert_eq!(document["version"], 3);
+    assert_eq!(document["crypto"]["kdf"], "scrypt");
+    assert_eq!(document["crypto"]["kdfparams"]["n"], 1u64 << 18);
+    let account = unlock_evm_key(&options, None).unwrap();
+    assert_eq!(account_address(&account), info.address);
+    assert!(!encrypted_text.contains(&hex::encode(account.to_field_bytes())));
+    assert!(!encrypted_text.contains("creation-password"));
+    assert!(!encrypted_text.contains("native-coldkey-preserved"));
+
+    // A refused second creation must leave the first account intact.
+    assert!(create_evm_key(&options, None).is_err());
+    assert_eq!(fs::read(&info.path).unwrap(), encrypted_bytes);
+    let second = create_evm_key(
+        &EvmKeyOptions {
+            name: "generated-2".into(),
+            ..options.clone()
+        },
+        None,
+    )
+    .unwrap();
+    assert_ne!(second.address, info.address);
+    assert_ne!(second.path, info.path);
+    assert_eq!(
+        list_evm_keys(&options.wallet_name, &options.wallet_path)
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(fs::read(&coldkey).unwrap(), b"native-coldkey-preserved");
+    assert_eq!(fs::read(&hotkey).unwrap(), b"native-hotkey-preserved");
+    assert_eq!(fs::read_dir(wallet.join("evmkeys")).unwrap().count(), 2);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            fs::metadata(&info.path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
+}
+
+#[test]
 fn imported_keystore_authentication_precedes_any_destination_write() {
     let root = tempfile::tempdir().unwrap();
     let options = EvmKeyOptions {

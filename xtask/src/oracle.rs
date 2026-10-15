@@ -1305,7 +1305,7 @@ mod tests {
         if root.join("vendor/oracle/manifest.json").exists() {
             assert_eq!(status, readiness::CommittedStatus::Verified);
         } else {
-            assert_eq!(status, readiness::CommittedStatus::InitialPending);
+            assert_eq!(status, readiness::CommittedStatus::OptionalUnverified);
         }
         println!("{}", status.report());
         Ok(())

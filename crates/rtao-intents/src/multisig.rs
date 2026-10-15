@@ -1,7 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/multisig.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Explicit multisig dispatch, approval and cancellation calls.
 
-use rtao_client::View;
+use rtao_client::{View, ViewExt};
 use rtao_core::DynValue;
 use rtao_primitives::{AccountId, CryptoType};
 use rtao_runtime::{CallBytes, calls::multisig, models::MultisigTimepoint};
@@ -322,6 +322,90 @@ async fn build_approval<V: View + ?Sized>(
     })
 }
 
+fn approval_count_unavailable() -> String {
+    "could not determine the multisig approval count; approve_as_multi cannot execute the call"
+        .into()
+}
+
+// Inspect the reviewed wire call, since rebuilding a timed or randomized child
+// can produce another hash. Follow only known call carriers, and refuse an
+// ambiguous set of approvals rather than attributing another call's state.
+fn reviewed_approval_hash(
+    call: &CallBytes,
+    runtime: &rtao_runtime::RuntimeHandle,
+    threshold: u16,
+    others: &[AccountId],
+    when: &Option<MultisigTimepoint>,
+) -> Option<[u8; 32]> {
+    use rtao_core::{codec::Value as CoreValue, value_ext::ValueExt};
+    fn list(value: &CoreValue) -> Option<&[CoreValue]> {
+        match value {
+            CoreValue::List(values) | CoreValue::Tuple(values) => Some(values),
+            _ => None,
+        }
+    }
+    fn arg<'a>(value: &'a CoreValue, name: &str) -> Option<&'a CoreValue> {
+        value
+            .field("call_args")
+            .and_then(list)?
+            .iter()
+            .find(|arg| arg.field("name").and_then(ValueExt::as_str) == Some(name))?
+            .field("value")
+    }
+    let decoded = runtime
+        .core()
+        .decode_spec(&rtao_core::runtime::TypeSpec::Call, call.as_bytes(), true)
+        .ok()?;
+    let mut stack = vec![&decoded];
+    let mut found = None;
+    let mut visited = 0usize;
+    while let Some(value) = stack.pop() {
+        visited += 1;
+        if visited > 4096 {
+            return None;
+        }
+        match (
+            value.field("call_module").and_then(ValueExt::as_str)?,
+            value.field("call_function").and_then(ValueExt::as_str)?,
+        ) {
+            ("Multisig", "approve_as_multi") => {
+                let signatories = arg(value, "other_signatories").and_then(list)?;
+                let matches = arg(value, "threshold").and_then(ValueExt::as_u128)
+                    == Some(u128::from(threshold))
+                    && signatories.len() == others.len()
+                    && signatories.iter().zip(others).all(|(value, expected)| {
+                        value
+                            .as_str()
+                            .and_then(|address| address.parse::<AccountId>().ok())
+                            == Some(*expected)
+                    })
+                    && DynValue::new(arg(value, "maybe_timepoint")?.clone()).to_json()
+                        == json!(when);
+                if matches {
+                    let hash: [u8; 32] = arg(value, "call_hash")?.value_bytes()?.try_into().ok()?;
+                    if found.replace(hash).is_some() {
+                        return None;
+                    }
+                }
+            }
+            ("Proxy", "proxy" | "proxy_announced")
+            | ("Sudo", "sudo" | "sudo_unchecked_weight")
+            | ("Multisig", "as_multi" | "as_multi_threshold_1") => {
+                stack.push(arg(value, "call")?);
+            }
+            ("Utility", "batch" | "batch_all" | "force_batch") => {
+                let calls = arg(value, "calls").and_then(list)?;
+                if calls.len().saturating_add(stack.len()) > 4096 {
+                    return None;
+                }
+                stack.extend(calls);
+            }
+            _ => {}
+        }
+    }
+    found
+}
+
 impl Intent for MultisigExecute {
     fn summary(&self) -> String {
         format!(
@@ -389,14 +473,53 @@ impl Intent for MultisigApprove {
         &self,
         cx: &PreflightCx<'_, V>,
     ) -> Result<Vec<String>, IntentError> {
-        Ok(if self.timepoint.is_none() {
-            multisig_opening_shortfall(cx.view, cx.dispatch_origin, self.threshold)
-                .await
-                .into_iter()
-                .collect()
-        } else {
-            vec![]
-        })
+        let expected = timepoint(self.timepoint.as_ref())?;
+        if expected.is_none() {
+            return Ok(
+                multisig_opening_shortfall(cx.view, cx.dispatch_origin, self.threshold)
+                    .await
+                    .into_iter()
+                    .collect(),
+            );
+        }
+        let account = group_account(
+            cx.runtime,
+            cx.dispatch_origin,
+            self.threshold,
+            &self.other_signatories,
+        )?;
+        let Some(hash) = reviewed_approval_hash(
+            cx.call,
+            cx.runtime,
+            self.threshold,
+            &sorted_others(&self.other_signatories)?,
+            &expected,
+        ) else {
+            return Ok(vec![approval_count_unavailable()]);
+        };
+        let pending = match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            cx.view
+                .storage(&rtao_runtime::storage::multisig::MULTISIGS, (account, hash)),
+        )
+        .await
+        {
+            Ok(Ok(pending)) => pending,
+            Ok(Err(_)) | Err(_) => {
+                return Ok(vec![approval_count_unavailable()]);
+            }
+        };
+        Ok(
+            if pending.is_some_and(|pending| {
+                Some(pending.when) == expected
+                    && !pending.approvals.contains(&cx.dispatch_origin)
+                    && pending.approvals.len() >= usize::from(self.threshold.saturating_sub(1))
+            }) {
+                vec!["this approval cannot execute the call; send multisig_execute".into()]
+            } else {
+                vec![]
+            },
+        )
     }
 
     fn validate(&self) -> Result<(), IntentError> {
@@ -820,6 +943,324 @@ mod tests {
             assert!(preview.available_free.is_none());
             assert!(preview.estimated_fee.is_none());
         }
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[cfg(feature = "transfer")]
+    #[tokio::test]
+    async fn approve_at_threshold_warns_without_executing_or_changing_the_hash_only_call()
+    -> anyhow::Result<()> {
+        let third = AccountId([9; 32]);
+        for (approvals, height, expected) in [
+            (vec![OTHER], 12, false),
+            (vec![OTHER, third], 12, true),
+            (vec![OTHER, third], 13, false),
+            (vec![MEMBER, OTHER], 12, false),
+        ] {
+            let (chain, client, snapshot) = fixture(1_000).await?;
+            let runtime = &snapshot.block().runtime;
+            let intent = MultisigApprove {
+                threshold: 3,
+                other_signatories: vec![json!(OTHER), json!(third)],
+                call: transfer(),
+                timepoint: Some(json!({"height":12,"index":3})),
+            };
+            let account = group_account(runtime, MEMBER, 3, &intent.other_signatories)?;
+            let inner = CallBytes::decode(&transfer_bytes(), runtime)?;
+            chain.mutate_state(|state| state.seed_python(
+                "Multisig", "Multisigs", &[json!(account), json!(format!("0x{}", hex::encode(inner.hash())))],
+                json!({"when":{"height":height,"index":3},"deposit":130,"depositor":OTHER,"approvals":approvals}),
+            ))?;
+            let build = BuildCx {
+                view: &snapshot,
+                origin: OriginView::Account(MEMBER),
+                runtime,
+                clock: &SystemClock,
+                spec: MultisigApprove::SPEC,
+            };
+            let before = intent.build(&build).await?;
+            let warnings = intent
+                .warnings(&PreflightCx {
+                    view: &snapshot,
+                    runtime,
+                    clock: &SystemClock,
+                    spec: MultisigApprove::SPEC,
+                    client: &client,
+                    dispatch_origin: MEMBER,
+                    fee_payer: MEMBER,
+                    call: &before.call,
+                })
+                .await?;
+            assert_eq!(
+                warnings,
+                if expected {
+                    vec!["this approval cannot execute the call; send multisig_execute".to_owned()]
+                } else {
+                    vec![]
+                }
+            );
+            let after = intent.build(&build).await?;
+            assert_eq!(before.call, after.call);
+            let decoded = decode(&after.call, runtime)?;
+            assert_eq!(decoded["call_function"], "approve_as_multi");
+            assert_eq!(
+                arg(&decoded, "call_hash")?,
+                &json!(format!("0x{}", hex::encode(inner.hash())))
+            );
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            client.close().await;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "transfer")]
+    #[tokio::test]
+    async fn approval_warning_uses_exact_reviewed_hash_through_wrappers_without_child_rpc()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(1_000).await?;
+        let runtime = &snapshot.block().runtime;
+        let intent = MultisigApprove {
+            threshold: 2,
+            other_signatories: vec![json!(OTHER)],
+            call: transfer(),
+            timepoint: Some(json!({"height":12,"index":3})),
+        };
+        // Timed or randomized builds can produce a different hash on a later
+        // build. The reviewed wire hash, not this recipe, identifies the state.
+        let reviewed_hash = [0x9d; 32];
+        assert_ne!(
+            CallBytes::decode(&transfer_bytes(), runtime)?.hash(),
+            reviewed_hash
+        );
+        let opening = timepoint(intent.timepoint.as_ref())?;
+        let reviewed = multisig::approve_as_multi(
+            2,
+            vec![OTHER],
+            opening.clone(),
+            reviewed_hash,
+            DynValue::new(rtao_core::codec::Value::record(vec![
+                ("ref_time".into(), rtao_core::codec::Value::Uint(1)),
+                ("proof_size".into(), rtao_core::codec::Value::Uint(2)),
+            ])),
+        )
+        .compose(runtime)?;
+        let account = group_account(runtime, MEMBER, 2, &intent.other_signatories)?;
+        chain.mutate_state(|state| state.seed_python(
+            "Multisig", "Multisigs",
+            &[json!(account), json!(format!("0x{}", hex::encode(reviewed_hash)))],
+            json!({"when":{"height":12,"index":3},"deposit":120,"depositor":OTHER,"approvals":[OTHER]}),
+        ))?;
+        chain.mutate_state(|state| {
+            state.set_handler("state_call", |_, _| {
+                rtao_testkit::Reply::error(-32601, "child rebuild must not request RPC", None)
+            });
+        });
+        let before = chain.requests().len();
+        let sudo = rtao_runtime::calls::sudo::sudo(reviewed.clone()).compose(runtime)?;
+        let batch =
+            rtao_runtime::calls::utility::batch_all(vec![reviewed.clone()]).compose(runtime)?;
+        let proxy = rtao_runtime::calls::proxy::proxy(
+            DynValue::new(rtao_core::codec::Value::hex(&MEMBER.0)),
+            None,
+            reviewed.clone(),
+        )
+        .compose(runtime)?;
+        for call in [&reviewed, &sudo, &batch, &proxy] {
+            assert_eq!(
+                intent
+                    .warnings(&PreflightCx {
+                        view: &snapshot,
+                        runtime,
+                        clock: &SystemClock,
+                        spec: MultisigApprove::SPEC,
+                        client: &client,
+                        dispatch_origin: MEMBER,
+                        fee_payer: MEMBER,
+                        call,
+                    })
+                    .await?,
+                ["this approval cannot execute the call; send multisig_execute"]
+            );
+        }
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .skip(before)
+                .all(|request| request.method != "state_call")
+        );
+        let duplicate = rtao_runtime::calls::utility::batch_all(vec![reviewed.clone(), reviewed])
+            .compose(runtime)?;
+        assert_eq!(
+            reviewed_approval_hash(&duplicate, runtime, 2, &[OTHER], &opening),
+            None
+        );
+        assert_eq!(
+            reviewed_approval_hash(&sudo, runtime, 3, &[OTHER], &opening),
+            None
+        );
+        assert_eq!(
+            reviewed_approval_hash(&sudo, runtime, 2, &[MEMBER], &opening),
+            None
+        );
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[cfg(feature = "transfer")]
+    #[tokio::test]
+    async fn null_timepoint_uses_opening_warnings_and_preserves_as_multi() -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(1_000).await?;
+        let runtime = &snapshot.block().runtime;
+        let ordinary = MultisigApprove {
+            threshold: 2,
+            other_signatories: vec![json!(OTHER)],
+            call: transfer(),
+            timepoint: None,
+        };
+        let null = MultisigApprove {
+            timepoint: Some(Value::Null),
+            ..ordinary.clone()
+        };
+        let build = BuildCx {
+            view: &snapshot,
+            origin: OriginView::Account(MEMBER),
+            runtime,
+            clock: &SystemClock,
+            spec: MultisigApprove::SPEC,
+        };
+        let call = null.build(&build).await?.call;
+        assert_eq!(call, ordinary.build(&build).await?.call);
+        assert_eq!(decode(&call, runtime)?["call_function"], "as_multi");
+        let preflight = PreflightCx {
+            view: &snapshot,
+            runtime,
+            clock: &SystemClock,
+            spec: MultisigApprove::SPEC,
+            client: &client,
+            dispatch_origin: MEMBER,
+            fee_payer: MEMBER,
+            call: &call,
+        };
+        assert_eq!(
+            null.warnings(&preflight).await?,
+            ordinary.warnings(&preflight).await?
+        );
+        assert!(
+            !null
+                .warnings(&preflight)
+                .await?
+                .iter()
+                .any(|warning| warning.contains("approve_as_multi"))
+        );
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[cfg(feature = "transfer")]
+    #[tokio::test(start_paused = true)]
+    async fn stalled_approval_count_returns_a_warning_within_two_seconds() -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(1_000).await?;
+        let runtime = &snapshot.block().runtime;
+        let intent = MultisigApprove {
+            threshold: 2,
+            other_signatories: vec![json!(OTHER)],
+            call: transfer(),
+            timepoint: Some(json!({"height":12,"index":3})),
+        };
+        let call = intent
+            .build(&BuildCx {
+                view: &snapshot,
+                origin: OriginView::Account(MEMBER),
+                runtime,
+                clock: &SystemClock,
+                spec: MultisigApprove::SPEC,
+            })
+            .await?
+            .call;
+        chain.mutate_state(|state| {
+            for method in ["state_getStorage", "state_queryStorageAt"] {
+                state.set_handler(method, |_, _| rtao_testkit::Reply::silent());
+            }
+        });
+        let started = tokio::time::Instant::now();
+        let warnings = intent
+            .warnings(&PreflightCx {
+                view: &snapshot,
+                runtime,
+                clock: &SystemClock,
+                spec: MultisigApprove::SPEC,
+                client: &client,
+                dispatch_origin: MEMBER,
+                fee_payer: MEMBER,
+                call: &call,
+            })
+            .await?;
+        assert_eq!(warnings, [approval_count_unavailable()]);
+        assert_eq!(started.elapsed(), std::time::Duration::from_secs(2));
+        assert!(chain.requests().iter().any(|request| matches!(
+            request.method.as_str(),
+            "state_getStorage" | "state_queryStorageAt"
+        )));
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[cfg(feature = "transfer")]
+    #[tokio::test]
+    async fn approval_count_read_failure_preserves_the_explicit_hash_only_approval()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(1_000).await?;
+        let runtime = &snapshot.block().runtime;
+        let intent = MultisigApprove {
+            threshold: 2,
+            other_signatories: vec![json!(OTHER)],
+            call: transfer(),
+            timepoint: Some(json!({"height":12,"index":3})),
+        };
+        let build = BuildCx {
+            view: &snapshot,
+            origin: OriginView::Account(MEMBER),
+            runtime,
+            clock: &SystemClock,
+            spec: MultisigApprove::SPEC,
+        };
+        let before = intent.build(&build).await?;
+        chain.mutate_state(|state| {
+            for method in ["state_getStorage", "state_queryStorageAt"] {
+                state.set_handler(method, |_, _| {
+                    rtao_testkit::Reply::error(-32601, "storage unavailable", None)
+                });
+            }
+        });
+        let warnings = intent
+            .warnings(&PreflightCx {
+                view: &snapshot,
+                runtime,
+                clock: &SystemClock,
+                spec: MultisigApprove::SPEC,
+                client: &client,
+                dispatch_origin: MEMBER,
+                fee_payer: MEMBER,
+                call: &before.call,
+            })
+            .await?;
+        assert_eq!(
+            warnings,
+            [
+                "could not determine the multisig approval count; approve_as_multi cannot execute the call"
+            ]
+        );
+        assert_eq!(intent.build(&build).await?.call, before.call);
+        assert!(chain.requests().iter().any(|request| matches!(
+            request.method.as_str(),
+            "state_getStorage" | "state_queryStorageAt"
+        )));
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
         client.close().await;
         Ok(())

@@ -63,6 +63,13 @@ pub trait PasswordPrompt: Send + Sync {
     }
     /// Ask the user for a secret; do not print or log the returned value.
     fn prompt(&self, message: &str) -> Result<SecretString, WalletError>;
+    /// Report a fixed validation diagnostic before retrying a terminal prompt.
+    ///
+    /// Implementations may render it beside their hidden input widget. The
+    /// default is silent; this callback never receives a password.
+    fn invalid_password(&self, _message: &'static str) -> Result<(), WalletError> {
+        Ok(())
+    }
 }
 /// A secret-bearing native password operation without implicit interaction.
 pub type NativePasswordFuture<'a, T> =
@@ -212,7 +219,11 @@ pub(crate) async fn resolve_with(
             .await
             .map_err(|error| WalletError::Blocking(error.to_string()))??;
             return Ok(resolved(
-                value.trim().to_owned(),
+                value
+                    .trim_matches(|character: char| {
+                        character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
+                    })
+                    .to_owned(),
                 PasswordSource::PasswordFile,
             ));
         }
@@ -427,6 +438,16 @@ mod tests {
                 .secret
                 .expose_secret(),
             "fallback"
+        );
+        std::fs::write(&fallback, "\u{1c}\u{1d}  separator-password \u{1e}\u{1f}").unwrap();
+        assert_eq!(
+            resolve_with(Path::new("/disposable/coldkey"), &sources, true, env)
+                .await
+                .unwrap()
+                .unwrap()
+                .secret
+                .expose_secret(),
+            "separator-password"
         );
         std::fs::write(&fallback, "").unwrap();
         assert_eq!(

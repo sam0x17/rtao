@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     books::{AccountLookup, FsAccountLookup, NameResolver},
-    call_names::resolve_intent_args_with,
+    call_names::{report_resolved_account, resolve_intent_args_with},
     context::{AppContext, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
     globals::{Tier, with_globals},
@@ -462,18 +462,15 @@ fn names(
         &ctx.globals.hotkey_name,
     );
     let mut output_error = None;
-    let result = resolve_intent_args_with(&resolver, &answers, None, &mut |_, resolved| {
-        if let Some(name) = &resolved.name
-            && let Err(error) = ctx.output.name_address(&resolved.address, name)
-        {
-            output_error = Some(error);
+    let result = resolve_intent_args_with(&resolver, &answers, None, &mut |param, resolved| {
+        if output_error.is_none() {
+            output_error = report_resolved_account(&ctx.output, param, resolved).err();
         }
-    })
-    .map_err(input)?;
+    });
     if let Some(error) = output_error {
         return Err(failure(error));
     }
-    Ok(result)
+    result.map_err(input)
 }
 
 /// Parsed semantic request; replay and execution options remain separate from args.

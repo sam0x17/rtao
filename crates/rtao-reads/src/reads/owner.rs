@@ -1,4 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{accounts,chain,delegation,epochs,hyperparameters,identity,locks,root,staking,subnets,prices}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/chain.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/epochs.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/hyperparameters.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Owner-loop catalog reads, with one immutable state identity per logical read.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -469,6 +472,28 @@ pub struct StakeValuation {
     pub stake_value: DynBalance,
     /// Spot TAO per alpha for each reported subnet.
     pub tao_per_alpha: BTreeMap<NetUid, f64>,
+}
+
+impl StakeValuation {
+    /// Spot TAO value of one stake balance, with root amounts kept exact.
+    ///
+    /// Missing subnet prices yield zero. Alpha values use Python's binary64
+    /// product followed by truncation, and reject results outside native u64 rao.
+    // py: sdk/python/bittensor/reads/staking.py:48-52
+    pub fn spot_value(&self, stake: &DynBalance) -> Result<DynBalance, ReadError> {
+        let rao = if stake.netuid == NetUid::ROOT {
+            stake.rao
+        } else {
+            spot_rao(
+                stake.rao,
+                self.tao_per_alpha
+                    .get(&stake.netuid)
+                    .copied()
+                    .unwrap_or(0.0),
+            )?
+        };
+        Ok(DynBalance::from_rao(rao, NetUid::ROOT))
+    }
 }
 
 fn spot_rao(rao: u64, price: f64) -> Result<u64, ReadError> {
@@ -951,6 +976,69 @@ pub async fn subnet_start_schedule<V: View + ?Sized>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn stake_valuation(tao_per_alpha: BTreeMap<NetUid, f64>) -> StakeValuation {
+        StakeValuation {
+            coldkey: AccountId::ZERO,
+            block: 10,
+            positions: Vec::new(),
+            stake_value: DynBalance::from_rao(0, NetUid::ROOT),
+            tao_per_alpha,
+        }
+    }
+
+    #[test]
+    fn public_spot_value_keeps_root_u64_max_exact_and_defaults_missing_prices_to_zero() {
+        let valuation = stake_valuation(BTreeMap::from([(NetUid::ROOT, f64::NAN)]));
+        assert_eq!(
+            valuation
+                .spot_value(&DynBalance::from_rao(u64::MAX, NetUid::ROOT))
+                .unwrap(),
+            DynBalance::from_rao(u64::MAX, NetUid::ROOT)
+        );
+        assert_eq!(
+            valuation
+                .spot_value(&DynBalance::from_rao(u64::MAX, NetUid(999)))
+                .unwrap(),
+            DynBalance::from_rao(0, NetUid::ROOT)
+        );
+    }
+
+    #[test]
+    fn public_spot_value_uses_binary64_product_truncation_and_returns_tao() {
+        let valuation = stake_valuation(BTreeMap::from([(NetUid(1), 0.5), (NetUid(2), 1.0)]));
+        assert_eq!(
+            valuation
+                .spot_value(&DynBalance::from_rao(3, NetUid(1)))
+                .unwrap(),
+            DynBalance::from_rao(1, NetUid::ROOT)
+        );
+        assert_eq!(
+            valuation
+                .spot_value(&DynBalance::from_rao(9_007_199_254_740_993, NetUid(2)))
+                .unwrap(),
+            DynBalance::from_rao(9_007_199_254_740_992, NetUid::ROOT)
+        );
+    }
+
+    #[test]
+    fn public_spot_value_rejects_nonfinite_negative_and_overflowing_native_results() {
+        for (rao, price) in [
+            (1, f64::NAN),
+            (1, f64::INFINITY),
+            (1, f64::NEG_INFINITY),
+            (3, -1.0),
+            (u64::MAX, 1.0),
+            (u64::MAX, 2.0),
+        ] {
+            let valuation = stake_valuation(BTreeMap::from([(NetUid(1), price)]));
+            assert!(matches!(
+                valuation.spot_value(&DynBalance::from_rao(rao, NetUid(1))),
+                Err(ReadError::InvalidParam { name, reason })
+                    if name == "stake_value" && reason == "spot valuation exceeds native u64 rao"
+            ));
+        }
+    }
 
     #[test]
     fn hyperparameters_preserve_full_bits_and_floor_negative_i32f32() {

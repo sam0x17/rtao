@@ -256,6 +256,101 @@ async fn nonloopback_is_rejected_before_lifecycle_or_account_calls() -> TestResu
 }
 
 #[tokio::test]
+async fn explicit_account_bridge_url_ignores_unused_listener_host_and_port() -> TestResult {
+    let backend = Fake::default();
+    let fixture = Fixture::new(
+        &[
+            "rtao",
+            "extension",
+            "accounts",
+            "--extension-bridge",
+            "ws://127.0.0.1:40000/ws",
+            "--host",
+            "ignored.example",
+            "--port",
+            "70000",
+        ],
+        true,
+        false,
+    )?;
+    fixture.run(&backend).await?;
+    let state = backend.state.lock().map_err(|_| "fixture lock")?;
+    assert_eq!(state.accounts.len(), 1);
+    assert_eq!(state.accounts[0].url, "ws://127.0.0.1:40000/ws");
+    assert!(state.serve.is_empty());
+    drop(state);
+
+    let fixture = Fixture::new(
+        &[
+            "rtao",
+            "extension",
+            "accounts",
+            "--extension-bridge",
+            "",
+            "--host",
+            "::1",
+            "--port",
+            "12345",
+        ],
+        true,
+        false,
+    )?;
+    fixture.run(&backend).await?;
+    let state = backend.state.lock().map_err(|_| "fixture lock")?;
+    assert_eq!(state.accounts.len(), 2);
+    assert_eq!(state.accounts[1].url, "ws://[::1]:12345/ws");
+    drop(state);
+
+    for (host, port) in [("ignored.example", "12345"), ("127.0.0.1", "70000")] {
+        let fixture = Fixture::new(
+            &[
+                "rtao",
+                "extension",
+                "accounts",
+                "--host",
+                host,
+                "--port",
+                port,
+            ],
+            true,
+            false,
+        )?;
+        assert_eq!(
+            fixture
+                .run(&backend)
+                .await
+                .err()
+                .ok_or("invalid fallback accepted")?
+                .code,
+            2
+        );
+    }
+    assert_eq!(
+        backend
+            .state
+            .lock()
+            .map_err(|_| "fixture lock")?
+            .accounts
+            .len(),
+        2
+    );
+    assert!(
+        tree()
+            .try_get_matches_from([
+                "rtao",
+                "extension",
+                "accounts",
+                "--extension-bridge",
+                "ws://127.0.0.1:40000/ws",
+                "--port",
+                "not-an-integer"
+            ])
+            .is_err()
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn accounts_json_preserves_python_rows_and_explicit_url_browser_and_quiet_choices()
 -> TestResult {
     let rows = vec![ExtensionAccount {

@@ -124,6 +124,9 @@ impl AppContext {
                 .name_address(&resolved.address, name)
                 .map_err(|e| CliError::failure(e.to_string()))?;
         }
+        self.output
+            .classify_address(&resolved.address, resolved.kind)
+            .map_err(|e| CliError::failure(e.to_string()))?;
         resolved
             .address
             .parse()
@@ -866,6 +869,7 @@ mod tests {
         output::{MemorySink, Stream},
         prompt::{LiveTerminal, PromptError},
     };
+    use serde_json::json;
     use std::{collections::VecDeque, path::Path};
     struct TerminalFixture {
         tty: bool,
@@ -919,6 +923,53 @@ mod tests {
             replies: VecDeque::from([Ok(reply.into())]),
             reads: 0,
         }
+    }
+    #[test]
+    fn account_resolution_classifies_explicit_and_named_targets_without_chatter()
+    -> Result<(), Box<dyn std::error::Error>> {
+        use crate::books::AccountKind;
+
+        let account = AccountId([7; 32]);
+        let raw = AccountId([8; 32]);
+        let mut ctx = context(&[], Value::Null, terminal(false, ""))?;
+        let sink = MemorySink::default();
+        ctx.output = Output::with_sink(Default::default(), Arc::new(sink.clone()));
+        ctx.books = Books::from_values(
+            json!([{"name":"operator","address":account},{"name":"alias","address":account}]),
+            json!([]),
+            json!([]),
+        );
+        let renderer = ctx.output.clone();
+        assert_eq!(
+            ctx.resolve_address("hotkey_ss58", Some("operator"))?,
+            Some(account)
+        );
+        assert_eq!(
+            ctx.resolve_address("dest_ss58", Some("alias"))?,
+            Some(account)
+        );
+        assert_eq!(
+            ctx.resolve_address("dest_ss58", Some(&raw.to_string()))?,
+            Some(raw)
+        );
+        assert_eq!(
+            renderer
+                .address_names()?
+                .get(&account.to_string())
+                .map(String::as_str),
+            Some("operator")
+        );
+        assert_eq!(
+            renderer.address_kinds()?.get(&account.to_string()),
+            Some(&AccountKind::Hotkey)
+        );
+        assert_eq!(
+            renderer.address_kinds()?.get(&raw.to_string()),
+            Some(&AccountKind::Coldkey)
+        );
+        assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        assert!(sink.bytes(Stream::Stderr)?.is_empty());
+        Ok(())
     }
     #[test]
     fn noninteractive_mutations_refuse_before_any_prompt_and_yes_bypasses()

@@ -104,21 +104,9 @@ pub async fn free_balance(ctx: &AppContext, client: &Client) -> Result<DynBalanc
 /// Convert alpha to spot TAO using Python's float product and truncation.
 /// Root amounts stay exact and every result is checked against native u64 rao.
 pub fn spot_value(valuation: &StakeValuation, stake: &DynBalance) -> Result<DynBalance, CliError> {
-    let rao = if stake.netuid == NetUid::ROOT {
-        stake.rao
-    } else {
-        let price = valuation
-            .tao_per_alpha
-            .get(&stake.netuid)
-            .copied()
-            .unwrap_or(0.0);
-        let product = (stake.rao as f64 * price).trunc();
-        if !(0.0..18_446_744_073_709_551_616.0).contains(&product) {
-            return Err(CliError::input("spot value exceeds native u64 rao"));
-        }
-        product as u64
-    };
-    Ok(DynBalance::from_rao(rao, NetUid::ROOT))
+    valuation
+        .spot_value(stake)
+        .map_err(|_| CliError::input("spot value exceeds native u64 rao"))
 }
 
 fn sum(left: u64, right: u64) -> Result<u64, CliError> {
@@ -178,7 +166,7 @@ pub fn subnet_choices(
         )?;
         choices[index].count += 1;
     }
-    choices.sort_by(|a, b| b.value_rao.cmp(&a.value_rao));
+    choices.sort_by_key(|choice| std::cmp::Reverse(choice.value_rao));
     Ok(choices)
 }
 
@@ -235,7 +223,7 @@ pub fn source_rows(
             note: note(position.hotkey),
         });
     }
-    rows.sort_by(|a, b| b.value.rao.cmp(&a.value.rao));
+    rows.sort_by_key(|row| std::cmp::Reverse(row.value.rao));
     Ok(rows)
 }
 
@@ -698,7 +686,7 @@ fn held_root_positions(
             held.push((total, position));
         }
     }
-    held.sort_by(|a, b| b.0.cmp(&a.0));
+    held.sort_by_key(|row| std::cmp::Reverse(row.0));
     Ok(held.into_iter().map(|(_, position)| position).collect())
 }
 

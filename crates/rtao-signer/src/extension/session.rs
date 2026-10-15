@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/session.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Additional source at the same commit/license: sdk/python/bittensor/extension/browser.py.
 use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
@@ -95,16 +96,27 @@ impl BridgePaths {
         let home = std::env::var_os("HOME")
             .map(PathBuf::from)
             .ok_or_else(|| error("HOME is unavailable; configure explicit bridge paths"))?;
-        let configured = |name: &str, filename: &str| {
+        Ok(Self::from_environment_with(&home, |name| {
             std::env::var_os(name)
+        }))
+    }
+    /// Resolve injected environment overrides without filesystem access.
+    /// Empty values select the supplied home; relative paths and literal
+    /// tildes remain unchanged, matching Python's `Path` construction.
+    pub fn from_environment_with(
+        home: &Path,
+        environment: impl Fn(&str) -> Option<std::ffi::OsString>,
+    ) -> Self {
+        let configured = |name: &str, filename: &str| {
+            environment(name)
                 .filter(|s| !s.is_empty())
                 .map(PathBuf::from)
                 .unwrap_or_else(|| home.join(".bittensor").join(filename))
         };
-        Ok(Self {
+        Self {
             token_file: configured("BITTENSOR_EXTENSION_BRIDGE_TOKEN", "extension_bridge.token"),
             pid_file: configured("BITTENSOR_EXTENSION_BRIDGE_PID", "extension_bridge.pid"),
-        })
+        }
     }
     /// Read a bounded private token without following a final-component symlink.
     pub fn read_token(&self) -> Result<Option<Zeroizing<String>>, BridgeError> {
@@ -880,47 +892,125 @@ pub(super) fn private_file_regressions() -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
-pub(crate) async fn open_bridge_page(url: &str, browser: Option<&str>) -> Result<(), BridgeError> {
+#[cfg(any(unix, test))]
+#[derive(Debug, PartialEq, Eq)]
+struct BrowserCommand {
+    program: PathBuf,
+    arguments: Vec<String>,
+}
+
+#[cfg(any(unix, test))]
+fn browser_command_with(
+    url: &str,
+    browser: Option<&str>,
+    environment: impl FnOnce() -> Option<String>,
+    macos: bool,
+    mut which: impl FnMut(&str) -> Option<PathBuf>,
+) -> BrowserCommand {
+    let system = || BrowserCommand {
+        program: if macos { "/usr/bin/open" } else { "xdg-open" }.into(),
+        arguments: vec![url.into()],
+    };
+    // Python uses `explicit or getenv`: an empty explicit choice falls through
+    // to the environment, while a custom command retains its original bytes.
     let choice = browser
+        .filter(|value| !value.is_empty())
         .map(str::to_owned)
-        .or_else(|| std::env::var("BT_EXTENSION_BROWSER").ok());
-    let choice = choice.as_deref().map(str::trim).filter(|s| {
-        !s.is_empty() && !matches!(s.to_ascii_lowercase().as_str(), "default" | "system")
-    });
-    #[cfg(target_os = "macos")]
-    let mut command = {
-        let mut command = Command::new("/usr/bin/open");
-        if let Some(choice) = choice {
-            let app = match choice.to_ascii_lowercase().as_str() {
-                "firefox" | "ff" => "Firefox",
-                "chrome" | "google-chrome" => "Google Chrome",
-                "chromium" => "Chromium",
-                "brave" => "Brave Browser",
-                "edge" => "Microsoft Edge",
-                "safari" => "Safari",
-                _ => choice,
+        .or_else(environment);
+    let Some(choice) = choice.filter(|value| !value.is_empty()) else {
+        return system();
+    };
+    let normalized = choice
+        .trim_matches(|character: char| {
+            character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
+        })
+        .to_lowercase();
+    if matches!(normalized.as_str(), "default" | "system") {
+        return system();
+    }
+    if macos {
+        let app = match normalized.as_str() {
+            "firefox" | "ff" => "Firefox",
+            "chrome" | "google-chrome" => "Google Chrome",
+            "chromium" => "Chromium",
+            "brave" => "Brave Browser",
+            "edge" => "Microsoft Edge",
+            "safari" => "Safari",
+            _ => &choice,
+        };
+        return BrowserCommand {
+            program: "/usr/bin/open".into(),
+            arguments: vec!["-a".into(), app.into(), url.into()],
+        };
+    }
+    let candidates: &[&str] = match normalized.as_str() {
+        "firefox" | "ff" => &["firefox", "firefox-esr"],
+        "chrome" | "google-chrome" => &[
+            "google-chrome",
+            "google-chrome-stable",
+            "chromium",
+            "chromium-browser",
+        ],
+        "brave" => &["brave-browser", "brave"],
+        "edge" => &["microsoft-edge", "microsoft-edge-stable"],
+        _ => &[&choice],
+    };
+    for candidate in candidates {
+        if let Some(program) = which(candidate) {
+            return BrowserCommand {
+                program,
+                arguments: vec![url.into()],
             };
-            command.args(["-a", app]);
         }
-        command.arg(url);
-        command
-    };
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = {
-        let mut command = Command::new(choice.unwrap_or("xdg-open"));
-        command.arg(url);
-        command
-    };
+    }
+    system()
+}
+
+#[cfg(unix)]
+fn browser_executable(name: &str) -> Option<PathBuf> {
+    use nix::unistd::{AccessFlags, access};
+    let executable = |path: &Path| path.is_file() && access(path, AccessFlags::X_OK).is_ok();
+    if name.contains('/') {
+        let path = Path::new(name);
+        return executable(path).then(|| path.to_owned());
+    }
+    let path = std::env::var_os("PATH").unwrap_or_else(|| "/bin:/usr/bin".into());
+    if path.is_empty() {
+        return None;
+    }
+    std::env::split_paths(&path)
+        .map(|directory| directory.join(name))
+        .find(|path| executable(path))
+}
+
+pub(crate) async fn open_bridge_page(url: &str, browser: Option<&str>) -> Result<(), BridgeError> {
     #[cfg(not(unix))]
     {
-        let _ = (url, choice);
+        let _ = (url, browser);
         return Err(error(
             "explicit browser opening is unsupported on this platform",
         ));
     }
     #[cfg(unix)]
     {
+        let url = url.to_owned();
+        let browser = browser.map(str::to_owned);
+        // Executable discovery may inspect several PATH directories. Keep
+        // those reads off the async bridge's reactor, along with selection.
+        let selected = tokio::task::spawn_blocking(move || {
+            browser_command_with(
+                &url,
+                browser.as_deref(),
+                || std::env::var("BT_EXTENSION_BROWSER").ok(),
+                cfg!(target_os = "macos"),
+                browser_executable,
+            )
+        })
+        .await
+        .map_err(|_| error("cannot select the bridge browser; open the session URL manually"))?;
+        let mut command = Command::new(selected.program);
         command
+            .args(selected.arguments)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -929,5 +1019,204 @@ pub(crate) async fn open_bridge_page(url: &str, browser: Option<&str>) -> Result
             .spawn()
             .map_err(|_| error("cannot open the bridge page; open the session URL manually"))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod environment_tests {
+    use super::*;
+
+    const URL: &str = "http://127.0.0.1:8090/?session=fixture";
+
+    #[test]
+    fn bridge_path_overrides_preserve_empty_relative_tilde_and_whitespace_semantics() {
+        let home = Path::new("/injected/home");
+        for value in [None, Some("")] {
+            let paths = BridgePaths::from_environment_with(home, |_| value.map(Into::into));
+            assert_eq!(
+                paths.token_file,
+                home.join(".bittensor/extension_bridge.token")
+            );
+            assert_eq!(paths.pid_file, home.join(".bittensor/extension_bridge.pid"));
+        }
+        for (token, pid) in [
+            ("relative/token", "relative/pid"),
+            ("~/token", "~/pid"),
+            (" token ", " pid "),
+            ("/absolute/token", "/absolute/pid"),
+        ] {
+            let paths = BridgePaths::from_environment_with(home, |name| match name {
+                "BITTENSOR_EXTENSION_BRIDGE_TOKEN" => Some(token.into()),
+                "BITTENSOR_EXTENSION_BRIDGE_PID" => Some(pid.into()),
+                _ => None,
+            });
+            assert_eq!(paths.token_file, Path::new(token));
+            assert_eq!(paths.pid_file, Path::new(pid));
+        }
+        let paths = BridgePaths::from_environment_with(home, |name| {
+            (name == "BITTENSOR_EXTENSION_BRIDGE_PID").then(|| "isolated.pid".into())
+        });
+        assert_eq!(paths.pid_file, Path::new("isolated.pid"));
+        assert_eq!(
+            paths.token_file,
+            home.join(".bittensor/extension_bridge.token")
+        );
+    }
+
+    #[test]
+    fn explicit_browser_uses_truthiness_then_environment_and_preserves_custom_bytes() {
+        for explicit in [None, Some("")] {
+            let mut looked_up = Vec::new();
+            let selected = browser_command_with(
+                URL,
+                explicit,
+                || Some("environment-browser".into()),
+                false,
+                |name| {
+                    looked_up.push(name.to_owned());
+                    Some(PathBuf::from("/resolved/env-browser"))
+                },
+            );
+            assert_eq!(looked_up, ["environment-browser"]);
+            assert_eq!(selected.program, Path::new("/resolved/env-browser"));
+            assert_eq!(selected.arguments, [URL]);
+        }
+        for raw in [
+            " custom browser ",
+            "$(do-not-execute)",
+            " ",
+            "relative/custom-browser",
+        ] {
+            let mut environment_reads = 0;
+            let selected = browser_command_with(
+                URL,
+                Some(raw),
+                || {
+                    environment_reads += 1;
+                    None
+                },
+                false,
+                |name| {
+                    assert_eq!(name, raw);
+                    Some(PathBuf::from(name))
+                },
+            );
+            assert_eq!(selected.program, Path::new(raw));
+            assert_eq!(selected.arguments, [URL]);
+            assert_eq!(environment_reads, 0);
+        }
+    }
+
+    #[test]
+    fn linux_aliases_select_the_first_executable_in_python_order() {
+        for (alias, candidates) in [
+            ("firefox", &["firefox", "firefox-esr"][..]),
+            ("\u{1c}FF\u{1f}", &["firefox", "firefox-esr"][..]),
+            (
+                " chrome ",
+                &[
+                    "google-chrome",
+                    "google-chrome-stable",
+                    "chromium",
+                    "chromium-browser",
+                ][..],
+            ),
+            (
+                "google-chrome",
+                &[
+                    "google-chrome",
+                    "google-chrome-stable",
+                    "chromium",
+                    "chromium-browser",
+                ][..],
+            ),
+            ("brave", &["brave-browser", "brave"][..]),
+            ("edge", &["microsoft-edge", "microsoft-edge-stable"][..]),
+        ] {
+            for first_available in 0..candidates.len() {
+                let mut visited = Vec::new();
+                let selected = browser_command_with(
+                    URL,
+                    Some(alias),
+                    || None,
+                    false,
+                    |name| {
+                        visited.push(name.to_owned());
+                        (name == candidates[first_available])
+                            .then(|| Path::new("/resolved").join(name))
+                    },
+                );
+                assert_eq!(visited, candidates[..=first_available]);
+                assert_eq!(
+                    selected.program,
+                    Path::new("/resolved").join(candidates[first_available])
+                );
+                assert_eq!(selected.arguments, [URL]);
+            }
+            let mut visited = Vec::new();
+            let selected = browser_command_with(
+                URL,
+                Some(alias),
+                || None,
+                false,
+                |name| {
+                    visited.push(name.to_owned());
+                    None
+                },
+            );
+            assert_eq!(visited, candidates);
+            assert_eq!(selected.program, Path::new("xdg-open"));
+            assert_eq!(selected.arguments, [URL]);
+        }
+    }
+
+    #[test]
+    fn system_browser_and_macos_app_selection_need_no_executable_probe() {
+        for macos in [false, true] {
+            for choice in [None, Some(""), Some(" default "), Some("SYSTEM")] {
+                let mut probed = Vec::new();
+                let selected = browser_command_with(
+                    URL,
+                    choice,
+                    || None,
+                    macos,
+                    |name| {
+                        probed.push(name.to_owned());
+                        None
+                    },
+                );
+                assert_eq!(
+                    selected.program,
+                    Path::new(if macos { "/usr/bin/open" } else { "xdg-open" })
+                );
+                assert_eq!(selected.arguments, [URL]);
+                assert!(probed.is_empty());
+            }
+        }
+        for (choice, app) in [
+            (" FF ", "Firefox"),
+            ("google-chrome", "Google Chrome"),
+            ("chromium", "Chromium"),
+            ("brave", "Brave Browser"),
+            ("edge", "Microsoft Edge"),
+            ("safari", "Safari"),
+            (" custom browser ", " custom browser "),
+            (" ", " "),
+        ] {
+            let mut probed = Vec::new();
+            let selected = browser_command_with(
+                URL,
+                Some(choice),
+                || None,
+                true,
+                |name| {
+                    probed.push(name.to_owned());
+                    None
+                },
+            );
+            assert_eq!(selected.program, Path::new("/usr/bin/open"));
+            assert_eq!(selected.arguments, ["-a", app, URL]);
+            assert!(probed.is_empty());
+        }
     }
 }

@@ -10,7 +10,7 @@ use rtao::{
 };
 use rtao_cli::{
     application,
-    books::Books,
+    books::{AccountKind, Books},
     commands::{
         catalog,
         generated::{self, QueryRequest, TxRequest},
@@ -607,6 +607,75 @@ fn parser_aliases_boolean_twins_defaults_and_leaf_globals_use_the_real_schema() 
             .0,
         "transfer-all"
     );
+    Ok(())
+}
+
+#[test]
+fn generated_nested_names_render_public_resolution_and_preserve_raw_address_silence() -> TestResult
+{
+    let coldkey = AccountId([7; 32]);
+    let hotkey = AccountId([8; 32]);
+    let raw = AccountId([9; 32]);
+    let children = json!([
+        {"op":"transfer","dest_ss58":"contact","amount_tao":"1"},
+        {"op":"add_stake","hotkey_ss58":"operator","netuid":1,"amount_tao":"1"},
+        {"op":"transfer","dest_ss58":raw,"amount_tao":"1"}
+    ])
+    .to_string();
+    for mode in [None, Some("--json"), Some("--quiet")] {
+        let mut argv = vec!["rtao", "tx", "batch", "--intents", &children, "--yes"];
+        argv.extend(mode);
+        let parsed = tree()?.try_get_matches_from(argv)?;
+        let (mut ctx, sink) = context(&parsed, &generated::intent_reserved("batch")?)?;
+        ctx.books = Books::from_values(
+            json!([{"name":"contact","address":coldkey},{"name":"operator","address":hotkey}]),
+            json!([]),
+            json!([]),
+        );
+        let request = TxRequest::from_matches(
+            &mut ctx,
+            "batch",
+            leaf(&parsed)?,
+            &mut PromptHistory::default(),
+        )?;
+        assert_eq!(request.args["intents"][0]["dest_ss58"], json!(coldkey));
+        assert_eq!(request.args["intents"][1]["hotkey_ss58"], json!(hotkey));
+        assert_eq!(request.args["intents"][2]["dest_ss58"], json!(raw));
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&coldkey.to_string())
+                .map(String::as_str),
+            Some("contact")
+        );
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&hotkey.to_string())
+                .map(String::as_str),
+            Some("operator")
+        );
+        assert_eq!(
+            ctx.output.address_kinds()?.get(&coldkey.to_string()),
+            Some(&AccountKind::Coldkey)
+        );
+        assert_eq!(
+            ctx.output.address_kinds()?.get(&hotkey.to_string()),
+            Some(&AccountKind::Hotkey)
+        );
+        assert!(!ctx.output.address_kinds()?.contains_key(&raw.to_string()));
+        assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        assert_eq!(
+            sink.text(Stream::Stderr)?,
+            if mode.is_none() {
+                format!(
+                    "dest_ss58: resolved address-book entry 'contact' to {coldkey}\nhotkey_ss58: resolved address-book entry 'operator' to {hotkey}\n"
+                )
+            } else {
+                String::new()
+            }
+        );
+    }
     Ok(())
 }
 

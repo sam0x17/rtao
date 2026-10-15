@@ -46,10 +46,17 @@ pub enum Overwrite {
     /// Explicitly replace an existing keyfile.
     Yes,
 }
-/// Creation/regeneration options; an explicit password forces encryption.
+/// Keyfile creation/regeneration options.
+///
+/// Role-specific wallet writes force encryption when a password is supplied.
+/// The generic [`crate::Keyfile`] instead honors `encrypt`, matching Python's
+/// single-file operation.
 #[derive(Clone, Debug)]
 pub struct WriteOptions {
     /// Encrypt using the core's btcli-compatible NaCl format.
+    ///
+    /// Generic keyfiles honor this field directly; a role-specific wallet also
+    /// encrypts when `password` is present.
     pub encrypt: bool,
     /// Password for encryption, otherwise resolved from the file's sources.
     pub password: Option<SecretString>,
@@ -559,7 +566,7 @@ fn preflight(path: &Path, overwrite: Overwrite) -> Result<(), WalletError> {
         Err(error) => Err(io_error(path, error)),
     }
 }
-fn private_dirs(path: &Path) -> Result<(), WalletError> {
+pub(crate) fn private_dirs(path: &Path) -> Result<(), WalletError> {
     if path.as_os_str().is_empty() {
         return Ok(());
     }
@@ -618,6 +625,11 @@ pub(crate) fn atomic_write(
     let parent = path
         .parent()
         .ok_or_else(|| WalletError::InvalidName("keyfile has no parent directory".into()))?;
+    let parent = if parent.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        parent
+    };
     // Check every existing ancestor, including ancestors above the nearest directory.
     for ancestor in parent
         .ancestors()
