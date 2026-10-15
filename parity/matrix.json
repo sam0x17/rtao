@@ -1961,7 +1961,8 @@
         "tests": [
           "rtao_intents::crowdloan::tests::programmatic_nested_json_has_depth_node_and_encoded_byte_budgets",
           "rtao_intents::crowdloan::tests::tool_constructor_bounds_nested_call_before_serde_conversion",
-          "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits"
+          "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits",
+          "rtao_intents::proxy::tests::announced_proxy_refusals_preserve_nested_error_order_and_never_read"
         ]
       },
       {
@@ -2172,9 +2173,11 @@
       {
         "id": "D-020",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "oracle vector"
+          "rtao_intents::proxy::tests::announced_proxy_inner_defaults_keep_callers_wallet_not_real_origin",
+          "rtao_intents::proxy::tests::announced_proxy_nests_exact_calls_and_optional_type_without_side_effects",
+          "rtao_intents::proxy::tests::announced_root_inner_remains_unwrapped_semantic_call"
         ]
       },
       {
@@ -9599,7 +9602,7 @@
         "name": "add_proxy",
         "oracle": "missing",
         "python_class": "AddProxy",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "add_stake",
@@ -9623,13 +9626,13 @@
         "name": "associate_evm_key",
         "oracle": "missing",
         "python_class": "AssociateEvmKey",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "associate_hotkey",
         "oracle": "missing",
         "python_class": "AssociateHotkey",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "batch",
@@ -9683,13 +9686,13 @@
         "name": "create_pure_proxy",
         "oracle": "missing",
         "python_class": "CreatePureProxy",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "decrease_take",
         "oracle": "missing",
         "python_class": "DecreaseTake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "dispute_coldkey_swap",
@@ -9713,7 +9716,7 @@
         "name": "execute_proxy_announced",
         "oracle": "missing",
         "python_class": "ExecuteProxyAnnounced",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "finalize_crowdloan",
@@ -9731,13 +9734,13 @@
         "name": "increase_take",
         "oracle": "missing",
         "python_class": "IncreaseTake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "kill_pure_proxy",
         "oracle": "missing",
         "python_class": "KillPureProxy",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "lock_stake",
@@ -9815,13 +9818,13 @@
         "name": "remove_proxies",
         "oracle": "missing",
         "python_class": "RemoveProxies",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "remove_proxy",
         "oracle": "missing",
         "python_class": "RemoveProxy",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "remove_stake",
@@ -9881,13 +9884,13 @@
         "name": "set_childkey_take",
         "oracle": "missing",
         "python_class": "SetChildkeyTake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_children",
         "oracle": "missing",
         "python_class": "SetChildren",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_crowdloan_max_contribution",
@@ -9953,7 +9956,7 @@
         "name": "set_take",
         "oracle": "missing",
         "python_class": "SetTake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_weights",

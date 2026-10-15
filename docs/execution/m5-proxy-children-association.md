@@ -1,8 +1,9 @@
 # M5-02 proxy, children and association source
 
-The candidate batch adds six proxy, five children/take and two association
-intents. Generated integration and ordinary hosted tests remain pending;
-these thirteen are not yet included in the committed count of 36/83.
+The batch adds six proxy, five children/take and two association intents.
+Verified hosted generation is adopted unchanged, bringing declared
+implementation coverage to 49/83 intents. Ordinary hosted tests and milestone
+acceptance remain pending.
 
 The Python sources at `850f2755bb05a3851f948489f0ab27b0645cebce` were
 authenticated against GitHub and the vendored bytes:
@@ -55,3 +56,23 @@ functions before the staking consumers existed.
 No local build, test, Python process, scratch root, node, wallet operation or
 upstream filing was used for this batch. Formatting and source checks cannot
 establish successful fixture execution or milestone acceptance.
+
+Hosted generation
+[38700421705](https://github.com/sam0x17/rtao/actions/runs/38700421705)
+at source `c39fab3db202edc8c416d9e0689cdb3d2abf3e6d` succeeded. Review checked
+fourteen exact regular-file members, archive digests/sizes, all 23 dependency
+hashes and unchanged role package sets/counts 225/361/365/416. The generated
+changes are exactly thirteen pending removals and metadata status updates,
+ten call-map additions, six constructor changes and five normalized JSON
+interfaces. The matrix changes only those intent statuses and D-020/D-046's
+reviewed test references. Unchanged interfaces and other matrix families were
+checked byte for byte.
+
+The generated ZIP is 91,583 bytes, SHA-256
+`deaee3210045a96d6dcfd99eb050e5a54c7b3ad32a558343505f881064ed3021`.
+The report ZIP is 40,275 bytes, SHA-256
+`cafe537d97b2fc94e44b270edba2956e56d7c86f0e2d427597830d890b6e8271`.
+The private bounded proof is
+`.local/recovery/2026-10-14/m5-proxy-children-association-adoption.json`.
+No runtime, hardware, fresh oracle or ordinary test success is implied by
+this generation result.

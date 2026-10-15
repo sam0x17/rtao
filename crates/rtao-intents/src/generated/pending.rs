@@ -16,21 +16,6 @@ impl rtao_tx::Intent for super::interfaces::AddCollateral {
         self
     }
 }
-#[cfg(feature = "proxy")]
-impl rtao_tx::Intent for super::interfaces::AddProxy {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("add_proxy"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "staking")]
 impl rtao_tx::Intent for super::interfaces::AddStake {
     fn summary(&self) -> String {
@@ -56,36 +41,6 @@ impl rtao_tx::Intent for super::interfaces::AddStakeLimit {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("add_stake_limit"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "association")]
-impl rtao_tx::Intent for super::interfaces::AssociateEvmKey {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("associate_evm_key"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "association")]
-impl rtao_tx::Intent for super::interfaces::AssociateHotkey {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("associate_hotkey"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
@@ -136,36 +91,6 @@ impl rtao_tx::Intent for super::interfaces::ClaimRootWithHotkey {
         self
     }
 }
-#[cfg(feature = "proxy")]
-impl rtao_tx::Intent for super::interfaces::CreatePureProxy {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("create_pure_proxy"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "children")]
-impl rtao_tx::Intent for super::interfaces::DecreaseTake {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("decrease_take"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "evm")]
 impl rtao_tx::Intent for super::interfaces::EvmWithdraw {
     fn summary(&self) -> String {
@@ -181,23 +106,6 @@ impl rtao_tx::Intent for super::interfaces::EvmWithdraw {
         self
     }
 }
-#[cfg(feature = "proxy")]
-impl rtao_tx::Intent for super::interfaces::ExecuteProxyAnnounced {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "execute_proxy_announced",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "evm")]
 impl rtao_tx::Intent for super::interfaces::FundEvmKey {
     fn summary(&self) -> String {
@@ -208,36 +116,6 @@ impl rtao_tx::Intent for super::interfaces::FundEvmKey {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("fund_evm_key"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "children")]
-impl rtao_tx::Intent for super::interfaces::IncreaseTake {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("increase_take"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "proxy")]
-impl rtao_tx::Intent for super::interfaces::KillPureProxy {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("kill_pure_proxy"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
@@ -380,36 +258,6 @@ impl rtao_tx::Intent for super::interfaces::RegisterLeasedNetwork {
         self
     }
 }
-#[cfg(feature = "proxy")]
-impl rtao_tx::Intent for super::interfaces::RemoveProxies {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("remove_proxies"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "proxy")]
-impl rtao_tx::Intent for super::interfaces::RemoveProxy {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("remove_proxy"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "staking")]
 impl rtao_tx::Intent for super::interfaces::RemoveStake {
     fn summary(&self) -> String {
@@ -450,36 +298,6 @@ impl rtao_tx::Intent for super::interfaces::SetAutoStake {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("set_auto_stake"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "children")]
-impl rtao_tx::Intent for super::interfaces::SetChildkeyTake {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("set_childkey_take"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "children")]
-impl rtao_tx::Intent for super::interfaces::SetChildren {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("set_children"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
@@ -542,21 +360,6 @@ impl rtao_tx::Intent for super::interfaces::SetRejectLockedAlpha {
         Err(rtao_tx::IntentError::NotYetPorted(
             "set_reject_locked_alpha",
         ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "children")]
-impl rtao_tx::Intent for super::interfaces::SetTake {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("set_take"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self

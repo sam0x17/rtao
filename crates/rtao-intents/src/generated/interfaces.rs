@@ -445,7 +445,7 @@ impl rtao_tx::IntentInterface for DecreaseTake {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::subtensor_module::DECREASE_TAKE];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("decrease_take", self)
+        crate::children::take_json("decrease_take", self, &self.take)
     }
 }
 #[cfg(feature = "coldkey")]
@@ -603,7 +603,7 @@ impl rtao_tx::IntentInterface for IncreaseTake {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::subtensor_module::INCREASE_TAKE];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("increase_take", self)
+        crate::children::take_json("increase_take", self, &self.take)
     }
 }
 #[cfg(feature = "proxy")]
@@ -1318,7 +1318,7 @@ impl rtao_tx::IntentInterface for SetChildkeyTake {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::subtensor_module::SET_CHILDKEY_TAKE];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("set_childkey_take", self)
+        crate::children::take_json("set_childkey_take", self, &self.take)
     }
 }
 #[cfg(feature = "children")]
@@ -1344,7 +1344,7 @@ impl rtao_tx::IntentInterface for SetChildren {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::subtensor_module::SET_CHILDREN];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("set_children", self)
+        crate::children::children_json(self)
     }
 }
 #[cfg(feature = "crowdloan")]
@@ -1676,7 +1676,7 @@ impl rtao_tx::IntentInterface for SetTake {
         &rtao_runtime::calls::subtensor_module::DECREASE_TAKE,
     ];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("set_take", self)
+        crate::children::take_json("set_take", self, &self.take)
     }
 }
 #[cfg(feature = "weights")]

@@ -448,7 +448,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::DecreaseTake = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::DecreaseTake = serde_json::from_value(args)?;
+                crate::children::canonical_take(&mut intent.take)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::DecreaseTake(intent))
             }
@@ -492,6 +493,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::proxy::check_constructor_input(&args)?;
                 let intent: super::interfaces::ExecuteProxyAnnounced =
                     serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
@@ -526,7 +528,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::IncreaseTake = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::IncreaseTake = serde_json::from_value(args)?;
+                crate::children::canonical_take(&mut intent.take)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::IncreaseTake(intent))
             }
@@ -802,7 +805,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::SetChildkeyTake = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::SetChildkeyTake = serde_json::from_value(args)?;
+                crate::children::canonical_take(&mut intent.take)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::SetChildkeyTake(intent))
             }
@@ -813,7 +817,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::SetChildren = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::SetChildren = serde_json::from_value(args)?;
+                crate::children::canonical_children(&mut intent.children)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::SetChildren(intent))
             }
@@ -939,7 +944,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::SetTake = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::SetTake = serde_json::from_value(args)?;
+                crate::children::canonical_take(&mut intent.take)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::SetTake(intent))
             }
