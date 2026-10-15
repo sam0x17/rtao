@@ -118,6 +118,12 @@ impl Default for ShieldOptions {
     }
 }
 
+struct ShieldReceiptWindow {
+    finalized_anchor: u64,
+    expiry: u64,
+    period: ShieldPeriod,
+}
+
 impl Client {
     /// Price the maximum-size carrier with public identity and a fresh nonce.
     pub async fn estimate_shielded_carrier_fee(
@@ -201,6 +207,13 @@ impl Client {
                     ),
                 )
                 .await?;
+            let receipt_window = ShieldReceiptWindow {
+                finalized_anchor: finalized,
+                expiry: inner.expiry().ok_or_else(|| {
+                    ClientError::Protocol("shielded inner extrinsic has no mortal expiry".into())
+                })?,
+                period: opts.period,
+            };
             let signature = limits
                 .admission
                 .run(self, async {
@@ -346,7 +359,7 @@ impl Client {
                 .resolve_shielded_inner(
                     carrier_report,
                     inner_hash,
-                    opts.period,
+                    receipt_window,
                     opts.wait,
                     limits.full,
                 )
@@ -396,19 +409,17 @@ impl Client {
         &self,
         mut outer: ExtrinsicReport,
         inner_hash: H256,
-        period: ShieldPeriod,
+        window: ShieldReceiptWindow,
         wait: Wait,
         limit: OperationLimit,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         let Some(included_at) = outer.block_number else {
             return Ok(outer);
         };
-        let deadline = included_at.checked_add(period.get()).ok_or_else(|| {
-            ClientError::Protocol("shield receipt deadline overflows block number".into())
-        })?;
+        let deadline = window.expiry;
         let interval = self.block_time().await?;
         let max_polls = rtao_catalog::py::SHIELDED_POLL_ATTEMPTS_PER_BLOCK
-            .checked_mul(period.get().saturating_add(1))
+            .checked_mul(window.period.get().saturating_add(1))
             .ok_or_else(|| ClientError::Protocol("shield poll bound overflow".into()))?;
         let mut block = included_at;
         // Python shares the missing-height allowance across the era range.
@@ -417,16 +428,22 @@ impl Client {
         let mut reorgs_left = rtao_catalog::py::SHIELDED_FINALITY_RPC_RETRIES;
         while block <= deadline {
             limit.check(self)?;
-            let Some(block_hash) = self.shield_block_hash(block).await.ok().flatten() else {
+            let Some(block_hash) = self.shield_block_hash(block).await? else {
                 waits_left -= 1;
                 if waits_left == 0 {
-                    break;
+                    return Err(ClientError::Protocol(format!(
+                        "shielded inner receipt remains unresolved: block {block} is unavailable after {max_polls} polls; canonical era expiry and absence have not been established"
+                    ))
+                    .into());
                 }
                 tokio::time::sleep(interval).await;
                 continue;
             };
             if self.find_extrinsic(inner_hash, block_hash).await?.is_none() {
-                block = block.saturating_add(1);
+                if block == deadline {
+                    break;
+                }
+                block += 1;
                 continue;
             }
             let resolved_hash = if wait == Wait::Finalization {
@@ -477,6 +494,25 @@ impl Client {
                 .await?;
             inner.shield = outer.shield;
             return Ok(inner);
+        }
+        // Seeing every best-chain height does not prove absence: an earlier
+        // lookup may have inspected an orphan. First establish finalized
+        // expiry, then rescan its canonical ancestors from the signing anchor.
+        // The anchor also covers a carrier re-included earlier after a reorg.
+        self.shield_finalized_hash(deadline, interval, max_polls, limit)
+            .await?;
+        for height in window.finalized_anchor..=deadline {
+            limit.check(self)?;
+            let hash = self.shield_block_hash(height).await?.ok_or_else(|| {
+                ClientError::Protocol(format!(
+                    "finalized shield receipt block {height} is unavailable; canonical absence has not been established"
+                ))
+            })?;
+            if self.find_extrinsic(inner_hash, hash).await?.is_some() {
+                let mut inner = self.resolve_extrinsic(inner_hash, hash, true).await?;
+                inner.shield = outer.shield;
+                return Ok(inner);
+            }
         }
         outer.success = false;
         outer.message = format!(
