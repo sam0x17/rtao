@@ -317,7 +317,7 @@ mod tests {
         receipt.extrinsic_id = Some("100-1".into());
         assert!(!retriable_pool_rejection(&receipt));
         let mut receipt = rejection.clone();
-        receipt.fee = Some(TaoBalance::from_rao(0));
+        receipt.fee = Some(TaoBalance(0));
         assert!(!retriable_pool_rejection(&receipt));
         let mut receipt = rejection.clone();
         receipt.fate_unknown = Some(H256([2; 32]));
