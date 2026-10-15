@@ -2,8 +2,12 @@
 
 /// Operation discovery and exact semantic/chain error explanations.
 pub mod catalog;
+/// Miner registration collateral inspection and transactions.
+pub mod collateral;
 /// Shared persistent config commands.
 pub mod config;
+/// Stake locking, conviction and locked-alpha acceptance.
+pub mod conviction;
 
 /// On-chain axon endpoint commands.
 pub mod axon;
@@ -17,6 +21,8 @@ pub mod multisig;
 pub mod pow;
 /// Proxy delegation, pure-account lifecycle and pending proxy execution.
 pub mod proxy;
+/// Root validator funds, allocation and registration.
+pub mod root;
 /// Schema-derived argument coercion and defaults.
 pub mod schema;
 /// Stake aliases of ordinary generated transaction operations.

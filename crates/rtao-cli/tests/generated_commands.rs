@@ -309,6 +309,39 @@ fn catalog_interface_metadata_covers_every_operation_and_pending_body() -> TestR
 }
 
 #[test]
+fn complete_query_tree_exposes_every_read_and_authenticated_parameter() -> TestResult {
+    let query = generated::query_command()?;
+    let actual = query
+        .get_subcommands()
+        .map(|command| command.get_name().to_owned())
+        .collect::<BTreeSet<_>>();
+    let expected = rtao::reads::ReadName::ALL
+        .into_iter()
+        .map(|name| name.as_str().replace('_', "-"))
+        .collect::<BTreeSet<_>>();
+    assert_eq!(actual.len(), 102);
+    assert_eq!(actual, expected);
+    for name in rtao::reads::ReadName::ALL {
+        let spelling = name.as_str().replace('_', "-");
+        let command = query.find_subcommand(&spelling).ok_or("read command")?;
+        let arguments = command
+            .get_arguments()
+            .map(|arg| arg.get_id().as_str())
+            .collect::<BTreeSet<_>>();
+        for field in schema::read_fields(name)? {
+            assert!(arguments.contains(field.name), "{name}.{}", field.name);
+        }
+        let error = tree()?
+            .try_get_matches_from(["rtao", "query", name.as_str(), "--help"])
+            .err()
+            .ok_or("query help")?;
+        assert_eq!(error.kind(), clap::error::ErrorKind::DisplayHelp);
+        assert!(error.to_string().contains(&format!("/query/{spelling}")));
+    }
+    Ok(())
+}
+
+#[test]
 fn tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata() -> TestResult {
     let rust_tools = generated::rust_tools()?;
     let tools = catalog::tools_payload(&rust_tools)?;
@@ -910,6 +943,89 @@ fn optional_own_key_null_defaults_survive_and_query_arrays_use_csv_rules() -> Te
         schema::coerce(&array, "[alice,bob]")?,
         json!(["[alice", "bob]"])
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn m6_query_dispatch_preserves_native_lease_ids_balances_and_historical_state() -> TestResult
+{
+    let cold = AccountId([21; 32]);
+    let hot = AccountId([22; 32]);
+    let mut state = FakeState::try_default()?;
+    let value = |cost| json!({"beneficiary":cold,"coldkey":cold,"hotkey":hot,"emissions_share":100,"end_block":null,"netuid":4095,"cost":cost});
+    state.seed_python(
+        "SubtensorModule",
+        "SubnetLeases",
+        &[json!(u32::MAX)],
+        value(u64::MAX),
+    )?;
+    let old = state.block;
+    state.advance(1);
+    state.seed_python(
+        "SubtensorModule",
+        "SubnetLeases",
+        &[json!(u32::MAX)],
+        value(1),
+    )?;
+    let (client, chain) = client(state).await?;
+    for (block, expected_cost) in [
+        (Some(old.to_string()), "τ18,446,744,073.709552765"),
+        (None, "τ0.000000001"),
+    ] {
+        let mut argv = vec![
+            "rtao",
+            "query",
+            "lease",
+            "--lease-id",
+            "4294967295",
+            "--json",
+        ];
+        if let Some(block) = &block {
+            argv.extend(["--block", block.as_str()]);
+        }
+        let parsed = tree()?.try_get_matches_from(argv)?;
+        let read = "lease".parse()?;
+        let (ctx, sink) = context(&parsed, &generated::read_reserved(read))?;
+        let request =
+            QueryRequest::from_matches(&ctx, read, leaf(&parsed)?, &mut PromptHistory::default())?;
+        let result = generated::execute_query(&client, &request, &ctx.output).await?;
+        assert_eq!(result["lease_id"], json!(u32::MAX));
+        assert_eq!(result["netuid"], json!(4095));
+        assert!(result["end_block"].is_null());
+        assert_eq!(result["cost"], json!(expected_cost));
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            result
+        );
+    }
+    let parsed = tree()?.try_get_matches_from([
+        "rtao",
+        "query",
+        "lease",
+        "--lease-id",
+        "4294967296",
+        "--json",
+    ])?;
+    let read = "lease".parse()?;
+    let (ctx, _) = context(&parsed, &generated::read_reserved(read))?;
+    let request =
+        QueryRequest::from_matches(&ctx, read, leaf(&parsed)?, &mut PromptHistory::default())?;
+    let observed = chain.requests().len();
+    let error = generated::execute_query(&client, &request, &ctx.output)
+        .await
+        .err()
+        .ok_or("invalid native lease id")?;
+    assert_eq!(error.code, 2);
+    assert_eq!(chain.requests().len(), observed);
+    assert!(
+        chain
+            .state()
+            .lock()
+            .map_err(|_| "state")?
+            .submissions
+            .is_empty()
+    );
+    client.close().await;
     Ok(())
 }
 

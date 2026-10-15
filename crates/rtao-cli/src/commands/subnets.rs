@@ -7,12 +7,14 @@ use crate::{
     books::{AccountLookup, FsAccountLookup},
     context::{AppContext, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
+    globals::{Tier, with_globals},
     output::{Output, TableSpec},
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use futures::TryStreamExt;
 use rtao::{
-    client::{BlockRef, Client},
+    client::{BlockRef, Client, ViewExt},
     primitives::{AccountId, NetUid, hyperparams::RawInteger, ratio::integer_division},
     reads::ReadName,
     tx::ExtrinsicResult,
@@ -83,13 +85,79 @@ pub fn command() -> Result<Command, CliError> {
                 .index(1)
                 .required(true)
         });
-    Ok(Command::new("subnets")
+    let mut command = Command::new("subnets")
         .about("Register and inspect subnets.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(register)
         .subcommand(generated::intent_command("register_subnet")?.name("create"))
-        .subcommand(graph))
+        .subcommand(graph)
+        .subcommand(Command::new("list").about("List subnets, highest emission first."))
+        .subcommand(inspect_command("show", "Inspect one subnet.", true))
+        .subcommand(
+            inspect_command("hyperparameters", "Show subnet hyperparameters.", true)
+                .alias("hparams")
+                .arg(Arg::new("name").long("name")),
+        )
+        .subcommand(inspect_command(
+            "burn-cost",
+            "Show the hotkey registration cost.",
+            true,
+        ))
+        .subcommand(Command::new("create-cost").about("Show the subnet registration cost."))
+        .subcommand(inspect_command(
+            "price",
+            "Show the spot TAO price of alpha.",
+            false,
+        ))
+        .subcommand(
+            inspect_command(
+                "conviction",
+                "Show per-hotkey subnet ownership conviction.",
+                false,
+            )
+            .arg(Arg::new("hotkey").long("hotkey"))
+            .arg(Arg::new("all").long("all").action(ArgAction::SetTrue)),
+        );
+    for name in [
+        "list",
+        "show",
+        "hyperparameters",
+        "burn-cost",
+        "create-cost",
+        "price",
+        "conviction",
+    ] {
+        command = command.mut_subcommand(name, |leaf| with_globals(leaf, Tier::Read));
+    }
+    Ok(command)
+}
+
+fn inspect_command(name: &'static str, about: &'static str, positional: bool) -> Command {
+    let arg = Arg::new("netuid")
+        .required(true)
+        .value_parser(clap::value_parser!(u16).range(0..4096));
+    Command::new(name).about(about).arg(if positional {
+        arg.index(1)
+    } else {
+        arg.long("netuid")
+    })
+}
+
+/// Public, signer-free subnet inspection inputs.
+pub struct InspectRequest {
+    /// Canonical command name, including hidden alias normalization.
+    pub command: String,
+    /// Subnet, absent for whole-network inspection.
+    pub netuid: Option<NetUid>,
+    /// Optional single hyperparameter explanation.
+    pub name: Option<String>,
+    /// Optional resolved hotkey for conviction.
+    pub hotkey: Option<AccountId>,
+    /// Include negligible conviction locks in human output.
+    pub all: bool,
+    /// Historical block, pinned for the complete command.
+    pub block: Option<u64>,
 }
 
 /// Command-owned identifiers to reserve from leaf-global overrides.
@@ -111,6 +179,10 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
             Ok(fields)
         }
         "metagraph" => Ok(generated::read_reserved(ReadName::Metagraph)),
+        "list" | "create-cost" => Ok(vec![]),
+        "show" | "burn-cost" | "price" => Ok(vec!["netuid"]),
+        "hyperparameters" => Ok(vec!["netuid", "name"]),
+        "conviction" => Ok(vec!["netuid", "hotkey", "all"]),
         _ => Err(CliError::input(format!("unknown subnets command {name:?}"))),
     }
 }
@@ -129,6 +201,8 @@ pub struct PowRegistration {
 
 /// Source-shaped registration or metagraph request.
 pub enum Request {
+    /// Curated subnet inspection over one pinned view.
+    Inspect(InspectRequest),
     /// A ready SDK transaction retaining its semantic submit controls.
     Transaction(TxRequest),
     /// Public mining happens only on an actual execution.
@@ -148,6 +222,42 @@ impl Request {
             .subcommand()
             .ok_or_else(|| CliError::input("missing subnets command"))?;
         match name {
+            "list" | "show" | "hyperparameters" | "burn-cost" | "create-cost" | "price"
+            | "conviction" => {
+                let hotkey = matches
+                    .try_get_one::<String>("hotkey")
+                    .ok()
+                    .flatten()
+                    .map(|hotkey| ctx.resolve_address("hotkey_ss58", Some(hotkey)))
+                    .transpose()?
+                    .flatten();
+                Ok(Self::Inspect(InspectRequest {
+                    command: name.into(),
+                    netuid: matches
+                        .try_get_one::<u16>("netuid")
+                        .ok()
+                        .flatten()
+                        .copied()
+                        .map(NetUid),
+                    name: matches
+                        .try_get_one::<String>("name")
+                        .ok()
+                        .flatten()
+                        .cloned(),
+                    hotkey,
+                    all: matches
+                        .try_get_one::<bool>("all")
+                        .ok()
+                        .flatten()
+                        .copied()
+                        .unwrap_or(false),
+                    block: matches
+                        .try_get_one::<u64>("__block")
+                        .ok()
+                        .flatten()
+                        .copied(),
+                }))
+            }
             "create" => TxRequest::from_matches(ctx, "register_subnet", matches, history)
                 .map(Self::Transaction),
             "metagraph" => QueryRequest::from_matches(ctx, ReadName::Metagraph, matches, history)
@@ -290,6 +400,533 @@ fn integer(value: &Value) -> Option<RawInteger> {
         .as_i128()
         .map(RawInteger::Signed)
         .or_else(|| value.as_u128().map(RawInteger::Unsigned))
+}
+
+async fn execute_inspect(
+    ctx: &AppContext,
+    client: &Client,
+    request: &InspectRequest,
+) -> Result<(), CliError> {
+    use rtao::reads::reads::{m6_locks, m6_root, m6_staking, owner};
+    use rtao_runtime::storage::subtensor_module as st;
+    let at = client
+        .at(request.block.map_or(BlockRef::Best, BlockRef::Number))
+        .await
+        .map_err(failure)?;
+    let output = &ctx.output;
+    let netuid = || {
+        request
+            .netuid
+            .ok_or_else(|| CliError::input("missing subnet"))
+    };
+    match request.command.as_str() {
+        "hyperparameters" => {
+            let netuid = netuid()?;
+            let params = super::hparams::fetch_hyperparameters(&at, netuid).await?;
+            super::hparams::render_hyperparameters(output, netuid, &params, request.name.as_deref())
+        }
+        "price" => {
+            let price = m6_staking::alpha_price(&at, netuid()?)
+                .await
+                .map_err(failure)?;
+            let payload = serde_json::to_value(price).map_err(failure)?;
+            let fields = payload
+                .as_object()
+                .ok_or_else(|| failure("price is not an object"))?
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect::<Vec<_>>();
+            output
+                .detail(None, &fields, Some(&payload))
+                .map_err(failure)
+        }
+        "burn-cost" | "create-cost" => {
+            let (key, cost) = if request.command == "create-cost" {
+                (
+                    "create_cost",
+                    m6_root::subnet_registration_cost(&at)
+                        .await
+                        .map_err(failure)?,
+                )
+            } else {
+                let netuid = netuid()?;
+                if !at
+                    .storage(&st::NETWORKS_ADDED, (netuid,))
+                    .await
+                    .map_err(failure)?
+                {
+                    return Err(failure(format!("subnet {netuid} does not exist")));
+                }
+                (
+                    "burn_cost",
+                    rtao::primitives::DynBalance::from_rao(
+                        at.storage(&st::BURN, (netuid,)).await.map_err(failure)?.0,
+                        NetUid::ROOT,
+                    ),
+                )
+            };
+            output
+                .detail(
+                    None,
+                    &[
+                        (key.into(), json!(cost.to_python_string())),
+                        ("tao".into(), json!(cost.amount())),
+                    ],
+                    None,
+                )
+                .map_err(failure)
+        }
+        "show" => {
+            let netuid = netuid()?;
+            if !at
+                .storage(&st::NETWORKS_ADDED, (netuid,))
+                .await
+                .map_err(failure)?
+            {
+                return Err(failure(format!("subnet {netuid} does not exist")));
+            }
+            let info = m6_root::subnet(&at, netuid).await.map_err(failure)?;
+            let identity = owner::subnet_identity(&at, netuid).await.map_err(failure)?;
+            let owner = at
+                .storage(&st::SUBNET_OWNER, (netuid,))
+                .await
+                .map_err(failure)?;
+            let hotkey = at
+                .storage(&st::SUBNET_OWNER_HOTKEY, (netuid,))
+                .await
+                .map_err(failure)?;
+            let registered = at
+                .storage(&st::NETWORK_REGISTERED_AT, (netuid,))
+                .await
+                .map_err(failure)?;
+            let max = at
+                .storage(&st::MAX_ALLOWED_UIDS, (netuid,))
+                .await
+                .map_err(failure)?;
+            let name = identity
+                .as_ref()
+                .and_then(|i| i.get("subnet_name"))
+                .filter(|v| v.as_str().is_some_and(|s| !s.is_empty()));
+            if let Some(name) = name.and_then(Value::as_str) {
+                output
+                    .update_subnet_names([(netuid.0, name.into())])
+                    .map_err(failure)?;
+            }
+            let record = json!({"netuid":netuid,"name":name,"symbol":output.unit(netuid),
+                "owner_coldkey":owner.to_string(),"owner_hotkey":hotkey.to_string(),
+                "registered_at":registered,"tempo":info.tempo,"burn_tao":info.burn.amount(),
+                "neurons":info.neuron_count,"max_neurons":(max != 0).then_some(max),"identity":identity});
+            let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
+            let names: BTreeMap<_, _> = lookup
+                .candidates()
+                .into_iter()
+                .map(|c| (c.address, c.name))
+                .collect();
+            let fields = vec![
+                ("name".into(), name.cloned().unwrap_or(Value::Null)),
+                (
+                    "owner".into(),
+                    json!(output.account_text(
+                        &owner.to_string(),
+                        names.get(&owner.to_string()).map(String::as_str)
+                    )),
+                ),
+                (
+                    "owner hotkey".into(),
+                    json!(output.account_text(
+                        &hotkey.to_string(),
+                        names.get(&hotkey.to_string()).map(String::as_str)
+                    )),
+                ),
+                (
+                    "registered".into(),
+                    json!(format!(
+                        "block {registered}{}",
+                        registered_note(registered, at.block().number)
+                            .map(|s| format!(" ({s})"))
+                            .unwrap_or_default()
+                    )),
+                ),
+                ("tempo".into(), json!(info.tempo)),
+                ("burn".into(), json!(info.burn.to_python_string())),
+                (
+                    "neurons".into(),
+                    json!(if max == 0 {
+                        info.neuron_count.to_string()
+                    } else {
+                        format!("{}/{max}", info.neuron_count)
+                    }),
+                ),
+            ];
+            output
+                .detail(Some(&format!("subnet {netuid}")), &fields, Some(&record))
+                .map_err(failure)?;
+            if !output.options.json_mode {
+                let links = [
+                    ("github_repo", "github"),
+                    ("subnet_url", "url"),
+                    ("discord", "discord"),
+                    ("subnet_contact", "contact"),
+                    ("description", "description"),
+                    ("logo_url", "logo"),
+                    ("additional", "additional"),
+                ]
+                .into_iter()
+                .filter_map(|(key, label)| {
+                    identity
+                        .as_ref()?
+                        .get(key)
+                        .filter(|v| !v.is_null() && **v != json!(""))
+                        .map(|v| (label.into(), v.clone()))
+                })
+                .collect::<Vec<_>>();
+                output
+                    .detail(Some("identity"), &links, None)
+                    .map_err(failure)?;
+            }
+            Ok(())
+        }
+        "list" => {
+            let mut infos = m6_root::subnets(&at).await.map_err(failure)?;
+            let names = owner::subnet_names(&at).await.map_err(failure)?;
+            output
+                .update_subnet_names(names.iter().map(|(id, name)| (id.0, name.clone())))
+                .map_err(failure)?;
+            let prices = m6_staking::alpha_prices(&at).await.map_err(failure)?;
+            let flows = m6_root::subnet_tao_flows(&at).await.map_err(failure)?;
+            let max = at
+                .storage_iter(&st::MAX_ALLOWED_UIDS, ())
+                .try_collect::<Vec<_>>()
+                .await
+                .map_err(failure)?;
+            let emissions = at
+                .storage_iter(&st::SUBNET_TAO_IN_EMISSION, ())
+                .try_collect::<Vec<_>>()
+                .await
+                .map_err(failure)?;
+            let key = |keys: &[rtao::core::DynValue]| -> Result<NetUid, CliError> {
+                keys.last()
+                    .and_then(rtao::core::DynValue::as_u128)
+                    .and_then(|v| u16::try_from(v).ok())
+                    .map(NetUid)
+                    .ok_or_else(|| failure("subnet map key is not a native NetUid"))
+            };
+            let max = max
+                .into_iter()
+                .map(|(k, v)| Ok((key(&k)?, v)))
+                .collect::<Result<BTreeMap<_, _>, CliError>>()?;
+            let emissions = emissions
+                .into_iter()
+                .map(|(k, v)| Ok((key(&k)?, v.0)))
+                .collect::<Result<BTreeMap<_, _>, CliError>>()?;
+            infos.sort_by_key(|i| {
+                (
+                    std::cmp::Reverse(emissions.get(&i.netuid).copied().unwrap_or(0)),
+                    i.netuid,
+                )
+            });
+            let mut rows = Vec::new();
+            let mut records = Vec::new();
+            for i in &infos {
+                let emission = emissions
+                    .get(&i.netuid)
+                    .copied()
+                    .unwrap_or(0)
+                    .checked_mul(7200)
+                    .ok_or_else(|| failure("daily emission exceeds native u64 balance"))?;
+                let emission =
+                    rtao::primitives::DynBalance::from_rao(emission, NetUid::ROOT).amount();
+                let price = prices
+                    .get(&i.netuid)
+                    .copied()
+                    .filter(|_| i.netuid != NetUid::ROOT);
+                let flow = flows
+                    .get(&i.netuid)
+                    .map(|v| v * 7200.0 / 1e9)
+                    .filter(|_| i.netuid != NetUid::ROOT);
+                let emission = (i.netuid != NetUid::ROOT).then_some(emission);
+                rows.push(vec![
+                    json!(i.netuid),
+                    json!(names.get(&i.netuid)),
+                    json!(
+                        price
+                            .map(|p| format!("{p:.6}"))
+                            .unwrap_or_else(|| "—".into())
+                    ),
+                    json!(
+                        emission
+                            .map(|e| format!("{e:.2}"))
+                            .unwrap_or_else(|| "—".into())
+                    ),
+                    json!(
+                        flow.map(|f| format!("{f:+.2}"))
+                            .unwrap_or_else(|| "—".into())
+                    ),
+                    json!(i.burn.to_python_string()),
+                ]);
+                records.push(json!({"netuid":i.netuid,"name":names.get(&i.netuid),"symbol":output.unit(i.netuid),"price_tao_per_alpha":price,"emission_tao_per_day":emission,"tao_flow_tao_per_day":flow,"tempo":i.tempo,"burn_tao":i.burn.amount(),"neurons":i.neuron_count,"max_neurons":max.get(&i.netuid),"url":output.options.network.as_deref().filter(|n| matches!(*n, "finney" | "archive")).map(|_| format!("https://taomarketcap.com/subnets/{}",i.netuid))}));
+            }
+            let mut table = TableSpec::new(
+                "subnets",
+                [
+                    "netuid",
+                    "name",
+                    "price (τ)",
+                    "emission (τ/day)",
+                    "flow (τ/day)",
+                    "burn",
+                ]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+                rows,
+            );
+            table.records = Some(json!(records));
+            table.footer = Some(format!(
+                "{} subnets · {} neurons · sorted by emission",
+                infos.len(),
+                infos.iter().map(|i| u64::from(i.neuron_count)).sum::<u64>()
+            ));
+            output.table(&table).map_err(failure)
+        }
+        "conviction" => {
+            let netuid = netuid()?;
+            if let Some(hotkey) = request.hotkey {
+                let data = m6_locks::hotkey_conviction(&at, hotkey, netuid)
+                    .await
+                    .map_err(failure)?;
+                return output
+                    .detail(
+                        Some(&format!("conviction netuid {netuid}")),
+                        &[(
+                            "conviction_alpha".into(),
+                            json!(data.conviction_alpha.to_python_string()),
+                        )],
+                        Some(&serde_json::to_value(data).map_err(failure)?),
+                    )
+                    .map_err(failure);
+            }
+            let data = m6_locks::subnet_convictions(&at, netuid)
+                .await
+                .map_err(failure)?;
+            let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
+            let mut names: BTreeMap<_, _> = lookup
+                .candidates()
+                .into_iter()
+                .filter(|c| c.source == "hotkey")
+                .map(|c| {
+                    let name = c.name.rsplit('/').next().unwrap_or(&c.name).to_owned();
+                    (c.address, name)
+                })
+                .collect();
+            for entry in &ctx.books.addresses {
+                if let (Some(address), Some(name)) = (
+                    entry
+                        .get("address")
+                        .and_then(Value::as_str)
+                        .filter(|address| !address.is_empty()),
+                    entry
+                        .get("name")
+                        .and_then(Value::as_str)
+                        .filter(|name| !name.is_empty()),
+                ) {
+                    names.entry(address.into()).or_insert_with(|| name.into());
+                }
+            }
+            let unnamed = data
+                .hotkeys
+                .iter()
+                .map(|e| e.hotkey)
+                .filter(|key| !names.contains_key(&key.to_string()))
+                .collect();
+            for (key, identity) in owner::hotkey_identities(&at, unnamed)
+                .await
+                .map_err(failure)?
+            {
+                if let Some(name) = identity
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .filter(|s| !s.is_empty())
+                {
+                    names.entry(key.to_string()).or_insert_with(|| name.into());
+                }
+            }
+            render_convictions_named(output, &data, request.all, &names)
+        }
+        _ => Err(CliError::input("unknown subnet inspection")),
+    }
+}
+
+/// Human registration age at the pinned head.
+pub fn registered_note(registered: u64, block: u64) -> Option<String> {
+    let seconds = block.checked_sub(registered)?.checked_mul(12)?;
+    if seconds == 0 {
+        return None;
+    }
+    Some(if seconds >= 365 * 86400 {
+        format!("~{:.1}y ago", seconds as f64 / (365.0 * 86400.0))
+    } else if seconds >= 86400 {
+        format!("~{:.0}d ago", seconds as f64 / 86400.0)
+    } else if seconds >= 3600 {
+        format!("~{:.0}h ago", seconds as f64 / 3600.0)
+    } else if seconds >= 60 {
+        format!("~{}m ago", seconds / 60)
+    } else {
+        "just now".into()
+    })
+}
+
+/// Individual ownership-gate estimate; total conviction is never used as a gate.
+pub fn conviction_eta(blocks: Option<u128>) -> String {
+    match blocks {
+        None => "won't clear 18%".into(),
+        Some(0) => "above 18%".into(),
+        Some(blocks) => {
+            let seconds = blocks as f64 * 12.0;
+            if seconds >= 86400.0 {
+                format!("18% in ~{:.0}d", seconds / 86400.0)
+            } else if seconds >= 3600.0 {
+                format!("18% in ~{:.0}h", seconds / 3600.0)
+            } else {
+                format!("18% in ~{}m", (blocks.saturating_mul(12) / 60).max(1))
+            }
+        }
+    }
+}
+
+/// Render all locks in JSON while applying the Python dust cutoff only to human rows.
+pub fn render_convictions(
+    output: &Output,
+    data: &rtao::reads::reads::m6_locks::SubnetConvictions,
+    all: bool,
+) -> Result<(), CliError> {
+    render_convictions_named(output, data, all, &BTreeMap::new())
+}
+
+fn render_convictions_named(
+    output: &Output,
+    data: &rtao::reads::reads::m6_locks::SubnetConvictions,
+    all: bool,
+    names: &BTreeMap<String, String>,
+) -> Result<(), CliError> {
+    let records = data.hotkeys.iter().map(|e| json!({"hotkey":e.hotkey,"is_owner":e.is_owner,"locked":e.locked_alpha.to_python_string(),"locked_alpha":e.locked_alpha.amount(),"conviction":e.conviction_alpha.to_python_string(),"conviction_alpha":e.conviction_alpha.amount(),"pct_of_threshold":e.pct_of_threshold,"blocks_to_threshold":e.blocks_to_threshold})).collect::<Vec<_>>();
+    let payload = json!({"netuid":data.netuid,"block":data.block,"alpha_out":data.alpha_out.amount(),"threshold_alpha":data.threshold_alpha.amount(),"total_locked_alpha":data.total_locked_alpha.amount(),"total_conviction_alpha":data.total_conviction_alpha.amount(),"leader_hotkey":data.leader_hotkey,"leader_blocks_to_threshold":data.leader_blocks_to_threshold,"unlock_rate":data.unlock_rate,"maturity_rate":data.maturity_rate,"owner_hotkey":data.owner_hotkey,"registered_at":data.registered_at,"ownership_changeable_at_block":data.ownership_changeable_at_block,"hotkeys":records});
+    if output.options.json_mode {
+        return output.value(&payload).map_err(failure);
+    }
+    let cutoff = (data.threshold_alpha.rao / 10_000).max(1_000_000);
+    let shown = data
+        .hotkeys
+        .iter()
+        .filter(|e| all || e.locked_alpha.rao >= cutoff || e.conviction_alpha.rao >= cutoff)
+        .collect::<Vec<_>>();
+    output
+        .detail(
+            Some(&format!("conviction netuid {}", data.netuid)),
+            &[
+                ("alpha out".into(), json!(data.alpha_out.to_python_string())),
+                (
+                    "takeover threshold".into(),
+                    json!(format!(
+                        "{} — one hotkey must exceed 18% of eligible alpha",
+                        data.threshold_alpha.to_python_string()
+                    )),
+                ),
+                (
+                    "unlock rate".into(),
+                    json!(format!("{} blocks", data.unlock_rate)),
+                ),
+                (
+                    "maturity rate".into(),
+                    json!(format!("{} blocks", data.maturity_rate)),
+                ),
+                (
+                    "age gate".into(),
+                    json!(
+                        if u128::from(data.block) >= data.ownership_changeable_at_block {
+                            "open".into()
+                        } else {
+                            format!("block {}", data.ownership_changeable_at_block)
+                        }
+                    ),
+                ),
+                ("owner hotkey".into(), json!(data.owner_hotkey)),
+                (
+                    "leader".into(),
+                    json!(
+                        data.leader_hotkey
+                            .map(|key| format!(
+                                "{}: {}",
+                                names
+                                    .get(&key.to_string())
+                                    .cloned()
+                                    .unwrap_or_else(|| key.to_string()),
+                                conviction_eta(data.leader_blocks_to_threshold)
+                            ))
+                            .unwrap_or_else(|| "no locks yet".into())
+                    ),
+                ),
+                (
+                    "total locked".into(),
+                    json!(data.total_locked_alpha.to_python_string()),
+                ),
+                (
+                    "total conviction".into(),
+                    json!(format!(
+                        "{} — context only; the gate is per-hotkey",
+                        data.total_conviction_alpha.to_python_string()
+                    )),
+                ),
+            ],
+            None,
+        )
+        .map_err(failure)?;
+    let rows = shown
+        .iter()
+        .map(|e| {
+            vec![
+                json!(output.account_text(
+                    &e.hotkey.to_string(),
+                    names.get(&e.hotkey.to_string()).map(String::as_str)
+                )),
+                json!(if e.is_owner { "owner" } else { "" }),
+                json!(e.locked_alpha.to_python_string()),
+                json!(e.conviction_alpha.to_python_string()),
+                json!(
+                    e.pct_of_threshold
+                        .map(|v| format!("{:.2}% of threshold", v * 100.0))
+                        .unwrap_or_else(|| "no threshold".into())
+                ),
+                json!(conviction_eta(e.blocks_to_threshold)),
+            ]
+        })
+        .collect();
+    let table = TableSpec::new(
+        "locks",
+        [
+            "hotkey",
+            "note",
+            "locked",
+            "conviction",
+            "threshold",
+            "estimate",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect(),
+        rows,
+    );
+    output.table(&table).map_err(failure)?;
+    output.message(&format!("Lock alpha with `rtao conviction add --netuid {} --amount <alpha>`. Estimates assume constant rates and alpha accounting. Ownership also requires the one-year age gate. Unlock half-life ~{:.0}d; maturity half-life ~{:.0}d.", data.netuid, data.unlock_rate as f64 * std::f64::consts::LN_2 * 12.0 / 86400.0, data.maturity_rate as f64 * std::f64::consts::LN_2 * 12.0 / 86400.0)).map_err(failure)?;
+    let hidden = data.hotkeys.len() - shown.len();
+    if hidden != 0 {
+        output
+            .message(&format!(
+                "{hidden} negligible locks hidden (pass --all to show)"
+            ))
+            .map_err(failure)?;
+    }
+    Ok(())
 }
 
 fn raw_text(value: &Value) -> String {
@@ -609,6 +1246,10 @@ pub async fn execute(
     history: &mut PromptHistory,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
     match request {
+        Request::Inspect(request) => {
+            execute_inspect(ctx, client, request).await?;
+            Ok(None)
+        }
         Request::Transaction(request) => {
             generated::execute_tx(ctx, client, request, options, external, history).await
         }
