@@ -3,6 +3,26 @@
 schema = 1
 
 [[divergences]]
+id = "D-066"
+upstream_symbol = "bittensor.timelock.decrypt/decrypt_async and cli.commands.timelock.decrypt_cmd"
+python_behavior = "Accepts float timeout values without finite/nonnegative validation. For an already revealed envelope, synchronous decrypt attempts core decryption before checking its retry deadline; decrypt_async gives the threaded fetch at least one second. A blocking core attempt may outlast that budget."
+rtao_behavior = "OpenOptions uses a nonnegative Duration and one total deadline for reveal wait, beacon access, crypto delivery and retries. The CLI rejects nonfinite, negative and unrepresentable timeout inputs. Zero expires without starting an attempt. Expiry drops pending waits/HTTP and the crypto waiter; an already running blocking crypto task finishes independently with its plaintext guarded."
+rationale = "Preserve the existing bounded native asynchronous I/O policy and make its different accepted inputs and deadline behavior explicit. This is a local resource policy, without an upstream defect claim."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; complete pinned timelock and CLI source reviewed on 2026-10-15"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_tx::timelock::tests::zero_timeout_does_not_start_a_beacon_request",
+  "rtao_tx::timelock::tests::deadline_caps_reveal_wait_and_fetch_together",
+  "rtao_tx::timelock::tests::deadline_truncates_the_retry_sleep_and_prevents_another_attempt",
+  "rtao_tx::timelock::tests::deadline_drops_an_in_flight_attempt_future",
+  "rtao_cli::m7_timelock_commands::missing_inputs_and_invalid_deadlines_fail_before_crypto",
+]
+upstream_report = "Existing native policy and fixtures reviewed in source; current combined hosted execution remains pending. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/timelock.py#L307-L379"
+
+[[divergences]]
 id = "D-065"
 upstream_symbol = "bittensor.cli.commands.misc.latency"
 python_behavior = "Adds no command-specific connection/header deadline; the ordinary transport timeout and retry policy governs the latency probe."

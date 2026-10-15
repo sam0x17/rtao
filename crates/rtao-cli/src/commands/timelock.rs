@@ -81,7 +81,6 @@ fn source(command: Command, encrypt: bool) -> Command {
     command.arg(Arg::new("data").help(data_help)).arg(
         Arg::new("file")
             .long("file")
-            .conflicts_with("data")
             .help(file_help)
             .long_help(format!("{file_help}\n\n{limit_help}")),
     )
@@ -267,7 +266,10 @@ async fn prompt_missing(
             }
             break raw;
         };
-        // Plaintext is deliberately omitted from replay history.
+        if !encrypt {
+            history.record_answers(vec![raw.clone()]);
+        }
+        // Plaintext is deliberately omitted from replay history (D-042).
         Some(Zeroizing::new(raw))
     } else {
         None
@@ -276,7 +278,7 @@ async fn prompt_missing(
         let mut spec = PromptSpec::new("reveal_in", "--in");
         spec.help = Some(DURATION_HELP.into());
         let (_, raw) = ask_with(&context, &mut terminal, &spec, |raw| {
-            Reveal::after(raw)
+            timelock::parse_duration(raw)
                 .map(|_| ())
                 .map_err(|error| PromptValidation::Message(error.to_string()))
         })
@@ -435,18 +437,27 @@ pub async fn run_with_backend(
     let (name, leaf) = group
         .subcommand()
         .ok_or_else(|| CliError::input("missing timelock command"))?;
+    if text(leaf, "data").is_some() && text(leaf, "file").is_some() {
+        return Err(if name == "encrypt" {
+            failure("give the payload exactly one way")
+                .with_help("pass text or a file path as an argument, or use --file")
+        } else {
+            failure("give the ciphertext exactly one way")
+                .with_help("pass the hex or a file path as an argument, or use --file")
+        });
+    }
     let (prompted, duration) = prompt_missing(ctx, leaf, name == "encrypt", history).await?;
     let data = text(leaf, "data").or_else(|| prompted.as_deref().map(String::as_str));
     let file = text(leaf, "file");
     match name {
         "encrypt" => {
-            let reveal = reveal(leaf, duration.as_deref())?;
             if file.is_none() && data.is_some_and(|data| Path::new(data).is_file()) {
                 ctx.output
                     .message(&format!("sealing file {}", data.unwrap_or_default()))
                     .map_err(failure)?;
             }
             let bytes = payload(data, file).await?;
+            let reveal = reveal(leaf, duration.as_deref())?;
             let sealed = backend.seal(&bytes, reveal).await.map_err(failure)?;
             if sealed.ciphertext().len() > MAX_CIPHERTEXT_BYTES {
                 return Err(CliError::input(
@@ -525,6 +536,7 @@ pub async fn run_with_backend(
                 .map_err(failure)
         }
         "decrypt" => {
+            let sealed = ciphertext(data, file).await?;
             let options = OpenOptions {
                 wait: leaf.get_flag("wait"),
                 timeout: text(leaf, "timeout")
@@ -538,7 +550,6 @@ pub async fn run_with_backend(
                     })
                     .transpose()?,
             };
-            let sealed = ciphertext(data, file).await?;
             if options.wait
                 && !sealed.revealed().map_err(failure)?
                 && !ctx.output.options().json_mode

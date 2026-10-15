@@ -323,6 +323,8 @@ jobs:
       - name: Verify refreshed client source parity
         # Catch source, attribution and generated-output failures in this
         # bounded refresh before starting the ordinary hosted test jobs.
+        # Manual parity compares the exact selected commit to its first parent;
+        # the full checkout above preserves shrink-only and oracle history.
         run: cargo run --locked -p xtask -- parity check
       - name: Verify generated output paths
         env:

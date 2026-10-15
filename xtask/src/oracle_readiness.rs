@@ -493,6 +493,50 @@ mod tests {
     }
 
     #[test]
+    fn manual_ci_baseline_is_the_selected_commits_parent_and_retains_history() -> Result<()> {
+        let fixture = Fixture::new()?;
+        let initial = fixture.git(&["rev-parse", "HEAD"])?;
+        // The initial commit has no parent and cannot silently skip a baseline.
+        assert!(crate::parity::dispatch_baseline_for_test(&fixture.0, initial.trim()).is_err());
+        let manifest = fixture.0.join("vendor/oracle/manifest.json");
+        fs::write(&manifest, "historical evidence")?;
+        fixture.git(&["add", "vendor/oracle/manifest.json"])?;
+        fixture.commit("manual baseline evidence")?;
+        let evidence = fixture.git(&["rev-parse", "HEAD"])?;
+        fs::remove_file(&manifest)?;
+        fixture.git(&["add", "-u"])?;
+        fixture.commit("selected manual commit removes evidence")?;
+        let selected = fixture.git(&["rev-parse", "HEAD"])?;
+        let baseline = crate::parity::dispatch_baseline_for_test(&fixture.0, selected.trim())?;
+        assert_eq!(baseline, evidence.trim());
+        // Local replacement refs must not rewrite the selected commit's parent.
+        fixture.git(&["replace", selected.trim(), evidence.trim()])?;
+        assert_eq!(
+            crate::parity::dispatch_baseline_for_test(&fixture.0, selected.trim())?,
+            evidence.trim()
+        );
+        assert!(
+            readiness_with_history(&fixture.0, false, Some(initial.trim()), |root, base| {
+                crate::parity::oracle_history_for_test(root, Some(&baseline), base)
+            })
+            .is_err()
+        );
+        for invalid in [
+            "",
+            "--unsafe",
+            "main",
+            &"0".repeat(40),
+            &"f".repeat(40),
+            initial.trim(),
+        ] {
+            assert!(crate::parity::dispatch_baseline_for_test(&fixture.0, invalid).is_err());
+        }
+        fixture.git(&["checkout", "--quiet", "--detach", evidence.trim()])?;
+        assert!(crate::parity::dispatch_baseline_for_test(&fixture.0, selected.trim()).is_err());
+        Ok(())
+    }
+
+    #[test]
     fn shallow_history_cannot_claim_first_manifest_absence() -> Result<()> {
         let fixture = Fixture::new()?;
         let head = fixture.git(&["rev-parse", "HEAD"])?;
