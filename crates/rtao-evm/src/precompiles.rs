@@ -747,7 +747,7 @@ fn argument_parts(raw: &Value) -> Result<Cow<'_, [Value]>> {
         }
         Value::String(text) => {
             check_byte_length(text.len())?;
-            let text = python_strip(&text);
+            let text = python_strip(text);
             if text.starts_with('[') {
                 let parts = serde_json::from_str::<Vec<Value>>(text).map_err(Error::Json)?;
                 if parts.len() > MAX_ABI_ITEMS {
