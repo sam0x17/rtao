@@ -1201,9 +1201,7 @@ impl AnyIntent {
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::WithdrawCrowdloan(intent))
             }
-            _ => Err(rtao_tx::IntentError::Validation(format!(
-                "Unknown or disabled intent: {op}"
-            ))),
+            _ => Err(crate::registry::unknown_op(op)),
         }
     }
     /// Return this intent's to_json projection.

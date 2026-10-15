@@ -1955,6 +1955,14 @@
     ],
     "divergences": [
       {
+        "id": "D-061",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::hparams_commands::epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json"
+        ]
+      },
+      {
         "id": "D-059",
         "oracle": "unverified",
         "rtao": "active",
@@ -3043,8 +3051,8 @@
       {
         "name": "test_balance_and_existential_deposit",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_reads::owner::balances_keep_u64_precision_and_batch_heterogeneous_duplicates"
       },
       {
         "name": "test_batch_applies_all_children_atomically",
@@ -3127,8 +3135,8 @@
       {
         "name": "test_mev_shield_next_key_is_mlkem768",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_reads::owner::owner_scalar_identity_epoch_and_hyperparameter_projections_match_python"
       },
       {
         "name": "test_netuid_allowlist_blocks_live",
@@ -3253,7 +3261,7 @@
       {
         "name": "test_unsettable_hyperparameter_rejected_at_construction",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       }
     ],
@@ -5866,7 +5874,7 @@
         "python": "common/src/proxy.rs",
         "rtao": "pending",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "vendor/upstream/extracted/chain_rules.json (proxy_contract source/metadata/Python codec reconciliation)"
         ],
         "synced_blob": "pending"
       },
@@ -5988,7 +5996,7 @@
         "python": "pallets/subtensor/src/coinbase/reveal_commits.rs",
         "rtao": "pending",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "vendor/upstream/extracted/chain_rules.json (reveal_contract payload and epoch-prefix projection; remaining reveal control flow pending)"
         ],
         "synced_blob": "pending"
       },
@@ -6205,7 +6213,7 @@
         "python": "runtime/src/transaction_payment_wrapper.rs",
         "rtao": "pending",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "runtime-authoritative fee-payer/discount/priority policy; source-to-client contract guard pending"
         ],
         "synced_blob": "pending"
       },
@@ -7459,12 +7467,12 @@
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/hyperparams_view.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "rtao_cli::commands::hparams::{fetch_hyperparameters, render_hyperparameters}",
           "rtao_cli::commands::{hparams, subnets} route dispatch"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c778b47718b99085def53920fb3e21b3bd31a6c5"
       },
       {
         "kind": "ported",
@@ -8451,55 +8459,55 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/base.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_tx::{IntentInterface, Intent, DynIntent, IntentPreflight, Built, BuildCx, PreflightCx}`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "89e2008189d424d4a9fcb31cc201815acabf10bc"
       },
       {
         "kind": "ported",
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/batch.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_intents::batch` (feature `batch`)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "efbab058438eba1017daecfd906a623d715f441c"
       },
       {
         "kind": "ported",
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/children.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_intents::children` (feature `children`)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0dd6874119b12211ee566b5a53bab05e9128c8e9"
       },
       {
         "kind": "ported",
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/coldkey.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_intents::coldkey` (feature `coldkey`)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2afbd304453223a3f3c4719cdcd13c85d41f98d3"
       },
       {
         "kind": "ported",
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/collateral.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_intents::collateral` (feature `collateral`)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "93f4a53ec22db5cebd2723626b6096646f170ba3"
       },
       {
         "kind": "ported",
@@ -8597,11 +8605,12 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/plan.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_tx::{Policy, Plan}`"
+          "rtao_tx::{Policy, PolicySubject, Plan}",
+          "rtao_tx::Executor::{plan, plan_dyn}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0cbdf4018fef1932c78168042650d21f7156d4ae"
       },
       {
         "kind": "ported",
@@ -8630,11 +8639,12 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/registry.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_catalog::INTENTS`; `rtao_intents::AnyIntent`; `rtao_tx::Executor::tools`"
+          "rtao_intents::{Registry, AnyIntent, executor}",
+          "rtao_tx::Executor::{tools, execute_tool}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "03340afe236412cd3c29935e1d9a43e5157efc0f"
       },
       {
         "kind": "ported",
