@@ -196,7 +196,7 @@ impl rtao_tx::IntentInterface for AssociateHotkey {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Batch {
-    #[doc = "The calls to execute, in order, as a JSON list of objects {\"op\": <intent name>, ...args}. At least one; all must share a signer; batches cannot nest."]
+    #[doc = "The calls to execute, in order, as a JSON list of objects {\"op\": &lt;intent name&gt;, ...args}. At least one; all must share a signer; batches cannot nest."]
     pub intents: Vec<serde_json::Value>,
 }
 #[cfg(feature = "batch")]
@@ -380,7 +380,7 @@ pub struct CreateCrowdloan {
     #[doc = "Account that receives the raised funds on finalize. Provide exactly one of this or call."]
     #[serde(default = "super::defaults::create_crowdloan::target_ss58")]
     pub target_ss58: Option<rtao_primitives::Ss58Address>,
-    #[doc = "Inner intent dispatched with the creator's origin on finalize, as a JSON object {\"op\": <name>, ...args}. Provide exactly one of this or target_ss58."]
+    #[doc = "Inner intent dispatched with the creator's origin on finalize, as a JSON object {\"op\": &lt;name&gt;, ...args}. Provide exactly one of this or target_ss58."]
     #[serde(default = "super::defaults::create_crowdloan::call")]
     pub call: Option<serde_json::Value>,
 }
@@ -779,7 +779,7 @@ pub struct MultisigApprove {
     pub threshold: u16,
     #[doc = "The other members of the multisig (every signatory except the signer), as a JSON list of addresses. The same set must be given on every approval; order does not matter (sorted automatically)."]
     pub other_signatories: Vec<serde_json::Value>,
-    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": <intent name>, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
+    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": &lt;intent name&gt;, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
     pub call: serde_json::Value,
     #[doc = "Block height and extrinsic index of the approval that opened the operation, as a JSON object {\"height\": ..., \"index\": ...}. Omit on the first approval; required on every later one (read it with the multisig query)."]
     #[serde(default = "super::defaults::multisig_approve::timepoint")]
@@ -815,7 +815,7 @@ pub struct MultisigCancel {
     pub threshold: u16,
     #[doc = "The other members of the multisig (every signatory except the signer), as a JSON list of addresses. The same set must be given on every approval; order does not matter (sorted automatically)."]
     pub other_signatories: Vec<serde_json::Value>,
-    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": <intent name>, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
+    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": &lt;intent name&gt;, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
     pub call: serde_json::Value,
     #[doc = "Block height and extrinsic index of the approval that opened the operation, as a JSON object {\"height\": ..., \"index\": ...}. Required — it identifies which pending operation to cancel."]
     pub timepoint: serde_json::Value,
@@ -848,7 +848,7 @@ pub struct MultisigExecute {
     pub threshold: u16,
     #[doc = "The other members of the multisig (every signatory except the signer), as a JSON list of addresses. The same set must be given on every approval; order does not matter (sorted automatically)."]
     pub other_signatories: Vec<serde_json::Value>,
-    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": <intent name>, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
+    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": &lt;intent name&gt;, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
     pub call: serde_json::Value,
     #[doc = "Block height and extrinsic index of the approval that opened the operation, as a JSON object {\"height\": ..., \"index\": ...}. Omit on the first approval; required on every later one (read it with the multisig query)."]
     #[serde(default = "super::defaults::multisig_execute::timepoint")]
@@ -880,7 +880,7 @@ impl rtao_tx::IntentInterface for MultisigExecute {
 pub struct MultisigThreshold1 {
     #[doc = "The other members of the multisig (every signatory except the signer), as a JSON list of addresses. The same set must be given on every approval; order does not matter (sorted automatically)."]
     pub other_signatories: Vec<serde_json::Value>,
-    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": <intent name>, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
+    #[doc = "The inner call to dispatch from the multisig account, as a JSON object {\"op\": &lt;intent name&gt;, ...args}. All approvals must describe the identical call — it is matched by hash. Its arguments must be fully explicit, since it runs as the multisig account, not the signer's wallet."]
     pub call: serde_json::Value,
 }
 #[cfg(feature = "multisig")]
