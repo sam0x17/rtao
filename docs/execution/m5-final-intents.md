@@ -79,3 +79,14 @@ The reports ZIP is 40,502 bytes, SHA-256
 The bounded private proof is
 `.local/recovery/2026-10-14/m5-final-intents-adoption.json`.
 No runtime, oracle, native-platform or hardware coverage is added by generation.
+
+Normal run [38709461377](https://github.com/sam0x17/rtao/actions/runs/38709461377)
+at `5cba852` stops check and MSRV at compilation. Source corrections give
+the multisig argument iterators their shared ArgMatches lifetime, compare
+policy subnet IDs at the same native type while retaining order/duplicates,
+and decode the public PoW hash with the existing strict fixed-width helper.
+No-host, supply and semver pass; features remains running at inspection.
+Tests, doctests and documentation builds were not reached. The next hosted
+run must verify these fixes; source review and rustfmt alone do not establish
+compilation or fixture success. Bounded failure evidence is retained privately
+as `check-38709461377.json`.

@@ -11,10 +11,10 @@ use rtao_core::{
     runtime::{Runtime, TypeSpec},
 };
 use rtao_intents::AnyIntent;
-use rtao_primitives::{AccountId, DefaultAccount, NetUid};
+use rtao_primitives::{AccountId, DefaultAccount, H256, NetUid};
 use rtao_runtime::{RuntimeHandle, storage::subtensor_module as st};
 use rtao_signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole};
-use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_testkit::{FakeChain, FakeState, fixtures::decode_fixed_hex, rpc::RpcClient};
 use rtao_tx::{Clock, Executor, PlanOptions};
 use serde_json::{Map, Value, json};
 use std::{
@@ -412,10 +412,8 @@ async fn plan_case(
     if spec.name == "pow_register" {
         // The upstream sample seal is only a placeholder. Bind one fixed nonce
         // to this public fake challenge at difficulty one; no solver is run.
-        let hash = state
-            .block_hash(state.block)
-            .context("fake work block")?
-            .parse()?;
+        let hash = state.block_hash(state.block).context("fake work block")?;
+        let hash = H256(decode_fixed_hex(&hash)?);
         let prefix = rtao_intents::pow::registration_prefix(SUBNET, hash, HOT, COLD)?;
         args["work_block"] = json!(state.block);
         args["nonce"] = json!(0);
