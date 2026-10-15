@@ -1053,15 +1053,15 @@ mod tests {
     use super::*;
     use std::fs;
 
-    fn root() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
+    fn root() -> Result<std::path::PathBuf> {
+        Ok(Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
-            .unwrap()
-            .to_owned()
+            .context("workspace parent directory")?
+            .to_owned())
     }
 
     fn inspect(source: Option<String>) -> Result<Value> {
-        let root = root();
+        let root = root()?;
         let mut pins = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
         let mut resolver = Resolver::new(&root)?;
         if let Some(source) = source {
@@ -1079,7 +1079,10 @@ mod tests {
     fn authenticated_root_claim_inputs_preserve_source_tables_and_cases() -> Result<()> {
         let document = inspect(None)?;
         assert_eq!(
-            document["node_quotes"]["value"].as_array().unwrap().len(),
+            document["node_quotes"]["value"]
+                .as_array()
+                .context("node quotes")?
+                .len(),
             3
         );
         assert_eq!(document["node_quotes"]["value"][0]["limits"], json!([129]));
@@ -1098,30 +1101,47 @@ mod tests {
         assert_eq!(
             document["admission_inclusive"]["value"]
                 .as_array()
-                .unwrap()
+                .context("inclusive admission rows")?
                 .len(),
             3
         );
-        assert_eq!(document["constants"].as_object().unwrap().len(), 13);
         assert_eq!(
-            document["seed_cases"].as_object().unwrap().len(),
+            document["constants"]
+                .as_object()
+                .context("constants")?
+                .len(),
+            13
+        );
+        assert_eq!(
+            document["seed_cases"]
+                .as_object()
+                .context("seed cases")?
+                .len(),
             SEEDS.len()
         );
         assert_eq!(
-            document["preview_cases"].as_object().unwrap().len(),
+            document["preview_cases"]
+                .as_object()
+                .context("preview cases")?
+                .len(),
             PREVIEWS.len()
         );
         assert_eq!(
             document["shielded_heavy"]["value"],
             json!({"hotkeys":257,"holdings":0,"payout":1_000_000,"networks":16})
         );
-        assert!(document["node_quotes"]["source"]["line"].as_u64().unwrap() > 0);
+        assert!(
+            document["node_quotes"]["source"]["line"]
+                .as_u64()
+                .context("node quote source line")?
+                > 0
+        );
         Ok(())
     }
 
     #[test]
     fn rejects_fixture_mutation_and_unreviewed_executable_shapes() -> Result<()> {
-        let original = fs::read_to_string(root().join("vendor/upstream/src").join(TEST))?;
+        let original = fs::read_to_string(root()?.join("vendor/upstream/src").join(TEST))?;
         for (from, to) in [
             ("_root_claim_fee as fees", "_root_claim_fee as other"),
             ("import pytest", "import pytest as other"),
@@ -1179,7 +1199,7 @@ mod tests {
 
     #[test]
     fn literal_update_reextracts_and_artifact_hash_tampering_fails() -> Result<()> {
-        let original = fs::read_to_string(root().join("vendor/upstream/src").join(TEST))?;
+        let original = fs::read_to_string(root()?.join("vendor/upstream/src").join(TEST))?;
         let changed = original.replace(
             "8_224_263, [fees._MAX_ROOT_CLAIM_HOTKEY_WORK]",
             "8_224_264, [fees._MAX_ROOT_CLAIM_HOTKEY_WORK]",
@@ -1190,7 +1210,7 @@ mod tests {
             document["node_quotes"]["value"][0]["weight_fee"],
             json!(8_224_264)
         );
-        let root = root();
+        let root = root()?;
         let pins = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
         let mut resolver = Resolver::new(&root)?;
         resolver.sources.insert(TEST.into(), changed);

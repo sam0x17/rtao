@@ -7938,11 +7938,11 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/axon.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `axon` group"
+          "rtao_cli::commands::axon"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5f96f9f9d1390a3b2dbd90e1956595a46796ab4c"
       },
       {
         "kind": "ported",
@@ -7960,11 +7960,11 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/config.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `config` group"
+          "rtao_cli::commands::config"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b6a2817fa0bb5687c741fd9db843464bea7ffd1a"
       },
       {
         "kind": "ported",
@@ -9015,14 +9015,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "M5–M7",
+        "milestone": "M5-M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/addresses.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_primitives::evm` (`h160_to_ss58`, `ss58_to_h160_truncated`); `rtao_evm`"
+          "rtao_primitives::evm",
+          "rtao_evm::addresses"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "19c36c3d7411944184148a1e5cbd96f03819f178"
       },
       {
         "kind": "ported",
