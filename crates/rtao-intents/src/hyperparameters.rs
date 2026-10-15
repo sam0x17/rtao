@@ -42,8 +42,19 @@ pub fn owner_parameter(
         .iter()
         .find(|row| row.name == name)
         .ok_or_else(|| {
+            let mut settable = rtao_catalog::owner_map::OWNER_HYPERPARAMETERS
+                .iter()
+                .map(|row| row.name)
+                .collect::<Vec<_>>();
+            settable.sort_unstable();
+            let settable = settable
+                .into_iter()
+                .map(rtao_primitives::pyfmt::string_repr)
+                .collect::<Vec<_>>()
+                .join(", ");
             rtao_tx::IntentError::InvalidArgument(format!(
-                "unknown or owner-unsettable hyperparameter {name:?}"
+                "unknown or owner-unsettable hyperparameter {}; settable: [{settable}]",
+                rtao_primitives::pyfmt::string_repr(name)
             ))
         })
 }
@@ -308,13 +319,18 @@ mod tests {
             "sn_owner_hotkey",
             "unknown",
         ] {
-            assert!(
-                crate::AnyIntent::from_tool(
-                    "set_hyperparameter",
-                    json!({"netuid":1,"name":name,"value":1})
-                )
-                .is_err()
-            );
+            let error = crate::AnyIntent::from_tool(
+                "set_hyperparameter",
+                json!({"netuid":1,"name":name,"value":1}),
+            )
+            .err()
+            .ok_or_else(|| anyhow::anyhow!("unsettable owner name was accepted"))?
+            .to_string();
+            assert!(error.contains(&format!(
+                "unknown or owner-unsettable hyperparameter '{name}'; settable: ['activity_cutoff_factor',"
+            )));
+            assert!(error.ends_with("'yuma3_enabled']"));
+            assert!(!error.contains("'recycle_or_burn'"));
         }
         for value in [json!(true), json!(1), json!("null"), json!({}), json!(null)] {
             assert!(

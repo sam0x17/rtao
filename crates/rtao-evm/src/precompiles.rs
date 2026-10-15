@@ -8,7 +8,7 @@
 use std::{borrow::Cow, collections::BTreeMap};
 
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt, JsonAbiExt, Specifier};
-use alloy_json_abi::{Function, JsonAbi, Param};
+use alloy_json_abi::{AbiItem, Function, JsonAbi, Param};
 use alloy_primitives::{B256, U256};
 use serde_json::Value;
 
@@ -51,16 +51,24 @@ impl Precompile {
         serde_json::from_str(self.abi_json).map_err(Error::Json)
     }
 
-    /// All function entries in the embedded ABI.
+    /// All function entries in their original embedded ABI array order.
     pub fn functions(&self) -> Result<Vec<Function>> {
-        Ok(self.abi()?.functions().cloned().collect())
+        let entries: Vec<AbiItem<'static>> =
+            serde_json::from_str(self.abi_json).map_err(Error::Json)?;
+        Ok(entries
+            .into_iter()
+            .filter_map(|entry| match entry {
+                AbiItem::Function(function) => Some(function.into_owned()),
+                _ => None,
+            })
+            .collect())
     }
 
     /// Resolve a name, or an exact canonical signature for an overloaded name.
     ///
     /// A bare name selects the first overload, matching Python's catalog.
     pub fn function(&self, name: &str) -> Result<Function> {
-        find_function(&self.abi()?, name, self.name).cloned()
+        find_function(self.functions()?.iter(), name, self.name).cloned()
     }
 
     /// Encode a native call, refusing rao-denominated inputs above `u64::MAX`.
@@ -381,13 +389,17 @@ pub fn decode_result_bytes(function: &Function, data: &[u8]) -> Result<Vec<Value
     decoded.iter().map(jsonable).collect()
 }
 
-/// Echo coerced arguments with ss58 keys and exact native rao denominations.
+/// Echo paired arguments with ss58 keys and Python-compatible native amount previews.
 pub fn describe_arguments(function: &Function, args: &[Value]) -> Result<BTreeMap<String, String>> {
-    let values = coerce_inputs(&function.inputs, args)?;
+    // Python uses zip here; encode_call separately enforces full arity.
+    let paired = function.inputs.len().min(args.len());
+    let values = coerce_inputs(&function.inputs[..paired], &args[..paired])?;
     let mut described = BTreeMap::new();
     for ((param, value), raw) in function.inputs.iter().zip(&values).zip(args) {
         let text = match value {
-            DynSolValue::FixedBytes(word, 32) => {
+            DynSolValue::FixedBytes(word, 32)
+                if argument_bytes(raw, &mut Budget::new())?.len() == 32 =>
+            {
                 let ss58 =
                     addresses::pubkey_to_ss58_with_prefix(word.as_slice(), crate::SS58_FORMAT)?;
                 format!("0x{} (ss58 {ss58})", hex::encode(word))
@@ -395,16 +407,14 @@ pub fn describe_arguments(function: &Function, args: &[Value]) -> Result<BTreeMa
             DynSolValue::Uint(amount, _) if RAO_PARAM_NAMES.contains(&param.name.as_str()) => {
                 let amount = native_amount(*amount, &param.name)?;
                 format!(
-                    "{} rao (= {}.{:09} TAO/alpha)",
+                    "{} rao (= {} TAO/alpha)",
                     grouped(amount),
-                    grouped(amount / 1_000_000_000),
-                    amount % 1_000_000_000
+                    rtao_primitives::pyfmt::fmt_comma_9f(rtao_primitives::pyfmt::rao_to_f64(
+                        amount
+                    ))
                 )
             }
-            _ => raw
-                .as_str()
-                .map(str::to_owned)
-                .unwrap_or_else(|| raw.to_string()),
+            _ => argument_text(raw)?,
         };
         described.insert(param.name.clone(), text);
     }
@@ -412,22 +422,25 @@ pub fn describe_arguments(function: &Function, args: &[Value]) -> Result<BTreeMa
 }
 
 pub(crate) fn find_function<'a>(
-    abi: &'a JsonAbi,
+    functions: impl Iterator<Item = &'a Function>,
     name: &str,
     source: &str,
 ) -> Result<&'a Function> {
-    let found = if name.contains('(') {
-        abi.functions()
-            .find(|function| function.signature() == name)
-    } else {
-        abi.function(name).and_then(|functions| functions.first())
-    };
+    let functions = functions.collect::<Vec<_>>();
+    let found = functions.iter().copied().find(|function| {
+        if name.contains('(') {
+            function.signature() == name
+        } else {
+            function.name == name
+        }
+    });
     found.ok_or_else(|| {
-        let available = abi
-            .functions()
+        let mut available = functions
+            .into_iter()
             .map(|function| function.name.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
+            .collect::<Vec<_>>();
+        available.sort_unstable();
+        let available = available.join(", ");
         invalid(format!(
             "{source} has no function {name:?}. Available: {}",
             if available.is_empty() {
@@ -581,30 +594,18 @@ fn coerce_value(
         DynSolType::String => {
             let text = argument_text(raw)?;
             budget.bytes(text.len())?;
-            Ok(DynSolValue::String(text))
+            Ok(DynSolValue::String(python_strip(&text).to_owned()))
         }
         DynSolType::Bool => {
             budget.bytes(32)?;
             let text = argument_text(raw)?;
             Ok(DynSolValue::Bool(matches!(
-                text.trim().to_ascii_lowercase().as_str(),
+                python_strip(&text).to_ascii_lowercase().as_str(),
                 "1" | "true" | "yes" | "y"
             )))
         }
         DynSolType::Bytes | DynSolType::FixedBytes(_) => {
-            let text = argument_text(raw)?;
-            budget.bytes(text.len().max(32))?;
-            let text = text.trim();
-            let bare_h160 = text.len() == 40 && text.bytes().all(|byte| byte.is_ascii_hexdigit());
-            let converted;
-            let hex_text = if !text.starts_with("0x") && !bare_h160 {
-                converted = addresses::ss58_to_pubkey(text)?;
-                converted.as_str()
-            } else {
-                text
-            };
-            let bytes =
-                hex::decode(hex_text.strip_prefix("0x").unwrap_or(hex_text)).map_err(abi_error)?;
+            let bytes = argument_bytes(raw, budget)?;
             if let DynSolType::FixedBytes(size) = ty {
                 if bytes.len() > *size {
                     return Err(invalid(format!(
@@ -622,7 +623,7 @@ fn coerce_value(
         _ => {
             let text = argument_text(raw)?;
             budget.bytes(text.len().max(32))?;
-            let text = text.trim();
+            let text = python_strip(&text);
             if matches!(ty, DynSolType::Int(_) | DynSolType::Uint(_)) {
                 // Do not silently accept Solidity units, decimals or exponents.
                 let digits = text.strip_prefix("0x").unwrap_or_else(|| {
@@ -654,16 +655,86 @@ fn coerce_value(
     }
 }
 
+fn python_strip(value: &str) -> &str {
+    value.trim_matches(|character: char| {
+        character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
+    })
+}
+
+fn argument_bytes(raw: &Value, budget: &mut Budget) -> Result<Vec<u8>> {
+    let text = argument_text(raw)?;
+    budget.bytes(text.len().max(32))?;
+    let text = python_strip(&text);
+    let bare_h160 = text.len() == 40 && text.bytes().all(|byte| byte.is_ascii_hexdigit());
+    let converted;
+    let hex_text = if !text.starts_with("0x") && !bare_h160 {
+        converted = addresses::ss58_to_pubkey(text)?;
+        converted.as_str()
+    } else {
+        text
+    };
+    hex::decode(hex_text.strip_prefix("0x").unwrap_or(hex_text)).map_err(abi_error)
+}
+
 fn argument_text(raw: &Value) -> Result<String> {
-    match raw {
-        Value::String(text) => {
-            check_byte_length(text.len())?;
-            Ok(text.clone())
-        }
-        Value::Number(number) => Ok(number.to_string()),
-        Value::Bool(value) => Ok(value.to_string()),
-        _ => Err(invalid("expected a scalar ABI argument")),
+    fn append(out: &mut String, text: &str, budget: &mut Budget) -> Result<()> {
+        budget.bytes(text.len())?;
+        out.push_str(text);
+        Ok(())
     }
+    fn render(
+        raw: &Value,
+        nested: bool,
+        out: &mut String,
+        budget: &mut Budget,
+        depth: usize,
+    ) -> Result<()> {
+        budget.item(depth)?;
+        match raw {
+            Value::Null => append(out, "None", budget),
+            Value::Bool(value) => append(out, if *value { "True" } else { "False" }, budget),
+            Value::String(text) if nested => {
+                check_byte_length(text.len())?;
+                append(out, &rtao_primitives::pyfmt::string_repr(text), budget)
+            }
+            Value::String(text) => append(out, text, budget),
+            Value::Number(number) => {
+                let text = number.to_string();
+                let rendered = if text.contains(['.', 'e', 'E']) {
+                    rtao_primitives::pyfmt::float_repr(text.parse::<f64>().map_err(abi_error)?)
+                } else {
+                    text
+                };
+                append(out, &rendered, budget)
+            }
+            Value::Array(values) => {
+                append(out, "[", budget)?;
+                for (index, value) in values.iter().enumerate() {
+                    if index != 0 {
+                        append(out, ", ", budget)?;
+                    }
+                    render(value, true, out, budget, depth + 1)?;
+                }
+                append(out, "]", budget)
+            }
+            Value::Object(values) => {
+                append(out, "{", budget)?;
+                for (index, (key, value)) in values.iter().enumerate() {
+                    if index != 0 {
+                        append(out, ", ", budget)?;
+                    }
+                    check_byte_length(key.len())?;
+                    append(out, &rtao_primitives::pyfmt::string_repr(key), budget)?;
+                    append(out, ": ", budget)?;
+                    render(value, true, out, budget, depth + 1)?;
+                }
+                append(out, "}", budget)
+            }
+        }
+    }
+    let mut out = String::new();
+    render(raw, false, &mut out, &mut Budget::new(), 0)?;
+    Ok(out)
 }
 
 fn argument_parts(raw: &Value) -> Result<Cow<'_, [Value]>> {
@@ -676,7 +747,7 @@ fn argument_parts(raw: &Value) -> Result<Cow<'_, [Value]>> {
         }
         Value::String(text) => {
             check_byte_length(text.len())?;
-            let text = text.trim();
+            let text = python_strip(&text);
             if text.starts_with('[') {
                 let parts = serde_json::from_str::<Vec<Value>>(text).map_err(Error::Json)?;
                 if parts.len() > MAX_ABI_ITEMS {
@@ -686,7 +757,7 @@ fn argument_parts(raw: &Value) -> Result<Cow<'_, [Value]>> {
             } else {
                 let parts = text
                     .split(',')
-                    .map(|part| Value::String(part.trim().to_owned()))
+                    .map(|part| Value::String(python_strip(part).to_owned()))
                     .collect::<Vec<_>>();
                 if parts.len() > MAX_ABI_ITEMS {
                     return Err(invalid("ABI array exceeds item limit"));
@@ -1070,6 +1141,78 @@ mod tests {
     }
 
     #[test]
+    fn catalog_function_enumeration_matches_each_raw_abi_array_order() {
+        let mut has_non_alphabetical_abi = false;
+        for precompile in PRECOMPILES {
+            let raw: Value = serde_json::from_str(precompile.abi_json()).unwrap();
+            let expected = raw
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|entry| entry["type"] == "function")
+                .map(|entry| entry["name"].as_str().unwrap())
+                .collect::<Vec<_>>();
+            let functions = precompile.functions().unwrap();
+            let actual = functions
+                .iter()
+                .map(|function| function.name.as_str())
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected, "{} ABI order", precompile.name);
+            let mut sorted = expected.clone();
+            sorted.sort_unstable();
+            has_non_alphabetical_abi |= expected != sorted;
+        }
+        assert!(has_non_alphabetical_abi);
+    }
+
+    #[test]
+    fn function_enumeration_keeps_interleaved_overloads_duplicates_and_first_lookup() {
+        let precompile = Precompile {
+            name: "ordered-fixture",
+            index: 1,
+            abi_file: "fixture.json",
+            description: "Function-order fixture",
+            deprecated: false,
+            abi_json: r#"[
+                {"type":"function","name":"zebra","inputs":[{"name":"n","type":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
+                {"type":"event","name":"Changed","inputs":[],"anonymous":false},
+                {"type":"function","name":"alpha","inputs":[],"outputs":[],"stateMutability":"view"},
+                {"type":"function","name":"zebra","inputs":[{"name":"who","type":"address"}],"outputs":[],"stateMutability":"view"},
+                {"type":"function","name":"zebra","inputs":[{"name":"n","type":"uint256"}],"outputs":[],"stateMutability":"nonpayable"}
+            ]"#,
+        };
+        assert_eq!(
+            precompile
+                .functions()
+                .unwrap()
+                .iter()
+                .map(|function| function.signature())
+                .collect::<Vec<_>>(),
+            [
+                "zebra(uint256)",
+                "alpha()",
+                "zebra(address)",
+                "zebra(uint256)"
+            ]
+        );
+        assert_eq!(
+            precompile.function("zebra").unwrap().signature(),
+            "zebra(uint256)"
+        );
+        assert_eq!(
+            precompile.function("zebra(address)").unwrap().signature(),
+            "zebra(address)"
+        );
+        assert!(
+            precompile
+                .function("missing")
+                .unwrap_err()
+                .to_string()
+                .contains("Available: alpha, zebra, zebra, zebra")
+        );
+    }
+
+    #[test]
     fn catalog_roles_and_deprecations_match_pinned_dispatch_semantics() {
         assert_eq!(
             function_deprecation("metagraph", "getTrust"),
@@ -1325,6 +1468,90 @@ mod tests {
     }
 
     #[test]
+    fn previews_follow_python_zip_repr_and_preserve_raw_strings() {
+        let function: Function = serde_json::from_value(serde_json::json!({
+            "type":"function", "name":"preview", "stateMutability":"view",
+            "inputs":[
+                {"name":"enabled","type":"bool"},
+                {"name":"values","type":"uint8[]"},
+                {"name":"note","type":"string"}
+            ], "outputs":[]
+        }))
+        .unwrap();
+        assert!(describe_arguments(&function, &[]).unwrap().is_empty());
+        assert_eq!(
+            describe_arguments(&function, &[json!(true)]).unwrap(),
+            BTreeMap::from([("enabled".to_owned(), "True".to_owned())])
+        );
+        let arguments = [
+            json!(false),
+            json!([1, 2]),
+            json!("  unchanged  "),
+            json!({"ignored":true}),
+        ];
+        let described = describe_arguments(&function, &arguments).unwrap();
+        assert_eq!(described["enabled"], "False");
+        assert_eq!(described["values"], "[1, 2]");
+        assert_eq!(described["note"], "  unchanged  ");
+        assert_eq!(described.len(), 3);
+        assert!(encode_call(&function, &arguments).is_err());
+        assert!(encode_call(&function, &[json!(true)]).is_err());
+    }
+
+    #[test]
+    fn coerced_strings_use_python_text_and_whitespace_with_bounded_containers() {
+        for (raw, expected) in [
+            (json!(true), "True"),
+            (Value::Null, "None"),
+            (json!([true, null, "x"]), "[True, None, 'x']"),
+            (
+                json!({"flag":true,"items":[null,"x"]}),
+                "{'flag': True, 'items': [None, 'x']}",
+            ),
+            (json!("\u{1c}  spaced  \u{1f}"), "spaced"),
+            (json!(1e20), "1e+20"),
+        ] {
+            assert_eq!(
+                coerce_argument("string", &raw).unwrap(),
+                DynSolValue::String(expected.into())
+            );
+        }
+        assert_eq!(
+            coerce_argument("bool", &json!("\u{1c}YES\u{1f}")).unwrap(),
+            DynSolValue::Bool(true)
+        );
+        let mut deep = json!("x");
+        for _ in 0..=MAX_ABI_DEPTH {
+            deep = json!([deep]);
+        }
+        assert!(coerce_argument("string", &deep).is_err());
+    }
+
+    #[test]
+    fn short_bytes32_previews_preserve_raw_input_without_padded_key_annotation() {
+        let function: Function = serde_json::from_value(json!({
+            "type":"function", "name":"preview", "stateMutability":"view",
+            "inputs":[{"name":"hotkey","type":"bytes32"}], "outputs":[]
+        }))
+        .unwrap();
+        for raw in [
+            "0x",
+            "0x01",
+            " 0x01 ",
+            "0102030405060708091011121314151617181920",
+        ] {
+            let described = describe_arguments(&function, &[json!(raw)]).unwrap();
+            assert_eq!(described["hotkey"], raw);
+            // Encoding still applies ABI's fixed-byte right padding.
+            assert_eq!(encode_call(&function, &[json!(raw)]).unwrap().len(), 74);
+        }
+        let full = format!("0x{}", "01".repeat(32));
+        let described = describe_arguments(&function, &[json!(full)]).unwrap();
+        assert!(described["hotkey"].starts_with(&full));
+        assert!(described["hotkey"].contains(" (ss58 "));
+    }
+
+    #[test]
     fn previews_use_exact_native_amounts_and_ss58() {
         let function = get_precompile("staking-v2")
             .unwrap()
@@ -1342,7 +1569,7 @@ mod tests {
         assert!(described["hotkey"].contains(" (ss58 5"));
         assert_eq!(
             described["amount"],
-            "18,446,744,073,709,551,615 rao (= 18,446,744,073.709551615 TAO/alpha)"
+            "18,446,744,073,709,551,615 rao (= 18,446,744,073.709552765 TAO/alpha)"
         );
     }
 }

@@ -166,6 +166,8 @@ jobs:
           timeout 180s cargo run --locked -p xtask -- core-patch strip
           timeout 180s cargo update --workspace
           timeout 900s cargo check --locked --workspace --all-features --exclude rtao-testkit --exclude xtask
+      - name: Exercise generic keyfiles without encryption support
+        run: timeout 300s cargo test --locked -p rtao-wallet --no-default-features --test keyfile
 
   supply:
     if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)

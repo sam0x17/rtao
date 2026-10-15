@@ -21,6 +21,8 @@ use serde::{Serialize, Serializer, ser::SerializeMap};
 use serde_json::{Map, Value, json};
 use zeroize::{Zeroize, Zeroizing};
 
+use crate::books::AccountKind;
+
 mod pyjson;
 pub use pyjson::PyJsonFormatter;
 
@@ -469,6 +471,7 @@ pub struct Output {
     sink: Arc<dyn OutputSink>,
     registry: RenderRegistry,
     address_names: Arc<RwLock<BTreeMap<String, String>>>,
+    address_kinds: Arc<RwLock<BTreeMap<String, AccountKind>>>,
     subnet_names: Arc<RwLock<BTreeMap<u16, String>>>,
     token_symbols: Arc<RwLock<BTreeMap<u16, Symbol>>>,
     #[cfg(test)]
@@ -488,6 +491,7 @@ impl Output {
             sink,
             registry: RenderRegistry::default(),
             address_names: Arc::new(RwLock::new(BTreeMap::new())),
+            address_kinds: Arc::new(RwLock::new(BTreeMap::new())),
             subnet_names: Arc::new(RwLock::new(BTreeMap::from([(0, "root".into())]))),
             token_symbols: Arc::new(RwLock::new(BTreeMap::new())),
             #[cfg(test)]
@@ -524,6 +528,23 @@ impl Output {
                 .or_insert_with(|| name.into());
         }
         Ok(())
+    }
+
+    /// Remember the first account kind for human account rendering.
+    /// Classification is cosmetic and never changes machine values.
+    pub fn classify_address(&self, address: &str, kind: AccountKind) -> Result<(), OutputError> {
+        if !address.is_empty() {
+            self.address_kinds
+                .write()
+                .entry(address.into())
+                .or_insert(kind);
+        }
+        Ok(())
+    }
+
+    /// Snapshot account classifications shared with cloned renderers.
+    pub fn address_kinds(&self) -> Result<BTreeMap<String, AccountKind>, OutputError> {
+        Ok(self.address_kinds.read().clone())
     }
 
     /// Install cosmetic subnet names; root always has a fallback name.

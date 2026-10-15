@@ -800,6 +800,158 @@ fn attribution(source: &str) -> Result<Option<(&str, &str)>> {
     Ok(Some((path, commit)))
 }
 
+fn attributions(source: &str) -> Result<BTreeSet<(&str, &str)>> {
+    let Some(primary) = attribution(source)? else {
+        return Ok(BTreeSet::new());
+    };
+    let mut result = BTreeSet::from([primary]);
+    for line in source
+        .lines()
+        .skip(1)
+        .filter(|line| line.starts_with(ATTRIBUTION))
+    {
+        let body = line
+            .strip_prefix(ATTRIBUTION)
+            .and_then(|body| body.strip_suffix(ATTRIBUTION_END))
+            .context("secondary attribution must use the complete canonical header")?;
+        let (path, commit) = body
+            .split_once(" @ ")
+            .context("secondary attribution requires upstream path @ commit")?;
+        ensure!(
+            valid_path(path) && valid_sha(commit),
+            "secondary attribution requires a safe path and full lowercase commit"
+        );
+        result.insert((path, commit));
+    }
+    Ok(result)
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum IndependentProducer {
+    Metadata,
+    Descriptions,
+}
+
+fn independent_producer(row: &Row) -> Result<Option<IndependentProducer>> {
+    let frozen_model = match row.py.as_str() {
+        "pallets/subtensor/src/rpc_info/basket_info.rs" => Some("basket_info"),
+        "pallets/subtensor/src/rpc_info/delegate_info.rs" => Some("delegate_info"),
+        "pallets/subtensor/src/rpc_info/dynamic_info.rs" => Some("dynamic_info"),
+        "pallets/subtensor/src/rpc_info/metagraph.rs" => Some("metagraph"),
+        "pallets/subtensor/src/rpc_info/neuron_info.rs" => Some("neuron_info"),
+        "pallets/subtensor/src/rpc_info/show_subnet.rs" => Some("show_subnet"),
+        "pallets/subtensor/src/rpc_info/stake_info.rs" => Some("stake_info"),
+        "pallets/subtensor/src/rpc_info/subnet_info.rs" => Some("subnet_info"),
+        _ => None,
+    };
+    if let Some(module) = frozen_model {
+        ensure!(
+            row.kind == "extracted"
+                && row.rs
+                    == [
+                        "codegen/frozen_models.toml".to_owned(),
+                        format!(
+                            "rtao_runtime::models (metadata projections and authenticated {module} freeze_struct layout tripwires)"
+                        ),
+                    ],
+            "{}: frozen model reconciliation must retain its exact checked projection/tripwire homes",
+            row.py
+        );
+        return Ok(Some(IndependentProducer::Metadata));
+    }
+    let metadata = match row.py.as_str() {
+        "sdk/python/bittensor/_generated/calls.py" => Some("calls"),
+        "sdk/python/bittensor/_generated/constants.py" => Some("constants"),
+        "sdk/python/bittensor/_generated/errors.py" => Some("errors::MODULE_ERRORS"),
+        "sdk/python/bittensor/_generated/runtime_apis.py" => Some("runtime_apis"),
+        "sdk/python/bittensor/_generated/storage.py" => Some("storage"),
+        _ => None,
+    };
+    if let Some(module) = metadata {
+        ensure!(
+            row.kind == "generated" && row.rs == [format!("`rtao_runtime::generated::{module}`")],
+            "{}: metadata cross-check row must retain its exact independently generated Rust home",
+            row.py
+        );
+        return Ok(Some(IndependentProducer::Metadata));
+    }
+    const DESCRIPTIONS: &[&str] = &[
+        "__init__",
+        "admin_utils",
+        "balances",
+        "commitments",
+        "contracts",
+        "crowdloan",
+        "drand",
+        "ethereum",
+        "evm",
+        "grandpa",
+        "limit_orders",
+        "mev_shield",
+        "multisig",
+        "preimage",
+        "proxy",
+        "safe_mode",
+        "scheduler",
+        "subtensor",
+        "sudo",
+        "swap",
+        "system",
+        "utility",
+    ];
+    if DESCRIPTIONS
+        .iter()
+        .any(|module| row.py == format!("sdk/python/bittensor/error_descriptions/{module}.py"))
+    {
+        ensure!(
+            row.kind == "generated"
+                && row.rs == ["`rtao_catalog::CHAIN_ERRORS` (description field)"],
+            "{}: description cross-check row must retain its exact checked catalog home",
+            row.py
+        );
+        return Ok(Some(IndependentProducer::Descriptions));
+    }
+    Ok(None)
+}
+
+fn independent_producers(root: &Path, rows: &[Row]) -> Result<BTreeSet<String>> {
+    let mut kinds = BTreeSet::new();
+    let mut checked = BTreeSet::new();
+    let pins: DocumentMut = fs::read_to_string(root.join("upstream.toml"))?.parse()?;
+    let tag = required_string(&pins["parity"], "tag")?;
+    let tree = read_tree(&fs::read_to_string(root.join("vendor/upstream/tree.txt"))?)?;
+    for row in rows.iter().filter(|row| row.synced_blob != "pending") {
+        let Some(producer) = independent_producer(row)? else {
+            continue;
+        };
+        ensure!(
+            row.synced_tag == tag && tree.get(&row.py) == Some(&row.synced_blob),
+            "{}: producer reconciliation requires the current exact source blob and tag",
+            row.py
+        );
+        let source = fs::read(root.join("vendor/upstream/src").join(&row.py))?;
+        ensure!(
+            crate::extract::git_blob(&source) == row.synced_blob,
+            "{}: independent producer source bytes differ from authenticated tree",
+            row.py
+        );
+        kinds.insert(producer);
+        checked.insert(row.py.clone());
+    }
+    if kinds.contains(&IndependentProducer::Metadata) {
+        // This recomputes every generated Rust byte from authenticated V15/V16
+        // and independently checks the five Python wire surfaces against it.
+        crate::regen::check_at(root)?;
+    }
+    if kinds.contains(&IndependentProducer::Descriptions) {
+        // Recompute all leaf tables, exact assembly grammar, per-entry source
+        // provenance and the 390 catalog descriptions, then the Rust output.
+        crate::extract::check_at(root)?;
+        catalog::catalogs(root)?;
+    }
+    Ok(checked)
+}
+
 fn mapped_crates(home: &str, names: &BTreeSet<String>) -> BTreeSet<String> {
     names
         .iter()
@@ -897,6 +1049,19 @@ fn check_unicode_attribution(root: &Path) -> Result<bool> {
 }
 
 fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
+    let independent = if rows.iter().any(|row| {
+        row.synced_blob != "pending"
+            && independent_producer(row).is_ok_and(|producer| producer.is_some())
+    }) {
+        independent_producers(root, rows)?
+    } else {
+        // Even a malformed narrow producer mapping must fail, not silently
+        // fall back to ordinary attribution through the prefilter above.
+        for row in rows.iter().filter(|row| row.synced_blob != "pending") {
+            independent_producer(row)?;
+        }
+        BTreeSet::new()
+    };
     let workspace: DocumentMut = fs::read_to_string(root.join("Cargo.toml"))?.parse()?;
     let workspace_license = workspace["workspace"]["package"]["license"]
         .as_str()
@@ -942,7 +1107,7 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         for path in files {
             let source = fs::read_to_string(&path)?;
             cli_psf |= cli_psf::source(root, name, directory, &path, &source)?;
-            if let Some((upstream_path, _)) = attribution(&source)
+            for (upstream_path, _) in attributions(&source)
                 .with_context(|| format!("{}: invalid attribution", path.display()))?
             {
                 derived.insert(name.to_owned());
@@ -957,6 +1122,9 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         row.synced_blob != "pending"
             && matches!(row.kind.as_str(), "ported" | "generated" | "extracted")
     }) {
+        if independent.contains(&row.py) {
+            continue;
+        }
         for home in &row.rs {
             for name in mapped_crates(home, &names) {
                 ensure!(
@@ -989,8 +1157,9 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
                         row.py
                     );
                     ensure!(
-                        attribution(&fs::read_to_string(&path)?)?
-                            .is_some_and(|(upstream_path, _)| upstream_path == row.py),
+                        attributions(&fs::read_to_string(&path)?)?
+                            .iter()
+                            .any(|(upstream_path, _)| *upstream_path == row.py),
                         "{token}: mapped derived Rust file is missing its attribution header"
                     );
                 }
@@ -1110,6 +1279,72 @@ mod tests {
     }
 
     #[test]
+    fn composite_provenance_retains_primary_grammar_and_every_secondary_source() -> Result<()> {
+        let first =
+            format!("{ATTRIBUTION}sdk/python/bittensor/settings.py @ {SHA}{ATTRIBUTION_END}");
+        let second = format!(
+            "{ATTRIBUTION}sdk/python/bittensor/hyperparams.py @ {OTHER_SHA}{ATTRIBUTION_END}"
+        );
+        let source = format!("{first}\n// @generated\n{second}\n//! Shared source table.\n");
+        assert_eq!(
+            attributions(&source)?,
+            BTreeSet::from([
+                ("sdk/python/bittensor/settings.py", SHA),
+                ("sdk/python/bittensor/hyperparams.py", OTHER_SHA),
+            ])
+        );
+        assert!(attributions(&source.replacen(OTHER_SHA, "short", 1)).is_err());
+        assert!(attributions(&format!("//! Unattributed primary.\n{second}\n")).is_err());
+        assert!(
+            attributions(&source.replace("sdk/python/bittensor/hyperparams.py", "../escape.py"))
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn independent_producer_exceptions_require_exact_kind_and_actual_home() -> Result<()> {
+        let mut metadata = row("sdk/python/bittensor/_generated/storage.py");
+        metadata.kind = "generated".into();
+        metadata.rs = vec!["`rtao_runtime::generated::storage`".into()];
+        assert_eq!(
+            independent_producer(&metadata)?,
+            Some(IndependentProducer::Metadata)
+        );
+        metadata.rs.push("rtao_example::unchecked".into());
+        assert!(independent_producer(&metadata).is_err());
+        metadata.rs.pop();
+        metadata.kind = "ported".into();
+        assert!(independent_producer(&metadata).is_err());
+        let mut descriptions = row("sdk/python/bittensor/error_descriptions/proxy.py");
+        descriptions.kind = "generated".into();
+        descriptions.rs = vec!["`rtao_catalog::CHAIN_ERRORS` (description field)".into()];
+        assert_eq!(
+            independent_producer(&descriptions)?,
+            Some(IndependentProducer::Descriptions)
+        );
+        descriptions.rs = vec!["rtao_catalog::unreviewed".into()];
+        assert!(independent_producer(&descriptions).is_err());
+        descriptions.py = "sdk/python/bittensor/error_descriptions/new_unreviewed.py".into();
+        assert_eq!(independent_producer(&descriptions)?, None);
+        let mut frozen = row("pallets/subtensor/src/rpc_info/basket_info.rs");
+        frozen.kind = "extracted".into();
+        frozen.rs = vec![
+            "codegen/frozen_models.toml".into(),
+            "rtao_runtime::models (metadata projections and authenticated basket_info freeze_struct layout tripwires)".into(),
+        ];
+        assert_eq!(
+            independent_producer(&frozen)?,
+            Some(IndependentProducer::Metadata)
+        );
+        frozen.rs[0] = "codegen/unreviewed_models.toml".into();
+        assert!(independent_producer(&frozen).is_err());
+        frozen.py = "pallets/subtensor/src/rpc_info/unreviewed.rs".into();
+        assert_eq!(independent_producer(&frozen)?, None);
+        Ok(())
+    }
+
+    #[test]
     fn rows_and_listing_reject_duplicates_and_malformed_blobs() -> Result<()> {
         let path = "sdk/python/bittensor/example.py";
         assert!(read_tree(&format!("{}{}", listing(path), listing(path))).is_err());
@@ -1176,14 +1411,12 @@ mod tests {
         );
         assert!(rows.iter().all(|row| row.synced_blob == "pending"));
         check_files(&rows, &read_tree(&listing)?, false)?;
+        // The seed retains the original prospective homes; the audited map
+        // subsequently records reviewed actual homes/reasons and source blobs.
+        // Its complete watched-file key set must still equal the seed exactly.
         assert_eq!(
-            rows.iter()
-                .map(|row| (&row.py, &row.rs, &row.kind, &row.milestone, &row.notes))
-                .collect::<Vec<_>>(),
-            committed
-                .iter()
-                .map(|row| (&row.py, &row.rs, &row.kind, &row.milestone, &row.notes))
-                .collect::<Vec<_>>()
+            rows.iter().map(|row| &row.py).collect::<Vec<_>>(),
+            committed.iter().map(|row| &row.py).collect::<Vec<_>>()
         );
         // Do not let a missing map row or a new upstream file disappear during seeding.
         assert!(
@@ -1296,6 +1529,45 @@ mod tests {
             // No child, launchd unit, config or environment depends on them.
             let _ = fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn independent_producers_refuse_wrong_tag_blob_source_and_missing_producer_prerequisites()
+    -> Result<()> {
+        let fixture = Fixture::new()?;
+        let path = "sdk/python/bittensor/_generated/storage.py";
+        let source = b"# authenticated generated fixture\n";
+        let blob = crate::extract::git_blob(source);
+        fs::create_dir_all(
+            fixture
+                .0
+                .join("vendor/upstream/src/sdk/python/bittensor/_generated"),
+        )?;
+        fs::write(fixture.0.join("upstream.toml"), "[parity]\ntag='v478'\n")?;
+        fs::write(
+            fixture.0.join("vendor/upstream/tree.txt"),
+            format!("100644 blob {blob}\t{path}\n"),
+        )?;
+        let file = fixture.0.join("vendor/upstream/src").join(path);
+        fs::write(&file, source)?;
+        let mut mapped = row(path);
+        mapped.kind = "generated".into();
+        mapped.rs = vec!["`rtao_runtime::generated::storage`".into()];
+        mapped.synced_blob = blob;
+        mapped.synced_tag = "old-tag".into();
+        assert!(independent_producers(&fixture.0, &[mapped.clone()]).is_err());
+        mapped.synced_tag = "v478".into();
+        let good_blob = mapped.synced_blob.clone();
+        mapped.synced_blob = OTHER_SHA.into();
+        assert!(independent_producers(&fixture.0, &[mapped.clone()]).is_err());
+        mapped.synced_blob = good_blob;
+        fs::write(&file, b"# changed bytes\n")?;
+        assert!(independent_producers(&fixture.0, &[mapped.clone()]).is_err());
+        fs::write(file, source)?;
+        // Matching Python bytes do not authorize the exception by themselves:
+        // absent metadata-pin prerequisites still fail producer validation.
+        assert!(independent_producers(&fixture.0, &[mapped]).is_err());
+        Ok(())
     }
 
     #[test]

@@ -208,6 +208,16 @@ fn selective(source: &str) -> Result<String> {
 }
 
 pub(super) fn run(args: Vec<String>) -> Result<()> {
+    run_at(args, &root()?)
+}
+
+/// Recompute metadata-generated outputs against an explicit workspace root.
+pub(crate) fn check_at(root: &Path) -> Result<()> {
+    run_at(vec!["--check".into()], root)
+}
+
+fn run_at(args: Vec<String>, root_path: &Path) -> Result<()> {
+    let root = root_path.to_owned();
     ensure!(
         args.iter().all(|arg| matches!(
             arg.as_str(),
@@ -229,7 +239,6 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
         "select only one scoped regeneration mode"
     );
     let check = models_only || args.iter().any(|arg| arg == "--check");
-    let root = root()?;
     let pins = read_document(&root, "upstream.toml")?;
     crate::metadata_pin::verify(&root, &pins)?;
     if namespaces_only {

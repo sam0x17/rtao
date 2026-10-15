@@ -33,6 +33,18 @@ use rtao_runtime::{
 };
 use serde_json::{Map, Value, json};
 use std::{collections::BTreeSet, time::Duration};
+use zeroize::Zeroizing;
+
+pub(crate) fn github_token() -> Option<Zeroizing<String>> {
+    github_token_with(|name| std::env::var(name).ok())
+}
+
+fn github_token_with(mut getenv: impl FnMut(&str) -> Option<String>) -> Option<Zeroizing<String>> {
+    getenv("GH_TOKEN")
+        .filter(|value| !value.is_empty())
+        .or_else(|| getenv("GITHUB_TOKEN").filter(|value| !value.is_empty()))
+        .map(Zeroizing::new)
+}
 
 fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
@@ -914,16 +926,8 @@ impl UpgradeFetch for GithubFetch {
             let mut request = client.get(url).header("User-Agent", "rtao-upgrade");
             if api {
                 request = request.header("Accept", "application/vnd.github+json");
-                if let Some(token) = std::env::var("GH_TOKEN")
-                    .ok()
-                    .filter(|value| !value.is_empty())
-                    .or_else(|| {
-                        std::env::var("GITHUB_TOKEN")
-                            .ok()
-                            .filter(|value| !value.is_empty())
-                    })
-                {
-                    request = request.bearer_auth(token);
+                if let Some(token) = github_token() {
+                    request = request.bearer_auth(token.as_str());
                 }
             }
             let mut response = request
@@ -1217,6 +1221,34 @@ pub(crate) fn upgrade_fields(record: &Value) -> Vec<(String, Value)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn github_token_precedence_is_lazy_and_treats_only_empty_values_as_unset() {
+        for (primary, fallback, expected, reads) in [
+            (None, None, None, 2),
+            (Some(""), Some("fallback"), Some("fallback"), 2),
+            (Some("primary"), Some("fallback"), Some("primary"), 1),
+            (Some(" "), Some("fallback"), Some(" "), 1),
+            (None, Some(""), None, 2),
+        ] {
+            let mut names = Vec::new();
+            let actual = github_token_with(|name| {
+                names.push(name.to_owned());
+                match name {
+                    "GH_TOKEN" => primary.map(str::to_owned),
+                    "GITHUB_TOKEN" => fallback.map(str::to_owned),
+                    _ => None,
+                }
+            });
+            assert_eq!(actual.as_deref().map(String::as_str), expected);
+            assert_eq!(names.len(), reads);
+            assert_eq!(names.first().map(String::as_str), Some("GH_TOKEN"));
+            if reads == 2 {
+                assert_eq!(names.last().map(String::as_str), Some("GITHUB_TOKEN"));
+            }
+        }
+    }
+
     use crate::{
         application::command_tree,
         books::Books,

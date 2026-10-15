@@ -152,11 +152,8 @@ impl CallTarget {
         Ok(Self {
             label: precompile.name.into(),
             address: precompile.address(),
-            artifact: ContractArtifact {
-                abi: Some(precompile.abi().map_err(input)?),
-                bytecode: None,
-                source: precompile.name.into(),
-            },
+            artifact: ContractArtifact::from_text(precompile.abi_json(), precompile.name)
+                .map_err(input)?,
             precompile: Some(precompile),
         })
     }
@@ -353,15 +350,15 @@ pub async fn run_with_backend(
         rtao::core::offload(move || PreparedCall::new(target, function_owned, &args))
             .await
             .map_err(failure)??;
-    if let Some(precompile) = prepared.target.precompile {
-        if let Some(note) = rtao::evm::function_deprecation(precompile.name, function) {
-            ctx.output
-                .message(&format!(
-                    "warning: {}.{function} is deprecated — {note}",
-                    prepared.target.label
-                ))
-                .map_err(failure)?;
-        }
+    if let Some(precompile) = prepared.target.precompile
+        && let Some(note) = rtao::evm::function_deprecation(precompile.name, function)
+    {
+        ctx.output
+            .message(&format!(
+                "warning: {}.{function} is deprecated — {note}",
+                prepared.target.label
+            ))
+            .map_err(failure)?;
     }
     if prepared.view {
         let data = if prepared.data.len() > 64 * 1024 {

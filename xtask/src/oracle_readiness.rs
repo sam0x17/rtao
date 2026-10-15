@@ -8,12 +8,14 @@ use std::{fs, io::ErrorKind, path::Path};
 pub(crate) enum CommittedStatus {
     Verified,
     InitialPending,
+    OptionalUnverified,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Readiness {
     CheckExisting,
     InitialAbsent,
+    OptionalAbsent,
 }
 
 impl CommittedStatus {
@@ -24,6 +26,9 @@ impl CommittedStatus {
             }
             Self::InitialPending => {
                 json!({"status":"pending","milestone":"M2-05","reason":"First hosted oracle manifest has not been produced; M2-05 refresh has not run and M2-14 oracle behavioral parity remains unverified. No current or previously committed oracle output is omitted."})
+            }
+            Self::OptionalUnverified => {
+                json!({"status":"optional-unverified","reason":"Q30 limits acceptance to client development and hosted tests. No first oracle manifest exists; independent Python oracle parity remains unverified. Existing or historically committed oracle outputs cannot use this status."})
             }
         }
     }
@@ -71,12 +76,17 @@ fn readiness_with_history(
         return Ok(Readiness::CheckExisting);
     }
     let plan = fs::read_to_string(root.join("PLAN.md"))?;
+    let optional_policy = plan
+        .lines()
+        .any(|line| line.starts_with("- **Q30 optional oracle policy.**"))
+        && plan
+            .lines()
+            .any(|line| line.starts_with("- **M2-05 optional hosted refresh.**"));
     for step in ["M2-05", "M2-14"] {
         let unchecked = format!("- [ ] **{step}**");
         let checked = format!("- [x] **{step}**");
-        // Q30 made the hosted refresh optional, without declaring any oracle
-        // output verified. Keep that explicit plan state distinct from a
-        // completed checkbox; M2-14 must still be unchecked.
+        // Q30 permits source-parity completion without inventing independent
+        // oracle evidence. A historical generic completed M2-14 still fails.
         let optional = (step == "M2-05").then_some("- **M2-05 optional hosted refresh.**");
         let rows = plan
             .lines()
@@ -92,12 +102,16 @@ fn readiness_with_history(
         );
         ensure!(
             rows[0].starts_with(&unchecked)
-                || optional.is_some_and(|prefix| rows[0].starts_with(prefix)),
+                || optional.is_some_and(|prefix| rows[0].starts_with(prefix))
+                || (optional_policy
+                    && step == "M2-14"
+                    && rows[0]
+                        .starts_with("- [x] **M2-14** Strict client-source parity machinery:")),
             "{step} is complete but committed oracle manifest/vectors are absent"
         );
     }
     ensure!(
-        !strict,
+        !strict || optional_policy,
         "strict oracle parity refuses missing first committed manifest"
     );
     let prior = history(root, base)?;
@@ -105,7 +119,11 @@ fn readiness_with_history(
         prior.is_empty(),
         "committed oracle evidence was removed; initial staging cannot hide prior artifacts: {prior:?}"
     );
-    Ok(Readiness::InitialAbsent)
+    Ok(if optional_policy {
+        Readiness::OptionalAbsent
+    } else {
+        Readiness::InitialAbsent
+    })
 }
 
 fn check_with(
@@ -136,6 +154,7 @@ fn check_with_history(
             Ok(CommittedStatus::Verified)
         }
         Readiness::InitialAbsent => Ok(CommittedStatus::InitialPending),
+        Readiness::OptionalAbsent => Ok(CommittedStatus::OptionalUnverified),
     }
 }
 
@@ -279,7 +298,7 @@ mod tests {
     }
 
     #[test]
-    fn q30_plan_optional_refresh_keeps_absent_oracle_pending() -> Result<()> {
+    fn q30_strict_source_parity_reports_optional_oracle_as_unverified() -> Result<()> {
         let fixture = Fixture::new()?;
         let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
@@ -294,11 +313,23 @@ mod tests {
             fixture.check(false, None, |_, _| {
                 anyhow::bail!("optional refresh cannot invent oracle evidence")
             })?,
-            CommittedStatus::InitialPending
+            CommittedStatus::OptionalUnverified
         );
-        assert!(fixture.readiness(true, None).is_err());
-        for invalid in [
+        let status = fixture.check(true, None, |_, _| {
+            anyhow::bail!("strict source checks must not invent oracle execution")
+        })?;
+        assert_eq!(status, CommittedStatus::OptionalUnverified);
+        assert_eq!(status.report()["status"], "optional-unverified");
+        fs::write(
+            fixture.0.join("PLAN.md"),
             plan.replace("- [ ] **M2-14**", "- [x] **M2-14**"),
+        )?;
+        assert_eq!(fixture.readiness(true, None)?, Readiness::OptionalAbsent);
+        for invalid in [
+            plan.replace(
+                "- [ ] **M2-14** Strict client-source parity machinery:",
+                "- [x] **M2-14** historical oracle parity claim:",
+            ),
             format!("{plan}\n- [x] **M2-05** completed\n"),
             format!("{plan}\n- [ ] **M2-05** duplicate\n"),
             plan.replace("- **M2-05 optional hosted refresh.**", "- [x] **M2-05**"),
@@ -306,6 +337,40 @@ mod tests {
             fs::write(fixture.0.join("PLAN.md"), invalid)?;
             assert!(fixture.readiness(false, None).is_err());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn q30_optional_policy_cannot_hide_removed_or_corrupt_evidence() -> Result<()> {
+        let fixture = Fixture::new()?;
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let plan = fs::read_to_string(workspace.join("PLAN.md"))?;
+        fs::write(fixture.0.join("PLAN.md"), &plan)?;
+        let manifest = fixture.0.join("vendor/oracle/manifest.json");
+        fs::write(&manifest, "corrupt optional evidence")?;
+        assert!(
+            fixture
+                .check(true, None, |_, directory| {
+                    let _: Value =
+                        serde_json::from_slice(&fs::read(directory.join("manifest.json"))?)?;
+                    Ok(())
+                })
+                .is_err()
+        );
+        fixture.git(&["add", "vendor/oracle/manifest.json"])?;
+        fixture.commit("optional evidence still belongs to history")?;
+        fs::remove_file(manifest)?;
+        assert!(fixture.readiness(true, None).is_err());
+        fs::write(
+            fixture.0.join("PLAN.md"),
+            plan.replace(
+                "- **Q30 optional oracle policy.**",
+                "- Oracle refresh is optional.",
+            ),
+        )?;
+        assert!(fixture.readiness(true, None).is_err());
         Ok(())
     }
 

@@ -24,12 +24,10 @@ impl NativeBackend {
 }
 impl SigningBackend for NativeBackend {
     fn validate(&self, request: &BackendRequest) -> Result<(), CliError> {
-        let available = match Self::backend(request) {
-            "ledger" => cfg!(feature = "ledger"),
-            "vault" => cfg!(feature = "vault"),
-            "extension" => cfg!(feature = "extension"),
-            _ => false,
-        };
+        let backend = Self::backend(request);
+        let available = matches!(backend, "ledger" if cfg!(feature = "ledger"))
+            || matches!(backend, "vault" if cfg!(feature = "vault"))
+            || matches!(backend, "extension" if cfg!(feature = "extension"));
         if available {
             Ok(())
         } else {
@@ -136,13 +134,18 @@ impl SigningBackend for NativeBackend {
 #[cfg(any(feature = "vault", feature = "extension"))]
 impl NativeBackend {
     fn browser(&self, request: &BackendRequest) -> Option<String> {
-        request.globals.extension_browser.clone().or_else(|| {
-            self.context
-                .config
-                .get("extension_browser")
-                .filter(|value| !value.is_null())
-                .map(crate::globals::config_string)
-        })
+        request
+            .globals
+            .extension_browser
+            .clone()
+            .filter(|value| !value.is_empty())
+            .or_else(|| {
+                self.context
+                    .config
+                    .get("extension_browser")
+                    .filter(|value| !value.is_null())
+                    .map(crate::globals::config_string)
+            })
     }
 }
 #[cfg(feature = "ledger")]
@@ -249,10 +252,12 @@ fn choose_extension_account(
             [account] => *account,
             _ => {
                 if let Some(account) = request.default_address.and_then(|expected| {
-                    filtered
+                    let mut saved = filtered
                         .iter()
                         .copied()
-                        .find(|account| matches(account, expected))
+                        .filter(|account| matches(account, expected));
+                    let first = saved.next()?;
+                    saved.next().is_none().then_some(first)
                 }) {
                     account
                 } else {
@@ -448,6 +453,26 @@ mod tests {
             account_type: "sr25519".into(),
         }
     }
+
+    #[test]
+    fn empty_explicit_browser_uses_config_while_whitespace_remains_explicit()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (mut context, mut request) = fixture(&[])?;
+        context
+            .config
+            .insert("extension_browser".into(), serde_json::json!("firefox"));
+        let backend = NativeBackend::new(&context);
+        for (explicit, expected) in [
+            (None, "firefox"),
+            (Some(""), "firefox"),
+            (Some("chrome"), "chrome"),
+            (Some(" "), " "),
+        ] {
+            request.globals.extension_browser = explicit.map(str::to_owned);
+            assert_eq!(backend.browser(&request).as_deref(), Some(expected));
+        }
+        Ok(())
+    }
     #[test]
     fn saved_missing_or_filtered_account_can_yield_a_new_filtered_identity()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -482,6 +507,33 @@ mod tests {
         );
         request.default_address = Some(AccountId([3; 32]));
         assert!(choose_extension_account(&context, &request, &candidates, None).is_err());
+        Ok(())
+    }
+    #[test]
+    fn duplicated_remembered_identity_requires_selection_after_filtering()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (context, mut request) = fixture(&[])?;
+        request.default_address = Some(AccountId([2; 32]));
+        let candidates = [
+            account(2, "first"),
+            account(2, "second"),
+            account(3, "third"),
+        ];
+        assert!(choose_extension_account(&context, &request, &candidates, None).is_err());
+
+        let (context, mut request) = fixture(&["2"])?;
+        request.default_address = Some(AccountId([2; 32]));
+        request.interactive = true;
+        let selection = choose_extension_account(&context, &request, &candidates, None)?;
+        assert_eq!(selection.account.source, "second");
+
+        request.globals.extension_source = Some("first".into());
+        assert_eq!(
+            choose_extension_account(&context, &request, &candidates, None)?
+                .account
+                .source,
+            "first"
+        );
         Ok(())
     }
     #[test]

@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use alloy_dyn_abi::JsonAbiExt;
-use alloy_json_abi::{Constructor, Function, JsonAbi};
+use alloy_json_abi::{AbiItem, Constructor, Function};
 use serde_json::Value;
 
 use crate::{Error, Result, precompiles};
@@ -12,8 +12,11 @@ use crate::{Error, Result, precompiles};
 /// Compiled ABI and optional init bytecode from a user-supplied artifact.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContractArtifact {
-    /// Solidity ABI, when the artifact contains one.
-    pub abi: Option<JsonAbi>,
+    /// Solidity ABI entries in source order, when the artifact contains one.
+    ///
+    /// A list retains interleaved overloads and repeated entries, matching
+    /// Python's artifact representation instead of grouping by function name.
+    pub abi: Option<Vec<AbiItem<'static>>>,
     /// Validated, lowercase 0x-hex init bytecode, when supplied.
     pub bytecode: Option<String>,
     /// Source path used to identify errors.
@@ -21,26 +24,33 @@ pub struct ContractArtifact {
 }
 
 impl ContractArtifact {
-    /// All functions, including overloads, in the artifact ABI.
+    /// All functions, including overloads and duplicates, in source ABI order.
     pub fn functions(&self) -> Vec<&Function> {
         self.abi
-            .as_ref()
-            .map(|abi| abi.functions().collect())
+            .as_deref()
             .unwrap_or_default()
+            .iter()
+            .filter_map(|entry| match entry {
+                AbiItem::Function(function) => Some(function.as_ref()),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Resolve a name or an exact canonical function signature.
     pub fn function(&self, name: &str) -> Result<&Function> {
-        let abi = self
-            .abi
-            .as_ref()
-            .ok_or_else(|| Error::Validation(format!("{} carries no ABI", self.source)))?;
-        precompiles::find_function(abi, name, &self.source)
+        if self.abi.is_none() {
+            return Err(Error::Validation(format!("{} carries no ABI", self.source)));
+        }
+        precompiles::find_function(self.functions().into_iter(), name, &self.source)
     }
 
     /// Constructor ABI, when explicitly present.
     pub fn constructor(&self) -> Option<&Constructor> {
-        self.abi.as_ref().and_then(|abi| abi.constructor.as_ref())
+        self.abi.as_deref()?.iter().find_map(|entry| match entry {
+            AbiItem::Constructor(constructor) => Some(constructor.as_ref()),
+            _ => None,
+        })
     }
 
     /// Parse artifact text already acquired by a caller.
@@ -221,6 +231,65 @@ mod tests {
         let bin = ContractArtifact::from_text("6000\n6000\n", "contract.bin").unwrap();
         assert_eq!(encode_deploy(&bin, &[]).unwrap(), "0x60006000");
         assert!(encode_deploy(&bin, &[json!(1)]).is_err());
+    }
+
+    #[test]
+    fn function_enumeration_preserves_source_order_interleaved_overloads_and_duplicates() {
+        let abi = json!([
+            {"type":"constructor","inputs":[],"stateMutability":"nonpayable"},
+            {"type":"function","name":"zebra","inputs":[{"name":"n","type":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
+            {"type":"event","name":"Changed","inputs":[],"anonymous":false},
+            {"type":"function","name":"alpha","inputs":[],"outputs":[],"stateMutability":"view"},
+            {"type":"fallback","stateMutability":"nonpayable"},
+            {"type":"function","name":"zebra","inputs":[{"name":"who","type":"address"}],"outputs":[],"stateMutability":"view"},
+            {"type":"error","name":"Denied","inputs":[]},
+            {"type":"function","name":"zebra","inputs":[{"name":"n","type":"uint256"}],"outputs":[],"stateMutability":"nonpayable"}
+        ]);
+        for payload in [abi.clone(), json!({"abi":abi,"bytecode":"0x6000"})] {
+            let mut artifact =
+                ContractArtifact::from_text(&payload.to_string(), "ordered.json").unwrap();
+            assert_eq!(
+                artifact
+                    .functions()
+                    .iter()
+                    .map(|function| function.signature())
+                    .collect::<Vec<_>>(),
+                [
+                    "zebra(uint256)",
+                    "alpha()",
+                    "zebra(address)",
+                    "zebra(uint256)"
+                ]
+            );
+            assert!(artifact.constructor().is_some());
+            assert_eq!(
+                artifact.function("zebra").unwrap().signature(),
+                "zebra(uint256)"
+            );
+            assert_eq!(
+                artifact.function("zebra(address)").unwrap().signature(),
+                "zebra(address)"
+            );
+            let error = artifact.function("missing").unwrap_err().to_string();
+            assert!(error.contains("Available: alpha, zebra, zebra, zebra"));
+
+            // The public ABI list remains authoritative after caller edits;
+            // function enumeration must not rely on a stale parallel cache.
+            artifact.abi.as_mut().unwrap().reverse();
+            assert_eq!(
+                artifact
+                    .functions()
+                    .iter()
+                    .map(|function| function.signature())
+                    .collect::<Vec<_>>(),
+                [
+                    "zebra(uint256)",
+                    "zebra(address)",
+                    "alpha()",
+                    "zebra(uint256)"
+                ]
+            );
+        }
     }
 
     #[test]

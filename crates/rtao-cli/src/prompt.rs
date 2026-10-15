@@ -2,6 +2,8 @@
 // Additional sources at the same commit/license: sdk/python/bittensor/keyfiles.py:42-62 and sdk/python/bittensor/cli/context.py:1900-1935.
 //! Terminal-gated, injectable prompting and secret password retry policy.
 
+mod masked_input;
+
 use rtao::wallet::{PasswordPrompt, PromptPolicy, WalletError};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::{Map, Value};
@@ -69,7 +71,7 @@ pub trait Terminal: Send {
     fn stderr_is_tty(&self) -> bool;
     /// Read an ordinary, echoing line; EOF and interrupts are aborts.
     fn read_line(&mut self, label: &str) -> Result<String, PromptError>;
-    /// Read without echo; returned secret material must never be logged.
+    /// Read with masked echo; returned secret material must never be logged.
     fn read_secret(&mut self, label: &str) -> Result<SecretString, PromptError>;
     /// Write a public prompt hint or diagnostic to stderr.
     fn message(&mut self, message: &str) -> Result<(), PromptError>;
@@ -119,7 +121,7 @@ impl Terminal for SharedTerminal {
     }
 }
 
-/// Standard-input/stderr terminal with rpassword hidden entry.
+/// Standard-input/stderr terminal with star-masked secret entry.
 #[derive(Default)]
 pub struct LiveTerminal;
 fn input_error(error: io::Error) -> PromptError {
@@ -127,6 +129,24 @@ fn input_error(error: io::Error) -> PromptError {
         io::ErrorKind::Interrupted | io::ErrorKind::UnexpectedEof => PromptError::Aborted,
         _ => PromptError::Io,
     }
+}
+
+/// Read a UTF-8 secret with star echo, backspace and Ctrl-U on a Unix terminal.
+///
+/// Like Python's helper, direct callers can use the warned plain-line fallback
+/// when neither stdin nor a controlling terminal is available. CLI password
+/// policy still checks for a terminal before invoking this helper.
+/// A controlling-terminal fallback uses the same editor without stars. Both
+/// terminal paths use fixed control keys: Ctrl-C cancels after restoration,
+/// backspace deletes one decoder result, Ctrl-U clears the entry and Ctrl-D
+/// aborts an empty entry. Escape sequences are discarded. Other ASCII control
+/// bytes are ignored; remapped terminal signal keys are not interpreted.
+/// Interpreter-specific input codecs are not used. These paths do not install
+/// process signal handlers: external signals may terminate or suspend the
+/// process without restoring terminal settings.
+#[doc(alias = "bittensor.masked_input.masked_input")]
+pub fn masked_input(label: &str) -> Result<SecretString, PromptError> {
+    masked_input::read(&crate::output::terminal_text(label)).map_err(input_error)
 }
 impl Terminal for LiveTerminal {
     fn stdin_is_tty(&self) -> bool {
@@ -155,9 +175,7 @@ impl Terminal for LiveTerminal {
         if !self.stdin_is_tty() {
             return Err(PromptError::Unavailable);
         }
-        rpassword::prompt_password(crate::output::terminal_text(label))
-            .map(SecretString::new)
-            .map_err(input_error)
+        masked_input(label)
     }
     fn message(&mut self, message: &str) -> Result<(), PromptError> {
         let mut stderr = io::stderr().lock();
