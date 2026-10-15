@@ -14,6 +14,10 @@ on:
         description: Also regenerate catalog interfaces and upload them for review
         type: boolean
         default: false
+      refresh_lock:
+        description: Resolve the reviewed existing dependency edges and retain the candidate lock
+        type: boolean
+        default: false
       prepare_core_patch:
         description: Prepare the reviewed Ledger core patch pins for artifact review
         type: boolean
@@ -23,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.ref }}-${{ inputs.prepare_core_patch && 'core-patch' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
+  group: pr-${{ github.ref }}-${{ inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
   cancel-in-progress: true
 
 env:
@@ -38,7 +42,7 @@ env:
 # Python and live Docker/hardware targets are excluded by the ci test profile.
 jobs:
   check:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -80,7 +84,7 @@ jobs:
           retention-days: 7
 
   no-host:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -100,7 +104,7 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -124,7 +128,7 @@ jobs:
           timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -164,7 +168,7 @@ jobs:
           timeout 900s cargo check --locked --workspace --all-features --exclude rtao-testkit --exclude xtask
 
   supply:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -199,7 +203,7 @@ jobs:
           retention-days: 14
 
   semver:
-    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch))
+    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -263,8 +267,30 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  lock-refresh:
+    if: github.event_name == 'workflow_dispatch' && inputs.refresh_lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - name: Resolve reviewed existing dependency edges without building
+        run: timeout 180s node ci/resolve-existing-lock.mjs
+      - name: Retain candidate dependency lock for review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lock-${{ github.sha }}
+          path: Cargo.lock
+          if-no-files-found: error
+          retention-days: 3
+
   compat-refresh:
-    if: github.event_name == 'workflow_dispatch' && (inputs.refresh_compat || inputs.refresh_codegen)
+    if: github.event_name == 'workflow_dispatch' && !inputs.refresh_lock && (inputs.refresh_compat || inputs.refresh_codegen)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -316,6 +342,7 @@ jobs:
             'crates/rtao/src/generated/blocking_namespaces.rs',
             'crates/rtao-cli/src/root_helpers/basket_index_data.rs',
             'crates/rtao-catalog/src/py.rs',
+            'vendor/upstream/extracted/env_vars.json',
           ];
           const allowed = new Set([...reports, ...(process.env.REFRESH_CODEGEN === 'true' ? interfaces : [])]);
           for (const path of allowed) {
@@ -358,5 +385,6 @@ jobs:
             crates/rtao/src/generated/blocking_namespaces.rs
             crates/rtao-cli/src/root_helpers/basket_index_data.rs
             crates/rtao-catalog/src/py.rs
+            vendor/upstream/extracted/env_vars.json
           if-no-files-found: error
           retention-days: 3
