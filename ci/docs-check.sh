@@ -36,6 +36,14 @@ cargo run --locked -p xtask -- docs --llms --out "$docs_root/generated" --check
 cp -R book "$docs_root/book-source"
 cp -R "$docs_root/generated/." "$docs_root/book-source/src/"
 "$docs_root/bin/mdbook" build "$docs_root/book-source" --dest-dir "$docs_root/book-html"
+# The LLM index links to raw Markdown. Keep those companions in the archive
+# alongside the rendered chapters, with the same relative paths.
+while IFS= read -r -d '' chapter; do
+  relative=${chapter#"$docs_root/book-source/src/"}
+  mkdir -p "$(dirname "$docs_root/book-html/$relative")"
+  cp "$chapter" "$docs_root/book-html/$relative"
+done < <(find "$docs_root/book-source/src" -type f -name '*.md' -print0)
+test -f "$docs_root/book-html/compat.html"
 
 # Downloadable development docs retain the same required attribution as source.
 source ci/release/license.sh
@@ -44,3 +52,18 @@ rtao_copy_release_licenses "$docs_root/book-html"
 rtao_copy_release_licenses "$docs_root/generated"
 # Keep the book's API links usable without copying another rendered doc tree.
 mv "$CARGO_TARGET_DIR/doc" "$docs_root/book-html/api"
+test -f "$docs_root/book-html/api/rtao_catalog/errors/enum.ErrorCode.html"
+test -f "$docs_root/book-html/api/rtao_catalog/errors/static.CHAIN_ERRORS.html"
+node - "$docs_root/book-html" <<'NODE_DOC_LINKS'
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(process.argv[2]);
+const index = fs.readFileSync(path.join(root, 'llms.txt'), 'utf8');
+for (const [, link] of index.matchAll(/\]\(([^)]+)\)/g)) {
+  if (/^https?:\/\//.test(link) || link.startsWith('#')) continue;
+  const target = path.resolve(root, link.split('#')[0]);
+  if (!target.startsWith(root + path.sep) || !fs.statSync(target).isFile()) {
+    throw new Error('LLM index target is absent from the book archive: ' + link);
+  }
+}
+NODE_DOC_LINKS

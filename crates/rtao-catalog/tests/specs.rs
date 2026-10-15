@@ -173,13 +173,25 @@ fn defaults_distinguish_omission_none_factories_and_own_key_fallback() -> Result
 }
 
 #[test]
-fn python_declaration_index_round_trips_every_resolved_value_and_span() -> Result {
+fn shared_python_declaration_index_round_trips_every_shared_value_and_span() -> Result {
     let tables: Value = serde_json::from_str(include_str!(
         "../../../vendor/upstream/extracted/named_tables.json"
     ))?;
     let tables = tables["tables"].as_object().ok_or("named tables absent")?;
     let mut count = 0;
     for (path, table) in tables {
+        if path == "sdk/python/bittensor/basket_index_data.py" {
+            // Frozen price history belongs to the CLI, so neuron consumers of
+            // rtao-catalog do not compile it. Extraction retains its evidence.
+            for name in table["values"]
+                .as_object()
+                .ok_or("basket values absent")?
+                .keys()
+            {
+                assert!(rtao_catalog::py::table(path, name).is_none());
+            }
+            continue;
+        }
         for (name, row) in table["values"].as_object().ok_or("values absent")? {
             let spec = rtao_catalog::py::table(path, name).ok_or("Python table absent")?;
             assert_eq!(

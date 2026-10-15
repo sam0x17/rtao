@@ -3,6 +3,41 @@
 schema = 1
 
 [[divergences]]
+id = "D-050"
+upstream_symbol = "bittensor.cli.output / live prompt rendering"
+python_behavior = "Human detail cells and direct prompt/output strings can contain terminal control or directional formatting characters."
+rtao_behavior = "Escapes control and directional formatting characters in human cells, titles, messages, review cards and prompts. Renderer-owned line boundaries remain structural. JSON records, transaction bytes and entered values retain their original characters."
+rationale = "Untrusted chain identities and supplied arguments must not clear or rewrite the operator's review display."
+decision = "PLAN.md execution rule 5; M4-S2 source review (2026-10-15)"
+status = "active"
+class = "stricter"
+milestone = "M4"
+pinning_tests = [
+  "rtao_cli::output_contract::human_detail_escapes_titles_keys_and_nested_values_without_changing_json",
+  "rtao_cli::output_contract::semantic_and_raw_review_cards_keep_signer_and_operation_visible_with_hostile_arguments",
+]
+upstream_report = "Local display-boundary repair; combined hosted validation pending. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/output.py"
+
+[[divergences]]
+id = "D-049"
+upstream_symbol = "Client submission watch and receipt recovery"
+python_behavior = "Several receipt and protocol failures after author transmission propagate without a typed recovery identity."
+rtao_behavior = "Unresolved post-transmission failures retain the attempted extrinsic hash, original cause and any later reconciliation failure. Direct, leased, externally signed, shield and executor entries invalidate unresolved nonce state and do not rebroadcast. Proven pool refusal and expiry remain distinct."
+rationale = "A failed receipt lookup does not prove that the mutation failed. Preserve recovery information before a caller decides whether to retry."
+decision = "PLAN.md execution rule 5; M4-S1 source review (2026-10-15)"
+status = "active"
+class = "improved"
+milestone = "M4"
+pinning_tests = [
+  "rtao_client::submission::receipt_rpc_protocol_and_event_decode_failures_keep_hash_and_cause_for_all_entries",
+  "rtao_client::shield::shield_receipt_watch_and_inner_receipt_errors_retain_the_attempted_carrier_and_cause",
+  "rtao_tx::executor::receipt_rpc_failure_keeps_recovery_identity_without_retry_for_every_executor_entry",
+]
+upstream_report = "Local recovery-boundary repair; combined hosted validation pending. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport"
+
+[[divergences]]
 id = "D-048"
 upstream_symbol = "bittensor.cli.commands.upgrade.upgrade_record_fields"
 python_behavior = "A matched release without sudo_layer details is displayed as not opened yet, including when asset fetching or authentication prevented the sudo-layer lookup."
@@ -622,9 +657,9 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-042"
-upstream_symbol = "bittensor.config book readers / AppContext saved multisig reference resolution / cli.call_names recursive JSON traversal"
-python_behavior = "Book readers parse the complete selected file. Saved multisig resolution detects cycles, but acyclic chains and programmatic nested call/name inputs have no matching 16 MiB and 128-level input-budget policy."
-rtao_behavior = "CLI book reads refuse content over 16 MiB without falling back to another account. Saved multisig references allow chains through 128 entries and refuse deeper paths, including paths through cached descendants. Programmatic name-resolution JSON counts containers including the root argument map and refuses beyond 128; direct raw-call conversion separately refuses recursion depth 128 before runtime encoding."
+upstream_symbol = "bittensor.config readers / cli.call raw JSON / cli.commands.weights input / AppContext saved multisig reference resolution / cli.call_names recursive JSON traversal"
+python_behavior = "Book/config and weights readers acquire complete selected files, and raw-call JSON uses an unbounded file reader. Saved multisig resolution detects cycles, but these inputs and acyclic/programmatic nested call/name inputs have no matching 16 MiB and 128-level input-budget policy."
+rtao_behavior = "CLI books, raw-call JSON, aggregate weights input and shared config/cache reads refuse content over 16 MiB. File acquisition uses nonblocking regular descriptors and a growth-safe capped read; rejected config/cache inputs are neither quarantined nor overwritten. Inline inputs have the same byte budget. Saved multisig references allow chains through 128 entries and refuse deeper paths, including paths through cached descendants. Programmatic name-resolution JSON counts containers including the root argument map and refuses beyond 128; direct raw-call conversion separately refuses recursion depth 128 before runtime encoding."
 rationale = "Bound memory and recursion for local untrusted inputs while preserving account selection. An oversized valid contact book must not become an empty book and redirect a same-name reference to a wallet. Finite acyclic reference chains and programmatic Values need explicit limits even when cycle detection and text-parser nesting checks are present."
 decision = "PLAN.md execution rule 5; safe input-budget policy registered during CLI source adoption (2026-10-15)"
 status = "active"
@@ -635,6 +670,8 @@ pinning_tests = [
   "rtao_cli::books::tests::acyclic_multisig_chains_have_a_bounded_refusal_and_repeated_branches_are_valid",
   "rtao_cli::call_names::tests::programmatic_json_nesting_refuses_before_clone_or_name_lookup",
   "rtao_cli::raw_call_contract::programmatic_raw_call_json_depth_refuses_before_runtime_encoding",
+  "rtao_cli::file_input_contract::raw_and_weights_accept_exact_sixteen_mib_files_without_rewriting",
+  "rtao_cli::file_input_contract::sparse_oversized_files_refuse_promptly_and_keep_their_contents",
 ]
 upstream_report = "Local safety policy; no upstream issue or PR filed. Active denotes implemented source with named regression bodies, including the new direct programmatic raw-call test. Combined hosted validation remains pending; no local build or test was run for registration."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/config.py#L138-L286"

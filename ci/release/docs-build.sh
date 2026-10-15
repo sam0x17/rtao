@@ -28,6 +28,12 @@ for name in api-index.md tx-reference.md reference.md compat.md SUMMARY.md llms.
   cp -R "$scratch/$name" "$scratch/book-source/src/"
 done
 mdbook build "$scratch/book-source" --dest-dir "$scratch/book-html"
+# Retain the Markdown targets referenced by llms.txt alongside rendered pages.
+while IFS= read -r -d '' chapter; do
+  relative=${chapter#"$scratch/book-source/src/"}
+  mkdir -p "$(dirname "$scratch/book-html/$relative")"
+  cp "$chapter" "$scratch/book-html/$relative"
+done < <(find "$scratch/book-source/src" -type f -name '*.md' -print0)
 cp -R "$CARGO_TARGET_DIR/doc" "$scratch/book-html/api"
 cp "$scratch/llms.txt" "$dist/llms.txt"
 rtao_copy_release_licenses "$CARGO_TARGET_DIR/doc"
