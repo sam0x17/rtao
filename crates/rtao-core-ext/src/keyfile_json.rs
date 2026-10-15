@@ -16,13 +16,15 @@ use bittensor_core::{
     CoreError,
     keys::{CRYPTO_ED25519, CRYPTO_SR25519, Keypair},
 };
-use serde::Deserialize;
 use serde_json::json;
 use std::{
     collections::HashMap,
     io::{self, Write},
 };
 use zeroize::{Zeroize, Zeroizing};
+
+mod secret_json;
+use secret_json::{Value as SecretValue, parse as parse_secret_json};
 
 /// The secret input whose derivation failed.
 #[derive(Clone, Copy, Debug)]
@@ -84,24 +86,45 @@ fn wipe_json(value: &mut serde_json::Value) {
     }
 }
 
-struct SecretJson(serde_json::Value);
+struct SecretJson<'a>(SecretValue<'a>);
 
-fn parse_secret_json<G>(
-    input: &str,
-    guard: impl FnOnce(serde_json::Value) -> G,
-) -> Result<G, serde_json::Error> {
-    let mut parser = serde_json::Deserializer::from_str(input);
-    // Install ownership before end() can reject trailing characters. Using
-    // from_str<Value> would drop this completed tree before our guard sees it.
-    let value = guard(serde_json::Value::deserialize(&mut parser)?);
-    parser.end()?;
-    Ok(value)
+fn stored_crypto_type(value: &SecretValue<'_>) -> u8 {
+    value
+        .get("cryptoType")
+        .and_then(|value| match value {
+            SecretValue::Number(number) => number.parse::<u8>().ok(),
+            SecretValue::String(text) => text.as_str().trim().parse::<u8>().ok(),
+            _ => None,
+        })
+        .unwrap_or(CRYPTO_SR25519)
 }
 
-impl Drop for SecretJson {
-    fn drop(&mut self) {
-        wipe_json(&mut self.0);
-    }
+/// Inspect public keyfile fields without deriving a key or copying secret text.
+///
+/// The callback receives the legacy-defaulted crypto type, preferred stored
+/// address, and preferred public-key hex, in that order. An existing field of
+/// the wrong type still takes precedence over its alias, as in the core's JSON
+/// lookup. References remain valid only during the callback. Parsing validates
+/// the entire JSON document, caps it at 16 MiB and keeps decoded strings under
+/// wiping ownership on success, duplicate replacement and error paths.
+///
+/// This accepts plaintext JSON only; it never decrypts or calls a secret-key
+/// constructor. Borrowed input and any copies made by the callback remain the
+/// caller's responsibility.
+pub fn with_public_keyfile_fields<T>(
+    keyfile_data: &[u8],
+    inspect: impl FnOnce(u8, Option<&str>, Option<&str>) -> T,
+) -> Result<T, CoreError> {
+    let input = std::str::from_utf8(keyfile_data).map_err(|_| key_err("invalid keyfile JSON"))?;
+    let value =
+        parse_secret_json(input, SecretJson).map_err(|_| key_err("invalid keyfile JSON"))?;
+    let address = stored_ss58(&value.0);
+    let public = value
+        .0
+        .get("publicKey")
+        .or_else(|| value.0.get("accountId"))
+        .and_then(SecretValue::as_str);
+    Ok(inspect(stored_crypto_type(&value.0), address, public))
 }
 
 struct SecretMap(HashMap<&'static str, serde_json::Value>);
@@ -230,7 +253,7 @@ pub fn serialized_keypair_to_keyfile_data(keypair: &Keypair) -> Result<Vec<u8>, 
 
 /// Stored ss58Address, including the legacy leading-space `" ss58Address"`
 /// key some old btwallet files carry.
-fn stored_ss58(keyfile_dict: &serde_json::Value) -> Option<&str> {
+fn stored_ss58<'a>(keyfile_dict: &'a SecretValue<'_>) -> Option<&'a str> {
     keyfile_dict
         .get("ss58Address")
         .or_else(|| keyfile_dict.get(" ss58Address"))
@@ -242,7 +265,7 @@ fn stored_ss58(keyfile_dict: &serde_json::Value) -> Option<&str> {
 /// a mismatch the other crypto type is tried before giving up: the stored
 /// address is the ground truth for which key the file holds.
 fn resolve_checked<F>(
-    keyfile_dict: &serde_json::Value,
+    keyfile_dict: &SecretValue<'_>,
     crypto_type: u8,
     derived_from: &'static str,
     input: SecretInput,
@@ -315,10 +338,14 @@ fn keypair_from_raw_text(text: &str) -> Option<Keypair> {
 
 /// Decode the pinned upstream plaintext keyfile format and historical forms.
 ///
-/// Owned JSON strings and decoded seed bytes are wiped on return. Borrowed input,
-/// parser-internal scratch allocations, and the returned upstream keypair keep
-/// their own lifetimes.
+/// Unescaped JSON strings and numbers borrow the input. Decoded escaped strings
+/// and seed bytes are wiped on return, replacement and error paths. The parser
+/// allocates no private serde_json scratch or decimal buffers. Borrowed input
+/// and the returned upstream keypair remain their owners' responsibility.
 pub fn deserialize_keypair_from_keyfile_data(keyfile_data: &[u8]) -> Result<Keypair, CoreError> {
+    if keyfile_data.len() > secret_json::MAX_INPUT_BYTES {
+        return Err(key_err("keyfile exceeds 16 MiB limit"));
+    }
     let decoded = std::str::from_utf8(keyfile_data).map_err(|_| {
         if keyfile_data_is_encrypted(keyfile_data) {
             key_err("keyfile is encrypted; decrypt it with its password first")
@@ -351,15 +378,7 @@ pub fn deserialize_keypair_from_keyfile_data(keyfile_data: &[u8]) -> Result<Keyp
 
     // Historical writers disagree on the cryptoType JSON type: python btwallet
     // wrote a number, some JS tooling wrote a numeric string.
-    let crypto_type = keyfile_dict
-        .0
-        .get("cryptoType")
-        .and_then(|value| match value {
-            serde_json::Value::Number(number) => number.to_string().parse::<u8>().ok(),
-            serde_json::Value::String(text) => text.trim().parse::<u8>().ok(),
-            _ => None,
-        })
-        .unwrap_or(CRYPTO_SR25519);
+    let crypto_type = stored_crypto_type(&keyfile_dict.0);
 
     if let Some(secret_phrase) = keyfile_dict
         .0
@@ -418,17 +437,22 @@ pub fn deserialize_keypair_from_keyfile_data(keyfile_data: &[u8]) -> Result<Keyp
         .as_object()
         .map(|object| {
             let mut unknown = false;
-            let mut names = object
-                .keys()
-                .filter_map(|name| match name.as_str() {
+            // Only these fixed, non-secret labels enter serde_json. Its map
+            // preserves the previous diagnostic ordering in graphs with and
+            // without the dependency's preserve_order feature.
+            let mut known = serde_json::Map::new();
+            for name in object.keys() {
+                match name.as_str() {
                     "accountId" | "publicKey" | "cryptoType" | "secretPhrase" | "secretSeed"
-                    | "privateKey" | "ss58Address" | " ss58Address" => Some(name.as_str()),
+                    | "privateKey" | "ss58Address" | " ss58Address" => {
+                        known.insert(name.as_str().to_owned(), serde_json::Value::Null);
+                    }
                     _ => {
                         unknown = true;
-                        None
                     }
-                })
-                .collect::<Vec<_>>();
+                }
+            }
+            let mut names = known.keys().map(String::as_str).collect::<Vec<_>>();
             if unknown {
                 names.push("[redacted unknown fields]");
             }
@@ -450,11 +474,11 @@ mod tests {
     fn completed_secret_tree_guard_drops_when_trailing_validation_fails()
     -> Result<(), Box<dyn Error>> {
         use std::cell::Cell;
-        struct TrackedJson<'a> {
-            _json: SecretJson,
-            dropped: &'a Cell<bool>,
+        struct TrackedJson<'input, 'track> {
+            _json: SecretJson<'input>,
+            dropped: &'track Cell<bool>,
         }
-        impl Drop for TrackedJson<'_> {
+        impl Drop for TrackedJson<'_, '_> {
             fn drop(&mut self) {
                 self.dropped.set(true);
             }
@@ -471,7 +495,180 @@ mod tests {
             r#"{"secretPhrase":"public\u0020disposable\nsecret"}"#,
             SecretJson,
         )?;
-        assert_eq!(value.0["secretPhrase"], "public disposable\nsecret");
+        assert_eq!(
+            value.0.get("secretPhrase").and_then(SecretValue::as_str),
+            Some("public disposable\nsecret")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn escaped_duplicate_recovery_fields_keep_precedence_and_crypto_retry()
+    -> Result<(), Box<dyn Error>> {
+        let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        for crypto in [CRYPTO_ED25519, CRYPTO_SR25519] {
+            let expected = Keypair::from_mnemonic(phrase, crypto, None)?;
+            let input = format!(
+                r#"{{"secretPhrase":"invalid disposable first phrase","secret\u0050hrase":"{}","secretSeed":"not used","privateKey":"not used","cryptoType":{},"ss58Address":"{}","unknown":{{"secret":"disposable\u0020unknown","number":123456789012345678901234567890}}}}"#,
+                phrase.replace(' ', "\\u0020"),
+                1 - crypto,
+                expected.ss58_address(),
+            );
+            let (parsed, audit) = secret_json::audit_drops(|| {
+                deserialize_keypair_from_keyfile_data(input.as_bytes())
+            });
+            let parsed = parsed?;
+            assert_eq!(parsed.crypto_type(), crypto);
+            assert_eq!(parsed.public_key_bytes(), expected.public_key_bytes());
+            assert_eq!(parsed.mnemonic(), Some(phrase));
+            assert!(expected.verify(
+                b"keyfile escaped fixture",
+                &parsed.sign(b"keyfile escaped fixture")?
+            )?);
+            assert!(audit.drops >= 3 && audit.wiped && audit.stable);
+        }
+        // A duplicate of the wrong type must replace the earlier string too.
+        let input = r#"{"secretPhrase":"invalid\u0020unused","secretPhrase":null,"secretSeed":"0x0707070707070707070707070707070707070707070707070707070707070707","cryptoType":" 0 "}"#;
+        let actual = deserialize_keypair_from_keyfile_data(input.as_bytes())?;
+        assert_eq!(
+            actual.public_key_bytes(),
+            Keypair::from_seed(&[7; 32], CRYPTO_ED25519)?.public_key_bytes()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_field_projection_matches_serde_for_alias_types_duplicates_and_crypto_defaults()
+    -> Result<(), Box<dyn Error>> {
+        for input in [
+            r#"{"ss58Address":"first","ss58Address":"last\u0020address","publicKey":"0x00","cryptoType":"\u00200\u0020","secretPhrase":"disposable\u0020secret"}"#,
+            r#"{"ss58Address":null," ss58Address":"ignored","publicKey":false,"accountId":"ignored","cryptoType":0}"#,
+            r#"{" ss58Address":"legacy","accountId":"legacy hex","cryptoType":-0}"#,
+            r#"{"ss58Address":[],"publicKey":{},"cryptoType":1e+0}"#,
+            r#"{"cryptoType":123456789012345678901234567890,"unknown":{"secret":"disposable\u0020secret"}}"#,
+            r#"{"cryptoType":true,"ss58Address":"value"}"#,
+            "null",
+            "[]",
+            "false",
+            "0",
+            "\"public disposable string\"",
+        ] {
+            let expected: serde_json::Value = serde_json::from_str(input)?;
+            let crypto = expected
+                .get("cryptoType")
+                .and_then(|value| match value {
+                    serde_json::Value::Number(number) => number.to_string().parse::<u8>().ok(),
+                    serde_json::Value::String(text) => text.trim().parse::<u8>().ok(),
+                    _ => None,
+                })
+                .unwrap_or(CRYPTO_SR25519);
+            let address = expected
+                .get("ss58Address")
+                .or_else(|| expected.get(" ss58Address"))
+                .and_then(serde_json::Value::as_str);
+            let public = expected
+                .get("publicKey")
+                .or_else(|| expected.get("accountId"))
+                .and_then(serde_json::Value::as_str);
+            let (result, audit) = secret_json::audit_drops(|| {
+                with_public_keyfile_fields(
+                    input.as_bytes(),
+                    |actual_crypto, actual_address, actual_public| {
+                        assert_eq!(
+                            (actual_crypto, actual_address, actual_public),
+                            (crypto, address, public),
+                            "{input}"
+                        );
+                    },
+                )
+            });
+            result?;
+            assert!(audit.wiped && audit.stable);
+        }
+        // Private serde_json map sentinels are ordinary unknown JSON keys, as
+        // in Python, rather than alternate deserialization instructions.
+        for input in [
+            br#"{"$serde_json::private::Number":"0","ss58Address":"ordinary address"}"#.as_slice(),
+            br#"{"$serde_json::private::RawValue":"{\"ss58Address\":\"injected address\"}","ss58Address":"ordinary address"}"#.as_slice(),
+        ] {
+            with_public_keyfile_fields(input, |crypto, address, _| {
+                assert_eq!(crypto, CRYPTO_SR25519);
+                assert_eq!(address, Some("ordinary address"));
+            })?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn public_projection_wipes_on_callback_error_partial_json_and_trailing_garbage()
+    -> Result<(), Box<dyn Error>> {
+        let valid = br#"{"ss58Address":"public address","secretPhrase":"public\u0020disposable"}"#;
+        let (callback, audit) = secret_json::audit_drops(|| {
+            with_public_keyfile_fields(valid, |_, _, _| Err::<(), _>("public callback error"))
+        });
+        assert!(callback?.is_err());
+        assert_eq!(audit.drops, 1);
+        assert!(audit.wiped && audit.stable);
+        for input in [
+            r#"{"ss58Address":"address","secretPhrase":"public\u0020disposable","unfinished":"#,
+            r#"{"ss58Address":"address","secretPhrase":"public\u0020disposable"} trailing"#,
+        ] {
+            let mut called = false;
+            let (result, audit) = secret_json::audit_drops(|| {
+                with_public_keyfile_fields(input.as_bytes(), |_, _, _| called = true)
+            });
+            assert!(result.is_err());
+            assert!(!called);
+            assert_eq!(audit.drops, 1);
+            assert!(audit.wiped && audit.stable);
+            let error = deserialize_keypair_from_keyfile_data(input.as_bytes())
+                .err()
+                .ok_or("invalid JSON accepted")?;
+            assert_eq!(
+                error.to_string(),
+                "keyfile error: failed to parse keyfile data: not keyfile JSON, a raw hex seed, or a mnemonic"
+            );
+            assert!(!format!("{error:?}").contains("disposable"));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn direct_keyfile_limit_refuses_oversized_historical_text_and_callbacks_but_accepts_boundary_json()
+    -> Result<(), Box<dyn Error>> {
+        let limit = secret_json::MAX_INPUT_BYTES;
+        // Reuse one allocation for all three cases. The raw text would be a
+        // valid historical mnemonic after trim if the cap did not run first.
+        let mut input = String::with_capacity(limit + 1);
+        input.push_str("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
+        input.extend(std::iter::repeat_n(' ', limit + 1 - input.len()));
+        let error = deserialize_keypair_from_keyfile_data(input.as_bytes())
+            .err()
+            .ok_or("oversized historical mnemonic was derived")?;
+        assert_eq!(
+            error.to_string(),
+            "keyfile error: keyfile exceeds 16 MiB limit"
+        );
+
+        input.clear();
+        input.push_str(
+            r#"{"ss58Address":"public boundary address","secretPhrase":"public\u0020disposable"}"#,
+        );
+        input.extend(std::iter::repeat_n(' ', limit + 1 - input.len()));
+        let mut called = false;
+        let oversized = with_public_keyfile_fields(input.as_bytes(), |_, _, _| called = true);
+        assert!(oversized.is_err());
+        assert!(!called);
+
+        assert_eq!(input.pop(), Some(' '));
+        assert_eq!(input.len(), limit);
+        with_public_keyfile_fields(input.as_bytes(), |crypto, address, public| {
+            called = true;
+            assert_eq!(crypto, CRYPTO_SR25519);
+            assert_eq!(address, Some("public boundary address"));
+            assert_eq!(public, None);
+        })?;
+        assert!(called);
         Ok(())
     }
 
