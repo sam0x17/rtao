@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "xtask"]
+exclude = ["patches/ruint", "ci/ruint-probe"]
 
 [workspace.package]
 version = "0.1.0"
@@ -92,6 +93,7 @@ zeroize = "1"
 regex = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
 axum = { version = "0.8", default-features = false, features = ["json", "http1", "tokio"] }
 hyper = { version = "1", default-features = false, features = ["server", "http1"] }
 hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
@@ -121,3 +123,4 @@ redis = { version = "0.32", default-features = false, features = ["tokio-comp", 
 
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+ruint = { path = "patches/ruint" }

@@ -30,6 +30,86 @@ use std::{
     },
 };
 type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+#[derive(Default)]
+struct RefuseReceiptSink(Mutex<Vec<u8>>);
+impl rtao_cli::output::OutputSink for RefuseReceiptSink {
+    fn write(&self, stream: Stream, bytes: &[u8]) -> std::io::Result<()> {
+        if stream == Stream::Stdout {
+            let value: Value = serde_json::from_slice(bytes).map_err(std::io::Error::other)?;
+            if value.get("success").is_some() {
+                *self
+                    .0
+                    .lock()
+                    .map_err(|_| std::io::Error::other("sink poisoned"))? = bytes.to_vec();
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "receipt pipe closed",
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn direct_and_saved_receipt_output_failure_retains_known_identity_without_resubmission()
+-> TestResult {
+    for saved in [false, true] {
+        let (client, chain, direct_keys) = fixture(1_000_000_000).await?;
+        let saved_keys = members()?;
+        let (mut ctx, _, _) = context(&["--yes", "--json", "--no-mev-shield"])?;
+        if saved {
+            ctx = saved_context(&saved_keys, &["--yes", "--json", "--no-mev-shield"], 1)?.0;
+        }
+        let sink = Arc::new(RefuseReceiptSink::default());
+        ctx.output = Output::new(
+            OutputOptions {
+                json_mode: true,
+                ..Default::default()
+            },
+            sink.clone(),
+        );
+        let result = if saved {
+            ctx.submit_saved_with_options(
+                &client,
+                &Preview { blocked: false },
+                Default::default(),
+                &factory(&saved_keys),
+                &CallCache::default(),
+            )
+            .await
+        } else {
+            ctx.submit_with_keys_options(
+                &client,
+                &Preview { blocked: false },
+                &direct_keys,
+                Default::default(),
+            )
+            .await
+        };
+        let error = result
+            .err()
+            .ok_or("receipt output must fail after submission")?;
+        assert!(error.message.contains("receipt pipe closed"));
+        let captured: Value = serde_json::from_slice(&sink.0.lock().map_err(|_| "sink")?)?;
+        assert_eq!(captured["success"], true);
+        let id = captured["extrinsic_id"]
+            .as_str()
+            .filter(|id| !id.is_empty())
+            .ok_or("known receipt identity")?;
+        let help = error.help.ok_or("known receipt recovery help")?;
+        assert!(help.contains(id));
+        assert!(help.contains("already submitted"));
+        assert_eq!(
+            chain.state().lock().map_err(|_| "state")?.submissions.len(),
+            1
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
 struct TerminalFixture {
     tty: bool,
     lines: VecDeque<String>,

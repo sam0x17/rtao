@@ -21,6 +21,9 @@ use serde::{Serialize, Serializer, ser::SerializeMap};
 use serde_json::{Map, Value, json};
 use zeroize::{Zeroize, Zeroizing};
 
+mod pyjson;
+pub use pyjson::PyJsonFormatter;
+
 fn terminal_control(character: char) -> bool {
     character.is_control()
         || matches!(character, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
@@ -122,7 +125,17 @@ impl Serialize for SecretField<'_> {
     }
 }
 
-struct SecretFields<'a>(BTreeMap<&'a str, SecretField<'a>>);
+struct SecretFields<'a>(Vec<(&'a str, SecretField<'a>)>);
+
+impl<'a> SecretFields<'a> {
+    fn insert(&mut self, name: &'a str, value: SecretField<'a>) {
+        if let Some((_, previous)) = self.0.iter_mut().find(|(key, _)| *key == name) {
+            *previous = value;
+        } else {
+            self.0.push((name, value));
+        }
+    }
+}
 
 impl Serialize for SecretFields<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -597,10 +610,10 @@ impl Output {
 
     /// Emit already JSON-friendly data; quiet mode does not discard values.
     pub fn value<T: Serialize + ?Sized>(&self, payload: &T) -> Result<(), OutputError> {
-        let payload = serde_json::to_value(payload)?;
         if self.options.json_mode {
-            self.json(Stream::Stdout, &payload)
+            self.json(Stream::Stdout, payload)
         } else {
+            let payload = serde_json::to_value(payload)?;
             self.line(Stream::Stdout, &python_value(&payload))
         }
     }
@@ -695,14 +708,12 @@ impl Output {
         if !self.options.json_mode {
             return self.detail(title, fields, None);
         }
-        let mut payload = SecretFields(
-            fields
-                .iter()
-                .map(|(name, value)| (name.as_str(), SecretField::Public(value)))
-                .collect(),
-        );
+        let mut payload = SecretFields(Vec::with_capacity(fields.len() + secrets.len()));
+        for (name, value) in fields {
+            payload.insert(name, SecretField::Public(value));
+        }
         for (name, value) in secrets {
-            payload.0.insert(name, SecretField::Secret(value));
+            payload.insert(name, SecretField::Secret(value));
         }
         self.secret_json(&payload)
     }
@@ -719,11 +730,11 @@ impl Output {
 
     fn secret_json(&self, payload: &SecretFields<'_>) -> Result<(), OutputError> {
         let mut size = OutputSize(0);
-        serde_json::to_writer_pretty(&mut size, payload)?;
+        PyJsonFormatter::to_writer(&mut size, payload)?;
         size.write_all(b"\n")?;
         let mut guarded = self.secret_buffer(size.0);
         let mut writer = io::Cursor::new(guarded.bytes.as_mut());
-        serde_json::to_writer_pretty(&mut writer, payload)?;
+        PyJsonFormatter::to_writer(&mut writer, payload)?;
         writer.write_all(b"\n")?;
         if writer.position() != size.0 as u64 {
             return Err(OutputError::Render("secret output size changed".into()));
@@ -1274,8 +1285,9 @@ impl Output {
         )
     }
 
-    fn json(&self, stream: Stream, payload: &Value) -> Result<(), OutputError> {
-        let mut bytes = serde_json::to_vec_pretty(payload)?;
+    fn json<T: Serialize + ?Sized>(&self, stream: Stream, payload: &T) -> Result<(), OutputError> {
+        let mut bytes = Vec::new();
+        PyJsonFormatter::to_writer(&mut bytes, payload)?;
         bytes.push(b'\n');
         self.sink.write(stream, &bytes)?;
         Ok(())

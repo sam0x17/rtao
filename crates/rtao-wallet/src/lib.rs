@@ -2,6 +2,7 @@
 #![deny(missing_docs)]
 
 mod files;
+mod messages;
 mod password;
 #[cfg(test)]
 #[path = "../tests/support/mod.rs"]
@@ -10,6 +11,9 @@ mod wallet;
 
 pub use files::read_data as read_keyfile_data;
 pub use files::{ColdkeyFile, HotkeyFile, Overwrite, PublicKeyInfo, WriteOptions};
+#[cfg(feature = "encrypted")]
+pub use messages::{EncryptedMessage, encrypt_message};
+pub use messages::{SignedMessage, verify_message};
 pub use password::{
     NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSource, PasswordSources,
     PromptPolicy, env_var_name, resolve_wallet_password,

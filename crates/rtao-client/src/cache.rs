@@ -323,6 +323,18 @@ impl RuntimeCache {
         state.head_generation = state.head_generation.wrapping_add(1);
     }
 
+    /// Inspect the installed head without fetching or joining an in-flight refresh.
+    #[cfg(test)]
+    pub(crate) async fn peek_head(&self) -> Option<RuntimeHandle> {
+        self.0
+            .state
+            .lock()
+            .await
+            .head
+            .as_ref()
+            .map(|(runtime, _)| runtime.clone())
+    }
+
     async fn fetch(
         &self,
         info: RuntimeInfo,

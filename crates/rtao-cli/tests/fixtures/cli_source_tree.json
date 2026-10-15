@@ -1,0 +1,2080 @@
+{
+  "schema": 1,
+  "provenance": "Pinned Python source inspection; Python/Click was not executed. Literal registered commands, command-owned option spellings and positional names only. Resolved defaults/types/envvars and shared global tiers need separate evidence.",
+  "sources": [
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/main.py",
+      "sha256": "b710988cf97c467c48a26f7a2465d21a19864f62707c2dfc9d710a221c4c7d15"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/globals.py",
+      "sha256": "7a415c6dcbb3566d138f5fad0b8b7f560c45749918f993bea3a7f03170a9e31f"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/call.py",
+      "sha256": "53effd047f64966d68c9f52abbe3cb6019147d1bde08ef8c190ef5c065ab3d0d"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/stake_exit.py",
+      "sha256": "a0f7accbca4d43054c3be0b219d37c000253dd1ea22b588be581465bf0b94238"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "sha256": "84b758ae9be1c4ced1d5ec960e01c983c21d66cea629342baded99e07a8daf06"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "sha256": "86927735b25f56289cf567e738d85c53716f6a14da1fafc378b4d166744eaf26"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "sha256": "5a9deb8e91ce68c5d92f15d7070cd32957809355c1fa5636a984bf309201e4bd"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root_move.py",
+      "sha256": "27d4bbb895151d971ce5be00331ae756c4103fce3a34022de2073a0533b72784"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root_swap.py",
+      "sha256": "201517bb57424ebb256627a7d0bef68b83d1fe8d57c2c2f13beaeaccdf5443c7"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "sha256": "9067bb209ab2c02138a7b5c08ec8396c6fdf99490d13ffd8490272c4e9795962"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "sha256": "d02e784e77bbf5266cdcdc91ebee1c473d66951a6cd7362fb31b7a778a3f6af7"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "sha256": "260ec28ec9bb8f41fd908cebf33b478e902a4def56cf62dda3b28cc9289dbe28"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
+      "sha256": "2d6a0503619847f649b4a39e7a10f1fdbbfa620401ce626cf11443fc50466144"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "sha256": "02361a35dbbafe34de6c3ac35c7307a7acea7b51eff2ad35c84ffc24832b35ca"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
+      "sha256": "ede41de489a50d0330b8664aeff8b2bf3844aaf0415918c177c76100e92c0c3e"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
+      "sha256": "4b42a27e1ca76fc8bc91256d47537f5628d18842cbc7e5bc61fef56c23c09d2c"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/misc.py",
+      "sha256": "628861e7824eb53d6308a8f5e87128f4ecd39dccffb5a15ccd3bde8e7fbc5815"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/weights.py",
+      "sha256": "63fe9c54b653c11d2187df513fdf27cea8dd1b30c1ffc9006b87fe80845daabc"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/axon.py",
+      "sha256": "edc75ce66dc40f67a3ca12ef60c2cfe5b632c5d91143c28536aadf49dc3a3453"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/crowd.py",
+      "sha256": "6aacc2a10721b356b26ba729019d1725760299025e1c46e726bab70fbc6eeb0c"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/collateral.py",
+      "sha256": "822c6832244ea50e45fbf38e8e9cf966931ef6e85620bc602f7768c50b4ae077"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/upgrade.py",
+      "sha256": "58d0ea1e527e3fcc140876ffb9c8072f05081f0b5d574f88917e7871ab87ca67"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/timelock.py",
+      "sha256": "34fadb588610a22eac98b75a084aba02ba2c309e204fdd0d60f8a8b2e62911d0"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/extension.py",
+      "sha256": "45be789f4c105ab5ff67aaf5816624d27ec24158709de03b449162fdf755fcc5"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/__init__.py",
+      "sha256": "a3ec64ba0f5a21c7e3777daedb91e362635fd5a2153146f16b581b179f35cfc7"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
+      "sha256": "df300fc4e65be08f0ebc6613710841208dc1c48c6980c65f6edbfe6fb0b0ff71"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/stake.py",
+      "sha256": "57e761ebc64496d8f7a3f0eb8ad88302f6e226264c98c328606be5d24f9c9150"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/address.py",
+      "sha256": "1017816707b812c83b383b09372190d254dfe4dc232db36b6ad7211912235254"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
+      "sha256": "d0f7244fe545a1fdeeab0b202e80f3bfa19c97e32988eb0459d292d884cee933"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/association.py",
+      "sha256": "2748ab0c54b31440ee1ed93ae2628bc015dee0dfdd71d3759b9c1dc7fadf4298"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
+      "sha256": "734caac83d4cef19a408bed901526ca69da31b13887b147a38a245fa2928df60"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/contracts_cmd.py",
+      "sha256": "4cb5cc32777fcb00186ac07a39e294f0311ce0c3e06d4315995d005273473c4d"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/setup.py",
+      "sha256": "f1ee4df5b90389de7cb0595a1e17e4bca31a8ee1a6789ce91103986f30eb4e83"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/_shared.py",
+      "sha256": "abb3a691c1da5da9fead2fb6a0de453983e3d84d2abc226dce9cae948555691f"
+    }
+  ],
+  "aliases": {
+    "w": "wallet",
+    "wallets": "wallet",
+    "st": "stake",
+    "rt": "root",
+    "s": "subnets",
+    "subnet": "subnets",
+    "su": "hparams",
+    "sudo": "hparams",
+    "lock": "conviction",
+    "c": "config",
+    "conf": "config",
+    "wt": "misc weights",
+    "weight": "misc weights",
+    "weights": "misc weights",
+    "cr": "misc crowd",
+    "crowdloan": "misc crowd",
+    "crowd": "misc crowd",
+    "addresses": "addr",
+    "extension": "misc extension",
+    "timelock": "misc timelock",
+    "axon": "misc axon",
+    "collateral": "misc collateral",
+    "upgrade": "misc upgrade",
+    "utils": "misc",
+    "stake children": "stake child",
+    "hparams mech": "hparams mechanisms",
+    "subnets hparams": "subnets hyperparameters",
+    "hparams buyback": "hparams stake-burn"
+  },
+  "commands": [
+    {
+      "path": "addr add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
+      "function": "add_address",
+      "options": [
+        "--extension",
+        "--note",
+        "--signer",
+        "--vault"
+      ],
+      "positionals": [
+        "name",
+        "ss58"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "addr list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
+      "function": "list_addresses",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "addr remove",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
+      "function": "remove_address",
+      "options": [],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "addr save",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
+      "function": "save",
+      "options": [
+        "--note"
+      ],
+      "positionals": [
+        "name",
+        "ss58"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "addr show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
+      "function": "show_address",
+      "options": [],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "call",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/main.py",
+      "function": "call",
+      "options": [
+        "--args",
+        "--args-file",
+        "--key",
+        "--multisig",
+        "--multisig-threshold",
+        "--other-signatories",
+        "--signatories",
+        "--signer",
+        "--sudo"
+      ],
+      "positionals": [
+        "target"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "config clear",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
+      "function": "clear_config",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "config get",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
+      "function": "get_value",
+      "options": [],
+      "positionals": [
+        "key"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "config path",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
+      "function": "show_path",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "config set",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
+      "function": "set_value",
+      "options": [],
+      "positionals": [
+        "key",
+        "value"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "config unset",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
+      "function": "unset_value",
+      "options": [],
+      "positionals": [
+        "key"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "conviction accept",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "accept_locked_alpha",
+      "options": [
+        "--allow",
+        "--reject"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "conviction add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "add_lock",
+      "options": [
+        "--all",
+        "--amount",
+        "--amount-alpha",
+        "--hotkey",
+        "--netuid",
+        "--perpetual"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "conviction list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "list_locks",
+      "options": [
+        "--coldkey",
+        "--dust",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "conviction mode",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "lock_mode",
+      "options": [
+        "--decaying",
+        "--netuid",
+        "--perpetual"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "conviction move",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "move_lock",
+      "options": [
+        "--destination-hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "conviction show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "show_lock",
+      "options": [
+        "--coldkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "conviction targeting",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
+      "function": "locks_targeting",
+      "options": [
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm abi",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
+      "function": "abi",
+      "options": [],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm associate",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/association.py",
+      "function": "associate",
+      "options": [
+        "--evm-key",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm balance",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
+      "function": "balance",
+      "options": [
+        "--rpc-url"
+      ],
+      "positionals": [
+        "address"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm call",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
+      "function": "call",
+      "options": [
+        "--abi",
+        "--evm-key",
+        "--rpc-url",
+        "--value-tao"
+      ],
+      "positionals": [
+        "name",
+        "function",
+        "args"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm claim-deposit",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/__init__.py",
+      "function": null,
+      "generated_intent": "evm_withdraw",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm config",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/setup.py",
+      "function": "config",
+      "options": [
+        "--format"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm deploy",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/contracts_cmd.py",
+      "function": "deploy",
+      "options": [
+        "--evm-key",
+        "--rpc-url",
+        "--value-tao"
+      ],
+      "positionals": [
+        "artifact_path",
+        "args"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm deposit-address",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/address.py",
+      "function": "deposit_address",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm doctor",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/setup.py",
+      "function": "doctor",
+      "options": [
+        "--evm-key",
+        "--rpc-url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm fund",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
+      "function": "fund",
+      "options": [
+        "--all",
+        "--amount-tao",
+        "--evm-key"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm key export",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
+      "function": "key_export",
+      "options": [
+        "--out",
+        "--private-key",
+        "--show"
+      ],
+      "positionals": [
+        "key"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm key import",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
+      "function": "key_import",
+      "options": [
+        "--derivation-path",
+        "--keystore",
+        "--keystore-password",
+        "--mnemonic",
+        "--name",
+        "--overwrite",
+        "--private-key"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm key list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
+      "function": "key_list",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm key new",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
+      "function": "key_new",
+      "options": [
+        "--name",
+        "--overwrite"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm key show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
+      "function": "key_show",
+      "options": [],
+      "positionals": [
+        "key"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm mirror",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/address.py",
+      "function": "mirror",
+      "options": [],
+      "positionals": [
+        "address"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm networks",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/setup.py",
+      "function": "networks",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm precompiles",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
+      "function": "precompiles_list",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm pubkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/address.py",
+      "function": "pubkey",
+      "options": [],
+      "positionals": [
+        "ss58"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "evm send",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
+      "function": "send",
+      "options": [
+        "--amount-tao",
+        "--evm-key",
+        "--rpc-url",
+        "--to"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm send-to-ss58",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
+      "function": "send_to_ss58",
+      "options": [
+        "--amount-tao",
+        "--evm-key",
+        "--rpc-url",
+        "--to"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm setup-localnet",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/setup.py",
+      "function": "setup_localnet",
+      "options": [
+        "--chain-id",
+        "--rpc-url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm stake add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/stake.py",
+      "function": "stake_add",
+      "options": [
+        "--amount-tao",
+        "--evm-key",
+        "--hotkey",
+        "--netuid",
+        "--rpc-url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm stake remove",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/stake.py",
+      "function": "stake_remove",
+      "options": [
+        "--amount-alpha",
+        "--evm-key",
+        "--hotkey",
+        "--netuid",
+        "--rpc-url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "evm stake show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/stake.py",
+      "function": "stake_show",
+      "options": [
+        "--evm-key",
+        "--hotkey",
+        "--netuid",
+        "--rpc-url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "explain",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/main.py",
+      "function": "explain",
+      "options": [
+        "--chain"
+      ],
+      "positionals": [
+        "code"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "hparams buyback",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "stake_burn",
+      "options": [
+        "--amount",
+        "--amount-tao",
+        "--hotkey",
+        "--limit-price",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams check-start",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "check_start",
+      "options": [
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams get",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "sudo_get",
+      "options": [
+        "--name",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams get-identity",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "get_subnet_identity",
+      "options": [],
+      "positionals": [
+        "netuid"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "hparams get-take",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "get_take",
+      "options": [
+        "--hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams mechanisms count",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "mechanism_count",
+      "options": [
+        "--netuid",
+        "--value"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams mechanisms emissions",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "mechanism_emissions",
+      "options": [
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams set",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "sudo_set",
+      "options": [
+        "--name",
+        "--netuid",
+        "--value"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams set-identity",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "set_subnet_identity",
+      "options": [
+        "--description",
+        "--name",
+        "--netuid",
+        "--url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams set-symbol",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "set_symbol",
+      "options": [
+        "--netuid",
+        "--symbol"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams set-take",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "set_take",
+      "options": [
+        "--hotkey",
+        "--take"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams stake-burn",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "stake_burn",
+      "options": [
+        "--amount",
+        "--amount-tao",
+        "--hotkey",
+        "--limit-price",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams start",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "start_subnet",
+      "options": [
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams trim",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "trim_subnet",
+      "options": [
+        "--max-n",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams trim-null",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "trim_null_subnet",
+      "options": [
+        "--max-batches",
+        "--netuid",
+        "--poll-seconds",
+        "--state-file",
+        "--switch-to-yuma",
+        "--target",
+        "--wait-timeout"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "hparams trim-null-batch",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
+      "function": "trim_null_subnet_batch",
+      "options": [
+        "--netuid",
+        "--target"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc axon reset",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/axon.py",
+      "function": "axon_reset",
+      "options": [
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc axon set",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/axon.py",
+      "function": "axon_set",
+      "options": [
+        "--certificate",
+        "--ip",
+        "--netuid",
+        "--port",
+        "--tls"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc collateral add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/collateral.py",
+      "function": "add_collateral",
+      "options": [
+        "--all",
+        "--amount",
+        "--amount-alpha",
+        "--hotkey",
+        "--netuid",
+        "--rate-tolerance"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc collateral list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/collateral.py",
+      "function": "list_collateral",
+      "options": [
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc collateral set-min",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/collateral.py",
+      "function": "set_min_collateral",
+      "options": [
+        "--amount",
+        "--hotkey",
+        "--min-alpha",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc collateral show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/collateral.py",
+      "function": "show_collateral",
+      "options": [
+        "--coldkey",
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc convert",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/misc.py",
+      "function": "convert",
+      "options": [
+        "--netuid",
+        "--rao"
+      ],
+      "positionals": [
+        "amount"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "misc crowd contributors",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/crowd.py",
+      "function": "crowdloan_contributors",
+      "options": [],
+      "positionals": [
+        "crowdloan_id"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "misc crowd info",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/crowd.py",
+      "function": "crowdloan_info",
+      "options": [],
+      "positionals": [
+        "crowdloan_id"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "misc crowd list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/crowd.py",
+      "function": "list_crowdloans",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc extension accounts",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/extension.py",
+      "function": "accounts",
+      "options": [
+        "--host",
+        "--port"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc extension bridge",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/extension.py",
+      "function": "bridge",
+      "options": [
+        "--host",
+        "--no-open",
+        "--port"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc extension stop",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/extension.py",
+      "function": "stop",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc latency",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/misc.py",
+      "function": "latency",
+      "options": [
+        "--networks"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc timelock decrypt",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/timelock.py",
+      "function": "decrypt_cmd",
+      "options": [
+        "--file",
+        "--out",
+        "--timeout",
+        "--wait"
+      ],
+      "positionals": [
+        "data"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "misc timelock encrypt",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/timelock.py",
+      "function": "encrypt_cmd",
+      "options": [
+        "--at",
+        "--file",
+        "--in",
+        "--out",
+        "--round"
+      ],
+      "positionals": [
+        "data"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "misc timelock show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/timelock.py",
+      "function": "show_cmd",
+      "options": [
+        "--file"
+      ],
+      "positionals": [
+        "data"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "misc upgrade check",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/upgrade.py",
+      "function": "upgrade_check",
+      "options": [
+        "--hex-file",
+        "--hex-url",
+        "--url",
+        "--wasm"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc upgrade pending",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/upgrade.py",
+      "function": "upgrade_pending",
+      "options": [
+        "--repo"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc upgrade sign",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/upgrade.py",
+      "function": "upgrade_sign",
+      "options": [
+        "--hex-file",
+        "--hex-url",
+        "--multisig",
+        "--multisig-threshold",
+        "--other-signatories",
+        "--signatories",
+        "--url",
+        "--wasm"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc weights commit",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/weights.py",
+      "function": "commit_weights",
+      "options": [
+        "--mechid",
+        "--netuid",
+        "--raw-u16",
+        "--uids",
+        "--version-key",
+        "--weights",
+        "--weights-file"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc weights reveal",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/weights.py",
+      "function": "reveal_weights",
+      "options": [
+        "--netuid",
+        "--salt",
+        "--uids",
+        "--version-key",
+        "--weights"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "misc weights set",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/weights.py",
+      "function": "set_weights",
+      "options": [
+        "--mechid",
+        "--netuid",
+        "--raw-u16",
+        "--uids",
+        "--version-key",
+        "--weights",
+        "--weights-file"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "multisig add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
+      "function": "multisig_add",
+      "options": [
+        "--note",
+        "--overwrite",
+        "--signatories",
+        "--signatory",
+        "--threshold"
+      ],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "multisig list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
+      "function": "multisig_list",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "multisig pending",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
+      "function": "multisig_pending",
+      "options": [
+        "--call-data",
+        "--call-hash",
+        "--multisig",
+        "--multisig-threshold",
+        "--other-signatories",
+        "--signatories",
+        "--signer"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "multisig remove",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
+      "function": "multisig_remove",
+      "options": [],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "multisig show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
+      "function": "multisig_show",
+      "options": [],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "proxy add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "add_proxy",
+      "options": [
+        "--delay",
+        "--delegate",
+        "--proxy-type"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy book add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "book_add",
+      "options": [
+        "--address",
+        "--delay",
+        "--ext-index",
+        "--height",
+        "--index",
+        "--name",
+        "--note",
+        "--proxy-type",
+        "--spawner"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy book clear",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "book_clear",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy book list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "book_list",
+      "options": [
+        "--verify"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy book remove",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "book_remove",
+      "options": [],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "proxy book update",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "book_update",
+      "options": [
+        "--address",
+        "--note"
+      ],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "proxy create",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "create_proxy",
+      "options": [
+        "--delay",
+        "--index",
+        "--name",
+        "--proxy-type"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy execute",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "execute_announced",
+      "options": [
+        "--delegate",
+        "--force-proxy-type",
+        "--inner-args",
+        "--inner-op",
+        "--real"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy kill",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "kill_proxy",
+      "options": [
+        "--ext-index",
+        "--height",
+        "--index",
+        "--proxy-type",
+        "--spawner"
+      ],
+      "positionals": [
+        "name"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "proxy list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "list_proxies",
+      "options": [
+        "--coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "proxy remove",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
+      "function": "remove_proxy",
+      "options": [
+        "--all",
+        "--delay",
+        "--delegate",
+        "--proxy-type"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "root allocate",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "function": "root_allocate",
+      "options": [
+        "--all",
+        "--amount",
+        "--hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "root claim",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "function": "root_claim",
+      "options": [
+        "--coldkey",
+        "--hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "root list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "function": "root_list",
+      "options": [
+        "--all",
+        "--coldkey",
+        "--dust",
+        "--mine",
+        "-a",
+        "-m"
+      ],
+      "positionals": [
+        "validator"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "root move",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "function": "root_move",
+      "options": [
+        "--coldkey",
+        "--from",
+        "--to"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "root register",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "function": "root_register",
+      "options": [
+        "--hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "root swap",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
+      "function": "root_swap",
+      "options": [
+        "--amount",
+        "--from",
+        "--hotkey",
+        "--max-slippage",
+        "--to"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake add",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "add_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake auto",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "auto_stake_list",
+      "options": [
+        "--coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake burn",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "stake_burn",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake child get",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "child_get",
+      "options": [
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake child revoke",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "child_revoke",
+      "options": [
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake child set",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "child_set",
+      "options": [
+        "--children",
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake child take",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "child_take",
+      "options": [
+        "--hotkey",
+        "--netuid",
+        "--take"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "stake_list",
+      "options": [
+        "--all",
+        "--coldkey",
+        "--dust",
+        "-a"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake move",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "move_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake move-swap",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "move_swap_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake remove",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "remove_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake set-auto",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "set_auto_stake",
+      "options": [
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "show",
+      "options": [
+        "--coldkey",
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake swap",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "swap_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake transfer",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": null,
+      "generated_intent": "transfer_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake unstake-all",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/stake_exit.py",
+      "function": "command",
+      "options": [
+        "--all-hotkeys",
+        "--force-proxy-type",
+        "--hotkey",
+        "--proxy-for"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake unstake-all-alpha",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/stake_exit.py",
+      "function": "command",
+      "options": [
+        "--all-hotkeys",
+        "--force-proxy-type",
+        "--hotkey",
+        "--proxy-for"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "stake wizard",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
+      "function": "stake_wizard",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets burn-cost",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "burn_cost",
+      "options": [],
+      "positionals": [
+        "netuid"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "subnets conviction",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "subnet_conviction",
+      "options": [
+        "--all",
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets create",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "create_subnet",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets create-cost",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "create_cost",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets hparams",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "hyperparameters",
+      "options": [
+        "--name"
+      ],
+      "positionals": [
+        "netuid"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "subnets hyperparameters",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "hyperparameters",
+      "options": [
+        "--name"
+      ],
+      "positionals": [
+        "netuid"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "subnets list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "list_subnets",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets metagraph",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "metagraph",
+      "options": [],
+      "positionals": [
+        "netuid"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "subnets price",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "subnet_price",
+      "options": [
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets register",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "register_subnet",
+      "options": [
+        "--hotkey",
+        "--netuid",
+        "--pow",
+        "--pow-backend",
+        "--pow-device",
+        "--pow-timeout",
+        "--pow-workers"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
+      "function": "show",
+      "options": [],
+      "positionals": [
+        "netuid"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "tools",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/main.py",
+      "function": "tools",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet announce-coldkey-swap",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "announce_coldkey_swap",
+      "options": [
+        "--new-coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet associate-hotkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "associate_hotkey",
+      "options": [
+        "--hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet balance",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "wallet_balance",
+      "options": [
+        "--all",
+        "--empty",
+        "--sort",
+        "-a"
+      ],
+      "positionals": [
+        "address"
+      ],
+      "unresolved": []
+    },
+    {
+      "path": "wallet create",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "create",
+      "options": [
+        "--crypto-type",
+        "--hotkey-crypto-type",
+        "--n-words",
+        "--no-password",
+        "--overwrite"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet decrypt",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "decrypt",
+      "options": [
+        "--ciphertext",
+        "--copy",
+        "--use-hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet encrypt",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "encrypt",
+      "options": [
+        "--message",
+        "--recipient"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet get-identity",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "get_identity",
+      "options": [
+        "--coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet history",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "wallet_history",
+      "options": [
+        "--coldkey",
+        "--limit"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet inspect",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "wallet_inspect",
+      "options": [
+        "--coldkey",
+        "--dust"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet keychain delete",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "keychain_delete",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet keychain save",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "keychain_save",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet keychain show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "keychain_show",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "list_wallets",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet new-coldkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "new_coldkey",
+      "options": [
+        "--crypto-type",
+        "--n-words",
+        "--no-password",
+        "--overwrite"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet new-hotkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "new_hotkey",
+      "options": [
+        "--crypto-type",
+        "--n-words",
+        "--overwrite"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet overview",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "wallet_overview",
+      "options": [
+        "--all",
+        "--dust",
+        "--netuid",
+        "-a"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet regen-coldkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "regen_coldkey",
+      "options": [
+        "--crypto-type",
+        "--json-password",
+        "--json-path",
+        "--mnemonic",
+        "--no-password",
+        "--overwrite",
+        "--private-key",
+        "--seed",
+        "-j"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet regen-coldkeypub",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "regen_coldkey_pub",
+      "options": [
+        "--crypto-type",
+        "--overwrite",
+        "--public-key",
+        "--ss58"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet regen-hotkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "regen_hotkey",
+      "options": [
+        "--crypto-type",
+        "--mnemonic",
+        "--overwrite",
+        "--private-key",
+        "--seed"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet regen-hotkeypub",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "regen_hotkey_pub",
+      "options": [
+        "--crypto-type",
+        "--overwrite",
+        "--public-key",
+        "--ss58"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet registrations",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "wallet_registrations",
+      "options": [
+        "--all",
+        "--netuid",
+        "-a"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet set-identity",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "set_identity",
+      "options": [
+        "--additional",
+        "--description",
+        "--discord",
+        "--github-repo",
+        "--image",
+        "--name",
+        "--url"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "show_wallet",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet sign",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "sign",
+      "options": [
+        "--message",
+        "--use-hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet swap-check",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "swap_check",
+      "options": [
+        "--coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet swap-coldkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "swap_coldkey",
+      "options": [
+        "--new-coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet swap-hotkey",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "swap_hotkey",
+      "options": [
+        "--netuid",
+        "--new-hotkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet transfer",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "wallet_transfer",
+      "options": [
+        "--all",
+        "--amount",
+        "--amount-tao",
+        "--dest"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet unlock",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "unlock_wallet",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet verify",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "verify",
+      "options": [
+        "--message",
+        "--signature",
+        "--ss58"
+      ],
+      "positionals": [],
+      "unresolved": []
+    }
+  ]
+}

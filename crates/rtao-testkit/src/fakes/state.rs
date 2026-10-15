@@ -5,7 +5,7 @@
 //! therefore exercise client key construction and decoding just as node RPCs do.
 
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
     sync::Arc,
 };
@@ -957,16 +957,24 @@ impl FakeState {
                     SubmitScript::Statuses(statuses) => statuses,
                     SubmitScript::InBlockThenFinalized { .. } => Vec::new(),
                 };
-                let included = statuses.iter().find_map(|status| {
-                    status
-                        .get("inBlock")
-                        .or_else(|| status.get("finalized"))
-                        .and_then(Value::as_str)
-                });
-                if let Some(block_hash) = included {
+                // Retraction scripts can include the same extrinsic in distinct
+                // fork blocks. Make every reported inclusion independently
+                // queryable, but consume its account nonce only once.
+                let included: BTreeSet<_> = statuses
+                    .iter()
+                    .filter_map(|status| {
+                        status
+                            .get("inBlock")
+                            .or_else(|| status.get("finalized"))
+                            .and_then(Value::as_str)
+                    })
+                    .collect();
+                if !included.is_empty() {
                     self.consume_nonce(&bytes);
+                }
+                for block_hash in included {
                     if let Some(block) = self.blocks.get_mut(block_hash) {
-                        block.extrinsics.push(bytes);
+                        block.extrinsics.push(bytes.clone());
                     }
                 }
                 if !watch {

@@ -234,14 +234,14 @@ impl VaultSessionServer {
             server: self,
             armed: true,
         };
-        if self.options.open_browser {
-            if let Err(error) = open_page(&self.http_url(), self.options.browser.as_deref()).await {
-                if let Some(running) = lock(&self.running)?.take() {
-                    shutdown(&running.shared);
-                    running.task.abort();
-                }
-                return Err(error);
+        if self.options.open_browser
+            && let Err(error) = open_page(&self.http_url(), self.options.browser.as_deref()).await
+        {
+            if let Some(running) = lock(&self.running)?.take() {
+                shutdown(&running.shared);
+                running.task.abort();
             }
+            return Err(error);
         }
         startup.armed = false;
         Ok(())
@@ -430,18 +430,17 @@ struct PendingGuard {
 }
 impl Drop for PendingGuard {
     fn drop(&mut self) {
-        if let Ok(mut inner) = self.shared.inner.lock() {
-            if inner
+        if let Ok(mut inner) = self.shared.inner.lock()
+            && inner
                 .pending
                 .as_ref()
                 .is_some_and(|pending| pending.id == self.id)
-            {
-                inner.pending = None;
-                // The page protocol has no per-request correlation id. Retire
-                // an unfinished tab as well as its queued messages so a late
-                // answer cannot be consumed by the next serialized request.
-                retire_browser(&self.shared, &mut inner);
-            }
+        {
+            inner.pending = None;
+            // The page protocol has no per-request correlation id. Retire
+            // an unfinished tab as well as its queued messages so a late
+            // answer cannot be consumed by the next serialized request.
+            retire_browser(&self.shared, &mut inner);
         }
     }
 }
@@ -667,10 +666,10 @@ async fn connection(mut socket: Socket, shared: Arc<Shared>) {
         shared: shared.clone(),
         generation,
     };
-    if let Some(pending) = pending {
-        if send(&mut socket, pending).await.is_err() {
-            return;
-        }
+    if let Some(pending) = pending
+        && send(&mut socket, pending).await.is_err()
+    {
+        return;
     }
     shared.connected.send_replace(true);
     loop {
@@ -692,9 +691,9 @@ async fn connection(mut socket: Socket, shared: Arc<Shared>) {
                             Some("error") => Some(Err(VaultPageError(value.get("message").and_then(Value::as_str).filter(|text| !text.is_empty()).unwrap_or("vault page error").chars().filter(|ch| !ch.is_control()).take(4096).collect()))),
                             _ => None,
                         };
-                        if let Some(answer) = answer {
-                            if let Ok(mut inner) = shared.inner.lock() {
-                                if inner.browser.as_ref().is_some_and(|browser| browser.generation == generation) {
+                        if let Some(answer) = answer
+                            && let Ok(mut inner) = shared.inner.lock()
+                            && inner.browser.as_ref().is_some_and(|browser| browser.generation == generation) {
                                     if value.get("type").and_then(Value::as_str) != Some("error") && !inner.pending.as_ref().is_some_and(|pending| value.get("type").and_then(Value::as_str)==Some(pending.answer_kind)) { continue; }
                                     if let Some(pending) = inner.pending.take() {
                                         let failed = answer.is_err();
@@ -702,8 +701,6 @@ async fn connection(mut socket: Socket, shared: Arc<Shared>) {
                                             retire_browser(&shared, &mut inner);
                                         }
                                     }
-                                }
-                            }
                         }
                     },
                     _ => break,
@@ -718,15 +715,14 @@ struct BrowserGuard {
 }
 impl Drop for BrowserGuard {
     fn drop(&mut self) {
-        if let Ok(mut inner) = self.shared.inner.lock() {
-            if inner
+        if let Ok(mut inner) = self.shared.inner.lock()
+            && inner
                 .browser
                 .as_ref()
                 .is_some_and(|browser| browser.generation == self.generation)
-            {
-                inner.browser = None;
-                self.shared.connected.send_replace(false);
-            }
+        {
+            inner.browser = None;
+            self.shared.connected.send_replace(false);
         }
     }
 }

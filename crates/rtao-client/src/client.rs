@@ -684,3 +684,128 @@ struct HashCache {
     hashes: std::collections::BTreeMap<u64, H256>,
     order: std::collections::VecDeque<u64>,
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::{View, ViewExt};
+    use rtao_testkit::fakes::{FakeChain, FakeState, SubscriptionScript};
+
+    fn config(input: &str) -> ClientConfig {
+        let mut config =
+            ClientConfig::new(Network::resolve_with(input, |_| None).unwrap()).unwrap();
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        config.session.rate_limit = None;
+        config
+    }
+
+    #[tokio::test]
+    async fn runtime_version_subscription_refreshes_codec_without_explicit_refresh() {
+        use std::{
+            sync::Arc,
+            time::{Duration, Instant},
+        };
+
+        let started = Instant::now();
+        let raw = FakeChain::from_state(FakeState::default());
+        // Suppress the initial version item so the only subscription notification
+        // under test is the upgrade published below.
+        raw.mutate_state(|state| {
+            state.queue_subscription(
+                "state_subscribeRuntimeVersion",
+                SubscriptionScript::new(vec![]),
+            );
+        });
+        let client = Client::from_rpc(RpcClient::new(raw.clone()), config("local"))
+            .await
+            .unwrap();
+        let old_runtime = View::runtime(&client).await.unwrap();
+        let descriptor = &rtao_runtime::constants::system::BLOCK_HASH_COUNT;
+        let old_constant = client.constant(descriptor).await.unwrap();
+        let old_call = rtao_runtime::calls::system::remark(vec![])
+            .compose(&old_runtime)
+            .unwrap();
+        // Let the watcher's immediate periodic check finish before changing state.
+        // Its next twelve-second tick cannot satisfy the five-second assertion.
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let requests = raw.requests();
+                let versions = requests
+                    .iter()
+                    .filter(|request| {
+                        request.method == "state_getRuntimeVersion"
+                            && request.params == json!([null])
+                    })
+                    .count();
+                if versions >= 2
+                    && requests
+                        .iter()
+                        .any(|request| request.method == "state_subscribeRuntimeVersion")
+                {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        raw.mutate_state(|state| {
+            state
+                .seed_constant("System", "BlockHashCount", json!(old_constant + 1))
+                .unwrap();
+            state.runtime = Arc::new(
+                rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 2, 42)
+                    .unwrap(),
+            );
+        });
+        raw.publish_method(
+            "state_subscribeRuntimeVersion",
+            json!({"specVersion":479, "transactionVersion":2}),
+        )
+        .unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            // Only inspect the installed cache until the watcher has completed.
+            // This never fetches metadata or polls an in-flight refresh for it.
+            loop {
+                if let Some(runtime) = client.inner.cache.peek_head().await
+                    && runtime.spec_version() == 479
+                    && runtime.transaction_version() == 2
+                {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+            let requests_before_observation = raw.requests().len();
+            let runtime = View::runtime(&client).await.unwrap();
+            assert_eq!(runtime.spec_version(), 479);
+            assert_eq!(runtime.transaction_version(), 2);
+            assert_ne!(
+                runtime.core().metadata_bytes,
+                old_runtime.core().metadata_bytes
+            );
+            assert_eq!(client.constant(descriptor).await.unwrap(), old_constant + 1);
+            let upgraded_call = rtao_runtime::calls::system::remark(vec![])
+                .compose(&runtime)
+                .unwrap();
+            assert_eq!(upgraded_call.stamp(), runtime.stamp());
+            assert!(old_call.ensure_runtime(&runtime).is_err());
+            assert_eq!(old_runtime.spec_version(), 478);
+            assert_eq!(old_runtime.transaction_version(), 1);
+            assert_eq!(
+                raw.requests().len(),
+                requests_before_observation,
+                "foreground observations must use the head installed by the watcher"
+            );
+        })
+        .await
+        .unwrap();
+        assert!(
+            started.elapsed() < Duration::from_secs(12),
+            "upgrade observation must precede the second periodic check"
+        );
+        client.close().await;
+    }
+}

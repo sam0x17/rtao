@@ -11,8 +11,8 @@ use rtao_cli::commands::extension;
 use rtao_cli::{
     application,
     commands::{
-        axon, catalog, collateral, config, conviction, generated, hparams, multisig, proxy, root,
-        stake, subnets, timelock, wallet, weights,
+        addresses, axon, catalog, collateral, config, conviction, crowd, generated, hparams, misc,
+        multisig, proxy, root, stake, subnets, timelock, upgrade, wallet, weights,
     },
     context::AppContext,
     error::CliError,
@@ -80,45 +80,27 @@ async fn run() -> Result<(), CliError> {
         );
         return Ok(());
     }
-    let commands = vec![
-        rtao_cli::call::command(),
-        config::command(),
-        catalog::tools_command(),
-        catalog::explain_command(),
-        generated::tx_command()?,
-        generated::query_command()?,
-        weights::command(),
-        axon::command(),
-        hparams::command()?,
-        stake::command()?,
-        proxy::command()?,
-        multisig::command(),
-        wallet::command(),
-        root::command()?,
-        conviction::command()?,
-        subnets::command()?,
-        {
-            let misc = clap::Command::new("misc")
-                .about("Additional chain operations.")
-                .subcommand_required(true)
-                .arg_required_else_help(true)
-                .subcommand(collateral::command()?)
-                .subcommand(timelock::command());
-            #[cfg(feature = "extension")]
-            let misc = misc.subcommand(extension::command());
-            misc
-        },
-    ];
-    #[cfg(feature = "evm")]
-    let commands = {
-        let mut commands = commands;
-        commands.push(evm::command()?);
-        commands
-    };
-    let mut command = application::command_tree(commands);
+    let mut command = rtao_cli::commands::command_tree()?;
     if argv.len() == 1 || argv.get(1).is_some_and(|arg| arg == "help") {
         print!("{}", command.render_long_help());
         return Ok(());
+    }
+    if argv.get(1).is_some_and(|arg| arg == "completions") {
+        let matches = command
+            .clone()
+            .try_get_matches_from(&argv)
+            .map_err(|error| CliError::input(error.to_string()))?;
+        let (_, leaf) = matches
+            .subcommand()
+            .ok_or_else(|| CliError::input("missing completion command"))?;
+        return rtao_cli::completions::run(
+            &command,
+            leaf,
+            &rtao_cli::output::Output::new(
+                Default::default(),
+                Arc::new(rtao_cli::output::ProcessSink),
+            ),
+        );
     }
     let paths = rtao::client::config::Paths::from_process()
         .map_err(|e| CliError::failure(e.to_string()))?;
@@ -134,7 +116,9 @@ async fn run() -> Result<(), CliError> {
     };
     let terminal: SharedTerminal = Arc::new(Mutex::new(Box::new(LiveTerminal)));
     let mut prompting = terminal.clone();
+    let completion_tree = command.clone();
     let mut invocation = application::parse_with_prompts(command, argv, &context, &mut prompting)?;
+    let command_path = application::command_path(&completion_tree, &invocation.matches);
     let Some((name, matches)) = invocation.matches.subcommand() else {
         return Err(CliError::input("missing command"));
     };
@@ -144,6 +128,11 @@ async fn run() -> Result<(), CliError> {
             .ok_or_else(|| CliError::input("missing misc command"))?
     } else {
         (name, matches)
+    };
+    let name = if command_path.first().is_some_and(|part| part == "misc") {
+        command_path.get(1).map(String::as_str).unwrap_or(name)
+    } else {
+        name
     };
     if name == "doctor" {
         // Builder allows root globals before the offline doctor.
@@ -164,7 +153,11 @@ async fn run() -> Result<(), CliError> {
     }
     let reserved = match name {
         "call" => vec!["signer_backend"],
-        "stake" => generated::intent_reserved(stake::operation(matches)?)?,
+        "stake" => stake::reserved(matches)?,
+        "addr" => addresses::reserved(matches),
+        "crowd" => crowd::reserved(matches)?,
+        "upgrade" => upgrade::reserved(matches)?,
+        "convert" | "latency" => misc::reserved(name),
         "proxy" => proxy::reserved(matches)?,
         "multisig" => multisig::reserved(matches)?,
         "tx" => generated::intent_reserved(
@@ -213,10 +206,22 @@ async fn run() -> Result<(), CliError> {
     let result = async {
         match name {
             "call" => rtao_cli::call::run(&mut app, matches, &replay).await,
+            "completions" => rtao_cli::completions::run(&completion_tree, matches, &app.output),
             "config" => config::run(&store, &app.output, matches).await,
             "tools" => catalog::run_tools(&app.output, &generated::rust_tools()?),
             "explain" => catalog::run_explain(&app.output, matches),
             "wallet" => wallet::run(&mut app, matches, &mut invocation.history).await,
+            "addr" => addresses::run(&app, store.paths(), matches).await,
+            "convert" | "latency" => {
+                misc::validate_before_connect(name, matches)?;
+                misc::run(&app, name, matches).await
+            }
+            "upgrade" => upgrade::run(&mut app, matches, &mut invocation.history).await,
+            "crowd" => {
+                crowd::validate_before_connect(matches)?;
+                app.run(|client| async { crowd::execute(&app, &client, matches).await })
+                    .await
+            }
             "timelock" => timelock::run(&app, matches, &mut invocation.history).await,
             #[cfg(feature = "extension")]
             "extension" => extension::run(&app, matches).await,
@@ -259,6 +264,12 @@ async fn run() -> Result<(), CliError> {
             }
             "multisig" => {
                 multisig::run(&mut app, store.paths(), matches, &mut invocation.history).await
+            }
+            "proxy" if matches.subcommand_name() == Some("book") => {
+                let (_, group) = matches
+                    .subcommand()
+                    .ok_or_else(|| CliError::input("missing proxy book command"))?;
+                proxy::book_run(&app, store.paths(), group).await
             }
             "proxy" => {
                 let request =
@@ -481,16 +492,40 @@ async fn run() -> Result<(), CliError> {
                     })
                     .await
             }
-            "tx" | "stake" => {
-                let op = if name == "stake" {
-                    stake::operation(matches)?.to_owned()
-                } else {
-                    matches
-                        .subcommand()
-                        .ok_or_else(|| CliError::input("missing transaction"))?
-                        .0
-                        .replace('-', "_")
-                };
+            "stake" => {
+                let request =
+                    stake::Request::from_matches(&mut app, matches, &mut invocation.history)?;
+                if stake::execute_local(&app, &request)? {
+                    return Ok(());
+                }
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        let replay = history.replay_command(&replay_args);
+                        stake::execute(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
+            "tx" => {
+                let op = matches
+                    .subcommand()
+                    .ok_or_else(|| CliError::input("missing transaction"))?
+                    .0
+                    .replace('-', "_");
                 let parsed = if !app.prompt_context().interactive(&app.terminal) {
                     Some(generated::TxRequest::from_matches(
                         &mut app,

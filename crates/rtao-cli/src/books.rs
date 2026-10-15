@@ -24,6 +24,318 @@ use zeroize::Zeroizing;
 /// Bound each book or cosmetic keyfile read before parsing untrusted JSON.
 const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 
+pub(crate) fn public_json_truthy(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(value) => *value,
+        Value::Number(value) => value.as_f64() != Some(0.0),
+        Value::String(value) => !value.is_empty(),
+        Value::Array(value) => !value.is_empty(),
+        Value::Object(value) => !value.is_empty(),
+    }
+}
+
+// Config's permissive `add_*` helpers also accept non-string names. Preserve
+// Python equality (including True == 1 == 1.0) without rounding large ints.
+fn python_book_name_eq(left: &Value, right: &Value) -> bool {
+    fn numeric_token(value: &Value) -> Option<&str> {
+        match value {
+            Value::Bool(true) => Some("1"),
+            Value::Bool(false) => Some("0"),
+            Value::Number(number) => Some(number.as_str()),
+            _ => None,
+        }
+    }
+    if let (Some(left), Some(right)) = (numeric_token(left), numeric_token(right)) {
+        let integer = |token: &str| {
+            (!token.contains(['.', 'e', 'E']))
+                .then(|| pyfmt::parse_integer(token))
+                .flatten()
+        };
+        return match (integer(left), integer(right)) {
+            (Some(left), Some(right)) => left == right,
+            (Some(integer), None) | (None, Some(integer)) => {
+                let float_token = if left.contains(['.', 'e', 'E']) {
+                    left
+                } else {
+                    right
+                };
+                float_token
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|value| value.is_finite() && value.fract() == 0.0)
+                    .and_then(|value| pyfmt::parse_integer(&format!("{value:.0}")))
+                    .is_some_and(|value| value == integer)
+            }
+            (None, None) => left
+                .parse::<f64>()
+                .ok()
+                .zip(right.parse::<f64>().ok())
+                .is_some_and(|(left, right)| left == right),
+        };
+    }
+    match (left, right) {
+        (Value::Array(left), Value::Array(right)) => {
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right)
+                    .all(|(left, right)| python_book_name_eq(left, right))
+        }
+        (Value::Object(left), Value::Object(right)) => {
+            left.len() == right.len()
+                && left.iter().all(|(key, left)| {
+                    right
+                        .get(key)
+                        .is_some_and(|right| python_book_name_eq(left, right))
+                })
+        }
+        _ => left == right,
+    }
+}
+
+/// Shared named-contact persistence using btcli's resolved address-book path.
+#[derive(Clone, Debug)]
+pub struct AddressBook {
+    file: PublicBook,
+}
+
+/// Shared proxy presets, including exact pure-account recovery coordinates.
+#[derive(Clone, Debug)]
+pub struct ProxyBook {
+    file: PublicBook,
+}
+
+#[derive(Clone, Debug)]
+struct PublicBook {
+    path: PathBuf,
+}
+
+impl PublicBook {
+    async fn load(&self) -> Result<Vec<Value>, ResolveError> {
+        let path = self.path.clone();
+        rtao::core::offload(move || Ok(read_json(&path)?.as_array().cloned().unwrap_or_default()))
+            .await
+            .map_err(|_| ResolveError::new("public book worker failed"))?
+    }
+
+    async fn mutate<T: Send + 'static>(
+        &self,
+        change: impl FnOnce(&mut Vec<Value>) -> Result<(T, bool), ResolveError> + Send + 'static,
+    ) -> Result<T, ResolveError> {
+        let path = self.path.clone();
+        rtao::core::offload(move || {
+            let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
+            let entries = value
+                .as_array_mut()
+                .ok_or_else(|| ResolveError::new("book is not a list"))?;
+            let (result, publish) = change(entries)?;
+            if publish {
+                write_public_json(&path, &value, corrupt)?;
+            }
+            Ok(result)
+        })
+        .await
+        .map_err(|_| ResolveError::new("public book worker failed"))?
+    }
+
+    async fn put(&self, entry: Value, address_required: bool) -> Result<Value, ResolveError> {
+        validate_named_entry(&entry, address_required)?;
+        self.mutate(move |entries| {
+            // Check programmatic values before their first recursive clone.
+            bounded_public_json(&entry)?;
+            let name = &entry["name"];
+            entries.retain(|row| {
+                !row.get("name")
+                    .is_some_and(|old| python_book_name_eq(old, name))
+            });
+            entries.push(entry.clone());
+            Ok((entry, true))
+        })
+        .await
+    }
+
+    async fn remove(&self, name: &str) -> Result<bool, ResolveError> {
+        let name = name.to_owned();
+        self.mutate(move |entries| {
+            let before = entries.len();
+            entries.retain(|row| row.get("name").and_then(Value::as_str) != Some(name.as_str()));
+            Ok((before != entries.len(), true))
+        })
+        .await
+    }
+
+    async fn save(&self, entries: Vec<Value>) -> Result<PathBuf, ResolveError> {
+        let path = self.path.clone();
+        self.mutate(move |rows| {
+            *rows = entries;
+            Ok((path, true))
+        })
+        .await
+    }
+}
+
+fn validate_named_entry(entry: &Value, address_required: bool) -> Result<(), ResolveError> {
+    if !entry.get("name").is_some_and(public_json_truthy) {
+        return Err(ResolveError::new(if address_required {
+            "address entry requires a 'name' field"
+        } else {
+            "proxy entry requires a 'name' field"
+        }));
+    }
+    if address_required
+        && !entry
+            .get("address")
+            .and_then(Value::as_str)
+            .is_some_and(|address| !address.is_empty())
+    {
+        return Err(ResolveError::new(
+            "address entry requires an 'address' field",
+        ));
+    }
+    Ok(())
+}
+
+impl AddressBook {
+    /// Bind the resolved shared path without filesystem access.
+    pub fn new(paths: &Paths) -> Self {
+        Self {
+            file: PublicBook {
+                path: paths.path(ConfigFile::Addresses).to_owned(),
+            },
+        }
+    }
+    /// The exact path used by readers and atomic writers.
+    pub fn path(&self) -> &Path {
+        &self.file.path
+    }
+    /// Best-effort ordered public rows; invalid files are left untouched.
+    #[doc(alias = "bittensor.config.load_addresses")]
+    pub async fn load(&self) -> Result<Vec<Value>, ResolveError> {
+        self.file.load().await
+    }
+    /// Replace all rows, retaining Python's open public JSON schema.
+    #[doc(alias = "bittensor.config.save_addresses")]
+    pub async fn save(&self, entries: Vec<Value>) -> Result<PathBuf, ResolveError> {
+        self.file.save(entries).await
+    }
+    /// Replace all exact-name matches and append the supplied row.
+    #[doc(alias = "bittensor.config.add_address")]
+    pub async fn add(&self, entry: Value) -> Result<Value, ResolveError> {
+        self.file.put(entry, true).await
+    }
+    /// Save a CLI contact, preserving its previous signer tag when omitted.
+    pub async fn save_contact(
+        &self,
+        name: String,
+        address: String,
+        note: String,
+        signer: Option<String>,
+    ) -> Result<Value, ResolveError> {
+        let mut entry = serde_json::json!({"name":name,"address":address,"note":note});
+        validate_named_entry(&entry, true)?;
+        self.file
+            .mutate(move |entries| {
+                bounded_public_json(&entry)?;
+                let name = entry["name"].clone();
+                let lookup = name.as_str().unwrap_or_default();
+                let previous = entries.iter().find(|row| {
+                    row.get("name").and_then(Value::as_str) == Some(lookup)
+                        || row.get("address").and_then(Value::as_str) == Some(lookup)
+                });
+                let tag = signer
+                    .map(Value::String)
+                    .or_else(|| previous.and_then(|row| row.get("signer")).cloned());
+                if let Some(tag) = tag.filter(public_json_truthy) {
+                    entry["signer"] = tag;
+                }
+                bounded_public_json(&entry)?;
+                entries.retain(|row| row.get("name") != Some(&name));
+                entries.push(entry.clone());
+                Ok((entry, true))
+            })
+            .await
+    }
+    /// Remove all exact-name matches and report whether any existed.
+    #[doc(alias = "bittensor.config.remove_address")]
+    pub async fn remove(&self, name: &str) -> Result<bool, ResolveError> {
+        self.file.remove(name).await
+    }
+}
+
+impl ProxyBook {
+    /// Bind the resolved shared path without filesystem access.
+    pub fn new(paths: &Paths) -> Self {
+        Self {
+            file: PublicBook {
+                path: paths.path(ConfigFile::Proxies).to_owned(),
+            },
+        }
+    }
+    /// The exact path used by readers and atomic writers.
+    pub fn path(&self) -> &Path {
+        &self.file.path
+    }
+    /// Best-effort ordered public rows; invalid files are left untouched.
+    #[doc(alias = "bittensor.config.load_proxies")]
+    pub async fn load(&self) -> Result<Vec<Value>, ResolveError> {
+        self.file.load().await
+    }
+    /// Replace all rows, preserving their unknown fields and coordinate values.
+    #[doc(alias = "bittensor.config.save_proxies")]
+    pub async fn save(&self, entries: Vec<Value>) -> Result<PathBuf, ResolveError> {
+        self.file.save(entries).await
+    }
+    /// Replace every exact-name match, then append the supplied row.
+    #[doc(alias = "bittensor.config.add_proxy")]
+    pub async fn add(&self, entry: Value) -> Result<Value, ResolveError> {
+        self.file.put(entry, false).await
+    }
+    /// Update the first exact-name match in place, preserving unknown fields.
+    /// Missing names do not create or rewrite the file.
+    #[doc(alias = "bittensor.config.update_proxy")]
+    pub async fn update(
+        &self,
+        name: &str,
+        updates: serde_json::Map<String, Value>,
+    ) -> Result<Option<Value>, ResolveError> {
+        let name = name.to_owned();
+        self.file
+            .mutate(move |entries| {
+                let Some(entry) = entries
+                    .iter_mut()
+                    .find(|entry| entry.get("name").and_then(Value::as_str) == Some(name.as_str()))
+                else {
+                    return Ok((None, false));
+                };
+                let row = entry
+                    .as_object_mut()
+                    .ok_or_else(|| ResolveError::new("proxy entry must be an object"))?;
+                row.extend(updates);
+                row.insert("name".into(), Value::String(name));
+                bounded_public_json(entry)?;
+                Ok((Some(entry.clone()), true))
+            })
+            .await
+    }
+    /// Remove all exact-name matches and report whether any existed.
+    #[doc(alias = "bittensor.config.remove_proxy")]
+    pub async fn remove(&self, name: &str) -> Result<bool, ResolveError> {
+        self.file.remove(name).await
+    }
+    /// Publish an empty array and return the previous row count.
+    #[doc(alias = "bittensor.config.clear_proxies")]
+    pub async fn clear(&self) -> Result<usize, ResolveError> {
+        self.file
+            .mutate(|entries| {
+                let count = entries.len();
+                entries.clear();
+                Ok((count, true))
+            })
+            .await
+    }
+}
+
 /// Saved multisig writers use the same resolved override as [`Books::load`].
 /// References remain portable names; signing code must resolve and validate
 /// their distinct accounts against the live runtime before approving a call.
@@ -230,35 +542,13 @@ fn named<'a>(rows: &'a [Value], name: &str) -> Option<&'a Value> {
 }
 
 fn read_json(path: &Path) -> Result<Value, ResolveError> {
-    let read = || -> Result<Option<Value>, ResolveError> {
-        if !path.is_file() {
-            return Ok(None);
-        }
-        let Ok(file) = File::open(path) else {
-            return Ok(None);
-        };
-        let oversized =
-            || ResolveError::new("book or public keyfile exceeds the 16 MiB input limit");
-        if file
-            .metadata()
-            .is_ok_and(|metadata| metadata.len() > MAX_FILE_BYTES)
-        {
-            return Err(oversized());
-        }
-        let mut bytes = Vec::new();
-        if file
-            .take(MAX_FILE_BYTES + 1)
-            .read_to_end(&mut bytes)
-            .is_err()
-        {
-            return Ok(None);
-        }
-        if bytes.len() as u64 > MAX_FILE_BYTES {
-            return Err(oversized());
-        }
-        Ok(rtao::primitives::json::from_slice(&bytes).ok())
-    };
-    read().map(|value| value.unwrap_or(Value::Null))
+    match rtao::client::config::read_bounded_json_file(path) {
+        Ok(bytes) => Ok(rtao::primitives::json::from_slice(&bytes).unwrap_or(Value::Null)),
+        Err(error) if error.kind() == io::ErrorKind::FileTooLarge => Err(ResolveError::new(
+            "book or public keyfile exceeds the 16 MiB input limit",
+        )),
+        Err(_) => Ok(Value::Null),
+    }
 }
 
 /// Mutation readers fail closed on unreadable/special/oversized files. Only

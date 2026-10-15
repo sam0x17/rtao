@@ -7,9 +7,7 @@
 
 use std::sync::Arc;
 
-use ::subxt::{
-    OnlineClient, SubstrateConfig, backend::legacy::LegacyBackend, error::OnlineClientError,
-};
+use ::subxt::{OnlineClient, SubstrateConfig, backend::LegacyBackend, error::OnlineClientError};
 use futures::StreamExt;
 use subxt_rpcs::{
     RpcClient,
