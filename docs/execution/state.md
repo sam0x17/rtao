@@ -16,6 +16,51 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Published checkpoint `2f9a30d2cc9c222d772838d49c63e91c629732f8` adopts the real
+legacy runtime-API lookup and four generated reports. Hosted generation
+[38812061254](https://github.com/sam0x17/rtao/actions/runs/38812061254) passed
+source parity at clean `1b9ecd5a4ae33311848c480bc6ad76af53bece6f`. Both artifact
+archives were authenticated and independently fetched twice. All 13 emitted
+contracts match the authenticated source inventory; the other 17 generated
+files and all 23 dependency inputs are unchanged. No new runtime or oracle
+validation is inferred. Bounded review/adoption proofs are retained under
+`.local/recovery/2026-10-15/` without archives or extraction directories.
+
+The published matrix has 275/357 source rows reconciled, 82 pending, 20 pending
+e2e mappings and 68 divergences. The next working batch has five additional
+source dispositions: codec, runtime API, registration, crowdloan and Ledger
+pytest input. Those source relationships have explicit native API/strictness
+and coverage limits. This is source reconciliation, not a passing test result.
+Strict M8 completeness remains off; no milestone is accepted. M2-S02 remains
+open and unaccepted, and upstream issue #3251 is still open.
+
+Normal [38809901640](https://github.com/sam0x17/rtao/actions/runs/38809901640)
+at `55f7ec0ebbbc5f08b685af9c47b8e18c71a2aef3` completed with all five supporting
+jobs successful. Its main gate passed 2,963 tests with zero failures and four
+skips, then passed the workspace doctests. Both serving-fixture repairs are
+therefore confirmed for that source. The gate subsequently failed strict
+rustdoc because public StateStore::save/load documentation linked through a
+private module to MAX_CHECKPOINT_BYTES. The working correction states the
+actual 64 MiB limit without changing visibility, behavior or lint policy.
+The exact 781,765-byte terminal log has SHA256
+`ba00375b057c261cbb8ec7efb71fb77897bfe305e384b6b2231a6aebeb35c502`;
+bounded proof is `check-38809901640.json`. Book generation was not completed.
+Newer legacy-dispatch/extraction, CLI canonical-signature notice and nested
+Utility.batch signing fixtures still require exact-source hosted execution.
+
+All current work follows Q30. Local target output remains 547,192 KiB; only
+source inspection, direct formatting and bounded bookkeeping ran locally.
+No local builds/tests, new temporary root, node, Mac Studio work, device run
+or new upstream filing was needed. Preserve wallets, recovery material and
+unrelated work.
+
+## Earlier client checkpoints, 2026-10-15
+
+These records retain their own source and execution scope. The current
+checkpoint above supersedes their instructions to dispatch or retry checks.
+
+### Earlier header and source checkpoint, superseded by 2f9a30d
+
 Normal [38790070632](https://github.com/sam0x17/rtao/actions/runs/38790070632)
 at `da99c3deb6886bca32a1d3c04eb098977068d8d3` stops before tests on
 `_subtensor.py`'s extra helper-crate mapping. All five supporting jobs pass.
@@ -82,11 +127,6 @@ raw-log digest and exact PASS lines are in
 `m9-security-targeted-ci-38780323094.json`. That run failed three other tests;
 these targeted results do not establish C1 or close the findings. M2-S02
 Ed25519 final-drop erasure remains open and unaccepted.
-
-## Earlier client checkpoints, 2026-10-15
-
-These records retain their own source and execution scope. The current
-checkpoint above supersedes their instructions to dispatch or retry checks.
 
 Hosted generation [38777439872](https://github.com/sam0x17/rtao/actions/runs/38777439872)
 succeeds at clean `5464ccf`. Authenticate two exact archives, all 20 regular
