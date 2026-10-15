@@ -124,9 +124,12 @@ fn guarded_author(state: &mut FakeState, request: &RpcRequest, script: &Script) 
                 .runtime
                 .decode_spec(&TypeSpec::Call, step.expected.as_bytes(), true)?;
         let actual = decoded.field("call").context("submitted call")?;
+        // The strict decoder consumes the framed body and its call is last.
+        // Its decoded call record is a display shape, not an enum-encoder
+        // input. Check the actual trailing call bytes against the independent
+        // expectation as well as comparing the fully decoded call.
         ensure!(
-            actual == &expected
-                && state.runtime.encode_spec(&TypeSpec::Call, actual)? == step.expected.as_bytes(),
+            actual == &expected && bytes.ends_with(step.expected.as_bytes()),
             "submitted call differs from independent expectation"
         );
         let account = decoded
@@ -338,11 +341,18 @@ async fn execute<I: Intent<Role = Hotkey, Output = ()>>(
 }
 
 fn assert_receipt(fixture: &Fixture, result: &ExtrinsicResult, position: usize) -> Result<()> {
-    let receipt = lock_script(&fixture.script)?
+    let transcript = lock_script(&fixture.script)?;
+    let receipt = transcript
         .receipts
         .get(position)
         .cloned()
-        .context("accepted serving receipt")?;
+        .with_context(|| {
+            format!(
+                "accepted serving receipt {position}: attempts={}, violations={:?}, result error={:?}",
+                transcript.attempts, transcript.violations, result.error
+            )
+        })?;
+    drop(transcript);
     assert!(result.success);
     assert_eq!(result.inclusion, Inclusion::Finalized);
     assert!(result.error.is_none());
