@@ -1,0 +1,8 @@
+{
+  "books.rs": "// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py,\n// cli/multisig_helpers.py, cli/call_names.py and config.py @\n// 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.\n",
+  "call_names.rs": "// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/call_names.py @\n// 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.\n",
+  "globals.rs": "// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/globals.py and main.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.\n",
+  "prompt.rs": "// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/prompt.py, keyfiles.py:42-62 and cli/context.py:1900-1935 @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.\n",
+  "process.rs": "// Derived from RaoFoundation/subtensor sdk/python/bittensor/macos_password.py and cli/secrets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.\n",
+  "multisig.rs": "// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/multisig.py and cli/multisig_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.\n"
+}

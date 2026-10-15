@@ -5,8 +5,10 @@ use crate::{Wallet, WalletError, io_error};
 use secrecy::{ExposeSecret, SecretString};
 use std::{
     fmt,
+    future::Future,
     io::IsTerminal,
     path::{Path, PathBuf},
+    pin::Pin,
     sync::Arc,
 };
 use zeroize::Zeroizing;
@@ -33,6 +35,10 @@ pub enum PasswordSource {
     KeyfileEnvironment,
     /// An explicit file or `BT_WALLET_PASSWORD_FILE`.
     PasswordFile,
+    /// The shared macOS Keychain account.
+    Keychain,
+    /// The explicit native macOS password dialog.
+    MacosDialog,
     /// A callback supplied by the CLI.
     Prompt,
 }
@@ -43,14 +49,37 @@ impl fmt::Display for PasswordSource {
             Self::WalletEnvironment => "BT_WALLET_PASSWORD",
             Self::KeyfileEnvironment => "keyfile environment",
             Self::PasswordFile => "password file",
+            Self::Keychain => "macOS Keychain",
+            Self::MacosDialog => "macOS password dialog",
             Self::Prompt => "prompt",
         })
     }
 }
 /// A hidden-entry callback implemented by a CLI; the library reads no input.
 pub trait PasswordPrompt: Send + Sync {
+    /// Whether the callback has an eligible terminal; injectable for CLI tests.
+    fn is_terminal(&self) -> bool {
+        std::io::stdin().is_terminal()
+    }
     /// Ask the user for a secret; do not print or log the returned value.
     fn prompt(&self, message: &str) -> Result<SecretString, WalletError>;
+}
+/// A secret-bearing native password operation without implicit interaction.
+pub type NativePasswordFuture<'a, T> =
+    Pin<Box<dyn Future<Output = Result<T, WalletError>> + Send + 'a>>;
+/// Native password access supplied explicitly by the calling application.
+pub trait NativePasswordProvider: Send + Sync {
+    /// Read btcli's shared Keychain account for the requested wallet.
+    fn keychain_load<'a>(
+        &'a self,
+        wallet_name: &'a str,
+    ) -> NativePasswordFuture<'a, Option<SecretString>>;
+    /// Show a hidden native dialog with the requested title and message.
+    fn macos_prompt<'a>(
+        &'a self,
+        title: &'a str,
+        message: &'a str,
+    ) -> NativePasswordFuture<'a, SecretString>;
 }
 /// Password inputs in Python precedence order, with library prompting disabled.
 #[derive(Clone, Default)]
@@ -59,14 +88,16 @@ pub struct PasswordSources {
     pub password: Option<SecretString>,
     /// A password file; its entire text is trimmed, matching Python's code.
     pub password_file: Option<PathBuf>,
-    /// Request the macOS Keychain source, implemented in M4.
+    /// Request the macOS Keychain source through the explicit native provider.
     pub keychain: bool,
-    /// Request the native macOS dialog, implemented in M4.
+    /// Request the native macOS dialog through the explicit native provider.
     pub macos_prompt: bool,
     /// Permission for an explicitly supplied CLI callback.
     pub prompt: PromptPolicy,
     /// The caller's hidden password-entry implementation.
     pub prompt_callback: Option<Arc<dyn PasswordPrompt>>,
+    /// Explicit native-password implementation; unused unless a native flag is set.
+    pub native_provider: Option<Arc<dyn NativePasswordProvider>>,
 }
 impl fmt::Debug for PasswordSources {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -79,6 +110,10 @@ impl fmt::Debug for PasswordSources {
             .field(
                 "prompt_callback",
                 &self.prompt_callback.as_ref().map(|_| "configured"),
+            )
+            .field(
+                "native_provider",
+                &self.native_provider.as_ref().map(|_| "configured"),
             )
             .finish()
     }
@@ -181,20 +216,56 @@ pub(crate) async fn resolve_with(
                 PasswordSource::PasswordFile,
             ));
         }
-        if sources.keychain {
-            return Err(WalletError::FeatureRequired(
-                "M4 macOS Keychain password support",
-            ));
-        }
-        if sources.macos_prompt {
-            return Err(WalletError::FeatureRequired(
-                "M4 macOS password dialog support",
-            ));
+        if sources.keychain || sources.macos_prompt {
+            let provider = sources
+                .native_provider
+                .as_ref()
+                .ok_or(WalletError::FeatureRequired("native password provider"))?;
+            let wallet_name = path
+                .parent()
+                .and_then(Path::file_name)
+                .and_then(|name| name.to_str())
+                .ok_or_else(|| {
+                    WalletError::InvalidName("coldkey path has no UTF-8 wallet name".into())
+                })?;
+            if sources.keychain {
+                if let Some(secret) = provider.keychain_load(wallet_name).await?
+                    && !secret.expose_secret().is_empty()
+                {
+                    return Ok(Some(ResolvedPassword {
+                        secret,
+                        source: PasswordSource::Keychain,
+                    }));
+                }
+                if !sources.macos_prompt {
+                    return Err(WalletError::KeychainMissing(wallet_name.to_owned()));
+                }
+            }
+            if sources.macos_prompt {
+                let title = format!("Unlock {wallet_name} coldkey");
+                let message = format!(
+                    "Enter the password for wallet {}.",
+                    rtao_primitives::pyfmt::string_repr(wallet_name)
+                );
+                let secret = provider.macos_prompt(&title, &message).await?;
+                if secret.expose_secret().is_empty() {
+                    return Err(WalletError::PasswordRequired);
+                }
+                return Ok(Some(ResolvedPassword {
+                    secret,
+                    source: PasswordSource::MacosDialog,
+                }));
+            }
         }
     }
     match sources.prompt {
         PromptPolicy::Never => Ok(None),
-        PromptPolicy::IfTty if !std::io::stdin().is_terminal() => {
+        PromptPolicy::IfTty
+            if !sources
+                .prompt_callback
+                .as_ref()
+                .is_some_and(|prompt| prompt.is_terminal()) =>
+        {
             Err(WalletError::PromptUnavailable)
         }
         _ => {
@@ -429,6 +500,231 @@ mod tests {
         assert!(
             rtao_core::keyfile_env::decode_password_from_environment("BT_PW_TEST", "!!!").is_err()
         );
+    }
+
+    #[derive(Default)]
+    struct Native {
+        keychain: std::sync::Mutex<std::collections::VecDeque<Option<SecretString>>>,
+        calls: std::sync::Mutex<Vec<String>>,
+    }
+    impl NativePasswordProvider for Native {
+        fn keychain_load<'a>(
+            &'a self,
+            wallet_name: &'a str,
+        ) -> NativePasswordFuture<'a, Option<SecretString>> {
+            self.calls
+                .lock()
+                .unwrap()
+                .push(format!("keychain:{wallet_name}"));
+            let secret = self.keychain.lock().unwrap().pop_front().flatten();
+            Box::pin(std::future::ready(Ok(secret)))
+        }
+        fn macos_prompt<'a>(
+            &'a self,
+            title: &'a str,
+            message: &'a str,
+        ) -> NativePasswordFuture<'a, SecretString> {
+            self.calls
+                .lock()
+                .unwrap()
+                .push(format!("dialog:{title}:{message}"));
+            Box::pin(std::future::ready(Ok(SecretString::new(
+                "dialog-only-test".into(),
+            ))))
+        }
+    }
+
+    #[tokio::test]
+    async fn native_sources_preserve_provenance_and_missing_keychain_branch() {
+        let native = Arc::new(Native::default());
+        native.keychain.lock().unwrap().extend([
+            Some(SecretString::new("keychain-only-test".into())),
+            None,
+            Some(SecretString::new(String::new())),
+        ]);
+        let mut sources = PasswordSources {
+            keychain: true,
+            native_provider: Some(native.clone()),
+            ..Default::default()
+        };
+        let path = Path::new("/disposable/wallet/coldkey");
+        let resolved = resolve_with(path, &sources, true, |_| None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(resolved.source, PasswordSource::Keychain);
+        assert_eq!(resolved.secret.expose_secret(), "keychain-only-test");
+        let error = resolve_with(path, &sources, true, |_| None)
+            .await
+            .err()
+            .unwrap();
+        assert!(matches!(error, WalletError::KeychainMissing(_)));
+        assert_eq!(
+            error.to_string(),
+            "no Keychain password for wallet 'wallet'; run `rtao wallet keychain save -w wallet`"
+        );
+        sources.macos_prompt = true;
+        let resolved = resolve_with(path, &sources, true, |_| None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(resolved.source, PasswordSource::MacosDialog);
+        assert_eq!(resolved.secret.expose_secret(), "dialog-only-test");
+        assert_eq!(
+            *native.calls.lock().unwrap(),
+            [
+                "keychain:wallet",
+                "keychain:wallet",
+                "keychain:wallet",
+                "dialog:Unlock wallet coldkey:Enter the password for wallet 'wallet'.",
+            ]
+        );
+        assert!(!format!("{sources:?}").contains("keychain-only-test"));
+        assert!(!format!("{sources:?}").contains("dialog-only-test"));
+    }
+
+    #[tokio::test]
+    async fn native_provider_is_unused_without_flags_and_never_precedes_earlier_sources() {
+        let native = Arc::new(Native::default());
+        let path = Path::new("/disposable/wallet/coldkey");
+        let mut sources = PasswordSources {
+            native_provider: Some(native.clone()),
+            ..Default::default()
+        };
+        assert!(
+            resolve_with(path, &sources, true, |_| None)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        sources.keychain = true;
+        sources.macos_prompt = true;
+        sources.password = Some(SecretString::new("explicit-test".into()));
+        assert_eq!(
+            resolve_with(path, &sources, true, |_| None)
+                .await
+                .unwrap()
+                .unwrap()
+                .source,
+            PasswordSource::Explicit
+        );
+        sources.password = None;
+        assert_eq!(
+            resolve_with(path, &sources, true, |name| (name == "BT_WALLET_PASSWORD")
+                .then(|| "env-test".into()))
+            .await
+            .unwrap()
+            .unwrap()
+            .source,
+            PasswordSource::WalletEnvironment
+        );
+        let name = env_var_name(path);
+        let encoded =
+            rtao_core::keyfile_env::encode_password_for_environment(&name, "keyfile-test").unwrap();
+        assert_eq!(
+            resolve_with(path, &sources, true, |key| (key == name)
+                .then(|| encoded.clone()))
+            .await
+            .unwrap()
+            .unwrap()
+            .source,
+            PasswordSource::KeyfileEnvironment
+        );
+        let temp = support::TempRoot::new();
+        let file = temp.path().join("empty-password");
+        std::fs::write(&file, " \n").unwrap();
+        sources.password_file = Some(file);
+        let resolved = resolve_with(path, &sources, true, |_| None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(resolved.source, PasswordSource::PasswordFile);
+        assert!(resolved.secret.expose_secret().is_empty());
+        assert!(native.calls.lock().unwrap().is_empty());
+        sources.password_file = None;
+        assert!(
+            resolve_with(path, &sources, false, |_| None)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(native.calls.lock().unwrap().is_empty());
+    }
+
+    struct TerminalPrompt {
+        terminal: bool,
+        calls: Arc<AtomicUsize>,
+    }
+    impl PasswordPrompt for TerminalPrompt {
+        fn is_terminal(&self) -> bool {
+            self.terminal
+        }
+        fn prompt(&self, _: &str) -> Result<SecretString, WalletError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Ok(SecretString::new("prompt-test".into()))
+        }
+    }
+    #[tokio::test]
+    async fn if_tty_uses_the_callback_terminal_authority_and_never_stays_silent() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let path = Path::new("/disposable/wallet/coldkey");
+        let mut sources = PasswordSources {
+            prompt: PromptPolicy::IfTty,
+            ..Default::default()
+        };
+        assert!(matches!(
+            resolve_with(path, &sources, true, |_| None).await,
+            Err(WalletError::PromptUnavailable)
+        ));
+        sources.prompt_callback = Some(Arc::new(TerminalPrompt {
+            terminal: false,
+            calls: calls.clone(),
+        }));
+        assert!(matches!(
+            resolve_with(path, &sources, true, |_| None).await,
+            Err(WalletError::PromptUnavailable)
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        sources.prompt_callback = Some(Arc::new(TerminalPrompt {
+            terminal: true,
+            calls: calls.clone(),
+        }));
+        assert_eq!(
+            resolve_with(path, &sources, true, |_| None)
+                .await
+                .unwrap()
+                .unwrap()
+                .source,
+            PasswordSource::Prompt
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        sources.prompt = PromptPolicy::Never;
+        assert!(
+            resolve_with(path, &sources, true, |_| None)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn native_flags_require_an_explicit_provider_instead_of_hidden_host_access() {
+        for sources in [
+            PasswordSources {
+                keychain: true,
+                ..Default::default()
+            },
+            PasswordSources {
+                macos_prompt: true,
+                ..Default::default()
+            },
+        ] {
+            assert!(matches!(
+                resolve_with(Path::new("/disposable/w/coldkey"), &sources, true, |_| None).await,
+                Err(WalletError::FeatureRequired("native password provider"))
+            ));
+        }
     }
 
     proptest::proptest! {

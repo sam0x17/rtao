@@ -1085,7 +1085,7 @@ fn markdown(document: &Json) -> Result<String> {
             output.push_str(&format!("\nMeasured on `{}` ({}) with `{}`, source `{}`{}; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.\n\n", json_text(record,"host")?,json_text(record,"machine")?,json_text(record,"compiler")?.lines().next().context("compiler missing")?,json_text(&record["source"],"head_commit")?, if record["source"]["dirty"]==true { " with dependency changes in the working tree" } else { "" }));
         }
     }
-    output.push_str("Regenerate with `cargo xtask compat`; verify offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).\n");
+    output.push_str("Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).\n");
     Ok(output)
 }
 

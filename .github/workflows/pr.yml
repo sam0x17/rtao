@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_compat:
-        description: Generate compatibility reports for review, without tests or a push
+        description: Generate compatibility and parity reports for review, without tests or a push
         type: boolean
         default: false
 
@@ -198,6 +198,8 @@ jobs:
         # This is cargo tree for the existing report target, not a Mac build
         # or native-platform test. The report records this Linux compiler host.
         run: cargo run --locked -p xtask -- compat --measure-build-weight --build-target aarch64-apple-darwin
+      - name: Refresh the declared parity inventory
+        run: cargo run --locked -p xtask -- parity matrix
       - name: Retain source reports for review
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -206,5 +208,6 @@ jobs:
             compat.json
             COMPAT.md
             docs/compat/build-weight/aarch64-apple-darwin.json
+            parity/matrix.json
           if-no-files-found: error
           retention-days: 3

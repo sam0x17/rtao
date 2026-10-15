@@ -537,3 +537,46 @@ read_hit_read = "subnet_start_schedule"
 read_hit_replacement = "constant:SubtensorModule.InitialStartCallDelay -> storage:SubtensorModule.StartCallDelay"
 upstream_report = "Draft source-backed issue retained in the D-040 supplemental proof for root review and filing. Native FakeState evidence only; no live Python reproduction or hosted oracle parity claimed."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/reads/subnets.py#L235-L253"
+
+[[divergences]]
+id = "D-041"
+upstream_symbol = "bittensor.cli.call / AppContext saved semantic multisig approval rounds / cli.multisig_helpers.await_pending_visible"
+python_behavior = "Automatic later approvals poll briefly for pending visibility, then infer the opening from current pending state. If another signer completes or cancels the operation, a later approval can encode no timepoint and open another operation for the same call hash."
+rtao_behavior = "Automatic later raw and saved semantic approvals retain the first submitted inner call and authenticate its opening from an included matching approval event. A pinned pending lookup refuses absent, replaced or already-approved state and composes Some(expected), preserving the original opening after later state removal. Saved semantic approval options disable owner-rate replanning; the executor also excludes multisig dispatch wrappers from automatic owner retries and returns the included failed receipt."
+rationale = "A successful earlier approval does not authorize opening another operation after the first one disappears. The final approval consumes pending state even when its inner owner call fails, so an automatic owner retry can also create a new opening. Require explicit operator action for another operation while preserving the original receipt and recovery identity. NewMultisig receipt-height inference assumes the reviewed runtime uses BlockNumberProvider = System; the separate automated source guard is not adopted."
+decision = "PLAN.md execution rule 5; CLI source adoption and owner-multisig retry review (2026-10-15)"
+status = "active"
+class = "stricter"
+milestone = "M4"
+pinning_tests = [
+  "rtao_client::compose::tests::existing_multisig_approval_encodes_exact_timepoint_and_retains_it_after_removal",
+  "rtao_client::compose::tests::existing_multisig_refuses_absent_replaced_and_noncontinuation_inputs",
+  "rtao_cli::raw_call_contract::chained_approval_encodes_the_authenticated_opening_in_the_actual_second_extrinsic",
+  "rtao_cli::raw_call_contract::unknown_disappeared_or_replaced_opening_refuses_before_the_next_source_or_signature",
+  "rtao_cli::multisig::tests::guarded_later_round_refuses_absent_or_replaced_opening_before_funds_or_unlock",
+  "rtao_cli::multisig::tests::operation_changed_after_composition_keeps_stale_some_in_the_actual_signed_call",
+  "rtao_cli::context_contract::saved_semantic_replaced_opening_refuses_before_second_source",
+  "rtao_cli::context_contract::saved_semantic_missing_opening_identity_refuses_automatic_continuation",
+  "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval",
+]
+upstream_report = "No issue or PR filed for D-041. Active denotes implemented source with the named regression bodies present; combined hosted validation remains pending. No live-node or cross-language execution is claimed."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/multisig_helpers.py#L1038-L1059"
+
+[[divergences]]
+id = "D-042"
+upstream_symbol = "bittensor.config book readers / AppContext saved multisig reference resolution / cli.call_names recursive JSON traversal"
+python_behavior = "Book readers parse the complete selected file. Saved multisig resolution detects cycles, but acyclic chains and programmatic nested call/name inputs have no matching 16 MiB and 128-level input-budget policy."
+rtao_behavior = "CLI book reads refuse content over 16 MiB without falling back to another account. Saved multisig references allow chains through 128 entries and refuse deeper paths, including paths through cached descendants. Programmatic name-resolution JSON counts containers including the root argument map and refuses beyond 128; direct raw-call conversion separately refuses recursion depth 128 before runtime encoding."
+rationale = "Bound memory and recursion for local untrusted inputs while preserving account selection. An oversized valid contact book must not become an empty book and redirect a same-name reference to a wallet. Finite acyclic reference chains and programmatic Values need explicit limits even when cycle detection and text-parser nesting checks are present."
+decision = "PLAN.md execution rule 5; safe input-budget policy registered during CLI source adoption (2026-10-15)"
+status = "active"
+class = "stricter"
+milestone = "M4"
+pinning_tests = [
+  "rtao_cli::books::tests::oversized_books_refuse_instead_of_redirecting_names_to_wallet_fallback",
+  "rtao_cli::books::tests::acyclic_multisig_chains_have_a_bounded_refusal_and_repeated_branches_are_valid",
+  "rtao_cli::call_names::tests::programmatic_json_nesting_refuses_before_clone_or_name_lookup",
+  "rtao_cli::raw_call_contract::programmatic_raw_call_json_depth_refuses_before_runtime_encoding",
+]
+upstream_report = "Local safety policy; no upstream issue or PR filed. Active denotes implemented source with named regression bodies, including the new direct programmatic raw-call test. Combined hosted validation remains pending; no local build or test was run for registration."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/config.py#L138-L286"
