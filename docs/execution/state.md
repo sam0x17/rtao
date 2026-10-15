@@ -16,6 +16,17 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Compatibility refresh
+[38756143897](https://github.com/sam0x17/rtao/actions/runs/38756143897)
+succeeds at clean `877a39c`. Verify/adopt its four exact regular report members,
+archive identity/digest and all 23 dependency inputs. Only xtask's reviewed
+license input hash changes; role packages and host selection are unchanged.
+The matrix changes only D-057's two portable pinning references, with all other
+source statuses and oracle classifications retained. Runtime validation claims
+remain empty. Proof is `877-generation-adoption.json`. The combined source and
+reports now need the next normal hosted check; no test or milestone acceptance
+is inferred from generation.
+
 Generation [38754665115](https://github.com/sam0x17/rtao/actions/runs/38754665115)
 succeeds at clean `d65e5a8`. Both exact archive identities/digests, nineteen
 regular allowlisted members and all 23 committed/current dependency inputs
