@@ -64,6 +64,8 @@ jobs:
         with:
           workspaces: . -> target/pr-gates/build
           cache-directories: ~/.cargo/git
+      - name: Fetch locked dependencies for offline no-host graph checks
+        run: cargo fetch --locked
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
