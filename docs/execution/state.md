@@ -55,6 +55,15 @@ no fuzz campaign ran. The remaining 17 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
+[38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)
+at `359b09e` passed supply, no-host and semver but failed check, MSRV and
+features during compilation. The collateral read requires registering the
+existing `MinerCollateralState` decoder as a client `ReadValue`. Root-claim
+fixtures also used the wrong public helper path and an unused import. These
+three source corrections are prepared; tests and doctests were not reached.
+The new instance-role/batch integration remains separate unfinished source.
+
+Earlier normal hosted run
 [38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
 on `b0e0aa1` passed compilation, strict Clippy, parity and five other jobs.
 Nextest ran 1,872 tests: 1,871 passed, one failed and four were skipped.

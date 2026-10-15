@@ -40,6 +40,14 @@ identity. These source relationships do not prove runtime conformance.
 ## Remaining acceptance work
 
 Latest normal run
+[38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)
+at `359b09e` passes supply, no-host and semver. Check, feature and MSRV jobs
+fail compilation because `MinerCollateralState` lacks its client `ReadValue`
+registration; the check job also identifies a test helper import path and an
+unused root-claim test import. All three source corrections are prepared.
+Nextest and doctests were not reached on this seventeen-port checkpoint.
+
+Earlier normal run
 [38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
 at `b0e0aa1` passes compilation, strict Clippy, parity and the five other jobs.
 Nextest ran 1,872 tests: 1,871 passed, one failed and four were skipped; all
