@@ -41,6 +41,8 @@ pub mod hyperparameters;
 #[cfg(feature = "pow")]
 pub mod pow;
 
+#[cfg(feature = "coldkey")]
+pub mod coldkey;
 #[cfg(feature = "crowdloan")]
 pub mod crowdloan;
 #[cfg(feature = "governance")]
