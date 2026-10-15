@@ -28,9 +28,10 @@ The authentication middleware target mutates headers, body and encoded URI,
 exercises policy denial and body limits, and checks immediate replay rejection
 with both signature algorithms. Its clock is fixed, so this run does not
 establish asynchronous expiry or retention race behavior. The keyfile targets
-exercise format detection and plaintext codec round trips with public seeds;
-they perform no decryption or KDF work. Event splitting, JSON-RPC frames and
-metagraph parsing also ran. No local Python or Docker process was used.
+exercise format detection and plaintext codec round trips with public seeds.
+They do not decrypt wallet envelopes. Public mnemonic-to-key derivation can
+run PBKDF2. Event splitting, JSON-RPC frames and metagraph parsing also ran. No
+local Python or Docker process was used.
 
 Logs, toolchain records, source hashes, binary instrumentation records and the
 preflight metadata remain under

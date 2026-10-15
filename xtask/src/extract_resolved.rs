@@ -43,6 +43,9 @@ mod specs;
 #[path = "extract_py_tables.rs"]
 mod py_tables;
 
+#[path = "extract_precompiles.rs"]
+mod precompiles;
+
 #[path = "extract_legacy_runtime_api.rs"]
 mod legacy_runtime_api;
 
@@ -104,6 +107,7 @@ const RPC_NAMES: &[&str] = &[
     "RpcSession.__init__.connect_factory",
 ];
 const NAMED_TABLES: &[(&str, &[&str])] = &[
+    (precompiles::SOURCE, precompiles::NAMES),
     ("sdk/python/bittensor/_generated/errors.py", &["ERRORS"]),
     (
         "sdk/python/bittensor/_transport/utils/receipt.py",
@@ -1404,6 +1408,9 @@ impl<'a> Resolver<'a> {
                 }
                 Literal::Dict(entries)
             }
+            ast::Expr::DictComp(value) if path == precompiles::SOURCE => {
+                precompiles::keyed_records(self, value, bindings, path, next)?
+            }
             ast::Expr::UnaryOp(value) => {
                 match (value.op, self.eval(&value.operand, bindings, path, next)?) {
                     (ast::UnaryOp::UAdd, value @ (Literal::Int(_) | Literal::Float(_))) => value,
@@ -2594,6 +2601,7 @@ fn outputs(root: &Path) -> Result<Vec<(&'static str, Vec<u8>)>> {
     // remains in Literal::Dict entry arrays and must never be sorted.
     tables.sort_all_objects();
     let mut generated = catalog::outputs(root, &pins, &tables)?;
+    generated.extend(precompiles::outputs(root, &pins, &tables)?);
     generated.extend(legacy_runtime_api::outputs(root, &pins)?);
     generated.extend(root_claim_fixtures::outputs(root, &pins)?);
     generated.extend(hyperparams::outputs(&tables, &settings)?);

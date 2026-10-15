@@ -224,6 +224,9 @@ struct PreparedCall {
     function: String,
     data: Vec<u8>,
     view: bool,
+    deprecation: Option<&'static str>,
+    caller_role: Option<&'static str>,
+    registers_network: bool,
     preview: Map<String, Value>,
     summary: String,
 }
@@ -238,6 +241,16 @@ impl PreparedCall {
                 .and_then(Value::as_str),
             Some("view" | "pure")
         );
+        // Metadata uses the ABI name; encoding and decoding keep the full selection.
+        let deprecation = target.precompile.and_then(|precompile| {
+            rtao::evm::function_deprecation(precompile.name, &function_abi.name)
+        });
+        let caller_role = target
+            .precompile
+            .and_then(|precompile| rtao::evm::caller_role(precompile.name, &function_abi.name));
+        let registers_network = target.precompile.is_some_and(|precompile| {
+            precompile.name == "subnet" && function_abi.name == "registerNetwork"
+        });
         let encoded = match target.precompile {
             Some(precompile) => precompile.encode_call(&function, args),
             None => rtao::evm::encode_call(function_abi, args),
@@ -264,6 +277,9 @@ impl PreparedCall {
             function,
             data,
             view,
+            deprecation,
+            caller_role,
+            registers_network,
             preview,
             summary,
         })
@@ -350,9 +366,7 @@ pub async fn run_with_backend(
         rtao::core::offload(move || PreparedCall::new(target, function_owned, &args))
             .await
             .map_err(failure)??;
-    if let Some(precompile) = prepared.target.precompile
-        && let Some(note) = rtao::evm::function_deprecation(precompile.name, function)
-    {
+    if let Some(note) = prepared.deprecation {
         ctx.output
             .message(&format!(
                 "warning: {}.{function} is deprecated — {note}",
@@ -376,17 +390,15 @@ pub async fn run_with_backend(
             .map_err(failure)??;
         return ctx.output.value(&result).map_err(failure);
     }
-    if let Some(precompile) = prepared.target.precompile {
-        if let Some(role) = rtao::evm::caller_role(precompile.name, function) {
-            let info = key_info(ctx, optional(leaf, "evm_key")).await?;
-            prepared.preview.insert(
-                "caller mirror".into(),
-                json!(format!("{} acts as the {role}", info.ss58_mirror)),
-            );
-        }
-        if precompile.name == "subnet" && function == "registerNetwork" {
-            ctx.output.message("warning: the caller mirror becomes the subnet owner, and some owner operations (notably start-call, which activates emissions) have no precompile — they require a native coldkey signature").map_err(failure)?;
-        }
+    if let Some(role) = prepared.caller_role {
+        let info = key_info(ctx, optional(leaf, "evm_key")).await?;
+        prepared.preview.insert(
+            "caller mirror".into(),
+            json!(format!("{} acts as the {role}", info.ss58_mirror)),
+        );
+    }
+    if prepared.registers_network {
+        ctx.output.message("warning: the caller mirror becomes the subnet owner, and some owner operations (notably start-call, which activates emissions) have no precompile — they require a native coldkey signature").map_err(failure)?;
     }
     let value = optional(leaf, "value_tao")
         .map(tao_to_wei)
@@ -435,6 +447,9 @@ mod tests {
             ],
         )?;
         assert!(!prepared.view);
+        assert_eq!(prepared.deprecation, None);
+        assert_eq!(prepared.caller_role, None);
+        assert!(!prepared.registers_network);
         assert_eq!(
             hex::encode(&prepared.data),
             format!(
@@ -447,6 +462,114 @@ mod tests {
         let mut encoded_bool = vec![0; 32];
         encoded_bool[31] = 1;
         assert_eq!(prepared.decode(&encoded_bool)?, json!(true));
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_view_keeps_deprecation_calldata_and_result() -> Result<(), CliError> {
+        let args = [json!(1), json!(2)];
+        let bare = PreparedCall::new(
+            CallTarget::load("metagraph", None)?,
+            "getTrust".into(),
+            &args,
+        )?;
+        let signature = "getTrust(uint16,uint16)";
+        let canonical = PreparedCall::new(
+            CallTarget::load("metagraph", None)?,
+            signature.into(),
+            &args,
+        )?;
+        assert_eq!(canonical.function, signature);
+        assert_eq!(canonical.data, bare.data);
+        assert_eq!(canonical.preview, bare.preview);
+        for prepared in [&bare, &canonical] {
+            assert!(prepared.view);
+            assert_eq!(
+                prepared.deprecation,
+                Some("always returns 0 on chain; trust is no longer computed")
+            );
+            assert_eq!(prepared.caller_role, None);
+            assert!(!prepared.registers_network);
+            assert_eq!(prepared.decode(&[0; 32])?, json!(0));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_stake_keeps_caller_role_and_calldata() -> Result<(), CliError> {
+        let args = [
+            json!(format!("0x{}", "11".repeat(32))),
+            json!(1_000_000_000),
+            json!(1),
+        ];
+        let bare = PreparedCall::new(
+            CallTarget::load("staking-v2", None)?,
+            "addStake".into(),
+            &args,
+        )?;
+        let signature = "addStake(bytes32,uint256,uint256)";
+        let canonical = PreparedCall::new(
+            CallTarget::load("staking-v2", None)?,
+            signature.into(),
+            &args,
+        )?;
+        assert_eq!(canonical.function, signature);
+        assert_eq!(canonical.data, bare.data);
+        assert_eq!(canonical.preview, bare.preview);
+        for prepared in [&bare, &canonical] {
+            assert!(!prepared.view);
+            assert_eq!(prepared.deprecation, None);
+            assert_eq!(
+                prepared.caller_role,
+                Some("coldkey (owns the resulting stake)")
+            );
+            assert!(!prepared.registers_network);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_network_overloads_keep_owner_notices_and_selection() -> Result<(), CliError> {
+        let mut selectors = Vec::new();
+        for (signature, string_count) in [
+            ("registerNetwork(bytes32)", 0),
+            (
+                "registerNetwork(bytes32,string,string,string,string,string,string,string)",
+                7,
+            ),
+            (
+                "registerNetwork(bytes32,string,string,string,string,string,string,string,string)",
+                8,
+            ),
+        ] {
+            let mut args = vec![json!(format!("0x{}", "11".repeat(32)))];
+            args.extend((0..string_count).map(|_| json!("fixture")));
+            let prepared =
+                PreparedCall::new(CallTarget::load("subnet", None)?, signature.into(), &args)?;
+            assert_eq!(prepared.function, signature);
+            assert!(!prepared.view);
+            assert_eq!(prepared.deprecation, None);
+            assert_eq!(
+                prepared.caller_role,
+                Some("subnet owner coldkey (becomes the owner)")
+            );
+            assert!(prepared.registers_network);
+            selectors.push(prepared.data[..4].to_vec());
+            if string_count == 0 {
+                let bare = PreparedCall::new(
+                    CallTarget::load("subnet", None)?,
+                    "registerNetwork".into(),
+                    &args,
+                )?;
+                assert_eq!(prepared.data, bare.data);
+                assert_eq!(prepared.preview, bare.preview);
+                assert_eq!(prepared.caller_role, bare.caller_role);
+                assert_eq!(prepared.registers_network, bare.registers_network);
+            }
+        }
+        selectors.sort();
+        selectors.dedup();
+        assert_eq!(selectors.len(), 3);
         Ok(())
     }
 

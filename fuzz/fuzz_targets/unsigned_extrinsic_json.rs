@@ -33,6 +33,19 @@ fuzz_target!(|data: &[u8]| {
                 0x5a, 0xb3, 0x6c, 0x03,
             ],
         };
+        // Hand-authored public corpus candidate. Fail initialization unless
+        // the production parser reconstructs it under this fixed trusted context.
+        let seed = UntrustedUnsignedExtrinsic::from_json(include_bytes!(
+            "../seeds/unsigned_extrinsic_json/immortal-remark"
+        ))
+        .expect("committed unsigned seed must parse");
+        let seed = seed
+            .validate(&runtime, &context, H256(context.genesis_hash), 100)
+            .expect("committed unsigned seed must reconstruct");
+        assert_eq!(seed.call().as_bytes(), &[0, 0, 0]);
+        assert_eq!(seed.payload().len(), 80);
+        assert_eq!(seed.nonce(), 0);
+        assert_eq!(seed.genesis_hash(), H256(context.genesis_hash));
         (runtime, context)
     });
     // Every mutation enters the actual untrusted parser and authenticated

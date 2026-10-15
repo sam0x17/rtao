@@ -8,8 +8,9 @@ process exit status.
 
 The run covered authentication headers, signature verification, production
 event splitting, JSON-RPC frames, encrypted-keyfile format detection, the
-portable plaintext keyfile codec and metagraph parsing. Keyfile fuzzing never
-decrypts files or runs a KDF. Its committed seeds are public test data.
+portable plaintext keyfile codec and metagraph parsing. Keyfile fuzzing uses
+public test data and does not decrypt wallet envelopes. Public mnemonic-to-key
+derivation can run PBKDF2.
 
 The event target invokes `Events::decode` with pinned spec-478 metadata and
 compares the eager records with the production borrowed event ranges. It checks

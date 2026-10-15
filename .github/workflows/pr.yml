@@ -351,6 +351,7 @@ jobs:
             'crates/rtao-cli/src/root_helpers/basket_index_data.rs',
             'crates/rtao-catalog/src/py.rs',
             'crates/rtao-client/src/legacy_api_table.rs',
+            'crates/rtao-evm/src/precompile_catalog.rs',
             'vendor/upstream/extracted/env_vars.json',
             'vendor/upstream/extracted/chain_rules.json',
             'vendor/upstream/extracted/named_tables.json',
@@ -398,6 +399,7 @@ jobs:
             crates/rtao-cli/src/root_helpers/basket_index_data.rs
             crates/rtao-catalog/src/py.rs
             crates/rtao-client/src/legacy_api_table.rs
+            crates/rtao-evm/src/precompile_catalog.rs
             vendor/upstream/extracted/env_vars.json
             vendor/upstream/extracted/chain_rules.json
             vendor/upstream/extracted/named_tables.json
