@@ -289,8 +289,9 @@ fn seeded_state(runtime: Arc<Runtime>, op: &str) -> Result<FakeState> {
     if op == "finalize_crowdloan" {
         // The sample finalizes ID 0. Its target-only contract is explicit;
         // absence or an opaque callback no longer inherits a no-spend label.
-        state.seed(
-            &rtao_runtime::storage::crowdloan::CROWDLOANS,
+        state.seed_typed(
+            "Crowdloan",
+            "Crowdloans",
             (0u32,),
             CrowdloanInfo {
                 creator: COLD,

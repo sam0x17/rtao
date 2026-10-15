@@ -16,6 +16,15 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38750380241](https://github.com/sam0x17/rtao/actions/runs/38750380241)
+at `eefbfa2` passes semver, MSRV and supply at inspection; features and no-host
+are still running. Main check stops before tests on three fixture compiler
+errors: Crowdloan state needs typed seeding in two fixtures, and V15 pallet
+metadata exposes `error`, not `errors`. Correct those fixtures and remove the
+unused descriptor import. Formatting and diff checks pass; execution of the
+corrected source requires the next normal hosted run. The bounded failure
+record is `check-38750380241.json`. No local build or test ran.
+
 The source batch is committed in `4c9473c`. Generation run
 [38749149983](https://github.com/sam0x17/rtao/actions/runs/38749149983) succeeds;
 its eighteen exact regular members and both archive digests are verified, along
