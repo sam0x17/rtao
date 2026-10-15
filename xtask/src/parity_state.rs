@@ -622,6 +622,31 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
     Ok(json!({"total":seen.len(),"active":active,"pending":pending,"withdrawn":1}))
 }
 
+fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
+    let target = if value.starts_with("e2e::") || value.starts_with("interop::") {
+        format!("rtao_testkit::{value}")
+    } else {
+        ensure!(
+            value == "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
+                && name
+                    .strip_prefix("intent_")
+                    .is_some_and(|op| { rtao_catalog::INTENTS.iter().any(|spec| spec.name == op) }),
+            "only catalog intent-plan keys may map to the complete ordinary plan fixture"
+        );
+        divergence_test(index, value)?;
+        value.to_owned()
+    };
+    ensure!(
+        index.feature_tests.contains(&target),
+        "e2e mapped test does not qualify: {value}: {}",
+        index
+            .rejected_feature_tests
+            .get(&target)
+            .map_or("test does not exist", String::as_str)
+    );
+    Ok(target)
+}
+
 pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
     let pins = document(root, "upstream.toml")?;
     let pin = &pins["artifacts"]["sdk/bittensor-core/tests/e2e-manifest.json"];
@@ -698,20 +723,7 @@ pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
             .context("e2e state must be string")?;
         match present[0] {
             "rtao" => {
-                ensure!(
-                    value.starts_with("e2e::") || value.starts_with("interop::"),
-                    "e2e mapped target must be e2e or interop"
-                );
-                ensure!(
-                    index
-                        .feature_tests
-                        .contains(&format!("rtao_testkit::{value}")),
-                    "e2e mapped test does not qualify: {value}: {}",
-                    index
-                        .rejected_feature_tests
-                        .get(&format!("rtao_testkit::{value}"))
-                        .map_or("test does not exist", String::as_str)
-                );
+                e2e_target(name, value, index)?;
                 mapped += 1;
             }
             "pending" => {
@@ -925,6 +937,30 @@ fn document_pins(root: &Path) -> Result<DocumentMut> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn ordinary_plan_mapping_requires_catalog_plan_key_and_actual_all_feature_test_body()
+    -> Result<()> {
+        let test = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain";
+        let mut index = Index::default();
+        assert!(e2e_target("intent_transfer", test, &index).is_err());
+        index.feature_tests.insert(test.into());
+        assert!(e2e_target("intent_transfer", test, &index).is_err());
+        index
+            .feature_test_bodies
+            .insert(test.into(), "{ assert!(plans_cover_catalog); }".into());
+        assert_eq!(e2e_target("intent_transfer", test, &index)?, test);
+        for key in [
+            "test_transfer",
+            "intent_set_root_claim_type",
+            "intent_missing",
+        ] {
+            assert!(e2e_target(key, test, &index).is_err());
+        }
+        assert!(e2e_target("intent_transfer", "arbitrary::placeholder", &index).is_err());
+        index.feature_tests.remove(test);
+        assert!(e2e_target("intent_transfer", test, &index).is_err());
+        Ok(())
+    }
     #[test]
     fn divergence_evidence_requires_both_all_feature_harness_entry_and_exact_indexed_body()
     -> Result<()> {

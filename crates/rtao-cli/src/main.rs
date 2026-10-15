@@ -6,7 +6,9 @@ mod doctor;
 
 use rtao_cli::{
     application,
-    commands::{axon, catalog, config, generated, hparams, subnets, wallet, weights},
+    commands::{
+        axon, catalog, config, generated, hparams, multisig, proxy, stake, subnets, wallet, weights,
+    },
     context::AppContext,
     error::CliError,
     output::DiagnosticContext,
@@ -83,6 +85,9 @@ async fn run() -> Result<(), CliError> {
         weights::command(),
         axon::command(),
         hparams::command()?,
+        stake::command()?,
+        proxy::command()?,
+        multisig::command(),
         wallet::command(),
         subnets::command()?,
     ]);
@@ -127,6 +132,9 @@ async fn run() -> Result<(), CliError> {
     }
     let reserved = match name {
         "call" => vec!["signer_backend"],
+        "stake" => generated::intent_reserved(stake::operation(matches)?)?,
+        "proxy" => proxy::reserved(matches)?,
+        "multisig" => multisig::reserved(matches)?,
         "tx" => generated::intent_reserved(
             &matches
                 .subcommand()
@@ -172,6 +180,34 @@ async fn run() -> Result<(), CliError> {
             "tools" => catalog::run_tools(&app.output, &generated::rust_tools()?),
             "explain" => catalog::run_explain(&app.output, matches),
             "wallet" => wallet::run(&mut app, matches, &mut invocation.history).await,
+            "multisig" => {
+                multisig::run(&mut app, store.paths(), matches, &mut invocation.history).await
+            }
+            "proxy" => {
+                let request =
+                    proxy::Request::from_matches(&mut app, matches, &mut invocation.history)?;
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        let replay = history.replay_command(&replay_args);
+                        proxy::execute(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
             "subnets" => {
                 let request =
                     subnets::Request::from_matches(&mut app, matches, &mut invocation.history)?;
@@ -265,12 +301,16 @@ async fn run() -> Result<(), CliError> {
                     })
                     .await
             }
-            "tx" => {
-                let op = matches
-                    .subcommand()
-                    .ok_or_else(|| CliError::input("missing transaction"))?
-                    .0
-                    .replace('-', "_");
+            "tx" | "stake" => {
+                let op = if name == "stake" {
+                    stake::operation(matches)?.to_owned()
+                } else {
+                    matches
+                        .subcommand()
+                        .ok_or_else(|| CliError::input("missing transaction"))?
+                        .0
+                        .replace('-', "_")
+                };
                 let parsed = if !app.prompt_context().interactive(&app.terminal) {
                     Some(generated::TxRequest::from_matches(
                         &mut app,

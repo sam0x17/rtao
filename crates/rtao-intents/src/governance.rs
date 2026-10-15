@@ -5,7 +5,7 @@ use rtao_client::View;
 use rtao_primitives::NetUid;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
 
-pub use crate::{SetMechanismCount, TrimNullSubnetBatch, TrimSubnet, UpdateSymbol};
+pub use crate::{SetMechanismCount, StakeBurn, TrimNullSubnetBatch, TrimSubnet, UpdateSymbol};
 
 async fn owner_blocks<V: View + ?Sized>(
     cx: &PreflightCx<'_, V>,

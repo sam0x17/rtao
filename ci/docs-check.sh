@@ -34,6 +34,7 @@ cargo run --locked -p xtask -- docs --llms --out "$docs_root/generated" --check
 # Copy only the small book source, replacing its generated-index placeholder.
 cp -R book "$docs_root/book-source"
 cp "$docs_root/generated/api-index.md" "$docs_root/book-source/src/api-index.md"
+cp "$docs_root/generated/tx-reference.md" "$docs_root/book-source/src/tx-reference.md"
 "$docs_root/bin/mdbook" build "$docs_root/book-source" --dest-dir "$docs_root/book-html"
 
 # Downloadable development docs retain the same required attribution as source.

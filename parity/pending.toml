@@ -1,16 +1,5 @@
 # Operations awaiting behavior ports; this set only shrinks.
-intents = [
-  "move_stake",
-  "multisig_approve",
-  "multisig_cancel",
-  "multisig_execute",
-  "multisig_threshold_1",
-  "remove_stake",
-  "remove_stake_limit",
-  "stake_burn",
-  "transfer_stake",
-  "unstake_all",
-]
+intents = []
 
 reads = [
   "accepts_locked_alpha",
