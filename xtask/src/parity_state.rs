@@ -722,10 +722,13 @@ struct ClientE2eFixture {
     key: &'static str,
     target: &'static str,
     identifiers: &'static [&'static str],
+    runtime_limits: &'static [&'static str],
 }
 
-// These five scenarios only exercise public planning, fee decoding and policy
-// refusal. They do not dispatch a runtime call or calibrate a real chain fee.
+const FEE_CLIENT_E2E_LIMITS: &[&str] = &["live-runtime-fee-query"];
+
+// Public planning/policy scenarios and finite submission transcripts qualify
+// only for their reviewed client contracts. Each retains its own runtime limits.
 const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
     ClientE2eFixture {
         key: "test_plan_simulates_real_fee",
@@ -738,6 +741,7 @@ const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
             "assert_no_private_or_submit",
             "assert_eq",
         ],
+        runtime_limits: FEE_CLIENT_E2E_LIMITS,
     },
     ClientE2eFixture {
         key: "test_policy_blocks_with_live_fee",
@@ -752,6 +756,7 @@ const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
             "assert_no_private_or_submit",
             "assert_eq",
         ],
+        runtime_limits: FEE_CLIENT_E2E_LIMITS,
     },
     ClientE2eFixture {
         key: "test_policy_aggregates_spend_across_batch",
@@ -767,6 +772,7 @@ const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
             "assert_no_private_or_submit",
             "assert_eq",
         ],
+        runtime_limits: FEE_CLIENT_E2E_LIMITS,
     },
     ClientE2eFixture {
         key: "test_netuid_allowlist_blocks_live",
@@ -782,6 +788,7 @@ const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
             "assert_no_private_or_submit",
             "assert_eq",
         ],
+        runtime_limits: FEE_CLIENT_E2E_LIMITS,
     },
     ClientE2eFixture {
         key: "test_spend_cap_blocks_value_movers",
@@ -798,10 +805,71 @@ const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
             "assert_no_private_or_submit",
             "assert_eq",
         ],
+        runtime_limits: FEE_CLIENT_E2E_LIMITS,
+    },
+    ClientE2eFixture {
+        key: "test_transfer_moves_exactly_the_amount",
+        target: "rtao_intents::client_transfer_lifecycles::client_transfer_reads_exact_three_tao_delta_from_explicit_receipt_state",
+        identifiers: &[
+            "expected_transfer",
+            "install",
+            "execute",
+            "transfer",
+            "receipt_snapshot",
+            "observed_balance",
+            "checked_sub",
+            "assert_consumed",
+            "assert_eq",
+        ],
+        runtime_limits: &[
+            "controlled-receipt-state",
+            "runtime-transfer-state-unverified",
+        ],
+    },
+    ClientE2eFixture {
+        key: "test_batch_applies_all_children_atomically",
+        target: "rtao_intents::client_transfer_lifecycles::client_batch_reads_both_explicit_recipient_deltas_after_success",
+        identifiers: &[
+            "batch_all",
+            "expected_transfer",
+            "install",
+            "execute",
+            "batch",
+            "receipt_snapshot",
+            "observed_balance",
+            "checked_sub",
+            "assert_consumed",
+            "assert_eq",
+        ],
+        runtime_limits: &[
+            "controlled-receipt-state",
+            "runtime-batch-application-unverified",
+            "runtime-batch-atomicity-unverified",
+        ],
+    },
+    ClientE2eFixture {
+        key: "test_failed_batch_reverts_everything",
+        target: "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state",
+        identifiers: &[
+            "SECOND",
+            "batch_all",
+            "expected_transfer",
+            "install",
+            "execute",
+            "batch",
+            "receipt_snapshot",
+            "observed_balance",
+            "assert_consumed",
+            "assert_eq",
+        ],
+        runtime_limits: &[
+            "controlled-receipt-state",
+            "runtime-batch-rollback-unverified",
+            "runtime-batch-atomicity-unverified",
+        ],
     },
 ];
 
-const CLIENT_E2E_LIMIT: &str = "live-runtime-fee-query";
 const CI_TEST_FILTER: &str =
     "not (binary(e2e) | binary(interop) | binary(core_oracle) | binary(ledger_emu))";
 
@@ -862,6 +930,7 @@ pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
         "e2e {name} has unsupported evidence fields"
     );
     if client {
+        let fixture = fixture.context("reviewed client e2e binding absent")?;
         ensure!(
             row.get("scope").and_then(Item::as_str) == Some("client-contract")
                 && row.get("runtime").and_then(Item::as_str) == Some("unverified"),
@@ -872,13 +941,22 @@ pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
             .and_then(Item::as_array)
             .context("client e2e evidence requires exact runtime limits")?;
         ensure!(
-            limits.len() == 1
-                && limits.get(0).and_then(toml_edit::Value::as_str) == Some(CLIENT_E2E_LIMIT),
+            limits
+                .iter()
+                .map(toml_edit::Value::as_str)
+                .eq(fixture.runtime_limits.iter().map(|limit| Some(*limit))),
             "client e2e runtime limits changed"
         );
     }
     let (scope, runtime, limits) = if client {
-        ("client-contract", "unverified", vec![CLIENT_E2E_LIMIT])
+        (
+            "client-contract",
+            "unverified",
+            fixture
+                .context("reviewed client e2e binding absent")?
+                .runtime_limits
+                .to_vec(),
+        )
     } else if state == "pending" {
         ("pending", "unverified", vec![])
     } else if state == "na" {
@@ -1481,15 +1559,16 @@ mod tests {
     #[test]
     fn client_e2e_scope_cannot_claim_runtime_success_or_drop_limits() -> Result<()> {
         for fixture in CLIENT_E2E_FIXTURES {
+            let limits_field = format!("runtime_limits = {:?}\n", fixture.runtime_limits);
             let source = format!(
-                "[fixture]\nrtao = {:?}\nscope = \"client-contract\"\nruntime = \"unverified\"\nruntime_limits = [\"live-runtime-fee-query\"]\n",
+                "[fixture]\nrtao = {:?}\nscope = \"client-contract\"\nruntime = \"unverified\"\n{limits_field}",
                 fixture.target
             );
             let document: DocumentMut = source.parse()?;
             assert_eq!(
                 e2e_evidence(fixture.key, &document["fixture"])?,
                 json!({
-                    "scope":"client-contract", "runtime":"unverified", "runtime_limits":[CLIENT_E2E_LIMIT]
+                    "scope":"client-contract", "runtime":"unverified", "runtime_limits":fixture.runtime_limits
                 })
             );
             for changed in [
@@ -1498,21 +1577,12 @@ mod tests {
                     "scope = \"client-contract\"",
                     "scope = \"hosted-scenario-source\"",
                 ),
-                source.replace(
-                    "runtime_limits = [\"live-runtime-fee-query\"]",
-                    "runtime_limits = []",
-                ),
-                source.replace(
-                    "runtime_limits = [\"live-runtime-fee-query\"]",
-                    "runtime_limits = [\"live-runtime-fee-query\", \"unreviewed\"]",
-                ),
-                source.replace(
-                    "runtime_limits = [\"live-runtime-fee-query\"]",
-                    "runtime_limits = [\"different-limit\"]",
-                ),
+                source.replace(&limits_field, "runtime_limits = []\n"),
+                source.replace(&limits_field, "runtime_limits = [\"unreviewed\"]\n"),
+                source.replace(&limits_field, "runtime_limits = [false]\n"),
                 source.replace("scope = \"client-contract\"\n", ""),
                 source.replace("runtime = \"unverified\"\n", ""),
-                source.replace("runtime_limits = [\"live-runtime-fee-query\"]\n", ""),
+                source.replace(&limits_field, ""),
                 source.replace(
                     fixture.target,
                     "rtao_testkit::e2e::test_plan_simulates_real_fee",
@@ -1529,6 +1599,36 @@ mod tests {
                 let changed: DocumentMut = changed.parse()?;
                 assert!(e2e_evidence(fixture.key, &changed["fixture"]).is_err());
             }
+            let mut extra = fixture.runtime_limits.to_vec();
+            extra.push("unreviewed");
+            let mut duplicate = fixture.runtime_limits.to_vec();
+            duplicate.push(
+                fixture
+                    .runtime_limits
+                    .first()
+                    .copied()
+                    .context("fixture limit")?,
+            );
+            let mut mutated_limits = vec![extra, duplicate];
+            for omitted in 0..fixture.runtime_limits.len() {
+                let mut missing = fixture.runtime_limits.to_vec();
+                missing.remove(omitted);
+                mutated_limits.push(missing);
+            }
+            if fixture.runtime_limits.len() > 1 {
+                let mut reordered = fixture.runtime_limits.to_vec();
+                reordered.reverse();
+                mutated_limits.push(reordered);
+            }
+            for changed_limits in mutated_limits {
+                let changed = source.replace(
+                    &limits_field,
+                    &format!("runtime_limits = {changed_limits:?}\n"),
+                );
+                assert_ne!(changed, source);
+                let changed: DocumentMut = changed.parse()?;
+                assert!(e2e_evidence(fixture.key, &changed["fixture"]).is_err());
+            }
         }
         client_e2e_profile(&format!(
             "[profile.ci]\ndefault-filter = {:?}",
@@ -1539,8 +1639,53 @@ mod tests {
             "[profile.ci]\ndefault-filter = 'not binary(client_policy_scenarios)'",
             "[profile.ci]",
             "",
+            "[profile.ci]\ndefault-filter = 'not binary(client_transfer_lifecycles)'",
         ] {
             assert!(client_e2e_profile(source).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn client_e2e_runtime_limits_are_bound_to_the_exact_reviewed_scenario() -> Result<()> {
+        let mut index = Index::default();
+        for fixture in CLIENT_E2E_FIXTURES {
+            index.feature_tests.insert(fixture.target.into());
+            index.feature_test_bodies.insert(
+                fixture.target.into(),
+                format!("{{ let actual = ({}); }}", fixture.identifiers.join(", ")),
+            );
+        }
+        for fixture in CLIENT_E2E_FIXTURES {
+            let source = format!(
+                "[fixture]\nrtao = {:?}\nscope = \"client-contract\"\nruntime = \"unverified\"\nruntime_limits = {:?}\n",
+                fixture.target, fixture.runtime_limits
+            );
+            for other in CLIENT_E2E_FIXTURES
+                .iter()
+                .filter(|other| other.key != fixture.key)
+            {
+                let crossed_target: DocumentMut =
+                    source.replace(fixture.target, other.target).parse()?;
+                assert!(e2e_evidence(fixture.key, &crossed_target["fixture"]).is_err());
+                assert!(e2e_target(fixture.key, other.target, &index).is_err());
+                if fixture.runtime_limits != other.runtime_limits {
+                    let crossed_limits: DocumentMut = source
+                        .replace(
+                            &format!("runtime_limits = {:?}", fixture.runtime_limits),
+                            &format!("runtime_limits = {:?}", other.runtime_limits),
+                        )
+                        .parse()?;
+                    assert!(e2e_evidence(fixture.key, &crossed_limits["fixture"]).is_err());
+                }
+            }
+        }
+        for fixture in CLIENT_E2E_FIXTURES.iter().filter(|fixture| {
+            fixture
+                .target
+                .starts_with("rtao_intents::client_policy_scenarios::")
+        }) {
+            assert_eq!(fixture.runtime_limits, ["live-runtime-fee-query"]);
         }
         Ok(())
     }

@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/_money.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! JSON input carriers shared by generated intent fields.
 
 use rtao_primitives::{Ratio, Uid};
@@ -26,6 +27,23 @@ pub(crate) fn tao_amount(
     match amount {
         rtao_primitives::Amount::Exact(money) => {
             Ok(money.resolve(rtao_primitives::NetUid::ROOT)?.tao()?)
+        }
+        rtao_primitives::Amount::All => Err(rtao_primitives::UnitError::AllNotAllowed.into()),
+    }
+}
+
+/// Resolve exact subnet currency, including TAO on root, to its call wire type.
+// Current alpha pass-throughs use custom `all` resolvers. Keep the exact helper
+// available for reviewed generated mappings without imposing an alpha-only tag
+// on root, where Python's alpha_amount intentionally accepts netuid-zero TAO.
+#[allow(dead_code)]
+pub(crate) fn alpha_amount(
+    amount: &rtao_primitives::Amount,
+    netuid: rtao_primitives::NetUid,
+) -> Result<rtao_primitives::AlphaBalance, rtao_tx::IntentError> {
+    match amount {
+        rtao_primitives::Amount::Exact(money) => {
+            Ok(rtao_primitives::AlphaBalance(money.resolve(netuid)?.rao))
         }
         rtao_primitives::Amount::All => Err(rtao_primitives::UnitError::AllNotAllowed.into()),
     }
@@ -147,7 +165,10 @@ pub(crate) fn weights_json(
     result
 }
 
-#[cfg(all(test, any(feature = "crowdloan", feature = "root")))]
+#[cfg(all(
+    test,
+    any(feature = "crowdloan", feature = "root", feature = "staking")
+))]
 mod tests {
     #![allow(clippy::unwrap_used)]
 
@@ -179,6 +200,60 @@ mod tests {
             Err(IntentError::UnitMismatch(UnitError::UnitMismatch {
                 expected: NetUid::ROOT,
                 actual: NetUid(1),
+            }))
+        ));
+    }
+}
+
+#[cfg(test)]
+mod alpha_amount_tests {
+    use super::alpha_amount;
+    use rtao_primitives::{AlphaBalance, Amount, DynBalance, Money, NetUid, UnitError};
+    use rtao_tx::IntentError;
+
+    #[test]
+    fn exact_alpha_fields_keep_native_boundaries_and_root_tao() -> Result<(), IntentError> {
+        for netuid in [NetUid::ROOT, NetUid(513)] {
+            for rao in [0, 1, 9_007_199_254_740_993, u64::MAX] {
+                for amount in [
+                    Amount::from(Money::from_rao(rao)),
+                    Amount::from(DynBalance::from_rao(rao, netuid)),
+                ] {
+                    assert_eq!(alpha_amount(&amount, netuid)?, AlphaBalance(rao));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn exact_alpha_fields_refuse_wrong_siblings_and_all() {
+        for (expected, actual) in [
+            (NetUid::ROOT, NetUid(513)),
+            (NetUid(513), NetUid::ROOT),
+            (NetUid(513), NetUid(514)),
+        ] {
+            let amount = DynBalance::from_rao(1, actual).into();
+            assert!(matches!(
+                alpha_amount(&amount, expected),
+                Err(IntentError::UnitMismatch(UnitError::UnitMismatch {
+                    expected: want,
+                    actual: got,
+                })) if want == expected && got == actual
+            ));
+        }
+        for netuid in [NetUid::ROOT, NetUid(513)] {
+            assert!(matches!(
+                alpha_amount(&Amount::All, netuid),
+                Err(IntentError::UnitMismatch(UnitError::AllNotAllowed))
+            ));
+        }
+        assert!(matches!(
+            alpha_amount(&Money::from_rao(1).into(), NetUid(4096)),
+            Err(IntentError::UnitMismatch(UnitError::InvalidIdentifier {
+                kind: "netuid",
+                value: 4096,
+                limit: 4096,
             }))
         ));
     }

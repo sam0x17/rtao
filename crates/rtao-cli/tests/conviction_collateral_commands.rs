@@ -224,6 +224,46 @@ fn reads_have_required_subnet_and_optional_coldkey() -> Result {
     Ok(())
 }
 
+#[test]
+fn collateral_required_options_and_owner_default_help_match_curated_commands() -> Result {
+    for args in [
+        vec!["rtao", "collateral", "add", "--amount", "1"],
+        vec!["rtao", "collateral", "set-min", "--netuid", "3"],
+        vec!["rtao", "collateral", "set-min", "--amount", "0"],
+    ] {
+        let error = tree()?
+            .try_get_matches_from(args)
+            .err()
+            .ok_or("required option")?;
+        assert_eq!(
+            error.kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
+        assert_eq!(error.exit_code(), 2);
+    }
+    // Only add's amount remains eligible for the ordinary interactive prompt.
+    assert!(
+        tree()?
+            .try_get_matches_from(["rtao", "collateral", "add", "--netuid", "3"])
+            .is_ok()
+    );
+    let mut group = collateral::command()?;
+    assert!(group.render_long_help().to_string().contains(&format!(
+        "{}/guides/mining/collateral",
+        rtao_catalog::py::DOCS_URL
+    )));
+    let show = group.find_subcommand("show").ok_or("show command")?;
+    let coldkey_help = show
+        .get_arguments()
+        .find(|arg| arg.get_id() == "coldkey_ss58")
+        .and_then(clap::Arg::get_help)
+        .ok_or("coldkey help")?
+        .to_string();
+    assert!(coldkey_help.contains("Defaults to the hotkey owner"));
+    assert!(!coldkey_help.contains("Defaults to your wallet's coldkey"));
+    Ok(())
+}
+
 async fn fake_client()
 -> std::result::Result<(rtao::client::Client, rtao_testkit::FakeChain), Box<dyn std::error::Error>>
 {
@@ -237,6 +277,7 @@ async fn fake_client()
     let other = AccountId([9; 32]);
     let mut state = FakeState::try_default()?;
     for (item, keys, value) in [
+        ("TokenSymbol", vec![json!(1)], json!("Ω")),
         ("AccountFlags", vec![json!(cold)], json!(1)),
         ("Owner", vec![json!(hot)], json!(cold)),
         (
@@ -429,6 +470,78 @@ async fn targeting_keeps_truthy_contact_json_types_and_ignores_falsy_labels() ->
         assert_eq!(payload[0]["name"], expected, "label {name}");
         assert_eq!(payload[0]["coldkey"], cold);
         assert_eq!(payload[0]["locked_amount"], json!(0.0000001));
+    }
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn collateral_list_preserves_order_full_json_and_renders_nonempty_and_empty_humans() -> Result
+{
+    use rtao::primitives::AccountId;
+    use rtao_cli::output::Stream;
+    let (client, chain) = fake_client().await?;
+    let cold = AccountId([7; 32]);
+    let hot = AccountId([8; 32]);
+    let other = AccountId([9; 32]);
+    let retired = AccountId([10; 32]);
+    chain.mutate_state(|state| -> Result {
+        state.seed_python(
+            "SubtensorModule",
+            "MinerCollateral",
+            &[json!(1), json!(retired), json!(other)],
+            json!({"locked":500,"min_locked":400,"earned":23,"drain_ratio":{"bits":2u128<<64}}),
+        )?;
+        state.seed_python("SubtensorModule", "Uids", &[json!(1), json!(hot)], json!(4))?;
+        Ok(())
+    })?;
+    let expected = json!([
+        {"hotkey":retired,"coldkey":other,"netuid":1,"locked_alpha":"0.000000500Ω",
+         "min_locked_alpha":"0.000000400Ω","earned_alpha":"0.000000023Ω","drain_ratio":2.0,
+         "headroom_alpha":"0.000000100Ω","shortfall_alpha":"0.000000000Ω","releasable_work_alpha":"0.000000050Ω","uid":null},
+        {"hotkey":hot,"coldkey":cold,"netuid":1,"locked_alpha":"0.000000300Ω",
+         "min_locked_alpha":"0.000000100Ω","earned_alpha":"0.000000017Ω","drain_ratio":0.0,
+         "headroom_alpha":"0.000000200Ω","shortfall_alpha":"0.000000000Ω","releasable_work_alpha":"0.000000000Ω","uid":4},
+        {"hotkey":hot,"coldkey":other,"netuid":1,"locked_alpha":"0.000000150Ω",
+         "min_locked_alpha":"0.000000200Ω","earned_alpha":"0.000000000Ω","drain_ratio":0.0,
+         "headroom_alpha":"0.000000000Ω","shortfall_alpha":"0.000000050Ω","releasable_work_alpha":"0.000000000Ω","uid":4},
+    ]);
+    for (netuid, records) in [("1", expected), ("2", json!([]))] {
+        for json_mode in [true, false] {
+            let parsed =
+                tree()?.try_get_matches_from(["rtao", "collateral", "list", "--netuid", netuid])?;
+            let group = parsed.subcommand().ok_or("collateral group")?.1;
+            let mut ctx = context(&parsed)?;
+            let sink = captured(&mut ctx, json_mode);
+            let request = collateral::prepare_read(&mut ctx, group, &mut PromptHistory::default())?;
+            collateral::execute_prepared_read(&ctx, &client, &request).await?;
+            let output = sink.text(Stream::Stdout)?;
+            if json_mode {
+                assert_eq!(serde_json::from_str::<serde_json::Value>(&output)?, records);
+            } else {
+                assert!(output.contains(&format!("collateral on netuid {netuid}")));
+                assert!(output.contains("positions"));
+                if netuid == "1" {
+                    assert!(output.contains("locked_alpha"));
+                    assert!(output.contains(&retired.to_string()));
+                    let positions = ["0.000000500Ω", "0.000000300Ω", "0.000000150Ω"]
+                        .map(|amount| output.find(amount).ok_or("human collateral amount"));
+                    let [first, second, third] = positions;
+                    let (first, second, third) = (first?, second?, third?);
+                    assert!(first < second && second < third);
+                } else {
+                    assert!(output.contains("none"));
+                }
+            }
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+        }
     }
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     assert!(

@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional source at the same commit/license: sdk/python/bittensor/intents/_root_claim_fee.py.
+// Test source at the same commit/license: sdk/python/tests/unit/test_root_claim_fee.py.
 //! Fail-closed root-claim admission and reserve, with optional yield previews.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -683,14 +684,103 @@ mod tests {
     use rtao_client::{BlockRef, Client, ClientConfig, Network, Snapshot};
     use rtao_core::runtime::TypeSpec;
     use rtao_runtime::{CallBytes, calls::proxy};
-    use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
-    use rtao_tx::{IntentInterface, OriginView, SystemClock};
+    use rtao_signer::{Coldkey, KeySource, KeyView, Signer, SignerError, SignerRole};
+    use rtao_testkit::{FakeChain, FakeState, RecordingView, Reply, rpc::RpcClient};
+    use rtao_tx::{
+        Executor, IntentInterface, OriginView, PlanOptions, ShieldOptions, SystemClock, TxError,
+    };
     use serde_json::{Value as Json, json};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
 
     const CLAIMANT: AccountId = AccountId([7; 32]);
     const PAYER: AccountId = AccountId([9; 32]);
     const HOTKEY: AccountId = AccountId([8; 32]);
     const OTHER_HOTKEY: AccountId = AccountId([10; 32]);
+
+    #[derive(Default)]
+    struct PublicOnlyKeys {
+        acquisitions: AtomicUsize,
+    }
+
+    impl KeyView for PublicOnlyKeys {
+        fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+            Ok(CLAIMANT)
+        }
+        fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+            Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+        }
+        fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+            Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+        }
+    }
+
+    impl KeySource<Coldkey> for PublicOnlyKeys {
+        fn address(&self) -> Result<AccountId, SignerError> {
+            Ok(CLAIMANT)
+        }
+        async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
+            self.acquisitions.fetch_add(1, Ordering::SeqCst);
+            Err(SignerError::RawSigningUnsupported)
+        }
+    }
+
+    fn seed_basket_for(
+        state: &mut FakeState,
+        hotkey: AccountId,
+        holdings: usize,
+    ) -> anyhow::Result<()> {
+        let info = rtao_core::ops::runtime_api::runtime_api_method(
+            &state.runtime,
+            "BetaBasketRuntimeApi",
+            "get_validator_basket",
+        )?;
+        let raw = rtao_testkit::fakes::fill_defaults(
+            &state.runtime,
+            info.output,
+            json!((0..holdings).map(|_| json!([1, 1, 1])).collect::<Vec<_>>()),
+        )?;
+        let encoded = state
+            .runtime
+            .encode_spec(&TypeSpec::Id(info.output), &raw)?;
+        state.seed_runtime_encoded(
+            "BetaBasketRuntimeApi_get_validator_basket",
+            hotkey.0.to_vec(),
+            encoded,
+        );
+        Ok(())
+    }
+
+    fn seed_coldkey_previews(state: &mut FakeState, previews: Json) -> anyhow::Result<()> {
+        let info = rtao_core::ops::runtime_api::runtime_api_method(
+            &state.runtime,
+            "BetaBasketRuntimeApi",
+            "get_root_basket_claim_previews",
+        )?;
+        let raw = rtao_testkit::fakes::fill_defaults(&state.runtime, info.output, previews)?;
+        let encoded = state
+            .runtime
+            .encode_spec(&TypeSpec::Id(info.output), &raw)?;
+        state.seed_runtime_encoded(
+            "BetaBasketRuntimeApi_get_root_basket_claim_previews",
+            CLAIMANT.0.to_vec(),
+            encoded,
+        );
+        Ok(())
+    }
+
+    fn seed_networks(state: &mut FakeState, added: u16, absent: u16) -> anyhow::Result<()> {
+        for netuid in 0..added + absent {
+            state.seed(
+                &storage::subtensor_module::NETWORKS_ADDED,
+                (NetUid(netuid),),
+                netuid < added,
+            )?;
+        }
+        Ok(())
+    }
 
     fn seed_admission(
         state: &mut FakeState,
@@ -844,8 +934,35 @@ mod tests {
             .map(|(_, value)| value.as_str())
     }
 
+    async fn coldkey_quote(
+        snapshot: &Snapshot,
+        client: &Client,
+        call: &CallBytes,
+    ) -> anyhow::Result<Quote> {
+        let cx = PreflightCx {
+            view: snapshot,
+            runtime: &snapshot.block().runtime,
+            clock: &SystemClock,
+            spec: ClaimRoot::SPEC,
+            client,
+            dispatch_origin: CLAIMANT,
+            fee_payer: PAYER,
+            call,
+        };
+        let admitted = admission(snapshot, CLAIMANT, None).await?;
+        let reserved = reserve(&cx, admitted.limit).await?;
+        Ok(quote(&cx, &admitted, &reserved, true).await?)
+    }
+
     #[test]
     fn weight_model_matches_recorded_spec_467_node_quotes_and_rounding() -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_reserved_fallback_charges_the_fee_allowance_not_the_envelope
+        // pyt: unit/test_root_claim_fee.py::test_discount_model_matches_the_467_release_node
+        // pyt: unit/test_root_claim_fee.py::test_charged_allowance_is_the_same_for_both_claim_paths
+        // pyt: unit/test_root_claim_fee.py::test_spent_caps_at_the_fee_allowance
+        // pyt: unit/test_root_claim_fee.py::test_single_hotkey_spent_caps_at_the_same_allowance
+        // pyt: unit/test_root_claim_fee.py::test_spent_keeps_non_weight_base_fee
+        // pyt: unit/test_root_claim_fee.py::test_scan_only_uses_scan_ref_time
         // Independent node quotes recorded in the pinned upstream regression:
         // declared ref_time includes the 60M dispatch-extension fold.
         for (limit, declared) in [(129, 2_048_205_118_028u128), (256, 2_476_947_290_768)] {
@@ -863,14 +980,22 @@ mod tests {
         assert_eq!(weight_fee_rao(2_000), 0);
         assert_eq!(weight_fee_rao(6_000), 1);
         assert_eq!(weight_fee_rao(6_001), 2);
+        assert_eq!(charged_ref_time(2), claim_ref_time(2, 12, 2));
+        assert_eq!(charged_ref_time(129), claim_ref_time(4, 24, 4));
+        assert_eq!(charged_ref_time(129), charged_ref_time(256));
         assert_eq!(
             spent_fee(Balance::from_rao(8_209_263 + 12_345), 1, 1, 0, 0, 129).rao(),
             1_509_587
         );
-        assert_eq!(
-            spent_fee(Balance::from_rao(8_209_263), 1, 32, 0, 0, 129).rao(),
-            8_209_263
-        );
+        for limit in [129, 256] {
+            assert_eq!(
+                spent_fee(Balance::from_rao(8_209_263), 1, 32, 0, 0, limit).rao(),
+                8_209_263
+            );
+        }
+        let scan_only = spent_fee(Balance::from_rao(8_209_263), 1, 0, 32, 0, 256);
+        assert_eq!(scan_only.rao(), 7_806_076);
+        assert!(scan_only.rao() < 8_209_263);
         assert_eq!(spent_fee(Balance::ZERO, 1, 32, 0, 0, 129), Balance::ZERO);
         Ok(())
     }
@@ -933,6 +1058,7 @@ mod tests {
     #[tokio::test]
     async fn coldkey_admission_keeps_root_and_negative_watermark_positions_in_vector_order()
     -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_wide_admission_keeps_unstaked_basket_claimant
         let (chain, client, snapshot) = fixture(|state| {
             seed_admission(
                 state,
@@ -1053,6 +1179,102 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn coldkey_admission_covers_selected_work_and_network_population_boundaries()
+    -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_root_claim_too_heavy_is_a_hard_stop
+        // pyt: unit/test_root_claim_fee.py::test_admission_limit_is_inclusive_at_256
+        // pyt: unit/test_root_claim_fee.py::test_network_count_does_not_affect_admission
+        for (hotkeys, holdings, added, absent, allowed) in [
+            (257u16, 0, 16, 0, false),
+            (1, 256, 1, 0, false),
+            (16, 0, 16, 0, true),
+            (1, 255, 1, 0, true),
+            (17, 0, 15, 25, true),
+        ] {
+            let keys = (0..hotkeys)
+                .map(|index| {
+                    let mut bytes = [0; 32];
+                    bytes[..2].copy_from_slice(&index.to_le_bytes());
+                    bytes[2] = 17;
+                    AccountId(bytes)
+                })
+                .collect::<Vec<_>>();
+            let (chain, client, snapshot) = fixture(|state| {
+                seed_admission(state, &keys, &keys, holdings)?;
+                seed_networks(state, added, absent)
+            })
+            .await?;
+            let admitted = admission(&snapshot, CLAIMANT, None).await?;
+            assert_eq!(admitted.hotkeys, keys);
+            assert_eq!(admitted.holdings()?, u64::from(hotkeys) * holdings as u64);
+            assert_eq!(admitted.selection_scans, u64::from(hotkeys));
+            let blocks = admitted.blocks()?;
+            assert_eq!(
+                blocks.is_empty(),
+                allowed,
+                "{hotkeys}/{holdings}/{added}/{absent}"
+            );
+            if hotkeys == 257 {
+                assert_eq!(
+                    blocks,
+                    [
+                        "root claim exceeds the 256-unit admission limit (257 root hotkeys + 0 basket holdings = 257; 257 staking-hotkey relationships to classify); claim one validator at a time with claim_root_with_hotkey"
+                    ]
+                );
+            }
+            if !allowed {
+                let intent = ClaimRoot {
+                    subnets: vec![NetUid::ROOT],
+                };
+                let built = build(&intent, &snapshot).await?;
+                let preview =
+                    inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
+                assert_eq!(preview.blocks, blocks);
+                assert!(preview.required_free.is_none());
+                assert!(
+                    !chain
+                        .requests()
+                        .iter()
+                        .any(|request| request.params[0] == "TransactionPaymentApi_query_info")
+                );
+            }
+            client.close().await;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coldkey_admission_excludes_positive_nonroot_stake_and_its_heavy_basket()
+    -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_wide_admission_ignores_non_root_hotkeys
+        let (_chain, client, snapshot) = fixture(|state| {
+            seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY], 1)?;
+            state.seed_runtime("StakeInfoRuntimeApi", "get_stake_info_for_coldkey", json!([
+                {"hotkey":HOTKEY.to_string(), "coldkey":CLAIMANT.to_string(), "netuid":0, "stake":1},
+                {"hotkey":OTHER_HOTKEY.to_string(), "coldkey":CLAIMANT.to_string(), "netuid":7, "stake":1}
+            ]))?;
+            seed_basket_for(state, OTHER_HOTKEY, 256)?;
+            seed_networks(state, 500, 0)
+        }).await?;
+        let recording = RecordingView::new(snapshot.clone());
+        let admitted = admission(&recording, CLAIMANT, None).await?;
+        assert_eq!(admitted.hotkeys, [HOTKEY]);
+        assert_eq!(admitted.holding_counts, [1]);
+        assert_eq!(admitted.selection_scans, 2);
+        assert!(admitted.blocks()?.is_empty());
+        assert_eq!(
+            recording
+                .touches()
+                .iter()
+                .filter(|touch| touch.item == "get_validator_basket")
+                .count(),
+            1
+        );
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn admission_read_failure_refuses_without_pricing_or_optional_facts() -> anyhow::Result<()>
     {
         for failure in ["basket", "stake", "watermark", "networks"] {
@@ -1164,34 +1386,155 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn real_shielded_root_claim_refuses_mandatory_limits_before_private_acquisition()
+    -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_shielded_root_claim_refuses_too_heavy_work_before_signing
+        // pyt: unit/test_root_claim_fee.py::test_shielded_claim_reserves_free_tao_for_inner_and_carrier
+        // pyt: unit/test_root_claim_fee.py::test_admission_hard_stop_survives_unavailable_payout_preview
+        // pyt: unit/test_root_claim_fee.py::test_reserve_hard_stop_survives_unavailable_payout_preview
+        // pyt: unit/test_root_claim_fee.py::test_carrier_hard_stop_survives_unavailable_payout_preview
+        for condition in ["heavy", "reserve", "carrier"] {
+            for payout in ["available", "none", "error"] {
+                let (chain, client, _snapshot) = fixture(|state| {
+                    if condition == "heavy" {
+                        seed_admission(state, &[HOTKEY], &[HOTKEY], 257)?;
+                    }
+                    let free = match condition {
+                        "reserve" => 0,
+                        "carrier" => 8_209_263,
+                        _ => 1_000_000_000,
+                    };
+                    state.seed_python(
+                        "System",
+                        "Account",
+                        &[json!(CLAIMANT.to_string())],
+                        json!({"data":{"free":free}}),
+                    )?;
+                    if payout != "available" {
+                        state.set_handler("state_call", move |state, request| {
+                            if request.params[0] == "BetaBasketRuntimeApi_get_root_basket_positions"
+                            {
+                                if payout == "none" {
+                                    Reply::result(Json::Null)
+                                } else {
+                                    Reply::error(-32603, "payout unavailable", None)
+                                }
+                            } else {
+                                state.dispatch(request)
+                            }
+                        });
+                    }
+                    Ok(())
+                })
+                .await?;
+                let intent = ClaimRoot {
+                    subnets: vec![NetUid::ROOT],
+                };
+                let keys = PublicOnlyKeys::default();
+                let executor = Executor::new(client.clone());
+                let expected = match condition {
+                    "heavy" => "exceeds the 256-unit admission limit",
+                    "reserve" => "below the reserved claim fee",
+                    _ => "reserve plus the MEV-shield carrier fee",
+                };
+                // Public planning also preserves admission and reserve blocks.
+                // Carrier affordability belongs to shielded execution itself.
+                if condition != "carrier" {
+                    let plan = executor
+                        .plan(&intent, &keys, &PlanOptions::default())
+                        .await?;
+                    assert!(
+                        plan.violations
+                            .iter()
+                            .any(|violation| violation.contains(expected)),
+                        "{condition}/{payout}"
+                    );
+                }
+                let refusal = executor
+                    .submit_shielded(&intent, &keys, &ShieldOptions::default())
+                    .await;
+                let Err(TxError::Policy(error)) = refusal else {
+                    anyhow::bail!("expected policy refusal for {condition}/{payout}: {refusal:?}");
+                };
+                assert!(
+                    error
+                        .violations
+                        .iter()
+                        .any(|violation| violation.contains(expected)),
+                    "{condition}/{payout}: {error}"
+                );
+                assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+                assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+                assert!(
+                    !chain
+                        .requests()
+                        .iter()
+                        .any(|request| request.method.starts_with("author_"))
+                );
+                if condition == "heavy" {
+                    assert!(!chain.requests().iter().any(|request| {
+                        request.params[0] == "BetaBasketRuntimeApi_get_root_basket_positions"
+                            || request.params[0]
+                                == "BetaBasketRuntimeApi_get_root_basket_claim_previews"
+                    }));
+                }
+                client.close().await;
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn fee_fallback_retains_native_reserve_and_does_not_claim_exact_estimate()
     -> anyhow::Result<()> {
-        let (_chain, client, snapshot) = fixture(|state| {
-            state.set_result("account_nextIndex", json!("invalid"));
-            Ok(())
-        })
-        .await?;
-        let intent = single();
-        let built = build(&intent, &snapshot).await?;
-        let preview = inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
-        assert_eq!(preview.required_free, Some(Balance::from_rao(8_209_263)));
-        assert_eq!(
-            preview.available_free,
-            Some(Balance::from_rao(1_000_000_000))
-        );
-        assert!(preview.estimated_fee.is_none());
-        assert!(preview.blocks.is_empty());
-        assert_eq!(
-            fact(&preview, "reserved"),
-            Some("τ0.008209263 at inclusion")
-        );
-        client.close().await;
+        // pyt: unit/test_root_claim_fee.py::test_reserved_fallback_is_max_root_claim_work
+        // pyt: unit/test_root_claim_fee.py::test_reserved_fallback_uses_fixed_envelope
+        // pyt: unit/test_root_claim_fee.py::test_single_hotkey_reserved_fallback_uses_declared_work
+        // Native reserve receives an already-built call instead of Python's
+        // compose callback. Fail the actual fee RPC for both native envelopes.
+        for coldkey_wide in [false, true] {
+            let (_chain, client, snapshot) = fixture(|state| {
+                state.set_handler("state_call", |state, request| {
+                    if request.params[0] == "TransactionPaymentApi_query_info" {
+                        Reply::error(-32603, "fee probe unavailable", None)
+                    } else {
+                        state.dispatch(request)
+                    }
+                });
+                Ok(())
+            })
+            .await?;
+            let preview = if coldkey_wide {
+                let intent = ClaimRoot {
+                    subnets: vec![NetUid::ROOT],
+                };
+                let built = build(&intent, &snapshot).await?;
+                inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?
+            } else {
+                let intent = single();
+                let built = build(&intent, &snapshot).await?;
+                inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?
+            };
+            assert_eq!(preview.required_free, Some(Balance::from_rao(8_209_263)));
+            assert_eq!(
+                preview.available_free,
+                Some(Balance::from_rao(1_000_000_000))
+            );
+            assert!(preview.estimated_fee.is_none());
+            assert!(preview.blocks.is_empty());
+            assert_eq!(
+                fact(&preview, "reserved"),
+                Some("τ0.008209263 at inclusion")
+            );
+            client.close().await;
+        }
         Ok(())
     }
 
     #[tokio::test]
     async fn wrapped_claim_reads_dispatch_origin_but_checks_and_prices_fee_payer()
     -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_proxy_claim_reads_dispatch_state_checks_delegate_and_prices_wrapper
         let (chain, client, snapshot) = fixture(|state| {
             state.seed_python(
                 "System",
@@ -1222,6 +1565,25 @@ mod tests {
         assert_eq!(preview.available_free, Some(Balance::ZERO));
         assert_eq!(preview.required_free, Some(Balance::from_rao(8_209_263)));
         assert!(preview.blocks[0].contains("below the reserved claim fee"));
+        assert_eq!(fact(&preview, "accrued"), Some("τ0.000900000"));
+        assert_eq!(
+            fact(&preview, "holdings"),
+            Some("1 basket holding (fee scales with ALPHA types)")
+        );
+        let claimant_reads = chain
+            .requests()
+            .into_iter()
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "StakeInfoRuntimeApi_get_stake_info_for_coldkey"
+            })
+            .collect::<Vec<_>>();
+        assert!(!claimant_reads.is_empty());
+        assert!(
+            claimant_reads
+                .iter()
+                .all(|request| request.params[1] == format!("0x{}", hex::encode(CLAIMANT.0)))
+        );
         let request = chain
             .requests()
             .into_iter()
@@ -1258,6 +1620,7 @@ mod tests {
     #[tokio::test]
     async fn dust_quote_preserves_exact_effects_facts_refunds_and_hook_outputs()
     -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust
         let (_chain, client, snapshot) = fixture(|state| {
             seed_admission(state, &[HOTKEY], &[HOTKEY], 3)?;
             seed_single_preview(state, 2_250_000, 2_200_000, 3, 2, 0)?;
@@ -1315,39 +1678,18 @@ mod tests {
 
     #[tokio::test]
     async fn per_validator_threshold_and_absent_positions_are_distinct() -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout
         let (chain, client, snapshot) = fixture(|state| {
-            seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY, OTHER_HOTKEY], 2)?;
-            state.seed_runtime(
-                "BetaBasketRuntimeApi",
-                "get_root_basket_claim_previews",
+            seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY, OTHER_HOTKEY], 0)?;
+            seed_basket_for(state, HOTKEY, 4)?;
+            seed_basket_for(state, OTHER_HOTKEY, 3)?;
+            seed_coldkey_previews(
+                state,
                 json!([
-                    preview_json(HOTKEY, 700_000, 400_000, 2, 1, 0),
-                    preview_json(OTHER_HOTKEY, 900_000, 880_000, 2, 1, 0)
+                    preview_json(HOTKEY, 700_000, 400_000, 4, 1, 0),
+                    preview_json(OTHER_HOTKEY, 900_000, 880_000, 3, 2, 0)
                 ]),
-            )?;
-            // Override the explicit unsupported response used by fixture().
-            let info = rtao_core::ops::runtime_api::runtime_api_method(
-                &state.runtime,
-                "BetaBasketRuntimeApi",
-                "get_root_basket_claim_previews",
-            )?;
-            let raw = rtao_testkit::fakes::fill_defaults(
-                &state.runtime,
-                info.output,
-                json!([
-                    preview_json(HOTKEY, 700_000, 400_000, 2, 1, 0),
-                    preview_json(OTHER_HOTKEY, 900_000, 880_000, 2, 1, 0)
-                ]),
-            )?;
-            let encoded = state
-                .runtime
-                .encode_spec(&TypeSpec::Id(info.output), &raw)?;
-            state.seed_runtime_encoded(
-                "BetaBasketRuntimeApi_get_root_basket_claim_previews",
-                CLAIMANT.0.to_vec(),
-                encoded,
-            );
-            Ok(())
+            )
         })
         .await?;
         let intent = ClaimRoot {
@@ -1355,15 +1697,27 @@ mod tests {
         };
         let built = build(&intent, &snapshot).await?;
         let preview = inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
+        let raw = coldkey_quote(&snapshot, &client, &built.call).await?;
+        assert_eq!(
+            (
+                raw.accrued,
+                raw.redeemable,
+                raw.eligible_hotkeys,
+                raw.below_threshold_hotkeys,
+                raw.dust_rows,
+                raw.forfeited
+            ),
+            (1_600_000, 880_000, 1, 1, 4, 320_000)
+        );
         assert_eq!(fact(&preview, "accrued"), Some("τ0.001600000"));
         assert_eq!(fact(&preview, "redeemable"), Some("τ0.000880000"));
         assert_eq!(
             fact(&preview, "dust"),
-            Some("2 rows skipped; ~τ0.000320000 stays in the fund")
+            Some("4 rows skipped; ~τ0.000320000 stays in the fund")
         );
         assert!(preview.warnings[0].starts_with("1 of 2 validators are individually below"));
-        assert_eq!(fact(&preview, "spent"), Some("~τ0.002735525"));
-        // Legacy fallback omits the other validator entirely; its two rows
+        assert_eq!(fact(&preview, "spent"), Some("~τ0.003129827"));
+        // Legacy fallback omits the other validator entirely; its three rows
         // incur no scan and do not count as a below-threshold entitlement.
         chain.mutate_state(|state| {
             state.seed_runtime_encoded(
@@ -1374,7 +1728,7 @@ mod tests {
         });
         let fallback = inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
         assert_eq!(fact(&fallback, "accrued"), Some("τ0.000900000"));
-        assert_eq!(fact(&fallback, "spent"), Some("~τ0.002144071"));
+        assert_eq!(fact(&fallback, "spent"), Some("~τ0.003437731"));
         assert!(
             !fallback
                 .warnings
@@ -1386,8 +1740,150 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn coldkey_threshold_is_per_present_validator_and_absence_does_not_scan()
+    -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_threshold_is_applied_per_hotkey_not_to_aggregate
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_quote_separates_eligible_and_below_threshold_hotkeys
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_quote_does_not_scan_validator_without_owed_shares
+        for (first, second, accrued, redeemable, eligible, below, spent) in [
+            (300_000u64, Some(300_000u64), 600_000, 0, 0, 2, 3_129_827),
+            (900_000, Some(300_000), 1_200_000, 900_000, 1, 1, 2_735_525),
+            (300_000, None, 300_000, 0, 0, 1, 2_538_374),
+        ] {
+            let (_chain, client, snapshot) = fixture(|state| {
+                seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY, OTHER_HOTKEY], 0)?;
+                seed_basket_for(state, HOTKEY, 2)?;
+                seed_basket_for(state, OTHER_HOTKEY, 3)?;
+                let mut positions = vec![json!([HOTKEY.to_string(), 1, first])];
+                if let Some(payout) = second {
+                    positions.push(json!([OTHER_HOTKEY.to_string(), 1, payout]));
+                }
+                state.seed_runtime(
+                    "BetaBasketRuntimeApi",
+                    "get_root_basket_positions",
+                    json!(positions),
+                )?;
+                Ok(())
+            })
+            .await?;
+            let intent = ClaimRoot {
+                subnets: vec![NetUid::ROOT],
+            };
+            let built = build(&intent, &snapshot).await?;
+            let raw = coldkey_quote(&snapshot, &client, &built.call).await?;
+            assert_eq!((raw.hotkeys, raw.holdings), (2, 5));
+            assert_eq!(
+                (
+                    raw.accrued,
+                    raw.redeemable,
+                    raw.eligible_hotkeys,
+                    raw.below_threshold_hotkeys
+                ),
+                (accrued, redeemable, eligible, below)
+            );
+            assert_eq!(raw.spent.rao(), spent);
+            let preview =
+                inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
+            if eligible == 0 {
+                assert_eq!(preview.warnings.len(), 1);
+                assert!(
+                    preview.warnings[0].ends_with("the claim pays a scan fee and realizes nothing")
+                );
+            } else {
+                assert!(
+                    preview.warnings[0].starts_with("1 of 2 validators are individually below")
+                );
+            }
+            client.close().await;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coldkey_empty_baskets_floor_fee_at_selected_hotkey_work() -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_coldkey_wide_empty_baskets_floor_to_hotkey_count
+        let keys = [HOTKEY, OTHER_HOTKEY, AccountId([11; 32])];
+        let (_chain, client, snapshot) = fixture(|state| {
+            seed_admission(state, &keys, &keys, 0)?;
+            state.seed_runtime(
+                "BetaBasketRuntimeApi",
+                "get_root_basket_positions",
+                json!([]),
+            )?;
+            Ok(())
+        })
+        .await?;
+        let intent = ClaimRoot {
+            subnets: vec![NetUid::ROOT],
+        };
+        let built = build(&intent, &snapshot).await?;
+        let admitted = admission(&snapshot, CLAIMANT, None).await?;
+        assert_eq!(admitted.selection_scans, 3);
+        let raw = coldkey_quote(&snapshot, &client, &built.call).await?;
+        assert_eq!(
+            (raw.hotkeys, raw.holdings, raw.accrued, raw.redeemable),
+            (3, 0, 0, 0)
+        );
+        assert_eq!((raw.eligible_hotkeys, raw.below_threshold_hotkeys), (0, 0));
+        assert_eq!(raw.spent.rao(), 2_790_901);
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn single_preview_none_and_missing_method_fall_back_to_full_entitlement()
+    -> anyhow::Result<()> {
+        // pyt: unit/test_root_claim_fee.py::test_quote_falls_back_to_full_entitlement_without_the_preview_api
+        for missing_method in [false, true] {
+            let (_chain, client, snapshot) = fixture(|state| {
+                if missing_method {
+                    state.set_handler("state_call", |state, request| {
+                        if request.params[0] == "BetaBasketRuntimeApi_get_basket_claim_preview" {
+                            Reply::error(-32601, "Method not found", None)
+                        } else {
+                            state.dispatch(request)
+                        }
+                    });
+                }
+                Ok(())
+            })
+            .await?;
+            let intent = single();
+            let built = build(&intent, &snapshot).await?;
+            let cx = PreflightCx {
+                view: &snapshot,
+                runtime: &snapshot.block().runtime,
+                clock: &SystemClock,
+                spec: ClaimRootWithHotkey::SPEC,
+                client: &client,
+                dispatch_origin: CLAIMANT,
+                fee_payer: PAYER,
+                call: &built.call,
+            };
+            let admitted = admission(&snapshot, CLAIMANT, Some(HOTKEY)).await?;
+            let reserved = reserve(&cx, admitted.limit).await?;
+            let raw = quote(&cx, &admitted, &reserved, false).await?;
+            assert_eq!(
+                (raw.accrued, raw.redeemable, raw.dust_rows, raw.forfeited),
+                (900_000, 900_000, 0, 0)
+            );
+            let preview =
+                inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
+            assert_eq!(fact(&preview, "accrued"), Some("τ0.000900000"));
+            assert_eq!(fact(&preview, "redeemable"), None);
+            assert_eq!(fact(&preview, "dust"), None);
+            assert_eq!(fact(&preview, "spent"), Some("~τ0.001497242"));
+            client.close().await;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn all_dust_and_consolidation_price_scan_and_redeem_work_separately() -> anyhow::Result<()>
     {
+        // pyt: unit/test_root_claim_fee.py::test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop
+        // pyt: unit/test_root_claim_fee.py::test_quote_prices_consolidated_rows_as_full_claim_units
+        // pyt: unit/test_root_claim_fee.py::test_quote_counts_consolidation_even_when_the_claim_is_below_threshold
         for (accrued, redeemable, rows, sold, swept, holdings, spent) in [
             (8_000, 0, 2, 0, 0, 2, 1_891_544),
             (300_000, 300_000, 3, 3, 6, 8, 5_322_843),
@@ -1402,6 +1898,7 @@ mod tests {
             let built = build(&intent, &snapshot).await?;
             let preview =
                 inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
+            assert_eq!(fact(&preview, "accrued"), Some(money(accrued).as_str()));
             assert_eq!(
                 fact(&preview, "spent"),
                 Some(format!("~{}", money(spent)).as_str())
@@ -1417,6 +1914,13 @@ mod tests {
                 );
             } else {
                 assert!(preview.warnings.is_empty());
+            }
+            if accrued == 8_000 {
+                assert_eq!(fact(&preview, "redeemable"), Some("τ0.000000000"));
+                assert_eq!(
+                    fact(&preview, "dust"),
+                    Some("2 rows skipped; ~τ0.000008000 stays in the fund")
+                );
             }
             client.close().await;
         }

@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_fee_filters.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Exercise the executor through the production Client and encoded FakeChain.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -1005,6 +1006,175 @@ async fn coldkey_fee_warning_precedes_failed_fee_probe_and_stays_out_of_prefligh
         .unwrap();
     assert_eq!(preview.warnings, vec!["intent warning"]);
     assert!(preview.estimated_fee.is_none());
+    assert!(fake.mutate_state(|state| state.submissions.is_empty()));
+    executor.client().close().await;
+}
+
+struct FeeFilterWallet {
+    coldkey: AccountId,
+    hotkey: AccountId,
+    acquisitions: AtomicUsize,
+}
+
+impl KeyView for FeeFilterWallet {
+    fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+        Ok(self.hotkey)
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+        Ok(self.hotkey.0)
+    }
+    fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+        Ok(self.coldkey)
+    }
+}
+
+impl rtao_signer::DynKeySource for FeeFilterWallet {
+    fn signer_for<'a>(
+        &'a self,
+        role: rtao_signer::SignerRole,
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+        self.acquisitions.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async move { Err(SignerError::KeyUnavailable(role)) })
+    }
+}
+
+async fn fee_filter_fixture() -> (Executor, FakeChain, FeeFilterWallet) {
+    let (executor, fake, _) = fixture().await;
+    // The upstream dev_wallet() uses these two public development identities.
+    // Discard their test signers; planning receives public identity access only.
+    let coldkey = KeypairSigner::from_uri("//Alice", CryptoType::Sr25519)
+        .unwrap()
+        .account();
+    let hotkey = KeypairSigner::from_uri("//Alice//hot", CryptoType::Sr25519)
+        .unwrap()
+        .account();
+    (
+        executor,
+        fake,
+        FeeFilterWallet {
+            coldkey,
+            hotkey,
+            acquisitions: AtomicUsize::new(0),
+        },
+    )
+}
+
+fn fee_filter_serve_axon() -> rtao_intents::AnyIntent {
+    rtao_intents::AnyIntent::from_tool(
+        "serve_axon",
+        json!({"netuid":1,"ip":"203.0.113.5","port":8091}),
+    )
+    .unwrap()
+}
+
+fn fee_filter_expected_serve_axon() -> Vec<u8> {
+    // Independent pinned SCALE: pallet/call, netuid, version, IPv4 integer,
+    // port, IP kind, protocol and two reserved zero bytes.
+    let mut expected = vec![7, 4];
+    expected.extend_from_slice(&1_u16.to_le_bytes());
+    expected.extend_from_slice(&1_u32.to_le_bytes());
+    expected.extend_from_slice(&u128::from(u32::from_be_bytes([203, 0, 113, 5])).to_le_bytes());
+    expected.extend_from_slice(&8091_u16.to_le_bytes());
+    expected.extend_from_slice(&[4, 4, 0, 0]);
+    expected
+}
+
+async fn assert_fee_filter_plan_is_public(
+    executor: &Executor,
+    fake: &FakeChain,
+    wallet: &FeeFilterWallet,
+) {
+    assert_eq!(wallet.acquisitions.load(Ordering::SeqCst), 0);
+    assert!(fake.mutate_state(|state| state.submissions.is_empty()));
+    for account in [wallet.coldkey, wallet.hotkey] {
+        assert_eq!(
+            executor
+                .client()
+                .nonces()
+                .cached(&account.to_string())
+                .await,
+            None
+        );
+    }
+}
+
+// pyt: unit/test_fee_filters.py::test_plan_warns_hotkey_coldkey_fee_routing
+#[tokio::test]
+async fn production_serve_axon_plan_warns_about_the_hotkey_owners_coldkey_fee() {
+    let (executor, fake, wallet) = fee_filter_fixture().await;
+    let intent = fee_filter_serve_axon();
+    let plan = executor
+        .plan_dyn(intent.as_dyn(), &wallet, &PlanOptions::default())
+        .await
+        .unwrap();
+    assert!(plan.ok());
+    assert_eq!(plan.op, "serve_axon");
+    assert_eq!(plan.signer, rtao_signer::SignerRole::Hotkey);
+    assert_eq!(plan.signer_address, wallet.hotkey);
+    assert_eq!(plan.call().as_bytes(), fee_filter_expected_serve_axon());
+    assert_eq!(
+        plan.warnings,
+        ["transaction fee is charged to the hotkey owner's coldkey, not the signing hotkey"]
+    );
+    assert_fee_filter_plan_is_public(&executor, &fake, &wallet).await;
+    executor.client().close().await;
+}
+
+// pyt: unit/test_fee_filters.py::test_plan_skips_warning_for_coldkey_signer
+#[tokio::test]
+async fn production_transfer_plan_has_no_hotkey_coldkey_fee_warning() {
+    let (executor, fake, wallet) = fee_filter_fixture().await;
+    let intent = rtao_intents::AnyIntent::from_tool(
+        "transfer",
+        json!({"dest_ss58":wallet.coldkey.to_string(),"amount_tao":1.0}),
+    )
+    .unwrap();
+    let plan = executor
+        .plan_dyn(intent.as_dyn(), &wallet, &PlanOptions::default())
+        .await
+        .unwrap();
+    let mut expected = vec![5, 3, 0]; // Balances.transfer_keep_alive, MultiAddress::Id.
+    expected.extend_from_slice(wallet.coldkey.as_bytes());
+    expected.extend_from_slice(&[2, 40, 107, 238]); // Compact(1_000_000_000 rao).
+    assert!(plan.ok());
+    assert_eq!(plan.op, "transfer");
+    assert_eq!(plan.signer, rtao_signer::SignerRole::Coldkey);
+    assert_eq!(plan.signer_address, wallet.coldkey);
+    assert_eq!(plan.call().as_bytes(), expected);
+    assert!(plan.warnings.is_empty());
+    assert_fee_filter_plan_is_public(&executor, &fake, &wallet).await;
+    executor.client().close().await;
+}
+
+// pyt: unit/test_fee_filters.py::test_plan_skips_warning_when_proxy_for_set
+#[tokio::test]
+async fn production_proxy_serve_axon_plan_has_no_hotkey_coldkey_fee_warning() {
+    let (executor, fake, wallet) = fee_filter_fixture().await;
+    let intent = fee_filter_serve_axon();
+    let plan = executor
+        .plan_dyn(
+            intent.as_dyn(),
+            &wallet,
+            &PlanOptions {
+                proxy_for: Some(wallet.coldkey),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let mut expected = vec![16, 0, 0]; // Proxy.proxy, real MultiAddress::Id.
+    expected.extend_from_slice(wallet.coldkey.as_bytes());
+    expected.push(0); // force_proxy_type=None.
+    expected.extend_from_slice(&fee_filter_expected_serve_axon());
+    assert!(plan.ok());
+    assert_eq!(plan.op, "serve_axon");
+    assert_eq!(plan.signer, rtao_signer::SignerRole::Hotkey);
+    assert_eq!(plan.signer_address, wallet.hotkey);
+    assert_eq!(plan.call().as_bytes(), expected);
+    assert_eq!(plan.extras["proxy_for"], json!(wallet.coldkey));
+    assert!(plan.warnings.is_empty());
+    assert_fee_filter_plan_is_public(&executor, &fake, &wallet).await;
+    executor.client().close().await;
 }
 
 #[tokio::test]

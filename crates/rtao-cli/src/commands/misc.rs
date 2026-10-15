@@ -194,47 +194,69 @@ pub struct NetworkLatencyBackend<'a> {
     pub connector: &'a dyn ConnectionFactory,
 }
 
+impl NetworkLatencyBackend<'_> {
+    /// Probe with explicit per-phase bounds. The ordinary CLI caps each phase
+    /// at 30 seconds; callers may set shorter budgets for their diagnostics.
+    pub async fn probe_with_timeouts(
+        &self,
+        network: &Network,
+        connection_timeout: Duration,
+        query_timeout: Duration,
+    ) -> LatencyMeasurement {
+        let started = Instant::now();
+        let outcome = async {
+            let mut config = ClientConfig::new(network.clone()).map_err(failure)?;
+            // Endpoint diagnosis does not maintain head subscriptions or
+            // write runtime/display caches on the user's machine.
+            config.track_heads = false;
+            config.runtime_cache_dir = None;
+            config.config_store = None;
+            let client = tokio::time::timeout(connection_timeout, self.connector.connect(config))
+                .await
+                .map_err(|_| {
+                    CliError::failure(format!(
+                        "connection deadline expired after {}s",
+                        pyfmt::fmt_g(connection_timeout.as_secs_f64())
+                    ))
+                })??;
+            let queried = tokio::time::timeout(query_timeout, async {
+                let params =
+                    serde_json::value::RawValue::from_string("[]".into()).map_err(failure)?;
+                let raw = client
+                    .rpc()
+                    .request_raw("chain_getHeader", Some(params))
+                    .await
+                    .map_err(failure)?;
+                let value = serde_json::from_str(raw.get()).map_err(failure)?;
+                BlockHeader::from_json(value).map_err(failure)?;
+                Ok::<(), CliError>(())
+            })
+            .await
+            .map_err(|_| {
+                CliError::failure(format!(
+                    "block query deadline expired after {}s",
+                    pyfmt::fmt_g(query_timeout.as_secs_f64())
+                ))
+            })
+            .and_then(|result| result);
+            client.close().await;
+            queried
+        }
+        .await;
+        LatencyMeasurement {
+            elapsed: started.elapsed(),
+            outcome,
+        }
+    }
+}
+
 impl LatencyBackend for NetworkLatencyBackend<'_> {
     fn probe<'a>(&'a self, network: &'a Network) -> BoxFuture<'a, LatencyMeasurement> {
-        Box::pin(async move {
-            let started = Instant::now();
-            let outcome = async {
-                let mut config = ClientConfig::new(network.clone()).map_err(failure)?;
-                // Endpoint diagnosis does not maintain head subscriptions or
-                // write runtime/display caches on the user's machine.
-                config.track_heads = false;
-                config.runtime_cache_dir = None;
-                config.config_store = None;
-                let client =
-                    tokio::time::timeout(Duration::from_secs(30), self.connector.connect(config))
-                        .await
-                        .map_err(|_| {
-                            CliError::failure("connection deadline expired after 30s")
-                        })??;
-                let queried = tokio::time::timeout(Duration::from_secs(30), async {
-                    let params =
-                        serde_json::value::RawValue::from_string("[]".into()).map_err(failure)?;
-                    let raw = client
-                        .rpc()
-                        .request_raw("chain_getHeader", Some(params))
-                        .await
-                        .map_err(failure)?;
-                    let value = serde_json::from_str(raw.get()).map_err(failure)?;
-                    BlockHeader::from_json(value).map_err(failure)?;
-                    Ok::<(), CliError>(())
-                })
-                .await
-                .map_err(|_| CliError::failure("block query deadline expired after 30s"))
-                .and_then(|result| result);
-                client.close().await;
-                queried
-            }
-            .await;
-            LatencyMeasurement {
-                elapsed: started.elapsed(),
-                outcome,
-            }
-        })
+        Box::pin(self.probe_with_timeouts(
+            network,
+            Duration::from_secs(30),
+            Duration::from_secs(30),
+        ))
     }
 }
 
