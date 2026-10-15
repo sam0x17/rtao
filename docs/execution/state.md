@@ -16,6 +16,42 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
+validates the isolated compiler correction at `237d189`. At inspection supply,
+MSRV and semver pass; main, features and no-host remain active. It does not
+include the following source batch. The previous run `38769405520` is superseded;
+its main failure and passing supporting jobs retain their own exact-source scope.
+
+The next reviewed batch completes generic money-unit selection from both
+authenticated Python tables, validates real sibling netuids and retains root
+TAO/native-width checks. Six fee-filter counterparts use actual registered
+intents and public planning with independent SCALE bytes; their focused test
+dependency explicitly enables serving. Root-claim fixtures now preserve all
+31 Python case assertions in 18 native bodies, including real shield refusals
+before private acquisition. Both root-claim rows stay pending the plan's
+authenticated table extraction/consumer requirement, with their nonexistent
+home corrected. Three client/config/facade discrepancies from the separate
+boundary audit also remain open.
+
+Collateral command parsing/help and complete list fixtures close the earlier
+source gaps; D064 discloses its repaired human-list rendering. Misc probes keep
+the existing separate 30-second phase bounds, documented in D065 and exercised
+through actual timeout/cancellation/closure branches with injected zero budgets.
+The ownership-gate test row has four independently verified exact counterparts.
+Source maps now declare 209 reconciled rows and 148 pending. Three reviewed
+transfer/batch source mappings retain explicit controlled-state, mutation,
+atomicity/rollback limits, leaving 21 e2e keys pending. Their tests and the
+existing five fee contracts remain ordinary CI targets; no runtime success
+is asserted. Current committed matrix/reports still describe the prior source
+until authenticated hosted refresh/adoption.
+
+Root review and available independent case/gate reviews found no remaining
+source defect in this batch. Direct formatting and whitespace checks pass;
+hosted compilation, generation checks and execution remain required. Proofs
+include `client-source-batch-root-review.json`, `client-unit-source-identities.json`
+and the individual source reports in the existing recovery root. No local
+build/test, service, temporary directory, upstream filing or milestone acceptance.
+
 Normal run [38769405520](https://github.com/sam0x17/rtao/actions/runs/38769405520)
 at `6480626` passes every ordinary parity layer, including all 63 divergence
 declarations with the exact optional D031 deferral. Main Clippy then fails

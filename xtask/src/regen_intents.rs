@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/_money.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Catalog-derived intent interfaces and reviewed pass-through call maps.
 
 use super::{emit, format_rust, types::TypeMapper};
@@ -113,6 +114,216 @@ fn integer(
         .unwrap_or_else(|| "u64".into()))
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MoneyUnit {
+    Tao,
+    Alpha,
+}
+
+impl MoneyUnit {
+    fn parse(value: &Value) -> Result<Self> {
+        match value.as_str() {
+            Some("TAO") => Ok(Self::Tao),
+            Some("ALPHA") => Ok(Self::Alpha),
+            _ => bail!("unknown money unit {value}"),
+        }
+    }
+}
+
+/// The Python annotation identities take precedence over the pre-newtype table.
+struct CallMoneyUnits {
+    identities: BTreeMap<String, MoneyUnit>,
+    fallback: BTreeMap<(String, String, String), MoneyUnit>,
+}
+
+impl CallMoneyUnits {
+    fn load() -> Result<Self> {
+        let table = |name| -> Result<Value> {
+            let table = rtao_catalog::py::table("sdk/python/bittensor/intents/_money.py", name)
+                .with_context(|| format!("missing authenticated money table {name}"))?;
+            serde_json::from_str(table.value_json).context("invalid extracted money table")
+        };
+        Self::from_values(&table("_IDENT_UNITS")?, &table("_FALLBACK_AMOUNT_UNITS")?)
+    }
+
+    fn from_values(identities: &Value, fallback: &Value) -> Result<Self> {
+        let mut result = Self {
+            identities: BTreeMap::new(),
+            fallback: BTreeMap::new(),
+        };
+        for row in identities["dict"]
+            .as_array()
+            .context("money identity table must be a dict")?
+        {
+            let pair = row.as_array().context("invalid money identity entry")?;
+            ensure!(pair.len() == 2, "invalid money identity entry");
+            let name = pair[0].as_str().context("invalid money identity name")?;
+            ensure!(
+                result
+                    .identities
+                    .insert(name.to_owned(), MoneyUnit::parse(&pair[1])?)
+                    .is_none(),
+                "duplicate money identity {name}"
+            );
+        }
+        for row in fallback["dict"]
+            .as_array()
+            .context("money fallback table must be a dict")?
+        {
+            let pair = row.as_array().context("invalid money fallback entry")?;
+            ensure!(pair.len() == 2, "invalid money fallback entry");
+            let key = pair[0]["tuple"]
+                .as_array()
+                .context("money fallback key must be a tuple")?;
+            ensure!(key.len() == 3, "invalid money fallback key");
+            let part = |index: usize| -> Result<String> {
+                Ok(key[index]
+                    .as_str()
+                    .context("money fallback key must contain strings")?
+                    .to_owned())
+            };
+            let key = (part(0)?, part(1)?, part(2)?);
+            ensure!(
+                result
+                    .fallback
+                    .insert(key.clone(), MoneyUnit::parse(&pair[1])?)
+                    .is_none(),
+                "duplicate money fallback {key:?}"
+            );
+        }
+        Ok(result)
+    }
+
+    fn resolve(
+        &self,
+        pallet: &str,
+        call: &str,
+        parameter: &str,
+        type_ident: &str,
+    ) -> Result<MoneyUnit> {
+        self.identities
+            .get(type_ident)
+            .or_else(|| {
+                self.fallback
+                    .get(&(pallet.to_owned(), call.to_owned(), parameter.to_owned()))
+            })
+            .copied()
+            .with_context(|| {
+                format!("no unit declared for {pallet}.{call} parameter {parameter:?}")
+            })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum MoneySource {
+    Tao,
+    Alpha(String),
+}
+
+fn money_source_override(
+    spec: &IntentSpec,
+    field: &rtao_catalog::ParamSpec,
+    config: &DocumentMut,
+    ir: &MetadataIr,
+    mapper: &TypeMapper<'_>,
+) -> Result<Option<MoneySource>> {
+    let key = format!("{}.{}", spec.name, field.name);
+    let Some(value) = config.get("money_units").and_then(|table| table.get(&key)) else {
+        return Ok(None);
+    };
+    ensure!(
+        matches!(field.annotation, Some("Money" | "Optional[Money]")),
+        "money unit override {key} must target a Money field"
+    );
+    let value = value
+        .as_str()
+        .with_context(|| format!("money unit source {key} must be a string"))?;
+    if value == "tao" {
+        return Ok(Some(MoneySource::Tao));
+    }
+    let sibling = value
+        .strip_prefix("alpha:")
+        .filter(|name| !name.is_empty())
+        .with_context(|| format!("invalid money unit source {key}: {value:?}"))?;
+    validate_money_sibling(spec, sibling, config, ir, mapper)?;
+    Ok(Some(MoneySource::Alpha(sibling.to_owned())))
+}
+
+fn validate_money_sibling(
+    spec: &IntentSpec,
+    name: &str,
+    config: &DocumentMut,
+    ir: &MetadataIr,
+    mapper: &TypeMapper<'_>,
+) -> Result<()> {
+    let sibling = spec
+        .fields
+        .iter()
+        .find(|field| field.name == name)
+        .with_context(|| format!("unknown money netuid sibling {}.{name}", spec.name))?;
+    // An integer annotation prevents recursive Money overrides from forming
+    // cycles, and the actual mapped type rejects u16/optional field overrides.
+    ensure!(
+        sibling.annotation == Some("int")
+            && field_type(spec, sibling, config, ir, mapper)? == "rtao_primitives::NetUid",
+        "money sibling {}.{name} must be a nonoptional NetUid field",
+        spec.name
+    );
+    Ok(())
+}
+
+fn money_source(
+    spec: &IntentSpec,
+    field: &rtao_catalog::ParamSpec,
+    config: &DocumentMut,
+    ir: &MetadataIr,
+    mapper: &TypeMapper<'_>,
+    unit: MoneyUnit,
+) -> Result<MoneySource> {
+    let configured = money_source_override(spec, field, config, ir, mapper)?;
+    if unit == MoneyUnit::Tao {
+        // The wrapped call's identity decides denomination, even if a source
+        // override or a stale field suffix names alpha.
+        return Ok(MoneySource::Tao);
+    }
+    if let Some(source @ MoneySource::Alpha(_)) = configured {
+        return Ok(source);
+    }
+    let candidates = ["netuid", "origin_netuid"]
+        .into_iter()
+        .filter(|name| spec.fields.iter().any(|field| field.name == *name))
+        .collect::<Vec<_>>();
+    ensure!(
+        candidates.len() == 1,
+        "alpha money property {}.{} requires an explicit netuid sibling",
+        spec.name,
+        field.name
+    );
+    validate_money_sibling(spec, candidates[0], config, ir, mapper)?;
+    Ok(MoneySource::Alpha(candidates[0].to_owned()))
+}
+
+fn exact_money_expression(source: &MoneySource, target: &str, access: &str) -> Result<String> {
+    match (source, target) {
+        (MoneySource::Tao, "rtao_primitives::TaoBalance") => Ok(format!(
+            "crate::arguments::tao_amount(&{access})?.to_wire()"
+        )),
+        (MoneySource::Tao, "u64") => Ok(format!("crate::arguments::tao_amount(&{access})?.rao()")),
+        (MoneySource::Alpha(sibling), "rtao_primitives::AlphaBalance" | "u64") => {
+            let amount = format!(
+                "crate::arguments::alpha_amount(&{access},intent.{})?",
+                emit::ident(sibling)
+            );
+            Ok(if target == "u64" {
+                format!("{amount}.0")
+            } else {
+                amount
+            })
+        }
+        _ => bail!("money source {source:?} cannot encode {target}"),
+    }
+}
+
 fn field_type(
     spec: &IntentSpec,
     field: &rtao_catalog::ParamSpec,
@@ -121,6 +332,7 @@ fn field_type(
     mapper: &TypeMapper<'_>,
 ) -> Result<String> {
     let key = format!("{}.{}", spec.name, field.name);
+    let money_source = money_source_override(spec, field, config, ir, mapper)?;
     if let Some(ty) = config
         .get("fields")
         .and_then(|v| v.get(&key))
@@ -159,11 +371,7 @@ fn field_type(
     } else if annotation == "Money" {
         if !name.ends_with("_tao") && !name.ends_with("_alpha") {
             ensure!(
-                config
-                    .get("money_units")
-                    .and_then(|v| v.get(&key))
-                    .and_then(|v| v.as_str())
-                    .is_some(),
+                money_source.is_some(),
                 "money property {key} requires an explicit unit source"
             );
         }
@@ -268,6 +476,7 @@ pub(super) fn run(
 ) -> Result<()> {
     let config = document(root, "codegen/intent_types.toml")?;
     let callmap = document(root, "codegen/intent_callmap.toml")?;
+    let money_units = CallMoneyUnits::load()?;
     let pins = document(root, "upstream.toml")?;
     let commit = pins
         .get("parity")
@@ -583,18 +792,27 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
                         || target_ty == "rtao_primitives::AlphaBalance"
                         || target_ty == "u64")
                 {
+                    let source_field = spec
+                        .fields
+                        .iter()
+                        .find(|source| source.name == field)
+                        .context("money constructor field missing")?;
+                    let unit =
+                        money_units.resolve(pallet, call, &argument.name, &argument.type_ident)?;
+                    let source = money_source(spec, source_field, &config, ir, mapper, unit)?;
                     let resolver = mapping
                         .get("resolvers")
                         .and_then(|v| v.get(&field))
                         .and_then(|v| v.as_str());
                     if let Some(resolver) = resolver {
                         format!("crate::{}::{resolver}(intent,cx).await?", feature)
-                    } else if target_ty == "rtao_primitives::TaoBalance" {
-                        format!("crate::arguments::tao_amount(&{access})?.to_wire()")
-                    } else if target_ty == "rtao_primitives::AlphaBalance" {
-                        format!("crate::arguments::alpha_amount(&{access},intent.netuid)?")
                     } else {
-                        format!("crate::arguments::tao_amount(&{access})?.rao()")
+                        ensure!(
+                            !spec.all_amount_fields.contains(&source_field.name),
+                            "all-enabled money property {}.{field} requires a custom resolver",
+                            spec.name
+                        );
+                        exact_money_expression(&source, &target_ty, &access)?
                     }
                 } else if source_ty == "Option<rtao_primitives::Amount>"
                     && target_ty == "Option<rtao_primitives::TaoBalance>"
@@ -853,6 +1071,252 @@ mod tests {
                 .contains("requires an explicit unit source")
         );
     }
+
+    #[test]
+    fn money_unit_source_mutants_reject_bad_values_and_non_netuid_siblings() {
+        let (runtime, ir, config) = fixture();
+        let mapper = mapper(&runtime);
+        let spec = rtao_catalog::INTENTS
+            .iter()
+            .find(|spec| spec.name == "swap_basket")
+            .unwrap();
+        let field = spec
+            .fields
+            .iter()
+            .find(|field| field.name == "amount")
+            .unwrap();
+        for value in [
+            "alpha",
+            "alpha:",
+            "TAO",
+            "tokens:origin_netuid",
+            "alpha:missing_netuid",
+            "alpha:hotkey_ss58",
+            "alpha:min_amount_out",
+        ] {
+            let mut mutant = config.clone();
+            mutant["money_units"]["swap_basket.amount"] = toml_edit::value(value);
+            assert!(
+                field_type(spec, field, &mutant, &ir, &mapper).is_err(),
+                "accepted money source {value:?}"
+            );
+        }
+        let mut mutant = config.clone();
+        mutant["money_units"]["swap_basket.amount"] = toml_edit::value(1);
+        assert!(field_type(spec, field, &mutant, &ir, &mapper).is_err());
+        for native_type in ["u16", "Option<rtao_primitives::NetUid>"] {
+            let mut mutant = config.clone();
+            mutant["fields"]["swap_basket.origin_netuid"] = toml_edit::value(native_type);
+            assert!(
+                field_type(spec, field, &mutant, &ir, &mapper)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("must be a nonoptional NetUid field")
+            );
+        }
+        let mut mutant = config;
+        mutant["money_units"]["swap_basket.hotkey_ss58"] = toml_edit::value("tao");
+        let address = spec
+            .fields
+            .iter()
+            .find(|field| field.name == "hotkey_ss58")
+            .unwrap();
+        assert!(field_type(spec, address, &mutant, &ir, &mapper).is_err());
+    }
+
+    #[test]
+    fn call_money_units_use_authenticated_newtypes_before_fallback_and_refuse_unknowns() {
+        let units = CallMoneyUnits::load().unwrap();
+        assert_eq!(units.identities.len(), 2);
+        assert_eq!(units.fallback.len(), 17);
+        // Change only the annotation, retaining the conflicting real fallback.
+        assert_eq!(
+            units
+                .resolve(
+                    "SubtensorModule",
+                    "add_stake",
+                    "amount_staked",
+                    "AlphaBalance"
+                )
+                .unwrap(),
+            MoneyUnit::Alpha
+        );
+        assert_eq!(
+            units
+                .resolve(
+                    "SubtensorModule",
+                    "swap_basket",
+                    "min_amount_out",
+                    "TaoBalance"
+                )
+                .unwrap(),
+            MoneyUnit::Tao
+        );
+        for ident in ["u64", "UnrecognizedBalance"] {
+            assert_eq!(
+                units
+                    .resolve("SubtensorModule", "swap_basket", "min_amount_out", ident)
+                    .unwrap(),
+                MoneyUnit::Alpha
+            );
+        }
+        assert!(
+            units
+                .resolve("UnknownPallet", "unknown_call", "amount", "u64")
+                .unwrap_err()
+                .to_string()
+                .contains("no unit declared")
+        );
+        for (identities, fallback) in [
+            (
+                serde_json::json!({"dict":[["TaoBalance","OTHER"]]}),
+                serde_json::json!({"dict":[]}),
+            ),
+            (
+                serde_json::json!({"dict":[]}),
+                serde_json::json!({"dict":[[{"tuple":["SubtensorModule","swap_basket","amount"]},"OTHER"]]}),
+            ),
+        ] {
+            assert!(
+                CallMoneyUnits::from_values(&identities, &fallback)
+                    .err()
+                    .unwrap()
+                    .to_string()
+                    .contains("unknown money unit")
+            );
+        }
+    }
+
+    #[test]
+    fn generated_money_uses_distinct_origin_and_destination_sources_for_newtypes_and_u64() {
+        let (runtime, ir, config) = fixture();
+        let mapper = mapper(&runtime);
+        let units = CallMoneyUnits::load().unwrap();
+        let spec = rtao_catalog::INTENTS
+            .iter()
+            .find(|spec| spec.name == "swap_basket")
+            .unwrap();
+        let call = ir
+            .pallets
+            .iter()
+            .find(|pallet| pallet.name == "SubtensorModule")
+            .unwrap()
+            .calls
+            .iter()
+            .find(|call| call.name == "swap_basket")
+            .unwrap();
+        for (name, sibling, expected_target) in [
+            ("amount", "origin_netuid", "rtao_primitives::AlphaBalance"),
+            ("min_amount_out", "dest_netuid", "u64"),
+        ] {
+            let field = spec.fields.iter().find(|field| field.name == name).unwrap();
+            let argument = call
+                .args
+                .iter()
+                .find(|argument| argument.name == name)
+                .unwrap();
+            let unit = units
+                .resolve("SubtensorModule", "swap_basket", name, &argument.type_ident)
+                .unwrap();
+            let source = money_source(spec, field, &config, &ir, &mapper, unit).unwrap();
+            assert_eq!(source, MoneySource::Alpha(sibling.into()));
+            let target = mapper
+                .argument("SubtensorModule", "swap_basket", argument)
+                .unwrap();
+            assert_eq!(target, expected_target);
+            let access = format!("intent.{name}");
+            assert_eq!(
+                exact_money_expression(&source, &target, &access).unwrap(),
+                format!(
+                    "crate::arguments::alpha_amount(&{access},intent.{sibling})?{}",
+                    if target == "u64" { ".0" } else { "" }
+                )
+            );
+            // The older bare-u64 form must retain the same subnet source.
+            let fallback = units
+                .resolve("SubtensorModule", "swap_basket", name, "u64")
+                .unwrap();
+            assert_eq!(fallback, MoneyUnit::Alpha);
+            assert_eq!(
+                exact_money_expression(
+                    &money_source(spec, field, &config, &ir, &mapper, fallback).unwrap(),
+                    "u64",
+                    &access,
+                )
+                .unwrap(),
+                format!("crate::arguments::alpha_amount(&{access},intent.{sibling})?.0")
+            );
+        }
+        let field = spec
+            .fields
+            .iter()
+            .find(|field| field.name == "min_amount_out")
+            .unwrap();
+        let unit = units
+            .resolve(
+                "SubtensorModule",
+                "swap_basket",
+                "min_amount_out",
+                "TaoBalance",
+            )
+            .unwrap();
+        let source = money_source(spec, field, &config, &ir, &mapper, unit).unwrap();
+        assert_eq!(source, MoneySource::Tao);
+        assert_eq!(
+            exact_money_expression(&source, "u64", "intent.min_amount_out").unwrap(),
+            "crate::arguments::tao_amount(&intent.min_amount_out)?.rao()"
+        );
+        assert!(
+            exact_money_expression(
+                &source,
+                "rtao_primitives::AlphaBalance",
+                "intent.min_amount_out"
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn generated_alpha_without_override_requires_one_real_netuid_source() {
+        let (runtime, ir, config) = fixture();
+        let mapper = mapper(&runtime);
+        let spec = rtao_catalog::INTENTS
+            .iter()
+            .find(|spec| spec.name == "move_stake")
+            .unwrap();
+        let field = spec
+            .fields
+            .iter()
+            .find(|field| field.name == "amount_alpha")
+            .unwrap();
+        let source = money_source(spec, field, &config, &ir, &mapper, MoneyUnit::Alpha).unwrap();
+        assert_eq!(source, MoneySource::Alpha("origin_netuid".into()));
+        assert_eq!(
+            exact_money_expression(
+                &source,
+                "rtao_primitives::AlphaBalance",
+                "intent.amount_alpha"
+            )
+            .unwrap(),
+            "crate::arguments::alpha_amount(&intent.amount_alpha,intent.origin_netuid)?"
+        );
+        let spec_without_origin = IntentSpec {
+            fields: &[],
+            ..*spec
+        };
+        assert!(
+            money_source(
+                &spec_without_origin,
+                field,
+                &config,
+                &ir,
+                &mapper,
+                MoneyUnit::Alpha
+            )
+            .is_err()
+        );
+    }
+
     #[test]
     fn inherited_optional_integer_fields_use_the_native_call_width() {
         let (runtime, ir, config) = fixture();

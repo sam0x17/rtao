@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_fee_filters.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/executor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registry.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Plan, preview and execution using one client's shared nonce manager.
@@ -2005,6 +2006,90 @@ mod tests {
         assert!(coldkey_pays(&runtime, &proxy)?);
         let sudo = rtao_runtime::calls::sudo::sudo(weights).compose(&runtime)?;
         assert!(!coldkey_pays(&runtime, &sudo)?); // Python treats sudo itself as a leaf.
+        Ok(())
+    }
+
+    // pyt: unit/test_fee_filters.py::test_coldkey_pays_fee_calls_matches_runtime_subset
+    #[test]
+    fn coldkey_fee_table_preserves_the_python_runtime_subset() {
+        let calls = rtao_catalog::rt::COLDKEY_PAYS_FEE_CALLS;
+        assert!(calls.contains(&("SubtensorModule", "serve_axon")));
+        assert!(calls.contains(&("Commitments", "set_commitment")));
+        assert!(!calls.contains(&("Balances", "transfer_keep_alive")));
+        assert_eq!(
+            rtao_catalog::py::COLDKEY_FEE_WARNING,
+            "transaction fee is charged to the hotkey owner's coldkey, not the signing hotkey"
+        );
+    }
+
+    // pyt: unit/test_fee_filters.py::test_iter_call_leaves_unwraps_proxy
+    #[test]
+    fn coldkey_fee_proxy_leaf_is_the_python_serve_axon_call() -> TestResult {
+        let runtime = rtao_runtime::RuntimeHandle::parse(
+            include_bytes!("../../../vendor/metadata/finney/478.v15.scale"),
+            478,
+            1,
+            42,
+        )?;
+        // The Python ComposedCall stub only supplies netuid. An encoded native
+        // call also supplies the remaining fields required by pinned metadata.
+        let inner = rtao_runtime::calls::subtensor_module::serve_axon(
+            rtao_primitives::NetUid(1),
+            1,
+            u128::from(u32::from_be_bytes([203, 0, 113, 5])),
+            8091,
+            4,
+            4,
+            0,
+            0,
+        )
+        .compose(&runtime)?;
+        let real: rtao_primitives::Ss58Address =
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".parse()?;
+        let outer = rtao_runtime::calls::proxy::proxy(
+            rtao_core::DynValue::new(real.account().into_core_value()),
+            None,
+            inner.clone(),
+        )
+        .compose(&runtime)?;
+        let decoded = runtime.core().decode_spec(
+            &rtao_core::runtime::TypeSpec::Call,
+            outer.as_bytes(),
+            true,
+        )?;
+        let json = rtao_core::codec::value::to_corpus_json(&decoded);
+        assert_eq!(json["call_module"], "Proxy");
+        assert_eq!(json["call_function"], "proxy");
+        let leaf = &json["call_args"][2]["value"];
+        assert_eq!(leaf["call_module"], "SubtensorModule");
+        assert_eq!(leaf["call_function"], "serve_axon");
+        assert_eq!(leaf["call_args"][0]["value"], 1);
+        assert!(!rtao_catalog::rt::COLDKEY_PAYS_FEE_CALLS.contains(&("Proxy", "proxy")));
+        assert!(coldkey_pays(&runtime, &inner)?);
+        assert!(coldkey_pays(&runtime, &outer)?);
+        Ok(())
+    }
+
+    // pyt: unit/test_fee_filters.py::test_charges_coldkey_fee_on_leaf
+    #[test]
+    fn coldkey_fee_associate_evm_leaf_keeps_the_python_classification() -> TestResult {
+        let runtime = rtao_runtime::RuntimeHandle::parse(
+            include_bytes!("../../../vendor/metadata/finney/478.v15.scale"),
+            478,
+            1,
+            42,
+        )?;
+        let call = rtao_runtime::calls::subtensor_module::associate_evm_key(
+            rtao_primitives::NetUid(1),
+            rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(vec![0; 20])),
+            0,
+            [0; 65],
+        )
+        .compose(&runtime)?;
+        let mut expected = vec![7, 93, 1, 0];
+        expected.extend_from_slice(&[0; 20 + 8 + 65]);
+        assert_eq!(call.as_bytes(), expected);
+        assert!(coldkey_pays(&runtime, &call)?);
         Ok(())
     }
 }
