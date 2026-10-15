@@ -2329,7 +2329,7 @@ mod tests {
             (
                 "test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop",
                 8_000u64,
-                0,
+                0u64,
                 2,
                 1_891_544,
             ),
