@@ -146,6 +146,159 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
     }
 }
 
+// pyt: sdk/python/tests/unit/test_prepare_attach.py::test_offline_roundtrip_assembles_nested_calls
+#[tokio::test]
+async fn utility_batch_survives_unsigned_json_roundtrip_and_signature_attachment() {
+    let (client, fake, signer) = fixture(CryptoType::Sr25519).await;
+    client.nonces().pin(&signer.account(), 80);
+    let runtime = client.refresh_runtime().await.unwrap();
+    let transfer = rtao_runtime::calls::balances::transfer_keep_alive(
+        rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(vec![9; 32])),
+        rtao_primitives::TaoBalance(1),
+    )
+    .compose(&runtime)
+    .unwrap();
+    let batch = rtao_runtime::calls::utility::batch(vec![transfer.clone(), transfer])
+        .compose(&runtime)
+        .unwrap();
+    let call_data = batch.as_bytes().to_vec();
+    let unsigned = client
+        .prepare_public(
+            batch,
+            signer.account(),
+            &PublicPrepareOptions {
+                crypto_type: signer.crypto_type(),
+                tip: 3,
+                submit: SubmitOptions {
+                    mortality: Mortality::Immortal,
+                    nonce: NoncePolicy::Explicit(7),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let expected = unsigned.to_json().unwrap();
+    let encoded = serde_json::to_vec(&expected).unwrap();
+    drop(unsigned);
+    let imported = client
+        .import_unsigned_json(&encoded, &SubmitOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(imported.to_json().unwrap(), expected);
+    assert_eq!(imported.call().as_bytes(), call_data);
+    let payload = imported.payload_json();
+    assert!(
+        payload["signedExtensions"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("CheckMetadataHash"))
+    );
+    assert_eq!(payload["mode"], 0);
+    assert_eq!(payload["metadataHash"], Value::Null);
+    assert_eq!(payload["nonce"], "0x00000007");
+    assert_eq!(payload["tip"], "0x00000000000000000000000000000003");
+    assert_eq!(
+        payload["specVersion"],
+        format!("0x{}", hex::encode(runtime.spec_version().to_be_bytes()))
+    );
+    assert_eq!(
+        payload["transactionVersion"],
+        format!(
+            "0x{}",
+            hex::encode(runtime.transaction_version().to_be_bytes())
+        )
+    );
+    assert_eq!(payload["era"], "0x00");
+    assert_eq!(payload["method"], format!("0x{}", hex::encode(&call_data)));
+    assert_eq!(payload["version"], runtime.core().extrinsic.version);
+    let signature = signer
+        .sign(&imported.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    let (signed, _) = client.attach_signature(&imported, signature).await.unwrap();
+    assert!(signed.ends_with(&call_data));
+    let decoded =
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&signed, true).unwrap()).to_json();
+    assert_eq!(decoded["call"]["call_module"], "Utility");
+    assert_eq!(decoded["call"]["call_function"], "batch");
+    let nested = decoded["call"]["call_args"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|arg| arg["name"] == "calls")
+        .unwrap()["value"]
+        .as_array()
+        .unwrap();
+    assert_eq!(nested.len(), 2);
+    assert_eq!(nested[0], nested[1]);
+    assert_eq!(nested[0]["call_module"], "Balances");
+    assert_eq!(nested[0]["call_function"], "transfer_keep_alive");
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        Some(80)
+    );
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+
+#[tokio::test]
+async fn fuzz_unsigned_seed_reconstructs_signs_and_attaches_under_authenticated_context() {
+    let (client, fake, _) = fixture(CryptoType::Sr25519).await;
+    let signer = KeypairSigner::from_uri("//Alice", CryptoType::Sr25519).unwrap();
+    client.nonces().pin(&signer.account(), 80);
+    // This is the same hand-authored public candidate used by the standalone
+    // target. Its acceptance is established only when this fixture is executed.
+    let seed = include_bytes!("../../../fuzz/seeds/unsigned_extrinsic_json/immortal-remark");
+    let expected: Value = rtao_primitives::json::from_slice(seed).unwrap();
+    let unsigned = client
+        .import_unsigned_json(seed, &SubmitOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(unsigned.to_json().unwrap(), expected);
+    assert_eq!(unsigned.address(), signer.account());
+    assert_eq!(unsigned.genesis_hash(), client.genesis());
+    assert_eq!(unsigned.call().as_bytes(), &[0, 0, 0]);
+    assert_eq!(unsigned.payload().len(), 80);
+    assert_eq!(unsigned.expiry(), None);
+    let signature = signer
+        .sign(&unsigned.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    unsigned.verify_signature(signature).unwrap();
+    let (signed, _) = client.attach_signature(&unsigned, signature).await.unwrap();
+    assert!(signed.ends_with(&[0, 0, 0]));
+    let runtime = client.refresh_runtime().await.unwrap();
+    let decoded =
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&signed, true).unwrap()).to_json();
+    assert_eq!(decoded["call"]["call_module"], "System");
+    assert_eq!(decoded["call"]["call_function"], "remark");
+    assert_eq!(decoded["nonce"], 0);
+    assert_eq!(decoded["tip"], 0);
+    assert_eq!(decoded["mode"]["mode"], "Disabled");
+    for (field, value) in [
+        ("payload", json!("0x00")),
+        ("genesis_hash", json!(format!("0x{}", "00".repeat(32)))),
+    ] {
+        let mut changed = expected.clone();
+        changed[field] = value;
+        assert!(import(&client, &changed).await.is_err(), "{field}");
+    }
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        Some(80)
+    );
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    assert!(
+        !fake
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+}
+
 #[tokio::test]
 async fn every_required_field_missing_unknown_duplicate_and_numeric_overflow_refuse() {
     let (client, fake, signer) = fixture(CryptoType::Ed25519).await;
