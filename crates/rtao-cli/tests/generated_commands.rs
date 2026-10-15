@@ -303,10 +303,24 @@ fn catalog_interface_metadata_covers_every_operation_and_pending_body() -> TestR
 }
 
 #[test]
-fn tools_retain_every_upstream_field_and_leave_pending_cli_null() -> TestResult {
+fn tools_retain_python_tool_fields_and_leave_pending_cli_null() -> TestResult {
     let tools = catalog::tools_payload(&generated::rust_tools()?)?;
     let tools = tools.as_array().ok_or("tools")?;
     assert_eq!(tools.len(), rtao_catalog::INTENTS.len());
+    // registry.list_tools() projects these nine fields. The extraction catalog
+    // additionally carries documentation-generation fields that btcli tools
+    // does not emit (cli, markdown_url, python_class and sources).
+    let python_fields = [
+        "name",
+        "summary",
+        "description",
+        "signer",
+        "origin",
+        "verify",
+        "wraps",
+        "docs_url",
+        "input_schema",
+    ];
     for spec in &rtao_catalog::INTENTS {
         let mut actual = tools
             .iter()
@@ -314,13 +328,23 @@ fn tools_retain_every_upstream_field_and_leave_pending_cli_null() -> TestResult 
             .ok_or("catalog row")?
             .clone();
         actual.as_object_mut().ok_or("tool object")?.remove("rust");
-        let mut expected: Value = serde_json::from_str(spec.catalog_json)?;
-        expected["docs_url"] = json!(format!(
-            "{}/tx/{}",
-            rtao_catalog::py::DOCS_URL,
-            spec.name.replace('_', "-")
-        ));
-        assert_eq!(actual, expected, "{}", spec.name);
+        let source: Value = serde_json::from_str(spec.catalog_json)?;
+        let mut expected = serde_json::Map::new();
+        for field in python_fields {
+            expected.insert(
+                field.into(),
+                source.get(field).ok_or("Python tool field")?.clone(),
+            );
+        }
+        expected.insert(
+            "docs_url".into(),
+            json!(format!(
+                "{}/tx/{}",
+                rtao_catalog::py::DOCS_URL,
+                spec.name.replace('_', "-")
+            )),
+        );
+        assert_eq!(actual, Value::Object(expected), "{}", spec.name);
     }
     let pending = tools
         .iter()
@@ -370,7 +394,7 @@ fn exact_money_keeps_native_u64_precision_exponents_and_all_policy() -> TestResu
 }
 
 #[test]
-fn tx_lists_accept_csv_and_json_and_mapping_values_preserve_integer_digits() -> TestResult {
+fn tx_lists_match_python_csv_and_json_list_rules_and_keep_integer_digits() -> TestResult {
     let spec = rtao_catalog::INTENTS
         .iter()
         .find(|spec| spec.name == "set_weights")
@@ -386,11 +410,41 @@ fn tx_lists_accept_csv_and_json_and_mapping_values_preserve_integer_digits() -> 
         .iter()
         .find(|field| field.name == "weights")
         .ok_or("weights")?;
-    assert_eq!(
-        schema::coerce(weights, r#"{"1":0.5,"9":1.0}"#)?,
-        json!({"1":0.5,"9":1.0})
-    );
+    assert_eq!(schema::coerce(weights, "[0.5,1.0]")?, json!([0.5, 1.0]));
+    assert_eq!(schema::coerce(weights, " 0.5, 1.0,, ")?, json!([0.5, 1.0]));
+    // The SDK's mapping input is broader than tx.py's list[float] CLI
+    // coercion: only a leading '[' selects JSON before the CSV float path.
+    assert!(schema::coerce(weights, r#"{"1":0.5,"9":1.0}"#).is_err());
     assert!(schema::coerce(weights, "{bad}").is_err());
+    for raw in ["0.5,1.0", "[0.5,1.0]"] {
+        let parsed = tree()?.try_get_matches_from([
+            "rtao",
+            "tx",
+            "set-weights",
+            "--netuid",
+            "1",
+            "--uids",
+            "1,9",
+            "--weights",
+            raw,
+        ])?;
+        let values = schema::values(leaf(&parsed)?, &fields)?;
+        assert_eq!(values["uids"], json!([1, 9]));
+        assert_eq!(values["weights"], json!([0.5, 1.0]));
+    }
+    assert!(
+        tree()?
+            .try_get_matches_from([
+                "rtao",
+                "tx",
+                "set-weights",
+                "--netuid",
+                "1",
+                "--weights",
+                r#"{"1":0.5,"9":1.0}"#,
+            ])
+            .is_err()
+    );
     let mut integer = uids.clone();
     integer.kind = "integer".into();
     integer.annotation = "int";
@@ -1051,8 +1105,17 @@ impl Terminal for PromptTerminal {
 #[tokio::test]
 async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_replay() -> TestResult {
     let keys = Keys::new()?;
-    let (client, chain) = client(funded(&keys)?).await?;
+    let proxy = AccountId([9; 32]);
+    let mut state = funded(&keys)?;
+    state.seed_python(
+        "System",
+        "Account",
+        &[json!(proxy)],
+        json!({"data":{"free":2_500_000_000_000_u64}}),
+    )?;
+    let (client, chain) = client(state).await?;
     let address = keys.key.account().to_string();
+    let proxy_address = proxy.to_string();
     let parsed = tree()?.try_get_matches_from([
         "rtao",
         "tx",
@@ -1062,7 +1125,7 @@ async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_repl
         "--dest",
         &address,
         "--proxy-for",
-        &address,
+        &proxy_address,
     ])?;
     let (mut ctx, _) = context(&parsed, &generated::intent_reserved("transfer")?)?;
     let messages = Arc::new(Mutex::new(Vec::new()));
@@ -1084,7 +1147,11 @@ async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_repl
         let messages = messages.lock().map_err(|_| "messages")?;
         let hint = messages
             .iter()
-            .position(|s| s.contains("free balance of") && s.contains("1000.000000000"))
+            .position(|s| {
+                s.starts_with(&format!(
+                    "--amount-tao: free balance of {proxy_address}: τ2,500.000000000\n"
+                ))
+            })
             .ok_or("live free balance hint")?;
         let prompt = messages
             .iter()

@@ -15,9 +15,10 @@ decoded 32-byte public key. They do not hash the SS58 spelling or truncate a
 512-bit digest.
 
 Five fixture sources check an independent Bouncy Castle hash vector, exact
-pinned SCALE layouts, canonical decoding, unchanged call bytes across five
+pinned SCALE layouts, canonical decoding, unchanged call bytes across four
 SS58 prefixes, preserved display/JSON spelling, exact warnings and policy,
-and malformed constructor inputs. The hash reference is
+and malformed constructor inputs. The core refuses unknown SS58 format 1000;
+the prefix fixture now covers that refusal separately. The hash reference is
 `attocash/commons@5ae16299214ed7fd44bc33c3ee6ee437cde393d9`,
 `commons-core/src/commonTest/kotlin/cash/atto/commons/AttoHashTest.kt:9-18`.
 The fake-transport fixtures also require no additional reads or submissions.

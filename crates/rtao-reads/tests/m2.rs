@@ -228,51 +228,20 @@ async fn pending_reads_are_explicit_and_do_no_io() {
         "../../../vendor/upstream/extracted/read_params.json"
     ))
     .unwrap();
-    let ported = [
-        "metagraph",
-        "token_symbols",
-        "block_time",
-        "timestamp",
-        "blocks_since_last_step",
-        "blocks_since_last_update",
-        "epoch_status",
-        "max_weight_limit",
-        "min_allowed_weights",
-        "reveal_period",
-        "weights_rate_limit",
-        "uid",
-        "commit_reveal_enabled",
-        "mechanism_count",
-        "weights",
-        "immunity_period",
-        "balance",
-        "balances",
-        "mev_shield_next_key",
-        "delegate_take",
-        "delegated",
-        "blocks_until_next_epoch",
-        "next_epoch_start_block",
-        "difficulty",
-        "subnet_emission_enabled",
-        "hotkey_identities",
-        "identity",
-        "most_convicted_hotkey",
-        "root_basket_owed",
-        "stake_value_for_coldkey",
-        "stake_value_for_coldkeys",
-        "validator_basket_summary",
-        "burn",
-        "mechanism_emission_split",
-        "subnet_hyperparameters",
-        "subnet_identity",
-        "subnet_names",
-        "subnet_start_schedule",
-    ];
+    let all: BTreeSet<_> = ReadName::ALL.into_iter().collect();
+    assert_eq!(all.len(), 102);
+    let expected_pending: BTreeSet<_> = all
+        .iter()
+        .copied()
+        .filter(|name| !name.interface_metadata().implemented)
+        .collect();
     let before = chain.requests().len();
-    let mut count = 0;
+    let mut seen = BTreeSet::new();
+    let mut checked = BTreeSet::new();
     for row in pending["reads"].as_array().unwrap() {
         let name: ReadName = row["name"].as_str().unwrap().parse().unwrap();
-        if ported.contains(&name.as_str()) {
+        assert!(seen.insert(name), "duplicate extracted read {name}");
+        if name.interface_metadata().implemented {
             continue;
         }
         let mut args = Map::new();
@@ -300,9 +269,10 @@ async fn pending_reads_are_explicit_and_do_no_io() {
             matches!(dispatch(&client,name,&args).await,Err(ReadError::NotYetPorted(actual))if actual==name),
             "{name}"
         );
-        count += 1;
+        assert!(checked.insert(name));
     }
-    assert_eq!(count, 64);
+    assert_eq!(seen, all, "every catalog read must be considered");
+    assert_eq!(checked, expected_pending, "every pending read must refuse");
     assert_eq!(chain.requests().len(), before);
     client.close().await;
 }

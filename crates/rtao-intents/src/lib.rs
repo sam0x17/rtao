@@ -3,6 +3,8 @@
 #![deny(missing_docs)]
 
 mod arguments;
+#[cfg(any(feature = "crowdloan", feature = "proxy"))]
+mod nested_json;
 mod registry;
 /// Python's mapping-or-list weight input carrier.
 pub use arguments::WeightsArg;
@@ -41,6 +43,10 @@ pub mod hyperparameters;
 #[cfg(feature = "pow")]
 pub mod pow;
 
+#[cfg(feature = "association")]
+pub mod association;
+#[cfg(feature = "children")]
+pub mod children;
 #[cfg(feature = "coldkey")]
 pub mod coldkey;
 #[cfg(feature = "crowdloan")]
@@ -49,6 +55,8 @@ pub mod crowdloan;
 pub mod governance;
 #[cfg(feature = "identity")]
 pub mod identity;
+#[cfg(feature = "proxy")]
+pub mod proxy;
 #[cfg(feature = "registration")]
 pub mod registration;
 #[cfg(feature = "registration")]
@@ -90,7 +98,7 @@ fn args_with_op(op: &str, intent: &impl serde::Serialize) -> serde_json::Value {
     serde_json::Value::Object(result)
 }
 
-#[cfg(feature = "transfer")]
+#[cfg(any(feature = "transfer", feature = "proxy"))]
 fn account_argument(account: rtao_primitives::AccountId) -> rtao_core::DynValue {
     rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(account.0.to_vec()))
 }

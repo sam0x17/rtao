@@ -152,7 +152,9 @@ mod tests {
         announced.extend_from_slice(&hex::decode(ZERO_KEY_HASH)?);
         let mut swapped = vec![7, 126];
         swapped.extend_from_slice(account.as_bytes());
-        for prefix in [0, 2, 42, 110, 1000] {
+        // The pinned core accepts registered network formats; arbitrary custom
+        // prefixes can be rendered but are refused by its SS58 parser.
+        for prefix in [0, 2, 42, 110] {
             let spelling = account.to_ss58(prefix);
             let announce = AnnounceColdkeySwap {
                 new_coldkey_ss58: spelling.parse()?,
@@ -201,6 +203,14 @@ mod tests {
                 assert_eq!(decoded["call_args"][0]["name"], argument);
                 assert_eq!(decoded["call_args"][0]["value"], value);
             }
+        }
+        let unknown_format = account.to_ss58(1000);
+        assert!(unknown_format.parse::<Ss58Address>().is_err());
+        for op in ["announce_coldkey_swap", "swap_coldkey_announced"] {
+            assert!(
+                crate::AnyIntent::from_tool(op, json!({"new_coldkey_ss58":unknown_format}))
+                    .is_err()
+            );
         }
         assert_eq!(chain.requests().len(), requests);
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));

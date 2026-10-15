@@ -5,10 +5,6 @@
 pallet = "Proxy"
 call = "add_proxy"
 
-[passthrough.associate_evm_key]
-pallet = "SubtensorModule"
-call = "associate_evm_key"
-
 [passthrough.associate_hotkey]
 pallet = "SubtensorModule"
 call = "try_associate_hotkey"

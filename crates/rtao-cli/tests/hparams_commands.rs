@@ -426,6 +426,14 @@ mod null_pruning {
     const NET: u16 = 3;
     const TARGET: u16 = 128;
 
+    fn machine_records(sink: &MemorySink) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+        // Each output record is pretty-printed and may span several lines.
+        let text = sink.text(Stream::Stdout)?;
+        Ok(serde_json::Deserializer::from_str(&text)
+            .into_iter::<Value>()
+            .collect::<Result<Vec<_>, _>>()?)
+    }
+
     struct Temp(PathBuf);
     impl Temp {
         fn new() -> Result<Self, Box<dyn std::error::Error>> {
@@ -679,11 +687,9 @@ mod null_pruning {
                 );
                 assert_eq!(self.population.load(Ordering::SeqCst), 192);
                 assert!(
-                    self.sink
-                        .text(Stream::Stdout)
-                        .expect("output")
-                        .lines()
-                        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+                    machine_records(&self.sink)
+                        .map_err(|error| SignerError::KeyView(error.to_string()))?
+                        .iter()
                         .all(
                             |value| value["status"] != "finalized" && value["status"] != "complete"
                         ),
@@ -935,12 +941,7 @@ mod null_pruning {
                     .len(),
                 3
             );
-            let payloads = f
-                .sink
-                .text(Stream::Stdout)?
-                .lines()
-                .map(serde_json::from_str::<Value>)
-                .collect::<Result<Vec<_>, _>>()?;
+            let payloads = machine_records(&f.sink)?;
             assert_eq!(
                 payloads.last().ok_or("summary")?,
                 &json!({"status":"complete","population":128,"target":128,"consensus":"Null","batches":3})
@@ -1085,12 +1086,7 @@ mod null_pruning {
         assert_eq!(result.data["multisig_followup"]["status"], "executed");
         assert_eq!(f.ctx.globals.wallet_name, "team");
         assert!(f.ctx.globals.signer_address.is_none());
-        let payloads = f
-            .sink
-            .text(Stream::Stdout)?
-            .lines()
-            .map(serde_json::from_str::<Value>)
-            .collect::<Result<Vec<_>, _>>()?;
+        let payloads = machine_records(&f.sink)?;
         let batches = payloads
             .iter()
             .filter(|payload| payload["status"] == "finalized")
@@ -1176,10 +1172,8 @@ mod null_pruning {
                 attempts
             );
             assert!(
-                !f.sink
-                    .text(Stream::Stdout)?
-                    .lines()
-                    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+                !machine_records(&f.sink)?
+                    .iter()
                     .any(|value| value["status"] == "complete")
             );
             f.client.close().await;
@@ -1220,11 +1214,11 @@ mod null_pruning {
         assert!(run(&mut f).await?.is_some());
         assert_eq!(f.factory.keys.unlocks.load(Ordering::SeqCst), 1);
         assert!(!f.journal.exists());
-        let text = f.sink.text(Stream::Stdout)?;
-        let last: Value = serde_json::from_str(text.lines().last().ok_or("summary")?)?;
+        let payloads = machine_records(&f.sink)?;
+        let last = payloads.last().ok_or("summary")?;
         assert_eq!(
             last,
-            json!({"status":"complete","population":128,"target":128,"consensus":"Yuma","batches":0})
+            &json!({"status":"complete","population":128,"target":128,"consensus":"Yuma","batches":0})
         );
         f.client.close().await;
         Ok(())

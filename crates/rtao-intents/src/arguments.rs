@@ -4,6 +4,11 @@ use rtao_primitives::{Ratio, Uid};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+#[cfg(feature = "children")]
+pub(crate) use crate::children::{children, take};
+#[cfg(any(feature = "crowdloan", feature = "proxy"))]
+pub(crate) use crate::nested_json::check_call_budget as check_nested_json;
+
 /// Resolve an exact TAO field without permitting alpha currencies or `all`.
 #[cfg(any(feature = "crowdloan", feature = "root"))]
 pub(crate) fn tao_amount(
@@ -167,5 +172,39 @@ mod tests {
                 actual: NetUid(1),
             }))
         ));
+    }
+}
+
+#[cfg(feature = "crowdloan")]
+/// Resolve exact or all-free TAO using the effective coldkey at this view.
+pub(crate) async fn stakeable_amount<V: rtao_client::View + ?Sized>(
+    amount: &rtao_primitives::Amount,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_primitives::TaoBalance, rtao_tx::IntentError> {
+    use rtao_client::ViewExt;
+    use rtao_primitives::{DynBalance, NetUid, ResolvedAmount, TaoBalance};
+    use rtao_tx::IntentError;
+    const ALL_FEE_HEADROOM_RAO: u64 = 500_000;
+    match amount.resolve(NetUid::ROOT, true)? {
+        ResolvedAmount::Exact(amount) => Ok(amount.tao()?.to_wire()),
+        ResolvedAmount::All => {
+            let free = rtao_tx::multisig::free_balance(cx.view, cx.coldkey_address()?).await?;
+            let deposit = cx
+                .view
+                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
+                .await?;
+            let amount = free
+                .rao()
+                .checked_sub(deposit.0)
+                .and_then(|amount| amount.checked_sub(ALL_FEE_HEADROOM_RAO))
+                .filter(|amount| *amount > 0)
+                .ok_or_else(|| {
+                    IntentError::validation(format!(
+                        "nothing to stake: free balance {} does not cover the existential deposit plus the transaction fee",
+                        DynBalance::from(free)
+                    ))
+                })?;
+            Ok(TaoBalance(amount))
+        }
     }
 }
