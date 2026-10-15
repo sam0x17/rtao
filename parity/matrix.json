@@ -2337,6 +2337,19 @@
           "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock",
           "rtao_cli::subnets_commands::unsupported_pow_root_gpu_and_mining_preview_refuse_before_connection"
         ]
+      },
+      {
+        "id": "D-045",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::book_cache_contract::multisig_mutations_preserve_order_extra_fields_and_require_exact_overwrite",
+          "rtao_cli::book_cache_contract::rejected_book_input_preserves_source_and_creates_no_replacement_artifacts",
+          "rtao_cli::book_cache_contract::corrupt_inputs_survive_and_rejected_output_creates_no_backups",
+          "rtao_cli::book_cache_contract::cache_rejects_hash_or_data_substitution_before_modifying_any_file",
+          "rtao_cli::book_cache_contract::writers_keep_restrictive_modes_and_refuse_symlink_and_fifo_destinations",
+          "rtao_cli::book_cache_contract::cache_lookup_decodes_exact_bytes_and_ignores_untrusted_presentation_fields"
+        ]
       }
     ],
     "e2e": [
