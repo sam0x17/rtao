@@ -2,8 +2,9 @@
 
 Ten remaining intent ports are prepared: RemoveStake, RemoveStakeLimit,
 MoveStake, TransferStake, UnstakeAll, StakeBurn and the four raw multisig
-operations. Generated adoption and ordinary hosted validation remain pending.
-Integrated coverage stays 73/83 intents and 40/102 reads until adoption.
+operations. Verified hosted generated output is adopted unchanged. Integrated
+coverage reaches 83/83 intents and 40/102 reads. Ordinary hosted validation
+and milestone acceptance remain pending.
 
 Claim-aware staking includes the complete atomic claim/follow-up construction,
 admission and reserve preflight, original wrapped-call fee probes, root money
@@ -60,3 +61,21 @@ compilation, tests, doctests, rendered docs and milestone acceptance remain
 pending. One bounded offline lock resolution adds no package versions: only
 the existing reqwest dependency edge for CLI advisory HTTP is recorded.
 No local build, test campaign, node, container, service or temporary root ran.
+
+Hosted generation
+[38709002368](https://github.com/sam0x17/rtao/actions/runs/38709002368)
+at `a929bcda8fb3b9b9fb7720a6c88b3bf920806613` succeeded. Review verified
+fourteen exact regular-file archive members, all 23 dependency hashes and
+unchanged role package sets/counts 225/361/365/416. Generated changes are ten
+availability/pending removals, four guarded constructors and four bounded JSON
+interfaces; pass-through bodies and all other interfaces are unchanged. The
+matrix changes only ten intent statuses, 72 ordinary plan mappings, D-046's
+fixture reference and the two reviewed new divergence rows.
+
+The generated ZIP is 91,201 bytes, SHA-256
+`92e96fdee4eb8de5e85a00ca8fb45a37f6365533b8a7f78713d804ba26ac0c60`.
+The reports ZIP is 40,502 bytes, SHA-256
+`a1ca868a1720f559afb774c07fb862ac9780369fb559f502fd4cfd2d707077c1`.
+The bounded private proof is
+`.local/recovery/2026-10-14/m5-final-intents-adoption.json`.
+No runtime, oracle, native-platform or hardware coverage is added by generation.
