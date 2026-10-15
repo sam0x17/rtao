@@ -27,6 +27,12 @@ The first hosted workflow exposed fresh-runner cache gaps. CI repair
 https://github.com/sam0x17/rtao/actions/runs/38681101185.
 No current all-job success or milestone exit is claimed.
 
+Owner source restoration is committed locally as `3f1a545`; it has not yet
+been accepted by hosted tests. A manual compatibility-report mode is prepared
+in the existing CI workflow, so the changed manifest inputs can be regenerated
+as a small reviewable artifact without local compilation. It skips the test
+matrix during generation and cannot push code or claim native Mac coverage.
+
 The plan's license expression list now includes the already required PSF and
 Unicode clauses. This clarifies Q1's existing obligations; implementation and
 license guards are unchanged. Private recovery is durably excluded from Git

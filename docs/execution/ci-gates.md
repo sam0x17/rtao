@@ -151,3 +151,13 @@ source caches before their offline graph checks:
 These repairs prepare disposable hosted caches; they retain all source,
 identity, lock and offline checks. Formatting and source review pass. Their
 current Rust tests and the complete jobs still need the next hosted run.
+
+## Regenerating compatibility inputs in CI
+
+The workflow's manual `refresh_compat=true` mode runs one 20-minute Ubuntu
+job and skips the six test jobs. It measures the existing Apple-target
+dependency graph with `cargo tree`, records its actual Linux compiler host,
+and generates compatibility source reports. This is not a Mac build or
+native-platform coverage. It uploads only three small report files for
+review, with three-day retention, and cannot push a commit. Normal pushes
+continue running the unchanged checks against the committed source reports.

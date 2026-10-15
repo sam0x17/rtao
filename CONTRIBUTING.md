@@ -11,6 +11,13 @@ coverage, supply checks and semver. A local full `cargo xtask gates` run is
 not a pre-push requirement. Required hosted checks must pass before merging;
 pending or unavailable CI remains explicitly unverified.
 
+After dependency or feature manifests change, use the workflow's manual
+`refresh_compat=true` mode to regenerate the existing compatibility graph
+reports in hosted CI. Download and review its small source artifact, commit
+the generated changes, then let normal checks validate that commit. This mode
+runs no test matrix, writes no commit and builds no Mac target; the existing
+Apple-target report is a dependency graph with its actual Linux host recorded.
+
 Keep local work to source edits, formatting and small inspections. Do not
 start cold workspace builds, extra toolchain builds, full nodes, testnets,
 Docker services, Python oracles, soaks, fuzz campaigns or release rehearsals
