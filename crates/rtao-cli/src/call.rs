@@ -8,14 +8,7 @@ use crate::prompt::shell_quote;
 use futures::StreamExt;
 use rtao::client::config::{ConfigFile, Paths};
 use rtao_runtime::models::{MultisigInfo, MultisigTimepoint};
-use std::{
-    collections::BTreeMap,
-    fs::{self, File, OpenOptions},
-    io::{Read, Write},
-    path::Path,
-    sync::atomic::{AtomicU64, Ordering},
-    time::Duration,
-};
+use std::{collections::BTreeMap, path::Path, time::Duration};
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::{
@@ -34,7 +27,8 @@ use serde_json::{Map, Value as Json, json};
 
 use crate::{
     books::{
-        AccountLookup, FsAccountLookup, NameResolver, is_bittensor_address, split_signatory_refs,
+        AccountLookup, FsAccountLookup, NameResolver, is_bittensor_address,
+        read_public_json_for_update, split_signatory_refs, write_public_json,
     },
     call_names::resolve_builder_params,
     context::AppContext,
@@ -1798,26 +1792,8 @@ fn prompt_member_backend(
 }
 
 fn raw_load_contacts(path: &Path) -> Result<Vec<Json>, CliError> {
-    let Ok(file) = File::open(path) else {
-        return Ok(Vec::new());
-    };
-    let mut bytes = Vec::new();
-    if file
-        .take(RAW_CACHE_MAX_BYTES.saturating_add(1))
-        .read_to_end(&mut bytes)
-        .is_err()
-    {
-        return Ok(Vec::new());
-    }
-    if bytes.len() as u64 > RAW_CACHE_MAX_BYTES {
-        return Err(CliError::input(
-            "address book exceeds the 16 MiB input limit",
-        ));
-    }
-    match serde_json::from_slice::<Json>(&bytes) {
-        Ok(Json::Array(entries)) => Ok(entries),
-        _ => Ok(Vec::new()),
-    }
+    let (value, _) = read_public_json_for_update(path, false).map_err(public_failure)?;
+    Ok(value.as_array().cloned().unwrap_or_default())
 }
 
 fn validate_rounds(request: &RawCallRequest) -> Result<(), CliError> {
@@ -1858,6 +1834,7 @@ fn public_failure(error: impl std::fmt::Display) -> CliError {
 /// Injected public call-spec persistence; never receives private signing state.
 pub trait RawCallCache: Send + Sync {
     /// Save one normalized call hash/spec with the shared btcli cache layout.
+    /// Filesystem persistence authenticates `call_data` against this exact hash.
     fn save(&self, hash: String, spec: Json) -> BoxFuture<'_, Result<(), CliError>>;
 }
 
@@ -1879,21 +1856,53 @@ impl FsRawCallCache {
         let paths = Paths::from_process().map_err(|error| CliError::failure(error.to_string()))?;
         Ok(Self::new(&paths))
     }
+
+    /// Recover exact call bytes from a Python-compatible shared entry.
+    /// The key, optional stored hash, and blake2_256 of `call_data` must agree.
+    /// Complete runtime decoding/re-encoding authenticates the SCALE layout;
+    /// cached target/params, labels and network strings are never trusted.
+    /// This checks call identity, not chain origin or approval authority.
+    pub async fn load_call(
+        &self,
+        hash: &str,
+        runtime: &RuntimeHandle,
+    ) -> Result<Option<CallBytes>, CliError> {
+        let hash = normalize_cache_hash(hash)?;
+        let path = self.path.clone();
+        let runtime = runtime.clone();
+        rtao::core::offload(move || {
+            let (entries, _) = read_public_json_for_update(&path, true).map_err(public_failure)?;
+            let Some(spec) = entries.get(&hash) else {
+                return Ok(None);
+            };
+            let bytes = authenticated_cache_data(&hash, spec)?;
+            CallBytes::decode(&bytes, &runtime)
+                .map(Some)
+                .map_err(public_input)
+        })
+        .await
+        .map_err(|_| CliError::failure("multisig cache worker failed"))?
+    }
 }
 
 impl RawCallCache for FsRawCallCache {
-    fn save(&self, hash: String, spec: Json) -> BoxFuture<'_, Result<(), CliError>> {
+    fn save(&self, hash: String, mut spec: Json) -> BoxFuture<'_, Result<(), CliError>> {
         let path = self.path.clone();
         Box::pin(async move {
             rtao::core::offload(move || {
-                let mut entries = raw_load_cache(&path)?;
-                let hash = if hash.starts_with("0x") {
-                    hash
-                } else {
-                    format!("0x{hash}")
-                };
+                let hash = normalize_cache_hash(&hash)?;
+                let bytes = authenticated_cache_data(&hash, &spec)?;
+                spec["call_hash"] = json!(hash);
+                spec["call_data"] = json!(format!("0x{}", hex::encode(bytes)));
+                let (value, corrupt) =
+                    read_public_json_for_update(&path, true).map_err(public_failure)?;
+                let mut entries = value
+                    .as_object()
+                    .cloned()
+                    .ok_or_else(|| CliError::failure("multisig cache is not an object"))?;
                 entries.insert(hash, spec);
-                raw_write_cache(&path, &entries)
+                entries.sort_keys();
+                write_public_json(&path, &Json::Object(entries), corrupt).map_err(public_failure)
             })
             .await
             .map_err(|error| CliError::failure(format!("multisig cache worker failed: {error}")))?
@@ -1901,99 +1910,57 @@ impl RawCallCache for FsRawCallCache {
     }
 }
 
-const RAW_CACHE_MAX_BYTES: u64 = 16 * 1024 * 1024;
-static RAW_CACHE_NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
+const RAW_CACHE_MAX_BYTES: usize = 16 * 1024 * 1024;
 
-fn raw_load_cache(path: &Path) -> Result<BTreeMap<String, Json>, CliError> {
-    // Python treats missing, unreadable, invalid JSON and nonobjects as empty.
-    // Do not invent a .corrupt backup: the multisig cache reader has no such
-    // recovery behavior, unlike the main configuration reader.
-    if !path.is_file() {
-        return Ok(BTreeMap::new());
-    }
-    let Ok(file) = File::open(path) else {
-        return Ok(BTreeMap::new());
-    };
-    if file
-        .metadata()
-        .is_ok_and(|metadata| metadata.len() > RAW_CACHE_MAX_BYTES)
-    {
-        return Err(CliError::failure(
-            "multisig cache exceeds the 16 MiB input limit",
+fn normalize_cache_hash(hash: &str) -> Result<String, CliError> {
+    let hash = hash.strip_prefix("0x").unwrap_or(hash);
+    if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(CliError::input(
+            "multisig call hash must be 32 bytes of hex",
         ));
     }
-    let mut bytes = Vec::new();
-    if file
-        .take(RAW_CACHE_MAX_BYTES + 1)
-        .read_to_end(&mut bytes)
-        .is_err()
-    {
-        return Ok(BTreeMap::new());
-    }
-    if bytes.len() as u64 > RAW_CACHE_MAX_BYTES {
-        return Err(CliError::failure(
-            "multisig cache exceeds the 16 MiB input limit",
-        ));
-    }
-    let Ok(Json::Object(entries)) = serde_json::from_slice::<Json>(&bytes) else {
-        return Ok(BTreeMap::new());
-    };
-    Ok(entries.into_iter().collect())
+    Ok(format!("0x{}", hash.to_ascii_lowercase()))
 }
 
-fn raw_write_cache(path: &Path, entries: &BTreeMap<String, Json>) -> Result<(), CliError> {
-    raw_write_json(path, &json!(entries))
+fn authenticated_cache_data(hash: &str, spec: &Json) -> Result<Vec<u8>, CliError> {
+    if !spec.is_object() {
+        return Err(CliError::input(
+            "multisig call cache entry must be an object",
+        ));
+    }
+    if let Some(stored) = spec.get("call_hash") {
+        let stored = stored
+            .as_str()
+            .ok_or_else(|| CliError::input("stored multisig call hash must be hex"))?;
+        if normalize_cache_hash(stored)? != hash {
+            return Err(CliError::input(
+                "stored multisig call hash does not match its cache key",
+            ));
+        }
+    }
+    let data = spec
+        .get("call_data")
+        .and_then(Json::as_str)
+        .ok_or_else(|| CliError::input("multisig call cache entry requires exact call_data hex"))?;
+    let data = data.strip_prefix("0x").unwrap_or(data);
+    if data.is_empty() || data.len() > RAW_CACHE_MAX_BYTES || !data.len().is_multiple_of(2) {
+        return Err(CliError::input(
+            "multisig call data is empty, oversized or invalid hex",
+        ));
+    }
+    let bytes = hex::decode(data).map_err(|_| CliError::input("multisig call data must be hex"))?;
+    let computed =
+        rtao::core::codec::storage::hash_param("Blake2_256", &bytes).map_err(public_failure)?;
+    if format!("0x{}", hex::encode(computed)) != hash {
+        return Err(CliError::input(
+            "multisig call data does not match its call hash",
+        ));
+    }
+    Ok(bytes)
 }
 
 fn raw_write_json(path: &Path, value: &Json) -> Result<(), CliError> {
-    let parent = path
-        .parent()
-        .filter(|path| !path.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
-    let fail =
-        |error: std::io::Error| CliError::failure(format!("cannot save CLI public JSON: {error}"));
-    let name = path
-        .file_name()
-        .ok_or_else(|| CliError::failure("multisig cache path has no file name"))?;
-    let mut bytes =
-        serde_json::to_vec_pretty(value).map_err(|error| CliError::failure(error.to_string()))?;
-    bytes.push(b'\n');
-    if bytes.len() as u64 > RAW_CACHE_MAX_BYTES {
-        return Err(CliError::failure(
-            "multisig cache exceeds the 16 MiB output limit",
-        ));
-    }
-    fs::create_dir_all(parent).map_err(fail)?;
-    // A same-directory replacement avoids partially publishing JSON. The
-    // read/modify/write intentionally retains Python's last-writer-wins model.
-    let (temporary, mut file) = loop {
-        let counter = RAW_CACHE_NEXT_TEMP.fetch_add(1, Ordering::Relaxed);
-        let mut name = name.to_owned();
-        name.push(format!(".tmp.{}.{counter}", std::process::id()));
-        let temporary = parent.join(name);
-        match OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temporary)
-        {
-            Ok(file) => break (temporary, file),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(fail(error)),
-        }
-    };
-    let result = (|| -> std::io::Result<()> {
-        file.write_all(&bytes)?;
-        file.sync_all()?;
-        drop(file);
-        fs::rename(&temporary, path)?;
-        #[cfg(unix)]
-        File::open(parent)?.sync_all()?;
-        Ok(())
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result.map_err(fail)
+    write_public_json(path, value, false).map_err(public_failure)
 }
 
 /// Match receipt events, including a threshold-reaching inner dispatch failure.
