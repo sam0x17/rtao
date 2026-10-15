@@ -203,6 +203,7 @@ typed_leaves!(
     rtao_runtime::models::NeuronCertificate,
     rtao_runtime::models::DelegateInfo,
     rtao_runtime::models::StakeInfo,
+    rtao_runtime::models::SimSwapResult,
     rtao_runtime::models::MinerCollateralState,
     rtao_runtime::models::SubnetPrice,
     rtao_runtime::models::MultisigInfo,

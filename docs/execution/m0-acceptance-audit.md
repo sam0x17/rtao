@@ -40,6 +40,15 @@ identity. These source relationships do not prove runtime conformance.
 ## Remaining acceptance work
 
 Latest normal run
+[38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
+at `1c807e1` fails check/features compilation on the missing `ReadValue`
+registration for the existing DecodeAsType `SimSwapResult` model. The client
+registration is corrected in source; ordinary execution still needs to pass.
+Supply, no-host and semver pass, while MSRV is still running. Tests, doctests
+and documentation builds were not reached. Bounded evidence is retained
+privately as `check-38705303263.json`.
+
+Earlier normal run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
 at `6470a11` passes supply, MSRV, features, no-host and semver. Strict Clippy
 rejects two generated leasing argument clones on Copy types. The generator
