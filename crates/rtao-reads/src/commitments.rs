@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/metagraph.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/identity.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Commitment status, decoded content and same-block storage scans.
 
 use std::{collections::HashMap, fmt, time::Duration};
@@ -474,8 +475,13 @@ pub(crate) fn python_fromhex(text: &str, field: &str) -> Result<Vec<u8>, Commitm
             format!("non-hexadecimal number found in fromhex() arg at position {position}"),
         )
     };
+    // CPython rejects the first non-ASCII character before inspecting any
+    // hexadecimal pairs, even when an earlier ASCII character is malformed.
+    if let Some(position) = chars.iter().position(|character| !character.is_ascii()) {
+        return Err(error(position));
+    }
     while index < chars.len() {
-        if chars[index].is_ascii_whitespace() {
+        if matches!(chars[index], '\t'..='\r' | ' ') {
             index += 1;
             continue;
         }
@@ -780,6 +786,49 @@ mod tests {
             "Raw1"
         );
         Ok(())
+    }
+
+    #[test]
+    fn hex_fields_accept_all_python_ascii_separators_only_between_complete_bytes()
+    -> Result<(), CommitmentError> {
+        for separator in [' ', '\t', '\n', '\u{b}', '\u{c}', '\r'] {
+            let field = format!("{separator}61{separator}62{separator}63{separator}");
+            assert_eq!(decode_fields(&[json!({"Raw3": field})])?, "abc");
+            let malformed = format!("6{separator}1");
+            let error = python_fromhex(&malformed, "Raw1").unwrap_err();
+            assert_eq!(error.field, "Raw1");
+            assert_eq!(
+                error.message,
+                "non-hexadecimal number found in fromhex() arg at position 1"
+            );
+        }
+        for separator in ['\u{1c}', '\u{1d}', '\u{1e}', '\u{1f}'] {
+            let malformed = format!("61{separator}62");
+            assert_eq!(
+                python_fromhex(&malformed, "Raw2").unwrap_err().message,
+                "non-hexadecimal number found in fromhex() arg at position 2"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn hex_fields_report_first_non_ascii_before_earlier_ascii_syntax_errors() {
+        for (input, position) in [
+            ("ggé", 2),
+            ("0 é", 2),
+            ("g\t00😀", 4),
+            ("00\u{a0}11", 2),
+            ("égg", 0),
+        ] {
+            let error = python_fromhex(input, "Raw3").unwrap_err();
+            assert_eq!(error.field, "Raw3");
+            assert_eq!(
+                error.message,
+                format!("non-hexadecimal number found in fromhex() arg at position {position}"),
+                "{input:?}"
+            );
+        }
     }
 
     #[test]

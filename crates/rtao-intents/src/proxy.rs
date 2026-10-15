@@ -2,10 +2,11 @@
 //! Proxy delegation, keyless accounts and announced-call dispatch.
 
 use rtao_client::{DynView, View};
-use rtao_primitives::IntoCoreValue;
+use rtao_primitives::{IntoCoreValue, NetUid, Spend};
 use rtao_runtime::{Call, calls::proxy};
-use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
+use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, PreflightCx};
 use serde_json::Value;
+use smallvec::SmallVec;
 
 pub use crate::{
     AddProxy, CreatePureProxy, ExecuteProxyAnnounced, KillPureProxy, RemoveProxies, RemoveProxy,
@@ -167,6 +168,53 @@ impl Intent for KillPureProxy {
 }
 
 impl Intent for ExecuteProxyAnnounced {
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        let inner = crate::AnyIntent::from_tool(&self.inner_op, self.inner_args.clone())?;
+        let borrowed = cx.view;
+        let mut safety = inner
+            .as_dyn()
+            .safety_at_dyn(&BuildCx {
+                view: &borrowed as &dyn DynView,
+                origin: cx.origin,
+                runtime: cx.runtime,
+                clock: cx.clock,
+                spec: inner.spec(),
+            })
+            .await?;
+        safety.op = Self::SPEC.name;
+        safety.mev_shield_required |= Self::SPEC.mev_shield_required;
+        Ok(safety)
+    }
+
+    fn safety(&self) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        let inner = crate::AnyIntent::from_tool(&self.inner_op, self.inner_args.clone())?;
+        let mut safety = inner.as_dyn().safety_dyn()?;
+        safety.op = Self::SPEC.name;
+        safety.mev_shield_required |= Self::SPEC.mev_shield_required;
+        Ok(safety)
+    }
+
+    fn spend(&self) -> Spend {
+        self.safety()
+            .map_or(Spend::Unbounded, |safety| safety.spend)
+    }
+
+    fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
+        self.safety()
+            .map(|safety| safety.netuids)
+            .unwrap_or_default()
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        self.safety()
+            .map_or(true, |safety| safety.affects_all_subnets)
+    }
+
     fn summary(&self) -> String {
         format!(
             "execute announced {} as {} via {}",
@@ -808,7 +856,7 @@ mod tests {
         assert_eq!(nested["call_function"], "sudo_set_subnet_emission_enabled");
         assert_eq!(nested["call_args"][0]["value"], json!(3));
         assert_eq!(nested["call_args"][1]["value"], json!(true));
-        assert!(intent.touches_netuids().is_empty());
+        assert_eq!(intent.touches_netuids().as_slice(), &[NetUid(3)]);
         assert!(built.extras.is_empty());
         assert!(view.touches().is_empty());
         assert_eq!(chain.requests().len(), requests);

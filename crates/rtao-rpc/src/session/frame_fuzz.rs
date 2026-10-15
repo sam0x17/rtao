@@ -85,7 +85,7 @@ impl Probe {
             supervisor.subscriptions.insert(
                 id.into(),
                 ActiveSubscription {
-                    queue: Queue::new(2),
+                    queue: Queue::new(2, supervisor.subscription_budget.clone()),
                     hash: None,
                     request_id: 5,
                     unsubscribe: "fuzz_unsubscribe".into(),
@@ -113,13 +113,21 @@ impl Probe {
             })
             .collect();
         assert!(self.supervisor.early.len() <= self.supervisor.config.early_notification_ids);
+        assert!(self.supervisor.early_bytes <= self.supervisor.config.early_notification_bytes);
+        assert!(
+            self.supervisor.subscription_budget.retained_bytes()
+                <= self.supervisor.config.subscription_buffer_bytes
+        );
         let early = self
             .supervisor
             .early
             .iter()
             .map(|(id, items)| {
                 assert!(items.len() <= self.supervisor.config.subscription_buffer);
-                (id.clone(), items.iter().cloned().collect())
+                (
+                    id.clone(),
+                    items.iter().map(|item| item.value.clone()).collect(),
+                )
             })
             .collect();
         let subscriptions = self
@@ -329,6 +337,304 @@ mod tests {
         let observed = observe(json!({"id":0,"error":{"code":-32004,"data":{"policy":"denied"}}}))?;
         assert_eq!(observed.failures, 2);
         assert!(matches!(observed.terminal, Some(RpcError::Policy(_))));
+        Ok(())
+    }
+    fn notification(probe: &mut Probe, id: &str, value: Value) -> Result<(), RpcError> {
+        probe.supervisor.inbound(Message::Text(
+            json!({
+                "params": {"subscription": id, "result": value}
+            })
+            .to_string()
+            .into(),
+        ))
+    }
+
+    #[test]
+    fn early_byte_budget_evicts_oldest_globally_and_accounts_for_identity_bytes()
+    -> Result<(), RpcError> {
+        let mut probe = Probe::new()?;
+        let payload = json!("x".repeat(128));
+        let charge = notification_bytes(&payload) + Supervisor::early_identity_bytes("a");
+        probe.supervisor.config.early_notification_bytes = 2 * charge;
+        notification(&mut probe, "a", payload.clone())?;
+        notification(&mut probe, "b", payload.clone())?;
+        assert_eq!(probe.supervisor.early_bytes, 2 * charge);
+        notification(&mut probe, "a", payload.clone())?;
+        assert_eq!(probe.supervisor.early_bytes, 2 * charge);
+        assert_eq!(
+            probe
+                .supervisor
+                .early
+                .iter()
+                .map(|(id, items)| (id.as_str(), items.len()))
+                .collect::<Vec<_>>(),
+            [("b", 1), ("a", 1)]
+        );
+        // Neither a huge value nor a huge unknown ID may flush useful updates.
+        notification(&mut probe, "huge", json!("z".repeat(4096)))?;
+        notification(&mut probe, &"z".repeat(4096), json!(1))?;
+        assert_eq!(probe.supervisor.early_bytes, 2 * charge);
+        probe.supervisor.dispatch(json!({"id":2,"result":"a"}));
+        assert!(probe.supervisor.early.is_empty());
+        assert_eq!(probe.supervisor.early_bytes, 0);
+        let observed = probe.observe(None);
+        assert_eq!(observed.subscriptions[1], ("a".into(), vec![Ok(payload)]));
+        Ok(())
+    }
+
+    #[test]
+    fn unsolicited_early_updates_require_a_live_transmitted_current_subscription_request()
+    -> Result<(), RpcError> {
+        for missing in ["absent", "unsent", "old_epoch", "cancelled", "ordinary"] {
+            let mut probe = Probe::new()?;
+            match missing {
+                "absent" => {
+                    probe.supervisor.pending.remove(&2);
+                }
+                "cancelled" => {
+                    drop(probe.receivers.remove(1));
+                }
+                reason => {
+                    if let Some(pending) = probe.supervisor.pending.get_mut(&2) {
+                        match reason {
+                            "unsent" => pending.sent = false,
+                            "old_epoch" => pending.last_sent_epoch = 0,
+                            _ => pending.subscription = None,
+                        }
+                    }
+                }
+            }
+            notification(&mut probe, "unsolicited", json!("payload"))?;
+            assert!(probe.supervisor.early.is_empty(), "{missing}");
+            assert_eq!(probe.supervisor.early_bytes, 0, "{missing}");
+            probe.observe(None);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn early_accounting_resets_on_cancel_error_forget_and_close() -> Result<(), RpcError> {
+        for ending in ["cancel", "error", "forget", "close"] {
+            let mut probe = Probe::new()?;
+            notification(&mut probe, "waiting", json!(42))?;
+            assert!(probe.supervisor.early_bytes > 0);
+            match ending {
+                "cancel" => probe.supervisor.command(Some(Command::Cancel(vec![2]))),
+                "error" => {
+                    probe
+                        .supervisor
+                        .dispatch(json!({"id":2,"error":{"code":-1,"message":"failed"}}));
+                }
+                "forget" => probe.supervisor.remember_closed("waiting"),
+                _ => probe.supervisor.finish(RpcError::Closed),
+            }
+            assert!(probe.supervisor.early.is_empty(), "{ending}");
+            assert_eq!(probe.supervisor.early_bytes, 0, "{ending}");
+            probe.observe(None);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn reconnect_resets_early_storage_and_old_streams_share_the_active_byte_budget()
+    -> Result<(), RpcError> {
+        let mut probe = Probe::new()?;
+        let charge = notification_bytes(&json!(7));
+        probe.supervisor.subscriptions.clear();
+        probe.supervisor.config.subscription_buffer_bytes = charge;
+        probe.supervisor.subscription_budget = QueueBudget::new(charge);
+        let old = Queue::new(2, probe.supervisor.subscription_budget.clone());
+        probe.supervisor.subscriptions.insert(
+            "old".into(),
+            ActiveSubscription {
+                queue: old.clone(),
+                hash: None,
+                request_id: 5,
+                unsubscribe: "unsubscribe".into(),
+            },
+        );
+        notification(&mut probe, "old", json!(7))?;
+        notification(&mut probe, "waiting", json!(42))?;
+        probe
+            .supervisor
+            .connection_lost(RpcError::Transport("lost".into()));
+        assert_eq!(probe.supervisor.early_bytes, 0);
+        assert!(probe.supervisor.early.is_empty());
+        assert_eq!(
+            probe.supervisor.subscription_budget.retained_bytes(),
+            charge
+        );
+        let current = Queue::new(2, probe.supervisor.subscription_budget.clone());
+        probe.supervisor.subscriptions.insert(
+            "current".into(),
+            ActiveSubscription {
+                queue: current,
+                hash: None,
+                request_id: 6,
+                unsubscribe: "unsubscribe".into(),
+            },
+        );
+        notification(&mut probe, "current", json!(9))?;
+        assert_eq!(
+            probe.supervisor.subscription_budget.retained_bytes(),
+            charge
+        );
+        let mut cx = Context::from_waker(Waker::noop());
+        assert!(matches!(
+            old.poll(&mut cx),
+            Poll::Ready(Some(Err(WireError::Rpc(RpcError::SubscriptionLost))))
+        ));
+        probe.supervisor.finish(RpcError::Closed);
+        assert_eq!(probe.supervisor.subscription_budget.retained_bytes(), 0);
+        probe.observe(None);
+        Ok(())
+    }
+
+    #[test]
+    fn global_active_eviction_reports_the_victim_stream_and_keeps_newest_updates()
+    -> Result<(), RpcError> {
+        let mut probe = Probe::new()?;
+        let charge = notification_bytes(&json!(1));
+        probe.supervisor.subscriptions.clear();
+        probe.supervisor.config.subscription_buffer_bytes = 2 * charge;
+        probe.supervisor.subscription_budget = QueueBudget::new(2 * charge);
+        for id in ["live", "7"] {
+            probe.supervisor.subscriptions.insert(
+                id.into(),
+                ActiveSubscription {
+                    queue: Queue::new(2, probe.supervisor.subscription_budget.clone()),
+                    hash: None,
+                    request_id: 5,
+                    unsubscribe: "unsubscribe".into(),
+                },
+            );
+        }
+        let mut events = probe.supervisor.events.subscribe();
+        notification(&mut probe, "live", json!(1))?;
+        notification(&mut probe, "7", json!(2))?;
+        notification(&mut probe, "7", json!(3))?;
+        assert!(
+            matches!(events.try_recv(), Ok(SessionEvent::SubscriptionOverflow { id }) if id == "live")
+        );
+        assert_eq!(
+            probe.supervisor.subscription_budget.retained_bytes(),
+            2 * charge
+        );
+        let observed = probe.observe(None);
+        assert_eq!(
+            observed.subscriptions,
+            [
+                ("7".into(), vec![Ok(json!(2)), Ok(json!(3))]),
+                ("live".into(), vec![]),
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn early_drain_into_smaller_active_budget_reports_new_subscription_overflow()
+    -> Result<(), RpcError> {
+        let mut probe = Probe::new()?;
+        let charge = notification_bytes(&json!(1));
+        probe.supervisor.config.subscription_buffer_bytes = charge;
+        probe.supervisor.subscription_budget = QueueBudget::new(charge);
+        let mut events = probe.supervisor.events.subscribe();
+        notification(&mut probe, "fresh", json!(1))?;
+        notification(&mut probe, "fresh", json!(2))?;
+        probe.supervisor.dispatch(json!({"id":2,"result":"fresh"}));
+        assert!(
+            matches!(events.try_recv(), Ok(SessionEvent::SubscriptionOverflow { id }) if id == "fresh")
+        );
+        assert_eq!(probe.supervisor.early_bytes, 0);
+        let observed = probe.observe(None);
+        assert_eq!(
+            observed.subscriptions[1],
+            ("fresh".into(), vec![Ok(json!(2))])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn zero_retained_byte_budgets_are_refused_before_connecting() -> Result<(), RpcError> {
+        let mut probe = Probe::new()?;
+        probe.supervisor.config.early_notification_bytes = 0;
+        assert!(matches!(
+            validate(&probe.supervisor.config),
+            Err(RpcError::Protocol(_))
+        ));
+        probe.supervisor.config.early_notification_bytes = 1024;
+        probe.supervisor.config.subscription_buffer_bytes = 0;
+        assert!(matches!(
+            validate(&probe.supervisor.config),
+            Err(RpcError::Protocol(_))
+        ));
+        probe.observe(None);
+        Ok(())
+    }
+
+    #[derive(Clone, Default)]
+    struct RawCapture(std::sync::Arc<std::sync::Mutex<Vec<String>>>);
+    impl tracing::Subscriber for RawCapture {
+        fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
+            metadata.target() == "rtao::rpc::raw"
+        }
+        fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+        fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
+        fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
+        fn event(&self, event: &tracing::Event<'_>) {
+            struct Visitor<'a>(&'a RawCapture);
+            impl tracing::field::Visit for Visitor<'_> {
+                fn record_debug(
+                    &mut self,
+                    field: &tracing::field::Field,
+                    value: &dyn std::fmt::Debug,
+                ) {
+                    if field.name() == "frame"
+                        && let Ok(mut frames) = self.0.0.lock()
+                    {
+                        frames.push(format!("{value:?}"));
+                    }
+                }
+            }
+            event.record(&mut Visitor(self));
+        }
+        fn enter(&self, _: &tracing::span::Id) {}
+        fn exit(&self, _: &tracing::span::Id) {}
+    }
+
+    #[test]
+    fn raw_receive_logs_escape_terminal_controls_while_protocol_values_stay_exact()
+    -> Result<(), RpcError> {
+        let mut probe = Probe::new()?;
+        let capture = RawCapture::default();
+        tracing::subscriber::with_default(capture.clone(), || -> Result<(), RpcError> {
+            probe.supervisor.inbound(Message::Text(
+                "\u{1b}]52;c;payload\u{7}\r\nmalformed".into(),
+            ))?;
+            let control = "\u{9b}31m";
+            let raw = format!(r#"{{"params":{{"subscription":"live","result":"{control}"}}}}"#);
+            probe.supervisor.inbound(Message::Text(raw.into()))?;
+            Ok(())
+        })?;
+        let frames = capture
+            .0
+            .lock()
+            .map_err(|_| RpcError::Protocol("capture lock poisoned".into()))?;
+        assert_eq!(frames.len(), 2);
+        assert!(
+            frames
+                .iter()
+                .all(|frame| !frame.chars().any(char::is_control))
+        );
+        assert!(frames[0].contains(r"\u{1b}]52;c;payload\u{7}\r\n"));
+        assert!(frames[1].contains(r"\u{9b}31m"));
+        let observed = probe.observe(None);
+        assert_eq!(
+            observed.subscriptions[1],
+            ("live".into(), vec![Ok(json!("\u{9b}31m"))])
+        );
         Ok(())
     }
 }

@@ -205,6 +205,21 @@ async fn group(executor: &rtao::Executor, keys: &Keys, threshold: u16) -> Multis
         .unwrap()
 }
 
+// These guard-specific fixtures start after a completed semantic review.
+// The real continuation fixture obtains its proof through reviewed_call().
+fn reviewed_fixture(
+    semantic: &dyn DynIntent,
+    group: &Multisig,
+    call: CallBytes,
+) -> ReviewedInnerCall {
+    ReviewedInnerCall {
+        call,
+        semantic: semantic.to_json_dyn(),
+        multisig: group.address,
+        origin: group.address,
+    }
+}
+
 fn decode(runtime: &RuntimeHandle, call: &CallBytes) -> Value {
     rtao::core::DynValue::new(
         runtime
@@ -546,7 +561,7 @@ async fn pending_timepoint_and_immutable_later_round_call_prevent_semantic_rebui
         group.clone(),
         keys.signer.account(),
         CryptoType::Ed25519,
-        Some(inner.clone()),
+        Some(first.reviewed_call().unwrap().unwrap()),
     )
     .await
     .unwrap()
@@ -598,6 +613,152 @@ async fn pending_timepoint_and_immutable_later_round_call_prevent_semantic_rebui
 }
 
 #[tokio::test]
+async fn hotkey_batch_continuation_uses_the_dynamic_role_and_preserves_reviewed_bytes() {
+    for threshold in [1, 2] {
+        let (executor, fake, keys) = fixture(1_000_000_000).await;
+        let semantic =
+            rtao::intents::Batch::new(vec![json!({"op":"reset_axon","netuid":7})]).unwrap();
+        assert_eq!(
+            <rtao::intents::Batch as IntentInterface>::SPEC.signer,
+            "coldkey"
+        );
+        assert_eq!(Intent::signer_role(&semantic).unwrap(), SignerRole::Hotkey);
+        let group = group(&executor, &keys, threshold).await;
+        let first = SemanticMultisig::new(
+            &semantic,
+            executor.client(),
+            group.clone(),
+            keys.signer.account(),
+            CryptoType::Ed25519,
+            None,
+        )
+        .await
+        .unwrap();
+        executor
+            .plan_dyn(&first, &keys, &PlanOptions::default())
+            .await
+            .unwrap();
+        let proof = first.reviewed_call().unwrap().unwrap();
+        let exact = proof.call().clone();
+        let later = SemanticMultisig::new(
+            &semantic,
+            executor.client(),
+            group,
+            keys.signer.account(),
+            CryptoType::Ed25519,
+            Some(proof),
+        )
+        .await
+        .unwrap();
+        let plan = executor
+            .plan_dyn(&later, &keys, &PlanOptions::default())
+            .await
+            .unwrap();
+        assert!(plan.ok(), "{:?}", plan.violations);
+        assert_eq!(
+            later.reviewed_inner_call().unwrap().unwrap().as_bytes(),
+            exact.as_bytes()
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        executor.client().close().await;
+    }
+}
+
+#[tokio::test]
+async fn continuation_proof_cannot_relabel_transfer_all_as_bounded_or_change_its_destination() {
+    for threshold in [1, 2] {
+        let (executor, fake, keys) = fixture(1_000_000_000).await;
+        let semantic = rtao::intents::TransferAll {
+            dest_ss58: AccountId([5; 32]).into(),
+            keep_alive: true,
+        };
+        let group = group(&executor, &keys, threshold).await;
+        let first = SemanticMultisig::new(
+            &semantic,
+            executor.client(),
+            group.clone(),
+            keys.signer.account(),
+            CryptoType::Ed25519,
+            None,
+        )
+        .await
+        .unwrap();
+        executor
+            .plan_dyn(&first, &keys, &PlanOptions::default())
+            .await
+            .unwrap();
+        let proof = first.reviewed_call().unwrap().unwrap();
+        let bounded = rtao::intents::Transfer {
+            dest_ss58: semantic.dest_ss58.clone(),
+            amount_tao: Balance::<Tao>::from_rao(0).into(),
+            keep_alive: true,
+        };
+        let changed_destination = rtao::intents::TransferAll {
+            dest_ss58: AccountId([6; 32]).into(),
+            ..semantic.clone()
+        };
+        for changed in [&bounded as &dyn DynIntent, &changed_destination] {
+            let result = SemanticMultisig::new(
+                changed,
+                executor.client(),
+                group.clone(),
+                keys.signer.account(),
+                CryptoType::Ed25519,
+                Some(proof.clone()),
+            )
+            .await;
+            assert!(
+                matches!(result, Err(IntentError::InvalidArgument(message)) if message.contains("reviewed semantic intent or account"))
+            );
+        }
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        executor.client().close().await;
+    }
+}
+
+#[tokio::test]
+async fn continuation_proof_rejects_a_different_canonical_multisig_account() {
+    let (executor, fake, keys) = fixture(1_000_000_000).await;
+    let semantic = Probe::<Cold>::default();
+    let first = SemanticMultisig::new(
+        &semantic,
+        executor.client(),
+        group(&executor, &keys, 2).await,
+        keys.signer.account(),
+        CryptoType::Ed25519,
+        None,
+    )
+    .await
+    .unwrap();
+    executor
+        .plan_dyn(&first, &keys, &PlanOptions::default())
+        .await
+        .unwrap();
+    let proof = first.reviewed_call().unwrap().unwrap();
+    let changed = executor
+        .multisig(&[keys.signer.account(), AccountId([8; 32])], 2)
+        .await
+        .unwrap();
+    let result = SemanticMultisig::new(
+        &semantic,
+        executor.client(),
+        changed,
+        keys.signer.account(),
+        CryptoType::Ed25519,
+        Some(proof),
+    )
+    .await;
+    assert!(
+        matches!(result, Err(IntentError::InvalidArgument(message)) if message.contains("reviewed semantic intent or account"))
+    );
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    executor.client().close().await;
+}
+
+#[tokio::test]
 async fn duplicate_pending_approval_refuses_before_weight_estimation_or_unlock() {
     let (executor, fake, keys) = fixture(1_000_000_000).await;
     let semantic = Probe::<Cold>::default();
@@ -610,10 +771,10 @@ async fn duplicate_pending_approval_refuses_before_weight_estimation_or_unlock()
     let adapter = SemanticMultisig::new(
         &semantic,
         executor.client(),
-        group,
+        group.clone(),
         keys.signer.account(),
         CryptoType::Ed25519,
-        Some(inner),
+        Some(reviewed_fixture(&semantic, &group, inner)),
     )
     .await
     .unwrap();
@@ -693,7 +854,7 @@ async fn actual_runtime_cap_refuses_a_previously_valid_group_before_fee_or_funds
     let result = SemanticMultisig::new(
         &semantic,
         executor.client(),
-        group,
+        group.clone(),
         keys.signer.account(),
         CryptoType::Ed25519,
         None,
@@ -726,7 +887,7 @@ async fn pending_storage_errors_propagate_and_do_not_turn_into_an_opening_approv
     let adapter = SemanticMultisig::new(
         &semantic,
         executor.client(),
-        group,
+        group.clone(),
         keys.signer.account(),
         CryptoType::Ed25519,
         None,
@@ -774,7 +935,7 @@ async fn wrapping_rechecks_a_cap_reduced_after_adapter_construction() {
     let adapter = SemanticMultisig::new(
         &semantic,
         executor.client(),
-        group,
+        group.clone(),
         keys.signer.account(),
         CryptoType::Ed25519,
         None,
@@ -878,10 +1039,10 @@ async fn guarded_later_round_refuses_absent_or_replaced_opening_before_funds_or_
         let adapter = SemanticMultisig::new(
             &semantic,
             executor.client(),
-            group,
+            group.clone(),
             keys.signer.account(),
             CryptoType::Ed25519,
-            Some(inner),
+            Some(reviewed_fixture(&semantic, &group, inner)),
         )
         .await
         .unwrap()
@@ -929,10 +1090,10 @@ async fn guarded_existing_approval_preserves_the_duplicate_member_refusal() {
     let adapter = SemanticMultisig::new(
         &semantic,
         executor.client(),
-        group,
+        group.clone(),
         keys.signer.account(),
         CryptoType::Ed25519,
-        Some(inner),
+        Some(reviewed_fixture(&semantic, &group, inner)),
     )
     .await
     .unwrap()
@@ -1035,7 +1196,7 @@ async fn operation_changed_after_composition_keeps_stale_some_in_the_actual_sign
             group.clone(),
             keys.signer.account(),
             CryptoType::Ed25519,
-            Some(inner.clone()),
+            Some(reviewed_fixture(&semantic, &group, inner.clone())),
         )
         .await
         .unwrap()

@@ -304,6 +304,35 @@ pub trait Intent: IntentInterface + Sized {
     fn affects_all_subnets(&self) -> bool {
         false
     }
+    /// Validate and collect policy and transport requirements recursively.
+    ///
+    /// Compositions override this hook using their current children, including
+    /// after public JSON fields have been mutated. It must not compose calls or
+    /// change their origin, wallet, adapters or reviewed bytes.
+    fn safety(&self) -> Result<crate::IntentSafety, IntentError> {
+        self.validate()?;
+        Ok(crate::IntentSafety {
+            op: Self::SPEC.name,
+            spend: self.spend(),
+            netuids: self.touches_netuids(),
+            affects_all_subnets: self.affects_all_subnets(),
+            contains_raw_calls: false,
+            mev_shield_required: Self::SPEC.mev_shield_required,
+        })
+    }
+    /// Resolve requirements that depend on stored callbacks at the pinned state.
+    ///
+    /// The default needs no state. Deferred dispatch intents inspect the exact
+    /// stored call here, and compositions forward the same view recursively.
+    /// A shielding requirement discovered only here refuses ordinary planning
+    /// and execution; use explicit shielded submission. Static requirements
+    /// continue to select automatic shielding in the executor.
+    fn safety_at<V: View + ?Sized>(
+        &self,
+        _cx: &BuildCx<'_, V>,
+    ) -> impl Future<Output = Result<crate::IntentSafety, IntentError>> + Send {
+        async { self.safety() }
+    }
     /// Apply an execution adapter after semantic, sudo and proxy composition.
     fn wrap_call<V: View + ?Sized>(
         &self,
@@ -350,6 +379,30 @@ pub trait DynIntent: crate::PolicySubject + Send + Sync {
     fn touches_netuids_dyn(&self) -> SmallVec<[NetUid; 2]>;
     /// Global-subnet effect flag.
     fn affects_all_subnets_dyn(&self) -> bool;
+    /// Validated recursive policy and transport requirements.
+    fn safety_dyn(&self) -> Result<crate::IntentSafety, IntentError> {
+        self.validate_dyn()?;
+        let raw = self.is_raw();
+        Ok(crate::IntentSafety {
+            op: self.spec().name,
+            spend: if raw {
+                Spend::Unbounded
+            } else {
+                self.spend_dyn()
+            },
+            netuids: self.touches_netuids_dyn(),
+            affects_all_subnets: raw || self.affects_all_subnets_dyn(),
+            contains_raw_calls: raw || self.contains_raw_calls(),
+            mev_shield_required: self.spec().mev_shield_required,
+        })
+    }
+    /// Resolve recursive requirements against the exact pinned build context.
+    fn safety_at_dyn<'a>(
+        &'a self,
+        _cx: &'a BuildCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<crate::IntentSafety, IntentError>> {
+        Box::pin(async { self.safety_dyn() })
+    }
     /// Semantic policy/build intent.
     fn semantic_intent_dyn(&self) -> &dyn DynIntent;
     /// Adapter's pinned call.
@@ -415,6 +468,15 @@ impl<I: Intent> DynIntent for I {
     }
     fn affects_all_subnets_dyn(&self) -> bool {
         Intent::affects_all_subnets(self)
+    }
+    fn safety_dyn(&self) -> Result<crate::IntentSafety, IntentError> {
+        self.safety()
+    }
+    fn safety_at_dyn<'a>(
+        &'a self,
+        cx: &'a BuildCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<crate::IntentSafety, IntentError>> {
+        Box::pin(self.safety_at(cx))
     }
     fn semantic_intent_dyn(&self) -> &dyn DynIntent {
         self.semantic_intent()

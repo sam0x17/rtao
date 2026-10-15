@@ -22,7 +22,7 @@ use tokio::time::{Instant, timeout, timeout_at};
 
 use crate::{AuthError, Clock, SystemClock, sign};
 
-/// Timing and concurrency for one axon query call.
+/// Timing, concurrency and response limits for one axon query call.
 #[derive(Debug, Clone)]
 pub struct FanOut {
     /// Maximum attempts in flight; further targets queue within the deadline.
@@ -40,6 +40,12 @@ pub struct FanOut {
     /// Additional attempts for transient network errors or HTTP 408/429/5xx.
     /// Each attempt obtains a fresh nonce and signature.
     pub retries: u8,
+    /// Maximum response-body bytes retained per attempt before JSON decoding.
+    ///
+    /// Defaults to 1 MiB. This must be positive; larger axon payloads require
+    /// an explicit budget. Concurrent responses and decoded JSON use additional
+    /// memory. The lower-level request API still returns a streaming response.
+    pub max_response_bytes: usize,
 }
 impl Default for FanOut {
     fn default() -> Self {
@@ -49,6 +55,7 @@ impl Default for FanOut {
             timeout: Duration::from_secs(12),
             deadline: Some(Duration::from_secs(13)),
             retries: 0,
+            max_response_bytes: 1024 * 1024,
         }
     }
 }
@@ -113,6 +120,12 @@ pub enum FanOutError {
     Status(StatusCode),
     /// The successful response was not valid JSON for the requested type.
     Decode(serde_json::Error),
+    /// Declared or acquired response-body bytes exceeded the configured budget.
+    /// This is a permanent response failure and is never retried.
+    ResponseTooLarge {
+        /// Maximum permitted response-body bytes for this attempt.
+        limit: usize,
+    },
 }
 impl fmt::Display for FanOutError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -122,6 +135,9 @@ impl fmt::Display for FanOutError {
             Self::Request(error) => error.fmt(f),
             Self::Status(status) => write!(f, "axon returned HTTP {status}"),
             Self::Decode(error) => error.fmt(f),
+            Self::ResponseTooLarge { limit } => {
+                write!(f, "axon response exceeds the {limit}-byte body limit")
+            }
         }
     }
 }
@@ -274,6 +290,9 @@ impl SignedClient {
                 "concurrency and timeouts must be positive and timeouts at most one year",
             );
         }
+        if cfg.max_response_bytes == 0 {
+            return configuration_stream(targets, "response-byte budget must be positive");
+        }
         let http = match http_client(self.tls.clone(), cfg.connect_timeout) {
             Ok(http) => http,
             Err(error) => return configuration_stream(targets, &error.to_string()),
@@ -336,24 +355,19 @@ impl SignedClient {
                                 if !response.status().is_success() {
                                     return Err(FanOutError::Status(response.status()));
                                 }
-                                let bytes = response.bytes().await.map_err(|error| {
-                                    FanOutError::Request(ClientError::Http(error))
-                                })?;
+                                let bytes =
+                                    response_bytes(response, cfg.max_response_bytes).await?;
                                 rtao_primitives::json::from_slice::<R>(&bytes)
                                     .map_err(FanOutError::Decode)
                             })
                             .await
                             .unwrap_or(Err(FanOutError::Timeout));
-                            // Deserialize is synchronous and may return Ready
-                            // after a timer's deadline in the same future poll.
-                            if deadline.is_some_and(|at| Instant::now() >= at) {
-                                return Err(FanOutError::Deadline);
-                            }
-                            let response = if attempt_started.elapsed() >= cfg.timeout {
-                                Err(FanOutError::Timeout)
-                            } else {
-                                response
-                            };
+                            let response = finish_attempt(
+                                response,
+                                attempt_started.elapsed(),
+                                cfg.timeout,
+                                deadline.is_some_and(|at| Instant::now() >= at),
+                            );
                             if response.is_ok()
                                 || attempt == cfg.retries
                                 || !response.as_ref().err().is_some_and(FanOutError::retryable)
@@ -441,6 +455,55 @@ impl SignedClient {
             .await
             .map_err(ClientError::Http)
     }
+}
+
+fn finish_attempt<R>(
+    response: Result<R, FanOutError>,
+    elapsed: Duration,
+    timeout: Duration,
+    deadline_elapsed: bool,
+) -> Result<R, FanOutError> {
+    // Tokio polls the inner future before its timer. Preserve a completed size
+    // rejection even if that poll crossed a timing boundary: replacing it with
+    // Timeout would turn a permanent resource failure into a retryable one.
+    if matches!(&response, Err(FanOutError::ResponseTooLarge { .. })) {
+        return response;
+    }
+    // Deserialize is synchronous and may return Ready after a timer's deadline
+    // in the same future poll. Such successful responses must still be refused.
+    if deadline_elapsed {
+        Err(FanOutError::Deadline)
+    } else if elapsed >= timeout {
+        Err(FanOutError::Timeout)
+    } else {
+        response
+    }
+}
+
+async fn response_bytes(
+    mut response: reqwest::Response,
+    limit: usize,
+) -> Result<Vec<u8>, FanOutError> {
+    if response
+        .content_length()
+        .is_some_and(|length| length > limit as u64)
+    {
+        return Err(FanOutError::ResponseTooLarge { limit });
+    }
+    // Do not reserve from the peer's declared length. Check every acquired
+    // chunk before copying it, including bodies without a Content-Length.
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|error| FanOutError::Request(ClientError::Http(error)))?
+    {
+        if chunk.len() > limit.saturating_sub(bytes.len()) {
+            return Err(FanOutError::ResponseTooLarge { limit });
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
 }
 
 struct RequestParts<'a> {
@@ -601,5 +664,46 @@ impl SignedRequestBuilder<'_> {
         )
         .await
         .unwrap_or(Err(ClientError::Timeout))
+    }
+}
+
+#[cfg(test)]
+mod attempt_budget_tests {
+    use super::*;
+
+    #[test]
+    fn completed_oversize_rejection_remains_permanent_across_timing_boundaries() {
+        let timeout = Duration::from_secs(1);
+        // Inject elapsed time at the production post-poll boundary, avoiding
+        // scheduler races or sleeps while covering Tokio's inner-Ready case.
+        for elapsed in [timeout - Duration::from_nanos(1), timeout, timeout * 2] {
+            for deadline_elapsed in [false, true] {
+                let response = finish_attempt::<()>(
+                    Err(FanOutError::ResponseTooLarge { limit: 11 }),
+                    elapsed,
+                    timeout,
+                    deadline_elapsed,
+                );
+                assert!(matches!(
+                    response,
+                    Err(FanOutError::ResponseTooLarge { limit: 11 })
+                ));
+                assert!(!response.as_ref().err().is_some_and(FanOutError::retryable));
+            }
+        }
+    }
+
+    #[test]
+    fn successful_inner_ready_still_obeys_attempt_and_call_timing_boundaries() {
+        let timeout = Duration::from_secs(1);
+        assert!(matches!(
+            finish_attempt(Ok(()), timeout, timeout, false),
+            Err(FanOutError::Timeout)
+        ));
+        assert!(matches!(
+            finish_attempt(Ok(()), Duration::ZERO, timeout, true),
+            Err(FanOutError::Deadline)
+        ));
+        assert!(finish_attempt(Ok(()), Duration::ZERO, timeout, false).is_ok());
     }
 }

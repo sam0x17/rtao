@@ -31,6 +31,137 @@ use std::{
 };
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
+struct RegistrationConfirmation {
+    questions: Arc<Mutex<Vec<String>>>,
+}
+impl Terminal for RegistrationConfirmation {
+    fn stdin_is_tty(&self) -> bool {
+        true
+    }
+    fn stderr_is_tty(&self) -> bool {
+        true
+    }
+    fn read_line(&mut self, question: &str) -> Result<String, PromptError> {
+        self.questions
+            .lock()
+            .map_err(|_| PromptError::Unavailable)?
+            .push(question.into());
+        Ok("no".into())
+    }
+    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        Err(PromptError::Unavailable)
+    }
+    fn message(&mut self, _: &str) -> Result<(), PromptError> {
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn live_registration_review_discloses_exact_burn_lock_and_root_recycling_before_unlock()
+-> TestResult {
+    for (op, cost, share, suffix, card_cost, note) in [
+        (
+            "burned_register",
+            65_535u64,
+            1u16,
+            "burn τ0.000065534 · lock τ0.000000001",
+            "τ0.000065534 burned + τ0.000000001 locked as collateral",
+            "lock τ0.000000001 as miner collateral",
+        ),
+        (
+            "burned_register",
+            1_000_000_000,
+            0,
+            "burn τ1.000000000 · lock none",
+            "τ1.000000000 burned",
+            "lock none (full cost is burned)",
+        ),
+        (
+            "root_register",
+            2_000_000_000,
+            u16::MAX,
+            "burn τ2.000000000 · lock none",
+            "τ2.000000000 recycled",
+            "burn τ2.000000000 (recycled into issuance)",
+        ),
+    ] {
+        let (client, chain, keys) = fixture(u64::MAX).await?;
+        let netuid = if op == "root_register" { 0 } else { 3 };
+        chain.mutate_state(|state| -> TestResult {
+            state.seed_python("SubtensorModule", "Burn", &[json!(netuid)], json!(cost))?;
+            state.seed_python(
+                "SubtensorModule",
+                "CollateralLockShare",
+                &[json!(netuid)],
+                json!(share),
+            )?;
+            state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))?;
+            Ok(())
+        })?;
+        let arguments = if op == "root_register" {
+            json!({"hotkey_ss58": keys.key.account()})
+        } else {
+            json!({"netuid": netuid, "hotkey_ss58": keys.key.account()})
+        };
+        let intent = rtao_intents::AnyIntent::from_tool(op, arguments)?;
+        let (mut ctx, sink, _) = context(&[])?;
+        let questions = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation {
+            questions: questions.clone(),
+        })));
+        let error = ctx
+            .submit_with(&client, intent.as_dyn(), &keys, false, None)
+            .await
+            .err()
+            .ok_or("confirmation must refuse")?;
+        assert_eq!(error.message, "aborted.");
+        {
+            let questions = questions.lock().map_err(|_| "questions")?;
+            assert_eq!(questions.len(), 1);
+            assert!(questions[0].contains(&format!(" — {suffix}?")));
+        }
+        let card = sink.text(Stream::Stdout)?;
+        assert!(card.contains(&format!(" — {suffix}")));
+        assert!(card.contains(card_cost));
+        assert!(sink.text(Stream::Stderr)?.contains(note));
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn dry_run_registration_keeps_the_sdk_summary_and_machine_schema() -> TestResult {
+    let (client, chain, keys) = fixture(u64::MAX).await?;
+    chain.mutate_state(|state| {
+        state.seed_python(
+            "SubtensorModule",
+            "Burn",
+            &[json!(0)],
+            json!(2_000_000_000u64),
+        )
+    })?;
+    let intent = rtao_intents::RootRegister {
+        hotkey_ss58: Some(keys.key.account().to_string().parse()?),
+    };
+    let (ctx, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
+    assert!(
+        ctx.submit_with(&client, &intent, &keys, false, None)
+            .await?
+            .is_none()
+    );
+    let payload: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+    assert_eq!(payload["summary"], intent.summary());
+    assert!(payload.get("cost").is_none());
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
 #[derive(Default)]
 struct RefuseReceiptSink(Mutex<Vec<u8>>);
 impl rtao_cli::output::OutputSink for RefuseReceiptSink {

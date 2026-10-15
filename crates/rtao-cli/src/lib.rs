@@ -20,7 +20,7 @@ pub mod logs;
 /// Explicit native macOS password and Keychain support.
 pub mod macos_password;
 /// Internal semantic multisig dispatch preserving the original intent contract.
-pub mod multisig;
+pub(crate) mod multisig;
 /// JSON data and human renderers.
 pub mod output;
 /// Injectable shell-free process execution.

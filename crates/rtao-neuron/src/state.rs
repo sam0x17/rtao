@@ -17,6 +17,9 @@ use rtao_metagraph::MetagraphDiff;
 use rtao_primitives::{AccountId, NetUid};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
+/// Maximum serialized checkpoint or rotated generation size (64 MiB).
+pub const MAX_CHECKPOINT_BYTES: u64 = 64 * 1024 * 1024;
+
 /// Shared state whose standard-library guards cannot cross an await in a Send future.
 ///
 /// Locks recover their contents after poisoning. Callbacks should release guards
@@ -239,6 +242,7 @@ impl<T> StateStore<T> {
 }
 impl<T: Serialize + Send + Sync + 'static> StateStore<T> {
     /// Serialize a consistent state view and atomically install a checkpoint.
+    /// The complete JSON envelope must fit [`MAX_CHECKPOINT_BYTES`].
     pub async fn save(&self, state: &StateCell<T>, block: u64) -> Result<(), StateError> {
         let inner = Arc::clone(&self.inner);
         let state = state.clone();
@@ -277,6 +281,7 @@ impl<T: DeserializeOwned + Send + 'static> StateStore<T> {
     /// Missing files yield `None`. Damaged JSON falls back to a previous
     /// generation. Identity/schema failures fail immediately, since recovery
     /// must never silently adopt a different application or neuron identity.
+    /// Every generation must be a regular file within [`MAX_CHECKPOINT_BYTES`].
     pub async fn load(&self) -> Result<Option<LoadedState<T>>, StateError> {
         let inner = Arc::clone(&self.inner);
         tokio::task::spawn_blocking(move || {
@@ -287,7 +292,7 @@ impl<T: DeserializeOwned + Send + 'static> StateStore<T> {
             let mut invalid = None;
             for generation in 0..3 {
                 let path = generation_path(&inner.directory, generation);
-                let bytes = match fs::read(&path) {
+                let bytes = match rtao_client::bounded_file::read(&path, MAX_CHECKPOINT_BYTES) {
                     Ok(bytes) => bytes,
                     Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
                     Err(source) => return Err(StateError::Io { path, source }),
@@ -345,6 +350,15 @@ fn generation_path(directory: &Path, generation: u8) -> PathBuf {
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn write_checkpoint(directory: &Path, bytes: &[u8]) -> Result<(), StateError> {
+    if bytes.len() as u64 > MAX_CHECKPOINT_BYTES {
+        return Err(StateError::Io {
+            path: generation_path(directory, 0),
+            source: io::Error::new(
+                io::ErrorKind::InvalidData,
+                "checkpoint exceeds 64 MiB limit",
+            ),
+        });
+    }
     fs::create_dir_all(directory).map_err(|source| StateError::Io {
         path: directory.into(),
         source,
@@ -389,8 +403,8 @@ fn write_checkpoint(directory: &Path, bytes: &[u8]) -> Result<(), StateError> {
 
 fn rotate(directory: &Path, from: u8, to: u8) -> Result<(), StateError> {
     let source_path = generation_path(directory, from);
-    let mut source = match File::open(&source_path) {
-        Ok(file) => file,
+    match fs::symlink_metadata(&source_path) {
+        Ok(_) => {}
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(source) => {
             return Err(StateError::Io {
@@ -398,7 +412,9 @@ fn rotate(directory: &Path, from: u8, to: u8) -> Result<(), StateError> {
                 source,
             });
         }
-    };
+    }
+    // Acquisition still validates the opened descriptor and bounds copying;
+    // the existence check above only identifies an absent older generation.
     let temporary = directory.join(format!(
         ".state.{to}.{}-{}.tmp",
         std::process::id(),
@@ -413,12 +429,15 @@ fn rotate(directory: &Path, from: u8, to: u8) -> Result<(), StateError> {
                 path: temporary.clone(),
                 source,
             })?;
-        io::copy(&mut source, &mut destination)
-            .and_then(|_| destination.sync_all())
+        rtao_client::bounded_file::copy(&source_path, &mut destination, MAX_CHECKPOINT_BYTES)
             .map_err(|source| StateError::Io {
-                path: temporary.clone(),
+                path: source_path.clone(),
                 source,
             })?;
+        destination.sync_all().map_err(|source| StateError::Io {
+            path: temporary.clone(),
+            source,
+        })?;
         drop(destination);
         fs::rename(&temporary, generation_path(directory, to)).map_err(|source| {
             StateError::Io {
@@ -625,6 +644,149 @@ mod tests {
             b"unrelated"
         );
         assert_eq!(fs::read_dir(&fixture.0).expect("parent entries").count(), 1);
+    }
+
+    #[tokio::test]
+    async fn oversized_load_refuses_the_current_file_without_adopting_an_older_generation() {
+        let fixture = Fixture::new();
+        let store = fixture.store::<u64>();
+        for block in 1..=2 {
+            store
+                .save(&StateCell::new(block), block)
+                .await
+                .expect("checkpoint");
+        }
+        let path = generation_path(&fixture.0, 0);
+        let old_path = generation_path(&fixture.0, 1);
+        let old = fs::read(&old_path).expect("older generation");
+        OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .expect("current file")
+            .set_len(MAX_CHECKPOINT_BYTES + 1)
+            .expect("sparse oversized checkpoint");
+        assert!(matches!(
+            store.load().await,
+            Err(StateError::Io { path: failed_path, source })
+                if failed_path == path && source.kind() == io::ErrorKind::InvalidData
+        ));
+        assert_eq!(
+            fs::metadata(&path).expect("current preserved").len(),
+            MAX_CHECKPOINT_BYTES + 1
+        );
+        assert_eq!(fs::read(old_path).expect("older preserved"), old);
+        assert_eq!(fs::read_dir(&fixture.0).expect("entries").count(), 2);
+    }
+
+    #[tokio::test]
+    async fn oversized_rotation_sources_preserve_current_and_remove_all_owned_temporaries() {
+        for generation in 0..=1 {
+            let fixture = Fixture::new();
+            let store = fixture.store::<u64>();
+            store
+                .save(&StateCell::new(1), 1)
+                .await
+                .expect("initial checkpoint");
+            let current_path = generation_path(&fixture.0, 0);
+            let current = fs::read(&current_path).expect("initial contents");
+            let source_path = generation_path(&fixture.0, generation);
+            let source = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .open(&source_path)
+                .expect("rotation source");
+            source
+                .set_len(MAX_CHECKPOINT_BYTES + 1)
+                .expect("sparse oversized rotation source");
+            drop(source);
+            assert!(matches!(
+                store.save(&StateCell::new(2), 2).await,
+                Err(StateError::Io { path, source })
+                    if path == source_path && source.kind() == io::ErrorKind::InvalidData
+            ));
+            assert_eq!(
+                fs::metadata(&source_path).expect("source retained").len(),
+                MAX_CHECKPOINT_BYTES + 1
+            );
+            if generation == 0 {
+                let mut prefix = vec![0; current.len()];
+                std::io::Read::read_exact(
+                    &mut File::open(&current_path).expect("current retained"),
+                    &mut prefix,
+                )
+                .expect("initial prefix");
+                assert_eq!(prefix, current);
+            } else {
+                assert_eq!(fs::read(&current_path).expect("current retained"), current);
+            }
+            assert_eq!(
+                fs::read_dir(&fixture.0)
+                    .expect("no temporary files")
+                    .count(),
+                usize::from(generation) + 1
+            );
+        }
+    }
+
+    #[test]
+    fn oversized_checkpoint_write_preserves_existing_generations_without_temporary_output() {
+        let fixture = Fixture::new();
+        for bytes in [b"oldest".as_slice(), b"previous", b"current"] {
+            write_checkpoint(&fixture.0, bytes).expect("initial checkpoint");
+        }
+        let originals: Vec<_> = (0..3)
+            .map(|generation| {
+                let path = generation_path(&fixture.0, generation);
+                let bytes = fs::read(&path).expect("initial generation");
+                (path, bytes)
+            })
+            .collect();
+        let bytes = vec![0; (MAX_CHECKPOINT_BYTES + 1) as usize];
+        let path = generation_path(&fixture.0, 0);
+        assert!(matches!(
+            write_checkpoint(&fixture.0, &bytes),
+            Err(StateError::Io { path: failed_path, source })
+                if failed_path == path && source.kind() == io::ErrorKind::InvalidData
+        ));
+        for (path, expected) in originals {
+            assert_eq!(fs::read(path).expect("preserved checkpoint"), expected);
+        }
+        assert_eq!(
+            fs::read_dir(&fixture.0)
+                .expect("no temporary files")
+                .count(),
+            3
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn broken_rotation_symlinks_are_errors_instead_of_missing_generations() {
+        let fixture = Fixture::new();
+        let store = fixture.store::<u64>();
+        store
+            .save(&StateCell::new(1), 1)
+            .await
+            .expect("initial checkpoint");
+        let current_path = generation_path(&fixture.0, 0);
+        let current = fs::read(&current_path).expect("initial contents");
+        let broken = generation_path(&fixture.0, 1);
+        std::os::unix::fs::symlink(fixture.0.join("absent"), &broken)
+            .expect("broken generation symlink");
+        assert!(matches!(
+            store.save(&StateCell::new(2), 2).await,
+            Err(StateError::Io { path, source })
+                if path == broken && source.kind() == io::ErrorKind::NotFound
+        ));
+        assert_eq!(fs::read(current_path).expect("current retained"), current);
+        assert!(
+            fs::symlink_metadata(broken)
+                .expect("broken link retained")
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(fs::read_dir(&fixture.0).expect("no temporaries").count(), 2);
     }
 
     #[tokio::test]

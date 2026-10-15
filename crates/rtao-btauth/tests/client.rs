@@ -135,8 +135,52 @@ fn cfg(concurrency: usize) -> FanOut {
         connect_timeout: Duration::from_secs(1),
         timeout: Duration::from_secs(2),
         deadline: Some(Duration::from_secs(3)),
-        retries: 0,
+        ..FanOut::default()
     }
+}
+
+async fn one_fanout_reply(
+    client: &SignedClient,
+    server: &Server,
+    streaming: bool,
+    max_response_bytes: usize,
+) -> TestResult<(Uid, Result<Value, FanOutError>)> {
+    let config = FanOut {
+        max_response_bytes,
+        retries: 2,
+        timeout: Duration::from_millis(500),
+        ..cfg(1)
+    };
+    let targets = targets(server, receiver()?, 1);
+    let mut replies = if streaming {
+        client
+            .fan_out_stream::<_, Value>(targets, query, config)
+            .collect::<Vec<_>>()
+            .await
+    } else {
+        client.fan_out::<_, Value>(targets, query, config).await
+    };
+    assert_eq!(replies.len(), 1);
+    Ok(replies
+        .pop()
+        .ok_or_else(|| io::Error::other("missing fan-out reply"))?)
+}
+
+fn chunked_response(chunks: &[&[u8]], terminate: bool) -> Response {
+    let mut wire = Vec::new();
+    for chunk in chunks {
+        wire.extend_from_slice(format!("{:x}\r\n", chunk.len()).as_bytes());
+        wire.extend_from_slice(chunk);
+        wire.extend_from_slice(b"\r\n");
+    }
+    if terminate {
+        wire.extend_from_slice(b"0\r\n\r\n");
+    }
+    let mut response = Response::json(wire);
+    response
+        .headers
+        .push(("Transfer-Encoding".into(), "chunked".into()));
+    response
 }
 
 struct BehaviorSigner {
@@ -899,6 +943,79 @@ async fn fanout_timeout_covers_body_consumption_after_successful_headers() -> Te
 }
 
 #[tokio::test]
+async fn both_fanout_apis_reject_oversized_declared_lengths_before_body_read_or_retry() -> TestResult
+{
+    let server = Server::http(|_, _| {
+        let mut response = Response {
+            body_delay: Duration::from_secs(30),
+            ..Response::json(b"not needed".to_vec())
+        };
+        response
+            .headers
+            .push(("Content-Length".into(), "1024".into()));
+        response
+    })
+    .await?;
+    let client = signed_client(signer(CryptoType::Sr25519)?)?;
+    for streaming in [false, true] {
+        let (uid, reply) = one_fanout_reply(&client, &server, streaming, 11).await?;
+        assert_eq!(uid, Uid(0));
+        assert!(matches!(
+            reply,
+            Err(FanOutError::ResponseTooLarge { limit: 11 })
+        ));
+    }
+    assert_eq!(server.observations().await?.len(), 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn both_fanout_apis_accept_fixed_length_json_at_the_exact_response_budget() -> TestResult {
+    let body = b"{\"ok\":true}";
+    let server = Server::http(move |_, _| Response::json(body.to_vec())).await?;
+    let client = signed_client(signer(CryptoType::Sr25519)?)?;
+    for streaming in [false, true] {
+        let (uid, reply) = one_fanout_reply(&client, &server, streaming, body.len()).await?;
+        assert_eq!(uid, Uid(0));
+        assert_eq!(reply?, json!({"ok": true}));
+    }
+    assert_eq!(server.observations().await?.len(), 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn both_fanout_apis_stop_chunked_overflow_before_eof_decoding_or_retry() -> TestResult {
+    // The first chunk fills the budget exactly. The next byte exceeds it;
+    // deliberately omit the terminal chunk, so collecting to EOF would fail
+    // as a transport error rather than the response-size error required here.
+    let server = Server::http(|_, _| chunked_response(&[b"{\"ok\":true}", b" "], false)).await?;
+    let client = signed_client(signer(CryptoType::Sr25519)?)?;
+    for streaming in [false, true] {
+        let (uid, reply) = one_fanout_reply(&client, &server, streaming, 11).await?;
+        assert_eq!(uid, Uid(0));
+        assert!(matches!(
+            reply,
+            Err(FanOutError::ResponseTooLarge { limit: 11 })
+        ));
+    }
+    assert_eq!(server.observations().await?.len(), 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn both_fanout_apis_accept_chunked_json_at_the_exact_response_budget() -> TestResult {
+    let server = Server::http(|_, _| chunked_response(&[b"{\"ok\":", b"true}"], true)).await?;
+    let client = signed_client(signer(CryptoType::Sr25519)?)?;
+    for streaming in [false, true] {
+        let (uid, reply) = one_fanout_reply(&client, &server, streaming, 11).await?;
+        assert_eq!(uid, Uid(0));
+        assert_eq!(reply?, json!({"ok": true}));
+    }
+    assert_eq!(server.observations().await?.len(), 2);
+    Ok(())
+}
+
+#[tokio::test]
 async fn status_decode_and_signing_failures_keep_uid_and_error_identity() -> TestResult {
     let server = Server::http(|_, request| match request.target.as_str() {
         "/query/0" => Response {
@@ -1242,6 +1359,10 @@ async fn invalid_fanout_configuration_returns_an_error_for_every_uid() -> TestRe
             deadline: Some(Duration::MAX),
             ..cfg(1)
         },
+        FanOut {
+            max_response_bytes: 0,
+            ..cfg(1)
+        },
     ] {
         let results = client
             .fan_out::<_, Value>(targets(&server, receiver()?, 4), query, config)
@@ -1273,6 +1394,7 @@ fn fanout_defaults_match_validator_timing_budget() {
     assert_eq!(config.timeout, Duration::from_secs(12));
     assert_eq!(config.deadline, Some(Duration::from_secs(13)));
     assert_eq!(config.retries, 0);
+    assert_eq!(config.max_response_bytes, 1024 * 1024);
 }
 
 #[tokio::test]
