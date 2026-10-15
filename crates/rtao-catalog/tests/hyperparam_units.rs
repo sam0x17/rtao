@@ -1,8 +1,9 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_hyperparams_units.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! The generated hyperparameter catalog must retain authenticated Python data.
 // pyt: sdk/python/codegen/check.py:472-507, check_units
 
 use rtao_catalog::hyperparams::TABLE;
-use rtao_primitives::hyperparams::RawInteger;
+use rtao_primitives::hyperparams::{HyperparamStorage, HyperparamTable, RawInteger};
 use serde_json::Value;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -36,6 +37,7 @@ fn raw_bound(value: &Value) -> Result<Option<RawInteger>, Box<dyn std::error::Er
     }
 }
 
+// pyt: unit/test_hyperparams_units.py::test_committed_descriptors_agree_with_hand_table
 #[test]
 fn hyperparam_units_gate() -> TestResult {
     for (name, meta) in TABLE.entries {
@@ -51,6 +53,7 @@ fn hyperparam_units_gate() -> TestResult {
                 "{name}: metadata/hand kind mismatch"
             );
         }
+        assert_eq!(TABLE.kind_of(name), meta.kind, "{name}: resolved kind");
     }
     let document = extracted()?;
     assert_eq!(
@@ -58,6 +61,58 @@ fn hyperparam_units_gate() -> TestResult {
         document["values"]["SHORT_MAX"]["value"].to_string()
     );
     Ok(())
+}
+
+// pyt: unit/test_hyperparams_units.py::test_metadata_identity_decides_kind
+// pyt: unit/test_hyperparams_units.py::test_metadata_identity_overrides_hand_table
+#[test]
+fn exact_source_metadata_identities_override_then_fall_back_to_the_hand_table() {
+    const METADATA: &[HyperparamStorage] = &[
+        HyperparamStorage {
+            parameter: "kappa",
+            container: "SubtensorModule",
+            name: "Kappa",
+            source_ident: "",
+            metadata_ident: "PerU16",
+        },
+        HyperparamStorage {
+            parameter: "min_burn",
+            container: "SubtensorModule",
+            name: "MinBurn",
+            source_ident: "",
+            metadata_ident: "TaoBalance",
+        },
+        HyperparamStorage {
+            parameter: "tempo",
+            container: "SubtensorModule",
+            name: "Tempo",
+            source_ident: "",
+            metadata_ident: "PerU16",
+        },
+    ];
+    const BARE_KAPPA: &[HyperparamStorage] = &[
+        HyperparamStorage {
+            metadata_ident: "u16",
+            ..METADATA[0]
+        },
+        METADATA[1],
+    ];
+    let metadata = HyperparamTable {
+        storage: METADATA,
+        ..TABLE
+    };
+    assert_eq!(metadata.metadata_kind("kappa"), Some("u16"));
+    assert_eq!(metadata.kind_of("kappa"), "u16");
+    assert_eq!(metadata.metadata_kind("min_burn"), Some("rao"));
+    assert_eq!(metadata.kind_of("min_burn"), "rao");
+    assert_eq!(metadata.kind_of("tempo"), "u16");
+    assert_eq!(metadata.normalized("tempo", 32767), Some(32767.0 / 65535.0));
+    let bare = HyperparamTable {
+        storage: BARE_KAPPA,
+        ..TABLE
+    };
+    assert_eq!(bare.metadata_kind("kappa"), None);
+    assert_eq!(bare.kind_of("kappa"), "u16");
 }
 
 #[test]

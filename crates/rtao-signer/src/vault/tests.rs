@@ -691,6 +691,7 @@ async fn proof_signer_embeds_existing_proof_vector_and_verifies_scripted_signatu
             ..Default::default()
         },
     )?;
+    signer.set_summary(Some("reviewed proof-backed transaction".into()))?;
     let server = signer.session_server().await?;
     let mut socket = browser(&server).await?;
     let vector: Value = serde_json::from_str(include_str!(
@@ -721,6 +722,10 @@ async fn proof_signer_embeds_existing_proof_vector_and_verifies_scripted_signatu
         assert_eq!(message["type"], "sign-request");
         assert_eq!(message["summary"]["hashed"], false);
         assert_eq!(message["summary"]["nonce"], 0);
+        assert_eq!(
+            message["summary"]["text"],
+            "reviewed proof-backed transaction"
+        );
         assert_eq!(message["summary"]["specVersion"], 461);
         assert_eq!(message["summary"]["deadlineSeconds"], Value::Null);
         assert_eq!(
@@ -774,20 +779,41 @@ async fn legacy_shield_stages_follow_purpose_and_reuse_one_session() -> TestResu
             ..Default::default()
         },
     )?;
+    signer.set_summary(Some("reviewed transaction [MEV-shielded]".into()))?;
     let server = signer.session_server().await?;
     let mut socket = browser(&server).await?;
     let context = context();
     let json = SignerPayloadJson::from_iter([("era".into(), json!("0x0200"))]);
-    for (purpose, stage) in [
+    for (purpose, stage, reset_manual) in [
         (
             SignPurpose::ShieldInner,
             "scan 1 of 2 — the shielded transaction",
+            false,
         ),
         (
             SignPurpose::ShieldCarrier,
             "scan 2 of 2 — the encrypted carrier",
+            false,
+        ),
+        (
+            SignPurpose::ShieldCarrier,
+            "scan 2 of 2 — the encrypted carrier",
+            true,
+        ),
+        (
+            SignPurpose::Extrinsic,
+            "scan 1 of 2 — the shielded transaction",
+            true,
+        ),
+        (
+            SignPurpose::Extrinsic,
+            "scan 2 of 2 — the encrypted carrier",
+            false,
         ),
     ] {
+        if reset_manual {
+            signer.set_two_stage(true)?;
+        }
         let request = SigningRequest {
             call: &[1, 2],
             included_in_extrinsic: &[],
@@ -800,6 +826,10 @@ async fn legacy_shield_stages_follow_purpose_and_reuse_one_session() -> TestResu
         let phone = async {
             let message = read(&mut socket).await?;
             assert_eq!(message["summary"]["stage"], stage);
+            assert_eq!(
+                message["summary"]["text"],
+                "reviewed transaction [MEV-shielded]"
+            );
             assert_eq!(message["summary"]["deadlineSeconds"], 96.0);
             let signature = software.sign_raw(request.payload).await?;
             send(

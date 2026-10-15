@@ -42,6 +42,8 @@ pub struct BackendRequest {
     pub open_browser: bool,
     /// Permit an interactive choice among advertised extension accounts.
     pub interactive: bool,
+    /// Reviewed transaction label, used only by the signing page display.
+    pub summary: Option<String>,
 }
 
 /// An acquired session must own its transport and dispose of it on drop.
@@ -155,6 +157,7 @@ impl NativeSignerFactory {
             default_address,
             open_browser: !globals.quiet && terminal.stderr_is_tty(),
             interactive: !globals.json && terminal.stdin_is_tty(),
+            summary: None,
         };
         self.backend.validate(&request)?;
         Ok(request)
@@ -183,6 +186,7 @@ impl NativeSignerFactory {
             request,
             account,
             role,
+            summary: Mutex::new(None),
             session: AsyncMutex::new(None),
             closed: AtomicBool::new(false),
         });
@@ -192,6 +196,13 @@ impl NativeSignerFactory {
         active.retain(|_, state| state.strong_count() > 0);
         active.insert(id, Arc::downgrade(&state));
         Ok(keys)
+    }
+    fn set_summary_for_keys(&self, keys: &dyn DynKeySource, summary: &str) {
+        let id = keys as *const dyn DynKeySource as *const () as usize;
+        let state = self.active.lock().get(&id).and_then(Weak::upgrade);
+        if let Some(state) = state {
+            *state.summary.lock() = Some(summary.to_owned());
+        }
     }
     async fn release_keys(&self, keys: &dyn DynKeySource, success: bool) -> Result<(), CliError> {
         let id = keys as *const dyn DynKeySource as *const () as usize;
@@ -213,6 +224,9 @@ impl NativeSignerFactory {
     }
 }
 impl ExternalSignerFactory for NativeSignerFactory {
+    fn set_summary(&self, keys: &dyn DynKeySource, summary: &str) {
+        self.set_summary_for_keys(keys, summary);
+    }
     fn keys<'a>(
         &'a self,
         globals: &'a Globals,
@@ -230,6 +244,9 @@ impl ExternalSignerFactory for NativeSignerFactory {
     }
 }
 impl RawSignerFactory for NativeSignerFactory {
+    fn set_summary(&self, _selection: &SigningSelection, keys: &dyn DynKeySource, summary: &str) {
+        self.set_summary_for_keys(keys, summary);
+    }
     fn public_selection<'a>(
         &'a self,
         ctx: &'a AppContext,
@@ -283,6 +300,7 @@ struct LazyState {
     request: BackendRequest,
     account: AccountId,
     role: Option<SignerRole>,
+    summary: Mutex<Option<String>>,
     session: AsyncMutex<Option<Arc<dyn BackendSession>>>,
     closed: AtomicBool,
 }
@@ -319,10 +337,12 @@ impl DynKeySource for LazyKeys {
             if let Some(session) = slot.as_ref() {
                 return Ok(session.signer());
             }
+            let mut request = self.0.request.clone();
+            request.summary = self.0.summary.lock().clone();
             let session = self
                 .0
                 .backend
-                .acquire(&self.0.request, self.0.account)
+                .acquire(&request, self.0.account)
                 .await
                 .map_err(|error| SignerError::KeyView(error.to_string()))?;
             let signer = session.signer();

@@ -609,9 +609,10 @@ async fn duration_prompt_accepts_python_grammar_before_checked_encryption() -> T
         );
         assert!(fixture.sink.bytes(Stream::Stdout)?.is_empty());
     }
-    let state = backend.state.lock().map_err(|_| "fixture lock")?;
-    assert!(state.seals.is_empty() && state.opens.is_empty());
-    drop(state);
+    {
+        let state = backend.state.lock().map_err(|_| "fixture lock")?;
+        assert!(state.seals.is_empty() && state.opens.is_empty());
+    }
     let mut fixture = Fixture::new(
         &["rtao", "timelock", "encrypt", "payload"],
         false,

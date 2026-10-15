@@ -737,6 +737,9 @@ fn decimal_u256(digits: &str) -> Result<[u8; 32], CliError> {
 
 /// Sources for per-round local/external signing, acquired only after confirmation.
 pub trait RawSignerFactory: Send + Sync {
+    /// Attach the reviewed label before this lazy source acquires its UI.
+    fn set_summary(&self, _selection: &SigningSelection, _keys: &dyn DynKeySource, _summary: &str) {
+    }
     /// Resolve public identity for review without acquiring a signing session.
     /// Ordinary previews bypass this hook; pinned accounts need no backend I/O.
     fn public_selection<'a>(
@@ -973,6 +976,11 @@ pub async fn execute_rounds_with(
             }
         })?;
         let result = async {
+            factory.set_summary(
+                selection,
+                source.as_ref(),
+                &raw_label(request, shield.enabled),
+            );
             if let Some(expected) = selection.address
                 && public_signer(source.as_ref(), request.role)? != expected
             {
