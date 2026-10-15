@@ -211,6 +211,12 @@ impl Wallet {
         self.coldkey = self.coldkey.with_password_sources(sources);
         self
     }
+    /// Configure the selected hotkey's independent password-resolution policy.
+    /// Coldkey password files and native password services are not inherited.
+    pub fn with_hotkey_password_sources(mut self, sources: PasswordSources) -> Self {
+        self.hotkey = self.hotkey.with_password_sources(sources);
+        self
+    }
     /// Create a new coldkey and return its recovery phrase without printing it.
     pub async fn create_new_coldkey(
         &self,
@@ -253,7 +259,7 @@ impl Wallet {
             crypto,
         })
     }
-    fn state(&self, role: SignerRole) -> &crate::files::FileState {
+    pub(crate) fn state(&self, role: SignerRole) -> &crate::files::FileState {
         match role {
             SignerRole::Coldkey => &self.coldkey.0,
             SignerRole::Hotkey => &self.hotkey.0,

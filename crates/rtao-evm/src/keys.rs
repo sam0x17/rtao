@@ -680,7 +680,7 @@ fn encrypt_keystore(account: &EvmAccount, password: &str, n: u64) -> Result<Valu
     let derived = derive_key(&crypto, password)?;
     let scalar = Zeroizing::new(account.to_field_bytes());
     let mut cipher = Zeroizing::new([0u8; 32]);
-    cipher.copy_from_slice(scalar.as_slice());
+    cipher.copy_from_slice(&scalar[..]);
     apply_aes_ctr(&derived[..16], iv, &mut cipher)?;
     crypto["ciphertext"] = Value::String(hex::encode(&cipher[..]));
     crypto["mac"] = Value::String(hex::encode(keystore_mac(&derived, &cipher)));

@@ -3,6 +3,7 @@
 mod bench;
 mod compat;
 mod core_canary;
+mod core_patch;
 mod core_surface;
 mod deps_check;
 mod docs;
@@ -57,6 +58,7 @@ fn main() -> Result<()> {
         Some("supply") => supply::run(args.collect()),
         Some("template") => template::run(args.collect()),
         Some("core-surface") => core_surface::run(args.collect()),
+        Some("core-patch") => core_patch::run(args.collect()),
         Some("lint-upstream") => lint_upstream::run(args.collect()),
         Some("staged") => staged::run(args.collect()),
         Some("extract") => extract::run(&args.collect::<Vec<_>>()),

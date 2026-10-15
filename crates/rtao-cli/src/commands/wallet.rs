@@ -22,6 +22,9 @@ use serde_json::{Value, json};
 use std::{cmp::Ordering, fs, path::Path, sync::Arc};
 use zeroize::Zeroizing;
 
+#[path = "wallet_m8/mod.rs"]
+mod m8;
+
 fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
 }
@@ -242,6 +245,7 @@ pub fn command() -> Command {
                     ),
                 ]),
         ])
+        .subcommands(m8::commands())
 }
 
 /// Run a selected wallet group. Public chain commands open one shared client.
@@ -254,7 +258,10 @@ pub async fn run(
     let (name, leaf) = group
         .subcommand()
         .ok_or_else(|| input("missing wallet command"))?;
-    if matches!(name, "balance" | "inspect") {
+    if name == "history" {
+        return m8::history::run(ctx, leaf, history).await;
+    }
+    if matches!(name, "balance" | "inspect") || m8::is_chain(name) {
         let runner = ctx.clone();
         return runner
             .run(|client| async move { run_with_client(ctx, &client, group, history).await })
@@ -277,6 +284,13 @@ pub async fn run_with_client(
     match name {
         "balance" => chain::balance(ctx, client, leaf, history).await,
         "inspect" => chain::inspect(ctx, client, leaf, history).await,
+        "overview" => chain::overview(ctx, client, leaf, history).await,
+        "registrations" => chain::registrations(ctx, client, leaf, history).await,
+        "get-identity" => m8::get_identity(ctx, client, leaf, history).await,
+        "swap-check" => m8::swap_check(ctx, client, leaf, history).await,
+        name if m8::transaction_op(name).is_some() => {
+            m8::transaction(ctx, client, name, leaf, history).await
+        }
         _ => run_local(ctx, name, leaf, history).await,
     }
 }
@@ -452,6 +466,9 @@ async fn run_local(
     matches: &ArgMatches,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
+    if m8::is_local(name) {
+        return m8::run_local(ctx, name, matches, history).await;
+    }
     if name == "list" {
         return list(ctx).await;
     }
@@ -1233,6 +1250,8 @@ mod chain {
         reads::reads::owner::{self, StakeValuation},
     };
     use std::collections::{BTreeMap, BTreeSet};
+
+    include!("wallet_m8/views.rs");
 
     const BASIS: &str = "spot price; excludes slippage/fees of an actual unstake";
     const STAKE_TITLE: &str = "stake (per-subnet currency: TAO on netuid 0, alpha elsewhere)";

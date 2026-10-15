@@ -14,12 +14,16 @@ on:
         description: Also regenerate catalog interfaces and upload them for review
         type: boolean
         default: false
+      prepare_core_patch:
+        description: Prepare the reviewed Ledger core patch pins for artifact review
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.ref }}-${{ (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
+  group: pr-${{ github.ref }}-${{ inputs.prepare_core_patch && 'core-patch' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
   cancel-in-progress: true
 
 env:
@@ -34,7 +38,7 @@ env:
 # Python and live Docker/hardware targets are excluded by the ci test profile.
 jobs:
   check:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -57,6 +61,8 @@ jobs:
             target/pr-gates/ci/tools
       - name: Fetch locked dependencies for offline source and graph checks
         run: cargo fetch --locked
+      - name: Verify maintained fixed integer source
+        run: node ci/verify-ruint.mjs
       - run: cargo run --locked -p xtask -- gates --job check
         # M0: imported hashes, pin/lock, fmt, Clippy, dependencies, surface,
         # staged probes, upstream lints, extraction, all parity layers, nextest,
@@ -74,7 +80,7 @@ jobs:
           retention-days: 7
 
   no-host:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -94,7 +100,7 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -112,9 +118,13 @@ jobs:
           workspaces: . -> target/pr-gates/build
           cache-directories: ~/.cargo/git
       - run: cargo run --locked -p xtask -- gates --job msrv
+      - name: Check fixed integer source and no-allocation regressions on the MSRV
+        run: |
+          node ci/verify-ruint.mjs
+          timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -147,7 +157,7 @@ jobs:
           retention-days: 7
 
   supply:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -168,6 +178,8 @@ jobs:
         run: |
           cargo fetch --locked
           cargo fetch --locked --manifest-path fuzz/Cargo.toml
+      - name: Verify fixed integer source before auditing its version
+        run: node ci/verify-ruint.mjs
       - run: cargo run --locked -p xtask -- gates --job supply
         # Pinned cargo-deny (all features, all checks) and cargo-audit 0.22.2.
       - name: Retain raw supply audit and graph evidence
@@ -180,7 +192,7 @@ jobs:
           retention-days: 14
 
   semver:
-    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen))
+    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -201,6 +213,48 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job semver
         # No tool installation/comparison before the first rtao-v* tag.
         # Pre-1.0 comparison failures warn; comparisons from 1.0 block.
+
+  core-patch-prepare:
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_core_patch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-on-failure: true
+          workspaces: . -> target/pr-gates/build
+          cache-directories: ~/.cargo/git
+      - name: Prepare exact reviewed patch pins and verify both API identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cargo fetch --locked
+          cargo run --locked -p xtask -- core-patch rebase v478
+          cargo update --workspace
+          cargo run --locked -p xtask -- pin --check --prepare-cache
+          node <<'NODE_PATCH_PATHS'
+          const cp = require('node:child_process');
+          const changed = cp.execFileSync('git', ['diff', '--name-only'], {encoding: 'utf8'}).trim().split('\n').sort();
+          const expected = ['Cargo.lock', 'Cargo.toml', 'upstream.toml'];
+          if (JSON.stringify(changed) !== JSON.stringify(expected)) throw Error('Unexpected core patch output paths: ' + changed.join(', '));
+          NODE_PATCH_PATHS
+      - name: Retain candidate pins for exact source review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: core-patch-${{ github.sha }}
+          path: |
+            Cargo.toml
+            Cargo.lock
+            upstream.toml
+          if-no-files-found: error
+          retention-days: 7
 
   compat-refresh:
     if: github.event_name == 'workflow_dispatch' && (inputs.refresh_compat || inputs.refresh_codegen)

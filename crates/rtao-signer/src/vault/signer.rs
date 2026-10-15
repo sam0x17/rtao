@@ -128,10 +128,10 @@ impl VaultSigner {
     /// Start or reuse the session page without waiting for a scan.
     pub async fn session_server(&self) -> Result<Arc<VaultSessionServer>, VaultError> {
         let mut server = self.server.lock().await;
-        if let Some(server) = server.as_ref() {
-            if server.is_running() {
-                return Ok(server.clone());
-            }
+        if let Some(server) = server.as_ref()
+            && server.is_running()
+        {
+            return Ok(server.clone());
         }
         let started = Arc::new(VaultSessionServer::new(self.options.server.clone())?);
         started.start().await?;

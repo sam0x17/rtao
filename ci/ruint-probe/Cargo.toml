@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "rtao-ruint-no-alloc-probe"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+ruint = { path = "../../patches/ruint", default-features = false }

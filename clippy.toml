@@ -2,6 +2,7 @@
 # runtime paths. Host-only paths are reachable in the enforcing all-features run;
 # core-surface probes also check the names so a rename cannot silence a guard.
 disallowed-methods = [
+  { path = "bittensor_core::signers::ledger::LedgerDevice::with_transport", reason = "testkit-only injected Ledger transport", allow-invalid = true },
   { path = "bittensor_core::client::Client::connect", reason = "blocking reqwest client; use rtao_client::Client", allow-invalid = true },
   { path = "bittensor_core::transaction::Executor::new", reason = "bound to the blocking Client; use rtao_tx::Executor", allow-invalid = true },
   { path = "bittensor_core::transaction::Executor::with_policy", reason = "bound to the blocking Client", allow-invalid = true },
@@ -12,4 +13,8 @@ disallowed-methods = [
   { path = "bittensor_core::timelock::epoch_schedule::predict_first_reveal_block", reason = "safety-net predicate differs from the pallet; use rtao_core::epoch" },
   { path = "bittensor_core::timelock::epoch_schedule::should_run_epoch", reason = "use rtao_core::epoch" },
   { path = "bittensor_core::keyfiles::save_password_to_environment", reason = "std::env::set_var is not thread-safe", allow-invalid = true },
+]
+
+disallowed-types = [
+  { path = "bittensor_core::signers::ApduTransport", reason = "testkit-only injected Ledger transport", allow-invalid = true },
 ]

@@ -118,6 +118,18 @@ impl FileState {
         if let Some(signer) = cached.as_ref() {
             return Ok(signer.clone());
         }
+        let keypair = self.load_keypair().await?;
+        let signer: Arc<dyn Signer> = Arc::new(
+            KeypairSigner::new(keypair)
+                .map_err(|error| WalletError::Blocking(error.to_string()))?,
+        );
+        *cached = Some(signer.clone());
+        Ok(signer)
+    }
+
+    // One authenticated read/KDF path serves both signing and sealed-box
+    // decryption. The private key never becomes a CLI value or public API.
+    async fn load_keypair(&self) -> Result<Keypair, WalletError> {
         let path = self.path.clone();
         let bytes = rtao_core::offload(move || read_data(&path))
             .await
@@ -168,12 +180,28 @@ impl FileState {
         })
         .await
         .map_err(|error| WalletError::Blocking(error.to_string()))??;
-        let signer: Arc<dyn Signer> = Arc::new(
-            KeypairSigner::new(keypair)
-                .map_err(|error| WalletError::Blocking(error.to_string()))?,
-        );
-        *cached = Some(signer.clone());
-        Ok(signer)
+        Ok(keypair)
+    }
+    #[cfg(feature = "encrypted")]
+    pub(crate) async fn decrypt_message_bytes(
+        &self,
+        bytes: Vec<u8>,
+    ) -> Result<SecretString, WalletError> {
+        // Serialize with key replacement and initial unlock. Decryption never
+        // mutates the retained signing cache or exports its private key.
+        let _cached = self.signer.lock().await;
+        let keypair = self.load_keypair().await?;
+        rtao_core::offload(move || {
+            let plain = Zeroizing::new(keypair.decrypt(&bytes).map_err(WalletError::from)?);
+            let text = std::str::from_utf8(&plain).map_err(|_| {
+                WalletError::Core(rtao_core::CoreError::Crypto(
+                    "decrypted message is not valid UTF-8".into(),
+                ))
+            })?;
+            Ok(SecretString::new(text.to_owned().into()))
+        })
+        .await
+        .map_err(|_| WalletError::Blocking("message decryption task failed".into()))?
     }
     pub(crate) async fn store(
         &self,

@@ -2,6 +2,7 @@
 
 - [Introduction](introduction.md)
 - [Getting started](getting-started.md)
+- [Command line use](cli.md)
 - [Running a validator](validator.md)
 - [Running a miner](miner.md)
 - [Subnet owner operations](owner.md)

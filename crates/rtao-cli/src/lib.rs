@@ -39,3 +39,5 @@ pub mod call;
 
 /// Hand-written command families and catalog discovery.
 pub mod commands;
+/// Shell completion scripts from the active command tree.
+pub mod completions;

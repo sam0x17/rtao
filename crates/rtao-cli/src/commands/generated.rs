@@ -508,6 +508,53 @@ impl TxRequest {
     ) -> Result<Self, CliError> {
         let mut prepared = Self::prepare_matches(ctx, op, matches, history)?;
         for prompt in prepared.missing.clone() {
+            if crate::prompt::supplied(&prepared.answers, &prompt.field) {
+                continue;
+            }
+            match &prompt.flow {
+                PromptFlow::StakeSource { netuid_field } => {
+                    super::stake::picker::source(
+                        ctx,
+                        client,
+                        &prompt.field,
+                        netuid_field.as_deref(),
+                        &mut prepared.answers,
+                        history,
+                    )
+                    .await?;
+                    continue;
+                }
+                PromptFlow::StakeTarget => {
+                    super::stake::picker::target(
+                        ctx,
+                        &prompt.field,
+                        &mut prepared.answers,
+                        history,
+                    )?;
+                    continue;
+                }
+                PromptFlow::DestinationAccount => {
+                    super::stake::picker::destination(
+                        ctx,
+                        &prompt.field,
+                        &mut prepared.answers,
+                        history,
+                    )?;
+                    continue;
+                }
+                PromptFlow::ClaimRootSource => {
+                    super::stake::picker::claim_root_source(
+                        ctx,
+                        client,
+                        &prompt.field,
+                        &mut prepared.answers,
+                        history,
+                    )
+                    .await?;
+                    continue;
+                }
+                _ => {}
+            }
             let hint = if prompt.free_balance {
                 let owner = match ctx.dispatch_proxy(None)? {
                     Some(owner) => owner,

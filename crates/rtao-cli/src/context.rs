@@ -385,6 +385,7 @@ impl AppContext {
                 intent,
                 keys,
                 SubmissionControl {
+                    mev_shield_default: options.mev_shield_default,
                     wait_for_finalization: options.wait_for_finalization,
                     replan_owner_rate_limit: options.replan_owner_rate_limit.unwrap_or(true),
                     bind_reviewed_call: options.bind_reviewed_call,
@@ -411,7 +412,7 @@ impl AppContext {
         if !self
             .output
             .result(&result, &format!("submitted {}", intent.spec().name))
-            .map_err(|error| CliError::failure(error.to_string()))?
+            .map_err(|error| known_receipt_error(CliError::failure(error.to_string()), &result))?
         {
             return Err(CliError::failure(""));
         }
@@ -439,8 +440,13 @@ impl AppContext {
         }
         let executor = rtao::Executor::new(client.clone());
         let spec = intent.semantic_intent_dyn().spec();
-        let mut choice =
-            self.resolve_mev_shield(spec.mev_shield_default, spec.mev_shield_required, spec.name)?;
+        let mut choice = self.resolve_mev_shield(
+            control
+                .mev_shield_default
+                .unwrap_or(spec.mev_shield_default),
+            spec.mev_shield_required,
+            spec.name,
+        )?;
         if let Some(period) = control.period
             && (!(4..=65_536).contains(&period) || !period.is_power_of_two())
         {
@@ -692,6 +698,7 @@ struct ApprovalFactory<'a> {
     selection: &'a crate::call::SigningSelection,
 }
 struct SubmissionControl<'a> {
+    mev_shield_default: Option<bool>,
     bind_reviewed_call: bool,
     replan_owner_rate_limit: bool,
     deadline: Option<Duration>,
@@ -767,6 +774,9 @@ pub trait SubmissionHooks: Send + Sync {
 /// Shared command submission settings, including durable recovery callbacks.
 #[derive(Clone, Copy, Default)]
 pub struct SubmissionOptions<'a> {
+    /// Override the intent's shielding default without forcing the user's choice.
+    /// Composed command workflows retain ordinary fallback and explicit flags.
+    pub mev_shield_default: Option<bool>,
     /// Refuse rebuilt outer bytes or runtime stamps that differ from the
     /// reviewed plan. Durable workflows opt in; proof-refresh routes do not.
     pub bind_reviewed_call: bool,
@@ -1694,6 +1704,7 @@ impl AppContext {
                 intent,
                 keys.as_ref(),
                 SubmissionControl {
+                    mev_shield_default: options.mev_shield_default,
                     period: options.period,
                     execution: options.execution,
                     wait_for_finalization: options.wait_for_finalization,
@@ -2014,6 +2025,7 @@ impl AppContext {
                         &adapter,
                         &public,
                         SubmissionControl {
+                            mev_shield_default: options.mev_shield_default,
                             period: options.period,
                             execution: None,
                             wait_for_finalization: options.wait_for_finalization,
@@ -2150,7 +2162,7 @@ impl AppContext {
         if !self
             .output
             .result(&result, &format!("submitted {}", intent.spec().name))
-            .map_err(|error| CliError::failure(error.to_string()))?
+            .map_err(|error| known_receipt_error(CliError::failure(error.to_string()), &result))?
         {
             return Err(CliError::failure(""));
         }

@@ -1186,6 +1186,7 @@ async fn spin_until(label: &str, mut ready: impl FnMut() -> bool) -> Result {
 
 #[tokio::test]
 async fn pool_rotation_backoff_and_exhaustion() -> Result {
+    assert_eq!(SessionConfig::default().max_retries, 5);
     let primary = FakeNode::start().await?;
     let fallback = FakeNode::start().await?;
     primary.set_handler("system_chain", |_, _| Reply::silent());

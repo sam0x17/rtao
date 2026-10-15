@@ -63,14 +63,13 @@ impl BridgePaths {
                 return Err(error("bridge reservation path changed"));
             }
             let existing = read_private(&paths.pid_file, false)?;
-            if existing.as_ref().is_some_and(|bytes| !bytes.is_empty()) {
-                if let Some(pid) = read_pid(&paths)? {
-                    if process_alive(pid) {
-                        return Err(error(
-                            "bridge state files belong to a live daemon; refusing to overwrite them",
-                        ));
-                    }
-                }
+            if existing.as_ref().is_some_and(|bytes| !bytes.is_empty())
+                && let Some(pid) = read_pid(&paths)?
+                && process_alive(pid)
+            {
+                return Err(error(
+                    "bridge state files belong to a live daemon; refusing to overwrite them",
+                ));
             }
             let guard = BridgeFiles {
                 paths,
@@ -219,10 +218,11 @@ pub async fn ensure_bridge(options: &EnsureBridgeOptions) -> Result<String, Brid
         // A foreground bridge is explicitly owned by its terminal. Reuse that
         // authenticated server without signalling it; only restart a verified
         // background daemon. Python daemon argv remains supported.
-        if let Some(pid) = read_pid(&options.paths)? {
-            if process_alive(pid) && verify_process(pid, &options.paths.pid_file).await.is_ok() {
-                stop_bridge_daemon(&options.paths, url.as_str()).await?;
-            }
+        if let Some(pid) = read_pid(&options.paths)?
+            && process_alive(pid)
+            && verify_process(pid, &options.paths.pid_file).await.is_ok()
+        {
+            stop_bridge_daemon(&options.paths, url.as_str()).await?;
         }
     }
     let mut status = timeout(
@@ -351,12 +351,12 @@ pub async fn start_bridge_daemon(
             "cannot start extension bridge: the loopback port is already in use by another process",
         ));
     }
-    if let Some(pid) = read_pid(paths)? {
-        if process_alive(pid) {
-            return Err(error(
-                "bridge PID file refers to a live process; refusing to start another daemon",
-            ));
-        }
+    if let Some(pid) = read_pid(paths)?
+        && process_alive(pid)
+    {
+        return Err(error(
+            "bridge PID file refers to a live process; refusing to start another daemon",
+        ));
     }
     let program = std::env::var_os("RTAO_BIN")
         .filter(|s| !s.is_empty())
@@ -403,12 +403,12 @@ pub async fn run_bridge_daemon(
     options: &BridgeOptions,
     paths: &BridgePaths,
 ) -> Result<(), BridgeError> {
-    if let Some(pid) = read_pid(paths)? {
-        if process_alive(pid) {
-            return Err(error(
-                "bridge state files belong to a live daemon; refusing to overwrite them",
-            ));
-        }
+    if let Some(pid) = read_pid(paths)?
+        && process_alive(pid)
+    {
+        return Err(error(
+            "bridge state files belong to a live daemon; refusing to overwrite them",
+        ));
     }
     if paths.token_file == paths.pid_file {
         return Err(error("bridge token and PID files must be different paths"));
@@ -539,16 +539,14 @@ impl Drop for BridgeFiles {
             if let (Ok(held), Ok(named)) = (
                 self._reservation.metadata(),
                 fs::symlink_metadata(&self.paths.pid_file),
-            ) {
-                if held.dev() == named.dev()
-                    && held.ino() == named.ino()
-                    && read_private(&self.paths.pid_file, false)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|bytes| bytes.is_empty())
-                {
-                    let _ = fs::remove_file(&self.paths.pid_file);
-                }
+            ) && held.dev() == named.dev()
+                && held.ino() == named.ino()
+                && read_private(&self.paths.pid_file, false)
+                    .ok()
+                    .flatten()
+                    .is_some_and(|bytes| bytes.is_empty())
+            {
+                let _ = fs::remove_file(&self.paths.pid_file);
             }
         }
     }

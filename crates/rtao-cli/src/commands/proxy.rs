@@ -7,7 +7,7 @@ use super::{
     schema::{self, Field},
 };
 use crate::{
-    books::{AccountLookup, FsAccountLookup, read_public_json_for_update, write_public_json},
+    books::{AccountLookup, FsAccountLookup, ProxyBook, public_json_truthy},
     context::{AppContext, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
     globals::{Tier, with_globals},
@@ -19,15 +19,12 @@ use crate::{
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::{
-    client::{
-        Client,
-        config::{ConfigFile, Paths},
-    },
+    client::{Client, config::Paths},
     primitives::{AccountId, pyfmt},
     tx::ExtrinsicResult,
 };
 use serde_json::{Map, Value, json};
-use std::{collections::BTreeSet, path::PathBuf};
+use std::collections::BTreeSet;
 
 fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
@@ -107,7 +104,7 @@ pub fn command() -> Result<Command, CliError> {
         .about("On-chain proxy management and the local proxy book.")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .subcommands([create, add, remove, kill, list, execute]))
+        .subcommands([create, add, remove, kill, list, execute, book_command()]))
 }
 
 /// Reserve command fields so execute's inner force type stays an intent input.
@@ -134,6 +131,7 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
         }
         "list" => Ok(vec!["coldkey_ss58"]),
         "execute" => generated::intent_reserved("execute_proxy_announced"),
+        "book" => Ok(Vec::new()),
         _ => Err(CliError::input(format!("unknown proxy command {name:?}"))),
     }
 }
@@ -568,59 +566,311 @@ async fn list(ctx: &AppContext, client: &Client, owner: AccountId) -> Result<(),
         .map_err(failure)
 }
 
-#[derive(Clone)]
-struct ProxyBook {
-    path: PathBuf,
+fn context_book(ctx: &AppContext) -> Result<ProxyBook, CliError> {
+    match &ctx.config_store {
+        Some(store) => Ok(ProxyBook::new(store.paths())),
+        None => Ok(ProxyBook::new(&Paths::from_process().map_err(failure)?)),
+    }
 }
-impl ProxyBook {
-    fn new(paths: &Paths) -> Self {
-        Self {
-            path: paths.path(ConfigFile::Proxies).to_owned(),
+
+fn book_command() -> Command {
+    let add = Command::new("add")
+        .about("Add an entry to the local proxy address book.")
+        .arg(Arg::new("name").long("name").required(true))
+        .arg(
+            Arg::new("address")
+                .long("address")
+                .required(true)
+                .help("Pure or delegate proxy SS58."),
+        )
+        .arg(Arg::new("spawner").long("spawner").default_value(""))
+        .arg(
+            Arg::new("proxy_type")
+                .long("proxy-type")
+                .default_value("Staking")
+                .value_parser(rtao_intents::proxy::PROXY_TYPES),
+        )
+        .arg(
+            Arg::new("delay")
+                .long("delay")
+                .default_value("0")
+                .allow_hyphen_values(true),
+        )
+        .arg(
+            Arg::new("index")
+                .long("index")
+                .default_value("0")
+                .allow_hyphen_values(true),
+        )
+        .arg(Arg::new("height").long("height").allow_hyphen_values(true))
+        .arg(
+            Arg::new("ext_index")
+                .long("ext-index")
+                .allow_hyphen_values(true),
+        )
+        .arg(Arg::new("note").long("note").default_value(""));
+    Command::new("book")
+        .about("Local proxy address book (named pure/delegate proxies).")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommands([
+            with_globals(add, Tier::Read),
+            with_globals(
+                Command::new("list").about("List saved proxies.").arg(
+                    Arg::new("verify")
+                        .long("verify")
+                        .action(ArgAction::SetTrue)
+                        .help("Check each entry against on-chain proxy state."),
+                ),
+                Tier::Read,
+            ),
+            with_globals(
+                Command::new("remove")
+                    .about("Remove a proxy book entry.")
+                    .arg(Arg::new("name").required(true)),
+                Tier::Read,
+            ),
+            with_globals(
+                Command::new("update")
+                    .about("Update a proxy book entry.")
+                    .arg(Arg::new("name").required(true))
+                    .arg(Arg::new("address").long("address"))
+                    .arg(Arg::new("note").long("note")),
+                Tier::Read,
+            ),
+            with_globals(
+                Command::new("clear").about("Clear the local proxy address book."),
+                Tier::Read,
+            ),
+        ])
+}
+
+/// Execute a `proxy book` group. Only a nonempty `list --verify` connects.
+pub async fn book_run(ctx: &AppContext, paths: &Paths, group: &ArgMatches) -> Result<(), CliError> {
+    let (name, leaf) = group
+        .subcommand()
+        .ok_or_else(|| CliError::input("missing proxy book command"))?;
+    if name == "list" && leaf.get_flag("verify") {
+        let entries = ProxyBook::new(paths).load().await.map_err(failure)?;
+        if !entries.is_empty() {
+            return ctx
+                .run(|client| async move { book_list(ctx, paths, entries, Some(&client)).await })
+                .await;
+        }
+        return book_list(ctx, paths, entries, None).await;
+    }
+    book_execute(ctx, paths, group, None).await
+}
+
+/// Execute book mutations or verification with an injected, already-open client.
+/// Mutations never request a signer or submit an extrinsic.
+pub async fn book_execute(
+    ctx: &AppContext,
+    paths: &Paths,
+    group: &ArgMatches,
+    client: Option<&Client>,
+) -> Result<(), CliError> {
+    let (name, leaf) = group
+        .subcommand()
+        .ok_or_else(|| CliError::input("missing proxy book command"))?;
+    let book = ProxyBook::new(paths);
+    let name_arg = || text(leaf, "name").ok_or_else(|| CliError::input("missing proxy book name"));
+    match name {
+        "add" => {
+            let mut entry = json!({"name":name_arg()?,"address":text(leaf,"address").ok_or_else(|| CliError::input("missing proxy address"))?,"spawner":text(leaf,"spawner").unwrap_or_default(),"proxy_type":text(leaf,"proxy_type").unwrap_or("Staking"),"note":text(leaf,"note").unwrap_or_default()});
+            for field in ["delay", "index", "height", "ext_index"] {
+                if let Some(raw) = text(leaf, field) {
+                    let value = rtao::primitives::pyfmt::parse_integer(raw).ok_or_else(|| {
+                        CliError::input(format!("expected an integer, got {raw:?}"))
+                    })?;
+                    entry[field] =
+                        rtao::primitives::json::from_str(&value.to_string()).map_err(failure)?;
+                }
+            }
+            let stored = book.add(entry).await.map_err(failure)?;
+            book_detail(
+                ctx,
+                "added proxy",
+                json!({"entry":stored,"path":book.path()}),
+            )
+        }
+        "list" => {
+            let entries = book.load().await.map_err(failure)?;
+            if leaf.get_flag("verify") && !entries.is_empty() && client.is_none() {
+                return Err(CliError::input("proxy book verification requires a client"));
+            }
+            book_list(
+                ctx,
+                paths,
+                entries,
+                if leaf.get_flag("verify") {
+                    client
+                } else {
+                    None
+                },
+            )
+            .await
+        }
+        "remove" => {
+            let name = name_arg()?;
+            let existed = book.remove(name).await.map_err(failure)?;
+            book_detail(ctx, "removed proxy", json!({"name":name,"existed":existed}))
+        }
+        "update" => {
+            let name = name_arg()?;
+            let updates = ["address", "note"]
+                .into_iter()
+                .filter_map(|key| text(leaf, key).map(|value| (key.to_owned(), json!(value))))
+                .collect();
+            let entry = book
+                .update(name, updates)
+                .await
+                .map_err(failure)?
+                .ok_or_else(|| failure(format!("proxy {} not found", pyfmt::string_repr(name))))?;
+            book_detail(ctx, "updated proxy", entry)
+        }
+        "clear" => {
+            let count = book.clear().await.map_err(failure)?;
+            book_detail(
+                ctx,
+                "cleared proxies",
+                json!({"removed":count,"path":book.path()}),
+            )
+        }
+        _ => Err(CliError::input(format!(
+            "unknown proxy book command {name:?}"
+        ))),
+    }
+}
+
+fn book_detail(ctx: &AppContext, title: &str, payload: Value) -> Result<(), CliError> {
+    let fields = payload
+        .as_object()
+        .map(|object| {
+            object
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    ctx.output
+        .detail(Some(title), &fields, Some(&payload))
+        .map_err(failure)
+}
+
+async fn book_list(
+    ctx: &AppContext,
+    paths: &Paths,
+    mut entries: Vec<Value>,
+    client: Option<&Client>,
+) -> Result<(), CliError> {
+    if let Some(client) = client {
+        for entry in &mut entries {
+            let status = book_status(client, entry).await?;
+            entry
+                .as_object_mut()
+                .ok_or_else(|| failure("proxy book entry must be an object"))?
+                .insert("status".into(), json!(status));
         }
     }
-    fn for_context(ctx: &AppContext) -> Result<Self, CliError> {
-        match &ctx.config_store {
-            Some(store) => Ok(Self::new(store.paths())),
-            None => Ok(Self::new(&Paths::from_process().map_err(failure)?)),
+    let book = ProxyBook::new(paths);
+    if ctx.globals.json {
+        return ctx
+            .output
+            .value(&json!({"path":book.path(),"proxies":entries}))
+            .map_err(failure);
+    }
+    let names = ctx.output.address_names().map_err(failure)?;
+    let nodes = entries
+        .iter()
+        .map(|entry| {
+            let string = |key| {
+                entry
+                    .get(key)
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.is_empty())
+            };
+            let mut meta = vec![string("proxy_type").unwrap_or("Staking").to_owned()];
+            if let Some(delay) = entry.get("delay").filter(|value| public_json_truthy(value)) {
+                meta.push(format!("delay {}", crate::globals::config_string(delay)));
+            }
+            if let Some(spawner) = string("spawner") {
+                meta.push(format!(
+                    "pure, spawned by {}",
+                    names.get(spawner).map(String::as_str).unwrap_or(spawner)
+                ));
+            }
+            let mut leaves = vec![
+                string("address").unwrap_or("—").to_owned(),
+                meta.join(" · "),
+            ];
+            for key in ["note", "status"] {
+                if let Some(text) = string(key) {
+                    leaves.push(text.to_owned());
+                }
+            }
+            (string("name").unwrap_or_default().to_owned(), leaves)
+        })
+        .collect::<Vec<_>>();
+    ctx.output
+        .tree(
+            &format!("proxy book ({})", book.path().display()),
+            &nodes,
+            Some(&json!(entries)),
+        )
+        .map_err(failure)
+}
+
+async fn book_status(client: &Client, entry: &Value) -> Result<String, CliError> {
+    let Some(address) = entry
+        .get("address")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok("no address recorded".into());
+    };
+    let account = address.parse::<AccountId>().map_err(failure)?;
+    let data = rtao::reads::generated::interfaces::proxies(client, account)
+        .await
+        .map_err(failure)?;
+    if data.proxies.is_empty() {
+        return Ok("stale: account has no on-chain delegations".into());
+    }
+    let Some(spawner) = entry
+        .get("spawner")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    else {
+        let count = data.proxies.len();
+        return Ok(format!(
+            "ok: {count} on-chain delegation{}",
+            if count == 1 { "" } else { "s" }
+        ));
+    };
+    let wanted = entry
+        .get("proxy_type")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("Staking");
+    let mut has_spawner = false;
+    for delegation in data.proxies {
+        if delegation.delegate.to_string() == spawner {
+            has_spawner = true;
+            if serde_json::to_value(delegation.proxy_type)
+                .map_err(failure)?
+                .as_str()
+                == Some(wanted)
+            {
+                return Ok("ok".into());
+            }
         }
     }
-    async fn put(&self, entry: Value) -> Result<(), CliError> {
-        let path = self.path.clone();
-        rtao::core::offload(move || {
-            let name = entry
-                .get("name")
-                .and_then(Value::as_str)
-                .filter(|name| !name.is_empty())
-                .ok_or_else(|| {
-                    crate::books::ResolveError::new("proxy entry requires a 'name' field")
-                })?;
-            let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
-            let rows = value
-                .as_array_mut()
-                .ok_or_else(|| crate::books::ResolveError::new("proxy book is not a list"))?;
-            rows.retain(|row| row.get("name").and_then(Value::as_str) != Some(name));
-            rows.push(entry);
-            write_public_json(&path, &value, corrupt)
-        })
-        .await
-        .map_err(|_| failure("proxy book worker failed"))?
-        .map_err(failure)
+    Ok(if has_spawner {
+        "mismatch: spawner is a delegate but with a different proxy type"
+    } else {
+        "stale: spawner is not a delegate of this account"
     }
-    async fn remove(&self, name: &str) -> Result<(), CliError> {
-        let path = self.path.clone();
-        let name = name.to_owned();
-        rtao::core::offload(move || {
-            let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
-            let rows = value
-                .as_array_mut()
-                .ok_or_else(|| crate::books::ResolveError::new("proxy book is not a list"))?;
-            rows.retain(|row| row.get("name").and_then(Value::as_str) != Some(name.as_str()));
-            write_public_json(&path, &value, corrupt)
-        })
-        .await
-        .map_err(|_| failure("proxy book worker failed"))?
-        .map_err(failure)
-    }
+    .into())
 }
 
 async fn after_submit(
@@ -632,7 +882,7 @@ async fn after_submit(
     match after {
         AfterSubmit::None => Ok(()),
         AfterSubmit::Kill { name: Some(name) } => {
-            ProxyBook::for_context(ctx)?.remove(name).await?;
+            context_book(ctx)?.remove(name).await.map_err(failure)?;
             ctx.books
                 .proxies
                 .retain(|entry| entry.get("name").and_then(Value::as_str) != Some(name));
@@ -666,8 +916,8 @@ async fn after_submit(
                         entry[field] = value.clone();
                     }
                 }
-                let book = ProxyBook::for_context(ctx)?;
-                book.put(entry.clone()).await?;
+                let book = context_book(ctx)?;
+                book.add(entry.clone()).await.map_err(failure)?;
                 ctx.books
                     .proxies
                     .retain(|entry| entry.get("name").and_then(Value::as_str) != Some(name));
@@ -676,7 +926,7 @@ async fn after_submit(
                     .message(&format!(
                         "saved to proxy book as {} ({}) — use it with `--proxy-for {name}`",
                         pyfmt::string_repr(name),
-                        book.path.display()
+                        book.path().display()
                     ))
                     .map_err(failure)
             } else {
@@ -696,7 +946,7 @@ mod tests {
         output::{MemorySink, Output, OutputOptions, Stream},
     };
     use rtao::{
-        client::{ClientConfig, Network},
+        client::{ClientConfig, Network, config::ConfigFile},
         primitives::CryptoType,
         signer::{
             BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
@@ -705,7 +955,7 @@ mod tests {
     use rtao_testkit::{FakeChain, FakeState, SubmitScript, rpc::RpcClient};
     use std::{
         collections::VecDeque,
-        path::Path,
+        path::{Path, PathBuf},
         sync::{
             Arc, Mutex,
             atomic::{AtomicU64, AtomicUsize, Ordering},

@@ -276,12 +276,6 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
         } else {
             next["monorepo"]["url"] = value(UPSTREAM);
             if core_moved {
-                ensure!(
-                    next.get("core")
-                        .and_then(|core| core.get("patch"))
-                        .is_none(),
-                    "core-patch-conflict: core patch requires core-patch rebase before moving the core pin"
-                );
                 next["core"]["tag"] = value(&proof.tag);
                 next["core"]["commit"] = value(&proof.commit);
                 next["core"]["toolchain"] = value(toolchain(&repo, &proof.commit)?);
@@ -334,6 +328,11 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
                     .context("candidate requires previous core pin")?,
                 &next,
             )?;
+            if let Some(previous) = current.as_ref()
+                && previous["core"].get("patch").is_some()
+            {
+                crate::core_patch::rebase_candidate(root, previous, &mut next)?;
+            }
         }
         let metadata = if current.is_none() || !opts.check {
             let endpoint = std::env::var("RTAO_FINNEY_HTTP").unwrap_or_else(|_| FINNEY.to_owned());
@@ -393,6 +392,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             .context("upstream.toml is missing; bootstrap with pin --parity auto --check")?;
         if opts.prepare_cache {
             prepare_check_cache(&repo, &current)?;
+            crate::core_patch::prepare_cache(root, &current)?;
         }
         verify_pin_identity(&repo, &current)?;
         verify_manifest(root, &current)?;
@@ -1190,10 +1190,7 @@ fn verify_manifest(root: &Path, pins: &DocumentMut) -> Result<()> {
         &read_document(&root.join("xtask/Cargo.toml"))?,
         &root.join("xtask/Cargo.toml"),
     )?;
-    ensure!(
-        pins["core"].get("patch").is_none(),
-        "core.patch verification must be implemented before using patched core pins"
-    );
+    crate::core_patch::verify(root, pins)?;
     Ok(())
 }
 
@@ -1255,6 +1252,7 @@ fn verify_lock_document(lock: &DocumentMut, pins: &DocumentMut) -> Result<String
     let tag = pin_string(pins, "core", "tag")?;
     let commit = pin_string(pins, "core", "commit")?;
     let expected = format!("git+{UPSTREAM}?tag={tag}#{commit}");
+    let effective_core = crate::core_patch::expected_core_source(pins)?;
     for name in ["bittensor-core", "subtensor-macros"] {
         let matching: Vec<_> = packages
             .iter()
@@ -1265,9 +1263,14 @@ fn verify_lock_document(lock: &DocumentMut, pins: &DocumentMut) -> Result<String
             "Cargo.lock must contain exactly one {name}; found {}",
             matching.len()
         );
+        let source = if name == "bittensor-core" {
+            &effective_core
+        } else {
+            &expected
+        };
         ensure!(
-            matching[0].get("source").and_then(Item::as_str) == Some(&expected),
-            "Cargo.lock {name} source differs from core pin {expected}"
+            matching[0].get("source").and_then(Item::as_str) == Some(source),
+            "Cargo.lock {name} source differs from core pin {source}"
         );
     }
     let identities: Vec<_> = packages

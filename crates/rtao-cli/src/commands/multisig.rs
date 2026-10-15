@@ -897,10 +897,10 @@ fn render_pending(
 
 const UPGRADE_REPO: &str = "RaoFoundation/subtensor";
 const MAX_FETCH_BYTES: usize = 64 * 1024 * 1024;
-trait UpgradeFetch: Send + Sync {
+pub(crate) trait UpgradeFetch: Send + Sync {
     fn bytes<'a>(&'a self, url: &'a str, api: bool) -> BoxFuture<'a, Result<Vec<u8>, CliError>>;
 }
-struct GithubFetch;
+pub(crate) struct GithubFetch;
 impl UpgradeFetch for GithubFetch {
     fn bytes<'a>(&'a self, url: &'a str, api: bool) -> BoxFuture<'a, Result<Vec<u8>, CliError>> {
         Box::pin(async move {
@@ -953,15 +953,15 @@ impl UpgradeFetch for GithubFetch {
         })
     }
 }
-async fn fetch_json(fetch: &dyn UpgradeFetch, url: &str, api: bool) -> Option<Value> {
+pub(crate) async fn fetch_json(fetch: &dyn UpgradeFetch, url: &str, api: bool) -> Option<Value> {
     let bytes = fetch.bytes(url, api).await.ok()?;
     if bytes.len() > MAX_FETCH_BYTES {
         return None;
     }
     serde_json::from_slice(&bytes).ok()
 }
-async fn release_manifests(fetch: &dyn UpgradeFetch) -> Vec<Value> {
-    let url = format!("https://api.github.com/repos/{UPGRADE_REPO}/releases?per_page=15");
+async fn release_manifests(fetch: &dyn UpgradeFetch, repo: &str) -> Vec<Value> {
+    let url = format!("https://api.github.com/repos/{repo}/releases?per_page=15");
     let Some(Value::Array(releases)) = fetch_json(fetch, &url, true).await else {
         return Vec::new();
     };
@@ -991,7 +991,7 @@ async fn release_manifests(fetch: &dyn UpgradeFetch) -> Vec<Value> {
     manifests
 }
 
-async fn discover_pending_upgrades(
+pub(crate) async fn discover_pending_upgrades(
     snapshot: &Snapshot,
     sudo: AccountId,
 ) -> Result<Vec<Value>, CliError> {
@@ -1023,11 +1023,20 @@ async fn load_pending_upgrades(
     sudo: AccountId,
     fetch: &dyn UpgradeFetch,
 ) -> Result<Vec<Value>, CliError> {
+    load_pending_upgrades_from_repo(ctx, snapshot, sudo, fetch, UPGRADE_REPO).await
+}
+pub(crate) async fn load_pending_upgrades_from_repo(
+    ctx: &AppContext,
+    snapshot: &Snapshot,
+    sudo: AccountId,
+    fetch: &dyn UpgradeFetch,
+    repo: &str,
+) -> Result<Vec<Value>, CliError> {
     let mut records = discover_pending_upgrades(snapshot, sudo).await?;
     if records.is_empty() {
         return Ok(records);
     }
-    let manifests = release_manifests(fetch).await;
+    let manifests = release_manifests(fetch, repo).await;
     for record in &mut records {
         let hash = record["call_hash"].as_str().unwrap_or("").to_owned();
         let Some(manifest) = manifests.iter().find(|manifest| {
@@ -1110,7 +1119,7 @@ async fn load_pending_upgrades(
     }
     Ok(records)
 }
-fn upgrade_fields(record: &Value) -> Vec<(String, Value)> {
+pub(crate) fn upgrade_fields(record: &Value) -> Vec<(String, Value)> {
     let mut fields = Vec::new();
     let mut push = |key: &str, value: Value| fields.push((key.to_owned(), value));
     let release = record.get("release").filter(|value| !value.is_null());
