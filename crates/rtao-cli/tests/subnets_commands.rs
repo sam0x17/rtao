@@ -2,7 +2,7 @@
 //! Registration routing and metagraph output preserve real SDK semantics.
 
 use rtao::{
-    client::{Client, ClientConfig, Network},
+    client::{Client, ClientConfig, HeadProvider, Network},
     primitives::{AccountId, NetUid},
 };
 use rtao_cli::{
