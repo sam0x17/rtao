@@ -482,10 +482,34 @@ async fn owners_memberships_and_evm_preserve_defaults_and_order() {
 }
 
 #[tokio::test]
+// upstream-e2e: sdk/bittensor-core/tests/e2e.rs::test_metagraph_fast_path_matches_runtime
 async fn neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum() {
     let (client, _) = setup_client(seed()).await;
     for lite in [true, false] {
         let records = reads::neurons(&client, NET, lite).await.unwrap();
+        let raw = rtao_client::ViewExt::call_dyn(
+            &client,
+            "NeuronInfoRuntimeApi",
+            if lite {
+                "get_neurons_lite"
+            } else {
+                "get_neurons"
+            },
+            &[rtao_core::codec::Value::Int(i128::from(NET.0))],
+        )
+        .await
+        .unwrap()
+        .to_json();
+        let raw = raw.as_array().unwrap();
+        assert_eq!(records.len(), raw.len());
+        assert!(raw.iter().all(|neuron| neuron["hotkey"].is_string()));
+        for record in &records {
+            let counterpart = raw
+                .iter()
+                .find(|neuron| neuron["uid"] == record.uid.0)
+                .unwrap();
+            assert_eq!(&record.raw, counterpart);
+        }
         assert_eq!(
             records.iter().map(|record| record.uid).collect::<Vec<_>>(),
             [Uid(2), Uid(7)]
