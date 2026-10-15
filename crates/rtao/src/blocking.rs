@@ -564,13 +564,6 @@ impl SyncClient {
         self.timestamp(None)
     }
 
-    /// Connection-scoped display symbols, with no wallet access.
-    pub fn token_symbols(&self) -> Result<BTreeMap<NetUid, String>, Error> {
-        self.view.with_view(|view| async move {
-            Ok::<_, ClientError>(view.client().token_symbols().await)
-        })
-    }
-
     /// Decode a complete live SCALE type, refusing trailing input.
     pub fn decode_scale(&self, type_name: String, bytes: Vec<u8>) -> Result<DynValue, Error> {
         self.view.with_view(move |view| async move {
@@ -1061,6 +1054,16 @@ macro_rules! common_reads {
                 })
             }
 
+            /// Copy cached connection symbols without I/O or worker startup.
+            pub fn token_symbols(&self) -> Result<BTreeMap<NetUid, String>, Error> {
+                self.view
+                    .shared
+                    .token_symbols
+                    .lock()
+                    .map(|symbols| symbols.clone())
+                    .map_err(|_| Error::Poisoned)
+            }
+
             /// Tag a native amount with the connected token symbol, without I/O.
             pub fn balance(&self, rao: u64, netuid: NetUid) -> DynBalance {
                 let amount = DynBalance::from_rao(rao, netuid);
@@ -1113,7 +1116,7 @@ macro_rules! common_reads {
                 param_sets: Vec<Vec<Value>>,
             ) -> Result<Vec<DynValue>, Error> {
                 self.view.with_view(move |view| async move {
-                    query_batch(&view, &pallet, &item, param_sets).await
+                    view.query_batch_dyn(&pallet, &item, param_sets).await
                 })
             }
 
@@ -1324,67 +1327,6 @@ impl SyncNeurons<'_> {
         self.view.with_view(move |view| async move {
             rtao_reads::reads::m6_accounts::neurons(&view, netuid, lite).await
         })
-    }
-}
-
-async fn query_batch(
-    view: &impl View,
-    pallet: &str,
-    item: &str,
-    param_sets: Vec<Vec<Value>>,
-) -> Result<Vec<DynValue>, ClientError> {
-    let snapshot = view.pin().await?;
-    let runtime = snapshot.block().runtime.clone();
-    let entry = runtime
-        .storage_entry(pallet, item)
-        .cloned()
-        .ok_or_else(|| {
-            ClientError::from(rtao_core::CoreError::NotInRuntime(format!(
-                "storage {pallet}.{item}"
-            )))
-        })?;
-    let keys = param_sets
-        .iter()
-        .map(|params| {
-            if params.len() != entry.key_types.len() {
-                return Err(ClientError::Protocol(format!(
-                    "{pallet}.{item} expects {} key arguments, got {}",
-                    entry.key_types.len(),
-                    params.len()
-                )));
-            }
-            runtime
-                .core()
-                .storage_key(&entry, params)
-                .map_err(rtao_core::CoreError::from)
-                .map_err(ClientError::from)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let values = snapshot.storage_raw_many(&keys).await?;
-    let offload = values.iter().fold(0usize, |total, value| {
-        total.saturating_add(value.as_ref().map_or(entry.default_bytes.len(), Bytes::len))
-    }) > 64 * 1024;
-    let decode = move || {
-        values
-            .into_iter()
-            .map(|value| {
-                rtao_core::ops::storage::decode_storage_bytes(
-                    runtime.core(),
-                    &entry,
-                    value.as_deref(),
-                )
-                .map(DynValue::new)
-                .map_err(rtao_core::CoreError::from)
-                .map_err(ClientError::from)
-            })
-            .collect()
-    };
-    if offload {
-        rtao_core::offload(decode).await.map_err(|error| {
-            ClientError::Protocol(format!("storage batch decoder task failed: {error}"))
-        })?
-    } else {
-        decode()
     }
 }
 
@@ -1842,6 +1784,7 @@ mod tests {
         let (client, chain, starts) = setup();
         let netuid = NetUid(3);
         let rao = 1_000_000_001;
+        assert!(client.token_symbols().unwrap().is_empty());
         assert_eq!(
             client.balance(rao, netuid).to_string(),
             DynBalance::from_rao(rao, netuid).to_string()
@@ -1870,6 +1813,15 @@ mod tests {
         client.connect().unwrap();
         let snapshot = client.at(BlockRef::Best).unwrap();
         let requests = chain.requests().len();
+        let expected_symbols = BTreeMap::from([
+            (NetUid::ROOT, "root symbol is ignored".into()),
+            (netuid, "λ".into()),
+        ]);
+        assert_eq!(client.token_symbols().unwrap(), expected_symbols);
+        assert_eq!(snapshot.token_symbols().unwrap(), expected_symbols);
+        let mut copied_symbols = client.token_symbols().unwrap();
+        copied_symbols.clear();
+        assert_eq!(client.token_symbols().unwrap(), expected_symbols);
         for value in [client.balance(rao, netuid), snapshot.balance(rao, netuid)] {
             assert_eq!(value.rao, rao);
             assert_eq!(value.netuid, netuid);
@@ -1894,6 +1846,47 @@ mod tests {
         assert_eq!(chain.requests().len(), requests);
         assert_eq!(starts.load(Ordering::SeqCst), 1);
         client.close().unwrap();
+        assert_eq!(client.token_symbols().unwrap(), expected_symbols);
+        assert_eq!(snapshot.token_symbols().unwrap(), expected_symbols);
+        assert_eq!(chain.requests().len(), requests);
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+    }
+
+    // Python SyncClient._call connects before invoking query_batch, even for
+    // an empty batch. The batch itself then skips metadata and storage RPC.
+    #[test]
+    fn empty_named_batch_connects_once_then_skips_metadata_and_rpc() {
+        let (client, chain, starts) = setup();
+        assert!(
+            client
+                .query_batch("UnknownPallet".into(), "UnknownStorage".into(), vec![])
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        assert!(client.is_started());
+        assert!(!chain.requests().is_empty());
+        let snapshot = client.at(BlockRef::Best).unwrap();
+        let before = chain.requests();
+        assert!(
+            client
+                .query_batch("UnknownPallet".into(), "UnknownStorage".into(), vec![])
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            snapshot
+                .query_batch("UnknownPallet".into(), "UnknownStorage".into(), vec![])
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(chain.requests(), before);
+        client.close().unwrap();
+        assert!(matches!(
+            client.query_batch("UnknownPallet".into(), "UnknownStorage".into(), vec![]),
+            Err(Error::Runtime(BlockingError::Closed))
+        ));
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
     }
 
     #[test]
@@ -1909,14 +1902,17 @@ mod tests {
                 vec![
                     vec![Value::Str(COLD.to_string())],
                     vec![Value::Str(OTHER.to_string())],
+                    vec![Value::Str(COLD.to_string())],
                 ],
             )
             .unwrap();
-        assert_eq!(result.len(), 2);
+        assert_eq!(result.len(), 3);
         assert_eq!(
             result[0].to_json()["data"]["free"],
             json!(10_000_000_000u64)
         );
+        assert_eq!(result[1].to_json()["data"]["free"], json!(0));
+        assert_eq!(result[2].to_json(), result[0].to_json());
         let requests = chain.requests();
         assert_eq!(
             requests[before..]
@@ -1925,6 +1921,11 @@ mod tests {
                 .count(),
             1
         );
+        let batch = requests[before..]
+            .iter()
+            .find(|request| request.method == "state_queryStorageAt")
+            .unwrap();
+        assert_eq!(batch.params[0].as_array().unwrap().len(), 2);
         assert_eq!(starts.load(Ordering::SeqCst), 1);
         assert!(client.is_fast_blocks().unwrap());
         client.close().unwrap();

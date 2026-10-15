@@ -1,6 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/snapshot.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/storage.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Read views whose multi-request operations retain one block identity.
 
 use std::{
@@ -878,8 +879,85 @@ fn storage_key(
         .map_err(|error| decode_error("storage key", error.into()))
 }
 
+async fn query_batch<V: View + ?Sized>(
+    view: &V,
+    pallet: &str,
+    item: &str,
+    param_sets: Vec<Vec<Value>>,
+) -> Result<Vec<DynValue>, ClientError> {
+    if param_sets.is_empty() {
+        return Ok(Vec::new());
+    }
+    let snapshot = view.pin().await?;
+    let runtime = snapshot.block().runtime.clone();
+    let entry = runtime
+        .storage_entry(pallet, item)
+        .cloned()
+        .ok_or_else(|| {
+            ClientError::from(rtao_core::CoreError::NotInRuntime(format!(
+                "storage {pallet}.{item}"
+            )))
+        })?;
+    let keys = param_sets
+        .iter()
+        .map(|params| {
+            if params.len() != entry.key_types.len() {
+                return Err(ClientError::Protocol(format!(
+                    "{pallet}.{item} expects {} key arguments, got {}",
+                    entry.key_types.len(),
+                    params.len()
+                )));
+            }
+            runtime
+                .core()
+                .storage_key(&entry, params)
+                .map_err(rtao_core::CoreError::from)
+                .map_err(ClientError::from)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let values = snapshot.storage_raw_many(&keys).await?;
+    let offload = values.iter().fold(0usize, |total, value| {
+        total.saturating_add(value.as_ref().map_or(entry.default_bytes.len(), Bytes::len))
+    }) > 64 * 1024;
+    let decode = move || {
+        values
+            .into_iter()
+            .map(|value| {
+                rtao_core::ops::storage::decode_storage_bytes(
+                    runtime.core(),
+                    &entry,
+                    value.as_deref(),
+                )
+                .map(DynValue::new)
+                .map_err(rtao_core::CoreError::from)
+                .map_err(ClientError::from)
+            })
+            .collect()
+    };
+    if offload {
+        rtao_core::offload(decode).await.map_err(|error| {
+            ClientError::Protocol(format!("storage batch decoder task failed: {error}"))
+        })?
+    } else {
+        decode()
+    }
+}
+
 /// Typed and Python-shaped reads built on a [`View`].
 pub trait ViewExt: View {
+    /// Read one named storage map for many keys at one pinned block.
+    ///
+    /// Results preserve key order and duplicates. An empty batch returns before
+    /// metadata lookup or RPC, including when the connection is closed.
+    fn query_batch_dyn(
+        &self,
+        pallet: &str,
+        item: &str,
+        param_sets: Vec<Vec<Value>>,
+    ) -> impl Future<Output = Result<Vec<DynValue>, ClientError>> + Send {
+        query_batch(self, pallet, item, param_sets)
+    }
+
     /// Read one typed storage entry using its live key types and hashers.
     fn storage<K: KeyArgs + 'static, V: FromStorage>(
         &self,
