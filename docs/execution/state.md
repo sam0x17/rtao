@@ -16,33 +16,40 @@ this cleanup, and no current hosted success is claimed.
 
 ## Current client checkpoint, 2026-10-15
 
-Canonical source implements 20 of 83 intents and 38 of 102 reads. It includes
-M0-M4 foundations and the feature-harness repair; prepared owner/CLI/offline
-candidates are retained in the private source recovery archive. Owner
-orchestration/proxy routing and its example are now restored to the canonical
-worktree for source review; their current hosted acceptance is still pending.
-CLI/offline candidates remain unadopted. Source checkpoint `450c914335daa6a5da76a6c30908186e84f05e6e` is pushed.
-The first hosted workflow exposed fresh-runner cache gaps. CI repair
-`45b7b4dcc3270ea52052a8dfb293ca6a82d06eae` is pushed; its workflow is
-https://github.com/sam0x17/rtao/actions/runs/38681101185.
-No current all-job success or milestone exit is claimed.
+Canonical source implements 20 of 83 intents and 38 of 102 reads. Owner
+orchestration/proxy routing and its example are pushed. Recovered CLI machinery, config/tools/explain handlers and their binary
+routing are in the worktree for source review; hosted acceptance and the
+remaining command families are still in progress. Offline and other command candidates remain in
+the private source recovery archive. No milestone exit is claimed.
 
-Owner source restoration is committed locally as `3f1a545`; it has not yet
-been accepted by hosted tests. A manual compatibility-report mode is prepared
-in the existing CI workflow, so the changed manifest inputs can be regenerated
-as a small reviewable artifact without local compilation. It skips the test
-matrix during generation and cannot push code or claim native Mac coverage.
+The latest pushed source is `1e672ac`. It includes a library-level correction
+preventing a completed multisig approval from inheriting its inner owner's
+rate-limit retry, plus a fixture asserting the failed receipt and exactly one
+signing/submission. It also corrects oracle staging for Q30's optional hosted
+refresh while preserving strict and historical-evidence guards. Normal checks
+are at https://github.com/sam0x17/rtao/actions/runs/38682666347. MSRV, supply, no-host and
+pre-baseline semver passed. The check job caught a missing ViewExt test import;
+that source correction is ready, and features is still live. No current
+all-job success is claimed.
 
-The plan's license expression list now includes the already required PSF and
-Unicode clauses. This clarifies Q1's existing obligations; implementation and
-license guards are unchanged. Private recovery is durably excluded from Git
-and Docker contexts.
+The corrected compatibility source artifact from hosted run
+https://github.com/sam0x17/rtao/actions/runs/38682108313 was verified and adopted
+byte for byte in `71f28d2`. All 23 input hashes, clean source identity,
+unchanged package sets/counts (225/361/365/416) and empty runtime-validation
+claims were checked. The earlier colored-output artifact was rejected.
+This measures Apple-target dependency graphs from a Linux host, with no native
+Mac build or test claim. CLI manifest/lock changes need another hosted refresh.
 
-The source-only `target/client-integration-20261015` task root was removed
-after exact path, contents, symlink and open-file checks. It held seven small
-patch/handoff/metadata files, no builds, services, configurations, virtual
-environments or workspace copies. Canonical source and the private recovery
-archive retain all useful work. No active temporary root remains.
+The CLI lockfile was resolved offline without compilation: eight packages
+were added and no existing package was upgraded. All substantive builds/tests
+remain hosted. The license wording includes Q1's already required PSF and
+Unicode obligations; the approved BLS and dormant advisory guards remain intact.
+
+The only current temporary root is `target/client-ci-20261015`, holding small
+source-report artifacts and the bounded CLI adoption record. No local build,
+node, container, device, Python or test process was started. The retired source
+integration root was audited and removed. Final scratch cleanup is part of this
+continuation; preserve the private recovery archive and wallet state.
 
 ## Disk cleanup completed
 
@@ -61,7 +68,7 @@ Canonical authored source remains in this repository. Unfinished source,
 The archive's 18,888 members were checked against the recovery selection.
 Its SHA-256 is
 `770d9d50a9c855e61a4e7476c91caef52b6d0161c297c996a9fdf46c0852969b`.
-The recovery directory is excluded locally from Git; its README and source
+The recovery directory is excluded from Git and Docker contexts; its README and source
 manifest describe recovery. Preserving a candidate does not adopt or
 validate it. See [disk-cleanup.md](disk-cleanup.md).
 
@@ -433,3 +440,9 @@ enumeration, with source, extraction, pin/parity/dependency and strict workspace
 Clippy checks already passed. No complete gate, commit/push, formal milestone
 exit or release is claimed. The unanswered license-criterion decision remains
 unchanged; all already approved decisions remain applied.
+
+## Active source-artifact task, 2026-10-15
+
+The only active temporary root is `target/client-ci-20261015`. It holds
+selected CI source reports and source patches only, with no builds or
+workspace copies. Remove it after source adoption/review.

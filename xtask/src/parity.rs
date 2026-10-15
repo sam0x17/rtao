@@ -8,6 +8,9 @@ use anyhow::{Context, Result, bail, ensure};
 use sha2::{Digest, Sha256};
 use toml_edit::{Array, DocumentMut, Item, Table, value};
 
+#[path = "parity_cli_psf.rs"]
+mod cli_psf;
+
 const PACKAGE: &str = "sdk/python/bittensor/";
 const ORIGINAL_LICENSE: &str = "MIT OR Apache-2.0";
 const DERIVED_LICENSE: &str = "(MIT OR Apache-2.0) AND Apache-2.0";
@@ -932,11 +935,13 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         }
     }
     let mut attributed: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut cli_psf = false;
     for (name, (directory, _)) in &manifests {
         let mut files = Vec::new();
         rust_files(directory, &mut files)?;
         for path in files {
             let source = fs::read_to_string(&path)?;
+            cli_psf |= cli_psf::source(root, name, directory, &path, &source)?;
             if let Some((upstream_path, _)) = attribution(&source)
                 .with_context(|| format!("{}: invalid attribution", path.display()))?
             {
@@ -1030,6 +1035,9 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         } else {
             base.to_owned()
         };
+        if cli_psf && name == "rtao-cli" {
+            expected.push_str(" AND PSF-2.0");
+        }
         if unicode && name == "rtao-core-ext" {
             expected.push_str(" AND ");
             expected.push_str(UNICODE_LICENSE);
@@ -1554,6 +1562,291 @@ mod tests {
         assert!(
             attribution(&good.replace("sdk/python/bittensor/example.py", "../example.py")).is_err()
         );
+        Ok(())
+    }
+    impl Fixture {
+        fn cli_psf(&self) -> Result<()> {
+            let package = self.0.join("crates/rtao-cli");
+            fs::create_dir_all(package.join("src"))?;
+            fs::write(
+                package.join("Cargo.toml"),
+                include_str!("../tests/fixtures/cli_psf/Cargo.toml"),
+            )?;
+            let source = if let Some(path) = std::env::var_os("RTAO_CLI_PSF_COMPOSITE_SOURCE") {
+                fs::read_to_string(path)?
+            } else {
+                include_str!("../tests/fixtures/cli_psf/books-provenance.txt").to_owned()
+            };
+            fs::write(package.join("src/books.rs"), source)?;
+            fs::write(
+                package.join("LICENSE-PSF"),
+                include_bytes!("../../crates/rtao-primitives/LICENSE-PSF"),
+            )?;
+            let notice = if self.0.join("NOTICE").is_file() {
+                fs::read_to_string(self.0.join("NOTICE"))?
+            } else {
+                include_str!("../../NOTICE").to_owned()
+            };
+            fs::write(
+                self.0.join("NOTICE"),
+                format!("{notice}\n{}", cli_psf::NOTICE),
+            )?;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn cli_psf_identified_port_retains_exact_base_and_release_notice() -> Result<()> {
+        let fixture = Fixture::new()?;
+        fixture.cli_psf()?;
+        check_licenses(&fixture.0, &[])?;
+        let notices: Vec<_> = crate::release::LICENSES
+            .iter()
+            .filter(|license| license.name == "LICENSE-PSF")
+            .collect();
+        assert_eq!(notices.len(), 1);
+        crate::release::validate_license_bytes(
+            notices[0],
+            &fs::read(fixture.0.join("crates/rtao-cli/LICENSE-PSF"))?,
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn cli_psf_missing_or_unsupported_license_clauses_are_rejected() -> Result<()> {
+        let fixture = Fixture::new()?;
+        fixture.cli_psf()?;
+        let path = fixture.0.join("crates/rtao-cli/Cargo.toml");
+        let original = fs::read_to_string(&path)?;
+        for unsupported in [
+            DERIVED_LICENSE.to_owned(),
+            ORIGINAL_LICENSE.to_owned(),
+            format!("{ORIGINAL_LICENSE} AND PSF-2.0"),
+            format!("{DERIVED_LICENSE} AND PSF-2.0 AND BSD-3-Clause"),
+            format!("{DERIVED_LICENSE} AND PSF-2.0 AND Unicode-DFS-2016"),
+        ] {
+            let mut manifest: DocumentMut = original.parse()?;
+            manifest["package"]["license"] = value(unsupported);
+            fs::write(&path, manifest.to_string())?;
+            assert!(check_licenses(&fixture.0, &[]).is_err());
+        }
+        fs::write(&path, original)?;
+        check_licenses(&fixture.0, &[])?;
+        Ok(())
+    }
+
+    #[test]
+    fn cli_psf_requires_full_exact_regular_notice_and_retained_root_attribution() -> Result<()> {
+        for relative in ["crates/rtao-cli/LICENSE-PSF", "NOTICE"] {
+            let fixture = Fixture::new()?;
+            fixture.cli_psf()?;
+            let path = fixture.0.join(relative);
+            let original = fs::read(&path)?;
+            fs::remove_file(&path)?;
+            assert!(
+                check_licenses(&fixture.0, &[]).is_err(),
+                "missing {relative}"
+            );
+            fs::write(&path, "PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2\n")?;
+            assert!(
+                check_licenses(&fixture.0, &[]).is_err(),
+                "truncated {relative}"
+            );
+            let mut changed = original.clone();
+            let changed_at = if relative == "NOTICE" {
+                std::str::from_utf8(&original)?
+                    .find(cli_psf::NOTICE)
+                    .context("CLI NOTICE section")?
+            } else {
+                0
+            };
+            changed[changed_at] = b'X';
+            fs::write(&path, &changed)?;
+            assert!(
+                check_licenses(&fixture.0, &[]).is_err(),
+                "changed {relative}"
+            );
+            fs::write(&path, &original)?;
+            check_licenses(&fixture.0, &[])?;
+            #[cfg(unix)]
+            {
+                let retained = fixture.0.join("retained-notice");
+                fs::rename(&path, &retained)?;
+                std::os::unix::fs::symlink(&retained, &path)?;
+                assert!(
+                    check_licenses(&fixture.0, &[]).is_err(),
+                    "symlink {relative}"
+                );
+            }
+        }
+        let fixture = Fixture::new()?;
+        fixture.cli_psf()?;
+        let path = fixture.0.join("NOTICE");
+        let original = fs::read_to_string(&path)?;
+        for token in [
+            "CPython difflib SequenceMatcher",
+            "CPython 3.12.12 Lib/difflib.py",
+            "4a5632fbf9bf59477c540e3f53fa7cdbeea3e3f5",
+            "3eb2d371b4a171b063921de6bbf115108bc39de8bf72866315868ce2599213b7",
+            "crates/rtao-cli/src/books.rs",
+            "crates/rtao-cli/LICENSE-PSF",
+            "Modified by rtao:",
+        ] {
+            fs::write(&path, original.replace(token, "removed"))?;
+            assert!(check_licenses(&fixture.0, &[]).is_err(), "NOTICE {token}");
+        }
+        fs::write(&path, original)?;
+        check_licenses(&fixture.0, &[])?;
+        Ok(())
+    }
+
+    #[test]
+    fn cli_psf_rejects_missing_stale_or_detached_source_provenance() -> Result<()> {
+        let fixture = Fixture::new()?;
+        fixture.cli_psf()?;
+        let path = fixture.0.join("crates/rtao-cli/src/books.rs");
+        let original = fs::read_to_string(&path)?;
+        for changed in [
+            original.replace(cli_psf::PROVENANCE, ""),
+            original.lines().skip(1).collect::<Vec<_>>().join("\n"),
+            original.replacen(
+                "sdk/python/bittensor/cli/context.py",
+                "sdk/python/bittensor/cli/other.py",
+                1,
+            ),
+            original.replace("4a5632fbf9bf59477c540e3f53fa7cdbeea3e3f5", OTHER_SHA),
+            original.replace(
+                "CPython 3.12.12 Lib/difflib.py",
+                "CPython 3.12.13 Lib/difflib.py",
+            ),
+            original.replace("Lib/difflib.py", "Lib/other.py"),
+            original.replace(
+                cli_psf::PROVENANCE,
+                &format!("{}\n{}", cli_psf::PROVENANCE, cli_psf::PROVENANCE),
+            ),
+            original.replace(
+                "pub(crate) fn sequence_ratio(",
+                "pub(crate) fn unrelated_ratio(",
+            ),
+            original.replace(
+                cli_psf::PROVENANCE,
+                &format!("{}\nconst UNRELATED: bool = true;", cli_psf::PROVENANCE),
+            ),
+        ] {
+            fs::write(&path, changed)?;
+            assert!(check_licenses(&fixture.0, &[]).is_err());
+        }
+        fs::write(&path, original)?;
+        check_licenses(&fixture.0, &[])?;
+        Ok(())
+    }
+
+    #[test]
+    fn cli_psf_rejects_unrelated_packages_and_wrong_source_paths() -> Result<()> {
+        let fixture = Fixture::new()?;
+        fixture.cli_psf()?;
+        let manifest = fixture.0.join("crates/rtao-cli/Cargo.toml");
+        let original = fs::read_to_string(&manifest)?;
+        let mut altered: DocumentMut = original.parse()?;
+        altered["package"]["name"] = value("unrelated-package");
+        fs::write(&manifest, altered.to_string())?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        fs::write(&manifest, original)?;
+        let books = fixture.0.join("crates/rtao-cli/src/books.rs");
+        let moved = fixture.0.join("crates/rtao-cli/src/other.rs");
+        fs::rename(&books, &moved)?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        fs::rename(&moved, &books)?;
+        fixture.license(&format!("{ORIGINAL_LICENSE} AND PSF-2.0"))?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        fixture.license(ORIGINAL_LICENSE)?;
+        fs::rename(
+            fixture.0.join("crates/rtao-cli"),
+            fixture.0.join("crates/other-path"),
+        )?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn cli_psf_keeps_existing_datetime_and_unicode_license_obligations() -> Result<()> {
+        let fixture = Fixture::new()?;
+        fixture.unicode()?;
+        fixture.cli_psf()?;
+        let primitive = fixture.0.join("crates/rtao-primitives");
+        fs::create_dir_all(primitive.join("src"))?;
+        fs::write(
+            primitive.join("Cargo.toml"),
+            format!("[package]\nname='rtao-primitives'\nlicense='{DERIVED_LICENSE} AND PSF-2.0'\n"),
+        )?;
+        fs::write(
+            primitive.join("src/drand.rs"),
+            format!(
+                "{ATTRIBUTION}sdk/python/bittensor/timelock.py @ {SHA}{ATTRIBUTION_END}\n// CPython v3.12.12 Modules/_datetimemodule.c (PSF-2.0)\n"
+            ),
+        )?;
+        fs::write(
+            primitive.join("LICENSE-PSF"),
+            include_bytes!("../../crates/rtao-primitives/LICENSE-PSF"),
+        )?;
+        check_licenses(&fixture.0, &[])?;
+        fs::write(primitive.join("LICENSE-PSF"), "missing legacy PSF notice\n")?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        fs::write(
+            primitive.join("LICENSE-PSF"),
+            include_bytes!("../../crates/rtao-primitives/LICENSE-PSF"),
+        )?;
+        fixture.unicode_license(DERIVED_LICENSE)?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        fixture.unicode_license(&format!("{DERIVED_LICENSE} AND {UNICODE_LICENSE}"))?;
+        check_licenses(&fixture.0, &[])?;
+        Ok(())
+    }
+
+    #[test]
+    fn cli_psf_no_port_keeps_canonical_cli_expression_and_strict_apache_headers() -> Result<()> {
+        let fixture = Fixture::new()?;
+        let package = fixture.0.join("crates/rtao-cli");
+        fs::create_dir_all(package.join("src"))?;
+        fs::write(
+            package.join("Cargo.toml"),
+            "[package]\nname='rtao-cli'\nlicense.workspace=true\n",
+        )?;
+        fs::write(package.join("src/main.rs"), "fn main() {}\n")?;
+        check_licenses(&fixture.0, &[])?;
+        fixture.cli_psf()?;
+        let books = package.join("src/books.rs");
+        let source = fs::read_to_string(&books)?;
+        let primary = source.lines().next().context("primary attribution")?;
+        let multiline = primary.replace(" @ ", " @\n// ");
+        fs::write(&books, source.replacen(primary, &multiline, 1))?;
+        assert!(check_licenses(&fixture.0, &[]).is_err());
+        assert!(attribution(&fs::read_to_string(books)?).is_err());
+        Ok(())
+    }
+    #[test]
+    fn cli_psf_frozen_apache_headers_do_not_change_shared_attribution_grammar() -> Result<()> {
+        let headers: serde_json::Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/cli_psf/apache-headers.json"
+        ))?;
+        for file in ["books.rs", "call_names.rs"] {
+            assert!(
+                attribution(headers[file].as_str().context("frozen header")?).is_err(),
+                "{file}"
+            );
+        }
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace")?;
+        let tree = read_tree(&fs::read_to_string(root.join("vendor/upstream/tree.txt"))?)?;
+        for file in ["globals.rs", "prompt.rs", "process.rs", "multisig.rs"] {
+            let (path, _) = attribution(headers[file].as_str().context("frozen header")?)?
+                .context("syntactic combined header")?;
+            assert!(
+                !tree.contains_key(path),
+                "combined path is not an authenticated single source: {file}: {path}"
+            );
+        }
         Ok(())
     }
 }
