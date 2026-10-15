@@ -3,6 +3,145 @@
 schema = 1
 
 [[divergences]]
+id = "D-059"
+upstream_symbol = "bittensor nested intent policy and deferred crowdloan dispatch"
+python_behavior = "Outer wrappers can hide nested spend, subnet and mandatory-shield requirements; finalization identifies a stored callback by ID."
+rtao_behavior = "Aggregates validated nested spend, subnet/global effects, raw status and shielding across batch, multisig, announced proxy and crowdloan authorizations. Finalization inspects authenticated exact stored callback bytes on the pinned view, checks positive wire contracts and shared depth/node/byte/cycle budgets, and refuses unknown or unsupported delayed authorization. Deferred mandatory-shield children are refused because authorizer shielding cannot protect their later execution. Static ID-only safety remains conservative until resolution."
+rationale = "A wrapper or delayed callback must not bypass policy on the operation it authorizes. Leaves without subnet effects retain D-021; composition follows the children's effects."
+decision = "PLAN.md execution rule 5; M9 findings S9-02 and S9-03"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_intents::nested_policy::nested_tools_cannot_hide_unbounded_or_bounded_child_spend",
+  "rtao_intents::nested_policy::nested_tools_preserve_child_subnet_and_global_restrictions",
+  "rtao_intents::nested_policy::mandatory_child_shielding_survives_tools_and_preserves_reviewed_inner_bytes",
+  "rtao_intents::nested_policy::stored_callbacks_propagate_spend_subnets_and_global_policy_through_tools",
+  "rtao_intents::nested_policy::deferred_required_shield_callbacks_refuse_even_explicit_shield_submission",
+]
+upstream_report = "Nested and deferred source fixes and regression sources remain under final review; hosted compilation and execution are pending. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/crowdloan.py"
+
+[[divergences]]
+id = "D-060"
+upstream_symbol = "bittensor.intents.multisig.MultisigIntentAdapter.inner_call_data"
+python_behavior = "Accepts retained call bytes independently from the associated semantic intent."
+rtao_behavior = "Public typed adapters accept only an opaque MultisigContinuation minted by a complete executor review. The proof binds exact stamped bytes to semantic JSON, canonical group and effective origin, and does not waive current policy. Direct public wrap hooks cannot mint a proof. The CLI's matching controller is crate-private and carries bound continuations internally."
+rationale = "Runtime validity alone does not prove that reviewed semantic spend/subnet/shield requirements describe retained bytes. Preserve randomized call bytes without allowing semantic relabeling."
+decision = "PLAN.md execution rule 5; supplemental M9 security finding S9-10"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_intents::multisig_adapter::directly_wrapping_an_unrelated_call_cannot_mint_a_semantic_continuation",
+  "rtao_intents::multisig_adapter::continuations_refuse_different_semantic_arguments_and_canonical_groups",
+  "rtao_intents::multisig_adapter::pinned_proxy_layers_require_the_original_effective_semantic_origin",
+  "rtao_intents::multisig_adapter::hotkey_batch_continuations_preserve_dynamic_origin_and_exact_bytes_at_both_thresholds",
+  "rtao_cli::multisig::tests::continuation_proof_cannot_relabel_transfer_all_as_bounded_or_change_its_destination",
+]
+upstream_report = "Independent review checked opaque proof provenance and identified a dynamic-role continuation edge; its correction and new fixtures require final reread and hosted validation. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/multisig.py"
+
+[[divergences]]
+id = "D-057"
+upstream_symbol = "bittensor runtime metadata cache, metagraph persistence and framework state files"
+python_behavior = "Persisted readers do not share these descriptor-based regular-file and streaming acquisition limits. Framework checkpoints have no Python equivalent."
+rtao_behavior = "Limits complete metadata/cache and checkpoint inputs to 64 MiB and metagraph files to 256 MiB. Validates opened regular descriptors, opens Unix special files nonblocking before refusing them and enforces maximum+1 acquisition against concurrent growth. Regular symlink targets remain supported. Saves include headers in the same caps. Oversized metadata is a cache miss; metagraph/checkpoint errors remain explicit. Rotation copies to an owned temporary and preserves the primary on failure."
+rationale = "Bound malformed or special persisted inputs without blocking on a FIFO or trusting an earlier path stat. Caps apply to encoded file acquisition, not decoded object memory or write-side serialization allocation."
+decision = "PLAN.md execution rule 5; M9 security finding S9-09"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_client::bounded_file::tests::fifos_without_writers_are_refused_without_blocking",
+  "rtao_client::bounded_file::tests::file_growth_after_descriptor_validation_stops_after_one_excess_byte",
+  "rtao_client::cache::tests::live_cache_treats_oversized_files_as_misses_and_fetches_bounded_replacements",
+  "rtao_metagraph::persist::oversized_and_nonregular_files_fail_before_decoding_or_metadata_lookup",
+  "rtao_neuron::state::tests::oversized_rotation_sources_preserve_current_and_remove_all_owned_temporaries",
+  "rtao_neuron::state::tests::broken_rotation_symlinks_are_errors_instead_of_missing_generations",
+]
+upstream_report = "Independent source review and eleven boundary/lifecycle regression sources, including a killable/reaped FIFO probe. Hosted compilation and execution remain pending. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/runtime.py"
+
+[[divergences]]
+id = "D-058"
+upstream_symbol = "bittensor.intents.weights._conform raw_u16 versus framework RawU16"
+python_behavior = "Drops zero pairs and checks the positive destination count before returning unscaled positive u16 values."
+rtao_behavior = "The explicit framework RawU16 input preserves all supplied pairs, zeros and order. Requires Null consensus and this hotkey as sole permit holder, checks native destination bounds and population-capped full-vector count with the chain's root-aware self exemption, rejects all-zero rows and applies the configured maximum-share inequality exactly without scaling. Ordinary intent conforming retains Python behavior."
+rationale = "The framework's explicit raw vector contract follows chain-native input preservation. Both direct and decrypted rows use the pinned dispatch checks. The storage-configured share limit remains an extra client guard because v478 get_max_weight_limit returns u16::MAX."
+decision = "PLAN.md execution rule 5; framework raw-weight source reconciliation"
+status = "active"
+class = "addition"
+milestone = "M9"
+pinning_tests = [
+  "rtao_neuron::weights::tests::raw_shared_preparation_enforces_chain_count_and_exact_share",
+  "rtao_neuron::weights::tests::raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs",
+  "rtao_neuron::weights::tests::raw_shared_preparation_rejects_structurally_invalid_rows_without_rewriting",
+]
+upstream_report = "Shared-preparation fixture source covers both path settings and exact boundaries; independent source review passed. Hosted execution remains pending. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/weights.py"
+
+[[divergences]]
+id = "D-054"
+upstream_symbol = "bittensor.http_auth.verify and documented legacy authentication"
+python_behavior = "Parses supplied authentication fields and sender spellings without matching pre-parse byte budgets."
+rtao_behavior = "Rejects authentication fields above 4096 bytes each or 8192 total, counting duplicate values, before decoding or allocation. Sender SS58 spellings are limited to the native AccountId32 maximum of 49 bytes before signature decoding. Legacy verification includes its supplied body hash in the same budgets. Numeric, signature and diagnostic behavior within these limits remains unchanged."
+rationale = "Prevent unauthenticated inputs from causing unbounded integer parsing, allocation or quadratic base58 work before authentication."
+decision = "PLAN.md execution rule 5; M9 security finding S9-01"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_btauth::tests::oversized_sender_never_reaches_the_native_signature_decoder",
+  "rtao_btauth::tests::numeric_crypto_and_signature_budgets_precede_parsing_and_preserve_bounded_spellings",
+  "rtao_btauth::header_limits::maximum_length_native_sender_addresses_verify_under_both_policies_and_algorithms",
+  "rtao_btauth::header_limits::legacy_sender_limits_preserve_maximum_native_addresses_and_reject_huge_inputs",
+]
+upstream_report = "Source-reviewed resource-limit repair and authored fixtures; combined hosted compilation and execution remain pending. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/http_auth.py"
+
+[[divergences]]
+id = "D-055"
+upstream_symbol = "bittensor signed HTTP fan-out recipe"
+python_behavior = "Collects response JSON without the same per-response acquisition budget."
+rtao_behavior = "Both fan-out APIs default to a positive 1 MiB response-body budget. Rejects oversized declared lengths before body consumption and enforces the limit while collecting chunks before JSON decoding. ResponseTooLarge is permanent even across timeout boundaries. The lower-level signed request API retains streaming access."
+rationale = "Bound bytes retained from an untrusted miner before parsing. The budget is per response and does not claim to bound transport storage, vector capacity, decoded JSON or aggregate concurrent memory."
+decision = "PLAN.md execution rule 5; M9 security finding S9-04"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_btauth::client::both_fanout_apis_reject_oversized_declared_lengths_before_body_read_or_retry",
+  "rtao_btauth::client::both_fanout_apis_accept_fixed_length_json_at_the_exact_response_budget",
+  "rtao_btauth::client::both_fanout_apis_stop_chunked_overflow_before_eof_decoding_or_retry",
+  "rtao_btauth::client::both_fanout_apis_accept_chunked_json_at_the_exact_response_budget",
+  "rtao_btauth::client::tests::completed_oversize_rejection_remains_permanent_across_timing_boundaries",
+]
+upstream_report = "Independent source review caught and verified the timeout reclassification correction. Hosted compilation and tests remain pending. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/docs/guides/signed-requests.mdx"
+
+[[divergences]]
+id = "D-056"
+upstream_symbol = "bittensor._transport.rpc subscription buffering and raw diagnostics"
+python_behavior = "Limits notification counts without matching aggregate retained-byte budgets; raw frame diagnostics can contain terminal controls."
+rtao_behavior = "Defaults to 8 MiB aggregate early-notification and 32 MiB aggregate active-subscription budgets, configurable through SessionConfig. Early buffering requires a live transmitted current-epoch subscription request. Globally evicts oldest updates with overflow events, retains accounting across old streams/reconnects and releases storage on drain/close/drop. Raw frame logs escape terminal controls while protocol bytes remain unchanged."
+rationale = "Frame-size and queue-count limits alone permit large retained memory across subscriptions and reconnects. Untrusted diagnostic bytes must not rewrite terminal output. These queue budgets do not claim a whole-process memory bound."
+decision = "PLAN.md execution rule 5; M9 security findings S9-05 and S9-08"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_rpc::session::frame_fuzz::tests::early_byte_budget_evicts_oldest_globally_and_accounts_for_identity_bytes",
+  "rtao_rpc::session::frame_fuzz::tests::unsolicited_early_updates_require_a_live_transmitted_current_subscription_request",
+  "rtao_rpc::session::frame_fuzz::tests::reconnect_resets_early_storage_and_old_streams_share_the_active_byte_budget",
+  "rtao_rpc::subscription::tests::active_byte_budget_evicts_oldest_across_streams_and_poll_releases_charge",
+  "rtao_rpc::subscription::tests::drained_and_closed_queues_release_high_water_backing_allocations",
+  "rtao_rpc::session::frame_fuzz::tests::raw_receive_logs_escape_terminal_controls_while_protocol_values_stay_exact",
+]
+upstream_report = "Independent source review and authored queue/lifecycle/logging regressions; hosted compilation and execution remain pending. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/rpc.py"
+
+[[divergences]]
 id = "D-053"
 upstream_symbol = "bittensor.masked_input.masked_input"
 python_behavior = "Uses the interpreter-selected input codec and terminal signal bindings; getpass supplies hidden controlling-terminal fallback."
@@ -242,120 +381,144 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-001"
-upstream_symbol = "reads.neurons.hotkey_owner`, `reads.collateral.miner_collateral` (+ `Keys`, `SubnetOwner`, `SubnetOwnerHotkey`)"
+upstream_symbol = "reads.neurons.hotkey_owner / reads.collateral.miner_collateral; Keys, SubnetOwner and SubnetOwnerHotkey"
 python_behavior = "zero-account default rendered as an ss58 address; `None` check never fires (the metadata defaults are 32 zero bytes)"
 rtao_behavior = "`DefaultAccount::get()` returns `None` for the zero account; JSON unchanged; applied by rule over the pinned metadata"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-001); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "The generation rule covers every pinned Default AccountId32 storage entry with a zero-byte default. Descriptor type assertions cover Owner, Keys, SubnetOwner and SubnetOwnerHotkey; the primitive fixture pins optional typed access and unchanged zero-account SS58 JSON. Source review only; hosted validation remains pending."
+status = "active"
 class = "typed-only"
 milestone = "M8"
-pinning_tests = ["`zero_account_default_decodes_to_zero_bytes` (offline, vendored metadata), `default_account_json_parity` (e2e 15 is a sanity check)"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue: dead `None` check"
+pinning_tests = [
+  "rtao_runtime::generated::zero_account_default_decodes_to_zero_bytes",
+  "rtao_primitives::primitives::account_default_is_typed_optional_but_keeps_zero_account_ss58",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/reads/neurons.py#L75-L84"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-002"
-upstream_symbol = "delegate_take`, `coldkey_swap_announcement`, `hotkey_identities`, `miner_collateral"
+upstream_symbol = "delegate_take / coldkey_swap_announcement / hotkey_identities / miner_collateral"
 python_behavior = "gather at head without pinning (may straddle blocks)"
 rtao_behavior = "pinned to one block"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-002); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Tuple fetches pin delegate bounds and coldkey announcement/dispute reads once; the identity and collateral pipelines explicitly retain one snapshot across their dependent requests. RecordingView and actual request assertions pin all four reads to one state hash. Source review only; hosted validation remains pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`RecordingView` single-block test"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_reads::owner::delegate_take_and_hotkey_identities_pin_their_batches_and_deduplicate",
+  "rtao_reads::m6_accounts::fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history",
+  "rtao_reads::m6_locks::nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_blocks",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/reads/delegation.py#L104-L121"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-003"
-upstream_symbol = "wallets.resolve_wallet_password` / keyfile prompting"
+upstream_symbol = "wallets.resolve_wallet_password / keyfile prompting"
 python_behavior = "the library may prompt"
-rtao_behavior = "the library never prompts (`PromptPolicy::Never`); the CLI prompts on a TTY"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-003); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rtao_behavior = "Library password resolution defaults to PromptPolicy::Never and has no implicit terminal input. Explicit caller callbacks require an enabled policy; the CLI uses injected TTY-gated prompts."
+rationale = "Keep ordinary library calls noninteractive while retaining explicit caller-controlled prompting. Fixtures prove the default ignores an installed callback and that IfTty uses the callback terminal authority. Source review only; hosted validation remains pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`library_never_prompts`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_wallet::password::tests::library_never_prompts_and_explicit_cli_callback_runs_once",
+  "rtao_wallet::password::tests::if_tty_uses_the_callback_terminal_authority_and_never_stays_silent",
+  "rtao_cli::prompt::tests::every_noninteractive_mode_refuses_reads_and_collects_missing_flags",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/wallets.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-004"
 upstream_symbol = "connect"
 python_behavior = "no genesis check"
 rtao_behavior = "signing refused on a genesis mismatch for named networks"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-004); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Named networks retain an expected genesis identity. Connection records any mismatch as a signing-disabled reason while preserving reads; the fixture requires both identities in the refusal and a successful pinned read. Source review only; hosted validation remains pending."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`genesis_mismatch_disables_signing`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_client::connect::genesis_mismatch_keeps_reads_and_refuses_signing_with_both_hashes",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/client.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-005"
 upstream_symbol = "http_auth.NonceStore"
 python_behavior = "synchronous `check_and_store`"
 rtao_behavior = "async (`BoxFuture`)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-005); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "NonceStore exposes a sendable boxed future so shared backends can perform atomic replay insertion without blocking the async executor. A delayed fake Redis response is raced with an independent timer before completing the same operation. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`redis_store_does_not_block`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_btauth::redis::tests::redis_store_does_not_block",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/http_auth.py#L124-L151"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-007"
 upstream_symbol = "snapshot.Snapshot.constant"
 python_behavior = "read from the head codec"
 rtao_behavior = "read from the snapshot's runtime"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-007); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Snapshot constants decode through the runtime retained by that snapshot, without consulting the client head. The fixture gives distinct runtime constant values and requires no RPC for either snapshot. Source review only; hosted validation remains pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`constants_follow_snapshot_spec`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_client::view::tests::typed_golden_constants_use_snapshot_runtime_without_rpc",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/snapshot.py#L66-L68"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-008"
 upstream_symbol = "_transport.interface.attach_signature"
 python_behavior = "refuses on a `spec_version` change only"
 rtao_behavior = "also refuses on a `transaction_version` change"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-008); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "A prepared signature covers both runtime version fields. The fixture changes transaction_version without changing spec_version, requires zero broadcast and nonce invalidation, then verifies a newly prepared transaction uses the new version. Source review only; hosted validation remains pending."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`submit_signature_refuses_tx_version_change`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_client::submission::prepared_signature_refuses_same_spec_transaction_version_change",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/interface.py#L607-L625"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-009"
-upstream_symbol = "http_auth.verify` retention check"
+upstream_symbol = "http_auth.verify retention check"
 python_behavior = "`ValueError` after a verified signature"
 rtao_behavior = "`ConfigError` at `Verifier::new`"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-009); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Reject an inadequate replay store before accepting requests instead of raising configuration errors after cryptographic verification. The fixture checks too-short retention, the inclusive equality boundary and a valid strictly longer retention; D-038 records the equality correction. Source review only; hosted validation remains pending."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`verifier_rejects_short_retention`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_btauth::conformance::test_window_wider_than_store_retention_refused",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/http_auth.py#L332-L339"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-010"
-upstream_symbol = "_transport.runtime` V14 path"
+upstream_symbol = "_transport.runtime V14 path"
 python_behavior = "signs with V14 metadata if ever selected"
 rtao_behavior = "V14 runtimes are read-only (runtime APIs via the legacy table only)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-010); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Degraded V14 metadata cannot authenticate the modern signing contract. Runtime guards refuse calls/signing/digests while the read path permits only authenticated frozen legacy API definitions. Source review only; hosted validation remains pending."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`v14_degraded_refuses_signing`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_runtime::handle::tests::v14_is_readable_but_signing_and_digest_are_refused",
+  "rtao_client::view::tests::v14_archive_calls_use_only_frozen_double_encoded_api_definitions",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/runtime.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-011"
@@ -367,68 +530,82 @@ status = "withdrawn"
 
 [[divergences]]
 id = "D-012"
-upstream_symbol = "Client.blocks` / subscriptions"
+upstream_symbol = "Client.blocks / subscriptions"
 python_behavior = "the stream dies on reconnect"
 rtao_behavior = "resubscribes and backfills by number (`blocks_strict` keeps Python semantics)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-012); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Recovered block streams retain their cursor across subscription loss and fill missed heights; best-chain forks remain explicit. The strict entry point keeps terminal subscription-loss semantics. Fake-provider fixtures cover recovery without duplicate finalized heights and both stream contracts. Source review only; hosted validation remains pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`blocks_gap_free_across_reconnect`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_client::head::tests::reconnect_resubscribes_and_backfills_without_duplicate_finalized_heights",
+  "rtao_client::head::tests::best_fork_reports_common_ancestor_then_each_replacement_once",
+  "rtao_client::head::tests::strict_stream_keeps_subscription_loss_terminal",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/client.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-013"
 upstream_symbol = "Executor.execute"
 python_behavior = "composes and submits, even across a runtime upgrade"
 rtao_behavior = "refuses spec-mismatched `CallBytes` and re-plans once"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-013); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Executor refuses stale CallBytes stamps and permits one controlled replan before broadcast. The actual spec-version fixture upgrades 478 to 479 while keeping transaction_version fixed, requires exactly two builds, one unlock and one submission, then separately upgrades to 480 during signing and requires refusal without broadcast or a cached nonce. Its companion fixture covers transaction-only changes. Source and independent flow review only; hosted compilation and execution remain pending."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`execute_replans_on_spec_change`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_tx::executor::spec_version_change_replans_once_and_refuses_a_second_change",
+  "rtao_tx::executor::transaction_version_change_replans_once_and_rechecks_policy",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py"
+upstream_report = "Authored spec- and transaction-version regressions were independently source-reviewed; hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-014"
 upstream_symbol = "btcli query"
 python_behavior = "no block flag"
 rtao_behavior = "`rtao query <read> --block <n>`"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-014); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "The generated query flag selects an actual historical snapshot. The fixture seeds different balances at historical and current blocks, parses --block and compares actual storage results without any private-key acquisition or submission. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`query_block_flag`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_cli::generated_commands::block_query_pins_real_storage_and_does_not_read_the_current_head_value",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/query.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-015"
 upstream_symbol = "RpcSession"
 python_behavior = "no client-side rate limit"
-rtao_behavior = "token bucket on public presets (timing only)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-015); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rtao_behavior = "With the rate-limit feature enabled, public presets pace requests through a shared token bucket; accepted request and result bytes are unchanged."
+rationale = "Public endpoint pacing includes method discovery and queued reads, prioritizes submissions and releases cancelled queue entries. The fake socket fixtures observe arrivals and distinguish the paced preset from an initial multi-token burst. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`ratelimit_paces_public_presets`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_testkit::rpc::ratelimit_paces_public_presets",
+  "rtao_testkit::rpc::rate_bucket_prioritizes_submissions_and_drops_cancelled_queue_entries",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/rpc.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-016"
-upstream_symbol = "SetWeights` path, framework only"
+upstream_symbol = "WeightScheduler / SetWeights"
 python_behavior = "n/a (no framework)"
-rtao_behavior = "`WeightScheduler` refuses when `CommitRevealWeightsVersion ≠ 4`; the intents are unchanged"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-016); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rtao_behavior = "When commit-reveal is enabled, WeightScheduler refuses CommitRevealWeightsVersion other than 4 through its public preflight check; the low-level intents are unchanged."
+rationale = "The scheduler calls the checked preflight before proposal submission and again after refresh. The fake-chain fixture checks unsupported version 5, supported version 4, version-key and registration gates. No live testnet scenario is claimed. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["e2e scenario 6"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_neuron::weights::tests::preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/weights.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-017"
@@ -448,29 +625,34 @@ upstream_report = "Existing approved client-side admission difference; exact sou
 
 [[divergences]]
 id = "D-018"
-upstream_symbol = "docs `advanced.mdx:146-150"
+upstream_symbol = "Python advanced documentation on hotkey shielding"
 python_behavior = "the docs claim a hotkey-shield refusal that the code lacks"
 rtao_behavior = "follows the code (no refusal)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-018); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Preserve the executable Python behavior rather than introducing a documentation-only refusal. The fixture submits a shielded hotkey operation, checks private-role selection after review and decodes the actual carrier signer account. Source review only; hosted validation remains pending."
+status = "active"
 class = "kept"
 milestone = "M8"
-pinning_tests = ["`hotkey_shield_not_refused`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue: docs drift"
+pinning_tests = [
+  "rtao_tx::executor::tests::dynamic_shield_acquires_only_the_instance_hotkey_after_review",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-019"
 upstream_symbol = "Metagraph.total_stake"
 python_behavior = "alpha-tagged `Balance`"
 rtao_behavior = "`StakeWeight` type; JSON unchanged"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-019); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Generated fields and borrowed/owned neuron accessors use StakeWeight. The explicit nonroot fixture checks nonzero borrowed/owned weights across forced View, Typed and Dynamic paths; neuron and graph JSON retain independently expected Python alpha-tagged strings with registered and fallback symbols, while the raw record remains numeric. Source and independent review only; hosted compilation and execution remain pending."
+status = "active"
 class = "typed-only"
 milestone = "M8"
-pinning_tests = ["`stake_weight_json_parity`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "question (§15.2 Q14)"
+pinning_tests = [
+  "rtao_runtime::generated::semantic_model_fields_and_native_fixed_fraction_are_typed",
+  "rtao_metagraph::decode::stake_weight_accessors_preserve_alpha_tagged_total_stake_json",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/metagraph.py#L363-L366"
+upstream_report = "Authored regression source was independently reviewed; hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-020"
@@ -492,80 +674,107 @@ upstream_report = "Kept behavior; no defect alleged or filing made. Fake-transpo
 [[divergences]]
 id = "D-021"
 upstream_symbol = "Policy.allowed_netuids"
-python_behavior = "intents without a `netuid` field pass any allowlist ([R] A1 §10 item 20)"
-rtao_behavior = "same"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-021); pending means the behavior/test is not claimed implemented."
-status = "pending"
+python_behavior = "Leaf operations without a declared subnet effect pass an allowlist."
+rtao_behavior = "Preserves unscoped leaf behavior. Wrappers aggregate their children's declared scopes under D-059, even when the wrapper has no netuid field."
+rationale = "Core policy equivalence pins unscoped transfer leaves. Execution rule 5 resolves the original broad no-netuid wording in favor of child authorization safety: no wrapper may hide a forbidden child subnet. Source fixtures cover direct Policy::check and executor tool entry points; hosted validation remains pending."
+status = "active"
 class = "kept"
 milestone = "M8"
-pinning_tests = ["oracle vector"]
+pinning_tests = [
+  "rtao_tx::policy_equivalence::trusted_m2_constructors_have_identical_policy_violation_sets",
+  "rtao_intents::nested_policy::nested_tools_preserve_child_subnet_and_global_restrictions",
+]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+upstream_report = "Kept leaf semantics with the explicit D-059 compositional security exception; no new filing or passing execution claimed."
 
 [[divergences]]
 id = "D-022"
 upstream_symbol = "generated call builders: limit-price arguments (`limit_price` of 88, 89, 90, 103, 144, 149; `limit` of `add_stake_burn`, 132)"
 python_behavior = "`TaoBalance` declared; a price in practice"
 rtao_behavior = "`PriceRao` / `Option<PriceRao>`"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-022); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "All seven generated public price slots use PriceRao or Option<PriceRao>. Function-pointer assignments pin the complete signatures; independently constructed full SCALE expectations cover every call with zero, one, asymmetric-byte and u64::MAX prices, both option variants and both partial flags where supported. The generation gate refuses missing overrides and unreviewed additions. Pinned finney v478 source and independent metadata review only; hosted compilation and execution remain pending."
+status = "active"
 class = "typed-only"
 milestone = "M8"
-pinning_tests = ["`limit_price_is_price`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue: type annotation"
+pinning_tests = [
+  "xtask::regen::tests::price_gate_requires_every_semantic_override_and_refuses_unreviewed_additions",
+  "rtao_runtime::limit_prices::all_seven_public_limit_arguments_use_price_rao",
+  "rtao_runtime::limit_prices::required_price_arguments_preserve_exact_u64_wire_bytes",
+  "rtao_runtime::limit_prices::optional_price_arguments_preserve_some_and_none_wire_bytes",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_generated/calls.py"
+upstream_report = "Authored regression source was independently reviewed; hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-023"
 upstream_symbol = "ExtrinsicResult"
 python_behavior = "no inclusion level; fate unknown visible only in the message"
 rtao_behavior = "adds `inclusion` and `fate_unknown` fields; `to_json()` unchanged"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-023); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Public results retain typed inclusion and unknown-fate identity while to_json preserves Python field presence. Included and unresolved fixtures construct populated public results, preserve the native fields through with_output, and compare complete independently expected Python dictionaries. Included results contain metadata-decoded events that remain absent from JSON; the failure uses Python's default Unknown remediation. Production creation of recovery state is covered separately by executor fixtures. Source and independent review only; hosted compilation and execution remain pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`extrinsic_result_json_parity`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_tx::output::tests::rejected_result_has_only_python_failure_fields_and_retains_native_fate",
+  "rtao_tx::result_json::included_results_keep_complete_python_json_without_native_tracking_fields",
+  "rtao_tx::result_json::fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_hash",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/result.py#L733-L751"
+upstream_report = "Authored populated-result serialization fixtures were independently source-reviewed after correcting the failure remediation expectation. Hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-024"
-upstream_symbol = "_transport.extrinsics` watch statuses"
+upstream_symbol = "_transport.extrinsics watch statuses"
 python_behavior = "`retracted`, `finalityTimeout` and `dropped` are fatal, like `usurped` and `invalid` (`PY/_transport/extrinsics.py:352, 364-369`)"
 rtao_behavior = "`retracted` keeps watching, then reconciles; `finalityTimeout(h)` resolves from block h; `dropped` reconciles when `reconcile` is on (§3.9.3)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-024); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "A retraction is not final failure. Continue observing or reconcile canonical history; finalityTimeout carries an inclusion block that can be resolved and, when requested, independently finalized. Fixtures cover actual receipts, retracted-then-dropped recovery and opt-in dropped reconciliation versus ordinary refusal. Source review only; hosted validation remains pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`retracted_then_finalized_is_success`, `finality_timeout_resolves_from_block`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_client::submission::retracted_status_keeps_watching_for_later_finalized_inclusion",
+  "rtao_client::submission::dropped_after_retraction_reconciles_even_without_the_dropped_opt_in",
+  "rtao_client::submission::finality_timeout_resolves_actual_inclusion_and_confirms_finality",
+  "rtao_client::submission::finality_timeout_returns_inclusion_when_finality_was_not_requested",
+  "rtao_client::submission::dropped_watch_preserves_python_failure_without_reconcile_and_expiry_is_definite",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/extrinsics.py#L352-L369"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-025"
 upstream_symbol = "shielded submission era"
 python_behavior = "submits a carrier whose era the finality lag has already expired, and fails"
 rtao_behavior = "refuses with `TxError::ShieldEraExpired` when B + 2 ≥ F + p; `ShieldPeriod` accepts only 4 and 8 (§3.11 step 1)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-025); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "The carrier must retain the two-block inclusion margin. Fixtures accept P4 lag 1 and P8 lag 5, refuse lags 2 and 6 before signing or nonce acquisition, restrict periods to 4/8 and check the executor typed-error mapping. Source review only; hosted validation remains pending."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`shield_era_refused_at_lag` (`P8` at lags 5 and 6, `P4` at lags 1 and 2)"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_client::shield::ciphertext_and_period_bounds_are_closed",
+  "rtao_client::shield::finality_lag_refuses_exact_expiry_boundary_before_signing",
+  "rtao_tx::shield_raw::shield_era_failure_maps_to_typed_error",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-026"
-upstream_symbol = "executor._submit_encrypted_call` nonces"
+upstream_symbol = "executor._submit_encrypted_call nonces"
 python_behavior = "takes n, pins n+1 then n; the cache is left at n, so the next submission reuses n+1 and gets `Stale` (`PY/executor.py:1037-1052`)"
-rtao_behavior = "`lease_pair` leaves `next = n + 2`; settle rules per lease (§3.11 step 2)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-026); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rtao_behavior = "Atomic pair allocation reserves n and n+1, so the next lease is n+2 after acknowledged pool submission; an unresolved or unsettled half invalidates the shared account cache."
+rationale = "The carrier and inner reserve adjacent nonces once. The pool fixture starts at n=7 and asserts signatures at 8/7 and the next lease at 9; unresolved inner/acknowledgement and unsettled-half fixtures require cache invalidation. Source review only; hosted validation remains pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`shielded_then_plain_uses_n_plus_2`, `shield_inner_missing_clears_nonce_cache`, `shield_wait_pool_keeps_n_plus_2`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_client::shield::pool_transmits_only_signed_carrier_and_preserves_pair_nonce_and_anchor",
+  "rtao_client::shield::stalled_chain_keeps_carrier_unresolved_and_inner_can_still_execute_later",
+  "rtao_client::shield::author_ack_timeout_keeps_carrier_hash_and_clears_pair",
+  "rtao_client::nonces::adjacent_pair_is_atomic_and_any_unsettled_half_invalidates_account",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py#L1037-L1052"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-027"
@@ -582,68 +791,80 @@ upstream_report = "Recorded design improvement; no new filing. Active denotes im
 
 [[divergences]]
 id = "D-028"
-upstream_symbol = "result.chain_error_from_dispatch` (nested module errors)"
+upstream_symbol = "result.chain_error_from_dispatch (nested module errors)"
 python_behavior = "resolved through the package's generated table (`PY/result.py:636-656`)"
 rtao_behavior = "resolved through the block's runtime, as top-level errors are (§4.7)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-028); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Client::resolve_extrinsic resolves all six nested Module-error wrappers through each block parent-selected runtime. The fake-chain fixture changes metadata error names and documentation at spec 478/479 while retaining identical Module indices, checks the upgrade block against its old parent and the next block against its new parent, then revisits the old block to detect cache mixing. Error names, docs, messages, events and inclusion identities are pinned. Source and independent review only; hosted compilation and execution remain pending."
+status = "active"
 class = "improved"
 milestone = "M8"
-pinning_tests = ["`nested_module_error_follows_block_runtime`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+pinning_tests = [
+  "rtao_client::nested_module_receipt::every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_upgrade",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/result.py#L636-L656"
+upstream_report = "Authored regression source was independently reviewed; hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-029"
-upstream_symbol = "btcli tools` / `list_tools"
+upstream_symbol = "btcli tools / list_tools"
 python_behavior = "9 keys per tool (`PY/intents/registry.py:43-66`)"
 rtao_behavior = "adds `rust {type, role, output, cli}`"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-029); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Keep the nine Python discovery fields while adding separate native type, role, output and CLI metadata. Fixtures compare all 83 catalog operations and distinguish implemented/compiled interfaces from unavailable ones. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`tools_json_equals_python_on_upstream_fields`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_83_ops",
+  "rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/registry.py#L43-L66"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-030"
 upstream_symbol = "btcli tx"
 python_behavior = "no era flag (period 128, `PY/settings.py:22`)"
 rtao_behavior = "`--period <n>`"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-030); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Expose mortal-era control through the ordinary transaction interface. The fixture parses --period 64 and decodes that era from the submitted extrinsic; invalid periods refuse before private-key acquisition or submission. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`tx_period_flag`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_cli::generated_commands::generated_transfer_submits_real_semantic_bytes_hooks_and_requested_period",
+  "rtao_cli::generated_commands::invalid_period_refuses_before_unlock_and_any_submission",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/tx.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-031"
 upstream_symbol = "--signer"
 python_behavior = "wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`)"
 rtao_behavior = "adds `remote` (lands with `RemoteSigner` in M10)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-031); pending means the behavior/test is not claimed implemented."
+rationale = "Intentionally deferred to M10: RemoteSigner and the remote CLI selection are outside the through-M9 acceptance scope. No implementation or fixture is claimed for this addition. Source review only; hosted validation remains pending."
 status = "pending"
 class = "addition"
 milestone = "M10"
-pinning_tests = ["`signer_remote_flag`"]
+pinning_tests = []
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+upstream_report = "Pending as documented in the rationale; no new filing and no passing execution claimed."
 
 [[divergences]]
 id = "D-032"
 upstream_symbol = "btauth server adapter"
 python_behavior = "the recipe applies policy after `verify`, so a replayed request from a denied hotkey gets 401 (`signed-requests.mdx:143-156`)"
 rtao_behavior = "authenticate → policy → commit → limit: the same request gets 403; `Verifier::verify` keeps Python's order (§7.2)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-032); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "The server adapter authenticates without spending replay capacity, applies caller policy, commits the nonce and only then debits the limiter. Fixtures explicitly require 403 for denied replays, 401 for admitted replays and no limiter debit for replay failures. Verifier::verify retains authenticate-then-commit library semantics. Source review only; hosted validation remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`policy_before_replay_check`"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+pinning_tests = [
+  "rtao_btauth::server::authentication_policy_commit_limit_order_protects_capacity_and_tokens",
+  "rtao_btauth::server::replay_does_not_spend_limiter_tokens",
+  "rtao_btauth::conformance::authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_replay_last",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/http_auth.py"
+upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
 id = "D-033"
@@ -774,7 +995,7 @@ pinning_tests = [
   "rtao_cli::generated_commands::initially_expired_future_and_difficulty_invalid_pow_prepare_before_signing",
   "rtao_cli::generated_commands::expired_pow_dry_run_never_enters_public_mining_or_unlocks",
   "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock",
-  "rtao_cli::subnets_commands::unsupported_pow_root_gpu_and_mining_preview_refuse_before_connection",
+  "rtao_cli::subnets_commands::pow_root_preview_and_feature_gated_gpu_are_validated_before_connection",
 ]
 upstream_report = "Local validation policy; no upstream defect alleged and no issue or PR filed. Active records prepared source with regression bodies, not successful execution. Hosted build/test validation remains pending."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L1511-L1548"

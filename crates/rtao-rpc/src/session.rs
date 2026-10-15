@@ -2,7 +2,7 @@
 //! Single-owner WebSocket supervision and request correlation.
 use crate::{
     policy,
-    subscription::{Queue, RawSubscription},
+    subscription::{Queue, QueueBudget, RawSubscription, notification_bytes},
     *,
 };
 use blake2::{Blake2b, Digest, digest::consts::U32};
@@ -614,6 +614,28 @@ fn subscription_id(value: &Value) -> Option<String> {
     }
 }
 
+/// Log-only escaping: the parser and WebSocket send path keep the original bytes.
+struct DiagnosticFrame<'a>(&'a str);
+impl std::fmt::Display for DiagnosticFrame<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
+        for ch in self.0.chars() {
+            if ch.is_control() {
+                write!(f, "{}", ch.escape_default())?;
+            } else {
+                f.write_char(ch)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+struct BufferedNotification {
+    value: Value,
+    bytes: usize,
+    order: u128,
+}
+
 struct Supervisor {
     config: SessionConfig,
     tls: Arc<rustls::ClientConfig>,
@@ -622,7 +644,10 @@ struct Supervisor {
     events: broadcast::Sender<SessionEvent>,
     pending: BTreeMap<u64, Pending>,
     subscriptions: BTreeMap<String, ActiveSubscription>,
-    early: VecDeque<(String, VecDeque<Value>)>,
+    early: VecDeque<(String, VecDeque<BufferedNotification>)>,
+    early_bytes: usize,
+    early_order: u128,
+    subscription_budget: Arc<QueueBudget>,
     closed_ids: VecDeque<String>,
     detached: VecDeque<(u64, Value)>,
     epoch: u64,
@@ -644,6 +669,7 @@ impl Supervisor {
         events: broadcast::Sender<SessionEvent>,
     ) -> Self {
         let bucket = Bucket::new(config.rate_limit);
+        let subscription_budget = QueueBudget::new(config.subscription_buffer_bytes);
         Self {
             config,
             tls,
@@ -653,6 +679,9 @@ impl Supervisor {
             pending: BTreeMap::new(),
             subscriptions: BTreeMap::new(),
             early: VecDeque::new(),
+            early_bytes: 0,
+            early_order: 0,
+            subscription_budget,
             closed_ids: VecDeque::new(),
             detached: VecDeque::new(),
             epoch: 0,
@@ -880,6 +909,8 @@ impl Supervisor {
                     pending: self.pending.len(),
                     subscriptions: self.subscriptions.len(),
                     early_notification_ids: self.early.len(),
+                    early_notification_bytes: self.early_bytes,
+                    subscription_retained_bytes: self.subscription_budget.retained_bytes(),
                     closed_subscription_ids: self.closed_ids.len(),
                 });
             }
@@ -889,10 +920,13 @@ impl Supervisor {
             }
             None => self.stopping = true,
         }
+        self.prune_early();
         self.update_gauge();
     }
     fn remember_closed(&mut self, id: &str) {
-        self.early.retain(|(key, _)| key != id);
+        if let Some(position) = self.early.iter().position(|(key, _)| key == id) {
+            self.take_early(position);
+        }
         self.closed_ids.retain(|key| key != id);
         self.closed_ids.push_back(id.into());
         while self.closed_ids.len() > generated::py_rpc::CLOSED_IDS_REMEMBERED {
@@ -917,6 +951,7 @@ impl Supervisor {
                 let _ = pending.sender.send(Err(WireError::Rpc(RpcError::Closed)));
             }
         }
+        self.prune_early();
         self.update_gauge();
     }
     fn in_flight(&self) -> usize {
@@ -940,7 +975,7 @@ impl Supervisor {
     fn inbound(&mut self, frame: Message) -> Result<(), RpcError> {
         let message = match frame {
             Message::Text(raw) => {
-                tracing::debug!(target:"rtao::rpc::raw",frame=%raw,"WEBSOCKET_RECEIVE");
+                tracing::debug!(target:"rtao::rpc::raw",frame=%DiagnosticFrame(&raw),"WEBSOCKET_RECEIVE");
                 serde_json::from_str::<Value>(&raw).ok()
             }
             Message::Binary(raw) => serde_json::from_slice::<Value>(&raw).ok(),
@@ -975,8 +1010,9 @@ impl Supervisor {
         Ok(())
     }
     async fn write_frame(&mut self, socket: &mut Socket, frame: Value) -> Result<(), RpcError> {
-        tracing::debug!(target:"rtao::rpc::raw",frame=%frame,"WEBSOCKET_SEND");
-        let write = socket.send(Message::Text(frame.to_string().into()));
+        let raw = frame.to_string();
+        tracing::debug!(target:"rtao::rpc::raw",frame=%DiagnosticFrame(&raw),"WEBSOCKET_SEND");
+        let write = socket.send(Message::Text(raw.into()));
         tokio::pin!(write);
         let deadline = sleep(self.config.silence_timeout);
         tokio::pin!(deadline);
@@ -1150,6 +1186,11 @@ impl Supervisor {
         }
     }
     fn dispatch(&mut self, message: Value) -> Option<RpcError> {
+        let result = self.dispatch_inner(message);
+        self.prune_early();
+        result
+    }
+    fn dispatch_inner(&mut self, mut message: Value) -> Option<RpcError> {
         if let Value::Array(items) = message {
             for item in items {
                 if let Some(error) = self.dispatch(item) {
@@ -1196,14 +1237,15 @@ impl Supervisor {
                     return None;
                 };
                 self.closed_ids.retain(|closed| closed != &id);
-                let queue = Queue::new(self.config.subscription_buffer);
-                if let Some(position) = self.early.iter().position(|(key, _)| key == &id)
-                    && let Some((_, items)) = self.early.remove(position)
-                {
-                    for item in items {
-                        queue.push(Ok(item));
-                    }
-                }
+                let queue = Queue::new(
+                    self.config.subscription_buffer,
+                    self.subscription_budget.clone(),
+                );
+                let early = self
+                    .early
+                    .iter()
+                    .position(|(key, _)| key == &id)
+                    .and_then(|position| self.take_early(position));
                 self.subscriptions.insert(
                     id,
                     ActiveSubscription {
@@ -1213,6 +1255,11 @@ impl Supervisor {
                         unsubscribe: sub.unsubscribe,
                     },
                 );
+                if let Some((_, items)) = early {
+                    for item in items {
+                        self.publish_notification(&queue, item.value);
+                    }
+                }
                 Some(queue)
             } else {
                 None
@@ -1224,30 +1271,120 @@ impl Supervisor {
             }));
             return None;
         }
-        let params = object.get("params")?.as_object()?;
+        let params = message.get_mut("params")?.as_object_mut()?;
         let id = subscription_id(params.get("subscription")?)?;
-        let value = params.get("result").cloned().unwrap_or(Value::Null);
+        // Move the decoded payload; cloning a large notification doubles its peak.
+        let value = params.remove("result").unwrap_or(Value::Null);
         if let Some(active) = self.subscriptions.get(&id) {
-            if active.queue.push(Ok(value)) {
-                let _ = self.events.send(SessionEvent::SubscriptionOverflow { id });
-            }
-            return None;
+            let queue = active.queue.clone();
+            self.publish_notification(&queue, value);
+        } else if !self.closed_ids.contains(&id) && self.pending_subscription() {
+            self.buffer_early(id, value);
         }
-        if self.closed_ids.contains(&id) {
-            return None;
-        }
-        if let Some((_, items)) = self.early.iter_mut().find(|(key, _)| key == &id) {
-            if items.len() >= self.config.subscription_buffer {
-                items.pop_front();
-            }
-            items.push_back(value);
-            return None;
-        }
-        while self.early.len() >= self.config.early_notification_ids {
-            self.early.pop_front();
-        }
-        self.early.push_back((id, VecDeque::from([value])));
         None
+    }
+    fn publish_notification(&self, queue: &Queue, value: Value) {
+        let dropped = queue.push(Ok(value));
+        for (id, active) in &self.subscriptions {
+            if dropped.contains(&active.queue.key()) {
+                let _ = self
+                    .events
+                    .send(SessionEvent::SubscriptionOverflow { id: id.clone() });
+            }
+        }
+    }
+    fn pending_subscription(&self) -> bool {
+        self.pending.values().any(|pending| {
+            pending.subscription.is_some()
+                && pending.sent
+                && pending.last_sent_epoch == self.epoch
+                && !pending.sender.is_closed()
+                && pending
+                    .required_epoch
+                    .is_none_or(|epoch| epoch == self.epoch)
+        })
+    }
+    fn prune_early(&mut self) {
+        if !self.pending_subscription() {
+            self.clear_early();
+        }
+    }
+    fn clear_early(&mut self) {
+        self.early.clear();
+        self.early_bytes = 0;
+        self.early_order = 0;
+    }
+    fn early_identity_bytes(id: &str) -> usize {
+        // Include retained identity bytes and conservative queue/key bookkeeping.
+        id.len().saturating_mul(2).saturating_add(128)
+    }
+    fn take_early(&mut self, position: usize) -> Option<(String, VecDeque<BufferedNotification>)> {
+        let (id, items) = self.early.remove(position)?;
+        self.early_bytes -=
+            Self::early_identity_bytes(&id) + items.iter().map(|item| item.bytes).sum::<usize>();
+        Some((id, items))
+    }
+    fn pop_early(&mut self, position: usize) {
+        if let Some((_, items)) = self.early.get_mut(position)
+            && let Some(item) = items.pop_front()
+        {
+            self.early_bytes -= item.bytes;
+            if items.is_empty() {
+                self.take_early(position);
+            } else if items.len() <= items.capacity() / 4 {
+                items.shrink_to_fit();
+            }
+        }
+    }
+    fn buffer_early(&mut self, id: String, value: Value) {
+        let bytes = notification_bytes(&value);
+        let identity = Self::early_identity_bytes(&id);
+        let limit = self.config.early_notification_bytes;
+        // An unretainable message must not flush otherwise useful queued updates.
+        if identity > limit || bytes > limit - identity {
+            return;
+        }
+        if let Some(position) = self.early.iter().position(|(key, _)| key == &id) {
+            if self.early[position].1.len() >= self.config.subscription_buffer {
+                self.pop_early(position);
+            }
+        } else if self.early.len() >= self.config.early_notification_ids {
+            self.take_early(0);
+        }
+        loop {
+            let exists = self.early.iter().any(|(key, _)| key == &id);
+            let extra = bytes + if exists { 0 } else { identity };
+            if self.early_bytes <= limit - extra {
+                break;
+            }
+            let Some(position) = self
+                .early
+                .iter()
+                .enumerate()
+                .filter_map(|(position, (_, items))| {
+                    items.front().map(|item| (position, item.order))
+                })
+                .min_by_key(|(_, order)| *order)
+                .map(|(position, _)| position)
+            else {
+                return;
+            };
+            self.pop_early(position);
+        }
+        let order = self.early_order;
+        self.early_order = self.early_order.saturating_add(1);
+        let item = BufferedNotification {
+            value,
+            bytes,
+            order,
+        };
+        self.early_bytes += bytes;
+        if let Some((_, items)) = self.early.iter_mut().find(|(key, _)| key == &id) {
+            items.push_back(item);
+        } else {
+            self.early_bytes += identity;
+            self.early.push_back((id, VecDeque::from([item])));
+        }
     }
     fn observe(&self, pending: &Pending, outcome: &'static str) {
         #[cfg(feature = "metrics")]
@@ -1266,7 +1403,7 @@ impl Supervisor {
             pending.last_sent_epoch = 0;
         }
         self.update_gauge();
-        self.early.clear();
+        self.clear_early();
         self.closed_ids.clear();
         self.detached.clear();
         for (_, active) in std::mem::take(&mut self.subscriptions) {
@@ -1333,7 +1470,7 @@ impl Supervisor {
                 active.queue.push(Err(WireError::Rpc(error.clone())));
             }
         }
-        self.early.clear();
+        self.clear_early();
         self.closed_ids.clear();
         self.state.send_replace(if closed {
             SessionState::Closed
@@ -1440,6 +1577,8 @@ fn validate(config: &SessionConfig) -> Result<(), RpcError> {
         || config.max_in_flight == 0
         || config.subscription_buffer == 0
         || config.early_notification_ids == 0
+        || config.early_notification_bytes == 0
+        || config.subscription_buffer_bytes == 0
         || config.max_message_bytes == 0
         || config.handshake_timeout.is_zero()
         || config.silence_timeout.is_zero()

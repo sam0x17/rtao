@@ -22,6 +22,8 @@ use std::{
     time::Duration,
 };
 
+mod registration;
+
 /// The resolved shield choice and whether it can be downgraded.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ShieldChoice {
@@ -443,11 +445,16 @@ impl AppContext {
         }
         let executor = rtao::Executor::new(client.clone());
         let spec = intent.semantic_intent_dyn().spec();
+        let required_shield = intent
+            .semantic_intent_dyn()
+            .safety_dyn()
+            .map_err(|error| CliError::input(error.to_string()))?
+            .mev_shield_required;
         let mut choice = self.resolve_mev_shield(
             control
                 .mev_shield_default
                 .unwrap_or(spec.mev_shield_default),
-            spec.mev_shield_required,
+            required_shield,
             spec.name,
         )?;
         if let Some(period) = control.period
@@ -468,12 +475,12 @@ impl AppContext {
         .map_err(|e| CliError::failure(e.to_string()))?;
         if !self.globals.uses_external_signer() {
             choice = self
-                .preflight_shield_fee(client, payer, choice, spec.mev_shield_required, spec.name)
+                .preflight_shield_fee(client, payer, choice, required_shield, spec.name)
                 .await?;
         }
         if control.period.is_some() || (!self.globals.dry_run && control.execution.is_some()) {
             choice = self
-                .honor_shield(client, payer, choice, spec.mev_shield_required, spec.name)
+                .honor_shield(client, payer, choice, required_shield, spec.name)
                 .await?;
             if choice.enabled
                 && control
@@ -547,13 +554,30 @@ impl AppContext {
         .or_else(|error| keys.bare_signer_account().ok_or(error))
         .map_err(|e| CliError::failure(e.to_string()))?;
         let choice = self
-            .honor_shield(client, payer, choice, spec.mev_shield_required, spec.name)
+            .honor_shield(client, payer, choice, required_shield, spec.name)
             .await?;
+        // A live quote is disclosure only; it never changes the reviewed call
+        // or the SDK's dry-run summary and output schema.
+        let registration = registration::live(client, intent).await?;
+        let mut review_summary = plan.summary.clone();
+        if let Some(registration) = &registration {
+            review_summary.push_str(&format!(" — {}", registration.suffix));
+            if !self.globals.assume_yes {
+                for note in &registration.notes {
+                    self.output
+                        .message(note)
+                        .map_err(|error| CliError::failure(error.to_string()))?;
+                }
+            }
+        }
         let mut transaction = vec![
             ("signer".into(), serde_json::json!(plan.signer_address)),
             ("role".into(), serde_json::json!(plan.signer.as_str())),
             ("MEV shield".into(), serde_json::json!(choice.enabled)),
         ];
+        if let Some(registration) = &registration {
+            transaction.push(("cost".into(), serde_json::json!(registration.cost)));
+        }
         if let Some(proxy) = proxy_for {
             transaction.push(("proxy for".into(), serde_json::json!(proxy)));
         }
@@ -578,7 +602,7 @@ impl AppContext {
         self.output
             .transaction_card(&[
                 ReviewSection {
-                    title: plan.summary.clone(),
+                    title: review_summary.clone(),
                     rows: args,
                 },
                 ReviewSection {
@@ -604,7 +628,7 @@ impl AppContext {
                 },
             ])
             .map_err(|error| CliError::failure(error.to_string()))?;
-        self.confirm(&format!("{}?", intent.summary_dyn()))?;
+        self.confirm(&format!("{review_summary}?"))?;
         if let Some(hooks) = control.hooks {
             hooks.before_submit_with_plan(&plan).await?;
         }
@@ -1041,6 +1065,77 @@ mod tests {
         );
         Ok(())
     }
+    #[tokio::test]
+    async fn required_child_shield_refuses_batch_before_identity_fee_or_signer_acquisition()
+    -> Result<(), Box<dyn std::error::Error>> {
+        use rtao::signer::{BoxFuture, KeyView, Signer, SignerError};
+        use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        struct NoKeys(AtomicUsize);
+        impl KeyView for NoKeys {
+            fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+            }
+            fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+            }
+            fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Err(SignerError::KeyUnavailable(SignerRole::Coldkey))
+            }
+        }
+        impl DynKeySource for NoKeys {
+            fn signer_for<'a>(
+                &'a self,
+                role: SignerRole,
+            ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Box::pin(async move { Err(SignerError::KeyUnavailable(role)) })
+            }
+        }
+        let chain = FakeChain::from_state(FakeState::try_default()?);
+        let mut config =
+            ClientConfig::new(rtao::client::Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+        let before = chain.requests().len();
+        let keys = NoKeys(AtomicUsize::new(0));
+        for child in [
+            json!({"op":"burned_register","netuid":3}),
+            json!({"op":"add_collateral","netuid":3,"amount_alpha":"all"}),
+        ] {
+            let batch = rtao_intents::Batch::new(vec![child])?;
+            for external in [false, true] {
+                for from_config in [false, true] {
+                    let mut ctx = if from_config {
+                        context(&[], json!({"mev_shield":false}), terminal(false, ""))?
+                    } else {
+                        context(&["--no-mev-shield"], Value::Null, terminal(false, ""))?
+                    };
+                    if external {
+                        ctx.globals.signer_backend = Some("vault".into());
+                    }
+                    let error = ctx
+                        .submit_with(&client, &batch, &keys, false, None)
+                        .await
+                        .err()
+                        .ok_or("required batch shield was bypassed")?;
+                    assert_eq!(error.code, 2);
+                    assert_eq!(error.message, "batch must be submitted MEV-shielded");
+                    assert_eq!(keys.0.load(Ordering::SeqCst), 0);
+                    assert_eq!(chain.requests().len(), before);
+                }
+            }
+        }
+        client.close().await;
+        Ok(())
+    }
+
     #[test]
     fn endpoint_none_and_order_override_network_defaults() -> Result<(), Box<dyn std::error::Error>>
     {
@@ -2011,7 +2106,7 @@ impl AppContext {
         {
             self.output.message(&format!("note: {} runs with the multisig account as its hotkey — {} ({}) must be the registered hotkey on-chain",intent.spec().name,self.globals.wallet_name,group.address)).map_err(|error|CliError::failure(error.to_string()))?;
         }
-        let mut inner: Option<rtao_runtime::CallBytes> = None;
+        let mut inner: Option<crate::multisig::ReviewedInnerCall> = None;
         let mut opening: Option<rtao_runtime::models::MultisigTimepoint> = None;
         let mut last: Option<rtao::tx::ExtrinsicResult> = None;
         let attempt = async {
@@ -2023,9 +2118,12 @@ impl AppContext {
                     crate::call::await_pending_visible(
                         client,
                         &group,
-                        inner.as_ref().ok_or_else(|| {
-                            CliError::failure("approval has no retained inner call")
-                        })?,
+                        inner
+                            .as_ref()
+                            .ok_or_else(|| {
+                                CliError::failure("approval has no retained inner call")
+                            })?
+                            .call(),
                     )
                     .await?;
                 }
@@ -2102,7 +2200,7 @@ impl AppContext {
                     return Err(known_receipt_error(error, &receipt));
                 }
                 let actual = adapter
-                    .reviewed_inner_call()
+                    .reviewed_call()
                     .map_err(|error| CliError::failure(error.to_string()))?
                     .ok_or_else(|| {
                         CliError::failure(
@@ -2115,7 +2213,7 @@ impl AppContext {
                 if receipt.success && raw.threshold >= 2 {
                     let spec = crate::call::decode_multisig_call_spec(
                         client,
-                        &actual,
+                        actual.call(),
                         SignerRole::Coldkey,
                     )
                     .await;
@@ -2126,7 +2224,7 @@ impl AppContext {
                             spec: &spec,
                             group: &raw,
                             multisig: &group,
-                            call: &actual,
+                            call: actual.call(),
                             result: &receipt,
                         },
                         cache,
@@ -2157,7 +2255,7 @@ impl AppContext {
                         last.as_ref()
                             .ok_or_else(|| CliError::failure("missing retained approval result"))?,
                         &group,
-                        &actual,
+                        actual.call(),
                     )?);
                 }
                 if index + 1 < rounds.len() && !executed {
@@ -2183,7 +2281,7 @@ impl AppContext {
                 if let Some(receipt) = &last {
                     let hash = inner
                         .as_ref()
-                        .map(|call| format!("0x{}", hex::encode(call.hash())))
+                        .map(|call| format!("0x{}", hex::encode(call.call().hash())))
                         .or_else(|| {
                             receipt
                                 .data

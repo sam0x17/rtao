@@ -790,10 +790,38 @@ async fn transient_pool_retry_waits_for_one_head_and_reuses_reviewed_call() {
 
 #[tokio::test]
 async fn transaction_version_change_replans_once_and_rechecks_policy() {
+    runtime_stamp_change_replans_once_and_refuses_a_second_change(false).await;
+}
+
+#[tokio::test]
+async fn spec_version_change_replans_once_and_refuses_a_second_change() {
+    runtime_stamp_change_replans_once_and_refuses_a_second_change(true).await;
+}
+
+async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_change: bool) {
+    fn upgrade(fake: &FakeChain, spec_change: bool, revision: u32) {
+        fake.mutate_state(|state| {
+            let (spec_version, transaction_version) = if spec_change {
+                (478 + revision, 1)
+            } else {
+                (478, 1 + revision)
+            };
+            state.runtime = Arc::new(
+                rtao_core::runtime::Runtime::parse(
+                    &state.runtime.metadata_bytes,
+                    spec_version,
+                    transaction_version,
+                    state.runtime.ss58_format,
+                )
+                .unwrap(),
+            );
+        });
+    }
     #[derive(Clone)]
     struct UpgradeKeys {
         keys: Keys,
         fake: FakeChain,
+        spec_change: bool,
         upgrade_while_signing: bool,
     }
     impl KeyView for UpgradeKeys {
@@ -812,12 +840,13 @@ async fn transaction_version_change_replans_once_and_rechecks_policy() {
             self.keys.address()
         }
         async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
-            self.fake.mutate_state(|state| state.set_result("state_getRuntimeVersion", json!({"specName":"node-subtensor","specVersion":478,"transactionVersion":2,"apis":[]})));
+            upgrade(&self.fake, self.spec_change, 1);
             let signer = self.keys.signer().await?;
             if self.upgrade_while_signing {
                 struct UpgradeSigner {
                     signer: Arc<dyn Signer>,
                     fake: FakeChain,
+                    spec_change: bool,
                 }
                 impl Signer for UpgradeSigner {
                     fn account(&self) -> AccountId {
@@ -832,7 +861,7 @@ async fn transaction_version_change_replans_once_and_rechecks_policy() {
                     ) -> rtao_signer::BoxFuture<'a, Result<rtao_signer::MultiSignature, SignerError>>
                     {
                         Box::pin(async move {
-                            self.fake.mutate_state(|state|state.set_result("state_getRuntimeVersion",json!({"specName":"node-subtensor","specVersion":478,"transactionVersion":3,"apis":[]})));
+                            upgrade(&self.fake, self.spec_change, 2);
                             self.signer.sign(request).await
                         })
                     }
@@ -840,6 +869,7 @@ async fn transaction_version_change_replans_once_and_rechecks_policy() {
                 Ok(Arc::new(UpgradeSigner {
                     signer,
                     fake: self.fake.clone(),
+                    spec_change: self.spec_change,
                 }))
             } else {
                 Ok(signer)
@@ -850,6 +880,7 @@ async fn transaction_version_change_replans_once_and_rechecks_policy() {
     let keys = UpgradeKeys {
         keys,
         fake: fake.clone(),
+        spec_change,
         upgrade_while_signing: false,
     };
     let intent = Remark::default();
@@ -861,29 +892,27 @@ async fn transaction_version_change_replans_once_and_rechecks_policy() {
     assert_eq!(intent.builds.load(Ordering::SeqCst), 2);
     assert_eq!(keys.keys.unlocks.load(Ordering::SeqCst), 1);
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
-    assert_eq!(
-        executor
-            .client()
-            .refresh_runtime()
-            .await
-            .unwrap()
-            .transaction_version(),
-        2
-    );
+    let current = executor.client().refresh_runtime().await.unwrap();
+    assert_eq!(current.spec_version(), 478 + u32::from(spec_change));
+    assert_eq!(current.transaction_version(), 1 + u32::from(!spec_change));
     let (executor, fake, keys) = fixture().await;
     let keys = UpgradeKeys {
         keys,
         fake: fake.clone(),
+        spec_change,
         upgrade_while_signing: true,
     };
     let intent = Remark::default();
-    assert!(
-        executor
-            .execute(&intent, &keys, &ExecuteOptions::default())
-            .await
-            .is_err()
-    );
+    let error = executor
+        .execute(&intent, &keys, &ExecuteOptions::default())
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        TxError::Chain(ref error) if error.message.contains("call runtime stamp")
+    ));
     assert_eq!(intent.builds.load(Ordering::SeqCst), 2);
+    assert_eq!(keys.keys.unlocks.load(Ordering::SeqCst), 1);
     assert!(fake.state().lock().unwrap().submissions.is_empty());
     assert_eq!(
         executor

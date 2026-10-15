@@ -123,6 +123,12 @@ before collection, and the runtime sets the inner axum `DefaultBodyLimit` to
 the same size. `with_body_limit(bytes)` changes both bounds. Full request bodies
 are buffered for hashing; responses may stream.
 
+Authentication fields have a separate budget of 4,096 bytes per field and
+8,192 bytes total, counting duplicate header values. Sender addresses must fit
+the native 49-byte AccountId32 SS58 limit. Inputs above these limits receive
+401 before expensive parsing or signature verification. The optional legacy
+verifier counts its supplied body hash in the same budget.
+
 The default in-memory nonce store retains accepted pairs for 60 seconds, with
 limits of 1,024 pairs per hotkey and 65,536 globally. Live entries are never
 evicted to make space. Replay retention must be **strictly greater than
@@ -165,6 +171,9 @@ Application state saves every five minutes and at graceful shutdown. The
 default directory is
 `~/.bittensor/miners/<wallet>/<hotkey>/netuid<netuid>/miner`. Checkpoints use
 `state.json`, `state.1.json` and `state.2.json`, with fsync and atomic replacement.
+Each complete checkpoint is limited to 64 MiB. Loading and rotation validate
+the opened regular file and enforce the limit while reading; special files
+are refused. A failed rotation preserves the current checkpoint.
 Each records schema, package version, subnet, hotkey, finalized block and save
 time. Corrupt JSON can recover a preceding valid generation; identity and
 schema mismatches refuse recovery. Override `Miner::state_schema_version`

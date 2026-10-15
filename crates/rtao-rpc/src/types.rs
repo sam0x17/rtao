@@ -213,8 +213,18 @@ pub struct SessionConfig {
     pub retry_forever: bool,
     /// Per-subscription retained notifications; overflow drops the oldest.
     pub subscription_buffer: usize,
+    /// Session-wide active update budget, including streams from earlier connections.
+    /// Defaults to 32 MiB. Charges encoded JSON plus conservative node/container
+    /// storage without a second encoded allocation; overflow evicts oldest updates
+    /// across streams. A single larger update is dropped without flushing queues.
+    /// This bounds queued values, not transient frame parsing or total process RSS.
+    pub subscription_buffer_bytes: usize,
     /// Maximum distinct unclaimed early-notification IDs.
     pub early_notification_ids: usize,
+    /// Aggregate early-update budget (default 8 MiB), using the same JSON/storage
+    /// charge plus identity bookkeeping. Only live, transmitted subscription
+    /// establishment requests admit early updates; oldest updates are evicted first.
+    pub early_notification_bytes: usize,
     /// Both maximum message and frame size.
     pub max_message_bytes: usize,
     /// Certificates appended to native root certificates.
@@ -254,6 +264,8 @@ impl fmt::Debug for SessionConfig {
             .field("silence_timeout", &self.silence_timeout)
             .field("max_retries", &self.max_retries)
             .field("retry_forever", &self.retry_forever)
+            .field("subscription_buffer_bytes", &self.subscription_buffer_bytes)
+            .field("early_notification_bytes", &self.early_notification_bytes)
             .field("max_message_bytes", &self.max_message_bytes)
             .field("max_in_flight", &self.max_in_flight)
             .field("rate_limit", &self.rate_limit)
@@ -271,7 +283,9 @@ impl Default for SessionConfig {
             max_retries: py_rpc::DEFAULT_MAX_RETRIES as u32,
             retry_forever: py_rpc::DEFAULT_RETRY_FOREVER,
             subscription_buffer: py_rpc::SUBSCRIPTION_QUEUE_MAXSIZE,
+            subscription_buffer_bytes: 32 * 1024 * 1024,
             early_notification_ids: py_rpc::MAX_EARLY_BUFFERS,
+            early_notification_bytes: 8 * 1024 * 1024,
             max_message_bytes: 256 * 1024 * 1024,
             extra_roots: Vec::new(),
             max_in_flight: 64,
@@ -440,7 +454,7 @@ pub enum SessionEvent {
     },
     /// Terminal policy refusal.
     PolicyRefused(PolicyRefusal),
-    /// An oldest subscription update was discarded.
+    /// A subscription update was discarded by a retention limit.
     SubscriptionOverflow {
         /// Subscription identity.
         id: String,
@@ -455,6 +469,10 @@ pub struct SessionStatistics {
     pub subscriptions: usize,
     /// Unclaimed early notification identities.
     pub early_notification_ids: usize,
+    /// Charged bytes held for early updates, including identity bookkeeping.
+    pub early_notification_bytes: usize,
+    /// Charged active-update bytes, including streams from earlier connections.
+    pub subscription_retained_bytes: usize,
     /// Remembered recently closed subscription identities.
     pub closed_subscription_ids: usize,
 }

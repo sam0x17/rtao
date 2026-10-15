@@ -1079,7 +1079,7 @@ async fn request_many_retains_other_results_when_one_member_fails() -> Result {
 }
 
 #[tokio::test]
-async fn subscription_overflow_retains_newest_and_early_ids_are_bounded() -> Result {
+async fn subscription_overflow_retains_newest_and_unsolicited_updates_are_not_buffered() -> Result {
     let node = FakeNode::start().await?;
     node.queue_reply(
         "chain_subscribeNewHeads",
@@ -1113,7 +1113,10 @@ async fn subscription_overflow_retains_newest_and_early_ids_are_bounded() -> Res
     }
     // A response behind all notifications establishes that they were routed.
     let _: Value = session.request(ReadMethod::SystemHealth, json!([])).await?;
-    assert_eq!(session.statistics().await?.early_notification_ids, 2);
+    let statistics = session.statistics().await?;
+    assert_eq!(statistics.early_notification_ids, 0);
+    assert_eq!(statistics.early_notification_bytes, 0);
+    assert_eq!(statistics.subscription_retained_bytes, 0);
     session.close().await;
     Ok(())
 }

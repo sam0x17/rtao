@@ -1,4 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{root,subnets,weights}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/root.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/weights.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Basket accounting, subnet listings and pending mechanism weight commits.
 
@@ -258,34 +260,62 @@ pub async fn root_basket_total_nav<V: View + ?Sized>(view: &V) -> Result<DynBala
 #[derive(Deserialize)]
 struct PricingPage {
     #[serde(default)]
-    pricing: Vec<PricingRow>,
+    pricing: Option<Vec<serde_json::Value>>,
     next: Option<AccountId>,
 }
 
 // Only fields Python presents are projected. In particular, a historical
 // pricing record need not contain the unused spot_nav_tao or shares fields.
+fn pricing_fixed_value<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<rtao_primitives::U64F64, D::Error> {
+    // Older metadata may expose raw integer bits rather than a newtype
+    // record. Python treats a missing/null record payload as zero.
+    let value = serde_json::Value::deserialize(deserializer)?;
+    let value = match value {
+        serde_json::Value::Object(mut fields) => {
+            fields.remove("bits").unwrap_or(serde_json::Value::Null)
+        }
+        value => value,
+    };
+    let bits = match value {
+        serde_json::Value::Null => 0,
+        serde_json::Value::Number(number) => number.as_u128().ok_or_else(|| {
+            <D::Error as serde::de::Error>::custom(
+                "pricing fixed-point bits must be a native u128 integer",
+            )
+        })?,
+        _ => {
+            return Err(<D::Error as serde::de::Error>::custom(
+                "pricing fixed-point bits must be a native u128 integer",
+            ));
+        }
+    };
+    Ok(rtao_primitives::U64F64::from_bits(bits))
+}
+
 #[derive(Deserialize)]
-struct PricingRow {
+pub(crate) struct PricingRow {
     hotkey: AccountId,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     spot_price: rtao_primitives::U64F64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     display_price: rtao_primitives::U64F64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     stake_price: rtao_primitives::U64F64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     staker_yield: rtao_primitives::U64F64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     staker_twr: rtao_primitives::U64F64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     bag_index: rtao_primitives::U64F64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     stake_index: rtao_primitives::U64F64,
     #[serde(default)]
     first_block: u64,
     #[serde(default)]
     provisional: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "pricing_fixed_value")]
     display_shares: rtao_primitives::U64F64,
 }
 
@@ -307,15 +337,27 @@ impl From<PricingRow> for owner::ChainPricing {
     }
 }
 
+fn project_pricing_rows(
+    rows: Vec<serde_json::Value>,
+) -> Result<BTreeMap<AccountId, owner::ChainPricing>, ReadError> {
+    rows.into_iter()
+        .map(|value| {
+            let row: PricingRow = serde_json::from_value(value)
+                .map_err(|error| surface("get_all_beta_pricing", error.to_string()))?;
+            Ok((row.hotkey, owner::ChainPricing::from(row)))
+        })
+        .collect()
+}
+
 async fn pricing<V: View + ?Sized>(
     view: &V,
 ) -> Result<BTreeMap<AccountId, owner::ChainPricing>, ReadError> {
     let mut cursor = None;
     let mut seen = BTreeSet::new();
-    let mut pricing = BTreeMap::new();
+    let mut rows = Vec::new();
     loop {
-        let page: PricingPage = model(
-            view.call_dyn(
+        let value = match view
+            .call_dyn(
                 "BetaBasketRuntimeApi",
                 "get_all_beta_pricing",
                 &[
@@ -323,26 +365,33 @@ async fn pricing<V: View + ?Sized>(
                     Value::Uint(0),
                 ],
             )
-            .await?,
-            "get_all_beta_pricing",
-        )?;
-        for row in page.pricing {
-            pricing.insert(row.hotkey, owner::ChainPricing::from(row));
-        }
+            .await
+        {
+            Ok(value) => value,
+            Err(_) => return Ok(BTreeMap::new()),
+        };
+        // Python catches failures while requesting/collecting whole pages,
+        // then projects row fields outside that fallback block.
+        let page: PricingPage = match model(value, "get_all_beta_pricing") {
+            Ok(page) => page,
+            Err(_) => return Ok(BTreeMap::new()),
+        };
+        rows.extend(page.pricing.unwrap_or_default());
         cursor = page.next;
         let Some(next) = cursor else {
-            return Ok(pricing);
+            break;
         };
         if !seen.insert(next) {
-            return Err(surface("get_all_beta_pricing", "pricing cursor repeated"));
+            return Ok(BTreeMap::new());
         }
     }
+    project_pricing_rows(rows)
 }
 
 /// Every active validator fund with batched rates and optional paginated pricing.
 ///
-/// Any pricing failure discards the partial pricing enrichment, matching the
-/// Python compatibility path for older nodes; core basket data remains available.
+/// Pricing RPC/page failures discard partial enrichment, matching Python's
+/// compatibility path for older nodes. Malformed presented row fields fail.
 // py: sdk/python/bittensor/reads/root.py:97-128,352-374
 pub async fn root_baskets<V: View + ?Sized>(
     view: &V,
@@ -373,10 +422,9 @@ pub async fn root_baskets<V: View + ?Sized>(
         let rate: rtao_primitives::I96F32 = model(rate, "SubtensorModule.BasketRate")?;
         record.basket_rate = rate.to_f64();
     }
-    if let Ok(pricing) = pricing(&snapshot).await {
-        for record in &mut records {
-            record.chain_pricing = pricing.get(&record.hotkey).cloned();
-        }
+    let pricing = pricing(&snapshot).await?;
+    for record in &mut records {
+        record.chain_pricing = pricing.get(&record.hotkey).cloned();
     }
     records.sort_by_key(|record| std::cmp::Reverse(record.nav_tao.rao));
     Ok(records)
@@ -667,7 +715,10 @@ mod tests {
             "next": null,
         }))
         .unwrap();
-        let rows: Vec<owner::ChainPricing> = page.pricing.into_iter().map(Into::into).collect();
+        let rows: Vec<_> = project_pricing_rows(page.pricing.unwrap_or_default())
+            .unwrap()
+            .into_values()
+            .collect();
         assert_eq!(rows.len(), 1);
         assert_eq!(
             rows[0].spot_price,
@@ -678,5 +729,38 @@ mod tests {
         assert_eq!(rows[0].first_block, 0);
         assert!(!rows[0].provisional);
         assert!(page.next.is_none());
+    }
+
+    #[test]
+    fn pricing_pages_keep_prior_rows_when_later_arrays_are_null_or_missing() {
+        let hotkey = AccountId([8; 32]);
+        let pages = [
+            json!({"pricing": [{"hotkey": hotkey, "spot_price": 1u128 << 63}], "next": hotkey}),
+            json!({"pricing": null, "next": AccountId([9; 32])}),
+            json!({"next": null}),
+        ];
+        let mut rows = Vec::new();
+        for page in pages {
+            let page: PricingPage = serde_json::from_value(page).unwrap();
+            rows.extend(page.pricing.unwrap_or_default());
+        }
+        let pricing = project_pricing_rows(rows).unwrap();
+        assert_eq!(pricing.len(), 1);
+        assert_eq!(pricing[&hotkey].spot_price, 0.5);
+    }
+
+    #[test]
+    fn pricing_projection_refuses_malformed_presented_rows_without_returning_partial_pricing() {
+        let rows = vec![
+            json!({"hotkey": AccountId([8; 32]), "spot_price": {"bits": 1u128 << 63}}),
+            json!({"hotkey": AccountId([9; 32]), "spot_price": "not fixed point"}),
+        ];
+        assert!(matches!(
+            project_pricing_rows(rows),
+            Err(ReadError::SurfaceChanged {
+                descriptor: "get_all_beta_pricing",
+                ..
+            })
+        ));
     }
 }

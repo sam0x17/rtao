@@ -1,4 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{delegation,leasing}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/delegation.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/leasing.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Delegate relations, subnet leases and crowdloans at the selected chain state.
 
 use futures::TryStreamExt;

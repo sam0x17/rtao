@@ -3,13 +3,15 @@
 
 use rtao_client::{View, ViewExt};
 use rtao_core::DynValue;
-use rtao_primitives::{AccountId, CryptoType};
+use rtao_primitives::{AccountId, CryptoType, NetUid, Spend};
 use rtao_runtime::{CallBytes, calls::multisig, models::MultisigTimepoint};
 use rtao_tx::{
-    BuildCx, Built, Intent, IntentError, OriginView, PreflightCx, TxError,
+    BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, OriginView, PreflightCx,
+    TxError,
     multisig::{FundsRequest, check_multisig_funds, multisig_opening_shortfall},
 };
 use serde_json::{Map, Value, json};
+use smallvec::SmallVec;
 use std::collections::BTreeSet;
 
 pub use crate::{MultisigApprove, MultisigCancel, MultisigExecute, MultisigThreshold1};
@@ -150,11 +152,7 @@ fn op_label(call: &Value) -> String {
     }
 }
 
-async fn compose_inner<V: View + ?Sized>(
-    cx: &BuildCx<'_, V>,
-    account: AccountId,
-    call: &Value,
-) -> Result<CallBytes, IntentError> {
+fn inner_intent(call: &Value) -> Result<crate::AnyIntent, IntentError> {
     crate::arguments::check_nested_json(call)?;
     let fields = call
         .as_object()
@@ -166,7 +164,49 @@ async fn compose_inner<V: View + ?Sized>(
     let op = op.as_str().ok_or_else(|| {
         IntentError::validation("multisig inner call 'op' must name a registered intent")
     })?;
-    let intent = crate::AnyIntent::from_tool(op, call.clone())?;
+    crate::AnyIntent::from_tool(op, call.clone())
+}
+
+fn inner_safety(
+    op: &'static str,
+    call: &Value,
+    shield_required: bool,
+) -> Result<IntentSafety, IntentError> {
+    let mut safety = inner_intent(call)?.as_dyn().safety_dyn()?;
+    safety.op = op;
+    safety.mev_shield_required |= shield_required;
+    Ok(safety)
+}
+
+async fn inner_safety_at<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    account: AccountId,
+    call: &Value,
+    shield_required: bool,
+) -> Result<IntentSafety, IntentError> {
+    let intent = inner_intent(call)?;
+    let borrowed = cx.view;
+    let mut safety = intent
+        .as_dyn()
+        .safety_at_dyn(&BuildCx {
+            view: &borrowed as &dyn rtao_client::DynView,
+            origin: OriginView::Account(account),
+            runtime: cx.runtime,
+            clock: cx.clock,
+            spec: intent.spec(),
+        })
+        .await?;
+    safety.op = cx.spec.name;
+    safety.mev_shield_required |= shield_required;
+    Ok(safety)
+}
+
+async fn compose_inner<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    account: AccountId,
+    call: &Value,
+) -> Result<CallBytes, IntentError> {
+    let intent = inner_intent(call)?;
     let borrowed = cx.view;
     let inner = intent
         .as_dyn()
@@ -407,6 +447,41 @@ fn reviewed_approval_hash(
 }
 
 impl Intent for MultisigExecute {
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        let account = group_account(
+            cx.runtime,
+            cx.coldkey_address()?,
+            self.threshold,
+            &self.other_signatories,
+        )?;
+        inner_safety_at(cx, account, &self.call, Self::SPEC.mev_shield_required).await
+    }
+
+    fn safety(&self) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        inner_safety(Self::SPEC.name, &self.call, Self::SPEC.mev_shield_required)
+    }
+
+    fn spend(&self) -> Spend {
+        self.safety()
+            .map_or(Spend::Unbounded, |safety| safety.spend)
+    }
+
+    fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
+        self.safety()
+            .map(|safety| safety.netuids)
+            .unwrap_or_default()
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        self.safety()
+            .map_or(true, |safety| safety.affects_all_subnets)
+    }
+
     fn summary(&self) -> String {
         format!(
             "multisig {}-of-{} execute {}",
@@ -448,6 +523,43 @@ impl Intent for MultisigExecute {
 }
 
 impl Intent for MultisigApprove {
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        let account = group_account(
+            cx.runtime,
+            cx.coldkey_address()?,
+            self.threshold,
+            &self.other_signatories,
+        )?;
+        inner_safety_at(cx, account, &self.call, Self::SPEC.mev_shield_required).await
+    }
+
+    // Approval authorizes the same child even when this particular extrinsic
+    // only stores its hash. Policy caps apply to that authorization as well.
+    fn safety(&self) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        inner_safety(Self::SPEC.name, &self.call, Self::SPEC.mev_shield_required)
+    }
+
+    fn spend(&self) -> Spend {
+        self.safety()
+            .map_or(Spend::Unbounded, |safety| safety.spend)
+    }
+
+    fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
+        self.safety()
+            .map(|safety| safety.netuids)
+            .unwrap_or_default()
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        self.safety()
+            .map_or(true, |safety| safety.affects_all_subnets)
+    }
+
     fn summary(&self) -> String {
         format!(
             "multisig {}-of-{} approve {}",
@@ -528,6 +640,41 @@ impl Intent for MultisigApprove {
 }
 
 impl Intent for MultisigThreshold1 {
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        let account = group_account(
+            cx.runtime,
+            cx.coldkey_address()?,
+            1,
+            &self.other_signatories,
+        )?;
+        inner_safety_at(cx, account, &self.call, Self::SPEC.mev_shield_required).await
+    }
+
+    fn safety(&self) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        inner_safety(Self::SPEC.name, &self.call, Self::SPEC.mev_shield_required)
+    }
+
+    fn spend(&self) -> Spend {
+        self.safety()
+            .map_or(Spend::Unbounded, |safety| safety.spend)
+    }
+
+    fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
+        self.safety()
+            .map(|safety| safety.netuids)
+            .unwrap_or_default()
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        self.safety()
+            .map_or(true, |safety| safety.affects_all_subnets)
+    }
+
     fn summary(&self) -> String {
         format!("multisig (1-of-N) dispatch {}", op_label(&self.call))
     }
@@ -584,7 +731,7 @@ mod tests {
     use rtao_client::DynView;
     use rtao_client::{BlockRef, Client, ClientConfig, Network, Snapshot};
     #[cfg(feature = "transfer")]
-    use rtao_primitives::{H256, Spend};
+    use rtao_primitives::H256;
     #[cfg(any(feature = "transfer", feature = "evm"))]
     use rtao_runtime::RuntimeHandle;
     #[cfg(feature = "transfer")]
@@ -751,7 +898,14 @@ mod tests {
                     rtao_tx::MultisigCall::default()
                 );
             }
-            assert_eq!(intent.spend_dyn(), Spend::None);
+            assert_eq!(
+                intent.spend_dyn(),
+                if call_index == 3 {
+                    Spend::None
+                } else {
+                    Spend::Bounded(rtao_primitives::Balance::from_rao(1))
+                }
+            );
             assert!(intent.touches_netuids_dyn().is_empty());
             assert!(!intent.affects_all_subnets_dyn());
             assert_eq!(intent.semantic_intent_dyn().spec().name, intent.spec().name);
@@ -1435,8 +1589,7 @@ mod tests {
 
     #[cfg(feature = "root")]
     #[tokio::test]
-    async fn raw_multisig_child_build_does_not_add_sudo_or_inherit_semantic_policy()
-    -> anyhow::Result<()> {
+    async fn raw_multisig_child_policy_propagates_without_adding_sudo() -> anyhow::Result<()> {
         let (_chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigThreshold1 {
@@ -1469,7 +1622,7 @@ mod tests {
         assert_eq!(inner["call_module"], "AdminUtils");
         assert_eq!(inner["call_function"], "sudo_set_subnet_emission_enabled");
         assert_eq!(intent.spend(), rtao_primitives::Spend::None);
-        assert!(intent.touches_netuids().is_empty());
+        assert_eq!(intent.touches_netuids().as_slice(), &[NetUid(3)]);
         assert!(!intent.affects_all_subnets());
         assert!(built.extras.is_empty());
         client.close().await;

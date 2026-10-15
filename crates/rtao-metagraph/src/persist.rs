@@ -22,6 +22,8 @@ use crate::{Metagraph, MetagraphError, MetagraphOptions, SnapshotInfo};
 
 const MAGIC: &[u8; 4] = b"RTMG";
 const VERSION: u8 = 1;
+/// Maximum persisted metagraph size, including the header (256 MiB).
+pub const MAX_FILE_BYTES: u64 = 256 * 1024 * 1024;
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 // A source is also the persisted preset: full API method or the exact selective
@@ -133,6 +135,7 @@ impl From<io::Error> for PersistError {
 /// Synthetic graphs made with [`Metagraph::from_dynamic`] cannot be saved.
 /// The separately fetched commitment maps are not included; fetch them again
 /// when needed. Any commitment fields in the runtime response remain intact.
+/// The complete file must fit [`MAX_FILE_BYTES`].
 pub async fn save(graph: &Metagraph, path: impl AsRef<Path>) -> Result<(), PersistError> {
     let origin = graph
         .persistence_origin
@@ -171,6 +174,7 @@ pub async fn save(graph: &Metagraph, path: impl AsRef<Path>) -> Result<(), Persi
 }
 
 /// Restore a raw metagraph with the stored spec's metadata, without any RPC.
+/// The opened input must be a regular file within [`MAX_FILE_BYTES`].
 ///
 /// Metadata must already exist in `cache`'s memory or shared disk directory.
 /// The stored genesis must match the cache. The original file is never changed,
@@ -241,7 +245,7 @@ pub async fn load(path: impl AsRef<Path>, cache: &RuntimeCache) -> Result<Metagr
 }
 
 fn read_file(path: &Path) -> Result<(Header, Bytes), PersistError> {
-    let bytes = Bytes::from(fs::read(path)?);
+    let bytes = Bytes::from(rtao_client::bounded_file::read(path, MAX_FILE_BYTES)?);
     if bytes.get(..MAGIC.len()) != Some(MAGIC.as_slice()) {
         return Err(PersistError::InvalidFormat("expected RTMG magic".into()));
     }
@@ -272,6 +276,16 @@ impl Drop for TemporaryFile {
 }
 
 fn write_atomic(path: &Path, header: &Header, raw: &[u8]) -> Result<(), PersistError> {
+    let encoded_header = header.encode();
+    if (raw.len() as u64)
+        .saturating_add(encoded_header.len() as u64)
+        .saturating_add(MAGIC.len() as u64 + 1)
+        > MAX_FILE_BYTES
+    {
+        return Err(PersistError::InvalidFormat(
+            "persisted metagraph exceeds 256 MiB limit".into(),
+        ));
+    }
     let parent = path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -295,11 +309,67 @@ fn write_atomic(path: &Path, header: &Header, raw: &[u8]) -> Result<(), PersistE
     };
     file.write_all(MAGIC)?;
     file.write_all(&[VERSION])?;
-    file.write_all(&header.encode())?;
+    file.write_all(&encoded_header)?;
     file.write_all(raw)?;
     file.sync_all()?;
     drop(file);
     fs::rename(&temporary.0, path)?;
     File::open(parent)?.sync_all()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn oversized_save_counts_header_before_creating_any_output() -> io::Result<()> {
+        let root = std::env::var_os("RTAO_TEMP_ROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target"))
+            .join("tmp");
+        fs::create_dir_all(&root)?;
+        let parent = loop {
+            let candidate = root.join(format!(
+                "metagraph-save-limit-{}-{}",
+                std::process::id(),
+                NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+            ));
+            match fs::create_dir(&candidate) {
+                Ok(()) => break candidate,
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                Err(error) => return Err(error),
+            }
+        };
+        struct Fixture(PathBuf);
+        impl Drop for Fixture {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.0);
+            }
+        }
+        let fixture = Fixture(parent);
+        let path = fixture.0.join("graph.rtmg");
+        fs::write(&path, b"previous graph")?;
+        let header = Header {
+            genesis: [1; 32],
+            block_hash: [2; 32],
+            block_number: 3,
+            spec_version: 478,
+            netuid: 1,
+            mechid: 0,
+            preset: Source::FullSubnet,
+        };
+        let prefix_len = MAGIC.len() + 1 + header.encode().len();
+        // The body alone fits; prefix and header make the persisted file one
+        // byte too large. Rejection must happen before any atomic replacement.
+        let raw = vec![0; MAX_FILE_BYTES as usize - prefix_len + 1];
+        assert!(matches!(
+            write_atomic(&path, &header, &raw),
+            Err(PersistError::InvalidFormat(detail))
+                if detail == "persisted metagraph exceeds 256 MiB limit"
+        ));
+        assert_eq!(fs::read(path)?, b"previous graph");
+        assert_eq!(fs::read_dir(&fixture.0)?.count(), 1);
+        Ok(())
+    }
 }

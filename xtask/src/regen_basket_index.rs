@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/basket_index_data.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! CLI-only frozen basket display data from the authenticated literal corpus.
 
 use anyhow::{Context, Result, ensure};

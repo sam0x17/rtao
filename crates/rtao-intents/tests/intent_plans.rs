@@ -11,8 +11,8 @@ use rtao_core::{
     runtime::{Runtime, TypeSpec},
 };
 use rtao_intents::AnyIntent;
-use rtao_primitives::{AccountId, DefaultAccount, H256, NetUid};
-use rtao_runtime::{RuntimeHandle, storage::subtensor_module as st};
+use rtao_primitives::{AccountId, DefaultAccount, H256, NetUid, TaoBalance};
+use rtao_runtime::{RuntimeHandle, models::CrowdloanInfo, storage::subtensor_module as st};
 use rtao_signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole};
 use rtao_testkit::{FakeChain, FakeState, fixtures::decode_fixed_hex, rpc::RpcClient};
 use rtao_tx::{Clock, Executor, PlanOptions};
@@ -286,6 +286,27 @@ fn seeded_state(runtime: Arc<Runtime>, op: &str) -> Result<FakeState> {
         json!(10_000_000),
     )?;
     seed_availability(&mut state)?;
+    if op == "finalize_crowdloan" {
+        // The sample finalizes ID 0. Its target-only contract is explicit;
+        // absence or an opaque callback no longer inherits a no-spend label.
+        state.seed(
+            &rtao_runtime::storage::crowdloan::CROWDLOANS,
+            (0u32,),
+            CrowdloanInfo {
+                creator: COLD,
+                deposit: TaoBalance(1),
+                min_contribution: TaoBalance(1),
+                end: 100,
+                cap: TaoBalance(10),
+                funds_account: OTHER_HOT,
+                raised: TaoBalance(10),
+                target_address: Some(COLD),
+                call: None,
+                finalized: false,
+                contributors_count: 1,
+            },
+        )?;
+    }
     if op == "pow_register" {
         // Uids is optional *storage*, so an absent key is not an encoded Option.
         // Override the upstream fake's blanket Uids=0 for this unregistered slot.

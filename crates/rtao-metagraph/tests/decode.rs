@@ -9,7 +9,7 @@ use rtao_core::{
 use rtao_metagraph::{
     DecodePath, DecodePreference, Metagraph, MetagraphOptions, MetagraphView, SnapshotInfo,
 };
-use rtao_primitives::{AccountId, NetUid, Uid};
+use rtao_primitives::{AccountId, NetUid, StakeWeight, Uid};
 use rtao_runtime::RuntimeHandle;
 
 fn runtime() -> RuntimeHandle {
@@ -201,6 +201,91 @@ fn set(graph: &mut Value, name: &str, value: Value) {
         *field = value;
     } else {
         fields.push((Value::Str(name.into()), value));
+    }
+}
+
+#[test]
+fn stake_weight_accessors_preserve_alpha_tagged_total_stake_json() {
+    let runtime = runtime();
+    let mut original = dynamic(
+        &runtime,
+        include_bytes!("../../../vendor/bench/finney-1.scale"),
+    );
+    set(&mut original, "netuid", Value::Int(3));
+    let total_stake = 1_234_500_000_000u64;
+    let Value::Dict(fields) = &mut original else {
+        panic!("record required");
+    };
+    for (name, amount) in [
+        ("emission", 125_000_000),
+        ("alpha_stake", 2_500_000_000),
+        ("tao_stake", 3_750_000_000),
+        ("total_stake", total_stake),
+    ] {
+        let (_, column) = fields
+            .iter_mut()
+            .find(|(key, _)| matches!(key, Value::Str(key) if key == name))
+            .unwrap();
+        let Value::List(values) = column else {
+            panic!("stake column required");
+        };
+        values[0] = Value::Int(i128::from(amount));
+    }
+    let output = runtime
+        .runtime_api("SubnetInfoRuntimeApi", "get_metagraph")
+        .unwrap()
+        .output;
+    // Python _build tags total_stake with (netuid, symbol), just like alpha_stake
+    // and emission; tao_stake keeps root units (metagraph.py:363-366).
+    // These literal strings follow Balance.__repr__ (balance.py:147-152).
+    for (symbol, total_json, emission_json, alpha_json) in [
+        ("λ", "1,234.500000000λ", "0.125000000λ", "2.500000000λ"),
+        ("", "1,234.500000000α₃", "0.125000000α₃", "2.500000000α₃"),
+    ] {
+        let mut value = original.clone();
+        set(
+            &mut value,
+            "symbol",
+            Value::List(
+                symbol
+                    .bytes()
+                    .map(|byte| Value::Int(i128::from(byte)))
+                    .collect(),
+            ),
+        );
+        let mut raw = Vec::new();
+        runtime.core().encode_id(output, &value, &mut raw).unwrap();
+        for (decoder, expected_path) in [
+            (DecodePreference::View, DecodePath::View),
+            (DecodePreference::Typed, DecodePath::Typed),
+            (DecodePreference::Dynamic, DecodePath::Dynamic),
+        ] {
+            let graph = Metagraph::decode(
+                Bytes::copy_from_slice(&raw),
+                &runtime,
+                NetUid(3),
+                SnapshotInfo::default(),
+                options(decoder),
+            )
+            .unwrap()
+            .unwrap();
+            assert_eq!(graph.decode_path(), expected_path);
+            assert_eq!(graph.header.netuid, NetUid(3));
+            let row = graph.neuron(Uid(0)).unwrap();
+            let borrowed: StakeWeight = row.total_stake().unwrap();
+            let owned = row.to_owned().unwrap();
+            let owned_weight: StakeWeight = owned.total_stake;
+            assert_eq!(borrowed, StakeWeight(total_stake));
+            assert_eq!(owned_weight, borrowed);
+            let neuron_json = owned.to_json();
+            assert_eq!(neuron_json["total_stake"], total_json);
+            assert_eq!(neuron_json["emission"], emission_json);
+            assert_eq!(neuron_json["alpha_stake"], alpha_json);
+            assert_eq!(neuron_json["tao_stake"], "τ3.750000000");
+            let graph_json = graph.to_json().unwrap();
+            assert_eq!(graph_json["neurons"][0], neuron_json);
+            assert_eq!(graph_json["raw"]["total_stake"][0], total_stake);
+        }
     }
 }
 

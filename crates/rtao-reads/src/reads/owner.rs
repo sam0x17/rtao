@@ -1,4 +1,12 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{accounts,chain,delegation,epochs,hyperparameters,identity,locks,root,staking,subnets,prices}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/accounts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/identity.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/delegation.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/root.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/prices.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/locks.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/chain.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/epochs.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/hyperparameters.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
@@ -752,6 +760,13 @@ fn basket_model<T: DeserializeOwned>(
     serde_json::from_value(value.to_json()).map_err(|error| surface(descriptor, error.to_string()))
 }
 
+fn project_optional_chain_pricing(value: DynValue) -> Result<Option<ChainPricing>, ReadError> {
+    // Share the board's presentation-only projection: historical records can
+    // omit modern/defaulted fields and fields Python never presents.
+    basket_model::<Option<super::m6_root::PricingRow>>(value, "get_beta_pricing")
+        .map(|row| row.map(ChainPricing::from))
+}
+
 /// Basket summary, rate and optional pricing at one immutable block.
 // py: sdk/python/bittensor/reads/root.py:319-345
 pub async fn validator_basket_summary<V: View + ?Sized>(
@@ -783,10 +798,9 @@ pub async fn validator_basket_summary<V: View + ?Sized>(
         .await;
     record.chain_pricing = pricing
         .ok()
-        .map(|value| basket_model::<Option<models::BetaPricing>>(value, "get_beta_pricing"))
+        .map(project_optional_chain_pricing)
         .transpose()?
-        .flatten()
-        .map(ChainPricing::from);
+        .flatten();
     Ok(record)
 }
 
@@ -976,6 +990,110 @@ pub async fn subnet_start_schedule<V: View + ?Sized>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn single_summary_pricing_defaults_historical_fields_and_ignores_unused_native_fields() {
+        let hotkey = AccountId([8; 32]);
+        let row = DynValue::new(Value::record(vec![
+            ("hotkey".into(), Value::Str(hotkey.to_string())),
+            (
+                "spot_price".into(),
+                Value::record(vec![("bits".into(), Value::Uint(1 << 63))]),
+            ),
+            (
+                "display_price".into(),
+                Value::record(vec![("bits".into(), Value::Uint(u128::MAX))]),
+            ),
+            ("first_block".into(), Value::Uint(u128::from(u64::MAX))),
+            ("provisional".into(), Value::Bool(true)),
+            // These fields have no presentation role. Even incompatible future
+            // shapes must not turn optional enrichment into a summary failure.
+            (
+                "shares".into(),
+                Value::Str("unused historical shape".into()),
+            ),
+            ("spot_nav_tao".into(), Value::List(Vec::new())),
+            ("future_field".into(), Value::Bool(true)),
+        ]));
+        let pricing = project_optional_chain_pricing(row).unwrap().unwrap();
+        assert_eq!(
+            serde_json::to_value(pricing).unwrap(),
+            json!({
+                "hotkey": hotkey,
+                "spot_price": 0.5,
+                "display_price": 18_446_744_073_709_551_616.0f64,
+                "stake_price": 0.0,
+                "staker_yield": 0.0,
+                "staker_twr": 0.0,
+                "bag_index": 0.0,
+                "stake_index": 0.0,
+                "first_block": u64::MAX,
+                "provisional": true,
+                "display_shares": 0.0,
+            })
+        );
+    }
+
+    #[test]
+    fn single_summary_pricing_keeps_null_absence_and_refuses_malformed_presented_fields() {
+        assert!(
+            project_optional_chain_pricing(DynValue::new(Value::Null))
+                .unwrap()
+                .is_none()
+        );
+        let hotkey = AccountId([8; 32]);
+        let historical = DynValue::new(Value::record(vec![(
+            "hotkey".into(),
+            Value::Str(hotkey.to_string()),
+        )]));
+        let pricing = project_optional_chain_pricing(historical).unwrap().unwrap();
+        assert_eq!(pricing.hotkey, hotkey);
+        assert_eq!(pricing.first_block, 0);
+        assert!(!pricing.provisional);
+        assert_eq!(pricing.display_shares, 0.0);
+        let malformed = DynValue::new(Value::record(vec![
+            ("hotkey".into(), Value::Str(hotkey.to_string())),
+            ("spot_price".into(), Value::Str("not fixed point".into())),
+        ]));
+        assert!(matches!(
+            project_optional_chain_pricing(malformed),
+            Err(ReadError::SurfaceChanged {
+                descriptor: "get_beta_pricing",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn single_summary_pricing_accepts_legacy_raw_bits_and_null_fixed_point_values() {
+        let row = DynValue::new(Value::record(vec![
+            ("hotkey".into(), Value::Str(AccountId([8; 32]).to_string())),
+            ("spot_price".into(), Value::Uint(u128::MAX)),
+            ("display_price".into(), Value::Null),
+            (
+                "stake_price".into(),
+                Value::record(vec![("bits".into(), Value::Null)]),
+            ),
+            ("staker_yield".into(), Value::record(Vec::new())),
+            ("staker_twr".into(), Value::Uint(1 << 63)),
+        ]));
+        let pricing = project_optional_chain_pricing(row).unwrap().unwrap();
+        assert_eq!(pricing.spot_price, 18_446_744_073_709_551_616.0);
+        assert_eq!(pricing.display_price, 0.0);
+        assert_eq!(pricing.stake_price, 0.0);
+        assert_eq!(pricing.staker_yield, 0.0);
+        assert_eq!(pricing.staker_twr, 0.5);
+        for bits in [
+            Value::Int(-1),
+            Value::Str("340282366920938463463374607431768211456".into()),
+        ] {
+            let malformed = DynValue::new(Value::record(vec![
+                ("hotkey".into(), Value::Str(AccountId([8; 32]).to_string())),
+                ("spot_price".into(), bits),
+            ]));
+            assert!(project_optional_chain_pricing(malformed).is_err());
+        }
+    }
 
     fn stake_valuation(tao_per_alpha: BTreeMap<NetUid, f64>) -> StakeValuation {
         StakeValuation {

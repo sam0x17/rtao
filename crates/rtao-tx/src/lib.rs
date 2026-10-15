@@ -30,7 +30,7 @@ pub use output::{
     ExtrinsicResult, IntentOutput, MultisigCall, PureCreated, SubnetRegistered, WeightsSubmitted,
 };
 pub use plan::Plan;
-pub use policy::{Policy, PolicySubject};
+pub use policy::{IntentSafety, Policy, PolicySubject};
 pub use rtao_client::{ShieldPeriod, UnsignedExtrinsic};
 pub use rtao_primitives::Spend;
 pub use rtao_runtime::models::ProxyType;

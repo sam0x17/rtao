@@ -260,7 +260,7 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
     };
     assert!(prepare_row(raw(), &state, Uid(0), NetUid(1), &graph).is_err());
     state.null_consensus = true;
-    state.max_weights_limit = 1;
+    state.max_weights_limit = u16::MAX;
     assert_eq!(
         prepare_row(raw(), &state, Uid(0), NetUid(1), &graph)?,
         (vec![Uid(1), Uid(2)], vec![0, 17])
@@ -359,6 +359,184 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
         )?,
         (vec![Uid(0)], vec![65535])
     );
+    client.close().await;
+    Ok(())
+}
+
+/// Pinned chain weights.rs:1050-1075 enforces capped vector length then Null
+/// max/sum. The shared preparation preserves every pair, including zeros.
+#[tokio::test]
+async fn raw_shared_preparation_enforces_chain_count_and_exact_share() -> anyhow::Result<()> {
+    let (_, client) = fixture().await?;
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    state.null_consensus = true;
+    state.min_allowed_weights = 2;
+    let graph = graph()?;
+    let row = |values| WeightsInput::RawU16 {
+        uids: vec![Uid(1), Uid(2)],
+        values,
+    };
+    assert_eq!(
+        prepare_row(row(vec![0, 17]), &state, Uid(0), NetUid(1), &graph)?,
+        (vec![Uid(1), Uid(2)], vec![0, 17]),
+        "chain length counts zero pairs without mutating raw input"
+    );
+    assert_eq!(
+        prepare_row(row(vec![3, 1]), &state, Uid(0), NetUid(1), &graph)?,
+        (vec![Uid(1), Uid(2)], vec![3, 1]),
+        "raw rows retain exact integers instead of max-upscaling them"
+    );
+    state.max_weights_limit = 32_767;
+    let error = prepare_row(row(vec![100, 1]), &state, Uid(0), NetUid(1), &graph)
+        .expect_err("raw preparation enforces the configured maximum share");
+    assert!(
+        error
+            .to_string()
+            .contains("raw weights exceed the configured maximum share")
+    );
+    // Exact equality is allowed; one greater max at the same sum is refused.
+    // A one-unit smaller configured limit is refused too.
+    state.max_weights_limit = 32_768;
+    assert_eq!(
+        prepare_row(row(vec![32_768, 32_767]), &state, Uid(0), NetUid(1), &graph)?,
+        (vec![Uid(1), Uid(2)], vec![32_768, 32_767])
+    );
+    assert!(
+        prepare_row(row(vec![32_769, 32_766]), &state, Uid(0), NetUid(1), &graph).is_err(),
+        "one greater maximum at the same total exceeds the exact share boundary"
+    );
+    state.max_weights_limit = 32_767;
+    assert!(prepare_row(row(vec![32_768, 32_767]), &state, Uid(0), NetUid(1), &graph).is_err());
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs()
+-> anyhow::Result<()> {
+    let (_, client) = fixture().await?;
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    state.null_consensus = true;
+    state.min_allowed_weights = 10;
+    let graph = graph()?;
+    let row = |values| WeightsInput::RawU16 {
+        uids: vec![Uid(0), Uid(1), Uid(2)],
+        values,
+    };
+    for values in [vec![65_534, 1, 1], vec![65_534, 1, 0], vec![17, 0, 0]] {
+        assert_eq!(
+            prepare_row(row(values.clone()), &state, Uid(0), NetUid(1), &graph)?,
+            (vec![Uid(0), Uid(1), Uid(2)], values),
+            "min(10, population=3) counts all three supplied pairs"
+        );
+    }
+    assert!(
+        prepare_row(
+            WeightsInput::RawU16 {
+                uids: vec![Uid(1), Uid(2)],
+                values: vec![1, 1]
+            },
+            &state,
+            Uid(0),
+            NetUid(1),
+            &graph
+        )
+        .is_err()
+    );
+    state.max_weights_limit = 0;
+    assert_eq!(
+        prepare_row(
+            WeightsInput::RawU16 {
+                uids: vec![Uid(0)],
+                values: vec![7]
+            },
+            &state,
+            Uid(0),
+            NetUid(1),
+            &graph
+        )?,
+        (vec![Uid(0)], vec![7])
+    );
+    // These test row constraints only; direct dispatch separately refuses root.
+    // The length helper does not give root the single-self count exemption.
+    assert!(
+        prepare_row(
+            WeightsInput::RawU16 {
+                uids: vec![Uid(0)],
+                values: vec![7]
+            },
+            &state,
+            Uid(0),
+            NetUid(0),
+            &graph
+        )
+        .is_err()
+    );
+    state.min_allowed_weights = 1;
+    assert_eq!(
+        prepare_row(
+            WeightsInput::RawU16 {
+                uids: vec![Uid(0)],
+                values: vec![7]
+            },
+            &state,
+            Uid(0),
+            NetUid(0),
+            &graph
+        )?,
+        (vec![Uid(0)], vec![7]),
+        "the chain maximum-share self exemption itself is root-independent"
+    );
+    for netuid in [NetUid(0), NetUid(1)] {
+        assert!(
+            prepare_row(
+                WeightsInput::RawU16 {
+                    uids: vec![Uid(0)],
+                    values: vec![0]
+                },
+                &state,
+                Uid(0),
+                netuid,
+                &graph
+            )
+            .is_err()
+        );
+    }
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn raw_shared_preparation_rejects_structurally_invalid_rows_without_rewriting()
+-> anyhow::Result<()> {
+    let (_, client) = fixture().await?;
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    state.null_consensus = true;
+    let graph = graph()?;
+    for (uids, values, diagnostic) in [
+        (vec![Uid(1)], vec![1, 2], "differ in length"),
+        (vec![Uid(1), Uid(1)], vec![1, 2], "duplicate UIDs"),
+        (
+            vec![Uid(3)],
+            vec![1],
+            "outside the current subnet population",
+        ),
+        (vec![Uid(1), Uid(2)], vec![0, 0], "all raw weights are zero"),
+        (vec![], vec![], "all raw weights are zero"),
+    ] {
+        let error = prepare_row(
+            WeightsInput::RawU16 { uids, values },
+            &state,
+            Uid(0),
+            NetUid(1),
+            &graph,
+        )
+        .expect_err("invalid raw vector");
+        assert!(error.to_string().contains(diagnostic));
+    }
     client.close().await;
     Ok(())
 }

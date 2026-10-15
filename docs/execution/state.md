@@ -16,7 +16,24 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-The latest completed normal run
+Run [38746145922](https://github.com/sam0x17/rtao/actions/runs/38746145922)
+at `5125fb9` finishes with all five supporting jobs passing, including supply.
+Main compilation and strict Clippy also pass. Parity then stops before tests
+on the missing basket producer's canonical attribution and a renamed D-044
+fixture reference; both are now corrected in source. The bounded log record
+is `check-38746145922.json`. No current nextest/doctest success is established.
+
+The next source batch adds M9 resource/secret/composition repairs and the public
+typed multisig adapters. [The M9 report](../security/m9.md) preserves its nine
+original findings and supplemental continuation finding, with source-repair
+evidence separate from pending hosted execution. Existing upstream filings and
+fuzz-source coverage are audited in [m9-upstream-audit.md](m9-upstream-audit.md)
+and [m9-robustness.md](m9-robustness.md). The file map has 172 reconciled rows and
+185 pending; through-M9 divergence source/fixture decisions are reconciled,
+while optional M10 D-031 remains pending. Strict parity and milestone acceptance
+remain incomplete. Fresh generated reports and combined hosted tests are next.
+
+The preceding completed normal run
 [38742652282](https://github.com/sam0x17/rtao/actions/runs/38742652282) at
 `d7143f7` passes features (including unpatched shipped-crate and generic-keyfile
 checks), MSRV, no-host and semver. Main check stops before tests on CLI fixture

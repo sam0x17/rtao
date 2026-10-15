@@ -337,6 +337,38 @@ async fn malformed_files_are_rejected_unchanged_without_rpc() {
 }
 
 #[tokio::test]
+async fn oversized_and_nonregular_files_fail_before_decoding_or_metadata_lookup() {
+    let scratch = Scratch::new();
+    let (chain, client, _) = setup(&scratch).await;
+    // A cache with no stored runtimes makes an accidental metadata lookup
+    // observable as a Runtime error instead of the expected filesystem error.
+    let empty_cache = RuntimeCache::new(client.rpc().clone(), client.genesis(), 42, None);
+    client.close().await;
+    let requests = chain.requests().len();
+    let file = fs::File::create(scratch.file()).unwrap();
+    file.set_len(persist::MAX_FILE_BYTES + 1).unwrap();
+    drop(file);
+    assert!(matches!(
+        persist::load(scratch.file(), &empty_cache).await,
+        Err(PersistError::Io(error)) if error.kind() == std::io::ErrorKind::InvalidData
+    ));
+    assert_eq!(
+        fs::metadata(scratch.file()).unwrap().len(),
+        persist::MAX_FILE_BYTES + 1
+    );
+    assert!(matches!(
+        persist::load(&scratch.0, &empty_cache).await,
+        Err(PersistError::Io(_))
+    ));
+    assert!(scratch.0.is_dir());
+    assert!(matches!(
+        persist::load(scratch.0.join("missing"), &empty_cache).await,
+        Err(PersistError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound
+    ));
+    assert_eq!(chain.requests().len(), requests);
+}
+
+#[tokio::test]
 async fn wrong_genesis_and_missing_spec_fail_offline_with_specific_errors() {
     let scratch = Scratch::new();
     let (chain, client, cache) = setup(&scratch).await;

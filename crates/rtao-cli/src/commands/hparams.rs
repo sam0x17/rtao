@@ -804,7 +804,15 @@ impl Request {
             if let Some(netuid) = args.get_one::<String>("netuid") {
                 let netuid = netuid.parse::<u16>().map(NetUid).map_err(failure)?;
                 let params = fetch_hyperparameters(client, netuid).await?;
-                render_hyperparameters(&ctx.output, netuid, &params, None)?;
+                render_hyperparameters_with_hint(
+                    &ctx.output,
+                    netuid,
+                    &params,
+                    None,
+                    Some(
+                        "these are the current values; only owner-settable parameters can be changed (a wrong name lists them)",
+                    ),
+                )?;
             }
         }
         Self::from_matches(ctx, matches, history)
@@ -878,12 +886,67 @@ fn text(value: &Value) -> String {
     }
 }
 
+fn normalized(name: &str, raw: &Value) -> Option<f64> {
+    if let Value::Bool(value) = raw {
+        TABLE.normalized(name, *value)
+    } else {
+        integer(raw).and_then(|raw| TABLE.normalized(name, raw))
+    }
+}
+
+fn example_value(name: &str, fraction: Option<f64>, raw: &Value) -> String {
+    let with_decimal_point = |mut value: String| {
+        if !value.contains(['.', 'e']) {
+            value.push_str(".0");
+        }
+        value
+    };
+    if let Some(fraction) = fraction {
+        return with_decimal_point(pyfmt::fmt_g4(fraction));
+    }
+    let denominator = match TABLE.kind_of(name) {
+        "rao" => Some(u128::from(TABLE.rao_per_tao)),
+        "fixed128" => Some(TABLE.fixed128_one),
+        "bool" => return crate::books::public_json_truthy(raw).to_string(),
+        _ => None,
+    };
+    if let Some(denominator) = denominator
+        && let Some(raw) = integer(raw).or_else(|| {
+            raw.as_bool()
+                .map(|value| RawInteger::Unsigned(u128::from(value)))
+        })
+        && let Some(value) = rtao::primitives::ratio::integer_division_big(&raw.into(), denominator)
+    {
+        return with_decimal_point(pyfmt::fmt_g(value));
+    }
+    // The setter accepts symbolic consensus names, so keep its own example
+    // valid even though the Python view prints the raw integer here.
+    if name == "epoch_consensus" {
+        return if integer(raw).and_then(RawInteger::as_u128) == Some(1) {
+            "Null".into()
+        } else {
+            "Yuma".into()
+        };
+    }
+    text(raw)
+}
+
 /// Render raw machine values independently from human annotations and hints.
 pub fn render_hyperparameters(
     output: &Output,
     netuid: NetUid,
     params: &Option<Map<String, Value>>,
     name: Option<&str>,
+) -> Result<(), CliError> {
+    render_hyperparameters_with_hint(output, netuid, params, name, None)
+}
+
+fn render_hyperparameters_with_hint(
+    output: &Output,
+    netuid: NetUid,
+    params: &Option<Map<String, Value>>,
+    name: Option<&str>,
+    hint: Option<&str>,
 ) -> Result<(), CliError> {
     let params = params
         .as_ref()
@@ -895,7 +958,7 @@ pub fn render_hyperparameters(
             ))
             .with_help("run without --name to list them all")
         })?;
-        let normalized = integer(raw).and_then(|raw| TABLE.normalized(name, raw));
+        let normalized = normalized(name, raw);
         let annotation = integer(raw).and_then(|raw| TABLE.annotate(name, raw));
         let settable = OWNER_HYPERPARAMETERS.iter().any(|row| row.name == name);
         let payload = json!({
@@ -928,16 +991,7 @@ pub fn render_hyperparameters(
             }),
         ));
         if settable {
-            // A raw integer is always an exact, accepted copy/paste example.
-            let example = if name == "epoch_consensus" {
-                if integer(raw).and_then(RawInteger::as_u128) == Some(1) {
-                    "Null".into()
-                } else {
-                    "Yuma".into()
-                }
-            } else {
-                text(raw)
-            };
+            let example = example_value(name, normalized, raw);
             fields.push((
                 "set it".into(),
                 json!(format!(
@@ -987,8 +1041,16 @@ pub fn render_hyperparameters(
         rows,
     );
     table.records = Some(Value::Object(params.clone()));
+    let example = if params.contains_key("kappa") {
+        "kappa"
+    } else {
+        params.keys().next().map_or("tempo", String::as_str)
+    };
+    let default_hint = format!("`--name {example}` explains one parameter and how to set it");
     table.footer = Some(format!(
-        "--name <parameter> explains one parameter and how to set it. {}/hyperparameters",
+        "{}. {}/hyperparameters",
+        hint.filter(|hint| !hint.is_empty())
+            .unwrap_or(&default_hint),
         rtao_catalog::py::DOCS_URL
     ));
     output.table(&table).map_err(failure)

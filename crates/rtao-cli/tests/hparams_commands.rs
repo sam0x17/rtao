@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/sudo.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Additional source at the same commit/license: sdk/python/bittensor/cli/hyperparams_view.py.
 //! Curated owner commands preserve real SDK arguments and lossless read output.
 
 use rtao::{
@@ -400,6 +401,73 @@ fn single_parameter_machine_record_is_exact_and_missing_names_refuse() -> TestRe
             .code,
         1
     );
+    Ok(())
+}
+
+#[test]
+fn parameter_examples_use_human_units_and_preserve_raw_machine_values() -> TestResult {
+    for (name, raw, example) in [
+        ("alpha_low", json!(32767), "0.5"),
+        ("alpha_low", json!(0), "0.0"),
+        ("alpha_low", json!(1), "1.526e-05"),
+        ("min_burn", json!(1_234_567_890), "1.23457"),
+        ("min_burn", json!(1), "1e-09"),
+        ("min_burn", json!(true), "1e-09"),
+        (
+            "burn_increase_mult",
+            json!((1u128 << 64) + (1u128 << 63)),
+            "1.5",
+        ),
+        ("burn_increase_mult", json!(true), "5.42101e-20"),
+        ("registration_allowed", json!(true), "true"),
+        ("registration_allowed", json!(false), "false"),
+        ("epoch_consensus", json!(1), "Null"),
+    ] {
+        let params = Some(serde_json::Map::from_iter([(name.into(), raw.clone())]));
+        let sink = MemorySink::default();
+        let output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+        hparams::render_hyperparameters(&output, NetUid(1), &params, Some(name))?;
+        let human = sink.text(Stream::Stdout)?;
+        assert!(
+            human.contains(&format!("--name {name} --value {example}")),
+            "{name}: {human}"
+        );
+        if name == "alpha_low" && raw == json!(32767) {
+            assert!(human.contains("0.499992"), "{human}");
+        }
+        let sink = MemorySink::default();
+        let output = Output::new(
+            OutputOptions {
+                json_mode: true,
+                ..Default::default()
+            },
+            Arc::new(sink.clone()),
+        );
+        hparams::render_hyperparameters(&output, NetUid(1), &params, Some(name))?;
+        let payload: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        assert_eq!(payload["value"], raw, "{name}");
+        assert!(payload.get("set it").is_none(), "{name}");
+    }
+    Ok(())
+}
+
+#[test]
+fn parameter_listing_hint_selects_a_present_name_or_the_empty_default() -> TestResult {
+    for (rows, name) in [
+        (vec![("rho", json!(7)), ("kappa", json!(32767))], "kappa"),
+        (vec![("rho", json!(7))], "rho"),
+        (vec![], "tempo"),
+    ] {
+        let params = Some(serde_json::Map::from_iter(
+            rows.into_iter().map(|(name, raw)| (name.into(), raw)),
+        ));
+        let sink = MemorySink::default();
+        let output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+        hparams::render_hyperparameters(&output, NetUid(1), &params, None)?;
+        assert!(sink.text(Stream::Stdout)?.contains(&format!(
+            "`--name {name}` explains one parameter and how to set it"
+        )));
+    }
     Ok(())
 }
 
