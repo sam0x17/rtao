@@ -24,6 +24,12 @@ The CLI compiles all intent interfaces and advertises implemented operations.
 The generated read interfaces and dispatch for both M5 owner reads are adopted.
 No milestone exit or current all-job success is claimed.
 
+The next source batch adds thirteen proxy, children/take and association
+implementations and removes their authored pending declarations. Its generated
+integration and ordinary hosted validation are pending; the recorded committed
+count remains 36/83 until generated output is adopted. See
+[m5-proxy-children-association.md](m5-proxy-children-association.md).
+
 The binary routes generated transactions/queries, config/tools/explain,
 weights/axon, wallet management, subnet registration/metagraph views and the M4
 hparams commands. Sequential `trim-null` now uses the shared SDK session,
@@ -42,6 +48,17 @@ no fuzz campaign ran. The remaining 47 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
+[38697413448](https://github.com/sam0x17/rtao/actions/runs/38697413448)
+on `60ccce5` passed compilation, strict Clippy, the parity gates and the five
+other normal jobs. Nextest ran 1,850 tests: 1,832 passed, 18 failed and four
+were skipped. Doctests were not reached. The failures cover CLI schema/output
+fixtures, wallet accounting fixtures, stale pending-operation assertions and
+an unknown SS58 prefix in a coldkey fixture. Their source fixes and the next
+thirteen-intent batch are in review; this run does not validate that batch.
+The bounded log digest and exact failure inventory are retained privately as
+`check-38697413448.json` in the recovery directory.
+
+Earlier normal hosted run
 [38695489489](https://github.com/sam0x17/rtao/actions/runs/38695489489)
 on `fa77262` passed MSRV, features, supply, no-host and semver. Compilation and
 strict Clippy passed, and D-045's corrected fixture qualified. Parity then

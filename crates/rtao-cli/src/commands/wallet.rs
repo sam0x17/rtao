@@ -109,7 +109,7 @@ fn recovery(mut command: Command, cold: bool) -> Command {
     key_options(command, false, cold)
 }
 
-/// Build the eleven M4 wallet commands; later wallet operations are not exposed.
+/// Build the M4 wallet commands, including the rtao password-export helper.
 pub fn command() -> Command {
     let mut create = key_options(
         Command::new("create").about("Create a coldkey and hotkey."),

@@ -239,6 +239,20 @@ async fn public_pow_preparation_binds_the_explicit_hotkey_and_proxy_owner_withou
     ] {
         state.seed_python("SubtensorModule", storage, &[json!(2)], value)?;
     }
+    // Python's permissive fake defaults Uids to zero, which is a registered
+    // uid. This preparation fixture needs a real optional-map miss instead.
+    let uids = state
+        .runtime
+        .storage_entry("SubtensorModule", "Uids")
+        .ok_or("Uids storage")?;
+    let key = state.runtime.storage_key(
+        uids,
+        &[
+            rtao::core::codec::Value::Int(2),
+            rtao::core::codec::Value::Bytes(hotkey.0.to_vec()),
+        ],
+    )?;
+    state.seed_encoded(key, None);
     let chain = FakeChain::from_state(state);
     let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
     config.track_heads = false;

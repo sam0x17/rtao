@@ -159,7 +159,8 @@ fn wallet_surface_exposes_only_m4_commands_and_supports_compatibility_aliases() 
             "show",
             "list",
             "balance",
-            "inspect"
+            "inspect",
+            "save-password-env"
         ]
     );
     let root = Root::new()?;
@@ -898,9 +899,16 @@ fn fifo_json_import_and_public_listing_refuse_without_a_writer() -> TestResult {
         "--quiet",
     ]))?;
     assert_eq!(result.status.code(), Some(2));
-    let error = String::from_utf8(result.stdout)?;
-    assert!(error.contains("regular file"));
-    assert!(!error.contains("unread-password-sentinel"));
+    assert!(
+        result.stdout.is_empty(),
+        "refusal must not emit wallet data"
+    );
+    let diagnostic: Value = serde_json::from_slice(&result.stderr)?;
+    assert_eq!(
+        diagnostic["error"],
+        "JSON keystore must be a readable regular file no larger than 16 MiB"
+    );
+    assert!(!String::from_utf8(result.stderr)?.contains("unread-password-sentinel"));
     let mut command = make_command();
     let result = bounded_output(command.args([
         "wallet",

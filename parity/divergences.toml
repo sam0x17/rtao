@@ -4,8 +4,8 @@ schema = 1
 
 [[divergences]]
 id = "D-046"
-upstream_symbol = "bittensor.intents.crowdloan.CreateCrowdloan.call"
-python_behavior = "Recursively constructs the supplied nested intent dictionary without matching depth, node-count or encoded-byte budgets."
+upstream_symbol = "bittensor.intents.crowdloan.CreateCrowdloan.call / proxy.ExecuteProxyAnnounced.inner_args"
+python_behavior = "Recursively constructs supplied nested intent dictionaries without matching depth, node-count or encoded-byte budgets."
 rtao_behavior = "Checks the nested call iteratively before tool deserialization, recursive cloning or nested construction. Refuses more than 128 JSON levels, 1,048,576 values or 64 MiB of encoded JSON. The node count and encoded size, each multiplied by maximum levels, must also fit those budgets to bound retained subtree copies. Rejects serde private RawValue/Number carrier keys before they can introduce unscanned JSON."
 rationale = "Bound untrusted programmatic inputs before recursive work. Count escaped serialized bytes without allocating another document, and preserve the original public origin and pinned view for accepted nested calls."
 decision = "PLAN.md execution rule 5; bounded client input policy during M5-02 (2026-10-15)"
@@ -16,6 +16,7 @@ pinning_tests = [
   "rtao_intents::crowdloan::tests::programmatic_nested_json_has_depth_node_and_encoded_byte_budgets",
   "rtao_intents::crowdloan::tests::tool_constructor_bounds_nested_call_before_serde_conversion",
   "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits",
+  "rtao_intents::proxy::tests::announced_proxy_refusals_preserve_nested_error_order_and_never_read",
 ]
 upstream_report = "Local input-budget policy; no upstream issue or PR filed. Named fixture source is present; hosted execution and acceptance remain pending."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/crowdloan.py"
@@ -344,14 +345,18 @@ upstream_report = "question (§15.2 Q14)"
 id = "D-020"
 upstream_symbol = "execute_proxy_announced"
 python_behavior = "builds the inner intent against the signing wallet ([R] A1 §10 item 6)"
-rtao_behavior = "same"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-020); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rtao_behavior = "Builds the inner semantic intent with the caller's public wallet, effective origin and pinned view, without substituting the real proxy account or applying executor wrappers."
+rationale = "Preserve the pinned wallet-default behavior while keeping execution adapters outside the nested semantic call."
+status = "active"
 class = "kept"
-milestone = "M8"
-pinning_tests = ["oracle vector"]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+milestone = "M5"
+pinning_tests = [
+  "rtao_intents::proxy::tests::announced_proxy_inner_defaults_keep_callers_wallet_not_real_origin",
+  "rtao_intents::proxy::tests::announced_proxy_nests_exact_calls_and_optional_type_without_side_effects",
+  "rtao_intents::proxy::tests::announced_root_inner_remains_unwrapped_semantic_call",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/proxy.py"
+upstream_report = "Kept behavior; no defect alleged or filing made. Fake-transport fixture source is present; hosted execution and acceptance remain pending."
 
 [[divergences]]
 id = "D-021"

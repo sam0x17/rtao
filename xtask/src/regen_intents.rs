@@ -426,6 +426,16 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             )
         } else if spec.name == "set_hyperparameter" {
             "crate::hyperparameters::intent_json(self)".to_owned()
+        } else if matches!(
+            spec.name,
+            "increase_take" | "decrease_take" | "set_childkey_take" | "set_take"
+        ) {
+            format!(
+                "crate::children::take_json({:?},self,&self.take)",
+                spec.name
+            )
+        } else if spec.name == "set_children" {
+            "crate::children::children_json(self)".to_owned()
         } else {
             format!("crate::args_with_op({:?},self)", spec.name)
         };
@@ -599,6 +609,21 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         } else if spec.name == "create_crowdloan" {
             format!(
                 "crate::crowdloan::check_constructor_input(&args)?; let intent:super::interfaces::{class}=serde_json::from_value(args)?;"
+            )
+        } else if spec.name == "execute_proxy_announced" {
+            format!(
+                "crate::proxy::check_constructor_input(&args)?; let intent:super::interfaces::{class}=serde_json::from_value(args)?;"
+            )
+        } else if matches!(
+            spec.name,
+            "increase_take" | "decrease_take" | "set_childkey_take" | "set_take"
+        ) {
+            format!(
+                "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::children::canonical_take(&mut intent.take)?;"
+            )
+        } else if spec.name == "set_children" {
+            format!(
+                "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::children::canonical_children(&mut intent.children)?;"
             )
         } else {
             format!("let intent:super::interfaces::{class}=serde_json::from_value(args)?;")
@@ -882,11 +907,11 @@ mod tests {
         );
     }
     #[test]
-    fn all_46_reviewed_passthrough_calls_are_distinct_catalog_members() {
+    fn all_45_reviewed_passthrough_calls_are_distinct_catalog_members() {
         let root = root();
         let config = document(root, "codegen/intent_callmap.toml").unwrap();
         let mappings = config["passthrough"].as_table().unwrap();
-        assert_eq!(mappings.len(), 46);
+        assert_eq!(mappings.len(), 45);
         for (name, call) in mappings.iter() {
             let spec = rtao_catalog::INTENTS
                 .iter()

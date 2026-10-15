@@ -1,10 +1,11 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/crowdloan.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Crowdloan funding, settlement and creator updates.
 
-use std::io::{self, Write};
-
-use rtao_client::{View, ViewExt};
-use rtao_primitives::{Amount, DynBalance, NetUid, ResolvedAmount, Spend, TaoBalance};
+use crate::arguments::check_nested_json as check_call_budget;
+#[cfg(test)]
+use crate::nested_json::{MAX_CALL_DEPTH, check_call_limits, inspect_call_limits};
+use rtao_client::View;
+use rtao_primitives::{Amount, DynBalance, NetUid, Spend, TaoBalance};
 use rtao_runtime::calls::crowdloan;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
 use serde_json::Value;
@@ -14,11 +15,6 @@ pub use crate::generated::{
     SetCrowdloanMaxContribution, UpdateCrowdloanCap, UpdateCrowdloanEnd,
     UpdateCrowdloanMinContribution, WithdrawCrowdloan,
 };
-
-const ALL_FEE_HEADROOM_RAO: u64 = 500_000;
-const MAX_CALL_DEPTH: usize = 128;
-const MAX_CALL_NODES: usize = 1 << 20;
-const MAX_CALL_JSON_BYTES: usize = 64 * 1024 * 1024;
 
 fn amount_summary(amount: &Amount) -> String {
     match crate::arguments::tao_amount(amount) {
@@ -46,126 +42,12 @@ fn truthy(value: &Value) -> bool {
     }
 }
 
-/// Check the owned JSON tree before recursive serde cloning or nested builds.
-///
-/// The traversal itself is iterative. At most one bounded tree is accepted;
-/// serialized size is counted into a writer rather than another allocation.
-fn check_call_budget(value: &Value) -> Result<(), IntentError> {
-    check_call_limits(value, MAX_CALL_DEPTH, MAX_CALL_NODES, MAX_CALL_JSON_BYTES)
-}
-
 /// Bound tool input before generated serde conversion recurses into `call`.
 pub(crate) fn check_constructor_input(args: &Value) -> Result<(), IntentError> {
     if let Some(call) = args.get("call") {
         check_call_budget(call)?;
     }
     Ok(())
-}
-
-fn check_call_limits(
-    value: &Value,
-    max_depth: usize,
-    max_nodes: usize,
-    max_bytes: usize,
-) -> Result<(), IntentError> {
-    let cost = inspect_call_limits(value, max_depth, max_nodes, max_bytes)?;
-    // Nested semantic builds retain their owned arguments while the next
-    // subtree is cloned. Tree levels bound the number of retained copies;
-    // charge every level the entire input rather than assuming a shape.
-    cost.nodes
-        .checked_mul(cost.levels)
-        .filter(|work| *work <= max_nodes)
-        .ok_or_else(|| {
-            IntentError::validation("crowdloan 'call' exceeds its recursive JSON node-work budget")
-        })?;
-    cost.bytes
-        .checked_mul(cost.levels)
-        .filter(|work| *work <= max_bytes)
-        .ok_or_else(|| {
-            IntentError::validation("crowdloan 'call' exceeds its recursive JSON byte-work budget")
-        })?;
-    Ok(())
-}
-
-#[derive(Debug)]
-struct CallCost {
-    nodes: usize,
-    levels: usize,
-    bytes: usize,
-}
-
-fn inspect_call_limits(
-    value: &Value,
-    max_depth: usize,
-    max_nodes: usize,
-    max_bytes: usize,
-) -> Result<CallCost, IntentError> {
-    let mut remaining = max_nodes;
-    let mut levels = 0;
-    let mut stack = vec![(value, 0usize)];
-    while let Some((value, depth)) = stack.pop() {
-        remaining = remaining.checked_sub(1).ok_or_else(|| {
-            IntentError::validation("crowdloan 'call' exceeds its JSON node budget")
-        })?;
-        if depth >= max_depth {
-            return Err(IntentError::validation(
-                "crowdloan 'call' exceeds its JSON depth budget",
-            ));
-        }
-        levels = levels.max(depth + 1);
-        match value {
-            Value::Object(fields) => {
-                if fields.len() > remaining.saturating_sub(stack.len()) {
-                    return Err(IntentError::validation(
-                        "crowdloan 'call' exceeds its JSON node budget",
-                    ));
-                }
-                for (key, child) in fields {
-                    // Value's enabled private serde carriers must not introduce
-                    // an embedded document after the bounded traversal.
-                    if matches!(
-                        key.as_str(),
-                        "$serde_json::private::RawValue" | "$serde_json::private::Number"
-                    ) {
-                        return Err(IntentError::validation(
-                            "private JSON carrier keys are not crowdloan call fields",
-                        ));
-                    }
-                    stack.push((child, depth + 1));
-                }
-            }
-            Value::Array(items) => {
-                if items.len() > remaining.saturating_sub(stack.len()) {
-                    return Err(IntentError::validation(
-                        "crowdloan 'call' exceeds its JSON node budget",
-                    ));
-                }
-                stack.extend(items.iter().map(|child| (child, depth + 1)));
-            }
-            _ => {}
-        }
-    }
-    let mut writer = SizeBudget(max_bytes);
-    serde_json::to_writer(&mut writer, value)
-        .map_err(|_| IntentError::validation("crowdloan 'call' exceeds its JSON byte budget"))?;
-    Ok(CallCost {
-        nodes: max_nodes - remaining,
-        levels,
-        bytes: max_bytes - writer.0,
-    })
-}
-
-struct SizeBudget(usize);
-impl Write for SizeBudget {
-    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        self.0 = self.0.checked_sub(bytes.len()).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "crowdloan call JSON size limit")
-        })?;
-        Ok(bytes.len())
-    }
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
 }
 
 impl Intent for CreateCrowdloan {
@@ -241,33 +123,12 @@ impl Intent for CreateCrowdloan {
     }
 }
 
-/// Resolve exact or all-free TAO using the effective coldkey at this view.
+/// Resolve a contribution through the shared exact/all-free TAO helper.
 pub(crate) async fn stakeable_amount<V: View + ?Sized>(
     intent: &ContributeCrowdloan,
     cx: &BuildCx<'_, V>,
 ) -> Result<TaoBalance, IntentError> {
-    match intent.amount_tao.resolve(NetUid::ROOT, true)? {
-        ResolvedAmount::Exact(amount) => Ok(amount.tao()?.to_wire()),
-        ResolvedAmount::All => {
-            let free = rtao_tx::multisig::free_balance(cx.view, cx.coldkey_address()?).await?;
-            let deposit = cx
-                .view
-                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
-                .await?;
-            let amount = free
-                .rao()
-                .checked_sub(deposit.0)
-                .and_then(|amount| amount.checked_sub(ALL_FEE_HEADROOM_RAO))
-                .filter(|amount| *amount > 0)
-                .ok_or_else(|| {
-                    IntentError::validation(format!(
-                        "nothing to stake: free balance {} does not cover the existential deposit plus the transaction fee",
-                        DynBalance::from(free)
-                    ))
-                })?;
-            Ok(TaoBalance(amount))
-        }
-    }
+    crate::arguments::stakeable_amount(&intent.amount_tao, cx).await
 }
 
 impl Intent for ContributeCrowdloan {

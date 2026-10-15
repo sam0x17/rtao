@@ -165,6 +165,7 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
     use crate::AnyIntent;
     use serde_json::{Value, json};
     let address = rtao_primitives::AccountId([1; 32]).to_ss58(110);
+    let mut tested = std::collections::BTreeSet::new();
     for spec in &rtao_catalog::INTENTS {
         let catalog: Value = serde_json::from_str(spec.catalog_json).unwrap();
         let mut args = serde_json::Map::new();
@@ -197,8 +198,30 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
         if spec.name == "set_hyperparameter" {
             args.insert("name".into(), json!("min_burn"));
         }
-        let intent = AnyIntent::from_tool(spec.name, Value::Object(args))
-            .expect("catalog sample constructor");
+        if spec.name == "create_crowdloan" {
+            // Optional individually, but Python requires one funding target.
+            args.insert("target_ss58".into(), json!(address));
+        }
+        if spec.name == "set_subnet_emission_enabled" {
+            args.insert("netuids".into(), json!([1]));
+        }
+        if spec.name == "execute_proxy_announced" {
+            args.insert("inner_op".into(), json!("finalize_crowdloan"));
+            args.insert("inner_args".into(), json!({"crowdloan_id":1}));
+        }
+        let supplied: std::collections::BTreeSet<_> = args.keys().cloned().collect();
+        let constructed = AnyIntent::from_tool(spec.name, Value::Object(args));
+        assert!(
+            constructed.is_ok(),
+            "{} catalog sample constructor: {constructed:?}",
+            spec.name
+        );
+        let intent = constructed.unwrap();
+        assert!(
+            tested.insert(spec.name),
+            "{} duplicate catalog entry",
+            spec.name
+        );
         assert_eq!(intent.spec(), spec);
         let json = intent.to_json();
         assert_eq!(json["op"], spec.name);
@@ -233,13 +256,11 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             "{} roundtrip",
             spec.name
         );
-        for field in spec.fields.iter().filter(|field| {
-            !field.required
-                && !matches!(
-                    (spec.name, field.name),
-                    ("set_weights" | "commit_weights", "uids" | "weights")
-                )
-        }) {
+        for field in spec
+            .fields
+            .iter()
+            .filter(|field| !field.required && !supplied.contains(field.name))
+        {
             let expected: Value = serde_json::from_str(field.default_json.unwrap()).unwrap();
             if field.annotation == Some("Money") {
                 continue;
@@ -248,6 +269,25 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
                 json[field.name], expected,
                 "{}.{} default",
                 spec.name, field.name
+            );
+        }
+        if spec.name == "create_crowdloan" {
+            // Exercise the other valid constructor so both optional defaults
+            // are still checked despite their mutually exclusive constraint.
+            assert_eq!(json["call"], Value::Null);
+            let mut nested = json.clone();
+            nested.as_object_mut().unwrap().remove("target_ss58");
+            nested["call"] = json!({"op":"finalize_crowdloan","crowdloan_id":1});
+            let nested_intent = AnyIntent::from_tool(spec.name, nested).unwrap();
+            let nested_json = nested_intent.to_json();
+            assert_eq!(nested_json["target_ss58"], Value::Null);
+            assert_eq!(
+                nested_json["call"],
+                json!({"op":"finalize_crowdloan","crowdloan_id":1})
+            );
+            assert_eq!(
+                AnyIntent::from_tool(spec.name, nested_json).unwrap(),
+                nested_intent
             );
         }
         for field in spec
@@ -284,6 +324,8 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             );
         }
     }
+    assert_eq!(rtao_catalog::INTENTS.len(), 83);
+    assert_eq!(tested.len(), 83);
 }
 
 #[cfg(feature = "serving")]

@@ -2,6 +2,7 @@
 
 use rtao::{
     client::{Client, ClientConfig, Network},
+    core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec},
     primitives::AccountId,
 };
 use rtao_cli::{
@@ -13,7 +14,11 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
-use rtao_testkit::{FakeChain, FakeState, fakes::RpcRequest, rpc::RpcClient};
+use rtao_testkit::{
+    FakeChain, FakeState,
+    fakes::{RpcRequest, json_to_core},
+    rpc::RpcClient,
+};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
@@ -199,14 +204,40 @@ fn seed() -> Result<FakeState, Box<dyn Error>> {
             json!({"hotkey":HOT,"shares":4_000_000_000u64,"nav_tao":8_000_000_000u64,"spot_nav_tao":9_000_000_000u64,"deposited_tao":4_000_000_000u64,"redeemed_tao":0,"holdings":[]}),
         ),
         ("BetaBasketRuntimeApi", "get_beta_pricing", Value::Null),
-        (
-            "StakeInfoRuntimeApi",
-            "get_stake_availability_for_coldkeys",
-            json!({(COLD.to_string()):{"0":{"total":2_000_000_000u64,"locked":0,"available":2_000_000_000u64},"1":{"total":3_000_000_000u64,"locked":2_000_000_000u64,"available":1_000_000_000u64}}}),
-        ),
     ] {
         state.seed_runtime(api, method, value)?;
     }
+    // JSON object keys would turn native NetUid map keys into strings. Seed
+    // this response through metadata with integer keys and its exact arguments.
+    let api = "StakeInfoRuntimeApi";
+    let method = "get_stake_availability_for_coldkeys";
+    let signature = runtime_api::runtime_api_method(&state.runtime, api, method)?;
+    let input = runtime_api::encode_params(
+        &state.runtime,
+        api,
+        signature,
+        &[
+            CoreValue::List(vec![CoreValue::Bytes(COLD.0.to_vec())]),
+            CoreValue::List(vec![CoreValue::Int(0), CoreValue::Int(1)]),
+        ],
+    )?;
+    let output = state.runtime.encode_spec(
+        &TypeSpec::Id(signature.output),
+        &CoreValue::Dict(vec![(
+            CoreValue::Bytes(COLD.0.to_vec()),
+            CoreValue::Dict(vec![
+                (
+                    CoreValue::Int(0),
+                    json_to_core(&json!({"total":2_000_000_000u64,"locked":0,"available":2_000_000_000u64}))?,
+                ),
+                (
+                    CoreValue::Int(1),
+                    json_to_core(&json!({"total":3_000_000_000u64,"locked":2_000_000_000u64,"available":1_000_000_000u64}))?,
+                ),
+            ]),
+        )]),
+    )?;
+    state.seed_runtime_encoded(format!("{api}_{method}"), input, output);
     Ok(state)
 }
 
