@@ -16,7 +16,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Source through `7d842e9` implements 66 of 83 intents and 40 of 102 reads,
+Source through `429f727` implements 73 of 83 intents and 40 of 102 reads,
 with the corresponding hosted generated output verified and adopted.
 The newer crowdloan/root and coldkey intent ports have verified hosted generated
 dispatch and availability metadata, with combined validation still pending;
@@ -51,7 +51,7 @@ shared multisig book/cache writers are committed. The importer authenticates
 all signing views, refuses serde private carrier injection and preserves nonce
 cache state for invalid, stale, expired or foreign preparations. Cache lookup
 authenticates exact canonical call bytes. The M5 fuzz target is source only;
-no fuzz campaign ran. The remaining 17 intents, other command families and
+no fuzz campaign ran. The remaining 10 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Latest normal hosted run
@@ -59,16 +59,23 @@ Latest normal hosted run
 at `6470a11` passes supply, MSRV, features, no-host and semver. The check job
 stops at strict Clippy: the leasing pass-through generator clones its Copy
 `Percent` and `Option<u32>` arguments. The source generator now recognizes
-these Copy types, including optional Copy values. Generated adoption is still
-required; tests and doctests were not reached on this checkpoint. The bounded
+these Copy types, including optional Copy values. Verified generated output
+is adopted; tests and doctests were not reached on this checkpoint. The bounded
 private failure record is `check-38703332560.json`.
 
-Seven further ports are prepared: Batch, SetIdentity, SwapHotkey, AddStake,
+Seven further ports have verified generated integration: Batch, SetIdentity, SwapHotkey, AddStake,
 AddStakeLimit, SwapStake and MoveSwapStake. Batch uses a unanimous instance
 signing role, bounded child dictionaries and full semantic preflight aggregation.
 The SDK typed entry points refuse a role mismatch before key access; dynamic
-and CLI paths use the selected instance role. Generated integration and hosted
-execution remain pending, so integrated coverage is still 66/83 and 40/102.
+and CLI paths use the selected instance role. Hosted execution remains pending.
+Generation run [38704675475](https://github.com/sam0x17/rtao/actions/runs/38704675475)
+at `429f727` was verified and adopted unchanged: fourteen exact archive members,
+23 dependency hashes, unchanged role inventories, seven availability/pending
+changes, one identity helper, two leasing Copy corrections, one guarded Batch
+constructor and one normalized JSON body. The matrix changes only those seven
+intent statuses and D-046's Batch fixture reference. Integrated coverage is
+73/83 intents and 40/102 reads; no runtime coverage or milestone exit is claimed.
+See [m5-batch-trades-identity.md](m5-batch-trades-identity.md).
 
 Earlier normal hosted run
 [38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)

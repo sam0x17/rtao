@@ -257,8 +257,8 @@ pub(crate) async fn register_leased_network<V: rtao_client::View + ?Sized>(
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::subtensor_module::register_leased_network(
-        intent.emissions_share.clone(),
-        intent.end_block.clone(),
+        intent.emissions_share,
+        intent.end_block,
     );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
@@ -399,6 +399,25 @@ pub(crate) async fn set_crowdloan_max_contribution<V: rtao_client::View + ?Sized
             .map(crate::arguments::tao_amount)
             .transpose()?
             .map(|amount| amount.to_wire()),
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "identity")]
+pub(crate) async fn set_identity<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SetIdentity,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::set_identity(
+        intent.name.as_bytes().to_vec(),
+        intent.url.as_bytes().to_vec(),
+        intent.github_repo.as_bytes().to_vec(),
+        intent.image.as_bytes().to_vec(),
+        intent.discord.as_bytes().to_vec(),
+        intent.description.as_bytes().to_vec(),
+        intent.additional.as_bytes().to_vec(),
     );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
