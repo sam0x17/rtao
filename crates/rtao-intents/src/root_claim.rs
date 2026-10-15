@@ -718,6 +718,10 @@ mod tests {
         shielded_heavy: Extracted<ShieldedHeavy>,
         seed_cases: BTreeMap<String, Extracted<SeedCase>>,
         preview_cases: BTreeMap<String, Extracted<Vec<PreviewCase>>>,
+        model_cases: BTreeMap<String, Extracted<Vec<ModelCase>>>,
+        allowance_units: Extracted<Vec<u64>>,
+        eligibility_cases: BTreeMap<String, Extracted<EligibilityCase>>,
+        helper_threshold_bits: Extracted<u64>,
     }
 
     #[derive(serde::Deserialize)]
@@ -780,6 +784,75 @@ mod tests {
         sold: u32,
         swept: u32,
         flushed: u32,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ModelCase {
+        reserve_rao: Option<u64>,
+        reserve_limit: u64,
+        base: u64,
+        declared_work: u64,
+        hotkeys: u64,
+        redeem_holdings: u64,
+        scan_holdings: u64,
+        selection_scans: u64,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct EligibilityCase {
+        stake_rows: Vec<EligibilityRow>,
+        watermark: Option<i128>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct EligibilityRow {
+        hotkey: String,
+        coldkey: String,
+        netuid: u16,
+        stake: u64,
+    }
+
+    fn model_reserve(case: &ModelCase) -> anyhow::Result<Balance<Tao>> {
+        let rao = match case.reserve_rao {
+            Some(rao) => rao,
+            None => approximate_reserve(case.reserve_limit)?
+                .rao()
+                .checked_add(case.base)
+                .ok_or_else(|| anyhow::anyhow!("model reserve exceeds native balance"))?,
+        };
+        Ok(Balance::from_rao(rao))
+    }
+
+    fn model_spent(case: &ModelCase) -> anyhow::Result<Balance<Tao>> {
+        Ok(spent_fee(
+            model_reserve(case)?,
+            case.hotkeys,
+            case.redeem_holdings,
+            case.scan_holdings,
+            case.selection_scans,
+            case.declared_work,
+        ))
+    }
+
+    fn seed_eligibility(state: &mut FakeState, case: &EligibilityCase) -> anyhow::Result<()> {
+        let mut rows = Vec::new();
+        for row in &case.stake_rows {
+            anyhow::ensure!(row.coldkey == "ALICE", "unknown extracted claimant role");
+            rows.push(json!({"hotkey":symbolic_hotkey(&row.hotkey)?.to_string(),"coldkey":CLAIMANT.to_string(),"netuid":row.netuid,"stake":row.stake}));
+        }
+        state.seed_runtime(
+            "StakeInfoRuntimeApi",
+            "get_stake_info_for_coldkey",
+            json!(rows),
+        )?;
+        if let Some(watermark) = case.watermark {
+            state.seed(
+                &storage::subtensor_module::BASKET_CLAIMED,
+                (HOTKEY, CLAIMANT),
+                watermark,
+            )?;
+        }
+        Ok(())
     }
 
     fn fixture_data() -> anyhow::Result<FixtureData> {
@@ -1040,6 +1113,12 @@ mod tests {
         setup: impl FnOnce(&mut FakeState) -> anyhow::Result<()>,
     ) -> anyhow::Result<(FakeChain, Client, Snapshot)> {
         let mut state = FakeState::try_default()?;
+        let data = fixture_data()?;
+        state.seed(
+            &storage::subtensor_module::ROOT_CLAIMABLE_THRESHOLD,
+            (NetUid::ROOT,),
+            rtao_primitives::I96F32::from_bits(i128::from(data.helper_threshold_bits.value)),
+        )?;
         seed_admission(&mut state, &[HOTKEY], &[HOTKEY], 1)?;
         state.seed_python(
             "System",
@@ -1237,22 +1316,41 @@ mod tests {
         assert_eq!(weight_fee_rao(2_000), 0);
         assert_eq!(weight_fee_rao(6_000), 1);
         assert_eq!(weight_fee_rao(6_001), 2);
-        assert_eq!(charged_ref_time(2), claim_ref_time(2, 12, 2));
-        assert_eq!(charged_ref_time(129), claim_ref_time(4, 24, 4));
-        assert_eq!(charged_ref_time(129), charged_ref_time(256));
-        assert_eq!(
-            spent_fee(Balance::from_rao(8_209_263 + 12_345), 1, 1, 0, 0, 129).rao(),
-            1_509_587
-        );
-        for limit in [129, 256] {
+        for &limit in &data.allowance_units.value {
+            let units = limit.min(FEE_ALLOWANCE);
             assert_eq!(
-                spent_fee(Balance::from_rao(8_209_263), 1, 32, 0, 0, limit).rao(),
-                8_209_263
+                charged_ref_time(limit),
+                claim_ref_time(units, 6 * units, units).min(cap)
             );
         }
-        let scan_only = spent_fee(Balance::from_rao(8_209_263), 1, 0, 32, 0, 256);
-        assert_eq!(scan_only.rao(), 7_806_076);
-        assert!(scan_only.rao() < 8_209_263);
+        assert_eq!(charged_ref_time(129), claim_ref_time(4, 24, 4));
+        assert_eq!(charged_ref_time(129), charged_ref_time(256));
+        let discount = |limit| claim_ref_time(limit, quotes, rows) - charged_ref_time(limit);
+        assert!(discount(MAX_HOTKEY_WORK) < discount(MAX_WORK));
+        for (function, expected) in [
+            ("test_spent_caps_at_the_fee_allowance", 8_209_263u64),
+            ("test_spent_keeps_non_weight_base_fee", 1_509_587),
+            ("test_scan_only_uses_scan_ref_time", 7_806_076),
+            (
+                "test_coldkey_wide_empty_baskets_floor_to_hotkey_count",
+                2_790_901,
+            ),
+            (
+                "test_single_hotkey_spent_caps_at_the_same_allowance",
+                8_209_263,
+            ),
+        ] {
+            let cases = extracted(&data.model_cases, function)?;
+            anyhow::ensure!(cases.len() == 1, "expected one extracted model case");
+            let case = cases
+                .first()
+                .ok_or_else(|| anyhow::anyhow!("missing model case"))?;
+            let spent = model_spent(case)?;
+            assert_eq!(spent.rao(), expected, "{function}");
+            if function == "test_scan_only_uses_scan_ref_time" {
+                assert!(spent < model_reserve(case)?);
+            }
+        }
         assert_eq!(spent_fee(Balance::ZERO, 1, 32, 0, 0, 129), Balance::ZERO);
         Ok(())
     }
@@ -1323,15 +1421,12 @@ mod tests {
         )?;
         let (_chain, client, snapshot) = fixture(|state| {
             seed_extracted_case(state, case)?;
-            state.seed_runtime(
-                "StakeInfoRuntimeApi",
-                "get_stake_info_for_coldkey",
-                json!([]),
-            )?;
-            state.seed(
-                &storage::subtensor_module::BASKET_CLAIMED,
-                (HOTKEY, CLAIMANT),
-                -1,
+            seed_eligibility(
+                state,
+                extracted(
+                    &data.eligibility_cases,
+                    "test_coldkey_wide_admission_keeps_unstaked_basket_claimant",
+                )?,
             )?;
             Ok(())
         })
@@ -1564,12 +1659,16 @@ mod tests {
         )?;
         let (_chain, client, snapshot) = fixture(|state| {
             seed_extracted_case(state, case)?;
-            state.seed_runtime("StakeInfoRuntimeApi", "get_stake_info_for_coldkey", json!([
-                {"hotkey":HOTKEY.to_string(), "coldkey":CLAIMANT.to_string(), "netuid":0, "stake":1},
-                {"hotkey":OTHER_HOTKEY.to_string(), "coldkey":CLAIMANT.to_string(), "netuid":7, "stake":1}
-            ]))?;
+            seed_eligibility(
+                state,
+                extracted(
+                    &data.eligibility_cases,
+                    "test_coldkey_wide_admission_ignores_non_root_hotkeys",
+                )?,
+            )?;
             Ok(())
-        }).await?;
+        })
+        .await?;
         let recording = RecordingView::new(snapshot.clone());
         let admitted = admission(&recording, CLAIMANT, None).await?;
         assert_eq!(admitted.hotkeys, [HOTKEY]);
@@ -2096,6 +2195,12 @@ mod tests {
         assert_eq!(intent.effects(&cx).await?, preview.effects);
         assert_eq!(intent.warnings(&cx).await?, preview.warnings);
         assert_eq!(intent.blocks(&cx).await?, preview.blocks);
+        let comparisons = extracted(&data.model_cases, function)?;
+        anyhow::ensure!(comparisons.len() == 2, "missing mixed-dust work comparison");
+        assert!(model_spent(&comparisons[1])? < model_spent(&comparisons[0])?);
+        let admitted = admission(&snapshot, CLAIMANT, Some(HOTKEY)).await?;
+        let reserved = reserve(&cx, admitted.limit).await?;
+        assert!(quote(&cx, &admitted, &reserved, false).await?.spent <= reserved.reserved);
         client.close().await;
         Ok(())
     }
@@ -2160,6 +2265,23 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("threshold"))
         );
+        // Native supplemental coverage retains the nonpositive-storage
+        // fallback alongside the authenticated positive helper threshold.
+        for bits in [0i128, -1] {
+            chain.mutate_state(|state| {
+                state.seed(
+                    &storage::subtensor_module::ROOT_CLAIMABLE_THRESHOLD,
+                    (NetUid::ROOT,),
+                    rtao_primitives::I96F32::from_bits(bits),
+                )
+            })?;
+            assert_eq!(
+                coldkey_quote(&snapshot, &client, &built.call)
+                    .await?
+                    .threshold,
+                DEFAULT_THRESHOLD_RAO
+            );
+        }
         client.close().await;
         Ok(())
     }
@@ -2236,7 +2358,16 @@ mod tests {
     #[tokio::test]
     async fn coldkey_empty_baskets_floor_fee_at_selected_hotkey_work() -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_coldkey_wide_empty_baskets_floor_to_hotkey_count
-        let keys = [HOTKEY, OTHER_HOTKEY, AccountId([11; 32])];
+        let data = fixture_data()?;
+        let cases = extracted(
+            &data.model_cases,
+            "test_coldkey_wide_empty_baskets_floor_to_hotkey_count",
+        )?;
+        anyhow::ensure!(cases.len() == 1, "missing empty-basket model input");
+        let model = cases
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("empty-basket input missing"))?;
+        let keys = indexed_hotkeys(u16::try_from(model.hotkeys)?);
         let (_chain, client, snapshot) = fixture(|state| {
             seed_admission(state, &keys, &keys, 0)?;
             state.seed_runtime(
@@ -2252,7 +2383,7 @@ mod tests {
         };
         let built = build(&intent, &snapshot).await?;
         let admitted = admission(&snapshot, CLAIMANT, None).await?;
-        assert_eq!(admitted.selection_scans, 3);
+        assert_eq!(admitted.selection_scans, model.hotkeys);
         let raw = coldkey_quote(&snapshot, &client, &built.call).await?;
         assert_eq!(
             (raw.hotkeys, raw.holdings, raw.accrued, raw.redeemable),
@@ -2260,6 +2391,7 @@ mod tests {
         );
         assert_eq!((raw.eligible_hotkeys, raw.below_threshold_hotkeys), (0, 0));
         assert_eq!(raw.spent.rao(), 2_790_901);
+        assert_eq!(raw.spent, model_spent(model)?);
         client.close().await;
         Ok(())
     }
@@ -2342,8 +2474,8 @@ mod tests {
             ),
             (
                 "test_quote_prices_consolidated_rows_as_full_claim_units",
-                2_700_000_000,
-                2_700_000_000,
+                2_700_000_000u64,
+                2_700_000_000u64,
                 8,
                 6_671_879,
             ),
@@ -2382,6 +2514,14 @@ mod tests {
                     fact(&preview, "dust"),
                     Some("2 rows skipped; ~τ0.000008000 stays in the fund")
                 );
+            }
+            if function == "test_quote_prices_consolidated_rows_as_full_claim_units" {
+                let comparisons = extracted(&data.model_cases, function)?;
+                anyhow::ensure!(
+                    comparisons.len() == 2,
+                    "missing consolidation work comparison"
+                );
+                assert!(model_spent(&comparisons[0])? > model_spent(&comparisons[1])?);
             }
             client.close().await;
         }

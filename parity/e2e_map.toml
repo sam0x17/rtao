@@ -340,7 +340,10 @@ rtao = "e2e::test_reads_catalog_nonempty"
 pending = "M4"
 
 [tests."test_serving_endpoints"]
-pending = "M2"
+rtao = "rtao_intents::client_serving_lifecycles::client_tls_axon_and_prometheus_submit_exact_upstream_calls"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["controlled-success-receipts", "runtime-serving-admission-unverified", "endpoint-certificate-state-unverified", "tls-reachability-unverified"]
 
 [tests."test_snapshot_pins_reads_to_one_block"]
 rtao = "e2e::test_snapshot_pins_reads_to_one_block"

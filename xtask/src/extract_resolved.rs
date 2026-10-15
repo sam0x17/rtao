@@ -176,7 +176,10 @@ const NAMED_TABLES: &[(&str, &[&str])] = &[
         "sdk/python/bittensor/fee_filters.py",
         &["COLDKEY_PAYS_FEE_CALLS", "COLDKEY_FEE_WARNING"],
     ),
-    ("sdk/python/bittensor/evm/networks.py", &["EVM_NETWORKS"]),
+    (
+        "sdk/python/bittensor/evm/networks.py",
+        &["EVM_NETWORKS", "_WS_TO_LABEL"],
+    ),
     (
         "sdk/python/bittensor/config.py",
         &[
