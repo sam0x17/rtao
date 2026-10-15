@@ -389,7 +389,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             let name = emit::ident(field.name);
             let doc = schema["input_schema"]["properties"][field.name]["description"]
                 .as_str()
-                .unwrap_or(field.name);
+                .unwrap_or(field.name)
+                // These catalog placeholders are prose, not HTML elements.
+                .replace("<intent name>", "&lt;intent name&gt;")
+                .replace("<name>", "&lt;name&gt;");
             interfaces.push_str(&format!("#[doc = {doc:?}]\n"));
             if let Some(default) = field.default_json {
                 let parsed: Value = serde_json::from_str(default)?;

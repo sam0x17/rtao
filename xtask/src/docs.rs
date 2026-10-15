@@ -1,13 +1,16 @@
-//! Generate the downloadable parity index, transaction reference and LLM text.
+//! Generate the downloadable book references, catalogs and LLM text.
+
+mod extra;
+mod reference;
 
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
 
 use anyhow::{Context, Result, bail, ensure};
-use rtao_catalog::{INTENTS, IntentSpec, ParamSpec};
+use rtao_catalog::{INTENTS, IntentSpec, ParamSpec, READS};
 use serde_json::Value;
 use toml_edit::DocumentMut;
 
@@ -46,17 +49,23 @@ fn code(value: &str) -> String {
 }
 
 fn pending_intents(source: &str) -> Result<BTreeSet<String>> {
+    pending_entries(source, "intents", INTENTS.iter().map(|spec| spec.name))
+}
+
+fn pending_entries<'a>(
+    source: &str,
+    kind: &str,
+    names: impl Iterator<Item = &'a str>,
+) -> Result<BTreeSet<String>> {
     let document: DocumentMut = source.parse()?;
+    let known: BTreeSet<_> = names.collect();
     let mut pending = BTreeSet::new();
-    for item in document["intents"].as_array().context("pending intents")? {
-        let name = item.as_str().context("pending intent must be a string")?;
-        ensure!(
-            INTENTS.iter().any(|spec| spec.name == name),
-            "unknown pending intent {name}"
-        );
+    for item in document[kind].as_array().context("pending entries")? {
+        let name = item.as_str().context("pending entry must be a string")?;
+        ensure!(known.contains(name), "unknown pending {kind} entry {name}");
         ensure!(
             pending.insert(name.to_owned()),
-            "duplicate pending intent {name}"
+            "duplicate pending {kind} entry {name}"
         );
     }
     Ok(pending)
@@ -211,7 +220,7 @@ fn transaction_reference(pending: &BTreeSet<String>) -> Result<String> {
     Ok(text)
 }
 
-fn content(root: &Path) -> Result<(String, String, String)> {
+fn content(root: &Path) -> Result<BTreeMap<String, String>> {
     let map: DocumentMut = fs::read_to_string(root.join("parity/map.toml"))?.parse()?;
     let rows = map
         .get("file")
@@ -255,6 +264,9 @@ fn content(root: &Path) -> Result<(String, String, String)> {
         "book/src/getting-started.md",
         "book/src/validator.md",
         "book/src/miner.md",
+        "book/src/owner.md",
+        "book/src/mev-shield.md",
+        "book/src/multisig.md",
         "book/src/releases.md",
     ] {
         llms.push_str(&format!(
@@ -262,11 +274,26 @@ fn content(root: &Path) -> Result<(String, String, String)> {
             fs::read_to_string(root.join(file))?
         ));
     }
-    let pending = pending_intents(&fs::read_to_string(root.join("parity/pending.toml"))?)?;
+    let pending_source = fs::read_to_string(root.join("parity/pending.toml"))?;
+    let pending = pending_intents(&pending_source)?;
+    let pending_reads =
+        pending_entries(&pending_source, "reads", READS.iter().map(|spec| spec.name))?;
     let transactions = transaction_reference(&pending)?;
+    let mut outputs = reference::pages(root, &pending, &pending_reads)?;
+    for (path, text) in extra::pages()? {
+        ensure!(
+            outputs.insert(path.clone(), text).is_none(),
+            "duplicate documentation path {path}"
+        );
+    }
+    reference::add_indexes(root, &mut outputs)?;
     llms.push_str(&index);
     llms.push('\n');
-    llms.push_str(&transactions);
+    for (path, text) in &outputs {
+        if path.ends_with(".md") && path != "SUMMARY.md" {
+            llms.push_str(&format!("\n## {path}\n\n{text}\n"));
+        }
+    }
     llms.push_str("\n## Rust API surface\n\nThe complete rustdoc tree is included in `api/` in the book archive. The following item signatures come from this source checkout.\n\n");
     // Rustdoc JSON is unstable. Walk the parsed source AST instead, keeping
     // module and impl context so signatures remain useful without inventing
@@ -292,7 +319,16 @@ fn content(root: &Path) -> Result<(String, String, String)> {
             llms.push('\n');
         }
     }
-    Ok((index, transactions, llms))
+    outputs.insert("api-index.md".into(), index);
+    outputs.insert("tx-reference.md".into(), transactions);
+    outputs.insert(
+        "compat.md".into(),
+        fs::read_to_string(root.join("COMPAT.md"))?,
+    );
+    let llms_index = reference::llms_index(&outputs)?;
+    outputs.insert("llms.txt".into(), llms_index.clone());
+    outputs.insert("llms-full.txt".into(), format!("{llms_index}\n{llms}"));
+    Ok(outputs)
 }
 
 fn source_files(dir: &Path, output: &mut Vec<PathBuf>) -> Result<()> {
@@ -436,33 +472,12 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
         out.is_dir() && !fs::symlink_metadata(&out)?.file_type().is_symlink(),
         "docs output must be an existing regular directory"
     );
-    let (index, transactions, text) = content(root)?;
-    for (name, bytes) in [
-        ("api-index.md", index),
-        ("tx-reference.md", transactions),
-        ("llms.txt", text),
-    ] {
-        if name == "llms.txt" && !llms {
-            continue;
-        }
-        let path = out.join(name);
-        if path.exists() {
-            ensure!(
-                fs::symlink_metadata(&path)?.is_file(),
-                "docs output must be a regular file"
-            );
-        }
-        if check {
-            ensure!(
-                fs::read_to_string(&path)? == bytes,
-                "{} is stale",
-                path.display()
-            );
-        } else {
-            fs::write(path, bytes)?;
-        }
+    let mut outputs = content(root)?;
+    if !llms {
+        outputs.remove("llms.txt");
+        outputs.remove("llms-full.txt");
     }
-    Ok(())
+    reference::write_outputs(&out, outputs, check)
 }
 
 #[cfg(test)]

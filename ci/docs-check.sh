@@ -31,10 +31,10 @@ RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps --all-featur
 cargo run --locked -p xtask -- docs --llms --out "$docs_root/generated"
 cargo run --locked -p xtask -- docs --llms --out "$docs_root/generated" --check
 
-# Copy only the small book source, replacing its generated-index placeholder.
+# Copy only the small book source and generated references. The generated
+# SUMMARY includes every catalog page so mdBook renders and links the full set.
 cp -R book "$docs_root/book-source"
-cp "$docs_root/generated/api-index.md" "$docs_root/book-source/src/api-index.md"
-cp "$docs_root/generated/tx-reference.md" "$docs_root/book-source/src/tx-reference.md"
+cp -R "$docs_root/generated/." "$docs_root/book-source/src/"
 "$docs_root/bin/mdbook" build "$docs_root/book-source" --dest-dir "$docs_root/book-html"
 
 # Downloadable development docs retain the same required attribution as source.
