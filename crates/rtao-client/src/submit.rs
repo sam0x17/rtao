@@ -1040,12 +1040,15 @@ impl Client {
             .unwrap_or("")
             .to_owned();
         check_live_stamp(&version, &call)?;
+        let (decimals, token_symbol) = signer
+            .metadata_constants()
+            .unwrap_or_else(|| (opts.metadata_decimals, opts.metadata_symbol.clone()));
         let chain_info = ChainInfo {
             spec_version: runtime.spec_version(),
             spec_name,
             base58_prefix: 42,
-            decimals: opts.metadata_decimals,
-            token_symbol: opts.metadata_symbol.clone(),
+            decimals,
+            token_symbol,
         };
         let metadata_hash = if signer.caps().contains(SignerCaps::METADATA_HASH) {
             let runtime = runtime.clone();

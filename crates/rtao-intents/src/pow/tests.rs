@@ -654,6 +654,443 @@ async fn workers_are_bounded_and_wrap_disjoint_nonce_chunks() {
     }
 }
 
+#[cfg(feature = "pow-gpu")]
+mod gpu_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::pow::gpu;
+
+    struct FakeGpu {
+        devices: usize,
+        miner: Miner,
+        dropped: Arc<AtomicUsize>,
+    }
+
+    impl gpu::Backend for FakeGpu {
+        fn device_count(&self) -> usize {
+            self.devices
+        }
+
+        fn mine(
+            &mut self,
+            prefix: &[u8],
+            difficulty: u64,
+            start: u64,
+            attempts: u32,
+        ) -> workers::Solution {
+            (self.miner)(prefix, difficulty, start, attempts)
+        }
+    }
+
+    impl Drop for FakeGpu {
+        fn drop(&mut self) {
+            self.dropped.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    fn factory(devices: usize, miner: Miner, dropped: Arc<AtomicUsize>) -> gpu::Factory {
+        Arc::new(move |_| {
+            Ok(Some(Box::new(FakeGpu {
+                devices,
+                miner: miner.clone(),
+                dropped: dropped.clone(),
+            })))
+        })
+    }
+
+    async fn solve_gpu(
+        client: &Client,
+        options: GpuOptions,
+        factory: gpu::Factory,
+    ) -> Result<PowProof, PowError> {
+        solver(Duration::from_secs(10))
+            .solve_with_workers(
+                client,
+                NETUID,
+                HOT,
+                COLD,
+                &CancellationToken::new(),
+                WorkerFactory::Gpu { options, factory },
+            )
+            .await
+    }
+
+    #[test]
+    fn gpu_configuration_rejects_invalid_selections_and_unbounded_batches() {
+        for (backend, ids, attempts) in [
+            (PowBackend::Cpu, Some(vec![0]), 1),
+            (PowBackend::Auto, Some(vec![]), 1),
+            (PowBackend::Gpu, Some(vec![1, 1]), 1),
+            (PowBackend::Gpu, Some((0..33).collect()), 1),
+            (PowBackend::Auto, None, 0),
+            (PowBackend::Auto, None, rtao_core::pow::MAX_BATCH + 1),
+        ] {
+            assert!(
+                GpuOptions {
+                    backend,
+                    device_ids: ids,
+                    attempts_per_device: attempts,
+                }
+                .validate()
+                .is_err()
+            );
+        }
+        assert!(GpuOptions::default().validate().is_ok());
+        assert!(
+            GpuOptions {
+                backend: PowBackend::Gpu,
+                device_ids: Some(vec![0, 31]),
+                attempts_per_device: rtao_core::pow::MAX_BATCH,
+            }
+            .validate()
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn automatic_fallback_does_not_hide_explicit_selection_or_driver_failure() {
+        let options = GpuOptions::default();
+        assert!(
+            gpu::select_backend(&options, || Ok(false), || panic!("no device to open"))
+                .unwrap()
+                .is_none()
+        );
+        for options in [
+            GpuOptions {
+                backend: PowBackend::Gpu,
+                ..GpuOptions::default()
+            },
+            GpuOptions {
+                device_ids: Some(vec![0]),
+                ..GpuOptions::default()
+            },
+        ] {
+            assert!(
+                gpu::select_backend(&options, || Ok(false), || panic!("no device to open"))
+                    .err()
+                    .unwrap()
+                    .contains("no usable OpenCL GPUs")
+            );
+        }
+        assert_eq!(
+            gpu::select_backend(
+                &options,
+                || Ok(true),
+                || Err("startup hash self-test failed".into()),
+            )
+            .err()
+            .unwrap(),
+            "startup hash self-test failed"
+        );
+        assert_eq!(
+            gpu::select_backend(
+                &options,
+                || Err("device enumeration failed".into()),
+                || panic!("discovery failed"),
+            )
+            .err()
+            .unwrap(),
+            "device enumeration failed"
+        );
+        let cpu = GpuOptions {
+            backend: PowBackend::Cpu,
+            ..GpuOptions::default()
+        };
+        assert!(
+            gpu::select_backend(
+                &cpu,
+                || panic!("CPU must not discover devices"),
+                || panic!("CPU must not load a driver"),
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn gpu_worker_initializes_and_mines_off_runtime_with_exact_public_challenge() {
+        let (client, fake) = fixture().await;
+        let runtime_thread = std::thread::current().id();
+        let observed = Arc::new(Mutex::new(Vec::new()));
+        let jobs = observed.clone();
+        let miner: Miner = Arc::new(move |prefix, difficulty, start, attempts| {
+            assert_ne!(std::thread::current().id(), runtime_thread);
+            jobs.lock()
+                .unwrap()
+                .push((prefix.to_vec(), difficulty, start, attempts));
+            rtao_core::pow::mine_cpu(prefix, difficulty, start, 1)
+        });
+        let dropped = Arc::new(AtomicUsize::new(0));
+        let create = factory(2, miner, dropped.clone());
+        let checked: gpu::Factory = Arc::new(move |options| {
+            assert_ne!(std::thread::current().id(), runtime_thread);
+            assert_eq!(options.device_ids, Some(vec![1, 3]));
+            create(options)
+        });
+        let options = GpuOptions {
+            backend: PowBackend::Gpu,
+            device_ids: Some(vec![1, 3]),
+            attempts_per_device: 7,
+        };
+        let proof = solve_gpu(&client, options, checked).await.unwrap();
+        let prefix = registration_prefix(NETUID, proof.block_hash, HOT, COLD).unwrap();
+        assert_eq!(*observed.lock().unwrap(), [(prefix.to_vec(), 1, 0, 7)]);
+        assert_eq!(proof.nonce, 0);
+        assert_eq!(proof.work, rtao_core::pow::seal(&prefix, 0).unwrap());
+        assert_eq!(dropped.load(Ordering::SeqCst), 1);
+        assert!(
+            fake.requests()
+                .iter()
+                .all(|r| !r.method.starts_with("author_"))
+        );
+    }
+
+    #[tokio::test]
+    async fn gpu_nonce_ranges_cover_every_device_and_wrap_without_overlap() {
+        let jobs = Arc::new(Mutex::new(Vec::new()));
+        let observed = jobs.clone();
+        let dropped = Arc::new(AtomicUsize::new(0));
+        let miner: Miner = Arc::new(move |_, _, start, attempts| {
+            observed.lock().unwrap().push((start, attempts));
+            Ok(None)
+        });
+        let options = GpuOptions {
+            attempts_per_device: 7,
+            ..GpuOptions::default()
+        };
+        let mut worker = gpu::GpuWorker::start(options, factory(3, miner, dropped.clone()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(worker.nonce_span(), 21);
+        let prefix = Arc::new(registration_prefix(NETUID, H256([1; 32]), HOT, COLD).unwrap());
+        let start = u64::MAX - 5;
+        assert_eq!(worker.dispatch(prefix.clone(), 1, start).unwrap(), 1);
+        assert!(worker.result().await.unwrap().unwrap().is_none());
+        worker
+            .dispatch(prefix, 1, start.wrapping_add(worker.nonce_span()))
+            .unwrap();
+        assert!(worker.result().await.unwrap().unwrap().is_none());
+        drop(worker);
+        assert_eq!(*jobs.lock().unwrap(), [(u64::MAX - 5, 7), (15, 7)]);
+        assert_eq!(dropped.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn gpu_proofs_still_reject_wrong_seals_and_out_of_range_nonces() {
+        for mode in 0..2 {
+            let (client, _) = fixture().await;
+            let miner: Miner = Arc::new(move |prefix, _, start, _| {
+                let nonce = if mode == 1 {
+                    start.wrapping_add(7)
+                } else {
+                    start
+                };
+                let work = if mode == 0 {
+                    [0; 32]
+                } else {
+                    rtao_core::pow::seal(prefix, nonce).unwrap()
+                };
+                Ok(Some((nonce, work)))
+            });
+            let dropped = Arc::new(AtomicUsize::new(0));
+            let options = GpuOptions {
+                backend: PowBackend::Gpu,
+                attempts_per_device: 7,
+                ..GpuOptions::default()
+            };
+            let result = solve_gpu(&client, options, factory(1, miner, dropped.clone())).await;
+            assert!(if mode == 0 {
+                matches!(result, Err(PowError::InvalidProof))
+            } else {
+                matches!(&result, Err(PowError::Core(message)) if message.contains("assigned range"))
+            });
+            assert_eq!(dropped.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn gpu_winners_recheck_difficulty_and_canonical_hash() {
+        for reorg in [false, true] {
+            let (client, fake) = fixture().await;
+            let observed = Arc::new(Mutex::new(Vec::new()));
+            let jobs = observed.clone();
+            let miner: Miner = Arc::new(move |prefix, difficulty, start, attempts| {
+                let mut jobs = jobs.lock().unwrap();
+                jobs.push(difficulty);
+                if jobs.len() == 1 {
+                    if reorg {
+                        fake.mutate_state(|state| {
+                            let parent = state.block_hash(99).unwrap();
+                            let fork = state.fork(&parent).unwrap();
+                            state.set_best(&fork).unwrap();
+                        });
+                    } else {
+                        fake.mutate_state(|state| seed(state, "Difficulty", 2));
+                        let nonce = (0..attempts)
+                            .map(|offset| start.wrapping_add(u64::from(offset)))
+                            .find(|&nonce| {
+                                rtao_core::pow::mine_cpu(prefix, 2, nonce, 1)
+                                    .unwrap()
+                                    .is_none()
+                            })
+                            .unwrap();
+                        return Ok(Some((nonce, rtao_core::pow::seal(prefix, nonce).unwrap())));
+                    }
+                }
+                rtao_core::pow::mine_cpu(prefix, difficulty, start, attempts)
+            });
+            let dropped = Arc::new(AtomicUsize::new(0));
+            let original = client.at(BlockRef::Best).await.unwrap().block().hash;
+            let proof = solve_gpu(
+                &client,
+                GpuOptions::default(),
+                factory(1, miner, dropped.clone()),
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                *observed.lock().unwrap(),
+                if reorg { [1, 1] } else { [1, 2] }
+            );
+            assert_eq!(proof.block_hash != original, reorg);
+            let prefix = registration_prefix(NETUID, proof.block_hash, HOT, COLD).unwrap();
+            assert_eq!(
+                rtao_core::pow::mine_cpu(&prefix, if reorg { 1 } else { 2 }, proof.nonce, 1)
+                    .unwrap(),
+                Some((proof.nonce, proof.work))
+            );
+            assert_eq!(dropped.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gpu_timeout_cancel_and_future_drop_join_current_batch_and_release_device() {
+        let _clock = ManualClock::new();
+        for mode in 0..3 {
+            let (client, _) = fixture().await;
+            let dropped = Arc::new(AtomicUsize::new(0));
+            let active = Arc::new(AtomicUsize::new(0));
+            let activity = active.clone();
+            let (started, mut observed) = tokio::sync::mpsc::unbounded_channel();
+            let miner: Miner = Arc::new(move |_, _, _, _| {
+                activity.fetch_add(1, Ordering::SeqCst);
+                let _ = started.send(());
+                std::thread::sleep(Duration::from_millis(10));
+                activity.fetch_sub(1, Ordering::SeqCst);
+                Ok(None)
+            });
+            let token = CancellationToken::new();
+            let cancel = token.clone();
+            let create = factory(1, miner, dropped.clone());
+            let running = tokio::spawn(async move {
+                solver(Duration::from_secs(60))
+                    .solve_with_workers(
+                        &client,
+                        NETUID,
+                        HOT,
+                        COLD,
+                        &token,
+                        WorkerFactory::Gpu {
+                            options: GpuOptions::default(),
+                            factory: create,
+                        },
+                    )
+                    .await
+            });
+            observed.recv().await.unwrap();
+            if mode == 0 {
+                tokio::time::advance(Duration::from_secs(60)).await;
+            } else if mode == 1 {
+                cancel.cancel();
+            } else if mode == 2 {
+                running.abort();
+            }
+            let result = running.await;
+            match mode {
+                0 => assert!(matches!(result.unwrap(), Err(PowError::Timeout))),
+                1 => assert!(matches!(result.unwrap(), Err(PowError::Cancelled))),
+                _ => assert!(result.unwrap_err().is_cancelled()),
+            }
+            assert_eq!(active.load(Ordering::SeqCst), 0);
+            assert_eq!(dropped.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn gpu_initialization_is_lazy_and_cancelled_initialization_is_joined() {
+        let (client, fake) = fixture().await;
+        fake.mutate_state(|state| {
+            state
+                .seed_typed(
+                    "SubtensorModule",
+                    "NetworkPowRegistrationAllowed",
+                    (NETUID,),
+                    false,
+                )
+                .unwrap();
+        });
+        let never: gpu::Factory = Arc::new(|_| panic!("admission must run before GPU setup"));
+        assert!(matches!(
+            solve_gpu(&client, GpuOptions::default(), never).await,
+            Err(PowError::Disabled)
+        ));
+        let (client, _) = fixture().await;
+        let dropped = Arc::new(AtomicUsize::new(0));
+        let release = dropped.clone();
+        let (started, mut observed) = tokio::sync::mpsc::unbounded_channel();
+        let (continue_setup, gate) = std::sync::mpsc::channel();
+        let gate = Mutex::new(gate);
+        let create: gpu::Factory = Arc::new(move |_| {
+            let _ = started.send(());
+            gate.lock().unwrap().recv().unwrap();
+            Ok(Some(Box::new(FakeGpu {
+                devices: 1,
+                miner: Arc::new(|_, _, _, _| panic!("cancelled setup must not mine")),
+                dropped: release.clone(),
+            })))
+        });
+        let running =
+            tokio::spawn(async move { solve_gpu(&client, GpuOptions::default(), create).await });
+        observed.recv().await.unwrap();
+        running.abort();
+        continue_setup.send(()).unwrap();
+        assert!(running.await.unwrap_err().is_cancelled());
+        assert_eq!(dropped.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn auto_fallback_solves_on_cpu_and_setup_failure_remains_visible() {
+        let (client, _) = fixture().await;
+        let no_devices: gpu::Factory = Arc::new(|_| Ok(None));
+        assert!(
+            solve_gpu(&client, GpuOptions::default(), no_devices)
+                .await
+                .is_ok()
+        );
+        let failed: gpu::Factory = Arc::new(|_| Err("GPU startup failed".into()));
+        assert!(matches!(
+            solve_gpu(&client, GpuOptions::default(), failed).await,
+            Err(PowError::Core(message)) if message == "GPU startup failed"
+        ));
+        for devices in [0, 33] {
+            let dropped = Arc::new(AtomicUsize::new(0));
+            let never: Miner = Arc::new(|_, _, _, _| panic!("invalid device count must not mine"));
+            let result = gpu::GpuWorker::start(
+                GpuOptions::default(),
+                factory(devices, never, dropped.clone()),
+            )
+            .await;
+            assert!(matches!(
+                result,
+                Err(PowError::Core(message)) if message == "GPU miner must select 1..=32 devices"
+            ));
+            assert_eq!(dropped.load(Ordering::SeqCst), 1);
+        }
+    }
+}
+
 #[tokio::test]
 async fn head_changes_during_validation_cannot_return_obsolete_state() {
     for advance in [1, 5] {

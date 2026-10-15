@@ -16,6 +16,7 @@ ledger = ["rtao/ledger"]
 vault = ["rtao/vault"]
 extension = ["rtao/extension"]
 evm = ["rtao/evm"]
+pow-gpu = ["rtao/pow-gpu", "rtao-intents/pow-gpu"]
 
 [dependencies]
 rtao = { workspace = true, features = ["client", "reads", "tx", "intents", "wallet-encrypted", "keychain", "owner"] }

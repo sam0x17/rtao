@@ -157,26 +157,28 @@ fn public_pow_inputs_keep_explicit_hotkey_limits_and_period() -> TestResult {
 }
 
 #[test]
-fn unsupported_pow_root_gpu_and_mining_preview_refuse_before_connection() -> TestResult {
+fn pow_root_preview_and_feature_gated_gpu_are_validated_before_connection() -> TestResult {
     let hotkey = AccountId([23; 32]).to_string();
-    for options in [
-        vec!["--netuid", "0", "--pow"],
-        vec!["--netuid", "1", "--pow", "--pow-backend", "gpu"],
-        vec!["--netuid", "1", "--pow", "--pow-device", "0"],
-        vec!["--netuid", "1", "--pow", "--dry-run"],
+    for (options, gpu_request) in [
+        (vec!["--netuid", "0", "--pow"], false),
+        (vec!["--netuid", "1", "--pow", "--pow-backend", "gpu"], true),
+        (vec!["--netuid", "1", "--pow", "--pow-device", "0"], true),
+        (vec!["--netuid", "1", "--pow", "--dry-run"], false),
     ] {
         let mut args = vec!["rtao", "subnets", "register", "--hotkey", &hotkey, "--yes"];
         args.extend(options);
         let parsed = parse(&args)?;
         let (mut ctx, _) = context(&parsed)?;
-        let error = Request::from_matches(
+        let result = Request::from_matches(
             &mut ctx,
             parsed.subcommand().ok_or("group")?.1,
             &mut PromptHistory::default(),
-        )
-        .err()
-        .ok_or("expected refusal")?;
-        assert_eq!(error.code, 2);
+        );
+        if gpu_request && cfg!(feature = "pow-gpu") {
+            assert!(matches!(result?, Request::Pow(_)));
+        } else {
+            assert_eq!(result.err().ok_or("expected refusal")?.code, 2);
+        }
     }
     for (flag, value) in [
         ("--pow-workers", "0"),
@@ -214,6 +216,8 @@ async fn public_pow_preparation_binds_the_explicit_hotkey_and_proxy_owner_withou
         "1",
         "--pow-timeout",
         "2",
+        "--pow-backend",
+        "cpu",
         "--yes",
     ])?;
     let (mut ctx, _) = context(&parsed)?;

@@ -13,7 +13,7 @@ workspace = true
 
 [features]
 blocking = []
-subxt = []
+subxt = ["dep:subxt"]
 metrics = ["rtao-rpc/metrics","dep:metrics"]
 test-util = []
 
@@ -33,6 +33,7 @@ serde_json = { workspace = true, features = ["preserve_order"] }
 tokio.workspace = true
 tokio-util.workspace = true
 subxt-rpcs.workspace = true
+subxt = { workspace = true, optional = true }
 tracing.workspace = true
 blake2.workspace = true
 parity-scale-codec.workspace = true

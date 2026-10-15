@@ -1,9 +1,10 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/pow_registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Public registration mining on dedicated, cancellable CPU workers.
+//! Public registration mining on dedicated, cancellable workers.
 //!
-//! `pow` activates the core's host capability. `pow-gpu` currently exposes the
-//! same CPU solver; GPU selection is reserved for M7. No signer or wallet enters
-//! this API. Submit a returned proof promptly through the coldkey intent path.
+//! `pow` activates the core's host capability. `pow-gpu` adds explicit OpenCL
+//! selection through `PowSolver::solve_with_backend`. No signer or wallet
+//! enters this API. Submit a returned proof promptly through the coldkey intent
+//! path. No GPU drivers are loaded by the ordinary CPU solver.
 
 use std::{future::poll_fn, sync::Arc, time::Duration};
 
@@ -13,8 +14,14 @@ use rtao_runtime::storage::subtensor_module as storage;
 use tokio::time::Instant;
 pub use tokio_util::sync::CancellationToken;
 
+#[cfg(feature = "pow-gpu")]
+mod gpu;
 mod workers;
-use workers::{CpuWorkers, Miner};
+#[cfg(feature = "pow-gpu")]
+pub use gpu::{GpuOptions, PowBackend, gpu_devices};
+#[cfg(test)]
+use workers::CpuWorkers;
+use workers::{Miner, WorkerFactory};
 
 /// Runtime challenge domain, without subnet, block, keys or nonce.
 pub const DOMAIN: &[u8] = b"subtensor-pow-register-v1";
@@ -194,8 +201,9 @@ pub fn effective_difficulty(value: u64, minimum: u64, maximum: u64) -> u64 {
 /// Mines bounded core batches on dedicated threads and retains no workers after
 /// return, cancellation, timeout or a dropped solve future.
 ///
-/// Cancellation completes after the running 1,024-attempt core batches finish.
-/// Workers are joined on cleanup, so no detached blocking task survives timeout.
+/// CPU cancellation completes after the running 1,024-attempt core batches
+/// finish. The optional GPU method documents its driver cleanup boundary.
+/// Workers are joined on cleanup, so no detached mining task survives timeout.
 #[derive(Clone, Debug)]
 pub struct PowSolver {
     config: PowConfig,
@@ -248,6 +256,63 @@ impl PowSolver {
         cancellation: &CancellationToken,
         miner: Miner,
     ) -> Result<PowProof, PowError> {
+        self.solve_with_workers(
+            client,
+            netuid,
+            hotkey,
+            coldkey,
+            cancellation,
+            WorkerFactory::Cpu(miner),
+        )
+        .await
+    }
+
+    /// Mine with explicit CPU, automatic OpenCL selection, or required GPU
+    /// execution. Device selection and driver calls run on a dedicated worker.
+    ///
+    /// Automatic mode falls back to CPU only when discovery finds no devices.
+    /// An explicit device selection or GPU mode requires usable hardware, and
+    /// driver initialization or hash self-test errors always propagate. Every
+    /// winning GPU proof passes the same CPU seal, current difficulty, canonical
+    /// block and admission checks as the ordinary solver.
+    ///
+    /// Cancellation and drop join the worker after its current bounded batch or
+    /// initialization returns. A GPU driver call cannot be forcibly interrupted;
+    /// an unresponsive third-party driver can delay cleanup.
+    #[cfg(feature = "pow-gpu")]
+    pub async fn solve_with_backend(
+        &self,
+        client: &Client,
+        netuid: NetUid,
+        hotkey: AccountId,
+        coldkey: AccountId,
+        cancellation: &CancellationToken,
+        options: &GpuOptions,
+    ) -> Result<PowProof, PowError> {
+        options.validate().map_err(PowError::Core)?;
+        self.solve_with_workers(
+            client,
+            netuid,
+            hotkey,
+            coldkey,
+            cancellation,
+            WorkerFactory::Gpu {
+                options: options.clone(),
+                factory: Arc::new(gpu::open_backend),
+            },
+        )
+        .await
+    }
+
+    async fn solve_with_workers(
+        &self,
+        client: &Client,
+        netuid: NetUid,
+        hotkey: AccountId,
+        coldkey: AccountId,
+        cancellation: &CancellationToken,
+        factory: WorkerFactory,
+    ) -> Result<PowProof, PowError> {
         if netuid.0 == 0 {
             return Err(PowError::RootSubnet);
         }
@@ -256,7 +321,7 @@ impl PowSolver {
             biased;
             () = cancellation.cancelled() => Err(PowError::Cancelled),
             () = tokio::time::sleep_until(deadline) => Err(PowError::Timeout),
-            result = self.search(client, netuid, hotkey, coldkey, deadline, miner) => {
+            result = self.search(client, netuid, hotkey, coldkey, deadline, factory) => {
                 if cancellation.is_cancelled() { Err(PowError::Cancelled) }
                 else if Instant::now() >= deadline { Err(PowError::Timeout) }
                 else { result }
@@ -271,7 +336,7 @@ impl PowSolver {
         hotkey: AccountId,
         coldkey: AccountId,
         deadline: Instant,
-        miner: Miner,
+        factory: WorkerFactory,
     ) -> Result<PowProof, PowError> {
         let mut heads = HeadProvider::subscribe(client.rpc(), rtao_client::Finality::Best).await?;
         let mut pool = None;
@@ -291,17 +356,16 @@ impl PowSolver {
             let block_hash = snapshot.block().hash;
             let prefix = Arc::new(registration_prefix(netuid, block_hash, hotkey, coldkey)?);
             if pool.is_none() {
-                pool = Some(CpuWorkers::new(self.config.workers, miner.clone())?);
+                pool = Some(factory.start(self.config.workers).await?);
             }
             let workers = pool
                 .as_mut()
-                .ok_or_else(|| PowError::Worker("CPU worker pool was not initialized".into()))?;
+                .ok_or_else(|| PowError::Worker("PoW worker pool was not initialized".into()))?;
             let refresh = Instant::now() + CHALLENGE_REFRESH;
             'challenge: loop {
                 let mut remaining =
                     workers.dispatch(prefix.clone(), state.difficulty, nonce_start)?;
-                nonce_start =
-                    nonce_start.wrapping_add(u64::from(remaining) * u64::from(workers::ATTEMPTS));
+                nonce_start = nonce_start.wrapping_add(workers.nonce_span());
                 while remaining > 0 {
                     let result = tokio::select! {
                         biased;

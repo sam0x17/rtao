@@ -21,6 +21,8 @@ mod wire;
 pub mod decoding;
 /// Local drand round, timestamp and duration helpers.
 pub mod drand;
+/// Portable EVM address normalization and native-account mappings.
+pub mod evm;
 /// Table-free conversion of human proportions into chain integers.
 pub mod hyperparams;
 /// Digit-exact, Value-first JSON text parsing and oracle comparisons.

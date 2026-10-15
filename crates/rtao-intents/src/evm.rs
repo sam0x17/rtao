@@ -40,45 +40,19 @@ pub(crate) fn fund_json(intent: &FundEvmKey) -> serde_json::Value {
     value
 }
 
-fn python_whitespace(character: char) -> bool {
-    character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
-}
-
-// bytes.fromhex permits ASCII whitespace between complete byte pairs. The
-// upstream is_h160 checks the text length, not the decoded length, so retain
-// its accepted interior-whitespace inputs instead of adding a second policy.
 fn normalize_h160(input: &str) -> Result<(String, Vec<u8>), IntentError> {
-    let invalid = || {
-        IntentError::validation(format!(
-            "not a valid EVM (h160) address: {}",
-            rtao_primitives::pyfmt::string_repr(input)
-        ))
-    };
-    let text = input.trim_matches(python_whitespace);
-    let body = text.strip_prefix("0x").unwrap_or(text);
-    if body.chars().count() != 40 {
-        return Err(invalid());
-    }
-    let mut bytes = Vec::with_capacity(20);
-    for group in body
-        .as_bytes()
-        .split(|byte| matches!(byte, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c))
-    {
-        bytes.extend(hex::decode(group).map_err(|_| invalid())?);
-    }
-    Ok((format!("0x{}", body.to_ascii_lowercase()), bytes))
+    let address = rtao_primitives::evm::normalize_h160(input)
+        .map_err(|error| IntentError::validation(error.to_string()))?;
+    let bytes = rtao_primitives::evm::decode_h160(input)
+        .map_err(|error| IntentError::validation(error.to_string()))?;
+    Ok((address, bytes))
 }
 
 fn mirror_account(address: &str) -> Result<AccountId, IntentError> {
-    let (_, bytes) = normalize_h160(address)?;
-    let mut payload = Vec::with_capacity(4 + bytes.len());
-    payload.extend_from_slice(b"evm:");
-    payload.extend_from_slice(&bytes);
-    let hash = rtao_core::codec::storage::hash_param("Blake2_256", &payload)?;
-    let hash = hash.try_into().map_err(|_| {
-        IntentError::validation("Blake2_256 returned an EVM mirror hash with an invalid length")
-    })?;
-    Ok(AccountId(hash))
+    rtao_primitives::evm::mirror_account(address).map_err(|error| match error {
+        rtao_primitives::evm::AddressError::Core(error) => IntentError::from(error),
+        error => IntentError::validation(error.to_string()),
+    })
 }
 
 fn amount_summary(amount: &Amount) -> String {

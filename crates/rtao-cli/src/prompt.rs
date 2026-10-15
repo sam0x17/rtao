@@ -355,7 +355,9 @@ pub fn ask_with<T>(
     }
     let label = spec.label();
     loop {
-        let answer = terminal.read_line(&label)?;
+        // Callers can use visible prompts for sensitive payload text. Preserve
+        // ordinary parsing while erasing the terminal's original owned answer.
+        let answer = zeroize::Zeroizing::new(terminal.read_line(&label)?);
         let raw = python_strip(&answer);
         let raw = if raw.is_empty() {
             match &spec.default {

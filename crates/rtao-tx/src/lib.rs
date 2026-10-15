@@ -13,6 +13,8 @@ mod output;
 mod plan;
 mod policy;
 mod registration;
+/// Portable Quicknet timelock envelopes and asynchronous beacon decryption.
+pub mod timelock;
 
 pub use error::{ChainError, IntentError, PolicyError, TxError, classify};
 pub use executor::{
