@@ -168,7 +168,7 @@ B/C/D echoing `CommitRevealWeightsVersion`, A's inheritance of the core's epoch 
 | 6 | Transport: own tokio-tungstenite session behind `RpcClientT`, with one explicitly built `ring` rustls config (never the process-default provider lookup); jsonrpsee is not in the default graph | §2.7, §3.2 |
 | 7 | Reconnect resends only methods in a `ReadMethod` allowlist; `author_submit*` is structurally absent, and a queued frame whose caller has gone is never transmitted | §3.2 |
 | 8 | Policy refusals are classified exactly as `rpc.py` classifies them, from extracted constants, with headers from the handshake response | §3.2 |
-| 9 | V15 metadata always; V14 only on Python's missing-method needle; a V14 runtime is degraded (no signing; runtime APIs only through the ported frozen legacy table) | §3.4 |
+| 9 | V15 metadata always; V14 only through Python's missing-method or absent-V15 fallback; a V14 runtime is degraded (no signing; runtime APIs only through the ported frozen legacy table) | §3.4 |
 | 10 | Generated descriptors are name-based; storage keys always come from the live entry via the core; shape hashes only verify | §3.7 |
 | 11 | Exact shape hashes for calls and the positional metagraph view; projection hashes (declared fields only) for by-name models; the outer `RuntimeCall`/`RuntimeEvent`/`RuntimeError` enums are opaque; fail-closed per call | §3.7 |
 | 12 | One encoder (`Runtime::compose_call`); no codec-derive encode path | §3.8 |
@@ -474,7 +474,7 @@ Line numbers are definition sites in `CORE/` at `850f2755`. This tree is byte-id
 
 | Core item | Wrapper | Why |
 |---|---|---|
-| `Runtime` | `rtao_runtime::RuntimeHandle(Arc<RuntimeEntry>)` (re-exported by `rtao-client`, cached by `rtao_client::RuntimeCache`): parsed V15, `MetadataLevel`, the surface report, the shape cache, name→index caches and the RFC-0078 digest computed once per spec (V16 is decoded only by `xtask`, §3.4) | caching per `(genesis, spec)`, V15 enforcement, surface verification (§3.4, §3.7) |
+| `Runtime` | `rtao_runtime::RuntimeHandle(Arc<RuntimeEntry>)` (re-exported by `rtao-client`, cached by `rtao_client::RuntimeCache`): parsed V15, `MetadataLevel`, the surface report, the shape cache, name-to-index caches and the RFC-0078 digest cached per signing context (V16 is decoded only by `xtask`, §3.4) | caching per `(genesis, spec, transaction_version)`, V15 enforcement, surface verification (§3.4, §3.7) |
 | `Keypair::sign` | `rtao_signer::KeypairSigner: Signer` | the async signer seam (§6.3); signing runs inline (about 0.03 ms, [R] A2 §7) |
 | `LedgerDevice::sign` | `LedgerSigner` over the `LedgerBackend` seam: one device mutex held across whole operations, plus `spawn_blocking` (§6.5) | HID blocks until the user approves, and the app aborts or refuses interleaved APDUs |
 | `decrypt_keyfile_data` | `Wallet::unlock_coldkey` (`spawn_blocking`, once per process, `Zeroizing`) | Argon2i with 512 MiB and t = 8 ([R] F §3.3) |
@@ -1423,16 +1423,16 @@ The core parses V14 and V15 and rejects V16 (`CORE/runtime/mod.rs:163-199` [V]).
   D's "fall back on any error" (the core's rule) is rejected [J-CF §5.3].
 - **`MetadataLevel`** on every `RuntimeHandle`:
   - `V15`: everything.
-  - `V14Degraded`: reached only through the needle, which means a runtime that predates V15 (deep archive reads).
-    Storage reads, constants and events work. **Signing is refused** (divergence D-010; on a live chain the needle
-    never fires). Runtime-API calls go only through the frozen legacy table, a port of `LEGACY_RUNTIME_APIS` and its
+  - `V14Degraded`: V14 metadata obtained through the missing-method or absent-V15 fallback (including deep archive reads).
+    Storage reads, constants and events work. **Signing is refused** (divergence D-010). Runtime-API calls go only
+    through the frozen legacy table, a port of `LEGACY_RUNTIME_APIS` and its
     decoders (`PY/_transport/runtime_api.py:95-171` [V]), as Python does. Any other runtime API returns
     `ClientError::RuntimeApiUnavailable`, never a silent mis-encode.
 - **V15 runtimes whose API returns `Vec<u8>`** (old pre-encoded results) also route through the legacy table, as in
   `_is_legacy_method` (`runtime_api.py:167`). None does at spec 477 ([R] C2 §0.2); the path exists for archive parity.
 - **Memory cache**: an LRU of 4 `RuntimeHandle`s keyed by `(genesis, spec_version, transaction_version)`, plus 512
   `block_hash` entries pointing to that runtime identity. A block's runtime is resolved through its **parent's** runtime version
-  (`runtime.py:178-207`). Concurrent fetches of one spec share one future (`futures::future::Shared`).
+  (`runtime.py:178-207`). Concurrent fetches of one runtime identity share one future (`futures::future::Shared`).
   A head refresh with the same spec but a new transaction version creates a distinct handle and digest cache without
   changing previously pinned handles. In-flight fetches for different transaction versions remain separate. The disk
   format and filenames remain Python-compatible. Cached metadata receives the observed chain transaction version;
@@ -2150,10 +2150,32 @@ Prepared transaction fields are private with read-only getters. Call bytes, nonc
 JSON view and context therefore describe one immutable transaction. Signature attachment validates its variant and
 both runtime stamps before author submission; cancellation drops the explicit lease used by external submission.
 
-`UnsignedExtrinsic` serializes to exactly Python's `to_dict()`/`from_dict()` JSON (`PY/_transport/contract.py:67-134`).
-That includes `SignerPayloadJSON` with numeric fields as big-endian hex at SCALE width (`extrinsics.py:87-132`). A call
-prepared by Python can therefore be signed by an rtao signer and submitted by either side, and the interop lane tests
-it (§11.6).
+`UnsignedExtrinsic` exports the exact 17-field JSON schema of Python's `to_dict()`
+(`PY/_transport/contract.py:67-134`) through `Serialize` and `to_json`. The six byte fields use prefixed hex,
+nullable fields remain present, and `SignerPayloadJSON` keeps numeric fields as big-endian hex at SCALE width
+(`extrinsics.py:87-132`). The public Python root types `UnsignedExtrinsic` and `SigningContext` have concrete
+namespaced Rust homes: `rtao::client::UnsignedExtrinsic` with `client`, and
+`rtao::signer::SigningContext` with `tx`. The context groups spec version/name and SS58 prefix in `ChainInfo`,
+with metadata bytes, transaction version and genesis supplied by authenticated preparation or import.
+
+`UntrustedUnsignedExtrinsic::from_json` parses this schema; `validate` or `Client::import_unsigned_json` must
+authenticate it before signing or submission. Import rejects duplicate, unknown or missing fields, out-of-width
+chain integers, altered signing views and inconsistent runtime/genesis/era/digest data. It requires independently
+obtained metadata, chain identity, canonical era anchor and finalized height, and applies the existing 64 MiB,
+128-level and shared-node JSON budgets. Native checked u64 rao and strict hex input replace Python's arbitrary
+mutable `from_dict` construction. The authored fixtures cover the complete schema, both signing schemes,
+short/hashed payloads and adversarial imports. Fresh Python-to-Rust-to-Python signing/submission interoperability
+remains unverified and optional under Q30 (§11.6).
+
+Other private transport dataclasses use native carriers. `Client::attach_signature` returns exact signed
+`(Bytes, H256)`; the submission path constructs the prefixed-hex RPC value without a separate `SignedExtrinsic`
+class. `BlockInfo` retains the normalized header and ordered decoded extrinsics, including null decode failures,
+and adds pinned timestamp/explorer aggregation; a standalone raw `BlockData` or strict-decoding `get_block` mode
+is not part of that aggregate API. The metadata IR preserves the seven original classes' field values and order
+in `rtao_core::ir` while adding native key/event/type/extension details. Its serde JSON is the documented richer
+native schema, not Python's minimal `MetadataIR.to_dict()` interchange. Receipt weights remain exact dynamic
+values, and failed event records remain available to native consumers under D-023 (§3.9.4); this source
+reconciliation changes neither S9 requirements nor M2-S02 acceptance.
 
 ### 3.15 Python transport parity checklist
 
@@ -2178,7 +2200,7 @@ result.
 | nonce: increment locally, clear on any failure, explicit pin, fresh for prepare | `rtao-client/tests/nonces.rs::{concurrent_clones_reserve_unique_consecutive_nonces_with_one_query, unsettled_drop_requeries_pool_and_fresh_does_not_mutate_cache}`; `rtao-client/tests/submission.rs::{policy_pool_and_signer_failures_clear_the_account_cache, explicit_submission_nonce_is_shared_with_client_clones, preparation_anchors_finalized_era_and_does_not_reserve_nonce}` |
 | mortal era anchored at the finalized head | `rtao-client/tests/submission.rs::preparation_anchors_finalized_era_and_does_not_reserve_nonce` |
 | `Submitted (not waiting).` with `success = true` | `rtao-client/tests/submission.rs::pool_acceptance_and_dispatch_failure_both_settle_nonce_leases` |
-| V15 fetch; V14 only on the missing-method or SCALE-None needle | `rtao-client/src/cache.rs::{missing_method_and_scale_none_are_the_only_legacy_paths, other_rpc_errors_never_fall_back_to_v14, malformed_some_wrapper_is_an_error_without_fallback}` |
+| V15 fetch; V14 only through the missing-method or absent-V15 fallback | `rtao-client/src/cache.rs::{missing_method_and_scale_none_are_the_only_legacy_paths, other_rpc_errors_never_fall_back_to_v14, malformed_some_wrapper_is_an_error_without_fallback}` |
 | Python disk-cache header, filename and fetch-path flag read and written | `rtao-client/src/cache.rs::{exact_disk_header_and_python_names, disk_flag_records_the_python_fetch_path}`; fresh cross-language interop remains optional under Q30 (§11.6) |
 | a submit whose caller was cancelled before transmission is never sent | `cancelled_unsent_submit_is_never_transmitted` (drop the socket, cancel the submit, reconnect, assert no `author_submitExtrinsic` frame) |
 | a response above 16 MiB in one frame is accepted (Python `max_size=2**32`) | `large_single_frame_response` (a 20 MiB single-frame result) |
@@ -3256,8 +3278,9 @@ pub trait Signer: Send + Sync + 'static {
     fn account(&self) -> AccountId;
     fn crypto_type(&self) -> CryptoType;
     fn caps(&self) -> SignerCaps { SignerCaps::RAW_PAYLOAD }
+    fn metadata_constants(&self) -> Option<(u8, String)> { None }
     fn sign<'a>(&'a self, req: &'a SigningRequest<'a>) -> BoxFuture<'a, Result<MultiSignature, SignerError>>;
-    /// Raw message signing (btauth/1, EVM association, `wallet sign`). Hardware signers refuse (no blind signing).
+    /// Raw message signing (btauth/1, EVM association, `wallet sign`); context-only backends refuse by default.
     fn sign_raw<'a>(&'a self, _msg: &'a [u8]) -> BoxFuture<'a, Result<[u8; 64], SignerError>> {
         Box::pin(async { Err(SignerError::RawSigningUnsupported) })
     }
@@ -3274,10 +3297,29 @@ pub struct SigningRequest<'a> {
 pub struct MultiSignature { pub crypto: CryptoType, pub bytes: [u8; 64] }   // 65-byte replies split and variant-checked
 ```
 
-`dyn Signer` with boxed futures is deliberate. Signers are heterogeneous runtime choices (`--ledger`, `--signer
-extension`), they sign at most a few times per block, and `sign_raw` lets btauth/1 run on any capable signer. Dispatch
-follows Python's capability order (`PY/_transport/extrinsics.py:321-347`): an unsigned-extrinsic signer first, then
-the extension payload signer, then a plain `sign`.
+`Signer` is an explicit trait for heterogeneous backends. Every signing operation returns a future, including
+software cryptography that runs inline. `AccountId` supplies the 32 public-key bytes and `CryptoType` restricts the
+scheme to Ed25519 or Sr25519. Custom backends implement this contract; arbitrary Python-shaped objects are outside
+the native input domain (`PY/signing.py:48-95`).
+
+The client builds one immutable prepared transaction and passes all its views in a `SigningRequest`.
+`KeypairSigner` signs `payload` exactly, without rebuilding or hashing it. `ExtensionSigner` uses `payload_json`
+and `purpose`. Ledger uses the original call and signed-extension parts with an RFC-0078 proof, so long payloads
+reach the device before hashing. Vault uses the prepared request and its proof/QR context. The client uses
+`METADATA_HASH` to enable `CheckMetadataHash` and computes the digest from authenticated runtime metadata, with
+`metadata_constants()` overriding only token display constants. It does not call an arbitrary signer
+`metadata_digest` override. The remaining format flags describe backend behavior.
+
+Python selects structural hooks in unsigned-extrinsic, extension-JSON, then raw-sign order
+(`PY/_transport/extrinsics.py:321-347`). Native dispatch calls one `Signer::sign`; each implementation chooses its
+view. It does not introspect competing hooks or enforce a precedence between them. `sign_raw` is a separate
+optional operation whose default refuses arbitrary messages. The boxed future permits device and remote approval
+without requiring every backend to expose a raw private key.
+
+`Client::prepare_public` is the address-only preparation entry point; `prepare_call` accepts a signer identity.
+`submit_signature` validates the prepared account, payload, algorithm and runtime stamps before attaching an
+external signature. These typed entry points implement the prepare/submit split described in
+`PY/signing.py:24-27`; they do not require a wallet unlock.
 
 ### 6.4 Roles, key sources and key views
 
@@ -3297,7 +3339,7 @@ pub trait KeyView: Send + Sync {
 /// Compile-time role check (typed path).
 pub trait KeySource<R: Role>: KeyView {
     fn address(&self) -> Result<AccountId, SignerError>;
-    fn signer(&self) -> impl Future<Output = Result<Arc<dyn Signer>, SignerError>> + Send;   // may unlock lazily, once
+    fn signer(&self) -> impl Future<Output = Result<Arc<dyn Signer>, SignerError>> + Send;   // unlocks on acquisition; cached per shared source
 }
 /// Runtime role check (CLI, agents, execute_tool): Python's resolve_signer (PY/signing.py:227-263).
 pub trait DynKeySource: KeyView {
@@ -3318,7 +3360,7 @@ accessors and exposes its own account through `bare_signer_account()`. `IntentKe
 role context: an explicit hotkey address wins before public I/O, an attached key wins next, and a bare identity is a
 default only when its requested role matches the intent's signing role. A bare signer still signs either role through
 `KeySource<R>` and `DynKeySource`; signing a coldkey intent does not attach a default hotkey. Missing-key diagnostics
-match Python, while public-file errors propagate without a fallback or unlock.
+match `intents/base.py`; public-file errors propagate without an identity fallback or unlock.
 
 `KeypairSigner` clones share one pinned-core `Keypair` through `Arc` until its final owner drops. The core separately zeroizes retained mnemonic and seed buffers. Rtao cannot wipe the opaque signing pair, and the pinned ed25519 pair has no guaranteed secret wipe on drop. Borrowed constructor inputs remain the caller's responsibility; secret-dependent constructor errors use fixed diagnostics after wiping the discarded owned message.
 `Arc<S>` forwards the complete `Signer` contract. Bare `Clone + Signer` values implement both typed key-source roles
@@ -3333,9 +3375,45 @@ signer acquisition.
 | `Wallet` | yes (unlock via §6.2; encrypted needs `encrypted`) | yes | CLI and owner tooling default |
 | `KeypairSigner` (URI, mnemonic, seed, unlocked) | yes | yes | a bare signer signs either role, as in Python |
 | `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `RemoteSigner` (M10) | yes | yes (bare signers) | normally coldkey |
-| `KeyedWallet { coldkey, hotkey }` | if present | if present | mirrors Python's keyed wallet |
+| Custom keyed source | if implemented | if implemented | implement the public-view and supported role traits; no exported `KeyedWallet` struct |
 
 There are no GATs in these signatures. B's `type Signer<'a>` is replaced by `Arc<dyn Signer>` [J-PD §4 B].
+
+The native role/input API makes the following dispositions for `PY/signing.py`:
+
+- `WalletLike`, `KeyedWallet` and `as_wallet` become explicit wallet constructors and trait implementations.
+  `Wallet`/`WalletRef` parse wallet references; a custom keyed object implements `KeyView` and its supported
+  `KeySource<R>`/`DynKeySource` traits. There is no exported `KeyedWallet` struct, general `WalletLike` union,
+  implicit string-to-wallet conversion at every API, or unknown-object pass-through.
+- `SignerRole` accepts only the exact `coldkey`/`hotkey` tokens. This is stricter than Python's bare-signer and
+  extension-marker branches, which pass through unknown role strings, and its keyed-wallet branch, which selects
+  hotkey for every non-coldkey string. Native backend construction replaces Python's runtime shape priority.
+- `as_ss58`, `is_address_param` and `coerce_address` have a typed input disposition. Intent generation selects
+  `Ss58Address`/`Vec<Ss58Address>` for `_ss58`/`_ss58s`; read generation selects `AccountId`/`Vec<AccountId>`.
+  Optional fields use `Option`. Callers obtain wallet addresses explicitly through a role source. Address
+  construction validates strings before downstream use. There is no runtime wallet coercer in `rtao_tx`,
+  arbitrary-shape pass-through or Python list/tuple identity contract. The CLI's separate `books::NameResolver`
+  owns textual account-book and wallet references.
+- `AccountId` exposes public bytes and canonical SS58 display, with `to_ss58(prefix)` for explicit rendering.
+  `Ss58Address` preserves validated caller spelling in intent JSON/summaries while wire calls use its decoded
+  account. Native signers do not retain a mutable Python `ss58_format` property.
+- `WalletSigner` becomes a role source plus an acquired `Arc<dyn Signer>`. `PasswordSources` attaches the unlock
+  policy to the source. Acquisition happens when `signer()`/`signer_for()` is awaited, rather than inside a first
+  `sign()` on a separate wrapper. Public planning does not acquire the signer; execution checks the acquired
+  account against the planned account. Clones share one role-source cache; independent or reconfigured sources
+  do not. Source replacement clears its cache, while previously returned `Arc` owners remain valid. This is not
+  a once-per-process guarantee. Native `Debug` redacts secrets and has no Python locked/unlocked repr contract.
+- Wallet public reads continue to inspect companion files after unlock. A missing hotkey companion permits
+  fallback only to public JSON fields in the legacy hotkey file; encrypted bytes refuse with
+  `PublicKeyUnavailable`, and malformed/unreadable companions propagate their errors. Python's `_public` and
+  `public_view` can return the private hotkey and unlock an encrypted legacy file; `_public` prefers its cached
+  private key after unlock. Native public reads retain the no-unlock rule. This does not change D-003's explicit
+  password-prompt policy (§6.2).
+
+`IntentKeyView` adds the intent role context from `intents/base.py`. Its cross-role missing-default refusal must
+not be attributed to `signing.py::public_view`, which passes a bare signer through for either role. These source
+dispositions describe the native API; fixture presence alone establishes neither current hosted execution nor
+independent Python or device parity. M2-S02 remains open and unaccepted.
 
 ### 6.5 Signer implementations
 
@@ -5519,7 +5597,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 | 7 | Resend allowlist (`ReadMethod`) plus a per-frame `sent` flag; a queued frame whose caller has gone is never transmitted | Python's blocklist only | a resent submit is structurally impossible; parity for every method Python uses; untransmitted submits still go out unless their caller was cancelled, whose dropped `NonceLease` already cleared the nonce cache | `PY/_transport/rpc.py:66, 495-504, 549, 686-717`; B §3.2 |
 | 8 | Classify policy refusals exactly as `rpc.py` does, from extracted constants | treat any `-32004`/`-32005` as terminal (C) | parity; an ordinary `-32005` must not become a terminal refusal | `rpc.py:52-59, 84-135, 190-241` [V] |
 | 9 | Coalesced reads (`fetch`) + a client-side token bucket on public presets | per-item reads (A, B, D); a bucket without coalescing (C) | about 1 r/s public endpoints and terminal `-32004`; a weights preflight goes from about 18 RPCs to 1 | `UP/docs/guides/local-development.mdx:160` [V]; J-PD concern 6 |
-| 10 | V15 always; V14 only on Python's missing-method needle; V14 is degraded (no signing; runtime APIs only through the ported legacy table) | fall back on any error (D, core); unrestricted fallback (A, B); V14 always an error (J-PD) | archive parity with Python and no silent V14 against a V15-capable chain | `runtime.py:34, 292-312` [V]; `runtime/mod.rs:172-181` [V]; `runtime_api.py:95-171` [V]; `meta_getMetadata.json` (V14) [J-CF §7 #10] |
+| 10 | V15 always; V14 only through Python's missing-method or absent-V15 fallback; V14 is degraded (no signing; runtime APIs only through the ported legacy table) | fall back on any error (D, core); unrestricted fallback (A, B); V14 always an error (J-PD) | archive parity with Python and no silent V14 against a V15-capable chain | `runtime.py:34, 292-312` [V]; `runtime/mod.rs:172-181` [V]; `runtime_api.py:95-171` [V]; `meta_getMetadata.json` (V14) [J-CF §7 #10] |
 | 11 | Name-based descriptors; storage keys always from the live entry; hashers recorded only for drift | B's baked hashers and positional codec types | archive reads across hasher changes stay correct; no second encoding engine | P-B line 746; J-CF concern 11; [R] A2 §8 |
 | 12 | Exact shape hashes for calls and the positional view; projection hashes for by-name models; the outer `RuntimeCall`/`RuntimeEvent`/`RuntimeError` enums opaque; `verify_surface` fail-closed per call at connect and on every upgrade | B: exact for every type; C: ident checks; D: connect-time checks only; fully structural hashes through `RuntimeCall` | appended runtime fields stay harmless for by-name models; signing and positional parsing stay safe; a call added in any pallet does not make every older build refuse the 12 intents that wrap `batch_all`, `as_multi`, `proxy_announced` or `sudo` | J-MA G4, G9; J-PD concern 10; `scale-decode-derive lib.rs:222-236` [J]; `CORE/codec/encode.rs:528-532`; §3.7 |
 | 13 | One encoder (`Runtime::compose_call`) | B's `[p, c] ++ args.encode()` | the golden vectors pin a single encoder | J-CF §3.4 |
@@ -5625,7 +5703,7 @@ outright: two are narrowed.
 |---|---|---|---|
 | CF-1 | Commit-reveal version gate: B, C and D echo storage | **Accepted.** Constant 4 per supported tlock payload format; intents unchanged from Python (`SetWeights` tags 4, `CommitWeights` field default 4); the framework refuses early when storage ≠ 4; e2e scenario 6 | §9.3 step 3, §11.4 |
 | CF-2 | Epoch predicate conflict; `MaxEpochsPerBlock` unmodeled; +3 offset empirical | **Accepted** for the predicate (pallet-faithful shim, agreement tests, D-006, PR-U5). **Deferral: deliberately not modeled**, with the direction analysis (it delays reveals, which per-block retries absorb) and event attribution; question Q9 goes upstream. The +3 offset is kept and its margin monitored by the reveal watcher | §1.6 G4, §9.3 steps 7-12, §15.2 Q9 |
-| CF-3 | `state_getMetadata` is V14 on finney; V14 has no runtime APIs | **Accepted.** V15 always; V14 only on Python's needle; `MetadataLevel::V14Degraded` refuses signing and serves runtime APIs only through the ported frozen legacy table; V16 blobs stay outside `md*.bin` | §3.4 |
+| CF-3 | `state_getMetadata` is V14 on finney; V14 has no runtime APIs | **Accepted.** V15 always; V14 only through Python's missing-method or absent-V15 fallback; `MetadataLevel::V14Degraded` refuses signing and serves runtime APIs only through the ported frozen legacy table; V16 blobs stay outside `md*.bin` | §3.4 |
 | CF-4 | Policy-refusal parity depends on the WebSocket library | **Accepted.** tokio-tungstenite session behind `RpcClientT`; Python's classification ported from extracted constants; `FakeNode` header tests | §3.2.3, §3.15 |
 | CF-5 | `w3f-bls` patch: the drop experiments cannot work; ciphertext equivalence unproven | **Accepted.** Patch mandatory; lock test and `rtao doctor`; PR-U4 gated on a localnet pallet-drand decrypt test | §1.3, §11.4 test 16 |
 | CF-6 | btauth retention check moved; verify-error mapping; wrapper default configurable | **Accepted.** Retention check at `Verifier::new` registered as D-009; core `Err` → `MalformedAuth("invalid hotkey address or signature encoding")`; `WrappedPolicy` configurable, default parity | §7.1 |
@@ -5898,7 +5976,7 @@ Actual workflow files must follow the bounded client scope of PLAN.md §9.7 befo
 | 3 | The chain requires equality with `CommitRevealWeightsVersion` "to gate runtime upgrades"; the arg is "the client (bittensor-drand) version"; the commit is `Pays::No` | `UP/pallets/subtensor/src/subnets/weights.rs:300-345`; `UP/pallets/subtensor/src/macros/dispatches.rs:1946-1948` |
 | 4 | Core predicate `> MAX_TEMPO_U64`; pallet predicate `> tempo`; pallet counter cap `tempo + 1`; deferral via `PendingEpochAt = block + 1` + `EpochDeferred`; Null epochs cap the per-block count at 1; `get_next_epoch_start_block` ignores deferral and the safety net | `CORE/timelock/epoch_schedule.rs:45-58`; `UP/pallets/subtensor/src/coinbase/run_coinbase.rs:356-431, 1224-1238, 1240-1274` |
 | 5 | V14 parse yields `apis = Vec::new()`; V16 is rejected | `CORE/runtime/mod.rs:163-199` |
-| 6 | Python fetches V15 and falls back to `state_getMetadata` only on the missing-method needle; disk cache `md1-<chain16>-<spec>.bin`, `STMD` + `<IB`, prune glob `md*.bin`, 8 files | `PY/_transport/runtime.py:33-39, 55-122, 292-312` |
+| 6 | Python fetches V15 and falls back to `state_getMetadata` only on the missing-method error or an absent-V15 result; disk cache `md1-<chain16>-<spec>.bin`, `STMD` + `<IB`, prune glob `md*.bin`, 8 files | `PY/_transport/runtime.py:33-39, 55-122, 292-312` |
 | 7 | Pre-V15 and `Vec<u8>` runtime APIs go through a frozen legacy table | `PY/_transport/runtime_api.py:1-13, 95-171, 167` |
 | 8 | jsonrpsee rejects a handshake as `Rejected { status_code }`; tungstenite exposes `Error::Http(Box<Response<Option<Vec<u8>>>>)` and `CloseCode::Policy` = 1008 | `REG/jsonrpsee-client-transport-0.26.1/src/ws/mod.rs:207, 522-524`; `REG/tungstenite-0.28.0/src/error.rs:69-75`, `src/protocol/frame/coding.rs:154, 214, 245` |
 | 9 | `RpcClientT` (`request_raw`, `subscribe_raw`); subxt-rpcs default features pull jsonrpsee; `Error::Client(Box<dyn Error>)`; `LegacyRpcMethods::new(RpcClient)`; `RpcConfig` | `REG/subxt-rpcs-0.51.1/src/client/rpc_client_t.rs:26-80`; `Cargo.toml [features]`; `src/lib.rs:45-52, 69-94`; `src/methods/legacy.rs:24-26` |

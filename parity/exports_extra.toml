@@ -1845,3 +1845,24 @@ pinning_tests = [
   "rtao_cli::wallet_commands::creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payload",
   "rtao_cli::wallet_commands::list_retains_partial_wallets_without_deriving_or_unlocking_secret_files",
 ]
+
+[[export]]
+python = "bittensor.UnsignedExtrinsic"
+home = "rtao_client::UnsignedExtrinsic"
+reason = "The public prepared value is available through rtao::client with the client feature. Immutable private fields and read-only signing views replace Python mutable dataclass construction; Serialize/to_json exports the exact 17-field source schema. UntrustedUnsignedExtrinsic and Client::import_unsigned_json authenticate every signing view against independent chain/runtime inputs before yielding a prepared value. This is a namespaced Rust API and strict import disposition, not a rtao root alias or a fresh Python interop execution claim."
+source = "sdk/python/bittensor/__init__.py"
+pinning_tests = [
+  "rtao_client::offline::python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_sizes",
+  "rtao_client::offline::every_required_field_missing_unknown_duplicate_and_numeric_overflow_refuse",
+  "rtao_client::offline::altered_call_identity_era_payload_views_parts_and_hashes_refuse",
+]
+
+[[export]]
+python = "bittensor.SigningContext"
+home = "rtao_signer::SigningContext"
+reason = "The public metadata-proof context is available through rtao::signer with the tx feature. Metadata bytes, transaction version and genesis remain explicit fields; ChainInfo carries the original spec version/name and SS58 prefix plus signer display constants. Authenticated preparation/import produce this eager context and SigningRequest borrows it for signer consumers. This is a namespaced typed context disposition, not a rtao root alias, identical Python constructor/serialization shape, or a completed hardware/Python comparison."
+source = "sdk/python/bittensor/__init__.py"
+pinning_tests = [
+  "rtao_client::submission::metadata_verifying_signer_receives_a_proof_consistent_with_the_signed_payload",
+  "rtao_client::submission::signer_display_constants_define_the_signed_digest_through_arc_delegation",
+]

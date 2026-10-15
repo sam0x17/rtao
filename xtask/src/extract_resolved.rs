@@ -43,6 +43,9 @@ mod specs;
 #[path = "extract_py_tables.rs"]
 mod py_tables;
 
+#[path = "extract_legacy_runtime_api.rs"]
+mod legacy_runtime_api;
+
 #[path = "extract_root_claim_fixtures.rs"]
 mod root_claim_fixtures;
 
@@ -2591,6 +2594,7 @@ fn outputs(root: &Path) -> Result<Vec<(&'static str, Vec<u8>)>> {
     // remains in Literal::Dict entry arrays and must never be sorted.
     tables.sort_all_objects();
     let mut generated = catalog::outputs(root, &pins, &tables)?;
+    generated.extend(legacy_runtime_api::outputs(root, &pins)?);
     generated.extend(root_claim_fixtures::outputs(root, &pins)?);
     generated.extend(hyperparams::outputs(&tables, &settings)?);
     generated.extend(owner_map::outputs(root, &pins, &tables)?);
