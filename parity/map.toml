@@ -951,12 +951,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated Python module 
 
 [[file]]
 py = "sdk/python/bittensor/basket_index.py"
-rs = ["`rtao-cli` `root_helpers::basket_index`"]
+rs = ["crates/rtao-cli/src/root_helpers/basket_index.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "caa7830f5183fe3e22f8cacb8c130be0b86d8a18"
 synced_tag = "v478"
 milestone = "M6"
-notes = "CLI-only display pricing for basket funds, and the fallback for nodes without `BetaBasketRuntimeApi.get_all_beta_pricing` (API v3) and for historical blocks; `root list --json` emits `basket_index` through `index_level()` (`cli/commands/root.py:23, 156, 240`) and `cli/root_helpers.py:18` uses `staker_yield`, so it cannot be dropped; not in `rtao-catalog`, which every neuron build compiles"
+notes = "Source reconciliation 2026-10-15: complete authenticated 361-line module, native helper and real root CLI consumers independently reviewed. Frozen/provisional divisors, spot haircut removal, clamped entitlement marks, total-return fallback, chain-first mixed boards, dust-weighted live indexes and signed historical age retain the finite typed production behavior. Native Fund/Normalized values replace arbitrary dict coercion and in-place alias mutation; monetary inputs remain checked u64, extra/preexisting fallback keys and malformed/nonfinite Python records are outside this API. Five existing fixture bodies cover series boundaries, conservation, migration rates, canonical precedence and dust; strengthen the dust case with distinct prices and the exact 0.1 cutoff so it detects inclusion/weighting regressions. Exact total-return weighting, zero-chain-index and whole-Python-dict serialization coverage is not established. The separate historical builder remains pending. Source/format review is complete; the strengthened fixture awaits hosted execution and no fresh Python/oracle result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/basket_index_data.py"
@@ -1050,93 +1050,93 @@ notes = "Source reconciliation 2026-10-15: complete authenticated command source
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/__init__.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "3d97ad96c4355f95960a23728c4e5952628132f6"
 synced_tag = "v478"
 milestone = "M7"
-notes = "group root, `claim-deposit` alias `:51`"
+notes = "Source reconciliation 2026-10-15: Complete authenticated 53-line module reviewed, including all imports, two subapps, six command-family registrations, root help behavior and claim-deposit alias to the actual generated evm_withdraw command. Native Clap construction, feature-gated installed routing and 25-leaf/source-tree fixture bodies are source-traced. Group registration reconciliation does not certify all imported command bodies, exact Rich/Click help rendering, current hosted tests or milestone closure."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/_shared.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm.rs","crates/rtao-cli/src/commands/evm/keys.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "a5689ac25cc006e86809ac52818e083d6ca5f969"
 synced_tag = "v478"
 milestone = "M7"
-notes = "shared helpers, `key`/`stake` subapps"
+notes = "Source reconciliation 2026-10-15: Complete authenticated 287 lines and all 12 definitions reviewed. Exact empty RPC overrides fall back to the configured network; whitespace/nonempty overrides retain real resolver behavior. Public key references/metadata, password-file and Keychain precedence, late unlock, typed async RPC/error handling, preparation diagnosis, source-shaped review fields and key JSON projections have actual native homes. Shared submission preserves preview identity checks, dry-run/confirmation boundaries, single send and hash-bearing unknown-fate recovery. Native u64 rao/exact parser, typed addresses, bounded secret/calldata/RPC acquisition and structured output are explicit adaptations. Six current repair fixtures are authored; hosted execution, real secrets/receipt/terminal integration and milestone acceptance remain unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/address.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "fddc33ddc279c43d7e423b21dc635bae817665b8"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`mirror`, `pubkey`, `deposit-address`"
+notes = "Source reconciliation 2026-10-15: Complete authenticated 90 lines, all four definitions and all three installed routes reviewed. Mirror, pubkey and deposit-address preserve full public-key identity, source hash/truncation algorithms, defaults, human versus machine field names and guidance. Native AccountId display is canonical prefix 42; Clap and structured diagnostics replace dynamic Typer/Rich objects. These read routes require no native client, private key or EVM RPC. Existing lower address vectors and installed source-tree fixtures were source-inspected; dedicated CLI output execution, fresh oracle and milestone acceptance remain unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/association.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm/association.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "84a0f6e45fe5998e20a05510f8e0f0e75f45d996"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`associate`"
+notes = "Source reconciliation 2026-10-15: complete authenticated associate registration/options and proof-to-native-intent path reviewed. D-051 preserves explicit pre-unlock proof consent, an unsigned proof-required dry run and effective proxy/multisig/external dispatch identity; the native finalized Substrate block and checked u16/u64 arguments are explicit adaptations. Exact EIP-191 proof bytes feed the ordinary independently reviewed native transaction, with swapped-key refusal. Authored consent/signature/identity/boundary fixtures were inspected; current execution and real signer/network behavior remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/contracts_cmd.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm/contracts.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "a2fec29b926c5e3b2df132805ffe717236dd4ddc"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`deploy`"
+notes = "Source reconciliation 2026-10-15: complete authenticated 68-line register/deploy module, real artifact/constructor consumers, shared transaction path and substantive fixtures reviewed. Required artifact and variadic constructor inputs, optional key/RPC/value, exact creation calldata, basename summary and receipt mirror have concrete native homes. Exact empty --value-tao now follows the source zero-value branch. Injected valid-artifact fixtures capture exact prepared bytes/value and retain dry-run, confirmation and invalid/overflow refusal. Native bounded regular-file/ABI/data acquisition, checked u64 balances and ordinary consent/once-only/unknown-fate protections remain. Multiple-invalid-input diagnostic precedence and exact dependency/help/terminal wording are native adaptations. Source-only reconciliation does not establish current hosted, real deployment or fresh oracle results."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/keys.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm/keys.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "5bd75ff7f952c3fa746f1ced32b3b23bb3e91426"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`key new/import/export/list/show`"
+notes = "Source reconciliation 2026-10-15: complete authenticated 239-line file and all five command handlers, actual password/key/clipboard consumers and substantive fixture bodies reviewed. New/import defaults, hidden source selection, public list/show records, encrypted metadata export and explicit raw scalar output have concrete native homes. Exact empty --out now selects stdout; nonempty raw destinations still refuse before acquisition. Injected export regressions assert selected backend operations and no writes. Native secret handling, signing-domain password precedence, bounded files/KDFs, atomic owner-only storage, name validation and abort semantics remain. Exact error/help/terminal formatting and malformed-source error precedence are not claimed identical. NativeKeys and underlying library sources retain separate attribution. Source-only reconciliation does not establish current hosted, real clipboard/KDF or hardware results."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/money.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "85f22716ada1bc1810c194e27774146c78cbfdb1"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`balance`, `fund`, `send`, `send-to-ss58`"
+notes = "Source reconciliation 2026-10-15: Complete authenticated 147 lines and all five definitions reviewed. Balance preserves exact wei tokens, native checked/dust-truncated rao, decimal TAO text and mirror fields. Native fund feeds actual FundEvmKey and shared native review/envelopes; source empty or all companions under --all now normalize through one helper shared by admission and actual request construction. Ordinary numeric grammar and amount conflicts remain native/checked. Send and send-to-ss58 use EVM value, exact destination encoding and the shared EVM preview/consent/late-unlock/single-submit path. Authored regressions exercise real Clap/global resolution and actual generated intent construction without wallets or sockets. Full command execution, fresh oracle and milestone closure are unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm/precompiles.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "cdbc8d2a2c8c4ec7a9a84d046a35952d301fe1a6"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`precompiles`, `abi`, `call`"
+notes = "Source reconciliation 2026-10-15: complete authenticated 228-line module and six definitions reviewed with actual native target/ABI/encoding/read-write routing and substantive fixture bodies. Discovery keeps native index order/deprecation, full raw ABI output, stable function listing, first-overload selection, scalar-or-array read results and caller-role/owner notices; canonical signatures extend selection while metadata follows the resolved ABI name. Exact empty --value-tao now means zero and empty custom --abi takes the missing-interface refusal. Injected production-path fixtures capture zero/native-boundary values and verify views avoid the write/key boundary. Generated catalog and repaired integer/fromhex consumers supersede historical static gaps. Native typed address/ABI validation, bounded input/decode acquisition, u64 native amounts and strict RPC DATA remain; generic uint256 stays full width. Source-only reconciliation does not establish current hosted, real signed/custom-contract or fresh oracle results."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/setup.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm/setup.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "c5ba0b6ea1b439db781898e12d9ff42508305e88"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`networks`, `config`, `doctor`, `setup-localnet`"
+notes = "Source reconciliation 2026-10-15: complete authenticated four-route file and nested submit operation reviewed against network/config/doctor/native setup producers and sixteen substantive fixtures. Preserves ordered machine records, MetaMask/Remix/Hardhat fields, doctor error/default-key/RPC behavior and chain-ID/whitelist plans. Native endpoint quoting, checked quantities, Root intent composition, scoped aggregate consent, exact-call/shared review/hooks and sequential failure recovery are explicit adaptations. setup-localnet configures an already selected node and starts no infrastructure. Source-only review; hosted execution, real RPC/Sudo and hardware behavior remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/stake.py"
-rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+rs = ["crates/rtao-cli/src/commands/evm.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "298a0c8b32d77046c3ad5dcb65d91428fd20c95d"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`stake add/remove/show`"
+notes = "Source reconciliation 2026-10-15: Complete authenticated 135 lines and all four definitions reviewed. Actual staking-v2 ABI encodes hotkey/rao/netuid for add/remove and hotkey/mirror/netuid for getStake; source-shaped JSON and native alpha display are present. Alpha-only removal uses from_alpha and rejects root before EVM backend calls, while source-permitted root add remains. Native checked u64 monetary grammar, typed netuids, generic ABI budgets and zero attached value remain. Injected actual write-handler regressions assert exact ABI words at ordinary/u64-max values, root-add, root-alpha refusal, dry-run and no private backend; shared policy and unknown-fate behavior are retained. Read-show/live execution, fresh oracle and milestone acceptance remain unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/extension.py"
@@ -2720,7 +2720,7 @@ kind = "extracted"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M2"
-notes = "Source audit 2026-10-15: COVERED_PALLETS, RAW_ONLY and related declarations are authenticated/extracted into rtao_catalog::py::PYTHON_TABLES; tests/specs.rs shared_python_declaration_index_round_trips_every_shared_value_and_span checks values/provenance. The license gate still needs truthful per-table producer provenance before this extracted row is reconciled."
+notes = "Source audit 2026-10-15: complete authenticated 534-line file independently reviewed. Coverage, namespace, unit and native regeneration/drift contracts have actual tooling homes beyond the two extracted declarations; the generated py.rs origin is present. Add production parity_catalog guards bridging classified names to pinned metadata, rejecting Unknown metadata classifications and Python-strip-blank chain/dispatch prose, with targeted stale/new/heuristic/Unknown/Unicode fixtures. These new guards and fixtures await hosted execution and follow-up source review, so this whole-file row remains pending. Native pinned Rust regeneration replaces Python text emission; optional live drift and fresh Python/oracle execution remain unclaimed."
 
 [[file]]
 py = "sdk/python/codegen/emit_namespaces.py"
@@ -2796,21 +2796,21 @@ notes = "Source audit 2026-10-15: ci/oracle/record.py does not run this builder;
 
 [[file]]
 py = "sdk/python/scripts/record_golden.py"
-rs = ["Optional hosted xtask record through ci/oracle/record.py; committed fixture readers in rtao-testkit"]
+rs = ["Optional upstream producer invoked by ci/oracle/record.py and xtask/src/record.rs; rtao-testkit loaders and recorded-root replay are separate consumers"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "f8de6bddb01df20c4b1948ee0ba880debb9c2879"
 synced_tag = "v478"
 milestone = "M2, M6"
-notes = "Source audit 2026-10-15: ci/oracle/record.py invokes the pinned golden/shape recorder. Optional hosted producer wiring exists, but no freshly recorded artifacts have been adopted and no manifested oracle corpus is present; product decoder/shape tests consume committed upstream fixtures separately."
+notes = "Source reconciliation 2026-10-15: complete authenticated 473-line producer, all four definitions and six case tables reviewed against ci/oracle/record.py, xtask record and actual native fixture readers. This oracle-only source is reused upstream, not ported to a Rust recorder. The optional wrapper preserves localhost guarding, filters six named tables by live metadata and records omissions; fixed nested compositions and the real Alice transfer remain mandatory. Output retains all 17 authored sections, fake-signature byte cases, receipt-pinned reads and separate unpinned payment shape; earlier codec/metadata capture is not one immutable runtime snapshot. Native Golden loaders and RTAO_RECORDED_ROOT replay are separate consumers. The optional workflow is deferred by Q30; identity/checksum/spec checks do not establish native wire replay. No producer run, fresh manifested recording, current differential/oracle acceptance, complete pytest port or milestone closure is claimed."
 
 [[file]]
 py = "sdk/python/scripts/record_shape_corpus.py"
-rs = ["Optional hosted xtask record through ci/oracle/record.py; committed fixture readers in rtao-testkit"]
+rs = ["Optional upstream producer invoked by ci/oracle/record.py and xtask/src/record.rs; rtao-testkit loaders and recorded-root replay are separate consumers"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "dc205be8269ccde3e348908acee71819bc7fc0d9"
 synced_tag = "v478"
 milestone = "M2, M6"
-notes = "Source audit 2026-10-15: ci/oracle/record.py invokes the pinned golden/shape recorder. Optional hosted producer wiring exists, but no freshly recorded artifacts have been adopted and no manifested oracle corpus is present; product decoder/shape tests consume committed upstream fixtures separately."
+notes = "Source reconciliation 2026-10-15: complete authenticated 208-line producer, both classes and all seven function/method definitions reviewed against the actual separate-process wrapper invocation, xtask integrity checker and native ShapeCorpus/recorded-root consumers. This oracle-only source is reused upstream, not replaced by a Rust byte generator. Deterministic per-type candidates cover a minimum of three attempts with a 16 top-level enum-variant cap, depth/sequence/array limits and production batch-decode outputs; failed attempts are omitted when a type has any success, and producer output enforces no coverage threshold. Exact schema and default JSON behavior remain upstream. Imported unwatched conftest golden()/golden_codec() implementations were unavailable in the retained snapshot, so fresh-metadata selection/cache behavior is not inferred; the optional image checks out the full exact commit. Native replay adds stricter registry/coverage/skipped-reason assertions and remains separate. Q30 leaves the workflow deferred. No execution, fresh corpus, all-variant coverage, differential/oracle acceptance or milestone closure is claimed."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_null_consensus.py"

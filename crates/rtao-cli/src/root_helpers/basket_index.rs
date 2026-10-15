@@ -340,14 +340,28 @@ mod tests {
         assert_eq!(outputs[1].stake_index, 4.0);
     }
     #[test]
-    fn dust_does_not_pull_live_weighted_index() {
-        let mut a = row("a");
+    fn dust_does_not_pull_live_weighted_index() -> Result<(), &'static str> {
+        let (name, baseline, _, _) = BASELINES.first().ok_or("pinned table is empty")?;
+        let frozen_level = index_level(None);
+        let mut a = row(name);
         let mut b = row("b");
+        a.nav_tao = 0.09;
         a.spot_nav_tao = 0.09;
+        a.beta_price_tao = baseline * frozen_level * 10.0;
+        b.nav_tao = 5.0;
         b.spot_nav_tao = 5.0;
-        let (level, outputs) = normalize_positions(&[a, b]);
-        assert!((level - index_level(None)).abs() < 1e-12);
+        let (level, outputs) = normalize_positions(&[a.clone(), b.clone()]);
+        assert!((outputs[0].display_price_tao - frozen_level * 10.0).abs() < 1e-12);
+        assert!((level - frozen_level).abs() < 1e-12);
         assert_eq!(outputs.len(), 2);
-        assert_eq!(normalize_positions(&[]).0, index_level(None));
+        // The exact cutoff participates, so the two distinct prices now
+        // determine a weighted average rather than the latest frozen level.
+        a.nav_tao = 0.1;
+        a.spot_nav_tao = 0.1;
+        let (level, _) = normalize_positions(&[a, b]);
+        let expected = (0.1 * frozen_level * 10.0 + 5.0 * frozen_level) / 5.1;
+        assert!((level - expected).abs() < 1e-12);
+        assert_eq!(normalize_positions(&[]).0, frozen_level);
+        Ok(())
     }
 }
