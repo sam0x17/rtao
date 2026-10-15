@@ -30,11 +30,17 @@ wording, and recovery receipt parsing for both canonical hex and legacy arrays.
 It also retains failed receipt events for native multisig/recovery consumers
 under D-023, while preserving Python result JSON field presence.
 
-Latest report adoption is `fc91-report-adoption.json`, from successful run
-38786488779. That report records 220/357 reconciled files. The next reviewed
-source batch reaches 228/357, with 129 pending files and 20 pending e2e mappings;
-its hosted report refresh and tests remain pending. Strict M8 completeness
-remains off. No milestone has been accepted.
+Report refresh [38789498154](https://github.com/sam0x17/rtao/actions/runs/38789498154)
+succeeds at clean `56469a09a2013c959035cd7303f7d2a4e19ac71a`.
+Authenticate the 55,264-byte archive, four regular report members and 23
+unchanged dependency inputs. The matrix changes exactly the eight reviewed
+file rows: 228/357 reconciled, 129 pending, with 20 pending e2e mappings.
+Role inventories and host flags are unchanged; graph changes are only CPU,
+time and source provenance. All compatibility, runtime and oracle claims
+remain unchanged. Proofs are `564-report-review.json` and
+`564-report-adoption.json`; no archive or extraction directory is retained.
+Combined hosted tests remain pending. Strict M8 completeness remains off.
+No milestone has been accepted.
 
 The batch restores command-specific timelock help/prompt guidance; adds async
 snapshot sibling, cached-symbol and balance helpers; preserves exact classifier
