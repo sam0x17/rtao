@@ -242,7 +242,7 @@ impl<T> StateStore<T> {
 }
 impl<T: Serialize + Send + Sync + 'static> StateStore<T> {
     /// Serialize a consistent state view and atomically install a checkpoint.
-    /// The complete JSON envelope must fit [`MAX_CHECKPOINT_BYTES`].
+    /// The complete JSON envelope must fit the 64 MiB checkpoint limit.
     pub async fn save(&self, state: &StateCell<T>, block: u64) -> Result<(), StateError> {
         let inner = Arc::clone(&self.inner);
         let state = state.clone();
@@ -281,7 +281,7 @@ impl<T: DeserializeOwned + Send + 'static> StateStore<T> {
     /// Missing files yield `None`. Damaged JSON falls back to a previous
     /// generation. Identity/schema failures fail immediately, since recovery
     /// must never silently adopt a different application or neuron identity.
-    /// Every generation must be a regular file within [`MAX_CHECKPOINT_BYTES`].
+    /// Every generation must be a regular file no larger than 64 MiB.
     pub async fn load(&self) -> Result<Option<LoadedState<T>>, StateError> {
         let inner = Arc::clone(&self.inner);
         tokio::task::spawn_blocking(move || {
