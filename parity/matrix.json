@@ -2334,7 +2334,8 @@
         "tests": [
           "rtao_cli::generated_commands::initially_expired_future_and_difficulty_invalid_pow_prepare_before_signing",
           "rtao_cli::generated_commands::expired_pow_dry_run_never_enters_public_mining_or_unlocks",
-          "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock"
+          "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock",
+          "rtao_cli::subnets_commands::unsupported_pow_root_gpu_and_mining_preview_refuse_before_connection"
         ]
       }
     ],
@@ -10373,7 +10374,7 @@
       {
         "name": "proxies",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "quote_stake",
@@ -10423,7 +10424,7 @@
       {
         "name": "root_claim_threshold",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake",
