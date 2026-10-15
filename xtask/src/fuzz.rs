@@ -17,6 +17,7 @@ const TARGETS: &[&str] = &[
     "keyfile_detection",
     "keyfile_json",
     "metagraph_view",
+    "unsigned_extrinsic_json",
 ];
 
 fn seed(directory: &Path, repository: &Path, target: &str) -> Result<()> {
