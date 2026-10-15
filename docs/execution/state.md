@@ -55,6 +55,16 @@ no fuzz campaign ran. The remaining 10 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Latest normal hosted run
+[38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
+at `93f562c` passes compilation, strict Clippy and the five other normal jobs.
+Parity rejects the lock-settings fixture because its dynamic dispatch does
+not explicitly reference the three Rust classes required by the pending gate.
+The fixture now matches MoveLock, SetPerpetualLock and SetRejectLockedAlpha
+and asserts their decoded fields before checking bytes and previews. The gate
+is unchanged. Tests, doctests and docs builds were not reached. Bounded failure
+evidence is retained privately as `check-38705671132.json`.
+
+Earlier normal hosted run
 [38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
 at `1c807e1` fails compilation in check and features because `SimSwapResult`
 needs client `ReadValue` registration. The existing model already derives

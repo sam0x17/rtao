@@ -40,6 +40,16 @@ identity. These source relationships do not prove runtime conformance.
 ## Remaining acceptance work
 
 Latest normal run
+[38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
+at `93f562c` passes compilation, strict Clippy and all five other normal jobs.
+Parity's existing evidence gate requires explicit Rust class references for
+the three lock settings/move operations, whose shared fixture uses dynamic
+dispatch. Typed variant/field assertions now supplement its existing bytes,
+policy and preview assertions. The checker is unchanged. Nextest, doctests
+and docs builds were not reached; bounded evidence is retained privately as
+`check-38705671132.json`.
+
+Earlier normal run
 [38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
 at `1c807e1` fails check/features compilation on the missing `ReadValue`
 registration for the existing DecodeAsType `SimSwapResult` model. The client

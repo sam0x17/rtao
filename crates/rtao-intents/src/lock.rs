@@ -572,6 +572,24 @@ mod tests {
             ),
         ] {
             let intent = crate::AnyIntent::from_tool(op, args)?;
+            match &intent {
+                crate::AnyIntent::MoveLock(typed) => {
+                    assert_eq!(typed.netuid, NETUID);
+                    assert_eq!(typed.destination_hotkey_ss58.account(), HOTKEY);
+                    assert_eq!(
+                        typed.destination_hotkey_ss58.to_string(),
+                        HOTKEY.to_ss58(110)
+                    );
+                }
+                crate::AnyIntent::SetPerpetualLock(typed) => {
+                    assert_eq!(typed.netuid, NETUID);
+                    assert_eq!(typed.enabled, expected[4] == 1);
+                }
+                crate::AnyIntent::SetRejectLockedAlpha(typed) => {
+                    assert_eq!(typed.enabled, expected[2] == 1);
+                }
+                other => anyhow::bail!("unexpected lock settings variant: {other:?}"),
+            }
             let dynamic = intent.as_dyn();
             assert_eq!(dynamic.summary_dyn(), summary);
             let built = dynamic
