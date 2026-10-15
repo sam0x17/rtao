@@ -98,6 +98,17 @@ fn documentation(attrs: &[syn::Attribute]) -> Result<String> {
     Ok(lines.join("\n"))
 }
 
+fn field_documentation_matches(actual: &str, source: &str) -> bool {
+    // The interface generator renders these two literal catalog placeholders
+    // as HTML entities so rustdoc shows the text instead of parsing a tag.
+    // Require that exact representation; do not decode arbitrary entities or
+    // normalize whitespace, punctuation, other tags or substantive wording.
+    let expected = source
+        .replace("<intent name>", "&lt;intent name&gt;")
+        .replace("<name>", "&lt;name&gt;");
+    actual == expected
+}
+
 fn serde_values(attrs: &[syn::Attribute]) -> Result<BTreeMap<String, Value>> {
     let mut output = BTreeMap::new();
     for attr in attrs.iter().filter(|attr| attr.path().is_ident("serde")) {
@@ -432,10 +443,12 @@ fn check_interfaces(file: &syn::File, defaults: &syn::File) -> Result<()> {
                 field.name
             );
             ensure!(
-                documentation(&generated.attrs)?
-                    == properties[field.name]["description"]
+                field_documentation_matches(
+                    &documentation(&generated.attrs)?,
+                    properties[field.name]["description"]
                         .as_str()
                         .unwrap_or(field.name),
+                ),
                 "intent {}.{} field documentation differs from Python",
                 spec.name,
                 field.name
@@ -1426,6 +1439,48 @@ mod tests {
         Ok(())
     }
     #[test]
+    fn field_docs_require_exact_rustdoc_placeholder_escaping() {
+        for (source, rendered) in [
+            (
+                "JSON object {\"op\": <intent name>, ...args}.",
+                "JSON object {\"op\": &lt;intent name&gt;, ...args}.",
+            ),
+            (
+                "JSON object {\"op\": <name>, ...args}.",
+                "JSON object {\"op\": &lt;name&gt;, ...args}.",
+            ),
+            (
+                "Use <intent name> or <name>.",
+                "Use &lt;intent name&gt; or &lt;name&gt;.",
+            ),
+            ("Amount & fraction < 1.", "Amount & fraction < 1."),
+            ("Already &lt;name&gt;.", "Already &lt;name&gt;."),
+        ] {
+            assert!(field_documentation_matches(rendered, source));
+            for mutation in [
+                format!("{rendered} "),
+                rendered.replacen(".", "!", 1),
+                rendered.replacen("&lt;", "&amp;lt;", 1),
+                rendered.replacen("&gt;", ">", 1),
+                rendered.replacen("name", "other", 1),
+            ] {
+                if mutation != rendered {
+                    assert!(
+                        !field_documentation_matches(&mutation, source),
+                        "accepted {mutation:?}"
+                    );
+                }
+            }
+            if source != rendered {
+                assert!(!field_documentation_matches(source, source));
+            }
+        }
+        // No general HTML entity decoding: these pairs have distinct rendered
+        // or literal wording and must never become equivalent through a gate.
+        assert!(!field_documentation_matches("a & b", "a &amp; b"));
+        assert!(!field_documentation_matches("<other>", "&lt;other&gt;"));
+    }
+    #[test]
     fn interface_mutations_reject_requiredness_defaults_and_signer_drift() -> Result<()> {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
@@ -1466,6 +1521,9 @@ mod tests {
                 "Different field documentation.",
                 1,
             ),
+            source.replacen("&lt;intent name&gt;", "<intent name>", 1),
+            source.replacen("&lt;intent name&gt;", "&lt;other name&gt;", 1),
+            source.replacen("&lt;name&gt;", "&amp;lt;name&amp;gt;", 1),
         ] {
             ensure!(
                 changed != source,
