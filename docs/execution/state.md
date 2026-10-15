@@ -16,6 +16,18 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38769405520](https://github.com/sam0x17/rtao/actions/runs/38769405520)
+at `6480626` passes every ordinary parity layer, including all 63 divergence
+declarations with the exact optional D031 deferral. Main Clippy then fails
+compiling the new unit fixture: `tempfile` is not an xtask dependency. Extract
+the existing document validator and call that same function from the fixture,
+preserving all cases without temporary files or a new dependency. The transfer
+lifecycle target has no reported compiler diagnostic in the completed Clippy
+log; execution remains unverified. Supply, MSRV, no-host and semver pass;
+features is still active at inspection. Proof: `check-38769405520.json`.
+This small compiler correction is pushed separately from the later source
+batch so ordinary hosted validation can proceed while that batch is reviewed.
+
 Normal run [38767926902](https://github.com/sam0x17/rtao/actions/runs/38767926902)
 at `bbfa09a` has failed its main check. Supply, MSRV, no-host and semver pass;
 features remains active at 16:28 UTC. The earlier parity check now passes the
