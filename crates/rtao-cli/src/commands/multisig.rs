@@ -201,9 +201,9 @@ fn resolve_refs(ctx: &AppContext, refs: &[String]) -> Result<Vec<AccountId>, Cli
     }
     Ok(result)
 }
-fn collect_refs(
-    raw: Option<&str>,
-    repeated: Option<clap::parser::ValuesRef<'_, String>>,
+fn collect_refs<'a>(
+    raw: Option<&'a str>,
+    repeated: Option<clap::parser::ValuesRef<'a, String>>,
 ) -> Vec<String> {
     let mut seen = BTreeSet::new();
     raw.into_iter()
