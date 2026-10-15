@@ -888,12 +888,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated four-protocol 
 
 [[file]]
 py = "sdk/python/bittensor/_transport/rpc.py"
-rs = ["`rtao_rpc::Session` + generated `py_rpc.rs`"]
+rs = ["crates/rtao-rpc/src/session.rs","crates/rtao-rpc/src/session/handshake.rs","crates/rtao-rpc/src/types.rs","crates/rtao-rpc/src/policy.rs","crates/rtao-rpc/src/subscription.rs","crates/rtao-rpc/src/generated/py_rpc.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "132871ca8047858efc2d6c0991dcf818312b5303"
 synced_tag = "v478"
 milestone = "M1"
-notes = "classifier `:84-135, 190-241`; non-idempotent set `:66`; resend `:686-725`; no frame whose caller is gone is transmitted `:495-504, 549, 713-717` (§3.2.1); URL sanitizing `:136-187`; constants `:52-66` extracted (§3.2)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 812-line module, all 44 definitions and actual native consumers reviewed. Central policy handling now covers paced replay/discovery setup before retry accounting; bounded refusal capture retains the original TLS stream and verified WebSocket context. HTTP diagnostics acquire at most 4096 decoded bytes under 64 KiB wire processing, 1024-byte chunk lines and the original absolute handshake deadline. Optional capture failure preserves known status/headers and terminal 403/429; ambiguous/malformed framing supplies no detail. This is bounded best-effort capture, not Python full-body acquisition/validation. Public typed methods, normalized IDs, ordered per-member batch results, explicit session lifecycle, read replay allowlist, caller liveness/epochs and exact-hash author fate are native API policies. Public pacing, frame/inflight limits, shared queue budgets and D-056 diagnostic escaping remain explicit. Cancellation after a transmitted subscribe but before acknowledgement can lose its unknown remote ID in both implementations; no stronger cleanup guarantee is claimed. Exact 2048/64/256 queue transitions and several malformed/full-queue paths still lack dedicated runtime evidence. Current functional execution, complete pytest/oracle coverage, interop and milestone acceptance remain unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/runtime.py"
@@ -1914,12 +1914,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated module and nat
 
 [[file]]
 py = "sdk/python/bittensor/evm/precompiles.py"
-rs = ["`rtao_evm::Precompiles`"]
+rs = ["crates/rtao-evm/src/precompiles.rs","crates/rtao-evm/src/precompile_catalog.rs","crates/rtao-cli/src/commands/evm/precompiles.rs","xtask/src/extract_precompiles.rs","crates/rtao-catalog/src/py.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "ce5b43be2cb6c1477b970858bb9992bff348855e"
 synced_tag = "v478"
 milestone = "M7"
-notes = "catalog of addresses + ABIs (§6.6)"
+notes = "Source reconciliation 2026-10-15: reuse the complete authenticated 389-line audit and all 21 SDK ABI identities, inventorying 352 function declarations without claiming 352 executed selectors. Both prior blockers are adopted: canonical CLI selections derive notices from resolved Function.name, and authenticated extraction of PRECOMPILES, STANDARD_PRECOMPILES, DEPRECATED_FUNCTIONS, CALLER_ROLES and _RAO_PARAM_NAMES drives the production native catalog and exact source-table fixture. Actual Precompile/PRECOMPILES/helpers replace the prospective Precompiles type. Catalog and raw ABI order, first bare-name overload, additive canonical signatures and source hint membership are preserved. Native static u16 catalog, typed JSON/Alloy values, structured diagnostics, sorted preview keys and bounded ABI resource checks are explicit API adaptations. Native rao input admission uses checked u64; generic contract encoding and decoded integers retain full Solidity widths. Hosted generated output adoption is authenticated; current functional test acceptance, fresh Python/oracle coverage, all-selector execution, runtime ABI regeneration, live agreement and milestone closure remain unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/evm/rpc.py"

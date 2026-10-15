@@ -81,8 +81,29 @@ Complete substrate/interface reviews add two qualified source dispositions;
 the source map and generated matrix agree at 282 reconciled and 75 pending.
 Native read/write API ownership, raw pool-only submission and map-presence
 capability/coverage limits are documented.
-The RPC source row stays pending: fragmented HTTP rejection bodies can still
-lose diagnostic text, and that separate repair is being prepared.
+The next source checkpoint repairs fragmented HTTP rejection-body diagnostics.
+It retains the complete TLS transport through rejection and preserves the actual
+verified WebSocket on success. Capture keeps at most 4096 entity bytes under a
+64 KiB wire budget, 1024-byte chunk lines and the original handshake deadline;
+known HTTP status/policy headers survive optional capture failure. Eight private
+unit fixtures and one ws/wss integration fixture cover fragmentation, buffered
+frames, cancellation, deadlines, framing and resource limits. These fixtures are
+authored and source-reviewed; compilation and execution remain pending.
+
+Complete precompile and RPC source dispositions bring the source map to
+284 reconciled and 73 pending. The published generated matrix remains at
+282 until the next hosted refresh. Precompile table/notice blockers are resolved
+by authenticated adopted output and source changes; full selector/runtime/oracle
+execution remains unclaimed. RPC retains explicit typed/budget/replay policies
+and the inherited pre-ack subscription-cancellation limitation.
+
+The retained TLS stream needs a direct edge to the existing tokio-rustls
+package. Both workspace and fuzz locks await bounded hosted regeneration;
+the hand-authored lock candidate was excluded from source adoption. The existing
+lock job now emits both locks, rejects changed package identities or unreviewed
+edges, and shares one 170-second resolver deadline. Normal validation follows
+lock adoption. The main gate also checks documentation before nextest/doctests,
+preserving every command while catching documentation failures earlier.
 
 All current work follows Q30. Local target output remains 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.

@@ -17,7 +17,11 @@ idle connection starts a fresh response deadline when it first sends an unanswer
 request. Replays, diagnostic discovery and detached unsubscribes consume rate
 limit tokens. Discovery responses do not reset the unanswered user-request retry
 budget, for either text or binary frames. Policy refusals remain terminal and
-retain the full HTTP or JSON-RPC details.
+retain structured JSON-RPC errors and bounded HTTP diagnostics. HTTP capture
+keeps at most 4096 decoded bytes, processes at most 64 KiB of body wire data,
+limits chunk lines to 1024 bytes and uses the original handshake deadline.
+Optional body failures preserve the known HTTP status and policy headers;
+complete body acquisition and validation are not promised.
 
 Historical reads use the archive pool lazily and retry once. This applies to
 `Session::request`, the raw subxt adapter and individual failed batch members.

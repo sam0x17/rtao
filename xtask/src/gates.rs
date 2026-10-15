@@ -179,6 +179,9 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
             }
             steps.extend([
                 xtask(&["extract", "--check"]),
+                // Documentation consumes checked-in source and catalogs, so
+                // reject rustdoc/book failures before running behavior tests.
+                docs(),
                 tool(
                     "cargo-nextest",
                     &[
@@ -192,7 +195,6 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                     ],
                 ),
                 cargo(&["test", "--workspace", "--doc", "--all-features", "--locked"]),
-                docs(),
             ]);
             steps
         }
