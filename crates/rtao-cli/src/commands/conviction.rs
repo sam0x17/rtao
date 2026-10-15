@@ -1,7 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/lock.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Stake-lock commands routed through semantic intents and public reads.
 use super::generated::{self, TxRequest};
-use crate::books::{AccountLookup, FsAccountLookup};
+use crate::books::{AccountLookup, FsAccountLookup, NameCandidate, public_json_truthy};
 use crate::{
     context::AppContext,
     error::CliError,
@@ -19,32 +19,76 @@ use rtao::{
     },
 };
 use serde_json::{Map, Value, json};
+use std::collections::BTreeMap;
 
-fn local_names(ctx: &AppContext) -> Result<std::collections::BTreeMap<String, String>, CliError> {
-    let mut names = std::collections::BTreeMap::new();
+fn local_names(ctx: &AppContext) -> Result<BTreeMap<String, Value>, CliError> {
     let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
-    let candidates = lookup.candidates();
-    for entry in candidates.iter().filter(|e| e.source == "hotkey") {
-        names.entry(entry.address.clone()).or_insert_with(|| {
-            entry
-                .name
-                .rsplit('/')
-                .next()
-                .unwrap_or(&entry.name)
-                .to_owned()
+    Ok(names_from_candidates(
+        lookup.candidates(),
+        &ctx.books.addresses,
+    ))
+}
+
+fn names_from_candidates(
+    candidates: Vec<NameCandidate>,
+    contacts: &[Value],
+) -> BTreeMap<String, Value> {
+    // Python walks naturally sorted wallets, then naturally sorted hotkeys
+    // within each wallet, before keeping the first alias for each address.
+    let mut wallets = Vec::<(String, Vec<NameCandidate>)>::new();
+    let mut wallet_indices = BTreeMap::new();
+    for entry in candidates
+        .into_iter()
+        .filter(|entry| entry.source == "hotkey")
+    {
+        let wallet = entry
+            .name
+            .split_once('/')
+            .map_or(entry.name.as_str(), |(wallet, _)| wallet)
+            .to_owned();
+        let index = *wallet_indices.entry(wallet.clone()).or_insert_with(|| {
+            let index = wallets.len();
+            wallets.push((wallet, Vec::new()));
+            index
         });
+        wallets[index].1.push(entry);
     }
-    for entry in &ctx.books.addresses {
-        if let (Some(address), Some(name)) = (entry["address"].as_str(), entry["name"].as_str())
-            && !address.is_empty()
-            && !name.is_empty()
-        {
-            names
-                .entry(address.to_owned())
-                .or_insert_with(|| name.to_owned());
+    // Stable wallet sorting preserves Python's directory encounter order for
+    // equal natural keys such as wallet2/wallet02; their hotkeys must not mix.
+    wallets.sort_by(|left, right| super::wallet::natural_cmp(&left.0, &right.0));
+    let mut names = BTreeMap::new();
+    for (_, mut hotkeys) in wallets {
+        hotkeys.sort_by(|left, right| {
+            let left = left.name.rsplit('/').next().unwrap_or(&left.name);
+            let right = right.name.rsplit('/').next().unwrap_or(&right.name);
+            super::wallet::natural_cmp(left, right)
+        });
+        for entry in hotkeys {
+            names.entry(entry.address).or_insert_with(|| {
+                Value::String(
+                    entry
+                        .name
+                        .rsplit('/')
+                        .next()
+                        .unwrap_or(&entry.name)
+                        .to_owned(),
+                )
+            });
         }
     }
-    Ok(names)
+    for entry in contacts {
+        if let Some(address) = entry["address"].as_str()
+            && !address.is_empty()
+            && public_json_truthy(&entry["name"])
+        {
+            // The shared contact file has an open JSON schema. Python keeps
+            // truthy labels as their original values, including in JSON.
+            names
+                .entry(address.to_owned())
+                .or_insert_with(|| entry["name"].clone());
+        }
+    }
+    names
 }
 fn subnet(required: bool) -> Arg {
     Arg::new("netuid")
@@ -351,9 +395,9 @@ pub async fn execute_prepared_read(
                                 .and_then(|i| i.get("name"))
                                 .and_then(Value::as_str)
                                 .filter(|s| !s.is_empty())
-                                .map(str::to_owned)
+                                .map(|name| json!(name))
                         })
-                        .unwrap_or_else(|| lock.hotkey.to_string());
+                        .unwrap_or_else(|| json!(lock.hotkey));
                     rows.push(vec![
                         json!(lock.netuid.0),
                         json!(label),
@@ -420,15 +464,19 @@ pub async fn execute_prepared_read(
                     .await
                     .map_err(failure)?
                 };
-                let label = local.map(String::as_str).or_else(|| {
-                    identity
-                        .get("name")
-                        .and_then(Value::as_str)
-                        .filter(|s| !s.is_empty())
-                });
+                let label = local
+                    .cloned()
+                    .or_else(|| {
+                        identity
+                            .get("name")
+                            .and_then(Value::as_str)
+                            .filter(|s| !s.is_empty())
+                            .map(|name| json!(name))
+                    })
+                    .filter(|name| name.as_str() != Some("—"));
                 records.push(json!({"coldkey":position.coldkey,"name":label,"locked":lock.locked_alpha.to_string(),"locked_amount":lock.locked_alpha.amount(),"value":value.to_string(),"value_tao":value.amount(),"is_perpetual":lock.is_perpetual}));
                 rows.push(vec![
-                    json!(label.unwrap_or("—")),
+                    label.unwrap_or_else(|| json!("—")),
                     json!(position.coldkey),
                     json!(lock.locked_alpha.to_string()),
                     json!(value.to_string()),
@@ -467,4 +515,58 @@ pub async fn execute_prepared_read(
         ctx.output.message(&message).map_err(failure)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wallet_alias_collision_uses_python_natural_wallet_then_hotkey_order() {
+        let address = AccountId([7; 32]).to_string();
+        let aliases = ["wallet10/worker1", "wallet2/worker10", "wallet2/worker2"];
+        for order in [
+            [0, 1, 2],
+            [0, 2, 1],
+            [1, 0, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+            [2, 1, 0],
+        ] {
+            let mut candidates = order
+                .into_iter()
+                .map(|index| NameCandidate {
+                    name: aliases[index].into(),
+                    address: address.clone(),
+                    source: "hotkey".into(),
+                })
+                .collect::<Vec<_>>();
+            candidates.insert(
+                0,
+                NameCandidate {
+                    name: "wallet1".into(),
+                    address: address.clone(),
+                    source: "wallet".into(),
+                },
+            );
+            let contacts = [json!({"address":address, "name":"contact fallback"})];
+            let names = names_from_candidates(candidates, &contacts);
+            assert_eq!(names.get(&address), Some(&json!("worker2")), "{order:?}");
+        }
+        for (aliases, expected) in [
+            (["wallet2/worker10", "wallet02/worker2"], "worker10"),
+            (["wallet02/worker2", "wallet2/worker10"], "worker2"),
+        ] {
+            let candidates = aliases
+                .into_iter()
+                .map(|name| NameCandidate {
+                    name: name.into(),
+                    address: address.clone(),
+                    source: "hotkey".into(),
+                })
+                .collect();
+            let names = names_from_candidates(candidates, &[]);
+            assert_eq!(names.get(&address), Some(&json!(expected)), "{aliases:?}");
+        }
+    }
 }

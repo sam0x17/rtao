@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/hyperparams.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/hyperparameters.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Hyperparameter vocabulary and shared raw-value conversion.
 
 mod planner;
@@ -330,7 +331,10 @@ mod tests {
                 "unknown or owner-unsettable hyperparameter '{name}'; settable: ['activity_cutoff_factor',"
             )));
             assert!(error.ends_with("'yuma3_enabled']"));
-            assert!(!error.contains("'recycle_or_burn'"));
+            let (_, settable) = error
+                .split_once("; settable: ")
+                .ok_or_else(|| anyhow::anyhow!("owner diagnostic omitted the settable list"))?;
+            assert!(!settable.contains("'recycle_or_burn'"));
         }
         for value in [json!(true), json!(1), json!("null"), json!({}), json!(null)] {
             assert!(

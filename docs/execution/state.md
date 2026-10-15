@@ -16,6 +16,34 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38759055202](https://github.com/sam0x17/rtao/actions/runs/38759055202)
+at `4000bd0` passes all five supporting jobs; main check remains in progress at
+inspection. The final corrected reveal-parser rereview finds no remaining
+concrete defect within its declared projection scope. Full chain rows remain
+pending; no runtime or milestone acceptance follows.
+
+The next source batch reconciles ten more authenticated files after complete
+source/fixture review, reaching 202 reconciled/155 pending. Seven intent rows,
+HTTP-auth core/its twenty direct test counterparts, and CLI lock commands have
+exact native homes. D062 discloses existing owner/window preflight and D063
+discloses decoded-account replay identity. Correct the contradictory owner-list
+fixture assertion and canonical attribution. Repair CLI contact JSON types and
+stable hierarchical alias order; independent rereview closes the natural-key
+tie found during that repair. All ten blobs/SHA256 pins are reverified in
+`ten-source-identities.json`.
+
+Five independently reviewed policy/fee scenario sources now use real intents
+and Executor, independent expected calls, exact fee-query decoding and refusal
+diagnostics, with no private-key acquisition or submission. Their exact mapping
+entries reduce pending e2e rows from 29 to 24. New validation/matrix code binds
+only those five client contracts, requires unverified runtime/fee limits, checks
+ordinary CI inclusion and classifies every existing mapping's source evidence.
+Strict pending and oracle rules remain intact. The gate integration needs an
+independent reread and hosted execution; its review request is retained in
+`e2e-mapping-integration-review-request.txt`. Fresh hosted matrix generation and
+combined ordinary validation remain required. No local build/test, service,
+temporary directory, new filing or milestone acceptance is claimed.
+
 Compatibility refresh
 [38757888373](https://github.com/sam0x17/rtao/actions/runs/38757888373)
 succeeds at clean `303e631`. Verify/adopt exactly four regular report files,

@@ -1,4 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/lock.py and collateral.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/lock.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/collateral.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Lock/collateral argument semantics without nodes or wallet unlocking.
 use rtao_cli::{
     application,
@@ -379,6 +380,67 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
     client.close().await;
     Ok(())
 }
+
+#[tokio::test]
+async fn targeting_keeps_truthy_contact_json_types_and_ignores_falsy_labels() -> Result {
+    use rtao::primitives::AccountId;
+    use rtao_cli::output::Stream;
+    let (client, chain) = fake_client().await?;
+    let cold = AccountId([7; 32]).to_string();
+    let hot = AccountId([8; 32]).to_string();
+    for (name, expected, retained) in [
+        (json!(7), json!(7), true),
+        (json!(true), json!(true), true),
+        (json!(["team", 3]), json!(["team", 3]), true),
+        (json!({"team":true}), json!({"team":true}), true),
+        (json!(0), json!("chain owner"), false),
+        (json!(false), json!("chain owner"), false),
+        (json!(null), json!("chain owner"), false),
+        (json!(""), json!("chain owner"), false),
+        (json!([]), json!("chain owner"), false),
+        (json!({}), json!("chain owner"), false),
+        (json!("—"), json!(null), true),
+    ] {
+        let parsed = tree()?.try_get_matches_from([
+            "rtao",
+            "conviction",
+            "targeting",
+            "--netuid",
+            "1",
+            "--hotkey",
+            hot.as_str(),
+        ])?;
+        let group = parsed.subcommand().ok_or("group")?.1;
+        let mut ctx = context(&parsed)?;
+        ctx.books.addresses = vec![
+            json!({"address":cold,"name":0}),
+            json!({"address":cold,"name":name}),
+        ];
+        if retained {
+            ctx.books
+                .addresses
+                .push(json!({"address":cold,"name":"later duplicate"}));
+        }
+        let sink = captured(&mut ctx, true);
+        let request = conviction::prepare_read(&mut ctx, group, &mut PromptHistory::default())?;
+        conviction::execute_prepared_read(&ctx, &client, &request).await?;
+        let payload: serde_json::Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        assert_eq!(payload.as_array().ok_or("targeting records")?.len(), 1);
+        assert_eq!(payload[0]["name"], expected, "label {name}");
+        assert_eq!(payload[0]["coldkey"], cold);
+        assert_eq!(payload[0]["locked_amount"], json!(0.0000001));
+    }
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
 #[tokio::test]
 async fn empty_human_lock_view_still_reports_acceptance_and_dust() -> Result {
     use rtao_cli::output::Stream;
