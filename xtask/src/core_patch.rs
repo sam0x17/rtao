@@ -304,7 +304,7 @@ fn verify_diff(repo: &Path, base: &str, rev: &str) -> Result<()> {
         !records.is_empty() && records.len() % 2 == 0,
         "empty or malformed core patch diff"
     );
-    for pair in records.chunks_exact(2) {
+    for pair in records.as_chunks::<2>().0 {
         ensure!(
             pair.first() == Some(&b"M".as_slice()),
             "core patch must only modify existing regular sources"

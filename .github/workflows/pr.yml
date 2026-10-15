@@ -155,6 +155,13 @@ jobs:
           path: target/pr-gates/template-evidence-*
           if-no-files-found: warn
           retention-days: 7
+      - name: Check shipped crates against the unpatched core
+        env:
+          RTAO_CORE_UNPATCHED_DISPOSABLE: "1"
+        run: |
+          timeout 180s cargo run --locked -p xtask -- core-patch strip
+          timeout 180s cargo update --workspace
+          timeout 900s cargo check --locked --workspace --all-features --exclude rtao-testkit --exclude xtask
 
   supply:
     if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.prepare_core_patch)

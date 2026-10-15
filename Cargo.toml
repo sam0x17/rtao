@@ -124,3 +124,10 @@ redis = { version = "0.32", default-features = false, features = ["tokio-comp", 
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
 ruint = { path = "patches/ruint" }
+
+[patch."https://github.com/RaoFoundation/subtensor.git"]
+bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "eafe84e8a97376e7902118ebb204b9c53e3df55e" }
+
+[patch."https://github.com/sam0x17/subtensor.git"]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
