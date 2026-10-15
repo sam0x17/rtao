@@ -29,8 +29,8 @@ Config/catalog handlers and their binary routing are adopted; see
 [m4-config-catalog.md](m4-config-catalog.md). Corrected transaction/query source
 now resolves plural account arrays, separates pending behavior from feature
 availability and preserves the effective origin during late PoW refresh.
-Plural name resolution is registered as additive D-043 in the working tree;
-its parity matrix refresh awaits hosted generation and adoption. The prepared
+Plural name resolution is registered as additive D-043 and its declared matrix
+row is adopted from hosted generation. The prepared
 human review includes preflight facts from the same snapshot and call as its plan.
 External backend factories and rich staking pickers remain incomplete; see
 [m4-generated-review.md](m4-generated-review.md). Wallet and subnet source is

@@ -265,3 +265,12 @@ package sets and empty runtime-validation claims. All eight files were adopted
 byte for byte in memory, with no extraction directory. The bootstrap normal
 no-host job correctly rejected the old generated read names before adoption;
 the combined source still requires a normal hosted run.
+
+Follow-up [38687383056](https://github.com/sam0x17/rtao/actions/runs/38687383056)
+succeeded at `48cf4ee`. Artifact `11950428392` (39,852 bytes) matched SHA-256
+`28bc70d1aeac58049c6b7628a95159256e34fba0198c500cc2284232aa6050f4`.
+Exact-path, input-hash and package-set review passed before adopting the four
+reports in memory. The 1,537-row matrix adds only D-043/D-044; their oracle
+status remains unverified. Runtime validation stays empty. The main job now
+retains its hosted compiler/tool cache on test failure to avoid repeating cold
+builds; all checks and the 45-minute bound remain unchanged.
