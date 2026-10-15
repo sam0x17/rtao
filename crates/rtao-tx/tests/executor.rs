@@ -270,6 +270,12 @@ async fn execute_submits_exact_reviewed_call_and_merges_success_extras() {
         .await
         .unwrap();
     assert!(result.success);
+    assert!(
+        result
+            .events
+            .iter()
+            .any(|event| event.matches("System", "ExtrinsicSuccess"))
+    );
     assert_eq!(result.inclusion, Inclusion::Finalized);
     assert_eq!(result.data["reviewed"], json!(true));
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
@@ -456,6 +462,8 @@ async fn dispatch_failure_is_returned_without_retry_or_success_extras() {
         .await
         .unwrap();
     assert!(!result.success);
+    assert!(result.events.is_empty());
+    assert!(result.fee.is_none());
     assert_eq!(result.error.unwrap().name.as_deref(), Some("BadOrigin"));
     assert!(result.data.is_empty());
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
