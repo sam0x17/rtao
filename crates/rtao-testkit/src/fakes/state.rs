@@ -2050,7 +2050,7 @@ mod tests {
         };
         let first = state.dispatch(&request);
         assert!(matches!(&first.outcome, Some(Ok(_))));
-        assert_eq!(state.requests, [request.clone()]);
+        assert_eq!(state.requests.as_slice(), std::slice::from_ref(&request));
         assert_eq!(state.submissions, [vec![1, 2, 3]]);
 
         // An actual second incoming call must never disappear through
