@@ -4691,13 +4691,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.UnsignedExtrinsic",
-        "rtao": "module_map",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.SigningContext",
-        "rtao": "module_map",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/__init__.py"
       },
       {
@@ -7757,11 +7757,17 @@
         "milestone": "M2–M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/contract.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_runtime::CallBytes`; `rtao_client::{UnsignedExtrinsic, ExtrinsicReport}`; `rtao_signer::{SigningContext, SignerPayloadJson}`"
+          "crates/rtao-runtime/src/handle.rs",
+          "crates/rtao-client/src/submit.rs",
+          "crates/rtao-client/src/offline.rs",
+          "crates/rtao-signer/src/lib.rs",
+          "crates/rtao-tx/src/multisig.rs",
+          "crates/rtao-client/src/block_info.rs",
+          "crates/rtao-core-ext/src/ir.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "fb01ce3096af01e97eaff28a27def819c30b9ad0"
       },
       {
         "kind": "ported",
@@ -7780,11 +7786,14 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/extrinsics.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_client::{NonceManager, NonceLease}`; `rtao_signer` dispatch"
+          "crates/rtao-client/src/nonce.rs",
+          "crates/rtao-client/src/submit.rs",
+          "crates/rtao-client/src/offline.rs",
+          "crates/rtao-core-ext/src/ops/receipt.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9a26b9d235e9bdd76a8d460493dc613a1d08f721"
       },
       {
         "kind": "ported",
@@ -7836,11 +7845,12 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/runtime.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_client::RuntimeCache`"
+          "crates/rtao-client/src/cache.rs",
+          "crates/rtao-catalog/src/runtime_py.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "76101e5247da8356118e4bb179aadf77b2f14c34"
       },
       {
         "kind": "ported",
@@ -7880,11 +7890,12 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/utils/receipt.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "staged `rtao_core_ext::ops::receipt` (PR-U2)"
+          "crates/rtao-core-ext/src/ops/receipt.rs",
+          "crates/rtao-core-ext/src/ops/dispatch_error.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4c33d256550a45a951e9c75c6e3b74b7dd0fa0d3"
       },
       {
         "kind": "ported",
@@ -9620,11 +9631,11 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/ledger.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::LedgerSigner` (feature `ledger`) over core `signers::ledger::LedgerDevice`"
+          "rtao_signer::ledger::{LedgerSigner,LedgerOptions,LedgerError} (feature ledger)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ed3559de6b78fa6e5cf004e15d27f9bbadfba0ca"
       },
       {
         "kind": "ported",
@@ -9962,11 +9973,14 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/signing.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::{Signer, SignerRole, KeyView, DynKeySource}`; lazy unlock in `rtao_wallet`; address coercion in `rtao_tx`"
+          "crates/rtao-signer/src/lib.rs",
+          "crates/rtao-signer/src/roles.rs",
+          "crates/rtao-wallet/src/files.rs",
+          "crates/rtao-wallet/src/wallet.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "25e9a4a9dcbe5ac7fadcc8dedb41c011e904adcd"
       },
       {
         "kind": "ported",
