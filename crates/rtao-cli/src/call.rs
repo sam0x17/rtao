@@ -6,7 +6,7 @@ use std::{collections::BTreeSet, path::PathBuf, sync::Arc};
 
 use crate::prompt::shell_quote;
 use futures::StreamExt;
-use rtao::client::config::{ConfigFile, Paths};
+use rtao::client::config::{ConfigFile, MAX_JSON_FILE_BYTES, Paths, read_bounded_json_file};
 use rtao_runtime::models::{MultisigInfo, MultisigTimepoint};
 use std::{collections::BTreeMap, path::Path, time::Duration};
 
@@ -51,12 +51,12 @@ pub fn command() -> Command {
             .arg(
                 Arg::new("args_json")
                     .long("args")
-                    .help("Call parameters as a JSON object."),
+                    .help("Call parameters as a JSON object (at most 16 MiB)."),
             )
             .arg(
                 Arg::new("args_file")
                     .long("args-file")
-                    .help("Read JSON parameters from a file."),
+                    .help("Read JSON parameters from a regular file (at most 16 MiB)."),
             )
             .arg(
                 Arg::new("sudo")
@@ -497,7 +497,7 @@ impl RawCallRequest {
     }
 }
 
-/// Read raw parameters from exactly one input; preserve all integer digits.
+/// Read at most 16 MiB from exactly one input; preserve all integer digits.
 pub fn load_params(
     args: Option<&str>,
     args_file: Option<&std::path::Path>,
@@ -508,9 +508,17 @@ pub fn load_params(
             "pass either --args or --args-file, not both",
         ));
     }
+    if args.is_some_and(|args| args.len() > MAX_JSON_FILE_BYTES) {
+        return Err(CliError::input("JSON input exceeds 16 MiB limit"));
+    }
     let file = args_file
         .map(|path| {
-            std::fs::read_to_string(path)
+            read_bounded_json_file(path)
+                .and_then(|bytes| {
+                    String::from_utf8(bytes).map_err(|error| {
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, error)
+                    })
+                })
                 .map_err(|error| CliError::input(format!("cannot read {path:?}: {error}")))
         })
         .transpose()?;

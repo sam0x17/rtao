@@ -8,6 +8,7 @@ use crate::{
     prompt::python_strip,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use rtao::client::config::{MAX_JSON_FILE_BYTES, read_bounded_json_file};
 use rtao::primitives::pyfmt;
 use serde_json::{Map, Value, json};
 use std::path::Path;
@@ -62,7 +63,7 @@ fn weighted(name: &'static str, description: &'static str) -> Command {
                 Arg::new("weights_file")
                     .long("weights-file")
                     .value_parser(clap::value_parser!(std::path::PathBuf))
-                    .help("JSON object mapping UID to weight; supports full 2,500-UID rows."),
+                    .help("Regular JSON file mapping UID to weight (at most 16 MiB); supports full 2,500-UID rows."),
             )
             .arg(
                 Arg::new("mechid")
@@ -116,6 +117,7 @@ fn text<'a>(matches: &'a ArgMatches, name: &str) -> Result<&'a str, CliError> {
 }
 
 fn integers(raw: &str) -> Result<Value, CliError> {
+    check_input_length(raw)?;
     raw.split(',')
         .map(python_strip)
         .filter(|part| !part.is_empty())
@@ -130,6 +132,7 @@ fn integers(raw: &str) -> Result<Value, CliError> {
 }
 
 fn floats(raw: &str) -> Result<Value, CliError> {
+    check_input_length(raw)?;
     raw.split(',')
         .map(python_strip)
         .filter(|part| !part.is_empty())
@@ -143,6 +146,13 @@ fn floats(raw: &str) -> Result<Value, CliError> {
         })
         .collect::<Result<Vec<_>, _>>()
         .map(Value::Array)
+}
+
+fn check_input_length(raw: &str) -> Result<(), CliError> {
+    if raw.len() > MAX_JSON_FILE_BYTES {
+        return Err(CliError::input("Weights input exceeds 16 MiB limit"));
+    }
+    Ok(())
 }
 
 fn inputs(
@@ -159,11 +169,11 @@ fn inputs(
                 "Use --weights-file or --uids/--weights, not both.",
             ));
         }
-        let data: Value = serde_json::from_str(
-            &read(path)
-                .map_err(|error| CliError::input(format!("Cannot read weights file: {error}")))?,
-        )
-        .map_err(|error| CliError::input(format!("Cannot read weights file: {error}")))?;
+        let contents = read(path)
+            .map_err(|error| CliError::input(format!("Cannot read weights file: {error}")))?;
+        check_input_length(&contents)?;
+        let data: Value = serde_json::from_str(&contents)
+            .map_err(|error| CliError::input(format!("Cannot read weights file: {error}")))?;
         if !data.is_object() {
             return Err(CliError::input(
                 "Weights file must contain a UID-to-weight JSON object.",
@@ -196,13 +206,19 @@ fn inputs(
 
 /// Parse a weights group before connecting; execution uses `generated::execute_tx`.
 pub fn request(matches: &ArgMatches) -> Result<TxRequest, CliError> {
-    request_with_reader(matches, |path| std::fs::read_to_string(path))
+    request_with_reader(matches, |path| {
+        let bytes = read_bounded_json_file(path)?;
+        String::from_utf8(bytes)
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
+    })
 }
 
 /// Parse with an injected file reader, preserving file and CSV exclusivity.
 ///
 /// Input conversion delegates canonicalization, UID duplicate detection, native
 /// widths, and defaults to the same SDK interface as generated transactions.
+/// The returned file text and total inline inputs are limited to 16 MiB; an
+/// injected reader must bound acquisition itself, as [`request`] does.
 pub fn request_with_reader(
     matches: &ArgMatches,
     read: impl FnOnce(&Path) -> Result<String, std::io::Error>,
@@ -210,6 +226,17 @@ pub fn request_with_reader(
     let (name, matches) = matches
         .subcommand()
         .ok_or_else(|| CliError::input("missing weights command"))?;
+    // Check the complete inline input before splitting, allocating converted
+    // arrays, looking up public keys or making any transport request.
+    let mut inline_bytes = 0usize;
+    for field in ["uids", "weights", "salt"] {
+        if let Some(value) = matches.try_get_one::<String>(field).ok().flatten() {
+            inline_bytes = inline_bytes.saturating_add(value.len());
+        }
+    }
+    if inline_bytes > MAX_JSON_FILE_BYTES {
+        return Err(CliError::input("Weights input exceeds 16 MiB limit"));
+    }
     let (op, mut args) = match name {
         "set" => ("set_weights", inputs(matches, read)?),
         "commit" => ("commit_weights", inputs(matches, read)?),
