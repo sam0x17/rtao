@@ -8,6 +8,7 @@ mod password;
 mod testsupport;
 mod wallet;
 
+pub use files::read_data as read_keyfile_data;
 pub use files::{ColdkeyFile, HotkeyFile, Overwrite, PublicKeyInfo, WriteOptions};
 pub use password::{
     NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSource, PasswordSources,
