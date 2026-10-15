@@ -16,6 +16,13 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38722567841](https://github.com/sam0x17/rtao/actions/runs/38722567841)
+at `f129eb1` passes features, MSRV, no-host, supply and semver. Main compilation
+then strict Clippy finds `expect_err` in the new duplicate-read regression.
+The fixture now requires the error through fallible test context, preserving
+the assertion and the lint. Parity, nextest and doctests were not reached on
+this run; another normal hosted run must verify the correction.
+
 Normal run [38720004914](https://github.com/sam0x17/rtao/actions/runs/38720004914)
 at `4058413` passes features, MSRV, no-host, supply and semver. Main check passes
 compilation and strict Clippy, then fails parity before tests on canonical
