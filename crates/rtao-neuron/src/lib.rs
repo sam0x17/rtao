@@ -42,7 +42,10 @@ pub use owner_monitor::{
     OwnerMonitorError, OwnerObservation, OwnerProxyAnnouncement,
 };
 #[cfg(feature = "owner")]
-pub use owner_ops::{OwnerConfig, OwnerOps, RegistrationWait, SubnetIdentity, TrimReport};
+pub use owner_ops::{
+    OwnerConfig, OwnerOps, RegistrationWait, SubnetIdentity, TrimNullAction, TrimNullConfig,
+    TrimNullSession, TrimNullStep, TrimReport,
+};
 #[cfg(any(feature = "miner", feature = "owner"))]
 pub use prune::{PruneError, PruneNeuron, PruneParameters, PruneRisk};
 #[cfg(feature = "miner")]
