@@ -7735,11 +7735,11 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/codec.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_runtime::RuntimeHandle` over core `runtime::Runtime` + `rtao_client::RuntimeCache`; staged `ops::metadata`"
+          "crates/rtao-runtime/src/handle.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "02520d119cd34ca7b974f06e272b5a0baa99ccbe"
       },
       {
         "kind": "n/a",
@@ -7857,11 +7857,13 @@
         "milestone": "M1–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/runtime_api.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "staged `rtao_core_ext::ops::runtime_api`; `rtao_client` legacy table"
+          "crates/rtao-client/src/legacy_api.rs",
+          "crates/rtao-client/src/legacy_api_table.rs",
+          "xtask/src/extract_legacy_runtime_api.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "13579899960c2c546e51279ff9181542bfd28a7b"
       },
       {
         "kind": "ported",
@@ -9417,11 +9419,11 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/crowdloan.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::crowdloan` (feature `crowdloan`)"
+          "rtao_intents::crowdloan (feature crowdloan)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a0e8fc6981a0aa63ad5d46aa60a37d6b657567a7"
       },
       {
         "kind": "ported",
@@ -9539,11 +9541,12 @@
         "milestone": "M4–M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/registration.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::registration` (feature `registration`)"
+          "rtao_intents::{registration,registration_pow,root_claim,registration_swap}",
+          "rtao_cli::context::registration"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "96645c419f9b5e95f9b0407164bdb0578c5efd85"
       },
       {
         "kind": "generated",
@@ -10583,15 +10586,15 @@
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_ledger_signer.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete reviewed upstream pytest input; four native fixture homes in crates/rtao-signer/src/ledger/tests.rs and one mandatory-context API disposition"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7f6edb683ca924ef87f0142b98f4546ca16bbfff"
       },
       {
         "kind": "ported",

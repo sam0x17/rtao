@@ -3,7 +3,8 @@
 //! CLI data and diagnostics, with injectable streams and human renderers.
 //!
 //! Machine values bypass human rendering. Domain objects supply their existing
-//! Python-shaped JSON, and balances in read results use [`PythonBalance`]. Human
+//! Python-shaped JSON, and balances in read results use
+//! [`PythonBalance`](crate::output::PythonBalance). Human
 //! formatting preserves fields and columns, rather than Rich terminal bytes.
 
 use std::borrow::Cow;
