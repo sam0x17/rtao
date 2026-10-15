@@ -755,6 +755,72 @@ fn cargo_test_sources(
         .collect())
 }
 
+fn workspace_test_packages(
+    root: &Path,
+    members: &[String],
+    excluded: &[String],
+) -> Result<BTreeSet<PathBuf>> {
+    let matches = |pattern: &str, relative: &str| {
+        pattern == relative
+            || pattern.strip_suffix("/*").is_some_and(|parent| {
+                relative
+                    .rsplit_once('/')
+                    .is_some_and(|(directory, _)| directory == parent)
+            })
+    };
+    for pattern in members.iter().chain(excluded) {
+        let path = pattern.strip_suffix("/*").unwrap_or(pattern);
+        ensure!(
+            super::valid_path(path) && !path.contains(['*', '?', '[', ']', '{', '}']),
+            "unsupported or unsafe workspace test membership pattern {pattern:?}"
+        );
+    }
+    let canonical_root = root.canonicalize()?;
+    let mut packages = BTreeSet::new();
+    for member in members {
+        let candidates = if let Some(parent) = member.strip_suffix("/*") {
+            fs::read_dir(root.join(parent))?
+                .map(|entry| entry.map(|entry| entry.path()))
+                .collect::<std::io::Result<Vec<_>>>()?
+        } else {
+            vec![root.join(member)]
+        };
+        for path in candidates {
+            let relative = path
+                .strip_prefix(root)?
+                .to_str()
+                .context("workspace package path must be UTF8")?;
+            if excluded.iter().any(|pattern| matches(pattern, relative)) {
+                continue;
+            }
+            if !path.is_dir() {
+                ensure!(
+                    member.ends_with("/*"),
+                    "workspace test package directory missing"
+                );
+                continue;
+            }
+            ensure!(
+                path.canonicalize()?.starts_with(&canonical_root),
+                "workspace test package outside repository"
+            );
+            if path.join("Cargo.toml").is_file() {
+                packages.insert(path);
+                ensure!(
+                    packages.len() <= 256,
+                    "workspace test package limit exceeded"
+                );
+            } else {
+                ensure!(
+                    member.ends_with("/*"),
+                    "workspace test package manifest missing"
+                );
+            }
+        }
+    }
+    Ok(packages)
+}
+
 fn index_tests(
     root: &Path,
     index: &mut Index,
@@ -781,33 +847,14 @@ fn index_tests(
     };
     let members = patterns("members")?;
     let excluded = patterns("exclude")?;
-    let matches = |pattern: &str, relative: &str| {
-        pattern == relative
-            || pattern.strip_suffix("/*").is_some_and(|parent| {
-                relative
-                    .rsplit_once('/')
-                    .is_some_and(|(directory, _)| directory == parent)
-            })
-    };
     let mut queued = Vec::new();
     let mut packages = BTreeSet::new();
-    for entry in fs::read_dir(root.join("crates"))? {
-        let path = entry?.path();
-        if path.is_dir() && path.join("Cargo.toml").is_file() {
-            let relative = path
-                .strip_prefix(root)?
-                .to_str()
-                .context("crate path must be UTF8")?;
-            if members.iter().any(|pattern| matches(pattern, relative))
-                && !excluded.iter().any(|pattern| matches(pattern, relative))
-            {
-                let sources = cargo_test_sources(&path, all_features, requested)?;
-                if let Some(source) = sources.first() {
-                    packages.insert(source.scope[0].clone());
-                }
-                queued.extend(sources);
-            }
+    for path in workspace_test_packages(root, &members, &excluded)? {
+        let sources = cargo_test_sources(&path, all_features, requested)?;
+        if let Some(source) = sources.first() {
+            packages.insert(source.scope[0].clone());
         }
+        queued.extend(sources);
     }
     ensure!(
         requested.keys().all(|package| packages.contains(package)),
@@ -1396,6 +1443,85 @@ mod auth {
                 );
             }
         }
+    }
+
+    #[test]
+    fn declared_workspace_tools_qualify_without_admitting_excluded_or_disabled_targets()
+    -> Result<()> {
+        let workspace = TestWorkspace::new()?;
+        workspace.write(
+            "crates/example/src/lib.rs",
+            "#[test] fn ordinary() { assert!(true); }",
+        )?;
+        workspace.write(
+            "xtask/Cargo.toml",
+            "[package]\nname = 'xtask'\nversion = '0.1.0'\nedition = '2024'\n",
+        )?;
+        workspace.write(
+            "xtask/src/main.rs",
+            "fn main() {} #[cfg(test)] mod tests { #[test] fn evidence() { assert_eq!(1, 1); } }",
+        )?;
+        workspace.write(
+            "tools/audit/Cargo.toml",
+            "[package]\nname = 'audit-tool'\nversion = '0.1.0'\nedition = '2024'\n",
+        )?;
+        workspace.write(
+            "tools/audit/src/lib.rs",
+            "#[cfg(test)] mod tests { #[test] fn evidence() { assert_eq!(2, 2); } }",
+        )?;
+        workspace.write(
+            "unlisted/Cargo.toml",
+            "[package]\nname = 'unlisted'\nversion = '0.1.0'\nedition = '2024'\n",
+        )?;
+        workspace.write(
+            "unlisted/src/lib.rs",
+            "#[test] fn evidence() { assert!(true); }",
+        )?;
+        let members = "[workspace]\nmembers = ['crates/*', 'xtask', 'tools/*']\n";
+        workspace.write("Cargo.toml", members)?;
+        let indexed = index(&workspace.path)?;
+        for target in ["xtask::tests::evidence", "audit_tool::tests::evidence"] {
+            assert!(indexed.tests.contains(target), "default {target}");
+            assert!(
+                indexed.feature_tests.contains(target),
+                "all-feature {target}"
+            );
+            assert!(indexed.feature_test_bodies[target].contains("assert_eq"));
+        }
+        assert!(!indexed.feature_tests.contains("unlisted::evidence"));
+        workspace.write(
+            "Cargo.toml",
+            &format!("{members}exclude = ['xtask', 'tools/*']\n"),
+        )?;
+        let excluded = index(&workspace.path)?;
+        assert!(excluded.feature_tests.contains("example::ordinary"));
+        assert!(!excluded.feature_tests.contains("xtask::tests::evidence"));
+        assert!(
+            !excluded
+                .feature_tests
+                .contains("audit_tool::tests::evidence")
+        );
+        workspace.write("Cargo.toml", members)?;
+        workspace.write("xtask/Cargo.toml", "[package]\nname = 'xtask'\nversion = '0.1.0'\nedition = '2024'\n[[bin]]\nname = 'xtask'\npath = 'src/main.rs'\nharness = false\n")?;
+        let disabled = index(&workspace.path)?;
+        assert!(!disabled.feature_tests.contains("xtask::tests::evidence"));
+        assert!(
+            disabled.rejected_feature_tests["xtask::tests::evidence"].contains("harness = false")
+        );
+        for pattern in [
+            "../outside",
+            "/outside",
+            "tools/**",
+            "tools/[ab]",
+            "missing-tool",
+        ] {
+            workspace.write(
+                "Cargo.toml",
+                &format!("[workspace]\nmembers = [{pattern:?}]\n"),
+            )?;
+            assert!(index(&workspace.path).is_err(), "{pattern}");
+        }
+        Ok(())
     }
 
     #[test]

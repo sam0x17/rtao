@@ -16,6 +16,33 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38762528504](https://github.com/sam0x17/rtao/actions/runs/38762528504)
+at `60ff9a4` is terminal. All five supporting jobs, main compilation and strict
+Clippy pass. Parity checks the new five client-contract bindings and all 115
+e2e keys, but stops before tests on a false CLI-derived package home and missing
+xtask test discovery. The D022 witness exists and Cargo tests it; the source
+index considered only packages under `crates/`. Discover declared explicit
+workspace members and immediate-child globs, retaining exclusions, repository
+bounds, feature/harness/ignore checks and the inclusion-graph limit. Add focused
+positive and refusal fixtures. Preserve the D022 reference and price assertions.
+Proof is `check-38762528504.json`, including the full parity-layer report.
+
+Correct five map rows whose dependency/producer references were incorrectly
+presented as derived-code homes. Retain actual native ports and literal outputs;
+dependency calls remain described in notes. No copyright notice, package license
+or attribution gate is removed. Run the same source-evidence check once, before
+longer compiler/probe work, preserving every mandatory gate and ordinary test.
+The newly reviewed balance/property rows bring source counts to 204 reconciled
+and 153 pending. Q25/D035's native u64 domain, excluded signed/rounding behavior
+and ten upstream property relationships are explicit; fresh oracle execution
+is unverified. `_money.py` stays pending for its remaining producer/consumer trace.
+
+A 15:51 UTC state-only filing refresh still finds eight PRs and five issues,
+all open, with unchanged reviewed PR heads and no new filings or GitHub writes.
+The earlier source/body audit remains separately dated. Fresh report generation,
+combined normal CI and independent gate-integration rereview remain required.
+No local build/test, service or temporary directory was created.
+
 Refresh [38761784282](https://github.com/sam0x17/rtao/actions/runs/38761784282)
 succeeds at clean `8cd8de5`. Verify/adopt four exact regular report members,
 the immutable archive digest/size and all 23 unchanged dependency inputs.

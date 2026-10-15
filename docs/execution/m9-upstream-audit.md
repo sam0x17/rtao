@@ -2,6 +2,13 @@
 
 Read-only audit, 2026-10-15, completed at 13:11 UTC. There are **eight PRs and five issues**, all open. No filing was added, changed or retried. PLAN section 15 and the [filed inventory](../upstream/README.md) contain the same thirteen links. The remaining proposals stay local under Q30.
 
+State-only refresh on 2026-10-15 at 15:51 UTC confirms the same eight PRs and
+five issues are open, with every PR still unmerged at its reviewed HEAD. The
+two scoped author searches return the same thirteen filings without incomplete
+results. All PR label and requested-reviewer/team lists remain empty. No GitHub
+write was performed. The body, source and test evidence below retains its
+13:11 audit scope; this refresh adds current filing-state evidence only.
+
 GitHub's authored-issue searches (`author:sam0x17`, each repository, `created:>=2026-10-13`, all states) returned exactly eleven Subtensor filings and two Zondax filings, with `incomplete_results=false`. Each individual issue/PR endpoint resolves. Every PR is unmerged, has no labels or requested reviewers/teams, and retains the reviewed HEAD below. This is a dated inventory of these two repositories, rather than an account-wide filing census.
 
 | PR | Current HEAD | Reviewed evidence and limits |
