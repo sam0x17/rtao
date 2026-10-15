@@ -2,223 +2,223 @@
 schema = 1
 
 [tests."intent_add_proxy"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_add_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_add_stake_limit"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_announce_coldkey_swap"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_associate_evm_key"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_associate_hotkey"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_batch"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_burned_register"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_claim_root"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_claim_root_with_hotkey"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_clear_coldkey_swap_announcement"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_commit_weights"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_contribute_crowdloan"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_create_crowdloan"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_create_pure_proxy"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_decrease_take"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_dispute_coldkey_swap"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_dissolve_crowdloan"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_evm_withdraw"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_execute_proxy_announced"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_finalize_crowdloan"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_fund_evm_key"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_increase_take"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_kill_pure_proxy"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_lock_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_move_lock"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_move_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_approve"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_cancel"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_execute"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_threshold_1"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_refund_crowdloan"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_register_leased_network"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_register_subnet"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_proxies"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_proxy"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_stake_limit"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_reset_axon"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_reveal_weights"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_root_register"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_serve_axon"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_serve_axon_tls"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_serve_prometheus"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_auto_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_childkey_take"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_children"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_crowdloan_max_contribution"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_hyperparameter"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_identity"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_mechanism_count"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_perpetual_lock"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_root_claim_type"]
 na = "Retired core constructor absent from the pinned runtime and Python catalog."
 
 [tests."intent_set_subnet_identity"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_take"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_weights"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_stake_burn"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_start_call"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_swap_coldkey_announced"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_swap_hotkey"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_swap_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_terminate_lease"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_transfer"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_transfer_all"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_transfer_stake"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_trim_subnet"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_unstake_all"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_unstake_all_alpha"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_crowdloan_cap"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_crowdloan_end"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_crowdloan_min_contribution"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_symbol"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_withdraw_crowdloan"]
-pending = "M5"
+rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."pyt:e2e/test_null_consensus.py::test_null_yuma_null_emissions_via_python_sdk"]
 pending = "M4"

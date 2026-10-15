@@ -6,6 +6,9 @@ pub mod fakes;
 pub mod fixtures;
 /// Descriptor observations for catalog read coverage and pinned-block tests.
 pub mod recording;
+/// Upstream synchronous client for dev-only constructor differential tests.
+#[cfg(feature = "core-policy")]
+pub use bittensor_core::client as core_client;
 /// Upstream transaction constructors and policy for dev-only differential tests.
 #[cfg(feature = "core-policy")]
 pub use bittensor_core::transaction as core_transaction;

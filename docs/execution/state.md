@@ -55,6 +55,23 @@ no fuzz campaign ran. The remaining 10 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Latest normal hosted run
+[38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
+at `bad95c0` passes compilation, strict Clippy and all five other normal jobs.
+Parity now qualifies the lock fixture, then rejects AddStake's helper-based
+fixture for missing its explicit class token. Meaningful existing trade and
+claim-aware fixture bindings now name their concrete intent types. A bounded
+lexical source audit finds assertion-body references for all 83 classes; the
+hosted Cargo/cfg/harness qualification remains authoritative. Tests, doctests
+and docs builds were not reached. Private evidence is `check-38707066144.json`.
+
+The final ten ports, 20 M5 CLI routes, 21-constructor policy fixture, all-83
+plan fixture and transaction reference are prepared. Generated adoption and
+combined hosted execution remain pending; integrated counts stay 73/83 and
+40/102. See [m5-final-intents.md](m5-final-intents.md). D-047/D-048 record the
+reviewed pure-proxy lifecycle and unknown proposal-status corrections. No
+new filing or local build is implied.
+
+Earlier normal hosted run
 [38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
 at `93f562c` passes compilation, strict Clippy and the five other normal jobs.
 Parity rejects the lock-settings fixture because its dynamic dispatch does

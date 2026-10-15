@@ -2,21 +2,28 @@
 // Additional source at the same commit/license: sdk/python/bittensor/cli/hyperparams_view.py.
 //! Subnet-owner commands using the ordinary semantic submission boundary.
 
-use super::generated::{self, QueryRequest, TxRequest};
+use super::{
+    generated::{self, QueryRequest, TxRequest},
+    schema,
+};
 use crate::{
     context::{AppContext, ExternalSignerFactory, SubmissionHooks, SubmissionOptions},
     error::CliError,
     globals::{Tier, with_globals},
     output::{Output, StepState, TableSpec},
-    prompt::{PromptHistory, WalletConfirmation},
+    prompt::{
+        PromptError, PromptHistory, PromptResolver, PromptSpec, PromptValidation,
+        WalletConfirmation, fill_missing,
+    },
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::{
     client::{BlockRef, Client, View, ViewExt},
     core::codec::Value as CoreValue,
     neuron::{TrimNullAction, TrimNullConfig, TrimNullSession, TrimNullStep},
-    primitives::{NetUid, hyperparams::RawInteger, pyfmt},
+    primitives::{AccountId, NetUid, hyperparams::RawInteger, pyfmt},
     reads::ReadName,
+    reads::reads::owner::DelegateTake,
     signer::BoxFuture,
     tx::{ExtrinsicResult, Plan},
 };
@@ -41,8 +48,146 @@ fn mutation(name: &str) -> Option<&'static str> {
         "set-identity" => Some("set_subnet_identity"),
         "trim" => Some("trim_subnet"),
         "trim-null-batch" => Some("trim_null_subnet_batch"),
+        "set-take" => Some("set_take"),
+        "stake-burn" => Some("stake_burn"),
         _ => None,
     }
+}
+
+const TAKE_HELP: &str =
+    "New take: a 0..1 fraction with a decimal point (e.g. 0.18) or the raw u16 integer (0..65535).";
+
+fn validator_fields(op: &str) -> Result<Vec<schema::Field>, CliError> {
+    let spec = rtao_catalog::INTENTS
+        .iter()
+        .find(|spec| spec.name == op)
+        .ok_or_else(|| failure("missing validator operation"))?;
+    let mut fields = schema::intent_fields(spec)?;
+    // The curated stake-burn command requires an explicit price; Python only
+    // exposes rate_tolerance on the generic tx command.
+    fields.retain(|field| field.name != "rate_tolerance");
+    Ok(fields)
+}
+
+fn validator_command(op: &str, name: &str) -> Result<Command, CliError> {
+    let fields = validator_fields(op)?;
+    let mut command = schema::arguments(Command::new(name.to_owned()), &fields, true);
+    if op == "set_take" {
+        command = command
+            .about("Set delegate take, signed by the coldkey that owns the hotkey.")
+            .mut_arg("take", |arg| arg.help(format!("{TAKE_HELP} (required)")));
+    } else {
+        command = command
+            .about("Execute a stake-burn (buyback) extrinsic.")
+            .alias("buyback")
+            .mut_arg("netuid", |arg| arg.required(true))
+            .mut_arg("amount_tao", |arg| arg.required(true))
+            .mut_arg("limit_price", |arg| arg.required(true));
+    }
+    Ok(with_globals(command, Tier::Tx))
+}
+
+fn prompt_error(error: PromptError) -> CliError {
+    CliError {
+        code: error.exit_code(),
+        message: error.to_string(),
+        help: None,
+    }
+}
+
+struct TakeResolver<'a> {
+    record: Option<&'a DelegateTake>,
+}
+
+impl PromptResolver for TakeResolver<'_> {
+    fn parse(&mut self, _spec: &PromptSpec, raw: &str) -> Result<Value, PromptValidation> {
+        let value = rtao_intents::children::take_to_u16(&json!(raw))
+            .map_err(|error| PromptValidation::Message(error.to_string()))?;
+        let fraction = f64::from(value) / f64::from(u16::MAX);
+        if let Some(record) = self.record
+            && !(record.min <= fraction && fraction <= record.max)
+        {
+            return Err(PromptValidation::Message(format!(
+                "take {:.2}% is outside the allowed range {:.2}% – {:.2}%",
+                fraction * 100.0,
+                record.min * 100.0,
+                record.max * 100.0,
+            )));
+        }
+        Ok(json!(value))
+    }
+}
+
+fn take_hotkey(
+    ctx: &mut AppContext,
+    matches: &ArgMatches,
+    history: &mut PromptHistory,
+) -> Result<AccountId, CliError> {
+    ctx.resolve_target(
+        "hotkey_ss58",
+        matches.get_one::<String>("hotkey_ss58").map(String::as_str),
+        history,
+    )?
+    .ok_or_else(|| CliError::input("set-take requires a public hotkey"))
+}
+
+fn set_take_request(
+    ctx: &AppContext,
+    matches: &ArgMatches,
+    hotkey: AccountId,
+    record: Option<&DelegateTake>,
+    history: &mut PromptHistory,
+) -> Result<TxRequest, CliError> {
+    let mut args = Map::from_iter([("hotkey_ss58".into(), json!(hotkey))]);
+    if let Some(take) = matches.get_one::<String>("take") {
+        let take = rtao_intents::children::take_to_u16(&json!(take))
+            .map_err(|error| CliError::input(error.to_string()))?;
+        args.insert("take".into(), json!(take));
+    } else {
+        let mut spec = PromptSpec::new("take", "--take");
+        spec.help = Some(TAKE_HELP.into());
+        let mut terminal = ctx.terminal.clone();
+        fill_missing(
+            &ctx.prompt_context(),
+            &mut terminal,
+            &[spec],
+            &mut args,
+            &mut TakeResolver { record },
+            history,
+        )
+        .map_err(prompt_error)?;
+    }
+    let request = TxRequest {
+        op: "set_take",
+        args,
+        period: None,
+    };
+    request.intent()?;
+    Ok(request)
+}
+
+fn stake_burn_request(
+    ctx: &mut AppContext,
+    matches: &ArgMatches,
+    history: &mut PromptHistory,
+) -> Result<TxRequest, CliError> {
+    let mut args = schema::values(matches, &validator_fields("stake_burn")?)?;
+    let hotkey = ctx.resolve_target(
+        "hotkey_ss58",
+        matches.get_one::<String>("hotkey_ss58").map(String::as_str),
+        history,
+    )?;
+    if let Some(hotkey) = hotkey {
+        args.insert("hotkey_ss58".into(), json!(hotkey));
+    }
+    args.retain(|_, value| !value.is_null());
+    let request = TxRequest {
+        op: "stake_burn",
+        args,
+        period: None,
+    };
+    request.intent()?;
+    Ok(request)
 }
 
 fn wait_seconds(raw: &str) -> Result<String, String> {
@@ -470,6 +615,8 @@ pub fn command() -> Result<Command, CliError> {
         });
     let emissions = generated::read_command(ReadName::MechanismEmissionSplit)?.name("emissions");
     Ok(group
+        .subcommand(validator_command("set_take", "set-take")?)
+        .subcommand(validator_command("stake_burn", "stake-burn")?)
         .subcommand(trim_null_command())
         .subcommand(get)
         .subcommand(generated::read_command(ReadName::DelegateTake)?.name("get-take"))
@@ -555,6 +702,20 @@ impl Request {
         history: &mut PromptHistory,
     ) -> Result<Self, CliError> {
         let (name, matches) = leaf(matches)?;
+        if name == "set-take" {
+            let hotkey = take_hotkey(ctx, matches, history)?;
+            if matches.get_one::<String>("take").is_none()
+                && ctx.prompt_context().interactive(&ctx.terminal)
+            {
+                return Err(CliError::failure(
+                    "set-take's interactive prompt needs a connected client",
+                ));
+            }
+            return set_take_request(ctx, matches, hotkey, None, history).map(Self::Transaction);
+        }
+        if name == "stake-burn" {
+            return stake_burn_request(ctx, matches, history).map(Self::Transaction);
+        }
         if name == "trim-null" {
             return NullPruningRequest::from_matches(ctx, matches, history).map(Self::NullPruning);
         }
@@ -593,6 +754,41 @@ impl Request {
         history: &mut PromptHistory,
     ) -> Result<Self, CliError> {
         let (name, args) = leaf(matches)?;
+        if name == "set-take"
+            && args.get_one::<String>("take").is_none()
+            && ctx.prompt_context().interactive(&ctx.terminal)
+        {
+            let hotkey = take_hotkey(ctx, args, history)?;
+            let record = rtao::reads::reads::owner::delegate_take(client, hotkey)
+                .await
+                .map_err(failure)?;
+            ctx.output
+                .detail(
+                    None,
+                    &[
+                        (
+                            "current take".into(),
+                            json!(format!(
+                                "{:.2}%  ({} as u16)",
+                                record.take * 100.0,
+                                record.take_u16
+                            )),
+                        ),
+                        (
+                            "allowed".into(),
+                            json!(format!(
+                                "{:.2}% – {:.2}%",
+                                record.min * 100.0,
+                                record.max * 100.0
+                            )),
+                        ),
+                    ],
+                    None,
+                )
+                .map_err(failure)?;
+            return set_take_request(ctx, args, hotkey, Some(&record), history)
+                .map(Self::Transaction);
+        }
         if name == "set"
             && args.get_one::<String>("name").is_none()
             && ctx.prompt_context().interactive(&ctx.terminal)
@@ -903,5 +1099,464 @@ pub async fn execute(
             render_read(&ctx.output, query, payload)?;
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod validator_tests {
+    use super::*;
+    use crate::{
+        application,
+        books::Books,
+        globals::Globals,
+        output::{MemorySink, OutputOptions, Stream},
+        prompt::Terminal,
+    };
+    use rtao::{
+        client::{ClientConfig, Network},
+        primitives::PerU16,
+        wallet::SecretString,
+    };
+    use rtao_runtime::storage::subtensor_module as st;
+    use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+    use std::{
+        collections::VecDeque,
+        error::Error,
+        sync::{Arc, Mutex},
+    };
+
+    type TestResult = Result<(), Box<dyn Error>>;
+    type PromptLog = Arc<Mutex<Vec<String>>>;
+    const HOTKEY: AccountId = AccountId([8; 32]);
+
+    struct TerminalFixture {
+        tty: bool,
+        answers: VecDeque<String>,
+        prompts: PromptLog,
+        sink: MemorySink,
+        require_take_detail: bool,
+    }
+
+    impl Terminal for TerminalFixture {
+        fn stdin_is_tty(&self) -> bool {
+            self.tty
+        }
+        fn stderr_is_tty(&self) -> bool {
+            self.tty
+        }
+        fn read_line(&mut self, label: &str) -> Result<String, PromptError> {
+            if self.require_take_detail && label.trim_start().starts_with("take:") {
+                let text = self
+                    .sink
+                    .text(Stream::Stdout)
+                    .map_err(|_| PromptError::Io)?;
+                if !text.contains("current take") || !text.contains("allowed") {
+                    return Err(PromptError::InvalidValue(
+                        "take prompt preceded its current-value detail".into(),
+                    ));
+                }
+            }
+            self.prompts
+                .lock()
+                .map_err(|_| PromptError::Io)?
+                .push(label.into());
+            self.answers.pop_front().ok_or(PromptError::Aborted)
+        }
+        fn read_secret(&mut self, _: &str) -> Result<SecretString, PromptError> {
+            Err(PromptError::Unavailable)
+        }
+        fn message(&mut self, message: &str) -> Result<(), PromptError> {
+            self.prompts
+                .lock()
+                .map_err(|_| PromptError::Io)?
+                .push(message.into());
+            Ok(())
+        }
+    }
+
+    fn parse(args: &[&str]) -> Result<ArgMatches, Box<dyn Error>> {
+        Ok(application::command_tree([command()?]).try_get_matches_from(args)?)
+    }
+
+    fn context(
+        parsed: &ArgMatches,
+        tty: bool,
+        answers: &[&str],
+        require_take_detail: bool,
+    ) -> Result<(AppContext, MemorySink, PromptLog), Box<dyn Error>> {
+        let group = parsed.subcommand().ok_or("hparams")?.1;
+        let (_, args) = leaf(group)?;
+        let config = Map::new();
+        let mut globals = Globals::resolve(
+            parsed,
+            &config,
+            Path::new("/isolated/hparams-source-fixture"),
+            |_| None,
+        )?;
+        globals.apply_with_env(args, &reserved(group)?, |_| None)?;
+        let sink = MemorySink::default();
+        let prompts = Arc::new(Mutex::new(Vec::new()));
+        let terminal = TerminalFixture {
+            tty,
+            answers: answers.iter().map(|value| (*value).to_owned()).collect(),
+            prompts: prompts.clone(),
+            sink: sink.clone(),
+            require_take_detail,
+        };
+        let mut ctx = AppContext::new(
+            globals,
+            config,
+            Books::from_values(
+                json!([{"name":"validator","address":HOTKEY.to_ss58(42)}]),
+                json!([]),
+                json!([]),
+            ),
+            Arc::new(Mutex::new(Box::new(terminal))),
+        );
+        ctx.output = Output::new(
+            OutputOptions {
+                json_mode: ctx.globals.json,
+                quiet: ctx.globals.quiet,
+                network: None,
+            },
+            Arc::new(sink.clone()),
+        );
+        Ok((ctx, sink, prompts))
+    }
+
+    async fn fixture() -> Result<(Client, FakeChain), Box<dyn Error>> {
+        let mut state = FakeState::try_default()?;
+        state.seed(&st::DELEGATES, (HOTKEY,), PerU16(32768))?;
+        state.seed(&st::MIN_DELEGATE_TAKE, (), PerU16(6554))?;
+        state.seed(&st::MAX_DELEGATE_TAKE, (), PerU16(39321))?;
+        let chain = FakeChain::from_state(state);
+        let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+        Ok((client, chain))
+    }
+
+    #[test]
+    fn curated_burn_requires_explicit_limit_keeps_aliases_and_omits_generic_only_options()
+    -> TestResult {
+        for command in ["stake-burn", "stake_burn", "buyback"] {
+            let parsed = parse(&[
+                "rtao",
+                "hparams",
+                command,
+                "--netuid",
+                "513",
+                "--amount",
+                "1e-9",
+                "--limit-price",
+                "18446744073709551615",
+                "--hotkey",
+                "validator",
+                "--yes",
+            ])?;
+            let (mut ctx, _, _) = context(&parsed, false, &[], false)?;
+            let request = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("group")?.1,
+                &mut PromptHistory::default(),
+            )?;
+            let Request::Transaction(request) = request else {
+                return Err("expected transaction".into());
+            };
+            assert_eq!(request.op, "stake_burn");
+            let json = request.intent()?.to_json();
+            assert_eq!(json["netuid"], 513);
+            assert_eq!(json["amount_tao"], "0.000000001");
+            assert_eq!(json["limit_price"], u64::MAX);
+            assert_eq!(json["rate_tolerance"], 0.05);
+            assert_eq!(json["hotkey_ss58"], HOTKEY.to_ss58(42));
+        }
+        for missing in ["--netuid", "--amount-tao", "--limit-price"] {
+            let mut args = vec!["rtao", "hparams", "stake-burn"];
+            for (flag, value) in [
+                ("--netuid", "1"),
+                ("--amount-tao", "1"),
+                ("--limit-price", "0"),
+            ] {
+                if flag != missing {
+                    args.extend([flag, value]);
+                }
+            }
+            assert!(parse(&args).is_err(), "{missing}");
+        }
+        for extra in [
+            "--rate-tolerance",
+            "--all",
+            "--slippage-protection",
+            "--allow-partial",
+        ] {
+            assert!(
+                parse(&[
+                    "rtao",
+                    "hparams",
+                    "stake-burn",
+                    "--netuid",
+                    "1",
+                    "--amount",
+                    "1",
+                    "--limit-price",
+                    "0",
+                    extra,
+                    "1"
+                ])
+                .is_err(),
+                "{extra}"
+            );
+        }
+        let group = command()?;
+        let burn = group.find_subcommand("stake-burn").ok_or("burn command")?;
+        assert!(burn.get_all_aliases().any(|alias| alias == "buyback"));
+        assert!(!burn.get_visible_aliases().any(|alias| alias == "buyback"));
+        let help = group.clone().render_help().to_string();
+        assert!(help.contains("set-take"));
+        assert!(help.contains("stake-burn"));
+        assert!(!help.contains("buyback"));
+        Ok(())
+    }
+
+    #[test]
+    fn supplied_take_uses_exact_decimal_point_rules_and_preserves_source_shape() -> TestResult {
+        for (raw, expected) in [
+            ("0", 0),
+            ("1", 1),
+            ("1.0", 65535),
+            ("0.18", 11796),
+            ("65535", 65535),
+        ] {
+            let parsed = parse(&[
+                "rtao",
+                "hparams",
+                "set-take",
+                "--take",
+                raw,
+                "--hotkey",
+                "validator",
+                "--yes",
+            ])?;
+            let (mut ctx, _, prompts) = context(&parsed, false, &[], false)?;
+            let Request::Transaction(request) = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("group")?.1,
+                &mut PromptHistory::default(),
+            )?
+            else {
+                return Err("expected transaction".into());
+            };
+            assert_eq!(request.op, "set_take");
+            assert_eq!(request.args["take"], expected);
+            assert_eq!(request.intent()?.to_json()["take"], expected);
+            assert_eq!(request.args["hotkey_ss58"], HOTKEY.to_ss58(42));
+            assert!(prompts.lock().map_err(|_| "prompts poisoned")?.is_empty());
+        }
+        assert!(parse(&["rtao", "hparams", "set-take", "--hotkey", "validator"]).is_ok());
+        assert!(
+            parse(&[
+                "rtao", "hparams", "set-take", "--take", "1", "--netuid", "1"
+            ])
+            .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn omitted_validator_hotkeys_use_the_shared_wallet_target_selection() -> TestResult {
+        for args in [
+            vec![
+                "rtao", "hparams", "set-take", "--take", "0.18", "--wallet", "selected",
+            ],
+            vec![
+                "rtao",
+                "hparams",
+                "stake-burn",
+                "--netuid",
+                "1",
+                "--amount",
+                "1",
+                "--limit-price",
+                "1",
+                "--wallet",
+                "selected",
+            ],
+        ] {
+            let parsed = parse(&args)?;
+            let (mut ctx, _, prompts) = context(&parsed, true, &["validator"], false)?;
+            let Request::Transaction(request) = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("group")?.1,
+                &mut PromptHistory::default(),
+            )?
+            else {
+                return Err("expected transaction".into());
+            };
+            assert_eq!(request.args["hotkey_ss58"], HOTKEY.to_ss58(42));
+            assert_eq!(ctx.globals.wallet_name, "selected");
+            assert!(
+                prompts
+                    .lock()
+                    .map_err(|_| "prompts poisoned")?
+                    .iter()
+                    .any(|line| line.trim_start().starts_with("wallet-hotkey:"))
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn omitted_take_displays_chain_bounds_before_prompt_and_reasks_outside_range()
+    -> TestResult {
+        let parsed = parse(&["rtao", "hparams", "set-take", "--hotkey", "validator"])?;
+        let (mut ctx, sink, prompts) = context(&parsed, true, &["0.9", "0.18"], true)?;
+        let (client, chain) = fixture().await?;
+        let before = chain.requests().len();
+        let mut history = PromptHistory::default();
+        let Request::Transaction(request) = Request::from_matches_with_client(
+            &mut ctx,
+            &client,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut history,
+        )
+        .await?
+        else {
+            return Err("expected transaction".into());
+        };
+        assert_eq!(request.args["take"], 11796);
+        let text = sink.text(Stream::Stdout)?;
+        assert!(text.contains("current take"));
+        assert!(text.contains("50.00%"));
+        assert!(text.contains("32768 as u16"));
+        assert!(text.contains("10.00% – 60.00%"));
+        {
+            let prompts = prompts.lock().map_err(|_| "prompts poisoned")?;
+            assert_eq!(
+                prompts
+                    .iter()
+                    .filter(|line| line.trim_start().starts_with("take:"))
+                    .count(),
+                2
+            );
+            assert!(
+                prompts
+                    .iter()
+                    .any(|line| line == "take 90.00% is outside the allowed range 10.00% – 60.00%")
+            );
+        }
+        let replay = history.replay_command(&["rtao".into(), "hparams".into(), "set-take".into()]);
+        assert!(replay.contains("--take 0.18"));
+        assert!(!replay.contains("0.9"));
+        let requests = chain.requests();
+        assert!(
+            requests[before..]
+                .iter()
+                .any(|request| request.method == "state_queryStorageAt")
+        );
+        assert!(
+            !requests[before..]
+                .iter()
+                .any(|request| request.method == "state_call")
+        );
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn supplied_take_skips_live_range_gate_and_missing_noninteractive_take_refuses()
+    -> TestResult {
+        let (client, chain) = fixture().await?;
+        let before = chain.requests().len();
+        let parsed = parse(&[
+            "rtao",
+            "hparams",
+            "set-take",
+            "--hotkey",
+            "validator",
+            "--take",
+            "0.9",
+            "--yes",
+        ])?;
+        let (mut ctx, sink, prompts) = context(&parsed, false, &[], false)?;
+        let Request::Transaction(request) = Request::from_matches_with_client(
+            &mut ctx,
+            &client,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )
+        .await?
+        else {
+            return Err("expected transaction".into());
+        };
+        // Supplied values only receive the converter's native bounds; Python
+        // applies the live min/max gate exclusively to the prompted path.
+        assert_eq!(request.args["take"], 58982);
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        assert!(prompts.lock().map_err(|_| "prompts poisoned")?.is_empty());
+        assert_eq!(chain.requests().len(), before);
+        for mode in ["--json", "--quiet", "--yes"] {
+            let parsed = parse(&["rtao", "hparams", "set-take", "--hotkey", "validator", mode])?;
+            let (mut ctx, _, _) = context(&parsed, false, &[], false)?;
+            let error = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("group")?.1,
+                &mut PromptHistory::default(),
+            )
+            .err()
+            .ok_or("expected missing take")?;
+            assert_eq!(error.code, 2);
+            assert_eq!(error.message, "missing required option: `--take`");
+        }
+        assert_eq!(chain.requests().len(), before);
+        client.close().await;
+        Ok(())
+    }
+
+    #[test]
+    fn bad_supplied_take_and_burn_amounts_refuse_before_submission() -> TestResult {
+        for raw in ["-1", "65536", "1.1", "nan", "abc"] {
+            let parsed = parse(&[
+                "rtao",
+                "hparams",
+                "set-take",
+                "--take",
+                raw,
+                "--hotkey",
+                "validator",
+                "--yes",
+            ])?;
+            let (mut ctx, _, _) = context(&parsed, false, &[], false)?;
+            let error = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("group")?.1,
+                &mut PromptHistory::default(),
+            )
+            .err()
+            .ok_or("expected bad take")?;
+            assert_eq!(error.code, 2, "{raw}");
+        }
+        for raw in ["all", "-1", "nan", "18446744073.709551616"] {
+            assert!(
+                parse(&[
+                    "rtao",
+                    "hparams",
+                    "stake-burn",
+                    "--netuid",
+                    "1",
+                    "--amount-tao",
+                    raw,
+                    "--limit-price",
+                    "1"
+                ])
+                .is_err(),
+                "{raw}"
+            );
+        }
+        Ok(())
     }
 }

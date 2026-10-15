@@ -40,6 +40,15 @@ identity. These source relationships do not prove runtime conformance.
 ## Remaining acceptance work
 
 Latest normal run
+[38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
+at `bad95c0` passes compilation, strict Clippy and the five other jobs. The
+lock fixture now qualifies; parity next requires an explicit AddStake class
+reference in its helper-based assertion fixture. Concrete intent annotations
+are added to existing trade/claim fixtures without changing the gate. Tests,
+doctests and documentation builds remain unexecuted. Private bounded evidence
+is `check-38707066144.json`.
+
+Earlier normal run
 [38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
 at `93f562c` passes compilation, strict Clippy and all five other normal jobs.
 Parity's existing evidence gate requires explicit Rust class references for

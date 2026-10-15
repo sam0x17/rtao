@@ -4402,6 +4402,12 @@ fn tx_command() -> clap::Command {
   Writes are atomic, and corrupt input is retained at a unique `.corrupt.<ts>[.<ordinal>]` path before replacement.
   D-045 records the shared multisig book/cache adapter's bounded regular-file reads, private new-file modes,
   atomic publication and hash-authenticated cache lookup. Cached labels and params never authorize signing.
+  D-047 keeps named pure-proxy creation coordinates after a successful approval that has not executed the kill.
+  Ordinary dispatch, threshold-one dispatch or a successful `MultisigExecuted` receipt establishes retirement;
+  failed kills retain the entry. No automatic transfer or reclaim is added.
+  D-048 displays an unknown sudo approval layer when proposal assets could not
+  be authenticated and its state was not queried. It only calls a layer unopened
+  after a successful lookup reports no operation; machine fields are unchanged.
   A pending multisig's call data resolves as in
   btcli: the shared cache, then `--call-data`, then the opening `as_multi` at the timepoint, through
   `Client::block_info` (`PY/cli/multisig_helpers.py:907-975`). Homes:

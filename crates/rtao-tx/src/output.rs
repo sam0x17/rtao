@@ -61,12 +61,25 @@ output!(WeightsSubmitted, SubnetRegistered, PureCreated);
 impl IntentOutput for MultisigCall {
     fn from_data(data: &Map<String, Value>) -> Result<Self, IntentError> {
         let call_hash = data
-            .get("call_hash")
+            .get("multisig_call_hash")
+            .or_else(|| data.get("call_hash"))
             .filter(|value| !value.is_null())
-            .map(|value| serde_json::from_value(value.clone()))
+            .map(|value| {
+                if let Some(text) = value.as_str() {
+                    let bytes = hex::decode(text.strip_prefix("0x").unwrap_or(text))
+                        .map_err(|error| IntentError::Validation(error.to_string()))?;
+                    let bytes = bytes.try_into().map_err(|_: Vec<u8>| {
+                        IntentError::Validation("multisig call hash must contain 32 bytes".into())
+                    })?;
+                    Ok(H256(bytes))
+                } else {
+                    serde_json::from_value(value.clone()).map_err(IntentError::from)
+                }
+            })
             .transpose()?;
         let call_data = data
-            .get("call_data")
+            .get("multisig_call_data")
+            .or_else(|| data.get("call_data"))
             .filter(|value| !value.is_null())
             .map(|value| {
                 let text = value.as_str().ok_or_else(|| {
@@ -283,6 +296,45 @@ mod tests {
         assert_eq!(data["unrelated"], json!(9));
         assert!(
             MultisigCall::from_data(&Map::from_iter([("call_data".into(), json!("0x0"))])).is_err()
+        );
+        Ok(())
+    }
+    #[test]
+    fn multisig_output_reads_python_extras_before_legacy_native_aliases() -> Result<(), IntentError>
+    {
+        let hash = H256([7; 32]);
+        let data = Map::from_iter([
+            (
+                "multisig_call_hash".into(),
+                json!(format!("0x{}", hex::encode(hash.0))),
+            ),
+            ("multisig_call_data".into(), json!("0x000102")),
+            ("call_hash".into(), json!(H256([8; 32]))),
+            ("call_data".into(), json!("0xff")),
+        ]);
+        assert_eq!(
+            MultisigCall::from_data(&data)?,
+            MultisigCall {
+                call_hash: Some(hash),
+                call_data: Some(vec![0, 1, 2]),
+            }
+        );
+        assert_eq!(data["multisig_call_data"], "0x000102");
+        for value in [json!("0x0"), json!(7)] {
+            assert!(
+                MultisigCall::from_data(&Map::from_iter([
+                    ("multisig_call_data".into(), value),
+                    ("call_data".into(), json!("0x00")),
+                ]))
+                .is_err()
+            );
+        }
+        assert!(
+            MultisigCall::from_data(&Map::from_iter([(
+                "multisig_call_hash".into(),
+                json!("0x01"),
+            )]))
+            .is_err()
         );
         Ok(())
     }

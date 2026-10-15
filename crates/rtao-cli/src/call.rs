@@ -192,6 +192,26 @@ pub async fn decode_multisig_call_spec(
     decoded_call_spec(&decoded, role, 0).unwrap_or_else(|| MultisigCallSpec::unknown(role))
 }
 
+/// Decode cosmetic followup details using the pending operation's pinned runtime.
+pub(crate) fn decode_multisig_call_spec_at(
+    runtime: &RuntimeHandle,
+    call: &CallBytes,
+    role: SignerRole,
+) -> MultisigCallSpec {
+    if call.ensure_runtime(runtime).is_err() {
+        return MultisigCallSpec::unknown(role);
+    }
+    let Ok(decoded) =
+        runtime
+            .core()
+            .decode_spec(&rtao::core::runtime::TypeSpec::Call, call.as_bytes(), true)
+    else {
+        return MultisigCallSpec::unknown(role);
+    };
+    let decoded = rtao::core::DynValue::new(decoded).to_json();
+    decoded_call_spec(&decoded, role, 0).unwrap_or_else(|| MultisigCallSpec::unknown(role))
+}
+
 fn decoded_call_spec(value: &Json, role: SignerRole, depth: usize) -> Option<MultisigCallSpec> {
     if depth >= 128 {
         return None;
@@ -244,6 +264,30 @@ fn decoded_call_spec(value: &Json, role: SignerRole, depth: usize) -> Option<Mul
         role,
         ..MultisigCallSpec::unknown(role)
     })
+}
+
+#[cfg(test)]
+mod pinned_spec_tests {
+    use super::*;
+
+    #[test]
+    fn pinned_followup_retains_semantic_role_and_refuses_foreign_runtime_stamps()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let metadata = include_bytes!("../../../vendor/metadata/finney/478.v15.scale");
+        let runtime = RuntimeHandle::parse(metadata, 478, 1, 42)?;
+        let call = rtao_runtime::calls::system::remark(vec![1, 2]).compose(&runtime)?;
+        let wrapped = rtao_runtime::calls::sudo::sudo(call).compose(&runtime)?;
+        let spec = decode_multisig_call_spec_at(&runtime, &wrapped, SignerRole::Hotkey);
+        assert_eq!(spec.target.as_deref(), Some("System.remark"));
+        assert_eq!(spec.role, SignerRole::Hotkey);
+        assert!(spec.sudo);
+        assert!(spec.params.contains_key("remark"));
+        let upgraded = RuntimeHandle::parse(metadata, 479, 1, 42)?;
+        let refused = decode_multisig_call_spec_at(&upgraded, &wrapped, SignerRole::Coldkey);
+        assert!(refused.target.is_none());
+        assert_eq!(refused.role, SignerRole::Coldkey);
+        Ok(())
+    }
 }
 
 /// One immutable composed call and its public multisig followup inputs.
