@@ -374,7 +374,7 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
         ));
         for owner in ["SyncClient", "SyncSnapshot"] {
             blocking_namespaces.push_str(&format!(
-                "impl super::{owner}{{/// Bind the `{namespace}` namespace without connecting.\npub fn {accessor}(&self)->{class}<'_>{{{class}{{view:&self.view}}}}}\n"
+                "impl super::{owner} {{\n/// Bind the `{namespace}` namespace without connecting.\npub fn {accessor}(&self) -> {class}<'_> {{ {class} {{ view: &self.view }} }}\n}}\n"
             ));
         }
     }

@@ -243,15 +243,16 @@ fn close_started(shared: &Arc<Shared>, cleanup_wait: Duration) -> Result<(), Clo
                     receiver.recv_timeout(Duration::from_secs(1)),
                     Err(mpsc::RecvTimeoutError::Timeout)
                 );
-            let joined = if completed {
-                coordinator
-                    .join()
-                    .map_err(|_| CloseFailure::Runtime(BlockingError::WorkerPanicked))
+            let acknowledged = if completed {
+                Ok(())
             } else {
-                drop(coordinator);
                 Err(CloseFailure::Runtime(BlockingError::ShutdownTimeout))
             };
-            shutdown.and(joined).and(cleanup)
+            // An acknowledgement completes the cleanup operation, but native
+            // thread teardown may still be pending. Detach rather than add
+            // an unbounded join after the caller's bounded waits.
+            drop(coordinator);
+            shutdown.and(acknowledged).and(cleanup)
         }
         Err(error) => {
             // Failure to create the cleanup coordinator must still stop the
