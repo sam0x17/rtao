@@ -425,6 +425,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::crowdloan::check_constructor_input(&args)?;
                 let intent: super::interfaces::CreateCrowdloan = serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::CreateCrowdloan(intent))
