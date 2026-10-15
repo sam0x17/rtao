@@ -124,6 +124,7 @@ fn epoch_prefix(file: &syn::File) -> Result<()> {
             && implementation.unsafety.is_none()
             && implementation.defaultness.is_none()
             && tokens(&implementation.self_ty) == tokens(&expected.self_ty)
+            && implementation.generics.where_clause.is_none()
             && tokens(&implementation.generics) == tokens(&expected.generics)
             && !implementation
                 .attrs
@@ -247,6 +248,10 @@ mod tests {
             chain.replace(
                 "impl<T: Config> Pallet<T>",
                 "impl<T: Config> OtherPallet<T>",
+            ),
+            chain.replace(
+                "impl<T: Config> Pallet<T>",
+                "impl<T: Config> Pallet<T> where T: AlternateConfig",
             ),
             format!(
                 "const netuid: NetUid = NetUid(0);\n{}",
