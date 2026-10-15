@@ -205,6 +205,7 @@ typed_leaves!(
     rtao_runtime::models::StakeInfo,
     rtao_runtime::models::SubnetPrice,
     rtao_runtime::models::MultisigInfo,
+    rtao_runtime::models::ProxyDefinition,
     rtao_runtime::models::MultisigTimepoint,
     rtao_runtime::models::SubnetIdentityV3,
     rtao_runtime::models::MetagraphWire,
