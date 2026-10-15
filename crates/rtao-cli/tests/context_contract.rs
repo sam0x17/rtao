@@ -2,6 +2,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use rtao::{
     client::{Client, ClientConfig, HeadProvider, Network, View},
+    core::value_ext::ValueExt,
     primitives::{AccountId, CryptoType},
     signer::{
         BoxFuture, Coldkey, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
@@ -1995,6 +1996,21 @@ impl rtao_cli::context::SubmissionHooks for CallbackHooks {
                     .map_err(|error| { rtao_cli::error::CliError::failure(error.to_string()) })?
                     .is_empty()
             );
+            assert!(!result.data.contains_key("multisig_followup"));
+            callback_phase(&self.trace, "after")?;
+            *self
+                .observed
+                .lock()
+                .map_err(|_| rtao_cli::error::CliError::failure("callback observed lock"))? =
+                Some(result.to_json());
+            Ok(())
+        })
+    }
+    fn after_followup<'a>(
+        &'a self,
+        result: &'a rtao::tx::ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
             if let Some(status) = self.expected_followup {
                 assert_eq!(result.data["multisig_followup"]["status"], json!(status));
                 assert!(
@@ -2008,7 +2024,7 @@ impl rtao_cli::context::SubmissionHooks for CallbackHooks {
                         .is_some()
                 );
             }
-            callback_phase(&self.trace, "after")?;
+            callback_phase(&self.trace, "followup")?;
             *self
                 .observed
                 .lock()
@@ -2102,8 +2118,8 @@ fn callback_options(hooks: &CallbackHooks) -> rtao_cli::context::SubmissionOptio
 }
 
 #[tokio::test]
-async fn direct_callback_phases_acquire_before_hook_and_release_before_receipt_and_render()
--> TestResult {
+async fn direct_callback_phases_prepare_source_before_hook_and_persist_before_release() -> TestResult
+{
     let (client, chain, keys) = fixture(1_000_000_000).await?;
     let base = DirectExternalFactory::new(&keys, false);
     let trace = CallbackTrace::default();
@@ -2139,7 +2155,7 @@ async fn direct_callback_phases_acquire_before_hook_and_release_before_receipt_a
         .ok_or("direct receipt")?;
     assert_eq!(
         *trace.lock().map_err(|_| "trace")?,
-        vec!["acquired", "before", "released", "after", "render"]
+        vec!["acquired", "before", "after", "released", "render"]
     );
     assert_eq!(*base.released.lock().map_err(|_| "release")?, vec![true]);
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
@@ -2160,7 +2176,8 @@ async fn direct_callback_phases_acquire_before_hook_and_release_before_receipt_a
 }
 
 #[tokio::test]
-async fn saved_callback_phases_release_before_enriched_receipt_hook_and_render() -> TestResult {
+async fn saved_callback_phases_persist_raw_before_release_then_enrich_before_render() -> TestResult
+{
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     let runtime = client.refresh_runtime().await?;
@@ -2205,7 +2222,9 @@ async fn saved_callback_phases_release_before_enriched_receipt_hook_and_render()
         .ok_or("saved receipt")?;
     assert_eq!(
         *trace.lock().map_err(|_| "trace")?,
-        vec!["acquired", "before", "released", "after", "render"]
+        vec![
+            "before", "acquired", "after", "released", "followup", "render"
+        ]
     );
     assert_eq!(*base.releases.lock().map_err(|_| "release")?, vec![true]);
     assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 1);
@@ -2283,7 +2302,7 @@ async fn direct_before_submit_failure_releases_without_signing_or_receipt_hook()
 }
 
 #[tokio::test]
-async fn saved_before_submit_failure_releases_without_signing_or_receipt_hook() -> TestResult {
+async fn saved_before_submit_failure_never_acquires_source_or_signs() -> TestResult {
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     let base = factory(&keys);
@@ -2313,11 +2332,9 @@ async fn saved_before_submit_failure_releases_without_signing_or_receipt_hook() 
         .err()
         .ok_or("before hook failure")?;
     assert_eq!(error.message, "before-submit failure sentinel");
-    assert_eq!(
-        *trace.lock().map_err(|_| "trace")?,
-        vec!["acquired", "before", "released"]
-    );
-    assert_eq!(*base.releases.lock().map_err(|_| "release")?, vec![false]);
+    assert_eq!(*trace.lock().map_err(|_| "trace")?, vec!["before"]);
+    assert_eq!(base.acquired.load(Ordering::SeqCst), 0);
+    assert!(base.releases.lock().map_err(|_| "release")?.is_empty());
     assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 0);
     assert!(hooks.observed.lock().map_err(|_| "observed")?.is_none());
     assert!(
@@ -2388,7 +2405,8 @@ async fn direct_source_failure_invokes_neither_callback_and_has_nothing_to_relea
 }
 
 #[tokio::test]
-async fn saved_source_failure_invokes_neither_callback_and_has_nothing_to_release() -> TestResult {
+async fn saved_source_failure_retains_plan_hook_and_has_no_receipt_or_source_to_release()
+-> TestResult {
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     let mut base = factory(&keys);
@@ -2419,7 +2437,10 @@ async fn saved_source_failure_invokes_neither_callback_and_has_nothing_to_releas
         .err()
         .ok_or("source failure")?;
     assert_eq!(error.message, "fixture source unavailable");
-    assert_eq!(*trace.lock().map_err(|_| "trace")?, vec!["source-error"]);
+    assert_eq!(
+        *trace.lock().map_err(|_| "trace")?,
+        vec!["before", "source-error"]
+    );
     assert_eq!(base.acquired.load(Ordering::SeqCst), 1);
     assert!(base.releases.lock().map_err(|_| "release")?.is_empty());
     assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 0);
@@ -2433,6 +2454,317 @@ async fn saved_source_failure_invokes_neither_callback_and_has_nothing_to_releas
             .is_empty()
     );
     assert!(sink.text(Stream::Stdout)?.is_empty());
+    client.close().await;
+    Ok(())
+}
+
+struct DurablePlanHooks<'a> {
+    unlocks: &'a AtomicUsize,
+    source_acquisitions: Option<&'a AtomicUsize>,
+    releases: &'a Mutex<Vec<bool>>,
+    plans: Mutex<Vec<rtao::tx::Plan>>,
+    raw: Mutex<Vec<rtao::tx::ExtrinsicResult>>,
+    enriched: Mutex<Vec<rtao::tx::ExtrinsicResult>>,
+    fail_result: bool,
+}
+impl rtao_cli::context::SubmissionHooks for DurablePlanHooks<'_> {
+    fn before_submit(&self) -> BoxFuture<'_, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async {
+            Err(rtao_cli::error::CliError::failure(
+                "durable submission must receive its reviewed plan",
+            ))
+        })
+    }
+    fn before_submit_with_plan<'a>(
+        &'a self,
+        plan: &'a rtao::tx::Plan,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            assert_eq!(self.unlocks.load(Ordering::SeqCst), 0);
+            if let Some(acquisitions) = self.source_acquisitions {
+                assert_eq!(acquisitions.load(Ordering::SeqCst), 0);
+            }
+            assert!(self.releases.lock().map_err(callback_lock)?.is_empty());
+            self.plans.lock().map_err(callback_lock)?.push(plan.clone());
+            Ok(())
+        })
+    }
+    fn on_result<'a>(
+        &'a self,
+        receipt: &'a rtao::tx::ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            assert_eq!(self.plans.lock().map_err(callback_lock)?.len(), 1);
+            assert!(self.releases.lock().map_err(callback_lock)?.is_empty());
+            assert!(!receipt.data.contains_key("multisig_followup"));
+            self.raw
+                .lock()
+                .map_err(callback_lock)?
+                .push(receipt.clone());
+            if self.fail_result {
+                return Err(rtao_cli::error::CliError::failure(
+                    "journal receipt persistence failure",
+                ));
+            }
+            Ok(())
+        })
+    }
+    fn after_followup<'a>(
+        &'a self,
+        receipt: &'a rtao::tx::ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            assert_eq!(self.raw.lock().map_err(callback_lock)?.len(), 1);
+            self.enriched
+                .lock()
+                .map_err(callback_lock)?
+                .push(receipt.clone());
+            Ok(())
+        })
+    }
+}
+
+fn callback_lock<T>(_: std::sync::PoisonError<T>) -> rtao_cli::error::CliError {
+    rtao_cli::error::CliError::failure("durable callback fixture lock")
+}
+
+#[tokio::test]
+async fn durable_direct_plan_keeps_proxy_call_and_records_receipt_before_close_failure()
+-> TestResult {
+    for fail_result in [false, true] {
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        let base = DirectExternalFactory::new(&keys, true);
+        let real = AccountId([91; 32]);
+        let real_flag = real.to_string();
+        let (mut ctx, sink, _) = context(&[
+            "--yes",
+            "--json",
+            "--no-mev-shield",
+            "--signer",
+            "extension",
+            "--proxy-for",
+            &real_flag,
+        ])?;
+        let hooks = DurablePlanHooks {
+            unlocks: keys.unlocks.as_ref(),
+            source_acquisitions: None,
+            releases: &base.released,
+            plans: Mutex::new(Vec::new()),
+            raw: Mutex::new(Vec::new()),
+            enriched: Mutex::new(Vec::new()),
+            fail_result,
+        };
+        let error = ctx
+            .submit_with_options(
+                &client,
+                &Preview { blocked: false },
+                rtao_cli::context::SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+                Some(&base),
+                &mut rtao_cli::prompt::PromptHistory::default(),
+            )
+            .await
+            .err()
+            .ok_or("known receipt followed by local failure")?;
+        assert_eq!(
+            error.message,
+            if fail_result {
+                "journal receipt persistence failure"
+            } else {
+                "direct close failure sentinel"
+            }
+        );
+        assert!(
+            error
+                .help
+                .ok_or("known receipt recovery")?
+                .contains("already submitted")
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(*base.released.lock().map_err(|_| "release")?, vec![true]);
+        let plans = hooks.plans.lock().map_err(|_| "plans")?.clone();
+        assert_eq!(plans.len(), 1);
+        assert_eq!(plans[0].signer_address, keys.key.account());
+        assert_eq!(plans[0].extras["proxy_for"], json!(real));
+        let submissions = chain
+            .state()
+            .lock()
+            .map_err(|_| "state")?
+            .submissions
+            .clone();
+        assert_eq!(submissions.len(), 1);
+        let runtime = client.refresh_runtime().await?;
+        let submitted = runtime.core().decode_extrinsic(&submissions[0], true)?;
+        let reviewed = runtime.core().decode_spec(
+            &rtao::core::runtime::TypeSpec::Call,
+            plans[0].call().as_bytes(),
+            true,
+        )?;
+        assert_eq!(submitted.field("call"), Some(&reviewed));
+        let raw = hooks.raw.lock().map_err(|_| "raw")?.clone();
+        assert_eq!(raw.len(), 1);
+        assert!(raw[0].success);
+        assert_eq!(raw[0].data["proxy_for"], json!(real));
+        assert!(hooks.enriched.lock().map_err(|_| "enriched")?.is_empty());
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn durable_saved_plan_precedes_source_and_raw_receipt_survives_close_or_journal_error()
+-> TestResult {
+    for fail_result in [false, true] {
+        let keys = members()?;
+        let (client, chain, _) = fixture(1_000_000_000).await?;
+        let mut base = factory(&keys);
+        base.fail_release = true;
+        let (ctx, sink) = saved_context(&keys, &["--yes", "--json", "--no-mev-shield"], 1)?;
+        let hooks = DurablePlanHooks {
+            unlocks: keys[0].unlocks.as_ref(),
+            source_acquisitions: Some(&base.acquired),
+            releases: &base.releases,
+            plans: Mutex::new(Vec::new()),
+            raw: Mutex::new(Vec::new()),
+            enriched: Mutex::new(Vec::new()),
+            fail_result,
+        };
+        let error = ctx
+            .submit_saved_with_options(
+                &client,
+                &Preview { blocked: false },
+                rtao_cli::context::SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+                &base,
+                &CallCache::default(),
+            )
+            .await
+            .err()
+            .ok_or("known saved receipt followed by local failure")?;
+        assert_eq!(
+            error.message,
+            if fail_result {
+                "journal receipt persistence failure"
+            } else {
+                "fixture close failed"
+            }
+        );
+        assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(base.acquired.load(Ordering::SeqCst), 1);
+        assert_eq!(*base.releases.lock().map_err(|_| "release")?, vec![true]);
+        let plans = hooks.plans.lock().map_err(|_| "plans")?.clone();
+        assert_eq!(plans.len(), 1);
+        assert_eq!(plans[0].op, "multisig_execute");
+        assert_eq!(plans[0].signer_address, keys[0].key.account());
+        let hash = plans[0].extras["multisig_call_hash"]
+            .as_str()
+            .ok_or("reviewed inner hash")?;
+        assert!(error.help.ok_or("saved recovery help")?.contains(hash));
+        let raw = hooks.raw.lock().map_err(|_| "raw")?.clone();
+        assert_eq!(raw.len(), 1);
+        assert!(raw[0].success);
+        assert!(!raw[0].data.contains_key("multisig_followup"));
+        let enriched = hooks.enriched.lock().map_err(|_| "enriched")?.clone();
+        assert_eq!(enriched.len(), usize::from(!fail_result));
+        if !fail_result {
+            assert!(enriched[0].data.contains_key("multisig_followup"));
+        }
+        assert_eq!(
+            chain.state().lock().map_err(|_| "state")?.submissions.len(),
+            1
+        );
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn durable_direct_call_binding_refuses_rebuild_drift_before_private_signing() -> TestResult {
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let (ctx, _, _) = context(&["--yes", "--json", "--no-mev-shield"])?;
+    let intent = ChangingPreview(AtomicUsize::new(0));
+    let error = ctx
+        .submit_with_keys_options(
+            &client,
+            &intent,
+            &keys,
+            rtao_cli::context::SubmissionOptions {
+                bind_reviewed_call: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .err()
+        .ok_or("reviewed bytes changed")?;
+    assert!(error.message.contains("differs from the reviewed call"));
+    assert_eq!(intent.0.load(Ordering::SeqCst), 2);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(
+        chain
+            .state()
+            .lock()
+            .map_err(|_| "state")?
+            .submissions
+            .is_empty()
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn durable_saved_binding_keeps_reviewed_plan_and_refuses_drift_before_private_signing()
+-> TestResult {
+    let keys = members()?;
+    let (client, chain, _) = fixture(1_000_000_000).await?;
+    let base = factory(&keys);
+    let (ctx, _) = saved_context(&keys, &["--yes", "--json", "--no-mev-shield"], 1)?;
+    let intent = ChangingPreview(AtomicUsize::new(0));
+    let hooks = DurablePlanHooks {
+        unlocks: keys[0].unlocks.as_ref(),
+        source_acquisitions: Some(&base.acquired),
+        releases: &base.releases,
+        plans: Mutex::new(Vec::new()),
+        raw: Mutex::new(Vec::new()),
+        enriched: Mutex::new(Vec::new()),
+        fail_result: false,
+    };
+    let error = ctx
+        .submit_saved_with_options(
+            &client,
+            &intent,
+            rtao_cli::context::SubmissionOptions {
+                bind_reviewed_call: true,
+                hooks: Some(&hooks),
+                ..Default::default()
+            },
+            &base,
+            &CallCache::default(),
+        )
+        .await
+        .err()
+        .ok_or("reviewed approval bytes changed")?;
+    assert!(error.message.contains("differs from the reviewed call"));
+    assert_eq!(intent.0.load(Ordering::SeqCst), 2);
+    assert_eq!(hooks.plans.lock().map_err(|_| "plans")?.len(), 1);
+    assert!(hooks.raw.lock().map_err(|_| "raw")?.is_empty());
+    assert!(hooks.enriched.lock().map_err(|_| "enriched")?.is_empty());
+    assert_eq!(base.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(*base.releases.lock().map_err(|_| "release")?, vec![false]);
+    assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 0);
+    assert!(
+        chain
+            .state()
+            .lock()
+            .map_err(|_| "state")?
+            .submissions
+            .is_empty()
+    );
     client.close().await;
     Ok(())
 }
