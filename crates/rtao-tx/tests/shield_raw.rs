@@ -791,12 +791,27 @@ async fn shield_runtime_stamp_change_rebuilds_once_and_reuses_resolved_signer() 
 #[tokio::test]
 async fn missing_inner_retains_shield_metadata_and_reviewed_extras() {
     let (ex, fake, keys) = fixture().await;
+    // Noninclusion is definite only after every era height is available and
+    // expiry is finalized. A static head would correctly retain unknown fate.
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlockHash", |state, request| {
+            if !state.submissions.is_empty()
+                && let Some(height) = request.params[0].as_u64()
+                && height > state.block
+                && height <= 108
+            {
+                state.advance(height - state.block);
+            }
+            state.dispatch(request)
+        });
+    });
     let result = ex
         .submit_shielded(&Required::default(), &keys, &ShieldOptions::default())
         .await
         .unwrap();
     assert!(!result.success);
     assert!(result.error.is_some());
+    assert_eq!(result.fate_unknown, None);
     assert!(
         result
             .message
@@ -811,6 +826,19 @@ async fn missing_inner_retains_shield_metadata_and_reviewed_extras() {
             .starts_with("0x")
     );
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    let requests = fake.requests();
+    let finality_check = requests
+        .iter()
+        .rposition(|request| request.method == "chain_getFinalizedHead")
+        .expect("finalized expiry must be checked");
+    let mut scanned: Vec<_> = requests[finality_check + 1..]
+        .iter()
+        .filter(|request| request.method == "chain_getBlockHash")
+        .filter_map(|request| request.params[0].as_u64())
+        .collect();
+    scanned.sort_unstable();
+    scanned.dedup();
+    assert_eq!(scanned, (100..=108).collect::<Vec<_>>());
 }
 
 #[tokio::test]

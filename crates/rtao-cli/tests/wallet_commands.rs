@@ -161,7 +161,23 @@ fn wallet_surface_exposes_wallet_commands_and_supports_compatibility_aliases() -
             "balance",
             "inspect",
             "save-password-env",
-            "keychain"
+            "keychain",
+            "sign",
+            "verify",
+            "encrypt",
+            "decrypt",
+            "unlock",
+            "overview",
+            "registrations",
+            "history",
+            "transfer",
+            "set-identity",
+            "get-identity",
+            "associate-hotkey",
+            "swap-hotkey",
+            "swap-coldkey",
+            "swap-check",
+            "announce-coldkey-swap",
         ]
     );
     let root = Root::new()?;
@@ -172,10 +188,13 @@ fn wallet_surface_exposes_wallet_commands_and_supports_compatibility_aliases() -
         false,
         &[],
     )?;
-    assert!(
-        application::command_tree([wallet::command()])
-            .try_get_matches_from(["rtao", "wallet", "sign"])
-            .is_err()
+    let error = application::command_tree([wallet::command()])
+        .try_get_matches_from(["rtao", "wallet", "sign"])
+        .err()
+        .ok_or("sign requires a message")?;
+    assert_eq!(
+        error.kind(),
+        clap::error::ErrorKind::MissingRequiredArgument
     );
     Ok(())
 }

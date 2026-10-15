@@ -350,6 +350,21 @@ fn generation_path(directory: &Path, generation: u8) -> PathBuf {
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn write_checkpoint(directory: &Path, bytes: &[u8]) -> Result<(), StateError> {
+    let temporary = directory.join(format!(
+        ".state.{}-{}.tmp",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+    ));
+    write_checkpoint_with_temporary(directory, bytes, temporary)
+}
+
+// The chosen path is explicit so collision fixtures exercise the publication
+// path without racing the process-wide temporary sequence.
+fn write_checkpoint_with_temporary(
+    directory: &Path,
+    bytes: &[u8],
+    temporary: PathBuf,
+) -> Result<(), StateError> {
     if bytes.len() as u64 > MAX_CHECKPOINT_BYTES {
         return Err(StateError::Io {
             path: generation_path(directory, 0),
@@ -363,45 +378,40 @@ fn write_checkpoint(directory: &Path, bytes: &[u8]) -> Result<(), StateError> {
         path: directory.into(),
         source,
     })?;
-    let temporary = directory.join(format!(
-        ".state.{}-{}.tmp",
-        std::process::id(),
-        NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
-    ));
-    let result = (|| {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temporary)
-            .map_err(|source| StateError::Io {
-                path: temporary.clone(),
-                source,
-            })?;
-        file.write_all(bytes)
-            .and_then(|()| file.sync_all())
-            .map_err(|source| StateError::Io {
-                path: temporary.clone(),
-                source,
-            })?;
-        drop(file);
-        // Copy through separate synced temporary files. The current checkpoint
-        // stays present until the final rename, even if the process is killed
-        // while its previous generations are being updated.
-        rotate(directory, 1, 2)?;
-        rotate(directory, 0, 1)?;
-        fs::rename(&temporary, generation_path(directory, 0)).map_err(|source| StateError::Io {
-            path: temporary.clone(),
+    // Declare the guard first so an I/O error drops the open file before the
+    // guard removes its path, including on platforms that forbid open unlink.
+    let (temporary, mut file) = TemporaryCheckpoint::create(temporary)?;
+    file.write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|source| StateError::Io {
+            path: temporary.path.clone(),
             source,
         })?;
-        sync_directory(directory)
-    })();
-    if temporary.exists() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result
+    drop(file);
+    // Copy through separate synced temporary files. The current checkpoint
+    // stays present until the final rename, even if the process is killed
+    // while its previous generations are being updated.
+    rotate(directory, 1, 2)?;
+    rotate(directory, 0, 1)?;
+    temporary.publish(&generation_path(directory, 0))?;
+    sync_directory(directory)
 }
 
 fn rotate(directory: &Path, from: u8, to: u8) -> Result<(), StateError> {
+    let temporary = directory.join(format!(
+        ".state.{to}.{}-{}.tmp",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+    ));
+    rotate_with_temporary(directory, from, to, temporary)
+}
+
+fn rotate_with_temporary(
+    directory: &Path,
+    from: u8,
+    to: u8,
+    temporary: PathBuf,
+) -> Result<(), StateError> {
     let source_path = generation_path(directory, from);
     match fs::symlink_metadata(&source_path) {
         Ok(_) => {}
@@ -415,42 +425,66 @@ fn rotate(directory: &Path, from: u8, to: u8) -> Result<(), StateError> {
     }
     // Acquisition still validates the opened descriptor and bounds copying;
     // the existence check above only identifies an absent older generation.
-    let temporary = directory.join(format!(
-        ".state.{to}.{}-{}.tmp",
-        std::process::id(),
-        NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
-    ));
-    let result = (|| {
-        let mut destination = OpenOptions::new()
+    let (temporary, mut destination) = TemporaryCheckpoint::create(temporary)?;
+    rtao_client::bounded_file::copy(&source_path, &mut destination, MAX_CHECKPOINT_BYTES).map_err(
+        |source| StateError::Io {
+            path: source_path.clone(),
+            source,
+        },
+    )?;
+    destination.sync_all().map_err(|source| StateError::Io {
+        path: temporary.path.clone(),
+        source,
+    })?;
+    drop(destination);
+    temporary.publish(&generation_path(directory, to))?;
+    sync_directory(directory)
+}
+
+struct TemporaryCheckpoint {
+    path: PathBuf,
+    remove_on_drop: bool,
+}
+
+impl TemporaryCheckpoint {
+    fn create(path: PathBuf) -> Result<(Self, File), StateError> {
+        let file = OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(&temporary)
+            .open(&path)
             .map_err(|source| StateError::Io {
-                path: temporary.clone(),
+                path: path.clone(),
                 source,
             })?;
-        rtao_client::bounded_file::copy(&source_path, &mut destination, MAX_CHECKPOINT_BYTES)
-            .map_err(|source| StateError::Io {
-                path: source_path.clone(),
-                source,
-            })?;
-        destination.sync_all().map_err(|source| StateError::Io {
-            path: temporary.clone(),
+        // Own cleanup only after create_new succeeds. An existing candidate
+        // belongs to somebody else and must survive an acquisition failure.
+        Ok((
+            Self {
+                path,
+                remove_on_drop: true,
+            },
+            file,
+        ))
+    }
+
+    fn publish(mut self, destination: &Path) -> Result<(), StateError> {
+        fs::rename(&self.path, destination).map_err(|source| StateError::Io {
+            path: self.path.clone(),
             source,
         })?;
-        drop(destination);
-        fs::rename(&temporary, generation_path(directory, to)).map_err(|source| {
-            StateError::Io {
-                path: temporary.clone(),
-                source,
-            }
-        })?;
-        sync_directory(directory)
-    })();
-    if temporary.exists() {
-        let _ = fs::remove_file(&temporary);
+        // The owned file now has its final name. Do not remove a later file
+        // that might appear at the retired temporary path.
+        self.remove_on_drop = false;
+        Ok(())
     }
-    result
+}
+
+impl Drop for TemporaryCheckpoint {
+    fn drop(&mut self) {
+        if self.remove_on_drop {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
 }
 fn sync_directory(directory: &Path) -> Result<(), StateError> {
     File::open(directory)
@@ -644,6 +678,68 @@ mod tests {
             b"unrelated"
         );
         assert_eq!(fs::read_dir(&fixture.0).expect("parent entries").count(), 1);
+    }
+
+    #[test]
+    fn checkpoint_temporary_collision_preserves_candidate_and_existing_generations() {
+        let fixture = Fixture::new();
+        let originals: Vec<_> = (0..3)
+            .map(|generation| {
+                let path = generation_path(&fixture.0, generation);
+                let bytes = format!("existing generation {generation}").into_bytes();
+                fs::write(&path, &bytes).expect("existing checkpoint");
+                (path, bytes)
+            })
+            .collect();
+        let collision = fixture.0.join("chosen-checkpoint-temporary.tmp");
+        fs::write(&collision, b"unrelated existing candidate").expect("collision candidate");
+
+        assert!(matches!(
+            write_checkpoint_with_temporary(&fixture.0, b"new checkpoint", collision.clone()),
+            Err(StateError::Io { path, source })
+                if path == collision && source.kind() == io::ErrorKind::AlreadyExists
+        ));
+
+        assert_eq!(
+            fs::read(&collision).expect("collision retained"),
+            b"unrelated existing candidate"
+        );
+        for (path, bytes) in originals {
+            assert_eq!(fs::read(path).expect("generation retained"), bytes);
+        }
+        assert_eq!(fs::read_dir(&fixture.0).expect("entries").count(), 4);
+    }
+
+    #[test]
+    fn rotation_temporary_collision_preserves_candidate_and_existing_generations() {
+        for (from, to) in [(0, 1), (1, 2)] {
+            let fixture = Fixture::new();
+            let originals: Vec<_> = (0..3)
+                .map(|generation| {
+                    let path = generation_path(&fixture.0, generation);
+                    let bytes = format!("existing generation {generation}").into_bytes();
+                    fs::write(&path, &bytes).expect("existing checkpoint");
+                    (path, bytes)
+                })
+                .collect();
+            let collision = fixture.0.join("chosen-rotation-temporary.tmp");
+            fs::write(&collision, b"unrelated existing candidate").expect("collision candidate");
+
+            assert!(matches!(
+                rotate_with_temporary(&fixture.0, from, to, collision.clone()),
+                Err(StateError::Io { path, source })
+                    if path == collision && source.kind() == io::ErrorKind::AlreadyExists
+            ));
+
+            assert_eq!(
+                fs::read(&collision).expect("collision retained"),
+                b"unrelated existing candidate"
+            );
+            for (path, bytes) in originals {
+                assert_eq!(fs::read(path).expect("generation retained"), bytes);
+            }
+            assert_eq!(fs::read_dir(&fixture.0).expect("entries").count(), 4);
+        }
     }
 
     #[tokio::test]

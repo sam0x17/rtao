@@ -205,6 +205,7 @@ pub struct FakeState {
     blocks: BTreeMap<String, Block>,
     canonical: BTreeMap<u64, String>,
     handlers: BTreeMap<String, Handler>,
+    dispatching: bool,
     results: BTreeMap<String, Value>,
     replies: BTreeMap<String, VecDeque<Reply>>,
     subscriptions: BTreeMap<String, VecDeque<SubscriptionScript>>,
@@ -277,6 +278,7 @@ impl FakeState {
             blocks: BTreeMap::new(),
             canonical: BTreeMap::new(),
             handlers: BTreeMap::new(),
+            dispatching: false,
             results: BTreeMap::new(),
             replies: BTreeMap::new(),
             subscriptions: BTreeMap::new(),
@@ -721,8 +723,27 @@ impl FakeState {
     }
 
     /// Dispatch one raw RPC. Queued replies, handlers, and fixed results precede built-ins.
+    ///
+    /// A handler may delegate to `dispatch` for the ordinary response. That
+    /// internal delegation records no second incoming request; separate calls
+    /// from a transport remain separately recorded even when identical.
     pub fn dispatch(&mut self, request: &RpcRequest) -> Reply {
+        if self.dispatching {
+            return self.dispatch_inner(request);
+        }
         self.requests.push(request.clone());
+        self.dispatching = true;
+        let reply = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.dispatch_inner(request)
+        }));
+        self.dispatching = false;
+        match reply {
+            Ok(reply) => reply,
+            Err(panic) => std::panic::resume_unwind(panic),
+        }
+    }
+
+    fn dispatch_inner(&mut self, request: &RpcRequest) -> Reply {
         if let Some(reply) = self
             .replies
             .get_mut(&request.method)
@@ -2012,6 +2033,54 @@ mod tests {
         let malformed: RpcRequest = serde_json::from_value(json!({"id": 2, "method": "custom"}))
             .map_err(|e| CoreError::Codec(e.to_string()))?;
         assert_eq!(malformed.params, json!([]));
+        Ok(())
+    }
+
+    #[test]
+    fn delegated_author_handlers_preserve_one_request_per_transport_call_and_identical_retries()
+    -> Result<(), CoreError> {
+        let mut state = FakeState::try_default()?;
+        state.set_handler("author_submitExtrinsic", |state, request| {
+            state.dispatch(request)
+        });
+        let request = RpcRequest {
+            id: json!(1),
+            method: "author_submitExtrinsic".into(),
+            params: json!(["0x010203"]),
+        };
+        let first = state.dispatch(&request);
+        assert!(matches!(&first.outcome, Some(Ok(_))));
+        assert_eq!(state.requests, [request.clone()]);
+        assert_eq!(state.submissions, [vec![1, 2, 3]]);
+
+        // An actual second incoming call must never disappear through
+        // deduplication, even if the JSON-RPC ID and signed bytes are identical.
+        let second = state.dispatch(&request);
+        assert_eq!(second.outcome, first.outcome);
+        assert_eq!(state.requests, [request.clone(), request]);
+        assert_eq!(state.submissions, [vec![1, 2, 3], vec![1, 2, 3]]);
+        Ok(())
+    }
+
+    #[test]
+    #[allow(clippy::panic)] // The recovered injected panic must not suppress later requests.
+    fn panicking_handlers_do_not_disable_transport_request_recording() -> Result<(), CoreError> {
+        let mut state = FakeState::try_default()?;
+        state.set_handler("system_health", |_, _| panic!("injected handler failure"));
+        let request = RpcRequest {
+            id: json!(1),
+            method: "system_health".into(),
+            params: json!([]),
+        };
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                state.dispatch(&request)
+            }))
+            .is_err()
+        );
+        let next = state.dispatch(&request);
+        assert!(matches!(next.outcome, Some(Ok(_))));
+        assert_eq!(state.requests, [request.clone(), request]);
         Ok(())
     }
 

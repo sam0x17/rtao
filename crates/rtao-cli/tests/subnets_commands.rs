@@ -704,7 +704,13 @@ fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
     subnets::render_convictions(&output, &data, false)?;
     let actual: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
     assert_eq!(actual["hotkeys"][0]["hotkey"], json!(key));
-    assert_eq!(actual["hotkeys"][0]["locked_alpha"], json!(0.000000001));
+    assert_eq!(
+        actual["hotkeys"][0]["locked_alpha"]
+            .as_f64()
+            .map(f64::to_bits),
+        Some(0.000000001_f64.to_bits())
+    );
+    assert_eq!(actual["hotkeys"][0]["locked_alpha"].to_string(), "1e-09");
     assert_eq!(actual["hotkeys"][0]["blocks_to_threshold"], Value::Null);
     assert!(actual.get("protocol_alpha").is_none());
     let human = MemorySink::default();

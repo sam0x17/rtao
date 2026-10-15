@@ -417,6 +417,7 @@ async fn sequential_requests_result_and_reload_use_the_pinned_page_messages() ->
         panic!("expected replaced-session close");
     };
     assert_eq!(frame.code, CloseCode::Restart);
+    assert_eq!(frame.reason, "replaced by new vault tab");
     send(
         &mut second,
         json!({"type":"signature","signature":"0xanswer"}),

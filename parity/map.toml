@@ -1012,12 +1012,12 @@ notes = "Source reconciliation 2026-10-15: Reviewed all five commands against pi
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/axon.py"
-rs = ["`rtao-cli` `axon` group"]
+rs = ["rtao_cli::commands::axon"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "5f96f9f9d1390a3b2dbd90e1956595a46796ab4c"
 synced_tag = "v478"
 milestone = "M4"
-notes = "§10.5; under `misc`"
+notes = "Source reconciliation 2026-10-15: Complete authenticated source and native set/reset handlers reviewed, including mining guide, registered-hotkey and compact-certificate help, required inputs, TLS-only selection, ignored plain certificate and empty TLS default. Semantic serving builders preserve IP/hex validation order, hotkey role, exact call bytes and reset placeholders. Native u16 wire domains, D-017 certificate admission and D-030 period control remain. weights_axon_commands fixture bodies cover routing, FakeChain submissions/era, pre-unlock refusal and dry-run; installed misc/historical axon routing is source-traced, not exercised by those standalone command-tree fixtures. Canonical source headers are present. Source review and authored fixtures do not establish current hosted execution."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/collateral.py"
@@ -1030,12 +1030,12 @@ notes = "Source reconciliation 2026-10-15: Complete pinned source and native com
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/config.py"
-rs = ["`rtao-cli` `config` group"]
+rs = ["rtao_cli::commands::config"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "b6a2817fa0bb5687c741fd9db843464bea7ffd1a"
 synced_tag = "v478"
 milestone = "M4"
-notes = "§10.5"
+notes = "Source reconciliation 2026-10-15: Complete authenticated source and all five native handlers reviewed. Exact set/get/unset/clear/path JSON, missing/null/unknown-only behavior, sorted-key diagnostics, per-key clear and full help have concrete homes. Shared Store supplies extracted keys/coercion and D-042 input refusal; actual startup loads config before parsing and dispatch. Six config_catalog fixture bodies and actual catalog_entrypoint binary fixtures cover storage, errors, c/conf and global overrides. Command and derived fixture headers identify the exact source. This CLI row does not claim the separate full config.py Store audit or standalone invalid-boolean/corrupt-file ordering is complete. Source review and authored fixtures do not establish current hosted execution."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/crowd.py"
@@ -1314,7 +1314,7 @@ kind = "ported"
 synced_blob = "c778b47718b99085def53920fb3e21b3bd31a6c5"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "Source reconciliation 2026-10-15: authenticated blob c778b47718b99085def53920fb3e21b3bd31a6c5 and canonical secondary attribution headers. Native pinned fetch supplements missing owner storage and unwraps a sole bits field. Human views use 6-digit normalized readings, 4-digit fraction examples, exact-before-rounding 6-digit TAO/fixed128 examples including bool-as-int inputs, decimal markers and lowercase boolean examples; listing selects kappa/first/tempo and setter flow overrides the hint. Raw JSON values remain exact. Independent source review found no remaining implementation issue. Authored hparams_commands fixtures: parameter_listing_keeps_runtime_values_and_augments_missing_fixed128_storage, single_parameter_machine_record_is_exact_and_missing_names_refuse, parameter_examples_use_human_units_and_preserve_raw_machine_values, parameter_listing_hint_selects_a_present_name_or_the_empty_default and epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json. D-061 records the accepted rule5 contradiction at hyperparams_view.py:135-145 versus sudo.py:88-95, intents/hyperparameters.py:126-128 and the runtime enum: native examples preserve accepted 0/Yuma and 1/Null symbolic spellings while raw display/JSON and setter validation are unchanged. No upstream filing, execution or milestone acceptance is claimed."
+notes = "Source reconciliation 2026-10-15: authenticated blob c778b47718b99085def53920fb3e21b3bd31a6c5 and canonical secondary attribution headers. Native pinned fetch supplements missing owner storage and unwraps a sole bits field. Human views use 6-digit normalized readings, 4-digit fraction examples, exact-before-rounding 6-digit TAO/fixed128 examples including bool-as-int inputs, decimal markers and lowercase boolean examples; listing selects kappa/first/tempo and setter flow overrides the hint. Raw JSON values remain exact. Independent source review found no remaining implementation issue. Authored hparams_commands fixtures: parameter_listing_keeps_runtime_values_and_augments_missing_fixed128_storage, single_parameter_machine_record_is_exact_and_missing_names_refuse, parameter_examples_use_human_units_and_preserve_raw_machine_values, parameter_listing_hint_selects_a_present_name_and_empty_tables_omit_it and epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json. D-061 records the accepted rule5 contradiction at hyperparams_view.py:135-145 versus sudo.py:88-95, intents/hyperparameters.py:126-128 and the runtime enum: native examples preserve accepted 0/Yuma and 1/Null symbolic spellings while raw display/JSON and setter validation are unchanged. No upstream filing, execution or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/intent_prompts.py"
@@ -1876,12 +1876,12 @@ notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` 
 
 [[file]]
 py = "sdk/python/bittensor/evm/addresses.py"
-rs = ["`rtao_primitives::evm` (`h160_to_ss58`, `ss58_to_h160_truncated`); `rtao_evm`"]
+rs = ["rtao_primitives::evm", "rtao_evm::addresses"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "19c36c3d7411944184148a1e5cbd96f03819f178"
 synced_tag = "v478"
-milestone = "M5–M7"
-notes = "in primitives so EVM intents (M5) need no `rtao-evm` (§6.6)"
+milestone = "M5-M7"
+notes = "Source reconciliation 2026-10-15: Complete authenticated Python/native helper bodies and meaningful fixture bodies reviewed, including the three pinned mirror vectors, Blake2 evm-prefix bytes, full-key/truncated conversion, registered prefixes 0/42/128 and unregistered-prefix 1000 refusal, Python fromhex whitespace grammar and malformed inputs. Actual homes are rtao_primitives::evm and forwarding rtao_evm::addresses. Raw-byte public keys and separate optional-prefix helpers are declared native API adaptations; typed wire addresses still require twenty decoded bytes. Existing intents, key, precompile and CLI consumers use these helpers. Source review establishes neither current hosted execution nor live EVM behavior."
 
 [[file]]
 py = "sdk/python/bittensor/evm/contracts.py"

@@ -374,9 +374,9 @@ impl RuntimeHandle {
 
     /// Compute and cache the RFC-0078 digest through the core.
     ///
-    /// The chain information must describe this runtime. A subsequent call
-    /// with different chain information is rejected rather than returning a
-    /// digest computed from different constants.
+    /// The chain information must describe this runtime. One complete display
+    /// context is cached; different signer display constants are computed
+    /// independently without reusing or replacing that cached digest.
     pub fn metadata_digest(&self, info: &ChainInfo) -> Result<[u8; 32], CoreError> {
         if self.metadata_level() != MetadataLevel::V15 {
             return Err(CoreError::Policy(
@@ -398,9 +398,8 @@ impl RuntimeHandle {
             )
         });
         if *cached_info != expected {
-            return Err(CoreError::Policy(
-                "metadata digest was already cached with different chain information".into(),
-            ));
+            return rtao_core::digest::metadata_digest(&self.core().metadata_bytes, info)
+                .map_err(CoreError::from);
         }
         digest.clone()
     }
@@ -1052,9 +1051,23 @@ mod tests {
             expected
         );
         assert!(runtime.metadata_digest(&info(479)).is_err());
-        let mut conflicting = info(478);
-        conflicting.token_symbol = "OTHER".into();
-        assert!(runtime.metadata_digest(&conflicting).is_err());
+        let mut alternate = info(478);
+        alternate.token_symbol = "OTHER".into();
+        alternate.decimals = 12;
+        let alternate_expected = rtao_core::digest::metadata_digest(METADATA, &alternate).unwrap();
+        assert_ne!(alternate_expected, expected);
+        assert_eq!(
+            runtime.metadata_digest(&alternate).unwrap(),
+            alternate_expected
+        );
+        assert_eq!(
+            runtime.clone().metadata_digest(&info(478)).unwrap(),
+            expected
+        );
+        assert_eq!(
+            runtime.metadata_digest(&alternate).unwrap(),
+            alternate_expected
+        );
         let mut wrong_prefix = info(478);
         wrong_prefix.base58_prefix = 0;
         assert!(runtime.metadata_digest(&wrong_prefix).is_err());

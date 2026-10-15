@@ -39,7 +39,11 @@ pub fn command() -> Command {
                 Tier::Read,
             ),
             with_globals(
-                Command::new("clear").about("Clear all stored config values."),
+                Command::new("clear")
+                    .about("Clear all stored config values.")
+                    .long_about(
+                        "Clear all stored config values.\n\nRemoves every key from the config file. Subsequent commands fall back to environment variables and built-in defaults.",
+                    ),
                 Tier::Read,
             ),
             with_globals(

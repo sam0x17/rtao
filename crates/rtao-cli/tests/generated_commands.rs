@@ -1392,10 +1392,11 @@ async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_repl
             .iter()
             .position(|s| {
                 s.starts_with(&format!(
-                    "--amount-tao: free balance of {proxy_address}: τ2,500.000000000\n"
+                    "--amount-tao: free balance of {proxy_address}: τ2,500.000000000\\n"
                 ))
             })
             .ok_or("live free balance hint")?;
+        assert!(!messages[hint].chars().any(char::is_control));
         let prompt = messages
             .iter()
             .position(|s| s.starts_with("  amount-tao"))

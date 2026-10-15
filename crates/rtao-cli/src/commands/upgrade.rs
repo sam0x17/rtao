@@ -140,6 +140,7 @@ pub fn validate_before_connect(group: &ArgMatches) -> Result<(), CliError> {
         if repo.split('/').count() != 2
             || repo.split('/').any(|part| {
                 part.is_empty()
+                    || matches!(part, "." | "..")
                     || !part.chars().all(|character| {
                         character.is_alphanumeric() || matches!(character, '_' | '-' | '.')
                     })

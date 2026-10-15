@@ -309,9 +309,11 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
     assert!(sink.bytes(Stream::Stdout)?.is_empty());
 
     chain.mutate_state(|state| {
-        state.set_handler("state_getStorage", |_, _| {
-            Reply::error(-32602, "crowdloan fixture unavailable", None)
-        });
+        for method in ["state_getStorage", "state_queryStorageAt"] {
+            state.set_handler(method, |_, _| {
+                Reply::error(-32602, "crowdloan fixture unavailable", None)
+            });
+        }
     });
     let parsed = parse(&["rtao", "cr", "info", "11", "--json"])?;
     let (ctx, sink) = context(&parsed)?;
@@ -320,7 +322,11 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         .err()
         .ok_or("RPC failure was accepted")?;
     assert_eq!(error.code, 1);
-    assert!(error.message.contains("crowdloan fixture unavailable"));
+    assert!(
+        error.message.contains("crowdloan fixture unavailable"),
+        "{}",
+        error.message
+    );
     assert!(!error.message.contains("not found"));
     assert!(sink.bytes(Stream::Stdout)?.is_empty());
     assert_read_only(&chain);

@@ -458,6 +458,16 @@ async fn plan_case(
             .plan_dyn(intent.as_dyn(), &keys, &PlanOptions::default())
             .await?;
         ensure!(plan.op == spec.name, "plan returned operation {}", plan.op);
+        ensure!(!plan.summary.is_empty(), "plan has an empty summary");
+        if extra.is_none() {
+            // Match the ordinary Python table's exact FakeSubstrate fee.
+            // Supplemental seeds have their own reviewed runtime overrides.
+            ensure!(
+                plan.fee.map(|fee| fee.rao()) == Some(124_414),
+                "ordinary catalog plan fee differs from 124414 rao: {:?}",
+                plan.fee
+            );
+        }
         ensure!(
             plan.ok(),
             "plan has preflight blocks: {:?}",
@@ -536,6 +546,8 @@ async fn plan_case(
 }
 
 #[tokio::test]
+// pyt: unit/test_intents_table.py::test_every_intent_has_a_sample
+// pyt: unit/test_intents_table.py::test_composes_and_plans_offline
 async fn all_83_catalog_operations_plan_with_fake_chain() -> Result<()> {
     let samples = samples()?;
     let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();

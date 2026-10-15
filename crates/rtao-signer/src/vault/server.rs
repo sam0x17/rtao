@@ -676,7 +676,13 @@ async fn connection(mut socket: Socket, shared: Arc<Shared>) {
         tokio::select! {
             _ = replaced.changed() => { close(&mut socket, CloseCode::Restart, "replaced by new vault tab").await; break; },
             request = incoming.recv() => {
-                let Some(request) = request else { break; };
+                let Some(request) = request else {
+                    // Replacement drops the outgoing sender as well as
+                    // signalling `replaced`; either ready branch must send
+                    // the close frame before the socket is dropped.
+                    close(&mut socket, CloseCode::Restart, "replaced by new vault tab").await;
+                    break;
+                };
                 if send(&mut socket, request).await.is_err() { break; }
             },
             reply = socket.next() => {

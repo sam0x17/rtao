@@ -278,7 +278,97 @@ fn verify_manifest(manifest: &DocumentMut, expected: &GitPin) -> Result<(), Stri
     Ok(())
 }
 
+struct CorePatch {
+    core: GitPin,
+    bls_source: String,
+}
+
+fn core_replacement<'a>(manifest: &'a DocumentMut, expected: &GitPin) -> Option<&'a Item> {
+    manifest
+        .get("patch")
+        .and_then(|patch| patch.get(expected.repository.as_str()))
+        .and_then(|patch| patch.get("bittensor-core"))
+}
+
+fn recorded_core_patch(
+    manifest: &DocumentMut,
+    expected: &GitPin,
+    record: &DocumentMut,
+) -> Result<CorePatch, String> {
+    let core = record
+        .get("core")
+        .ok_or("core patch record has no core pin")?;
+    let tag = core
+        .get("tag")
+        .and_then(Item::as_str)
+        .ok_or("core patch record has no upstream tag")?;
+    let base = core
+        .get("commit")
+        .and_then(Item::as_str)
+        .ok_or("core patch record has no upstream commit")?;
+    let repository = record
+        .get("monorepo")
+        .and_then(|monorepo| monorepo.get("url"))
+        .and_then(Item::as_str)
+        .ok_or("core patch record has no upstream repository")?;
+    let original = GitPin {
+        repository: repository.to_owned(),
+        reference: Some(("tag".into(), tag.to_owned())),
+    };
+    if original != *expected {
+        return Err("core patch record differs from the workspace's upstream declaration".into());
+    }
+    let patch = core
+        .get("patch")
+        .ok_or("core patch record has no replacement")?;
+    let revision = patch
+        .get("rev")
+        .and_then(Item::as_str)
+        .ok_or("core patch record has no replacement revision")?;
+    if patch.get("base").and_then(Item::as_str) != Some(base)
+        || !full_commit(base)
+        || !full_commit(revision)
+    {
+        return Err(
+            "core patch record requires matching full upstream and replacement commits".into(),
+        );
+    }
+    let recorded = GitPin {
+        repository: patch
+            .get("repo")
+            .and_then(Item::as_str)
+            .ok_or("core patch record has no replacement repository")?
+            .to_owned(),
+        reference: Some(("rev".into(), revision.to_owned())),
+    };
+    let replacement = GitPin::from_dependency(
+        core_replacement(manifest, expected).ok_or("workspace core replacement is absent")?,
+    )?;
+    if replacement != recorded {
+        return Err("workspace core replacement differs from its recorded immutable pin".into());
+    }
+    // Only core is replaced. BLS must retain the original upstream identity,
+    // even when Cargo resolves core to the recorded Ledger transport fork.
+    Ok(CorePatch {
+        core: recorded,
+        bls_source: format!("git+{repository}?tag={tag}#{base}"),
+    })
+}
+
+fn full_commit(commit: &str) -> bool {
+    commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 fn verify_lock(lock: &DocumentMut, expected: &GitPin) -> Result<String, String> {
+    verify_resolved_lock(lock, expected, None, &expected.patch_line())
+}
+
+fn verify_resolved_lock(
+    lock: &DocumentMut,
+    expected: &GitPin,
+    bls_source: Option<&str>,
+    required_patch: &str,
+) -> Result<String, String> {
     let packages = lock
         .get("package")
         .and_then(Item::as_array_of_tables)
@@ -291,7 +381,7 @@ fn verify_lock(lock: &DocumentMut, expected: &GitPin) -> Result<String, String> 
         return Err(format!(
             "Cargo.lock must contain exactly one bittensor-core; found {}.\n\n{}",
             core.len(),
-            expected.patch_line()
+            required_patch
         ));
     }
     let core_source = core[0]
@@ -300,12 +390,15 @@ fn verify_lock(lock: &DocumentMut, expected: &GitPin) -> Result<String, String> 
         .ok_or("Cargo.lock bittensor-core has no git source")?;
     let matches_pin = GitPin::from_source(core_source).is_ok_and(|pin| pin == *expected);
     let has_commit = core_source.rsplit_once('#').is_some_and(|(_, commit)| {
-        commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+        full_commit(commit)
+            && expected.reference.as_ref().is_none_or(|(kind, revision)| {
+                kind != "rev" || !full_commit(revision) || revision == commit
+            })
     });
     if !matches_pin || !has_commit {
         return Err(format!(
             "Cargo.lock bittensor-core source differs from the workspace declaration or resolved commit.\n\n{}",
-            expected.patch_line()
+            required_patch
         ));
     }
     let bls = packages
@@ -323,9 +416,9 @@ fn verify_lock(lock: &DocumentMut, expected: &GitPin) -> Result<String, String> 
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
-    validate_bls_lock(&bls, core_source)
-        .map_err(|error| format!("{error}\n\n{}", expected.patch_line()))?;
-    Ok(core_source.to_owned())
+    let bls_source = bls_source.unwrap_or(core_source);
+    validate_bls_lock(&bls, bls_source).map_err(|error| format!("{error}\n\n{required_patch}"))?;
+    Ok(bls_source.to_owned())
 }
 
 fn built_tree_command(manifest: &Path) -> Command {
@@ -378,8 +471,23 @@ pub(super) fn check(manifest_path: &Path) -> Result<Check, String> {
     let root = manifest_path
         .parent()
         .ok_or("Cargo.toml has no parent directory")?;
-    let core_source = verify_lock(&document(&root.join("Cargo.lock"))?, &expected)?;
-    verify_built(&manifest_path, &core_source)?;
+    let lock = document(&root.join("Cargo.lock"))?;
+    let bls_source = if core_replacement(&manifest, &expected).is_some() {
+        let patch = recorded_core_patch(
+            &manifest,
+            &expected,
+            &document(&root.join("upstream.toml"))?,
+        )?;
+        verify_resolved_lock(
+            &lock,
+            &patch.core,
+            Some(&patch.bls_source),
+            &expected.patch_line(),
+        )?
+    } else {
+        verify_lock(&lock, &expected)?
+    };
+    verify_built(&manifest_path, &bls_source)?;
     Ok(Check {
         manifest: manifest_path,
         warning: expected.warning(),
@@ -444,6 +552,77 @@ mod tests {
         assert!(verify_lock(&lock(&source, &rev)?, &pin("tag", "v478")).is_err());
         let other_commit = source.replace(COMMIT, "0000000000000000000000000000000000000000");
         assert!(verify_lock(&lock(&source, &other_commit)?, &pin("tag", "v478")).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn recorded_core_replacement_keeps_bls_at_its_upstream_base() -> Result<(), String> {
+        const FORK: &str = "https://github.com/sam0x17/subtensor.git";
+        const REVISION: &str = "eafe84e8a97376e7902118ebb204b9c53e3df55e";
+        let expected = pin("tag", "v478");
+        let required_patch = expected.patch_line();
+        let manifest = parse(&format!(
+            "{required_patch}\n[patch.{MONOREPO:?}]\nbittensor-core = {{ git = {FORK:?}, rev = {REVISION:?} }}\n"
+        ))?;
+        let record = parse(&format!(
+            "[monorepo]\nurl = {MONOREPO:?}\n[core]\ntag = \"v478\"\ncommit = {COMMIT:?}\n[core.patch]\nrepo = {FORK:?}\nrev = {REVISION:?}\nbase = {COMMIT:?}\n"
+        ))?;
+        verify_manifest(&manifest, &expected)?;
+        let patch = recorded_core_patch(&manifest, &expected, &record)?;
+        let upstream = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
+        let replaced = format!("git+{FORK}?rev={REVISION}#{REVISION}");
+        assert_eq!(patch.bls_source, upstream);
+        assert_eq!(
+            verify_resolved_lock(
+                &lock(&replaced, &upstream)?,
+                &patch.core,
+                Some(&patch.bls_source),
+                &required_patch,
+            )?,
+            upstream
+        );
+        // The normal downstream path still rejects an undeclared replacement.
+        assert!(verify_lock(&lock(&replaced, &upstream)?, &expected).is_err());
+        for (core_source, bls_source) in [
+            (upstream.clone(), upstream.clone()),
+            (replaced.clone(), replaced.clone()),
+            (
+                replaced.replace(&format!("#{REVISION}"), &format!("#{COMMIT}")),
+                upstream.clone(),
+            ),
+            (replaced.clone(), upstream.replace(COMMIT, REVISION)),
+            (replaced.replace(FORK, MONOREPO), upstream.clone()),
+        ] {
+            let error = verify_resolved_lock(
+                &lock(&core_source, &bls_source)?,
+                &patch.core,
+                Some(&patch.bls_source),
+                &required_patch,
+            )
+            .err()
+            .ok_or("changed core or BLS identity accepted")?;
+            assert!(error.contains(&required_patch));
+        }
+        for changed in [
+            record
+                .to_string()
+                .replace("tag = \"v478\"", "tag = \"v477\""),
+            record.to_string().replace(
+                &format!("base = {COMMIT:?}"),
+                &format!("base = {REVISION:?}"),
+            ),
+            record.to_string().replace(REVISION, COMMIT),
+            record.to_string().replace(FORK, MONOREPO),
+            "[core]\n".to_owned(),
+        ] {
+            assert!(recorded_core_patch(&manifest, &expected, &parse(&changed)?).is_err());
+        }
+        for changed in [
+            manifest.to_string().replace(REVISION, COMMIT),
+            manifest.to_string().replace(FORK, MONOREPO),
+        ] {
+            assert!(recorded_core_patch(&parse(&changed)?, &expected, &record).is_err());
+        }
         Ok(())
     }
 

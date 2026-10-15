@@ -424,8 +424,19 @@ fn command_owned_external_backend_uses_shared_account_precedence_without_tags_or
         Some(bob)
     );
     assert!(ctx.globals.signer_address.is_none());
+    // The extension picker receives the persisted address as a preference;
+    // ordinary planning must not turn it into an explicit source-filter pin.
     let ordinary = call::plan_rounds(&ctx, None, SignerRole::Coldkey, Some("extension"))?;
-    assert_eq!(ordinary[0].address, Some(bob));
+    assert_eq!(ordinary[0].address, None);
+    assert_eq!(ordinary[0].backend, "extension");
+    for backend in ["vault", "ledger"] {
+        let ordinary = call::plan_rounds(&ctx, None, SignerRole::Coldkey, Some(backend))?;
+        assert_eq!(ordinary[0].address, Some(bob));
+    }
+    ctx.globals.signer_address = Some("bob".into());
+    let explicit = call::plan_rounds(&ctx, None, SignerRole::Coldkey, Some("extension"))?;
+    assert_eq!(explicit[0].address, Some(bob));
+    ctx.globals.signer_address = None;
     ctx.config
         .insert("signer_address".into(), json!(AccountId([9; 32])));
     assert!(call::select_member(&ctx, &group, SignerRole::Coldkey, Some("vault")).is_err());

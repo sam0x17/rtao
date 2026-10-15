@@ -211,7 +211,7 @@ async fn bounded_preimage<V: View + ?Sized>(
                 .as_core()
                 .variant("Requested")
                 .or_else(|| status.as_core().variant("Unrequested"))
-                .and_then(|status| status.field("len"))
+                .and_then(|status| status.field("maybe_len").or_else(|| status.field("len")))
                 .and_then(ValueExt::as_u128)
                 .and_then(|len| u32::try_from(len).ok())
                 .ok_or_else(|| callback_error("legacy preimage has no authenticated length"))?;

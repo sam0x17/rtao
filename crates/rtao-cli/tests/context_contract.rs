@@ -290,10 +290,22 @@ async fn subnet_creation_review_quotes_exact_cost_and_all_queue_flows_before_unl
             .count();
         assert_eq!(prunes, usize::from(probes_prune));
         for request in &requests {
+            // Registration disclosures use one state identity. Independent
+            // metadata/fee probes can query the head without that state hash.
             let state_hash = match request.method.as_str() {
                 "state_getStorage" | "state_queryStorageAt" => request.params.get(1),
                 "state_getKeysPaged" => request.params.get(3),
-                "state_call" => request.params.get(2),
+                "state_call"
+                    if matches!(
+                        request.params[0].as_str(),
+                        Some(
+                            "SubnetRegistrationRuntimeApi_get_network_registration_cost"
+                                | "SubnetInfoRuntimeApi_get_subnet_to_prune"
+                        )
+                    ) =>
+                {
+                    request.params.get(2)
+                }
                 _ => None,
             };
             if let Some(hash) = state_hash {
@@ -353,6 +365,7 @@ async fn subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_r
         })?;
     let intent = rtao_intents::RegisterSubnet { hotkey_ss58: None };
     let (ctx, sink, reads) = context(&["--yes", "--no-mev-shield"])?;
+    let request_start = chain.requests().len();
     let error = ctx
         .submit_with_hooks(
             &client,
@@ -373,7 +386,11 @@ async fn subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_r
     assert_eq!(reads.load(Ordering::SeqCst), 0);
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
-    let requests = chain.requests();
+    let requests = chain
+        .requests()
+        .into_iter()
+        .skip(request_start)
+        .collect::<Vec<_>>();
     assert_eq!(
         requests
             .iter()

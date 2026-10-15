@@ -700,6 +700,219 @@ mod tests {
     const HOTKEY: AccountId = AccountId([8; 32]);
     const OTHER_HOTKEY: AccountId = AccountId([10; 32]);
 
+    #[derive(serde::Deserialize)]
+    struct Extracted<T> {
+        value: T,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct FixtureData {
+        format: u64,
+        constants: BTreeMap<String, Extracted<u64>>,
+        extension_ref_time: Extracted<u64>,
+        node_quotes: Extracted<Vec<NodeQuote>>,
+        admission_hard_stop: Extracted<Vec<AdmissionCase>>,
+        admission_inclusive: Extracted<Vec<AdmissionCase>>,
+        payout_failures: BTreeMap<String, Extracted<Vec<PayoutFailure>>>,
+        network_population: Extracted<NetworkPopulation>,
+        shielded_heavy: Extracted<ShieldedHeavy>,
+        seed_cases: BTreeMap<String, Extracted<SeedCase>>,
+        preview_cases: BTreeMap<String, Extracted<Vec<PreviewCase>>>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct NodeQuote {
+        name: String,
+        weight: u128,
+        weight_fee: u128,
+        limits: Vec<u64>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct AdmissionCase {
+        hotkeys: u16,
+        holdings: usize,
+        networks: u16,
+        reason: Option<String>,
+        allowed: Option<bool>,
+    }
+
+    #[derive(Clone, serde::Deserialize)]
+    #[serde(tag = "kind", rename_all = "lowercase")]
+    enum PayoutFailure {
+        None,
+        Error {
+            #[serde(rename = "type")]
+            exception_type: String,
+            message: String,
+        },
+    }
+
+    #[derive(serde::Deserialize)]
+    struct NetworkPopulation {
+        hotkeys: u16,
+        added: u16,
+        absent: u16,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ShieldedHeavy {
+        hotkeys: u16,
+        holdings: usize,
+        payout: u64,
+        networks: u16,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct SeedCase {
+        hotkeys: Vec<String>,
+        payouts: BTreeMap<String, u64>,
+        holdings: BTreeMap<String, usize>,
+        networks: u16,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct PreviewCase {
+        hotkey: String,
+        accrued: u64,
+        redeemable: u64,
+        rows: u32,
+        sold: u32,
+        swept: u32,
+        flushed: u32,
+    }
+
+    fn fixture_data() -> anyhow::Result<FixtureData> {
+        // Hosted extraction must adopt this artifact before execution. Reading
+        // the committed test input at runtime keeps a generation-only checkout
+        // compilable while the new file is awaiting that first hosted adoption.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../vendor/upstream/extracted/root_claim_fixtures.json");
+        let source = std::fs::read_to_string(&path).map_err(|error| {
+            anyhow::anyhow!(
+                "read {}: {error}; run hosted fixture extraction",
+                path.display()
+            )
+        })?;
+        let data: FixtureData = serde_json::from_str(&source)?;
+        anyhow::ensure!(data.format == 1, "unsupported root-claim fixture format");
+        Ok(data)
+    }
+
+    fn extracted<'a, T>(
+        records: &'a BTreeMap<String, Extracted<T>>,
+        name: &str,
+    ) -> anyhow::Result<&'a T> {
+        records
+            .get(name)
+            .map(|record| &record.value)
+            .ok_or_else(|| anyhow::anyhow!("missing extracted root-claim record {name}"))
+    }
+
+    fn symbolic_hotkey(name: &str) -> anyhow::Result<AccountId> {
+        // The extracted dev-key names retain source identity; the native fake
+        // maps those names to its own deterministic public accounts.
+        match name {
+            "ALICE_HOT" => Ok(HOTKEY),
+            "BOB_HOT" => Ok(OTHER_HOTKEY),
+            _ => anyhow::bail!("unsupported extracted hotkey {name}"),
+        }
+    }
+
+    fn indexed_hotkeys(count: u16) -> Vec<AccountId> {
+        (0..count)
+            .map(|index| {
+                let mut bytes = [0; 32];
+                bytes[..2].copy_from_slice(&index.to_le_bytes());
+                bytes[2] = 17;
+                AccountId(bytes)
+            })
+            .collect()
+    }
+
+    fn seed_extracted_case(state: &mut FakeState, case: &SeedCase) -> anyhow::Result<()> {
+        let keys = case
+            .hotkeys
+            .iter()
+            .map(|name| symbolic_hotkey(name))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        seed_admission(state, &keys, &keys, 0)?;
+        let mut positions = Vec::new();
+        for name in &case.hotkeys {
+            let hotkey = symbolic_hotkey(name)?;
+            let holdings = case
+                .holdings
+                .get(name)
+                .ok_or_else(|| anyhow::anyhow!("missing extracted holdings for {name}"))?;
+            seed_basket_for(state, hotkey, *holdings)?;
+            if let Some(&payout) = case.payouts.get(name) {
+                if payout != 0 {
+                    positions.push(json!([hotkey.to_string(), 1, payout]));
+                }
+                let info = rtao_core::ops::runtime_api::runtime_api_method(
+                    &state.runtime,
+                    "BetaBasketRuntimeApi",
+                    "get_basket_payout",
+                )?;
+                let raw =
+                    rtao_testkit::fakes::fill_defaults(&state.runtime, info.output, json!(payout))?;
+                let encoded = state
+                    .runtime
+                    .encode_spec(&TypeSpec::Id(info.output), &raw)?;
+                state.seed_runtime_encoded(
+                    "BetaBasketRuntimeApi_get_basket_payout",
+                    [hotkey.0.as_slice(), CLAIMANT.0.as_slice()].concat(),
+                    encoded,
+                );
+            }
+        }
+        state.seed_runtime(
+            "BetaBasketRuntimeApi",
+            "get_root_basket_positions",
+            json!(positions),
+        )?;
+        seed_networks(state, case.networks, 0)?;
+        Ok(())
+    }
+
+    fn extracted_preview(case: &PreviewCase) -> anyhow::Result<Json> {
+        let mut preview = preview_json(
+            symbolic_hotkey(&case.hotkey)?,
+            case.accrued,
+            case.redeemable,
+            case.rows,
+            case.sold,
+            case.swept,
+        );
+        preview["flushed_credits"] = json!(case.flushed);
+        Ok(preview)
+    }
+
+    fn seed_extracted_previews(
+        state: &mut FakeState,
+        cases: &[PreviewCase],
+        coldkey_wide: bool,
+    ) -> anyhow::Result<()> {
+        let previews = cases
+            .iter()
+            .map(extracted_preview)
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        if coldkey_wide {
+            seed_coldkey_previews(state, json!(previews))
+        } else {
+            anyhow::ensure!(previews.len() == 1, "expected one extracted basket preview");
+            state.seed_runtime(
+                "BetaBasketRuntimeApi",
+                "get_basket_claim_preview",
+                previews
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("missing preview"))?,
+            )?;
+            Ok(())
+        }
+    }
+
     #[derive(Default)]
     struct PublicOnlyKeys {
         acquisitions: AtomicUsize,
@@ -805,22 +1018,6 @@ mod tests {
             &storage::subtensor_module::NETWORKS_ADDED,
             (NetUid::ROOT,),
             true,
-        )?;
-        Ok(())
-    }
-
-    fn seed_single_preview(
-        state: &mut FakeState,
-        accrued: u64,
-        redeemable: u64,
-        rows: u32,
-        sold: u32,
-        swept: u32,
-    ) -> anyhow::Result<()> {
-        state.seed_runtime(
-            "BetaBasketRuntimeApi",
-            "get_basket_claim_preview",
-            preview_json(HOTKEY, accrued, redeemable, rows, sold, swept),
         )?;
         Ok(())
     }
@@ -963,20 +1160,80 @@ mod tests {
         // pyt: unit/test_root_claim_fee.py::test_single_hotkey_spent_caps_at_the_same_allowance
         // pyt: unit/test_root_claim_fee.py::test_spent_keeps_non_weight_base_fee
         // pyt: unit/test_root_claim_fee.py::test_scan_only_uses_scan_ref_time
-        // Independent node quotes recorded in the pinned upstream regression:
-        // declared ref_time includes the 60M dispatch-extension fold.
-        for (limit, declared) in [(129, 2_048_205_118_028u128), (256, 2_476_947_290_768)] {
-            assert_eq!(claim_ref_time(limit, 2_560, 512) + 60_000_000, declared);
-            let discount = claim_ref_time(limit, 2_560, 512) - charged_ref_time(limit);
-            assert_eq!(weight_fee_rao(declared - discount), 8_224_263);
-            assert_eq!(approximate_reserve(limit)?.rao(), 8_209_263);
+        let data = fixture_data()?;
+        let constant = |name| extracted(&data.constants, name).copied();
+        assert_eq!(MAX_WORK, constant("_MAX_ROOT_CLAIM_WORK")?);
+        assert_eq!(MAX_HOTKEY_WORK, constant("_MAX_ROOT_CLAIM_HOTKEY_WORK")?);
+        assert_eq!(FEE_ALLOWANCE, constant("_ROOT_CLAIM_FEE_ALLOWANCE")?);
+        assert_eq!(DEFAULT_THRESHOLD_RAO, constant("_DEFAULT_THRESHOLD_RAO")?);
+        let read = u128::from(constant("_ROCKSDB_READ_PS")?);
+        let write = u128::from(constant("_ROCKSDB_WRITE_PS")?);
+        for units in [0u64, 1, 32, MAX_WORK] {
+            let count = u128::from(units);
+            assert_eq!(
+                claim_root_ref_time(units),
+                567_441_000
+                    + 437_318_379 * count
+                    + (23 + 22 * count) * read
+                    + (18 + 16 * count) * write
+            );
+            assert_eq!(
+                claim_root_scan_ref_time(units),
+                309_208_000 + 263_604_241 * count + (6 + 21 * count) * read
+            );
         }
-        let discounts =
-            [129, 256].map(|limit| claim_ref_time(limit, 2_560, 512) - charged_ref_time(limit));
-        assert_eq!(
-            weight_fee_rao(4_525_285_010_166 - discounts.into_iter().sum::<u128>()),
-            16_481_677
-        );
+        let parts = u128::from(constant("_WEIGHT_FEE_PARTS")?);
+        let perbill = u128::from(constant("_PERBILL")?);
+        for ref_time in [2_000, 6_000, 6_001, 1_000_000_001] {
+            let scaled = ref_time * parts;
+            assert_eq!(
+                weight_fee_rao(ref_time),
+                scaled / perbill + u128::from((scaled % perbill) * 2 > perbill)
+            );
+        }
+        let quotes = constant("_FLUSH_BOUND_QUOTES")?;
+        let rows = constant("_FLUSH_BOUND_ROWS")?;
+        assert_eq!(quotes, 10 * constant("_MAX_BASKET_ROWS")?);
+        assert_eq!(rows, 2 * constant("_MAX_BASKET_ROWS")?);
+        let extension = u128::from(data.extension_ref_time.value);
+        assert_eq!(extension, u128::from(constant("_EXTENSION_FOLD_REF_TIME")?));
+        let cap = u128::from(constant("_ROOT_CLAIM_CAP_459_REF_TIME")?) - extension;
+        // Consume every recorded node row, including its name, limits and fee.
+        // The batch's outer weight includes work beyond the inner declarations.
+        for node in &data.node_quotes.value {
+            anyhow::ensure!(!node.limits.is_empty(), "node quote has no claim limits");
+            let mut discount = 0;
+            for &limit in &node.limits {
+                let declared = claim_ref_time(limit, quotes, rows);
+                let units = limit.min(FEE_ALLOWANCE);
+                assert_eq!(
+                    charged_ref_time(limit),
+                    claim_ref_time(units, 6 * units, units).min(cap)
+                );
+                discount += declared - charged_ref_time(limit);
+                assert_eq!(approximate_reserve(limit)?.rao(), 8_209_263);
+            }
+            assert_eq!(
+                weight_fee_rao(node.weight - discount),
+                node.weight_fee,
+                "{}",
+                node.name
+            );
+            if let [limit] = node.limits.as_slice() {
+                assert_eq!(
+                    claim_ref_time(*limit, quotes, rows) + extension,
+                    node.weight,
+                    "{}",
+                    node.name
+                );
+                assert_eq!(
+                    charged_ref_time(*limit) + extension,
+                    node.weight - discount,
+                    "{}",
+                    node.name
+                );
+            }
+        }
         assert_eq!(weight_fee_rao(2_000), 0);
         assert_eq!(weight_fee_rao(6_000), 1);
         assert_eq!(weight_fee_rao(6_001), 2);
@@ -1059,6 +1316,33 @@ mod tests {
     async fn coldkey_admission_keeps_root_and_negative_watermark_positions_in_vector_order()
     -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_coldkey_wide_admission_keeps_unstaked_basket_claimant
+        let data = fixture_data()?;
+        let case = extracted(
+            &data.seed_cases,
+            "test_coldkey_wide_admission_keeps_unstaked_basket_claimant",
+        )?;
+        let (_chain, client, snapshot) = fixture(|state| {
+            seed_extracted_case(state, case)?;
+            state.seed_runtime(
+                "StakeInfoRuntimeApi",
+                "get_stake_info_for_coldkey",
+                json!([]),
+            )?;
+            state.seed(
+                &storage::subtensor_module::BASKET_CLAIMED,
+                (HOTKEY, CLAIMANT),
+                -1,
+            )?;
+            Ok(())
+        })
+        .await?;
+        assert_eq!(
+            admission(&snapshot, CLAIMANT, None).await?.hotkeys,
+            [HOTKEY]
+        );
+        client.close().await;
+        // Additional native ordering/duplicate coverage surrounds the exact
+        // one-validator source case with other staking relationships.
         let (chain, client, snapshot) = fixture(|state| {
             seed_admission(
                 state,
@@ -1184,21 +1468,41 @@ mod tests {
         // pyt: unit/test_root_claim_fee.py::test_root_claim_too_heavy_is_a_hard_stop
         // pyt: unit/test_root_claim_fee.py::test_admission_limit_is_inclusive_at_256
         // pyt: unit/test_root_claim_fee.py::test_network_count_does_not_affect_admission
-        for (hotkeys, holdings, added, absent, allowed) in [
-            (257u16, 0, 16, 0, false),
-            (1, 256, 1, 0, false),
-            (16, 0, 16, 0, true),
-            (1, 255, 1, 0, true),
-            (17, 0, 15, 25, true),
-        ] {
-            let keys = (0..hotkeys)
-                .map(|index| {
-                    let mut bytes = [0; 32];
-                    bytes[..2].copy_from_slice(&index.to_le_bytes());
-                    bytes[2] = 17;
-                    AccountId(bytes)
-                })
-                .collect::<Vec<_>>();
+        let data = fixture_data()?;
+        let mut cases = Vec::new();
+        // Keep both source tables intact: the rejecting 1/256 row occurs in
+        // each table and is exercised twice, with its original expectations.
+        for case in &data.admission_hard_stop.value {
+            let reason = case
+                .reason
+                .as_deref()
+                .ok_or_else(|| anyhow::anyhow!("missing hard-stop reason"))?;
+            cases.push((
+                case.hotkeys,
+                case.holdings,
+                case.networks,
+                0,
+                false,
+                Some(reason),
+            ));
+        }
+        for case in &data.admission_inclusive.value {
+            let allowed = case
+                .allowed
+                .ok_or_else(|| anyhow::anyhow!("missing admission expectation"))?;
+            cases.push((case.hotkeys, case.holdings, case.networks, 0, allowed, None));
+        }
+        let population = &data.network_population.value;
+        cases.push((
+            population.hotkeys,
+            0,
+            population.added,
+            population.absent,
+            true,
+            None,
+        ));
+        for (hotkeys, holdings, added, absent, allowed, reason) in cases {
+            let keys = indexed_hotkeys(hotkeys);
             let (chain, client, snapshot) = fixture(|state| {
                 seed_admission(state, &keys, &keys, holdings)?;
                 seed_networks(state, added, absent)
@@ -1214,6 +1518,12 @@ mod tests {
                 allowed,
                 "{hotkeys}/{holdings}/{added}/{absent}"
             );
+            if let Some(reason) = reason {
+                assert!(
+                    blocks.iter().any(|block| block.contains(reason)),
+                    "{reason}: {blocks:?}"
+                );
+            }
             if hotkeys == 257 {
                 assert_eq!(
                     blocks,
@@ -1247,14 +1557,18 @@ mod tests {
     async fn coldkey_admission_excludes_positive_nonroot_stake_and_its_heavy_basket()
     -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_coldkey_wide_admission_ignores_non_root_hotkeys
+        let data = fixture_data()?;
+        let case = extracted(
+            &data.seed_cases,
+            "test_coldkey_wide_admission_ignores_non_root_hotkeys",
+        )?;
         let (_chain, client, snapshot) = fixture(|state| {
-            seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY], 1)?;
+            seed_extracted_case(state, case)?;
             state.seed_runtime("StakeInfoRuntimeApi", "get_stake_info_for_coldkey", json!([
                 {"hotkey":HOTKEY.to_string(), "coldkey":CLAIMANT.to_string(), "netuid":0, "stake":1},
                 {"hotkey":OTHER_HOTKEY.to_string(), "coldkey":CLAIMANT.to_string(), "netuid":7, "stake":1}
             ]))?;
-            seed_basket_for(state, OTHER_HOTKEY, 256)?;
-            seed_networks(state, 500, 0)
+            Ok(())
         }).await?;
         let recording = RecordingView::new(snapshot.clone());
         let admitted = admission(&recording, CLAIMANT, None).await?;
@@ -1393,11 +1707,97 @@ mod tests {
         // pyt: unit/test_root_claim_fee.py::test_admission_hard_stop_survives_unavailable_payout_preview
         // pyt: unit/test_root_claim_fee.py::test_reserve_hard_stop_survives_unavailable_payout_preview
         // pyt: unit/test_root_claim_fee.py::test_carrier_hard_stop_survives_unavailable_payout_preview
-        for condition in ["heavy", "reserve", "carrier"] {
-            for payout in ["available", "none", "error"] {
+        let data = fixture_data()?;
+        let heavy_reason = data
+            .admission_hard_stop
+            .value
+            .iter()
+            .find(|case| case.hotkeys > 1)
+            .ok_or_else(|| anyhow::anyhow!("missing multi-hotkey admission case"))?;
+        // Both source carrier cases use the same seed; preserve that separate
+        // case identity instead of silently leaving one extracted row unused.
+        let ordinary_carrier = extracted(
+            &data.seed_cases,
+            "test_shielded_claim_reserves_free_tao_for_inner_and_carrier",
+        )?;
+        let missing_carrier = extracted(
+            &data.seed_cases,
+            "test_carrier_hard_stop_survives_unavailable_payout_preview",
+        )?;
+        assert_eq!(
+            (
+                &ordinary_carrier.hotkeys,
+                &ordinary_carrier.payouts,
+                &ordinary_carrier.holdings,
+                ordinary_carrier.networks
+            ),
+            (
+                &missing_carrier.hotkeys,
+                &missing_carrier.payouts,
+                &missing_carrier.holdings,
+                missing_carrier.networks
+            )
+        );
+        for condition in ["heavy_basket", "heavy_hotkeys", "reserve", "carrier"] {
+            let policy_seed = match condition {
+                "heavy_basket" => Some(extracted(
+                    &data.seed_cases,
+                    "test_shielded_root_claim_refuses_too_heavy_work_before_signing",
+                )?),
+                "reserve" => Some(extracted(
+                    &data.seed_cases,
+                    "test_reserve_hard_stop_survives_unavailable_payout_preview",
+                )?),
+                "carrier" => Some(extracted(
+                    &data.seed_cases,
+                    "test_shielded_claim_reserves_free_tao_for_inner_and_carrier",
+                )?),
+                _ => None,
+            };
+            let mut payouts = if condition == "heavy_hotkeys" {
+                Vec::new()
+            } else {
+                vec![None]
+            };
+            if condition != "heavy_basket" {
+                let function = if condition == "heavy_hotkeys" {
+                    "test_admission_hard_stop_survives_unavailable_payout_preview"
+                } else {
+                    "test_reserve_hard_stop_survives_unavailable_payout_preview"
+                };
+                payouts.extend(
+                    extracted(&data.payout_failures, function)?
+                        .iter()
+                        .cloned()
+                        .map(Some),
+                );
+            }
+            for payout in payouts {
+                let payout_name = match &payout {
+                    None => "available",
+                    Some(PayoutFailure::None) => "none",
+                    Some(PayoutFailure::Error { .. }) => "error",
+                };
                 let (chain, client, _snapshot) = fixture(|state| {
-                    if condition == "heavy" {
-                        seed_admission(state, &[HOTKEY], &[HOTKEY], 257)?;
+                    if let Some(seed) = policy_seed {
+                        seed_extracted_case(state, seed)?;
+                    }
+                    if condition == "heavy_hotkeys" {
+                        // Exact source failure setup: 257 selected hotkeys,
+                        // no holdings, 16 networks, before optional yield.
+                        let heavy = &data.shielded_heavy.value;
+                        let keys = indexed_hotkeys(heavy.hotkeys);
+                        seed_admission(state, &keys, &keys, heavy.holdings)?;
+                        state.seed_runtime(
+                            "BetaBasketRuntimeApi",
+                            "get_root_basket_positions",
+                            json!(
+                                keys.iter()
+                                    .map(|hotkey| json!([hotkey.to_string(), 1, heavy.payout]))
+                                    .collect::<Vec<_>>()
+                            ),
+                        )?;
+                        seed_networks(state, heavy.networks, 0)?;
                     }
                     let free = match condition {
                         "reserve" => 0,
@@ -1410,14 +1810,21 @@ mod tests {
                         &[json!(CLAIMANT.to_string())],
                         json!({"data":{"free":free}}),
                     )?;
-                    if payout != "available" {
+                    if let Some(failure) = payout.clone() {
+                        if let PayoutFailure::Error { exception_type, .. } = &failure {
+                            anyhow::ensure!(
+                                exception_type == "RuntimeError",
+                                "unsupported extracted exception {exception_type}"
+                            );
+                        }
                         state.set_handler("state_call", move |state, request| {
                             if request.params[0] == "BetaBasketRuntimeApi_get_root_basket_positions"
                             {
-                                if payout == "none" {
-                                    Reply::result(Json::Null)
-                                } else {
-                                    Reply::error(-32603, "payout unavailable", None)
+                                match &failure {
+                                    PayoutFailure::None => Reply::result(Json::Null),
+                                    PayoutFailure::Error { message, .. } => {
+                                        Reply::error(-32603, message.clone(), None)
+                                    }
                                 }
                             } else {
                                 state.dispatch(request)
@@ -1433,7 +1840,7 @@ mod tests {
                 let keys = PublicOnlyKeys::default();
                 let executor = Executor::new(client.clone());
                 let expected = match condition {
-                    "heavy" => "exceeds the 256-unit admission limit",
+                    "heavy_basket" | "heavy_hotkeys" => "exceeds the 256-unit admission limit",
                     "reserve" => "below the reserved claim fee",
                     _ => "reserve plus the MEV-shield carrier fee",
                 };
@@ -1447,21 +1854,34 @@ mod tests {
                         plan.violations
                             .iter()
                             .any(|violation| violation.contains(expected)),
-                        "{condition}/{payout}"
+                        "{condition}/{payout_name}"
                     );
+                    if condition == "heavy_hotkeys" {
+                        let reason = heavy_reason
+                            .reason
+                            .as_deref()
+                            .ok_or_else(|| anyhow::anyhow!("missing admission reason"))?;
+                        assert!(
+                            plan.violations
+                                .iter()
+                                .any(|violation| violation.contains(reason))
+                        );
+                    }
                 }
                 let refusal = executor
                     .submit_shielded(&intent, &keys, &ShieldOptions::default())
                     .await;
                 let Err(TxError::Policy(error)) = refusal else {
-                    anyhow::bail!("expected policy refusal for {condition}/{payout}: {refusal:?}");
+                    anyhow::bail!(
+                        "expected policy refusal for {condition}/{payout_name}: {refusal:?}"
+                    );
                 };
                 assert!(
                     error
                         .violations
                         .iter()
                         .any(|violation| violation.contains(expected)),
-                    "{condition}/{payout}: {error}"
+                    "{condition}/{payout_name}: {error}"
                 );
                 assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
                 assert!(chain.mutate_state(|state| state.submissions.is_empty()));
@@ -1471,7 +1891,7 @@ mod tests {
                         .iter()
                         .any(|request| request.method.starts_with("author_"))
                 );
-                if condition == "heavy" {
+                if condition.starts_with("heavy") {
                     assert!(!chain.requests().iter().any(|request| {
                         request.params[0] == "BetaBasketRuntimeApi_get_root_basket_positions"
                             || request.params[0]
@@ -1621,9 +2041,13 @@ mod tests {
     async fn dust_quote_preserves_exact_effects_facts_refunds_and_hook_outputs()
     -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust
+        let data = fixture_data()?;
+        let function = "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust";
+        let seed = extracted(&data.seed_cases, function)?;
+        let previews = extracted(&data.preview_cases, function)?;
         let (_chain, client, snapshot) = fixture(|state| {
-            seed_admission(state, &[HOTKEY], &[HOTKEY], 3)?;
-            seed_single_preview(state, 2_250_000, 2_200_000, 3, 2, 0)?;
+            seed_extracted_case(state, seed)?;
+            seed_extracted_previews(state, previews, false)?;
             state.fee += 12_345;
             Ok(())
         })
@@ -1679,17 +2103,13 @@ mod tests {
     #[tokio::test]
     async fn per_validator_threshold_and_absent_positions_are_distinct() -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout
+        let data = fixture_data()?;
+        let function = "test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout";
+        let seed = extracted(&data.seed_cases, function)?;
+        let previews = extracted(&data.preview_cases, function)?;
         let (chain, client, snapshot) = fixture(|state| {
-            seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY, OTHER_HOTKEY], 0)?;
-            seed_basket_for(state, HOTKEY, 4)?;
-            seed_basket_for(state, OTHER_HOTKEY, 3)?;
-            seed_coldkey_previews(
-                state,
-                json!([
-                    preview_json(HOTKEY, 700_000, 400_000, 4, 1, 0),
-                    preview_json(OTHER_HOTKEY, 900_000, 880_000, 3, 2, 0)
-                ]),
-            )
+            seed_extracted_case(state, seed)?;
+            seed_extracted_previews(state, previews, true)
         })
         .await?;
         let intent = ClaimRoot {
@@ -1724,8 +2144,13 @@ mod tests {
                 "BetaBasketRuntimeApi_get_root_basket_claim_previews",
                 CLAIMANT.0.to_vec(),
                 vec![255],
+            );
+            state.seed_runtime(
+                "BetaBasketRuntimeApi",
+                "get_root_basket_positions",
+                json!([[HOTKEY.to_string(), 1, 900_000]]),
             )
-        });
+        })?;
         let fallback = inspect(&intent, &snapshot, &snapshot, &client, &built.call, PAYER).await?;
         assert_eq!(fact(&fallback, "accrued"), Some("τ0.000900000"));
         assert_eq!(fact(&fallback, "spent"), Some("~τ0.003437731"));
@@ -1745,27 +2170,36 @@ mod tests {
         // pyt: unit/test_root_claim_fee.py::test_coldkey_threshold_is_applied_per_hotkey_not_to_aggregate
         // pyt: unit/test_root_claim_fee.py::test_coldkey_quote_separates_eligible_and_below_threshold_hotkeys
         // pyt: unit/test_root_claim_fee.py::test_coldkey_quote_does_not_scan_validator_without_owed_shares
-        for (first, second, accrued, redeemable, eligible, below, spent) in [
-            (300_000u64, Some(300_000u64), 600_000, 0, 0, 2, 3_129_827),
-            (900_000, Some(300_000), 1_200_000, 900_000, 1, 1, 2_735_525),
-            (300_000, None, 300_000, 0, 0, 1, 2_538_374),
+        let data = fixture_data()?;
+        for (function, accrued, redeemable, eligible, below, spent) in [
+            (
+                "test_coldkey_threshold_is_applied_per_hotkey_not_to_aggregate",
+                600_000u64,
+                0,
+                0,
+                2,
+                3_129_827,
+            ),
+            (
+                "test_coldkey_quote_separates_eligible_and_below_threshold_hotkeys",
+                1_200_000,
+                900_000,
+                1,
+                1,
+                2_735_525,
+            ),
+            (
+                "test_coldkey_quote_does_not_scan_validator_without_owed_shares",
+                300_000,
+                0,
+                0,
+                1,
+                2_538_374,
+            ),
         ] {
-            let (_chain, client, snapshot) = fixture(|state| {
-                seed_admission(state, &[HOTKEY, OTHER_HOTKEY], &[HOTKEY, OTHER_HOTKEY], 0)?;
-                seed_basket_for(state, HOTKEY, 2)?;
-                seed_basket_for(state, OTHER_HOTKEY, 3)?;
-                let mut positions = vec![json!([HOTKEY.to_string(), 1, first])];
-                if let Some(payout) = second {
-                    positions.push(json!([OTHER_HOTKEY.to_string(), 1, payout]));
-                }
-                state.seed_runtime(
-                    "BetaBasketRuntimeApi",
-                    "get_root_basket_positions",
-                    json!(positions),
-                )?;
-                Ok(())
-            })
-            .await?;
+            let seed = extracted(&data.seed_cases, function)?;
+            let (_chain, client, snapshot) =
+                fixture(|state| seed_extracted_case(state, seed)).await?;
             let intent = ClaimRoot {
                 subnets: vec![NetUid::ROOT],
             };
@@ -1834,8 +2268,14 @@ mod tests {
     async fn single_preview_none_and_missing_method_fall_back_to_full_entitlement()
     -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_quote_falls_back_to_full_entitlement_without_the_preview_api
+        let data = fixture_data()?;
+        let seed = extracted(
+            &data.seed_cases,
+            "test_quote_falls_back_to_full_entitlement_without_the_preview_api",
+        )?;
         for missing_method in [false, true] {
             let (_chain, client, snapshot) = fixture(|state| {
+                seed_extracted_case(state, seed)?;
                 if missing_method {
                     state.set_handler("state_call", |state, request| {
                         if request.params[0] == "BetaBasketRuntimeApi_get_basket_claim_preview" {
@@ -1872,7 +2312,7 @@ mod tests {
             assert_eq!(fact(&preview, "accrued"), Some("τ0.000900000"));
             assert_eq!(fact(&preview, "redeemable"), None);
             assert_eq!(fact(&preview, "dust"), None);
-            assert_eq!(fact(&preview, "spent"), Some("~τ0.001497242"));
+            assert_eq!(fact(&preview, "spent"), Some("~τ0.002790901"));
             client.close().await;
         }
         Ok(())
@@ -1884,14 +2324,35 @@ mod tests {
         // pyt: unit/test_root_claim_fee.py::test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop
         // pyt: unit/test_root_claim_fee.py::test_quote_prices_consolidated_rows_as_full_claim_units
         // pyt: unit/test_root_claim_fee.py::test_quote_counts_consolidation_even_when_the_claim_is_below_threshold
-        for (accrued, redeemable, rows, sold, swept, holdings, spent) in [
-            (8_000, 0, 2, 0, 0, 2, 1_891_544),
-            (300_000, 300_000, 3, 3, 6, 8, 5_322_843),
-            (2_700_000_000, 2_700_000_000, 3, 3, 6, 8, 6_671_879),
+        let data = fixture_data()?;
+        for (function, accrued, redeemable, holdings, spent) in [
+            (
+                "test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop",
+                8_000u64,
+                0,
+                2,
+                1_891_544,
+            ),
+            (
+                "test_quote_counts_consolidation_even_when_the_claim_is_below_threshold",
+                300_000,
+                300_000,
+                8,
+                5_322_843,
+            ),
+            (
+                "test_quote_prices_consolidated_rows_as_full_claim_units",
+                2_700_000_000,
+                2_700_000_000,
+                8,
+                6_671_879,
+            ),
         ] {
+            let seed = extracted(&data.seed_cases, function)?;
+            let previews = extracted(&data.preview_cases, function)?;
             let (_chain, client, snapshot) = fixture(|state| {
-                seed_admission(state, &[HOTKEY], &[HOTKEY], holdings)?;
-                seed_single_preview(state, accrued, redeemable, rows, sold, swept)
+                seed_extracted_case(state, seed)?;
+                seed_extracted_previews(state, previews, false)
             })
             .await?;
             let intent = single();

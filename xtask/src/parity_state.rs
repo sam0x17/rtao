@@ -876,7 +876,12 @@ const CI_TEST_FILTER: &str =
 fn client_e2e_profile(source: &str) -> Result<()> {
     let config: DocumentMut = source.parse()?;
     ensure!(
-        config["profile"]["ci"]["default-filter"].as_str() == Some(CI_TEST_FILTER),
+        config
+            .get("profile")
+            .and_then(|profile| profile.get("ci"))
+            .and_then(|profile| profile.get("default-filter"))
+            .and_then(Item::as_str)
+            == Some(CI_TEST_FILTER),
         "client e2e evidence requires the reviewed ordinary CI test filter"
     );
     Ok(())
@@ -1638,7 +1643,11 @@ mod tests {
             "[profile.ci]\ndefault-filter = 'binary(e2e)'",
             "[profile.ci]\ndefault-filter = 'not binary(client_policy_scenarios)'",
             "[profile.ci]",
+            "[profile]",
             "",
+            "profile = false",
+            "[profile]\nci = false",
+            "[profile.ci]\ndefault-filter = false",
             "[profile.ci]\ndefault-filter = 'not binary(client_transfer_lifecycles)'",
         ] {
             assert!(client_e2e_profile(source).is_err());
