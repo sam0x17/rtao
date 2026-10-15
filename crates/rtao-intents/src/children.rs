@@ -676,7 +676,10 @@ mod tests {
         // pins the public JSON boundary rather than an already sorted map.
         let forward =
             serde_json::from_str::<Value>(&format!(r#"{{"0.5":false,"{address}":null}}"#))?;
-        assert_eq!(children(&[forward.clone()])?, vec![(1u64 << 63, CHILD)]);
+        assert_eq!(
+            children(std::slice::from_ref(&forward))?,
+            vec![(1u64 << 63, CHILD)]
+        );
         assert_eq!(
             crate::AnyIntent::from_tool("set_children", json!({"netuid":3,"children":[forward]}),)?
                 .to_json()["children"],
@@ -689,7 +692,7 @@ mod tests {
             .ok_or_else(|| anyhow::anyhow!("account parsed as a child proportion"))?
             .to_string();
         assert_eq!(
-            normalized_proportions(&[reversed.clone()])
+            normalized_proportions(std::slice::from_ref(&reversed))
                 .err()
                 .map(|error| error.to_string()),
             Some(expected.clone())
