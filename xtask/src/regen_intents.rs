@@ -48,6 +48,29 @@ fn stripped(name: &str) -> &str {
         .unwrap_or(name)
 }
 
+fn passthrough_is_copy(ty: &str) -> bool {
+    if let Some(inner) = ty
+        .strip_prefix("Option<")
+        .and_then(|ty| ty.strip_suffix('>'))
+    {
+        return passthrough_is_copy(inner);
+    }
+    matches!(
+        ty,
+        "bool"
+            | "u8"
+            | "u16"
+            | "u32"
+            | "u64"
+            | "u128"
+            | "rtao_primitives::AccountId"
+            | "rtao_primitives::NetUid"
+            | "rtao_primitives::MechId"
+            | "rtao_primitives::Uid"
+            | "rtao_primitives::Percent"
+    )
+}
+
 fn integer(
     spec: &IntentSpec,
     name: &str,
@@ -440,6 +463,8 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             "crate::staking_baskets::many_json(self)".to_owned()
         } else if spec.name == "fund_evm_key" {
             "crate::evm::fund_json(self)".to_owned()
+        } else if spec.name == "batch" {
+            "crate::batch::to_json(self)".to_owned()
         } else {
             format!("crate::args_with_op({:?},self)", spec.name)
         };
@@ -494,19 +519,7 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
                 let target_ty = mapper.argument(pallet, call, argument)?;
                 let access = format!("intent.{}", emit::ident(&field));
                 let expr = if target_ty == *source_ty {
-                    if matches!(
-                        target_ty.as_str(),
-                        "bool"
-                            | "u8"
-                            | "u16"
-                            | "u32"
-                            | "u64"
-                            | "u128"
-                            | "rtao_primitives::AccountId"
-                            | "rtao_primitives::NetUid"
-                            | "rtao_primitives::MechId"
-                            | "rtao_primitives::Uid"
-                    ) {
+                    if passthrough_is_copy(&target_ty) {
                         access.clone()
                     } else {
                         format!("{access}.clone()")
@@ -617,6 +630,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         } else if spec.name == "execute_proxy_announced" {
             format!(
                 "crate::proxy::check_constructor_input(&args)?; let intent:super::interfaces::{class}=serde_json::from_value(args)?;"
+            )
+        } else if spec.name == "batch" {
+            format!(
+                "crate::batch::check_constructor_input(&args)?; let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::batch::canonicalize(&mut intent)?;"
             )
         } else if matches!(
             spec.name,
@@ -919,11 +936,11 @@ mod tests {
         );
     }
     #[test]
-    fn all_45_reviewed_passthrough_calls_are_distinct_catalog_members() {
+    fn all_44_reviewed_passthrough_calls_are_distinct_catalog_members() {
         let root = root();
         let config = document(root, "codegen/intent_callmap.toml").unwrap();
         let mappings = config["passthrough"].as_table().unwrap();
-        assert_eq!(mappings.len(), 45);
+        assert_eq!(mappings.len(), 44);
         for (name, call) in mappings.iter() {
             let spec = rtao_catalog::INTENTS
                 .iter()

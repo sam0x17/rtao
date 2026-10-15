@@ -4,7 +4,7 @@
 use rtao_client::View;
 use rtao_tx::{BuildCx, Built, Intent, IntentError};
 
-pub use crate::SetSubnetIdentity;
+pub use crate::{SetIdentity, SetSubnetIdentity};
 
 impl Intent for SetSubnetIdentity {
     fn summary(&self) -> String {

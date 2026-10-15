@@ -23,6 +23,14 @@ pub(crate) fn check_call_limits(
     max_bytes: usize,
 ) -> Result<(), IntentError> {
     let cost = inspect_call_limits(value, max_depth, max_nodes, max_bytes)?;
+    check_retained_work(cost, max_nodes, max_bytes)
+}
+
+fn check_retained_work(
+    cost: CallCost,
+    max_nodes: usize,
+    max_bytes: usize,
+) -> Result<(), IntentError> {
     // Nested semantic builds retain their owned arguments while the next
     // subtree is cloned. Tree levels bound the number of retained copies;
     // charge every level the entire input rather than assuming a shape.
@@ -39,6 +47,53 @@ pub(crate) fn check_call_limits(
             IntentError::validation("nested intent exceeds its recursive JSON byte-work budget")
         })?;
     Ok(())
+}
+
+/// Check a borrowed child slice as one JSON array without cloning that array.
+#[cfg(feature = "batch")]
+pub(crate) fn check_items_budget(items: &[Value]) -> Result<(), IntentError> {
+    check_items_limits(items, MAX_CALL_DEPTH, MAX_CALL_NODES, MAX_CALL_JSON_BYTES)
+}
+
+#[cfg(feature = "batch")]
+fn check_items_limits(
+    items: &[Value],
+    max_depth: usize,
+    max_nodes: usize,
+    max_bytes: usize,
+) -> Result<(), IntentError> {
+    let child_depth = max_depth
+        .checked_sub(1)
+        .ok_or_else(|| IntentError::validation("nested intent exceeds its JSON depth budget"))?;
+    if max_nodes == 0 || items.len() > max_nodes - 1 {
+        return Err(IntentError::validation(
+            "nested intent exceeds its JSON node budget",
+        ));
+    }
+    // Charge the virtual array's brackets and separators before each child.
+    let mut bytes = items
+        .len()
+        .saturating_sub(1)
+        .checked_add(2)
+        .filter(|bytes| *bytes <= max_bytes)
+        .ok_or_else(|| IntentError::validation("nested intent exceeds its JSON byte budget"))?;
+    let mut nodes = 1;
+    let mut levels = 1;
+    for item in items {
+        let cost = inspect_call_limits(item, child_depth, max_nodes - nodes, max_bytes - bytes)?;
+        nodes += cost.nodes;
+        bytes += cost.bytes;
+        levels = levels.max(cost.levels + 1);
+    }
+    check_retained_work(
+        CallCost {
+            nodes,
+            levels,
+            bytes,
+        },
+        max_nodes,
+        max_bytes,
+    )
 }
 
 #[derive(Debug)]
@@ -119,5 +174,34 @@ impl Write for SizeBudget {
     }
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(all(test, feature = "batch"))]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn borrowed_slice_matches_array_literal_and_retained_work_budgets() {
+        for items in [
+            vec![],
+            vec![Value::Null, json!("\\\"\n")],
+            vec![json!({"a":[1,2]}), json!([true, false])],
+            vec![json!({"$serde_json::private::Number":"1"})],
+        ] {
+            let array = Value::Array(items.clone());
+            for depth in [0, 1, 2, 3, 8] {
+                for nodes in [0, 1, 2, 4, 16] {
+                    for bytes in [0, 1, 2, 8, 32, 128] {
+                        assert_eq!(
+                            check_items_limits(&items, depth, nodes, bytes).is_ok(),
+                            check_call_limits(&array, depth, nodes, bytes).is_ok(),
+                            "depth={depth} nodes={nodes} bytes={bytes} input={array}"
+                        );
+                    }
+                }
+            }
+        }
     }
 }

@@ -292,6 +292,7 @@ impl Executor {
         keys: &K,
         opts: &PlanOptions,
     ) -> Result<Plan, TxError> {
+        check_typed_role(intent)?;
         let budget = TimeBudget::new(opts.deadline)?;
         budget
             .run(&self.client, async {
@@ -335,6 +336,7 @@ impl Executor {
         keys: &K,
         opts: &PlanOptions,
     ) -> Result<IntentPreflight, TxError> {
+        check_typed_role(intent)?;
         let budget = TimeBudget::new(opts.deadline)?;
         budget
             .run(&self.client, async {
@@ -475,7 +477,7 @@ impl Executor {
             .call
             .ensure_runtime(&runtime)
             .map_err(rtao_client::ClientError::from)?;
-        let semantic_role: SignerRole = semantic.spec().signer.parse()?;
+        let semantic_role: SignerRole = semantic.signer_role_dyn()?;
         let dispatch_origin = opts.proxy_for.map_or_else(
             || role_address(&origin, semantic_role, semantic.spec().name),
             Ok,
@@ -492,7 +494,7 @@ impl Executor {
         };
         let mut preview = intent.preflight_dyn(&pfcx).await?;
         let mut warnings = preview.warnings.clone();
-        let role: SignerRole = intent.spec().signer.parse()?;
+        let role: SignerRole = intent.signer_role_dyn()?;
         if !shielded
             && role == SignerRole::Hotkey
             && opts.proxy_for.is_none()
@@ -584,6 +586,7 @@ impl Executor {
         keys: &K,
         opts: &ExecuteOptions,
     ) -> Result<ExtrinsicResult<I::Output>, TxError> {
+        check_typed_role(intent)?;
         let budget = TimeBudget::new(opts.deadline)?;
         budget.check(&self.client)?;
         let address = keys.address()?;
@@ -611,6 +614,7 @@ impl Executor {
         keys: &K,
         opts: &ShieldOptions,
     ) -> Result<ExtrinsicResult<I::Output>, TxError> {
+        check_typed_role(intent)?;
         let budget = TimeBudget::new(opts.execute.deadline)?;
         budget.check(&self.client)?;
         let result = self
@@ -635,7 +639,7 @@ impl Executor {
     ) -> Result<ExtrinsicResult, TxError> {
         let budget = TimeBudget::new(opts.execute.deadline)?;
         budget.check(&self.client)?;
-        let role: SignerRole = intent.spec().signer.parse()?;
+        let role: SignerRole = intent.signer_role_dyn()?;
         self.submit_shielded_with_keys(
             intent,
             keys,
@@ -957,7 +961,7 @@ impl Executor {
         budget: TimeBudget,
     ) -> Result<ExtrinsicResult, TxError> {
         budget.check(&self.client)?;
-        let role: SignerRole = intent.spec().signer.parse()?;
+        let role: SignerRole = intent.signer_role_dyn()?;
         self.execute_with_keys(
             intent,
             keys,
@@ -1171,11 +1175,7 @@ impl Executor {
             .proxy_for
             .map(OriginView::Account)
             .unwrap_or_else(|| intent.origin_view_dyn(keys));
-        let view = IntentKeyView::new(
-            &origin,
-            semantic.spec().signer.parse()?,
-            semantic.spec().name,
-        );
+        let view = IntentKeyView::new(&origin, semantic.signer_role_dyn()?, semantic.spec().name);
         let args = semantic.to_json_dyn();
         let explicit = args
             .get("hotkey_ss58")
@@ -1324,7 +1324,20 @@ impl TimeBudget {
 }
 
 fn public_address(intent: &dyn DynIntent, keys: &dyn KeyView) -> Result<AccountId, TxError> {
-    role_address(keys, intent.spec().signer.parse()?, intent.spec().name)
+    role_address(keys, intent.signer_role_dyn()?, intent.spec().name)
+}
+
+fn check_typed_role<I: Intent>(intent: &I) -> Result<(), TxError> {
+    let actual = intent.signer_role()?;
+    if actual != I::Role::KIND {
+        return Err(IntentError::validation(format!(
+            "{} selects the {} role at runtime; use the dynamic executor API with this intent",
+            I::SPEC.name,
+            actual.as_str()
+        ))
+        .into());
+    }
+    Ok(())
 }
 
 fn owner_rate_replan(intent: &dyn DynIntent, result: &ExtrinsicResult) -> bool {
@@ -1411,7 +1424,481 @@ fn coldkey_pays(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Resu
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use super::*;
+    use crate::{Built, IntentInterface, Signed};
+    use rtao_client::{ClientConfig, Inclusion, Network};
+    use rtao_primitives::{CryptoType, Spend};
+    use rtao_signer::{BoxFuture, Coldkey, KeypairSigner, Signer, SignerError};
+    use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+    use std::sync::{
+        Mutex,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
+
+    #[derive(Default)]
+    struct RoleAccess {
+        typed_addresses: AtomicUsize,
+        coldkey_public: AtomicUsize,
+        hotkey_public: AtomicUsize,
+        hotkey_public_key: AtomicUsize,
+        typed_acquisitions: AtomicUsize,
+        dynamic_acquisitions: Mutex<Vec<SignerRole>>,
+        events: Mutex<Vec<&'static str>>,
+    }
+
+    struct RoleKeys {
+        coldkey: KeypairSigner,
+        hotkey: KeypairSigner,
+        access: Arc<RoleAccess>,
+    }
+
+    impl KeyView for RoleKeys {
+        fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+            self.access.hotkey_public.fetch_add(1, Ordering::SeqCst);
+            self.access
+                .events
+                .lock()
+                .expect("events")
+                .push("public hotkey");
+            Ok(self.hotkey.account())
+        }
+        fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+            self.access.hotkey_public_key.fetch_add(1, Ordering::SeqCst);
+            Ok(self.hotkey.account().0)
+        }
+        fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+            self.access.coldkey_public.fetch_add(1, Ordering::SeqCst);
+            self.access
+                .events
+                .lock()
+                .expect("events")
+                .push("public coldkey");
+            Ok(self.coldkey.account())
+        }
+    }
+
+    impl KeySource<Coldkey> for RoleKeys {
+        fn address(&self) -> Result<AccountId, SignerError> {
+            self.access.typed_addresses.fetch_add(1, Ordering::SeqCst);
+            Ok(self.coldkey.account())
+        }
+        async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
+            self.access
+                .typed_acquisitions
+                .fetch_add(1, Ordering::SeqCst);
+            self.access
+                .events
+                .lock()
+                .expect("events")
+                .push("acquire coldkey");
+            Ok(Arc::new(self.coldkey.clone()))
+        }
+    }
+
+    impl DynKeySource for RoleKeys {
+        fn signer_for<'a>(
+            &'a self,
+            role: SignerRole,
+        ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+            Box::pin(async move {
+                self.access
+                    .dynamic_acquisitions
+                    .lock()
+                    .expect("roles")
+                    .push(role);
+                self.access.events.lock().expect("events").push(match role {
+                    SignerRole::Coldkey => "acquire coldkey",
+                    SignerRole::Hotkey => "acquire hotkey",
+                });
+                let signer: Arc<dyn Signer> = match role {
+                    SignerRole::Coldkey => Arc::new(self.coldkey.clone()),
+                    SignerRole::Hotkey => Arc::new(self.hotkey.clone()),
+                };
+                Ok(signer)
+            })
+        }
+    }
+
+    struct InstanceHotkey {
+        builds: AtomicUsize,
+        previews: AtomicUsize,
+        origins: Mutex<Vec<(AccountId, AccountId)>>,
+        access: Arc<RoleAccess>,
+    }
+
+    impl IntentInterface for InstanceHotkey {
+        // Batch is cataloged as coldkey but adopts its children's instance role.
+        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[7];
+        type Role = Coldkey;
+        type Origin = Signed;
+        type Output = ();
+        const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
+            &[&rtao_runtime::calls::system::REMARK];
+        fn to_json(&self) -> Value {
+            json!({"op":"batch","instance_role":"hotkey"})
+        }
+    }
+
+    impl Intent for InstanceHotkey {
+        fn signer_role(&self) -> Result<SignerRole, IntentError> {
+            Ok(SignerRole::Hotkey)
+        }
+        fn summary(&self) -> String {
+            "instance-selected hotkey fixture".into()
+        }
+        fn spend(&self) -> Spend {
+            Spend::Bounded(Balance::<Tao>::from_rao(1))
+        }
+        async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+            self.builds.fetch_add(1, Ordering::SeqCst);
+            self.access.events.lock().expect("events").push("build");
+            let mut built =
+                Built::new(rtao_runtime::calls::system::remark(vec![73]).compose(cx.runtime)?);
+            built.extras.insert("instance_hotkey".into(), json!(true));
+            Ok(built)
+        }
+        async fn preflight<V: View + ?Sized>(
+            &self,
+            cx: &PreflightCx<'_, V>,
+        ) -> Result<IntentPreflight, IntentError> {
+            self.previews.fetch_add(1, Ordering::SeqCst);
+            self.origins
+                .lock()
+                .expect("origins")
+                .push((cx.dispatch_origin, cx.fee_payer));
+            self.access.events.lock().expect("events").push("preflight");
+            Ok(IntentPreflight {
+                effects: vec![format!(
+                    "dispatch={} payer={}",
+                    cx.dispatch_origin, cx.fee_payer
+                )],
+                ..Default::default()
+            })
+        }
+    }
+
+    async fn role_fixture() -> TestResult<(Executor, FakeChain, RoleKeys, InstanceHotkey)> {
+        let mut state = FakeState::try_default()?;
+        state.seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])?;
+        state.seed_constant("Aura", "SlotDuration", json!(1))?;
+        let chain = FakeChain::from_state(state);
+        let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+        let access = Arc::new(RoleAccess::default());
+        let keys = RoleKeys {
+            coldkey: KeypairSigner::from_seed(&[31; 32], CryptoType::Ed25519)?,
+            hotkey: KeypairSigner::from_seed(&[37; 32], CryptoType::Ed25519)?,
+            access: access.clone(),
+        };
+        assert_ne!(keys.coldkey.account(), keys.hotkey.account());
+        let intent = InstanceHotkey {
+            builds: AtomicUsize::new(0),
+            previews: AtomicUsize::new(0),
+            origins: Mutex::new(vec![]),
+            access,
+        };
+        Ok((Executor::new(client), chain, keys, intent))
+    }
+
+    fn assert_no_private_role_access(keys: &RoleKeys) {
+        assert_eq!(keys.access.typed_acquisitions.load(Ordering::SeqCst), 0);
+        assert!(
+            keys.access
+                .dynamic_acquisitions
+                .lock()
+                .expect("roles")
+                .is_empty()
+        );
+    }
+
+    fn assert_no_coldkey_access(keys: &RoleKeys) {
+        assert_eq!(keys.access.typed_addresses.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.access.coldkey_public.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.access.typed_acquisitions.load(Ordering::SeqCst), 0);
+    }
+
+    fn assert_acquisition_after_review(keys: &RoleKeys) {
+        let events = keys.access.events.lock().expect("events");
+        let acquisition = events
+            .iter()
+            .position(|event| *event == "acquire hotkey")
+            .expect("private acquisition");
+        let preview = events
+            .iter()
+            .position(|event| *event == "preflight")
+            .expect("preflight");
+        assert!(preview < acquisition);
+        assert!(!events.contains(&"acquire coldkey"));
+    }
+
+    #[tokio::test]
+    async fn typed_entrypoints_refuse_instance_role_mismatch_before_any_key_or_rpc_access()
+    -> TestResult {
+        let (executor, chain, keys, intent) = role_fixture().await?;
+        assert_eq!(InstanceHotkey::SPEC.signer, "coldkey");
+        executor.client().nonces().pin(&keys.coldkey.account(), 40);
+        executor.client().nonces().pin(&keys.hotkey.account(), 20);
+        let requests = chain.requests().len();
+        let errors = [
+            executor
+                .plan(&intent, &keys, &PlanOptions::default())
+                .await
+                .expect_err("typed plan role mismatch"),
+            executor
+                .preflight(&intent, &keys, &PlanOptions::default())
+                .await
+                .expect_err("typed preview role mismatch"),
+            executor
+                .execute(&intent, &keys, &ExecuteOptions::default())
+                .await
+                .expect_err("typed execution role mismatch"),
+            executor
+                .submit_shielded(&intent, &keys, &ShieldOptions::default())
+                .await
+                .expect_err("typed shield role mismatch"),
+        ];
+        for error in errors {
+            assert!(matches!(
+                &error,
+                TxError::Intent(IntentError::Validation(_))
+            ));
+            assert_eq!(
+                error.to_string(),
+                "batch selects the hotkey role at runtime; use the dynamic executor API with this intent"
+            );
+        }
+        assert_no_private_role_access(&keys);
+        assert_no_coldkey_access(&keys);
+        assert_eq!(keys.access.hotkey_public.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.access.hotkey_public_key.load(Ordering::SeqCst), 0);
+        assert!(keys.access.events.lock().expect("events").is_empty());
+        assert_eq!(intent.builds.load(Ordering::SeqCst), 0);
+        assert_eq!(intent.previews.load(Ordering::SeqCst), 0);
+        assert_eq!(chain.requests().len(), requests);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert_eq!(
+            executor
+                .client()
+                .nonces()
+                .cached(&keys.coldkey.account().to_string())
+                .await,
+            Some(40)
+        );
+        assert_eq!(
+            executor
+                .client()
+                .nonces()
+                .cached(&keys.hotkey.account().to_string())
+                .await,
+            Some(20)
+        );
+        executor.client().close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dynamic_preview_uses_instance_hotkey_without_unlocking_or_leasing_nonce() -> TestResult
+    {
+        let (executor, chain, keys, intent) = role_fixture().await?;
+        let hotkey = keys.hotkey.account();
+        executor.client().nonces().pin(&hotkey, 20);
+        executor.client().nonces().pin(&keys.coldkey.account(), 40);
+        let plan = executor
+            .plan_dyn(&intent, &keys, &PlanOptions::default())
+            .await?;
+        assert!(plan.ok());
+        assert_eq!(plan.signer, SignerRole::Hotkey);
+        assert_eq!(plan.signer_address, hotkey);
+        assert_eq!(plan.to_json()["signer"], json!("hotkey"));
+        assert_eq!(plan.effects, [format!("dispatch={hotkey} payer={hotkey}")]);
+        let preview = executor
+            .preflight_dyn(&intent, &keys, &PlanOptions::default())
+            .await?;
+        assert_eq!(
+            preview.effects,
+            [format!("dispatch={hotkey} payer={hotkey}")]
+        );
+        assert_eq!(
+            *intent.origins.lock().expect("origins"),
+            [(hotkey, hotkey), (hotkey, hotkey)]
+        );
+        assert_eq!(intent.builds.load(Ordering::SeqCst), 2);
+        assert_eq!(intent.previews.load(Ordering::SeqCst), 2);
+        assert!(keys.access.hotkey_public.load(Ordering::SeqCst) > 0);
+        assert_no_coldkey_access(&keys);
+        assert_no_private_role_access(&keys);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert_eq!(
+            executor.client().nonces().cached(&hotkey.to_string()).await,
+            Some(20)
+        );
+        assert_eq!(
+            executor
+                .client()
+                .nonces()
+                .cached(&keys.coldkey.account().to_string())
+                .await,
+            Some(40)
+        );
+        executor.client().close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dynamic_normal_and_shield_policy_refusal_precede_private_hotkey_acquisition()
+    -> TestResult {
+        let (executor, chain, keys, intent) = role_fixture().await?;
+        let options = ExecuteOptions {
+            policy: Some(Policy {
+                max_spend: Some(Balance::<Tao>::ZERO),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(matches!(
+            executor.execute_dyn(&intent, &keys, &options).await,
+            Err(TxError::Policy(_))
+        ));
+        assert!(matches!(
+            executor
+                .submit_shielded_dyn(
+                    &intent,
+                    &keys,
+                    &ShieldOptions {
+                        execute: options,
+                        ..Default::default()
+                    }
+                )
+                .await,
+            Err(TxError::Policy(_))
+        ));
+        let hotkey = keys.hotkey.account();
+        assert_eq!(
+            *intent.origins.lock().expect("origins"),
+            [(hotkey, hotkey), (hotkey, hotkey)]
+        );
+        assert_eq!(intent.builds.load(Ordering::SeqCst), 2);
+        assert_eq!(intent.previews.load(Ordering::SeqCst), 2);
+        assert_no_coldkey_access(&keys);
+        assert_no_private_role_access(&keys);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(
+            executor
+                .client()
+                .nonces()
+                .cached(&hotkey.to_string())
+                .await
+                .is_none()
+        );
+        executor.client().close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dynamic_execution_acquires_only_the_instance_hotkey_after_review_and_signs_its_account()
+    -> TestResult {
+        let (executor, chain, keys, intent) = role_fixture().await?;
+        let result = executor
+            .execute_dyn(
+                &intent,
+                &keys,
+                &ExecuteOptions {
+                    period: None,
+                    wait_for_inclusion: false,
+                    wait_for_finalization: false,
+                    ..Default::default()
+                },
+            )
+            .await?;
+        assert!(result.success);
+        assert_eq!(result.inclusion, Inclusion::PoolAccepted);
+        assert_eq!(result.data["instance_hotkey"], json!(true));
+        assert_eq!(
+            *keys.access.dynamic_acquisitions.lock().expect("roles"),
+            [SignerRole::Hotkey]
+        );
+        assert_no_coldkey_access(&keys);
+        assert_acquisition_after_review(&keys);
+        assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+        let bytes = chain.mutate_state(|state| state.submissions[0].clone());
+        let runtime = executor.client().refresh_runtime().await?;
+        let decoded = runtime.core().decode_extrinsic(&bytes, true)?;
+        assert_eq!(
+            decoded.field("address").and_then(ValueExt::as_str),
+            Some(keys.hotkey.account().to_string().as_str())
+        );
+        assert_eq!(
+            *intent.origins.lock().expect("origins"),
+            [(keys.hotkey.account(), keys.hotkey.account())]
+        );
+        assert_eq!(
+            executor
+                .client()
+                .nonces()
+                .cached(&keys.hotkey.account().to_string())
+                .await,
+            Some(1)
+        );
+        assert!(
+            executor
+                .client()
+                .nonces()
+                .cached(&keys.coldkey.account().to_string())
+                .await
+                .is_none()
+        );
+        executor.client().close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dynamic_shield_acquires_only_the_instance_hotkey_after_review() -> TestResult {
+        let (executor, chain, keys, intent) = role_fixture().await?;
+        let result = executor
+            .submit_shielded_dyn(
+                &intent,
+                &keys,
+                &ShieldOptions {
+                    execute: ExecuteOptions {
+                        wait_for_inclusion: false,
+                        wait_for_finalization: false,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .await?;
+        assert!(result.success);
+        assert_eq!(result.inclusion, Inclusion::PoolAccepted);
+        assert_eq!(
+            *keys.access.dynamic_acquisitions.lock().expect("roles"),
+            [SignerRole::Hotkey]
+        );
+        assert_no_coldkey_access(&keys);
+        assert_acquisition_after_review(&keys);
+        assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+        let bytes = chain.mutate_state(|state| state.submissions[0].clone());
+        let runtime = executor.client().refresh_runtime().await?;
+        let decoded = runtime.core().decode_extrinsic(&bytes, true)?;
+        assert_eq!(
+            decoded.field("address").and_then(ValueExt::as_str),
+            Some(keys.hotkey.account().to_string().as_str())
+        );
+        assert_eq!(
+            *intent.origins.lock().expect("origins"),
+            [(keys.hotkey.account(), keys.hotkey.account())]
+        );
+        executor.client().close().await;
+        Ok(())
+    }
+
     #[test]
     fn coldkey_warning_follows_python_wrapper_leaves() -> Result<(), Box<dyn std::error::Error>> {
         let runtime = rtao_runtime::RuntimeHandle::parse(

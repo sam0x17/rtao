@@ -237,6 +237,13 @@ pub trait IntentInterface: Send + Sync + 'static {
 
 /// Behavior hooks corresponding to Python's Intent ABC.
 pub trait Intent: IntentInterface + Sized {
+    /// Instance signing role, allowing composition to inherit its children's role.
+    ///
+    /// Runtime-selected roles use the dynamic executor API when they differ
+    /// from this interface's compile-time [`IntentInterface::Role`].
+    fn signer_role(&self) -> Result<SignerRole, IntentError> {
+        Self::SPEC.signer.parse().map_err(Into::into)
+    }
     /// One-line human summary.
     fn summary(&self) -> String;
     /// Build the semantic call against the effective origin.
@@ -327,6 +334,8 @@ pub trait Intent: IntentInterface + Sized {
 pub trait DynIntent: crate::PolicySubject + Send + Sync {
     /// Authenticated catalog record.
     fn spec(&self) -> &'static IntentSpec;
+    /// Validated instance signing role, independent of static catalog metadata.
+    fn signer_role_dyn(&self) -> Result<SignerRole, IntentError>;
     /// Wrapped descriptors.
     fn wraps(&self) -> &'static [&'static CallDescriptor];
     /// Exact intent JSON.
@@ -352,6 +361,21 @@ pub trait DynIntent: crate::PolicySubject + Send + Sync {
         &'a self,
         cx: &'a BuildCx<'a, dyn DynView + 'a>,
     ) -> BoxFuture<'a, Result<Built, IntentError>>;
+    /// Invoke only the predicted-effects hook.
+    fn effects_dyn<'a>(
+        &'a self,
+        cx: &'a PreflightCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<Vec<String>, IntentError>>;
+    /// Invoke only the nonfatal-warnings hook.
+    fn warnings_dyn<'a>(
+        &'a self,
+        cx: &'a PreflightCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<Vec<String>, IntentError>>;
+    /// Invoke only the hard-stop hook.
+    fn blocks_dyn<'a>(
+        &'a self,
+        cx: &'a PreflightCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<Vec<String>, IntentError>>;
     /// Dynamic preview hook.
     fn preflight_dyn<'a>(
         &'a self,
@@ -367,6 +391,9 @@ pub trait DynIntent: crate::PolicySubject + Send + Sync {
 impl<I: Intent> DynIntent for I {
     fn spec(&self) -> &'static IntentSpec {
         I::SPEC
+    }
+    fn signer_role_dyn(&self) -> Result<SignerRole, IntentError> {
+        Intent::signer_role(self)
     }
     fn wraps(&self) -> &'static [&'static CallDescriptor] {
         I::WRAPS
@@ -409,6 +436,24 @@ impl<I: Intent> DynIntent for I {
         cx: &'a PreflightCx<'a, dyn DynView + 'a>,
     ) -> BoxFuture<'a, Result<IntentPreflight, IntentError>> {
         Box::pin(self.preflight(cx))
+    }
+    fn effects_dyn<'a>(
+        &'a self,
+        cx: &'a PreflightCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<Vec<String>, IntentError>> {
+        Box::pin(self.effects(cx))
+    }
+    fn warnings_dyn<'a>(
+        &'a self,
+        cx: &'a PreflightCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<Vec<String>, IntentError>> {
+        Box::pin(self.warnings(cx))
+    }
+    fn blocks_dyn<'a>(
+        &'a self,
+        cx: &'a PreflightCx<'a, dyn DynView + 'a>,
+    ) -> BoxFuture<'a, Result<Vec<String>, IntentError>> {
+        Box::pin(self.blocks(cx))
     }
     fn wrap_call_dyn<'a>(
         &'a self,

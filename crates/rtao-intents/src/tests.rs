@@ -215,6 +215,21 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
                 json!(format!("0x{}", "11".repeat(20))),
             );
         }
+        if spec.name == "batch" {
+            args.insert(
+                "intents".into(),
+                json!([{"op":"transfer_all","dest_ss58":address}]),
+            );
+        }
+        if matches!(spec.name, "swap_stake" | "move_swap_stake") {
+            args.insert("dest_netuid".into(), json!(2));
+        }
+        if spec.name == "move_swap_stake" {
+            args.insert(
+                "dest_hotkey_ss58".into(),
+                json!(rtao_primitives::AccountId([2; 32]).to_ss58(110)),
+            );
+        }
         if matches!(spec.name, "swap_basket" | "swap_basket_many") {
             if spec.name == "swap_basket" {
                 args.insert("dest_netuid".into(), json!(2));

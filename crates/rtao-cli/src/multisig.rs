@@ -5,7 +5,7 @@
 use rtao::{
     client::{Client, ClientError, DynView, ViewExt},
     primitives::{AccountId, CryptoType, NetUid, Spend},
-    signer::{BoxFuture, KeyView},
+    signer::{BoxFuture, KeyView, SignerRole},
     tx::{
         BuildCx, Built, DynIntent, IntentError, IntentPreflight, Multisig, OriginView,
         PolicySubject, PreflightCx, TxError,
@@ -190,6 +190,11 @@ impl DynIntent for SemanticMultisig<'_> {
     fn spec(&self) -> &'static IntentSpec {
         self.dispatch_spec
     }
+    fn signer_role_dyn(&self) -> Result<SignerRole, IntentError> {
+        // The semantic origin can be a hotkey, but approval extrinsics always
+        // acquire the selected member's coldkey.
+        Ok(SignerRole::Coldkey)
+    }
     fn wraps(&self) -> &'static [&'static CallDescriptor] {
         if self.group.threshold == 1 {
             &[&rtao_runtime::calls::multisig::AS_MULTI_THRESHOLD_1]
@@ -299,6 +304,71 @@ impl DynIntent for SemanticMultisig<'_> {
             Ok(preview)
         })
     }
+    fn effects_dyn<'b>(
+        &'b self,
+        cx: &'b PreflightCx<'b, dyn DynView + 'b>,
+    ) -> BoxFuture<'b, Result<Vec<String>, IntentError>> {
+        Box::pin(async move {
+            let semantic_cx = PreflightCx {
+                view: cx.view,
+                runtime: cx.runtime,
+                clock: cx.clock,
+                spec: self.semantic.spec(),
+                client: cx.client,
+                dispatch_origin: cx.dispatch_origin,
+                fee_payer: cx.fee_payer,
+                call: cx.call,
+            };
+            let mut effects = self.semantic.effects_dyn(&semantic_cx).await?;
+            effects.push(self.dispatch_summary());
+            Ok(effects)
+        })
+    }
+    fn warnings_dyn<'b>(
+        &'b self,
+        cx: &'b PreflightCx<'b, dyn DynView + 'b>,
+    ) -> BoxFuture<'b, Result<Vec<String>, IntentError>> {
+        Box::pin(async move {
+            let semantic_cx = PreflightCx {
+                view: cx.view,
+                runtime: cx.runtime,
+                clock: cx.clock,
+                spec: self.semantic.spec(),
+                client: cx.client,
+                dispatch_origin: cx.dispatch_origin,
+                fee_payer: cx.fee_payer,
+                call: cx.call,
+            };
+            let mut warnings = self.semantic.warnings_dyn(&semantic_cx).await?;
+            let opening = self.state()?.timepoint.is_none();
+            if self.group.threshold >= 2
+                && opening
+                && let Some(warning) =
+                    multisig_opening_shortfall(cx.view, self.member, self.group.threshold).await
+            {
+                warnings.insert(0, warning);
+            }
+            Ok(warnings)
+        })
+    }
+    fn blocks_dyn<'b>(
+        &'b self,
+        cx: &'b PreflightCx<'b, dyn DynView + 'b>,
+    ) -> BoxFuture<'b, Result<Vec<String>, IntentError>> {
+        Box::pin(async move {
+            let semantic_cx = PreflightCx {
+                view: cx.view,
+                runtime: cx.runtime,
+                clock: cx.clock,
+                spec: self.semantic.spec(),
+                client: cx.client,
+                dispatch_origin: cx.dispatch_origin,
+                fee_payer: cx.fee_payer,
+                call: cx.call,
+            };
+            self.semantic.blocks_dyn(&semantic_cx).await
+        })
+    }
     fn wrap_call_dyn<'b>(
         &'b self,
         cx: &'b BuildCx<'b, dyn DynView + 'b>,
@@ -404,3 +474,177 @@ impl DynIntent for SemanticMultisig<'_> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod isolated_hook_tests {
+    use super::*;
+    use rtao::{
+        client::{ClientConfig, Network, View},
+        signer::Hotkey,
+        tx::{Intent, IntentInterface, Signed, SystemClock},
+    };
+    use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+
+    type HookInput = (&'static str, &'static str, AccountId, AccountId, Vec<u8>);
+
+    #[derive(Default)]
+    struct HookProbe(Mutex<Vec<HookInput>>);
+
+    impl HookProbe {
+        fn record<V: View + ?Sized>(
+            &self,
+            hook: &'static str,
+            cx: &PreflightCx<'_, V>,
+        ) -> Result<(), IntentError> {
+            self.0
+                .lock()
+                .map_err(|_| IntentError::validation("hook recorder poisoned"))?
+                .push((
+                    hook,
+                    cx.spec.name,
+                    cx.dispatch_origin,
+                    cx.fee_payer,
+                    cx.call.as_bytes().to_vec(),
+                ));
+            Ok(())
+        }
+    }
+
+    impl IntentInterface for HookProbe {
+        const SPEC: &'static IntentSpec = <rtao::intents::ServeAxon as IntentInterface>::SPEC;
+        type Role = Hotkey;
+        type Origin = Signed;
+        type Output = ();
+        const WRAPS: &'static [&'static CallDescriptor] = &[&rtao_runtime::calls::system::REMARK];
+        fn to_json(&self) -> Value {
+            json!({"op": Self::SPEC.name})
+        }
+    }
+
+    impl Intent for HookProbe {
+        fn summary(&self) -> String {
+            "isolated semantic hooks".into()
+        }
+        async fn build<V: View + ?Sized>(
+            &self,
+            _cx: &BuildCx<'_, V>,
+        ) -> Result<Built, IntentError> {
+            Err(IntentError::validation("isolated hook must not build"))
+        }
+        async fn effects<V: View + ?Sized>(
+            &self,
+            cx: &PreflightCx<'_, V>,
+        ) -> Result<Vec<String>, IntentError> {
+            self.record("effects", cx)?;
+            Ok(vec!["semantic effect".into()])
+        }
+        async fn warnings<V: View + ?Sized>(
+            &self,
+            cx: &PreflightCx<'_, V>,
+        ) -> Result<Vec<String>, IntentError> {
+            self.record("warnings", cx)?;
+            Ok(vec!["semantic warning".into()])
+        }
+        async fn blocks<V: View + ?Sized>(
+            &self,
+            cx: &PreflightCx<'_, V>,
+        ) -> Result<Vec<String>, IntentError> {
+            self.record("blocks", cx)?;
+            Ok(vec!["semantic block".into()])
+        }
+        async fn preflight<V: View + ?Sized>(
+            &self,
+            _cx: &PreflightCx<'_, V>,
+        ) -> Result<IntentPreflight, IntentError> {
+            Err(IntentError::validation(
+                "isolated hook must not invoke full preflight",
+            ))
+        }
+    }
+
+    #[tokio::test]
+    async fn isolated_hooks_preserve_semantic_context_without_calling_full_preflight()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let member = AccountId([7; 32]);
+        let mut state = FakeState::try_default()?;
+        state.seed_python(
+            "System",
+            "Account",
+            &[json!(member.to_string())],
+            json!({"data": {"free": 0}}),
+        )?;
+        let chain = FakeChain::from_state(state);
+        let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+        let executor = rtao::Executor::new(client.clone());
+        let semantic = HookProbe::default();
+        let group = executor.multisig(&[member, AccountId([9; 32])], 2).await?;
+        let adapter = SemanticMultisig::new(
+            &semantic,
+            &client,
+            group.clone(),
+            member,
+            CryptoType::Sr25519,
+            None,
+        )
+        .await?;
+        assert_eq!(semantic.signer_role()?, SignerRole::Hotkey);
+        assert_eq!(adapter.signer_role_dyn()?, SignerRole::Coldkey);
+        let snapshot = View::pin(&client).await?;
+        let runtime = client.refresh_runtime().await?;
+        let call = rtao_runtime::calls::system::remark(vec![1, 2, 3]).compose(&runtime)?;
+        let cx = PreflightCx {
+            view: &snapshot as &dyn DynView,
+            runtime: &runtime,
+            clock: &SystemClock,
+            spec: adapter.spec(),
+            client: &client,
+            dispatch_origin: group.address,
+            fee_payer: member,
+            call: &call,
+        };
+        assert_eq!(
+            adapter.effects_dyn(&cx).await?,
+            ["semantic effect", "multisig 2-of-2 execute serve_axon"]
+        );
+        let warnings = adapter.warnings_dyn(&cx).await?;
+        assert_eq!(warnings.len(), 2);
+        assert!(warnings[0].contains("opening approval reserves"));
+        assert_eq!(warnings[1], "semantic warning");
+        assert_eq!(adapter.blocks_dyn(&cx).await?, ["semantic block"]);
+        let recorded = semantic
+            .0
+            .lock()
+            .map_err(|_| std::io::Error::other("hook recorder poisoned"))?
+            .clone();
+        assert_eq!(
+            recorded,
+            ["effects", "warnings", "blocks"].map(|hook| (
+                hook,
+                HookProbe::SPEC.name,
+                group.address,
+                member,
+                call.as_bytes().to_vec()
+            ))
+        );
+        assert!(
+            !chain
+                .requests()
+                .iter()
+                .any(|request| request.method.starts_with("author_")
+                    || request.params[0] == "TransactionPaymentApi_query_info")
+        );
+        // A later approval keeps the same semantic hook and omits only the
+        // adapter's opening-deposit warning.
+        adapter.state()?.timepoint = Some(MultisigTimepoint {
+            height: 12,
+            index: 3,
+        });
+        assert_eq!(adapter.warnings_dyn(&cx).await?, ["semantic warning"]);
+        client.close().await;
+        Ok(())
+    }
+}

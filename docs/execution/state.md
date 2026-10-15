@@ -54,14 +54,30 @@ authenticates exact canonical call bytes. The M5 fuzz target is source only;
 no fuzz campaign ran. The remaining 17 intents, other command families and
 later milestones still require implementation and acceptance.
 
-Normal hosted run
+Latest normal hosted run
+[38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
+at `6470a11` passes supply, MSRV, features, no-host and semver. The check job
+stops at strict Clippy: the leasing pass-through generator clones its Copy
+`Percent` and `Option<u32>` arguments. The source generator now recognizes
+these Copy types, including optional Copy values. Generated adoption is still
+required; tests and doctests were not reached on this checkpoint. The bounded
+private failure record is `check-38703332560.json`.
+
+Seven further ports are prepared: Batch, SetIdentity, SwapHotkey, AddStake,
+AddStakeLimit, SwapStake and MoveSwapStake. Batch uses a unanimous instance
+signing role, bounded child dictionaries and full semantic preflight aggregation.
+The SDK typed entry points refuse a role mismatch before key access; dynamic
+and CLI paths use the selected instance role. Generated integration and hosted
+execution remain pending, so integrated coverage is still 66/83 and 40/102.
+
+Earlier normal hosted run
 [38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)
 at `359b09e` passed supply, no-host and semver but failed check, MSRV and
 features during compilation. The collateral read requires registering the
 existing `MinerCollateralState` decoder as a client `ReadValue`. Root-claim
 fixtures also used the wrong public helper path and an unused import. These
-three source corrections are prepared; tests and doctests were not reached.
-The new instance-role/batch integration remains separate unfinished source.
+three source corrections are committed in `6470a11`; tests and doctests were
+not reached.
 
 Earlier normal hosted run
 [38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
@@ -534,6 +550,12 @@ unchanged; all already approved decisions remain applied.
 
 ## Active source-artifact task, 2026-10-15
 
-The only active temporary root is `target/client-ci-20261015`. It holds
-selected CI source reports and source patches only, with no builds or
-workspace copies. Remove it after source adoption/review.
+No temporary root remains. Hosted archives and logs are inspected in memory;
+only bounded adoption and failure records are retained in the existing
+private recovery directory. No local builds or workspace copies are created.
+
+The Q30 follow-up audit removes the stale macOS-local requirement and adds
+hosted documentation coverage to the existing check job: strict rustdoc, a
+rendered book, generated API/LLM index and downloadable development artifacts.
+The docs command has a 15-minute limit, reuses the hosted target and requires
+GitHub's Linux runner environment. Hosted execution remains pending.

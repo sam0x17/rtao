@@ -2296,6 +2296,11 @@ pub struct IntentPreflight { pub effects: Vec<String>, pub warnings: Vec<String>
 - **The `dyn` path keeps Python's runtime check.** `DynIntent` (object-safe, JSON in and out) and
   `DynKeySource::signer_for(SignerRole)` serve the CLI, agents and `execute_tool`. A missing role yields
   `SignerError::RoleUnavailable` with Python's message (`PY/signing.py:227-263`).
+  `Intent::signer_role` supplies the instance role, forwarded by `DynIntent::signer_role_dyn`;
+  it defaults to the catalog signer. Batch inherits its children's unanimous role. Its generated
+  associated role remains the catalog's `Coldkey`; a hotkey Batch uses the dynamic executor API.
+  Typed executor entry points refuse a differing instance role before public key access or private
+  acquisition. CLI wallet selection, public payer lookup and lazy acquisition use the instance role.
 - **Typed outputs without changing JSON.** `ExtrinsicResult<O>` keeps Python's `data` map verbatim for JSON and adds
   `output: O`, which `IntentOutput::from_data(&data)` decodes from the same map. The typed outputs are:
   - `SetWeights` and `CommitWeights`: `WeightsSubmitted { reveal_round: Option<u64> }`;

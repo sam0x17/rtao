@@ -3,7 +3,7 @@
 #![deny(missing_docs)]
 
 mod arguments;
-#[cfg(any(feature = "crowdloan", feature = "proxy"))]
+#[cfg(any(feature = "batch", feature = "crowdloan", feature = "proxy"))]
 mod nested_json;
 mod registry;
 /// Python's mapping-or-list weight input carrier.
@@ -45,6 +45,8 @@ pub mod pow;
 
 #[cfg(feature = "association")]
 pub mod association;
+#[cfg(feature = "batch")]
+pub mod batch;
 #[cfg(feature = "children")]
 pub mod children;
 #[cfg(feature = "coldkey")]
@@ -59,6 +61,8 @@ pub mod evm;
 pub mod governance;
 #[cfg(feature = "identity")]
 pub mod identity;
+#[cfg(feature = "identity")]
+mod identity_account;
 #[cfg(feature = "leasing")]
 pub mod leasing;
 #[cfg(feature = "lock")]
@@ -69,12 +73,16 @@ pub mod proxy;
 pub mod registration;
 #[cfg(feature = "registration")]
 mod registration_pow;
+#[cfg(feature = "registration")]
+mod registration_swap;
 #[cfg(feature = "root")]
 pub mod root;
 #[cfg(feature = "registration")]
 pub mod root_claim;
 #[cfg(feature = "staking")]
 mod staking_baskets;
+#[cfg(feature = "staking")]
+pub mod staking_trades;
 
 // The generated records contain only infallibly serializable primitive values.
 #[allow(clippy::expect_used)]

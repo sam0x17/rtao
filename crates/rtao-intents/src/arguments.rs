@@ -6,8 +6,10 @@ use std::collections::BTreeMap;
 
 #[cfg(feature = "children")]
 pub(crate) use crate::children::{children, take};
-#[cfg(any(feature = "crowdloan", feature = "proxy"))]
+#[cfg(any(feature = "batch", feature = "crowdloan", feature = "proxy"))]
 pub(crate) use crate::nested_json::check_call_budget as check_nested_json;
+#[cfg(feature = "batch")]
+pub(crate) use crate::nested_json::check_items_budget as check_nested_items;
 #[cfg(feature = "staking")]
 pub(crate) use crate::staking_baskets::legs as basket_legs;
 
