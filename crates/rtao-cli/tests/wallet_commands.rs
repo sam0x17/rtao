@@ -26,6 +26,7 @@ use std::{
 };
 
 type TestResult = Result<(), Box<dyn Error>>;
+type WalletContext = (clap::ArgMatches, AppContext, MemorySink, Arc<AtomicUsize>);
 struct Root(PathBuf);
 impl Root {
     fn new() -> Result<Self, std::io::Error> {
@@ -79,7 +80,7 @@ fn fixture(
     json_mode: bool,
     tty: bool,
     secrets: &[&str],
-) -> Result<(clap::ArgMatches, AppContext, MemorySink, Arc<AtomicUsize>), Box<dyn Error>> {
+) -> Result<WalletContext, Box<dyn Error>> {
     let matches = application::command_tree([wallet::command()]).try_get_matches_from(args)?;
     let leaf = matches
         .subcommand()
