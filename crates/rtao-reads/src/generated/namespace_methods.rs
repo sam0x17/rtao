@@ -5,7 +5,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
     pub async fn accepts_locked_alpha(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<bool, crate::ReadError> {
         super::interfaces::accepts_locked_alpha(self.view, coldkey_ss58).await
     }
 }
@@ -14,13 +14,15 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Prices<'_, V> {
     pub async fn alpha_price(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_staking::AlphaPrice, crate::ReadError> {
         super::interfaces::alpha_price(self.view, netuid).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Prices<'_, V> {
     #[doc = "Spot alpha price for every subnet, as TAO per alpha keyed by netuid."]
-    pub async fn alpha_prices(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn alpha_prices(
+        &self,
+    ) -> Result<std::collections::BTreeMap<rtao_primitives::NetUid, f64>, crate::ReadError> {
         super::interfaces::alpha_prices(self.view).await
     }
 }
@@ -30,7 +32,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Neurons<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         uid: rtao_primitives::Uid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_accounts::AssociatedEvmKey>, crate::ReadError> {
         super::interfaces::associated_evm_key(self.view, netuid, uid).await
     }
 }
@@ -40,7 +42,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<rtao_primitives::AccountId>, crate::ReadError> {
         super::interfaces::auto_stake(self.view, coldkey_ss58, netuid).await
     }
 }
@@ -49,7 +51,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn auto_stake_all(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_staking::AutoStakeDestination>, crate::ReadError> {
         super::interfaces::auto_stake_all(self.view, coldkey_ss58).await
     }
 }
@@ -80,7 +82,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_root::BasketPosition>, crate::ReadError> {
         super::interfaces::basket_position(self.view, hotkey_ss58, coldkey_ss58).await
     }
 }
@@ -89,13 +91,16 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn basket_trading_status(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_root::BasketTradingStatus, crate::ReadError> {
         super::interfaces::basket_trading_status(self.view, hotkey_ss58).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Chain<'_, V> {
     #[doc = "A block's hash, timestamp, and extrinsics (as module.function summaries).\n\nProgrammatic callers wanting the fully decoded extrinsics and raw header\nshould use `client.block_info()` instead."]
-    pub async fn block_info(&self, block: i64) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn block_info(
+        &self,
+        block: i64,
+    ) -> Result<Option<crate::reads::m6_accounts::BlockSummary>, crate::ReadError> {
         super::interfaces::block_info(self.view, block).await
     }
 }
@@ -139,7 +144,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Weights<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         mechid: rtao_primitives::MechId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_root::BondMatrix, crate::ReadError> {
         super::interfaces::bonds(self.view, netuid, mechid).await
     }
 }
@@ -157,7 +162,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
     pub async fn childkey_threshold_suspended(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<bool, crate::ReadError> {
         super::interfaces::childkey_threshold_suspended(self.view, hotkey_ss58).await
     }
 }
@@ -167,7 +172,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<(u64, rtao_primitives::AccountId)>, crate::ReadError> {
         super::interfaces::children(self.view, hotkey_ss58, netuid).await
     }
 }
@@ -177,7 +182,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_locks::ColdkeyLock>, crate::ReadError> {
         super::interfaces::coldkey_lock(self.view, coldkey_ss58, netuid).await
     }
 }
@@ -186,7 +191,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
     pub async fn coldkey_swap_announcement(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_accounts::ColdkeySwapAnnouncement>, crate::ReadError> {
         super::interfaces::coldkey_swap_announcement(self.view, coldkey_ss58).await
     }
 }
@@ -195,7 +200,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Collateral<'_, V> {
     pub async fn collateral_policy(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_locks::CollateralPolicy, crate::ReadError> {
         super::interfaces::collateral_policy(self.view, netuid).await
     }
 }
@@ -214,7 +219,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Identity<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_accounts::Commitment>, crate::ReadError> {
         super::interfaces::commitment(self.view, netuid, hotkey_ss58).await
     }
 }
@@ -223,7 +228,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Identity<'_, V> {
     pub async fn commitments(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<serde_json::Value>, crate::ReadError> {
         super::interfaces::commitments(self.view, netuid).await
     }
 }
@@ -231,8 +236,8 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Leasing<'_, V> {
     #[doc = "A crowdloan's state (creator, deposit, raised, cap, end, target/call), or None.\n\nAmounts are TAO; `end` is the block number at which contributions close."]
     pub async fn crowdloan(
         &self,
-        crowdloan_id: i64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+        crowdloan_id: u32,
+    ) -> Result<Option<crate::reads::m6_delegation::Crowdloan>, crate::ReadError> {
         super::interfaces::crowdloan(self.view, crowdloan_id).await
     }
 }
@@ -240,14 +245,16 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Leasing<'_, V> {
     #[doc = "Contributors and amounts for a crowdloan, with amounts in TAO."]
     pub async fn crowdloan_contributors(
         &self,
-        crowdloan_id: i64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+        crowdloan_id: u32,
+    ) -> Result<Vec<crate::reads::m6_delegation::CrowdloanContributor>, crate::ReadError> {
         super::interfaces::crowdloan_contributors(self.view, crowdloan_id).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Leasing<'_, V> {
     #[doc = "All crowdloans on chain (id and summary fields)."]
-    pub async fn crowdloans(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn crowdloans(
+        &self,
+    ) -> Result<Vec<crate::reads::m6_delegation::CrowdloanSummary>, crate::ReadError> {
         super::interfaces::crowdloans(self.view).await
     }
 }
@@ -256,7 +263,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
     pub async fn delegate(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::owner::DelegateInfo>, crate::ReadError> {
         super::interfaces::delegate(self.view, hotkey_ss58).await
     }
 }
@@ -280,7 +287,9 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
     #[doc = "Every delegate hotkey on the network, with take and registrations."]
-    pub async fn delegates(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn delegates(
+        &self,
+    ) -> Result<Vec<crate::reads::owner::DelegateInfo>, crate::ReadError> {
         super::interfaces::delegates(self.view).await
     }
 }
@@ -304,7 +313,9 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Epochs<'_, V> {
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
     #[doc = "Minimum balance an account must keep to stay alive."]
-    pub async fn existential_deposit(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn existential_deposit(
+        &self,
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::existential_deposit(self.view).await
     }
 }
@@ -314,7 +325,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_locks::HotkeyConviction, crate::ReadError> {
         super::interfaces::hotkey_conviction(self.view, hotkey_ss58, netuid).await
     }
 }
@@ -335,7 +346,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Neurons<'_, V> {
     pub async fn hotkey_owner(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<rtao_primitives::DefaultAccount, crate::ReadError> {
         super::interfaces::hotkey_owner(self.view, hotkey_ss58).await
     }
 }
@@ -362,25 +373,30 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
     pub async fn is_delegate(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<bool, crate::ReadError> {
         super::interfaces::is_delegate(self.view, hotkey_ss58).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Chain<'_, V> {
     #[doc = "Whether the chain runs fast blocks (0.25s slots, local/e2e testing mode)."]
-    pub async fn is_fast_blocks(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn is_fast_blocks(&self) -> Result<bool, crate::ReadError> {
         super::interfaces::is_fast_blocks(self.view).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Leasing<'_, V> {
     #[doc = "A subnet lease by id (beneficiary, emissions share, end block, netuid, cost), or None.\n\n`emissions_share` is a percentage from 0 to 100; `end_block` is None for a\nperpetual lease."]
-    pub async fn lease(&self, lease_id: i64) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn lease(
+        &self,
+        lease_id: u32,
+    ) -> Result<Option<crate::reads::m6_delegation::Lease>, crate::ReadError> {
         super::interfaces::lease(self.view, lease_id).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Leasing<'_, V> {
     #[doc = "Every subnet lease on the network."]
-    pub async fn leases(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn leases(
+        &self,
+    ) -> Result<Vec<crate::reads::m6_delegation::Lease>, crate::ReadError> {
         super::interfaces::leases(self.view).await
     }
 }
@@ -389,7 +405,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
     pub async fn locks_for_coldkey(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_locks::ColdkeyLock>, crate::ReadError> {
         super::interfaces::locks_for_coldkey(self.view, coldkey_ss58).await
     }
 }
@@ -399,7 +415,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_locks::HotkeyLock>, crate::ReadError> {
         super::interfaces::locks_for_hotkey(self.view, hotkey_ss58, netuid).await
     }
 }
@@ -452,7 +468,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Collateral<'_, V> {
         netuid: rtao_primitives::NetUid,
         hotkey_ss58: rtao_primitives::AccountId,
         coldkey_ss58: Option<rtao_primitives::AccountId>,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_locks::MinerCollateral>, crate::ReadError> {
         super::interfaces::miner_collateral(self.view, netuid, hotkey_ss58, coldkey_ss58).await
     }
 }
@@ -471,7 +487,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
         &self,
         account_ss58: rtao_primitives::AccountId,
         call_hash: String,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_accounts::MultisigOperation>, crate::ReadError> {
         super::interfaces::multisig(self.view, account_ss58, call_hash).await
     }
 }
@@ -480,7 +496,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Neurons<'_, V> {
     pub async fn netuids_for_hotkey(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<rtao_primitives::NetUid>, crate::ReadError> {
         super::interfaces::netuids_for_hotkey(self.view, hotkey_ss58).await
     }
 }
@@ -490,7 +506,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Neurons<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         lite: bool,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_accounts::Neuron>, crate::ReadError> {
         super::interfaces::neurons(self.view, netuid, lite).await
     }
 }
@@ -508,7 +524,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Neurons<'_, V> {
     pub async fn owned_hotkeys(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<rtao_primitives::AccountId>, crate::ReadError> {
         super::interfaces::owned_hotkeys(self.view, coldkey_ss58).await
     }
 }
@@ -518,7 +534,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<(u64, rtao_primitives::AccountId)>, crate::ReadError> {
         super::interfaces::parents(self.view, hotkey_ss58, netuid).await
     }
 }
@@ -528,7 +544,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_delegation::PendingChildren, crate::ReadError> {
         super::interfaces::pending_children(self.view, hotkey_ss58, netuid).await
     }
 }
@@ -547,7 +563,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Prices<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         amount_tao: f64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_staking::SwapQuote, crate::ReadError> {
         super::interfaces::quote_stake(self.view, netuid, amount_tao).await
     }
 }
@@ -557,7 +573,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Prices<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         amount_alpha: f64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_staking::SwapQuote, crate::ReadError> {
         super::interfaces::quote_unstake(self.view, netuid, amount_alpha).await
     }
 }
@@ -576,7 +592,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Identity<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<Vec<(String, u64)>>, crate::ReadError> {
         super::interfaces::revealed_commitment(self.view, netuid, hotkey_ss58).await
     }
 }
@@ -594,7 +610,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn root_basket_owed_breakdown(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_root::BasketOwed>, crate::ReadError> {
         super::interfaces::root_basket_owed_breakdown(self.view, coldkey_ss58).await
     }
 }
@@ -603,19 +619,23 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn root_basket_portfolio(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_root::BasketPosition>, crate::ReadError> {
         super::interfaces::root_basket_portfolio(self.view, coldkey_ss58).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     #[doc = "Network-wide total basket NAV across all validators, in TAO.\n\nSampling this over time yields the TAO/day flowing to root stakers."]
-    pub async fn root_basket_total_nav(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn root_basket_total_nav(
+        &self,
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::root_basket_total_nav(self.view).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     #[doc = "Basket summaries for every validator with an active basket.\n\nThe network-wide leaderboard: one `validator_basket_summary` record per\nvalidator with an active fund, sorted by NAV descending, each including\nits `basket_rate` (the cumulative entitlement accumulator: β raw units\nminted per rao of root stake, migration-seeded history included).\nCompare `lifetime_return` across validators to rank basket performance;\nfor staker returns use `chain_pricing` (`staker_twr` / `stake_price`)."]
-    pub async fn root_baskets(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn root_baskets(
+        &self,
+    ) -> Result<Vec<crate::reads::owner::ValidatorBasketSummary>, crate::ReadError> {
         super::interfaces::root_baskets(self.view).await
     }
 }
@@ -634,7 +654,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
         coldkey_ss58: rtao_primitives::AccountId,
         hotkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::stake(self.view, coldkey_ss58, hotkey_ss58, netuid).await
     }
 }
@@ -644,7 +664,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_staking::StakeAvailability, crate::ReadError> {
         super::interfaces::stake_availability(self.view, coldkey_ss58, netuid).await
     }
 }
@@ -653,8 +673,8 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn stake_availability_for_coldkey(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-        netuids: Vec<i64>,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+        netuids: Vec<rtao_primitives::NetUid>,
+    ) -> Result<Vec<crate::reads::m6_staking::StakeAvailability>, crate::ReadError> {
         super::interfaces::stake_availability_for_coldkey(self.view, coldkey_ss58, netuids).await
     }
 }
@@ -663,7 +683,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn stake_for_coldkey(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::owner::StakePosition>, crate::ReadError> {
         super::interfaces::stake_for_coldkey(self.view, coldkey_ss58).await
     }
 }
@@ -672,7 +692,13 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn stake_for_coldkeys(
         &self,
         coldkey_ss58s: Vec<rtao_primitives::AccountId>,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<
+        std::collections::BTreeMap<
+            rtao_primitives::AccountId,
+            Vec<crate::reads::owner::StakePosition>,
+        >,
+        crate::ReadError,
+    > {
         super::interfaces::stake_for_coldkeys(self.view, coldkey_ss58s).await
     }
 }
@@ -702,7 +728,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn staking_hotkeys(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<rtao_primitives::AccountId>, crate::ReadError> {
         super::interfaces::staking_hotkeys(self.view, coldkey_ss58).await
     }
 }
@@ -711,7 +737,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     pub async fn subnet(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_root::SubnetInfo, crate::ReadError> {
         super::interfaces::subnet(self.view, netuid).await
     }
 }
@@ -720,7 +746,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Collateral<'_, V> {
     pub async fn subnet_collateral(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_locks::SubnetCollateral>, crate::ReadError> {
         super::interfaces::subnet_collateral(self.view, netuid).await
     }
 }
@@ -729,7 +755,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
     pub async fn subnet_convictions(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::m6_locks::SubnetConvictions, crate::ReadError> {
         super::interfaces::subnet_convictions(self.view, netuid).await
     }
 }
@@ -771,7 +797,9 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     #[doc = "Current cost to register a new subnet.\n\nDenominated in TAO. The cost is dynamic: it rises when subnets register\nand decays back down over time."]
-    pub async fn subnet_registration_cost(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn subnet_registration_cost(
+        &self,
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::subnet_registration_cost(self.view).await
     }
 }
@@ -786,13 +814,17 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     #[doc = "Per-subnet EMA of net TAO flow, in rao per block.\n\nTAO flow is the chain's running measure of user stake activity on a\nsubnet: every stake adds to the accumulator and every unstake subtracts,\nso a positive value means TAO is (on average) flowing into the subnet\nand a negative value means it is flowing out. The chain smooths the\nper-block accumulator (`SubnetTaoFlow`) into an exponential moving\naverage (`SubnetEmaTaoFlow`); this read returns that EMA per netuid.\nSubnets with no recorded flow are omitted."]
-    pub async fn subnet_tao_flows(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn subnet_tao_flows(
+        &self,
+    ) -> Result<std::collections::BTreeMap<rtao_primitives::NetUid, f64>, crate::ReadError> {
         super::interfaces::subnet_tao_flows(self.view).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     #[doc = "Info for every subnet, fetched in four batched map queries rather than\none-query-per-subnet. This is what listing should use."]
-    pub async fn subnets(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn subnets(
+        &self,
+    ) -> Result<Vec<crate::reads::m6_root::SubnetInfo>, crate::ReadError> {
         super::interfaces::subnets(self.view).await
     }
 }
@@ -802,7 +834,10 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Weights<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         mechid: rtao_primitives::MechId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<
+        std::collections::BTreeMap<u64, Vec<crate::reads::m6_root::TimelockedWeightCommit>>,
+        crate::ReadError,
+    > {
         super::interfaces::timelocked_weight_commits(self.view, netuid, mechid).await
     }
 }
@@ -825,13 +860,13 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn total_alpha_staked(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::total_alpha_staked(self.view, netuid).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Chain<'_, V> {
     #[doc = "Global transaction rate limit in blocks."]
-    pub async fn tx_rate_limit(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn tx_rate_limit(&self) -> Result<u64, crate::ReadError> {
         super::interfaces::tx_rate_limit(self.view).await
     }
 }
@@ -850,7 +885,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn validator_basket(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::m6_root::ValidatorBasketHolding>, crate::ReadError> {
         super::interfaces::validator_basket(self.view, hotkey_ss58).await
     }
 }
@@ -859,7 +894,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     pub async fn validator_basket_nav(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::validator_basket_nav(self.view, hotkey_ss58).await
     }
 }

@@ -648,105 +648,105 @@ impl ReadName {
     /// Whether this read's actual generated dispatch has implemented behavior.
     pub const fn implemented(self) -> bool {
         match self {
-            Self::AcceptsLockedAlpha => false,
-            Self::AlphaPrice => false,
-            Self::AlphaPrices => false,
-            Self::AssociatedEvmKey => false,
-            Self::AutoStake => false,
-            Self::AutoStakeAll => false,
+            Self::AcceptsLockedAlpha => true,
+            Self::AlphaPrice => true,
+            Self::AlphaPrices => true,
+            Self::AssociatedEvmKey => true,
+            Self::AutoStake => true,
+            Self::AutoStakeAll => true,
             Self::Balance => true,
             Self::Balances => true,
-            Self::BasketPosition => false,
-            Self::BasketTradingStatus => false,
-            Self::BlockInfo => false,
+            Self::BasketPosition => true,
+            Self::BasketTradingStatus => true,
+            Self::BlockInfo => true,
             Self::BlockTime => true,
             Self::BlocksSinceLastStep => true,
             Self::BlocksSinceLastUpdate => true,
             Self::BlocksUntilNextEpoch => true,
-            Self::Bonds => false,
+            Self::Bonds => true,
             Self::Burn => true,
-            Self::ChildkeyThresholdSuspended => false,
-            Self::Children => false,
-            Self::ColdkeyLock => false,
-            Self::ColdkeySwapAnnouncement => false,
-            Self::CollateralPolicy => false,
+            Self::ChildkeyThresholdSuspended => true,
+            Self::Children => true,
+            Self::ColdkeyLock => true,
+            Self::ColdkeySwapAnnouncement => true,
+            Self::CollateralPolicy => true,
             Self::CommitRevealEnabled => true,
-            Self::Commitment => false,
-            Self::Commitments => false,
-            Self::Crowdloan => false,
-            Self::CrowdloanContributors => false,
-            Self::Crowdloans => false,
-            Self::Delegate => false,
+            Self::Commitment => true,
+            Self::Commitments => true,
+            Self::Crowdloan => true,
+            Self::CrowdloanContributors => true,
+            Self::Crowdloans => true,
+            Self::Delegate => true,
             Self::DelegateTake => true,
             Self::Delegated => true,
-            Self::Delegates => false,
+            Self::Delegates => true,
             Self::Difficulty => true,
             Self::EpochStatus => true,
-            Self::ExistentialDeposit => false,
-            Self::HotkeyConviction => false,
+            Self::ExistentialDeposit => true,
+            Self::HotkeyConviction => true,
             Self::HotkeyIdentities => true,
-            Self::HotkeyOwner => false,
+            Self::HotkeyOwner => true,
             Self::Identity => true,
             Self::ImmunityPeriod => true,
-            Self::IsDelegate => false,
-            Self::IsFastBlocks => false,
-            Self::Lease => false,
-            Self::Leases => false,
-            Self::LocksForColdkey => false,
-            Self::LocksForHotkey => false,
+            Self::IsDelegate => true,
+            Self::IsFastBlocks => true,
+            Self::Lease => true,
+            Self::Leases => true,
+            Self::LocksForColdkey => true,
+            Self::LocksForHotkey => true,
             Self::MaxWeightLimit => true,
             Self::MechanismCount => true,
             Self::MechanismEmissionSplit => true,
             Self::Metagraph => true,
             Self::MevShieldNextKey => true,
             Self::MinAllowedWeights => true,
-            Self::MinerCollateral => false,
+            Self::MinerCollateral => true,
             Self::MostConvictedHotkey => true,
-            Self::Multisig => false,
-            Self::NetuidsForHotkey => false,
-            Self::Neurons => false,
+            Self::Multisig => true,
+            Self::NetuidsForHotkey => true,
+            Self::Neurons => true,
             Self::NextEpochStartBlock => true,
-            Self::OwnedHotkeys => false,
-            Self::Parents => false,
-            Self::PendingChildren => false,
+            Self::OwnedHotkeys => true,
+            Self::Parents => true,
+            Self::PendingChildren => true,
             Self::Proxies => true,
-            Self::QuoteStake => false,
-            Self::QuoteUnstake => false,
+            Self::QuoteStake => true,
+            Self::QuoteUnstake => true,
             Self::RevealPeriod => true,
-            Self::RevealedCommitment => false,
+            Self::RevealedCommitment => true,
             Self::RootBasketOwed => true,
-            Self::RootBasketOwedBreakdown => false,
-            Self::RootBasketPortfolio => false,
-            Self::RootBasketTotalNav => false,
-            Self::RootBaskets => false,
+            Self::RootBasketOwedBreakdown => true,
+            Self::RootBasketPortfolio => true,
+            Self::RootBasketTotalNav => true,
+            Self::RootBaskets => true,
             Self::RootClaimThreshold => true,
-            Self::Stake => false,
-            Self::StakeAvailability => false,
-            Self::StakeAvailabilityForColdkey => false,
-            Self::StakeForColdkey => false,
-            Self::StakeForColdkeys => false,
+            Self::Stake => true,
+            Self::StakeAvailability => true,
+            Self::StakeAvailabilityForColdkey => true,
+            Self::StakeForColdkey => true,
+            Self::StakeForColdkeys => true,
             Self::StakeValueForColdkey => true,
             Self::StakeValueForColdkeys => true,
-            Self::StakingHotkeys => false,
-            Self::Subnet => false,
-            Self::SubnetCollateral => false,
-            Self::SubnetConvictions => false,
+            Self::StakingHotkeys => true,
+            Self::Subnet => true,
+            Self::SubnetCollateral => true,
+            Self::SubnetConvictions => true,
             Self::SubnetEmissionEnabled => true,
             Self::SubnetHyperparameters => true,
             Self::SubnetIdentity => true,
             Self::SubnetNames => true,
-            Self::SubnetRegistrationCost => false,
+            Self::SubnetRegistrationCost => true,
             Self::SubnetStartSchedule => true,
-            Self::SubnetTaoFlows => false,
-            Self::Subnets => false,
-            Self::TimelockedWeightCommits => false,
+            Self::SubnetTaoFlows => true,
+            Self::Subnets => true,
+            Self::TimelockedWeightCommits => true,
             Self::Timestamp => true,
             Self::TokenSymbols => true,
-            Self::TotalAlphaStaked => false,
-            Self::TxRateLimit => false,
+            Self::TotalAlphaStaked => true,
+            Self::TxRateLimit => true,
             Self::Uid => true,
-            Self::ValidatorBasket => false,
-            Self::ValidatorBasketNav => false,
+            Self::ValidatorBasket => true,
+            Self::ValidatorBasketNav => true,
             Self::ValidatorBasketSummary => true,
             Self::Weights => true,
             Self::WeightsRateLimit => true,
@@ -756,36 +756,42 @@ impl ReadName {
     pub fn interface_metadata(self) -> ReadInterfaceMetadata {
         match self {
             Self::AcceptsLockedAlpha => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::AcceptsLockedAlphaParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<bool>(),
             },
             Self::AlphaPrice => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::AlphaPriceParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_staking::AlphaPrice>(),
             },
             Self::AlphaPrices => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::AlphaPricesParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    std::collections::BTreeMap<rtao_primitives::NetUid, f64>,
+                >(),
             },
             Self::AssociatedEvmKey => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::AssociatedEvmKeyParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_accounts::AssociatedEvmKey>,
+                >(),
             },
             Self::AutoStake => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::AutoStakeParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<rtao_primitives::AccountId>>(),
             },
             Self::AutoStakeAll => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::AutoStakeAllParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::m6_staking::AutoStakeDestination>,
+                >(),
             },
             Self::Balance => ReadInterfaceMetadata {
                 implemented: true,
@@ -803,20 +809,25 @@ impl ReadName {
                 >(),
             },
             Self::BasketPosition => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::BasketPositionParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_root::BasketPosition>,
+                >(),
             },
             Self::BasketTradingStatus => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::BasketTradingStatusParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_root::BasketTradingStatus>(
+                ),
             },
             Self::BlockInfo => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::BlockInfoParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_accounts::BlockSummary>,
+                >(),
             },
             Self::BlockTime => ReadInterfaceMetadata {
                 implemented: true,
@@ -844,9 +855,9 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Option<u64>>(),
             },
             Self::Bonds => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::BondsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_root::BondMatrix>(),
             },
             Self::Burn => ReadInterfaceMetadata {
                 implemented: true,
@@ -854,34 +865,37 @@ impl ReadName {
                 output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::ChildkeyThresholdSuspended => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::ChildkeyThresholdSuspendedParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<bool>(),
             },
             Self::Children => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ChildrenParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<(u64, rtao_primitives::AccountId)>>(),
             },
             Self::ColdkeyLock => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ColdkeyLockParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<crate::reads::m6_locks::ColdkeyLock>>(
+                ),
             },
             Self::ColdkeySwapAnnouncement => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::ColdkeySwapAnnouncementParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_accounts::ColdkeySwapAnnouncement>,
+                >(),
             },
             Self::CollateralPolicy => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::CollateralPolicyParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_locks::CollateralPolicy>(),
             },
             Self::CommitRevealEnabled => ReadInterfaceMetadata {
                 implemented: true,
@@ -890,36 +904,45 @@ impl ReadName {
                 output_type_name: std::any::type_name::<bool>(),
             },
             Self::Commitment => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::CommitmentParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_accounts::Commitment>,
+                >(),
             },
             Self::Commitments => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::CommitmentsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<serde_json::Value>>(),
             },
             Self::Crowdloan => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::CrowdloanParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_delegation::Crowdloan>,
+                >(),
             },
             Self::CrowdloanContributors => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::CrowdloanContributorsParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::m6_delegation::CrowdloanContributor>,
+                >(),
             },
             Self::Crowdloans => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::CrowdloansParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::m6_delegation::CrowdloanSummary>,
+                >(),
             },
             Self::Delegate => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::DelegateParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<crate::reads::owner::DelegateInfo>>(
+                ),
             },
             Self::DelegateTake => ReadInterfaceMetadata {
                 implemented: true,
@@ -932,9 +955,9 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Vec<crate::reads::owner::DelegatedStake>>(),
             },
             Self::Delegates => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::DelegatesParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::owner::DelegateInfo>>(),
             },
             Self::Difficulty => ReadInterfaceMetadata {
                 implemented: true,
@@ -947,16 +970,16 @@ impl ReadName {
                 output_type_name: std::any::type_name::<crate::reads::epochs::EpochStatus>(),
             },
             Self::ExistentialDeposit => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ExistentialDepositParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::HotkeyConviction => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::HotkeyConvictionParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_locks::HotkeyConviction>(),
             },
             Self::HotkeyIdentities => ReadInterfaceMetadata {
                 implemented: true,
@@ -967,9 +990,9 @@ impl ReadName {
                 >(),
             },
             Self::HotkeyOwner => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::HotkeyOwnerParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DefaultAccount>(),
             },
             Self::Identity => ReadInterfaceMetadata {
                 implemented: true,
@@ -982,34 +1005,35 @@ impl ReadName {
                 output_type_name: std::any::type_name::<u16>(),
             },
             Self::IsDelegate => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::IsDelegateParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<bool>(),
             },
             Self::IsFastBlocks => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::IsFastBlocksParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<bool>(),
             },
             Self::Lease => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::LeaseParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<crate::reads::m6_delegation::Lease>>(
+                ),
             },
             Self::Leases => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::LeasesParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_delegation::Lease>>(),
             },
             Self::LocksForColdkey => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::LocksForColdkeyParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_locks::ColdkeyLock>>(),
             },
             Self::LocksForHotkey => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::LocksForHotkeyParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_locks::HotkeyLock>>(),
             },
             Self::MaxWeightLimit => ReadInterfaceMetadata {
                 implemented: true,
@@ -1046,9 +1070,11 @@ impl ReadName {
                 output_type_name: std::any::type_name::<u16>(),
             },
             Self::MinerCollateral => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::MinerCollateralParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_locks::MinerCollateral>,
+                >(),
             },
             Self::MostConvictedHotkey => ReadInterfaceMetadata {
                 implemented: true,
@@ -1057,20 +1083,22 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Option<rtao_primitives::AccountId>>(),
             },
             Self::Multisig => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::MultisigParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_accounts::MultisigOperation>,
+                >(),
             },
             Self::NetuidsForHotkey => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::NetuidsForHotkeyParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<rtao_primitives::NetUid>>(),
             },
             Self::Neurons => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::NeuronsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_accounts::Neuron>>(),
             },
             Self::NextEpochStartBlock => ReadInterfaceMetadata {
                 implemented: true,
@@ -1079,19 +1107,20 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Option<u64>>(),
             },
             Self::OwnedHotkeys => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::OwnedHotkeysParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<rtao_primitives::AccountId>>(),
             },
             Self::Parents => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ParentsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<(u64, rtao_primitives::AccountId)>>(),
             },
             Self::PendingChildren => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::PendingChildrenParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_delegation::PendingChildren>(
+                ),
             },
             Self::Proxies => ReadInterfaceMetadata {
                 implemented: true,
@@ -1099,14 +1128,14 @@ impl ReadName {
                 output_type_name: std::any::type_name::<crate::reads::owner::ProxyDelegations>(),
             },
             Self::QuoteStake => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::QuoteStakeParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_staking::SwapQuote>(),
             },
             Self::QuoteUnstake => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::QuoteUnstakeParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_staking::SwapQuote>(),
             },
             Self::RevealPeriod => ReadInterfaceMetadata {
                 implemented: true,
@@ -1114,10 +1143,10 @@ impl ReadName {
                 output_type_name: std::any::type_name::<u64>(),
             },
             Self::RevealedCommitment => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::RevealedCommitmentParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<Vec<(String, u64)>>>(),
             },
             Self::RootBasketOwed => ReadInterfaceMetadata {
                 implemented: true,
@@ -1125,28 +1154,31 @@ impl ReadName {
                 output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::RootBasketOwedBreakdown => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::RootBasketOwedBreakdownParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_root::BasketOwed>>(),
             },
             Self::RootBasketPortfolio => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::RootBasketPortfolioParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_root::BasketPosition>>(
+                ),
             },
             Self::RootBasketTotalNav => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::RootBasketTotalNavParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::RootBaskets => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::RootBasketsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::owner::ValidatorBasketSummary>,
+                >(),
             },
             Self::RootClaimThreshold => ReadInterfaceMetadata {
                 implemented: true,
@@ -1155,33 +1187,41 @@ impl ReadName {
                 output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::Stake => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::StakeParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::StakeAvailability => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::StakeAvailabilityParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_staking::StakeAvailability>(
+                ),
             },
             Self::StakeAvailabilityForColdkey => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::StakeAvailabilityForColdkeyParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::m6_staking::StakeAvailability>,
+                >(),
             },
             Self::StakeForColdkey => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::StakeForColdkeyParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::owner::StakePosition>>(),
             },
             Self::StakeForColdkeys => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::StakeForColdkeysParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    std::collections::BTreeMap<
+                        rtao_primitives::AccountId,
+                        Vec<crate::reads::owner::StakePosition>,
+                    >,
+                >(),
             },
             Self::StakeValueForColdkey => ReadInterfaceMetadata {
                 implemented: true,
@@ -1203,26 +1243,29 @@ impl ReadName {
                 >(),
             },
             Self::StakingHotkeys => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::StakingHotkeysParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<rtao_primitives::AccountId>>(),
             },
             Self::Subnet => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::SubnetParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_root::SubnetInfo>(),
             },
             Self::SubnetCollateral => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::SubnetCollateralParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::m6_locks::SubnetCollateral>,
+                >(),
             },
             Self::SubnetConvictions => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::SubnetConvictionsParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::m6_locks::SubnetConvictions>(
+                ),
             },
             Self::SubnetEmissionEnabled => ReadInterfaceMetadata {
                 implemented: true,
@@ -1253,11 +1296,11 @@ impl ReadName {
                 >(),
             },
             Self::SubnetRegistrationCost => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::SubnetRegistrationCostParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::SubnetStartSchedule => ReadInterfaceMetadata {
                 implemented: true,
@@ -1266,21 +1309,28 @@ impl ReadName {
                 output_type_name: std::any::type_name::<crate::reads::owner::SubnetStartSchedule>(),
             },
             Self::SubnetTaoFlows => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::SubnetTaoFlowsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    std::collections::BTreeMap<rtao_primitives::NetUid, f64>,
+                >(),
             },
             Self::Subnets => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::SubnetsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::m6_root::SubnetInfo>>(),
             },
             Self::TimelockedWeightCommits => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::TimelockedWeightCommitsParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    std::collections::BTreeMap<
+                        u64,
+                        Vec<crate::reads::m6_root::TimelockedWeightCommit>,
+                    >,
+                >(),
             },
             Self::Timestamp => ReadInterfaceMetadata {
                 implemented: true,
@@ -1295,15 +1345,15 @@ impl ReadName {
                 >(),
             },
             Self::TotalAlphaStaked => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::TotalAlphaStakedParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::TxRateLimit => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::TxRateLimitParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<u64>(),
             },
             Self::Uid => ReadInterfaceMetadata {
                 implemented: true,
@@ -1311,15 +1361,17 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Option<rtao_primitives::Uid>>(),
             },
             Self::ValidatorBasket => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ValidatorBasketParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Vec<crate::reads::m6_root::ValidatorBasketHolding>,
+                >(),
             },
             Self::ValidatorBasketNav => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ValidatorBasketNavParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::ValidatorBasketSummary => ReadInterfaceMetadata {
                 implemented: true,
