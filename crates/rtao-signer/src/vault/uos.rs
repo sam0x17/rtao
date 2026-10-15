@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/vault/uos.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Universal Offline Signatures framing for Polkadot Vault.
 //!
 //! This ports the pure byte protocol in the pinned Python `vault/uos.py`.

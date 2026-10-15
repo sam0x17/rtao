@@ -8,6 +8,12 @@ pub mod collateral;
 pub mod config;
 /// Stake locking, conviction and locked-alpha acceptance.
 pub mod conviction;
+/// EVM keys, native funding, HTTP transactions and precompile commands.
+#[cfg(feature = "evm")]
+pub mod evm;
+/// Browser-extension bridge lifecycle and public account discovery.
+#[cfg(feature = "extension")]
+pub mod extension;
 
 /// On-chain axon endpoint commands.
 pub mod axon;
@@ -29,6 +35,8 @@ pub mod schema;
 pub mod stake;
 /// Subnet creation, registration and metagraph views.
 pub mod subnets;
+/// Standalone timelock encryption, decryption and envelope inspection.
+pub mod timelock;
 /// Local wallet management and public account views.
 pub mod wallet;
 /// Validator weight submission commands.

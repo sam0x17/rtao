@@ -1207,9 +1207,10 @@ mod tests {
 /// a local wallet key under a different signing identity.
 pub trait ExternalSignerFactory: Send + Sync {
     /// Prepare public identity and a lazy source for the selected backend.
-    /// This may resolve an account but must not unlock or acquire a private
-    /// signer, sign, or submit: `signer_for` runs only after the durable plan
-    /// hook. Shipped M7 backends must preserve this contract.
+    /// This may discover an external account for an ordinary invocation but
+    /// must not unlock a private key, sign, or submit: `signer_for` runs only
+    /// after the durable plan hook. Previews require a public account without
+    /// discovery that opens a device or browser.
     fn keys<'a>(
         &'a self,
         globals: &'a Globals,
@@ -1306,8 +1307,7 @@ impl DynKeySource for CliWalletKeys {
     }
 }
 impl AppContext {
-    /// Resolve signing keys lazily. External command families inject their
-    /// factory; absent capability is an explicit error, never a wallet fallback.
+    /// Resolve signing keys lazily through injected or native external backends.
     pub async fn signing_keys(
         &self,
         role: SignerRole,
@@ -1326,12 +1326,31 @@ impl AppContext {
                 self.output.clone(),
             )));
         }
-        let factory = external.ok_or_else(|| {
-            CliError::failure(format!(
-                "{backend} signing requires its enabled CLI backend"
-            ))
-        })?;
-        factory.keys(&self.globals, role).await
+        match external {
+            Some(factory) => factory.keys(&self.globals, role).await,
+            None => {
+                crate::signer_backends::NativeSignerFactory::new(self)
+                    .keys(&self.globals, role)
+                    .await
+            }
+        }
+    }
+    /// Resolve a public external account for prompts and public PoW preparation.
+    ///
+    /// Live account discovery does not acquire a signing session. A preview
+    /// uses only an already pinned address and never opens a device or browser.
+    pub async fn external_signer_public_account(&self) -> Result<Option<AccountId>, CliError> {
+        if !self.globals.uses_external_signer() {
+            return Ok(None);
+        }
+        if self.globals.dry_run {
+            return self.external_signer_address();
+        }
+        let keys = self.signing_keys(SignerRole::Coldkey, None).await?;
+        keys.bare_signer_account()
+            .or_else(|| keys.coldkey_address().ok())
+            .map(Some)
+            .ok_or_else(|| CliError::input("external signer has no public account"))
     }
     /// Missing-input policy shared by generated and hand-written commands.
     pub fn prompt_context(&self) -> crate::prompt::PromptContext {
@@ -1619,6 +1638,8 @@ impl AppContext {
         external: Option<&dyn ExternalSignerFactory>,
         history: &mut crate::prompt::PromptHistory,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+        let native = crate::signer_backends::NativeSignerFactory::new(self);
+        let external = Some(external.unwrap_or(&native));
         let role = intent
             .signer_role_dyn()
             .map_err(|e| CliError::input(e.to_string()))?;

@@ -19,7 +19,7 @@ use rtao::{
     reads::ReadName,
     tx::ExtrinsicResult,
 };
-use rtao_intents::pow::{CancellationToken, PowConfig, PowSolver};
+use rtao_intents::pow::{PowConfig, PowSolver};
 use serde_json::{Map, Value, json};
 use std::{
     collections::BTreeMap,
@@ -62,14 +62,16 @@ pub fn command() -> Result<Command, CliError> {
                 .long("pow-backend")
                 .default_value("auto")
                 .value_parser(["auto", "cpu", "gpu"])
-                .help("auto/cpu use the native CPU solver; gpu is unavailable in this build."),
+                .help(
+                    "auto selects available GPU support or CPU; gpu requires the pow-gpu feature.",
+                ),
         )
         .arg(
             Arg::new("pow_device")
                 .long("pow-device")
                 .action(ArgAction::Append)
                 .value_parser(clap::value_parser!(u32))
-                .help("GPU device id (GPU execution is unavailable in this build)."),
+                .help("GPU device id; repeat to select several (requires pow-gpu)."),
         )
         .arg(
             Arg::new("pow_timeout")
@@ -195,6 +197,10 @@ pub struct PowRegistration {
     pub hotkey: AccountId,
     /// Validated bounded CPU worker and timeout settings.
     pub config: PowConfig,
+    /// Requested automatic, CPU or GPU mining backend.
+    pub backend: String,
+    /// Optional explicit GPU device selection.
+    pub devices: Option<Vec<u64>>,
     /// Requested mortal transaction period.
     pub period: Option<u32>,
 }
@@ -270,15 +276,14 @@ impl Request {
                     if netuid == NetUid::ROOT {
                         return Err(CliError::input("PoW registration is unavailable on root"));
                     }
-                    if matches
+                    let backend = matches
                         .get_one::<String>("pow_backend")
-                        .is_some_and(|backend| backend == "gpu")
-                        || matches.get_many::<u32>("pow_device").is_some()
-                    {
-                        return Err(CliError::input(
-                            "GPU PoW registration is unavailable in this build; use --pow-backend cpu without --pow-device",
-                        ));
-                    }
+                        .cloned()
+                        .unwrap_or_else(|| "auto".into());
+                    let devices = matches
+                        .get_many::<u32>("pow_device")
+                        .map(|ids| ids.map(|id| u64::from(*id)).collect::<Vec<_>>());
+                    super::pow::validate_backend(&backend, devices.as_deref())?;
                     if ctx.globals.dry_run {
                         return Err(CliError::input(
                             "--pow --dry-run does not start a proof search; preview an existing proof with rtao tx pow-register",
@@ -309,6 +314,8 @@ impl Request {
                         netuid,
                         hotkey,
                         config,
+                        backend,
+                        devices,
                         period: request.period,
                     }));
                 }
@@ -347,7 +354,7 @@ pub async fn prepare_pow(
             let owner = if ctx.globals.uses_external_signer()
                 && ctx.books.multisig(&ctx.globals.wallet_name).is_none()
             {
-                ctx.external_signer_address()?
+                ctx.external_signer_public_account().await?
             } else {
                 ctx.resolve_address("coldkey_ss58", None)?
             };
@@ -357,17 +364,18 @@ pub async fn prepare_pow(
     ctx.output
         .message("mining a fresh registration proof")
         .map_err(failure)?;
-    let proof = PowSolver::new(request.config)
-        .map_err(|error| CliError::input(error.to_string()))?
-        .solve(
-            client,
-            request.netuid,
-            request.hotkey,
-            owner,
-            &CancellationToken::new(),
-        )
-        .await
-        .map_err(failure)?;
+    let solver =
+        PowSolver::new(request.config).map_err(|error| CliError::input(error.to_string()))?;
+    let proof = super::pow::solve_public(
+        &solver,
+        client,
+        request.netuid,
+        request.hotkey,
+        owner,
+        &request.backend,
+        request.devices.as_deref(),
+    )
+    .await?;
     let request = TxRequest {
         op: "pow_register",
         args: Map::from_iter([
@@ -384,7 +392,8 @@ pub async fn prepare_pow(
                 "mining_timeout".into(),
                 json!(request.config.timeout.as_secs_f64()),
             ),
-            ("mining_backend".into(), json!("cpu")),
+            ("mining_backend".into(), json!(request.backend)),
+            ("mining_device_ids".into(), json!(request.devices)),
         ]),
         period: request.period,
     };

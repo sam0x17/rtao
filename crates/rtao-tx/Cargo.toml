@@ -15,7 +15,7 @@ workspace = true
 rtao-client = { workspace = true }
 rtao-catalog = { workspace = true }
 rtao-signer = { workspace = true }
-rtao-core.workspace = true
+rtao-core = { workspace = true, features = ["offload"] }
 rtao-runtime.workspace = true
 rtao-primitives.workspace = true
 rtao-rpc.workspace = true
@@ -25,8 +25,17 @@ tokio.workspace = true
 futures.workspace = true
 hex.workspace = true
 smallvec = "1"
+chrono.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true
+rustls-pki-types.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
 rtao-testkit = { workspace = true, features = ["core-policy"] }
 rtao-intents = { workspace = true, features = ["transfer", "registration", "hyperparameters", "staking", "children", "evm"] }
+tokio = { workspace = true, features = ["test-util"] }
+rcgen.workspace = true
+tokio-rustls.workspace = true
 

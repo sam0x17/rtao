@@ -3,6 +3,24 @@
 schema = 1
 
 [[divergences]]
+id = "D-051"
+upstream_symbol = "bittensor.cli.commands.evm.association"
+python_behavior = "Unlocks the EVM key to produce an association proof before the native transaction review; the configured wallet hotkey supplies the proof identity."
+rtao_behavior = "Obtains explicit proof consent before unlocking, renders an unsigned proof-required preview for dry-run, and binds the proof to the effective native dispatch account before proxy or multisig envelopes. The complete native transaction still requires its ordinary review."
+rationale = "Avoid acquiring a private key for a refused or preview-only operation and prevent an envelope's payer from replacing the account whose association is authorized. Source review and authored fixtures do not establish executed parity."
+decision = "PLAN.md execution rule 5; M7 EVM association source review"
+status = "active"
+class = "stricter"
+milestone = "M7"
+pinning_tests = [
+  "rtao_cli::commands::evm::association::tests::refused_and_dry_run_never_unlock_or_submit",
+  "rtao_cli::commands::evm::association::tests::consent_signs_exact_reviewed_hotkey_block_and_routes_native_intent",
+  "rtao_cli::commands::evm::association::tests::proof_authenticates_proxy_before_multisig_and_external_envelopes",
+]
+upstream_report = "Local authorization-order correction with independent source review; hosted execution pending. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/evm/association.py"
+
+[[divergences]]
 id = "D-050"
 upstream_symbol = "bittensor.cli.output / live prompt rendering"
 python_behavior = "Human detail cells and direct prompt/output strings can contain terminal control or directional formatting characters."
@@ -588,12 +606,12 @@ upstream_report = "—"
 id = "D-033"
 upstream_symbol = "timelock.encrypt"
 python_behavior = "`reveal_in`, `reveal_at` or `reveal_round`"
-rtao_behavior = "adds `Reveal::InBlocks(n)` (§9.8)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-033); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rtao_behavior = "Adds Reveal::InBlocks(n), using a documented nominal 12-second block duration by default and an explicit duration override. Beacon time remains independent of chain progress."
+rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-033); checked arithmetic rejects zero and overflow. Source fixtures are authored; hosted execution remains pending."
+status = "active"
 class = "addition"
-milestone = "M8"
-pinning_tests = ["`timelock_reveal_in_blocks`"]
+milestone = "M7"
+pinning_tests = ["rtao_tx::timelock::tests::timelock_reveal_in_blocks"]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
 upstream_report = "—"
 
@@ -657,9 +675,9 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-042"
-upstream_symbol = "bittensor.config readers / cli.call raw JSON / cli.commands.weights input / AppContext saved multisig reference resolution / cli.call_names recursive JSON traversal"
+upstream_symbol = "bittensor.config readers / cli.call raw JSON / cli.commands.weights input / cli.commands.timelock / AppContext saved multisig reference resolution / cli.call_names recursive JSON traversal"
 python_behavior = "Book/config and weights readers acquire complete selected files, and raw-call JSON uses an unbounded file reader. Saved multisig resolution detects cycles, but these inputs and acyclic/programmatic nested call/name inputs have no matching 16 MiB and 128-level input-budget policy."
-rtao_behavior = "CLI books, raw-call JSON, aggregate weights input and shared config/cache reads refuse content over 16 MiB. File acquisition uses nonblocking regular descriptors and a growth-safe capped read; rejected config/cache inputs are neither quarantined nor overwritten. Inline inputs have the same byte budget. Saved multisig references allow chains through 128 entries and refuse deeper paths, including paths through cached descendants. Programmatic name-resolution JSON counts containers including the root argument map and refuses beyond 128; direct raw-call conversion separately refuses recursion depth 128 before runtime encoding."
+rtao_behavior = "CLI books, raw-call JSON, aggregate weights input and shared config/cache reads refuse content over 16 MiB. File acquisition uses nonblocking regular descriptors and a growth-safe capped read; rejected config/cache inputs are neither quarantined nor overwritten. Inline inputs have the same byte budget. Timelock acquisition is bounded to 16 MiB; encryption caps plaintext at 8 MiB minus 1025 bytes and actual envelopes at 8 MiB minus one byte so emitted prefixed hex fits that input budget. Large decoding and file acquisition run off async workers, and plaintext is omitted from replay history. Saved multisig references allow chains through 128 entries and refuse deeper paths, including paths through cached descendants. Programmatic name-resolution JSON counts containers including the root argument map and refuses beyond 128; direct raw-call conversion separately refuses recursion depth 128 before runtime encoding."
 rationale = "Bound memory and recursion for local untrusted inputs while preserving account selection. An oversized valid contact book must not become an empty book and redirect a same-name reference to a wallet. Finite acyclic reference chains and programmatic Values need explicit limits even when cycle detection and text-parser nesting checks are present."
 decision = "PLAN.md execution rule 5; safe input-budget policy registered during CLI source adoption (2026-10-15)"
 status = "active"
@@ -672,6 +690,9 @@ pinning_tests = [
   "rtao_cli::raw_call_contract::programmatic_raw_call_json_depth_refuses_before_runtime_encoding",
   "rtao_cli::file_input_contract::raw_and_weights_accept_exact_sixteen_mib_files_without_rewriting",
   "rtao_cli::file_input_contract::sparse_oversized_files_refuse_promptly_and_keep_their_contents",
+  "rtao_cli::m7_timelock_commands::boundary_ciphertext_roundtrips_as_prefixed_hex_and_oversized_output_is_not_emitted",
+  "rtao_cli::m7_timelock_commands::prompted_large_hex_uses_same_decode_path_and_plaintext_is_omitted_from_replay",
+  "rtao_cli::m7_timelock_commands::oversized_sparse_ciphertext_is_rejected_before_beacon_and_left_unchanged",
 ]
 upstream_report = "Local safety policy; no upstream issue or PR filed. Active denotes implemented source with named regression bodies, including the new direct programmatic raw-call test. Combined hosted validation remains pending; no local build or test was run for registration."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/config.py#L138-L286"

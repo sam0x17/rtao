@@ -140,7 +140,7 @@ fn payload(sink: &MemorySink) -> Result<Value, Box<dyn Error>> {
 }
 
 #[test]
-fn wallet_surface_exposes_only_m4_commands_and_supports_compatibility_aliases() -> TestResult {
+fn wallet_surface_exposes_wallet_commands_and_supports_compatibility_aliases() -> TestResult {
     let command = wallet::command();
     let names = command
         .get_subcommands()
@@ -160,7 +160,8 @@ fn wallet_surface_exposes_only_m4_commands_and_supports_compatibility_aliases() 
             "list",
             "balance",
             "inspect",
-            "save-password-env"
+            "save-password-env",
+            "keychain"
         ]
     );
     let root = Root::new()?;

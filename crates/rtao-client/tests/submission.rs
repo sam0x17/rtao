@@ -219,6 +219,7 @@ async fn large_payload_is_hashed_once_and_signature_variant_is_checked() {
 
 struct MetadataSigner {
     signer: KeypairSigner,
+    constants: Option<(u8, String)>,
 }
 impl Signer for MetadataSigner {
     fn account(&self) -> AccountId {
@@ -229,6 +230,9 @@ impl Signer for MetadataSigner {
     }
     fn caps(&self) -> SignerCaps {
         SignerCaps::METADATA_HASH | SignerCaps::UNSIGNED_TX
+    }
+    fn metadata_constants(&self) -> Option<(u8, String)> {
+        self.constants.clone()
     }
     fn sign<'a>(
         &'a self,
@@ -262,7 +266,10 @@ impl Signer for MetadataSigner {
 #[tokio::test]
 async fn metadata_verifying_signer_receives_a_proof_consistent_with_the_signed_payload() {
     let (client, fake, signer) = fixture().await;
-    let signer = MetadataSigner { signer };
+    let signer = MetadataSigner {
+        signer,
+        constants: None,
+    };
     fake.mutate_state(|state| {
         state.set_result(
             "state_getRuntimeVersion",
@@ -288,6 +295,49 @@ async fn metadata_verifying_signer_receives_a_proof_consistent_with_the_signed_p
         .unwrap();
     assert!(report.success);
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
+async fn signer_display_constants_define_the_signed_digest_through_arc_delegation() {
+    let (client, _, signer) = fixture().await;
+    let raw = MetadataSigner {
+        signer: signer.clone(),
+        constants: None,
+    };
+    let device = Arc::new(MetadataSigner {
+        signer,
+        constants: Some((12, "DEVICE".into())),
+    });
+    let call = call(&client, vec![1]).await;
+    let fallback = client
+        .prepare_call(call.clone(), &raw, &SubmitOptions::default())
+        .await
+        .unwrap();
+    let custom = client
+        .prepare_call(call.clone(), &device, &SubmitOptions::default())
+        .await
+        .unwrap();
+    let info = &custom.context().chain_info;
+    assert_eq!(info.decimals, 12);
+    assert_eq!(info.token_symbol, "DEVICE");
+    assert_eq!(info.base58_prefix, 42);
+    assert_eq!(info.spec_name, fallback.context().chain_info.spec_name);
+    assert_eq!(
+        info.spec_version,
+        fallback.context().chain_info.spec_version
+    );
+    assert_eq!(
+        custom.metadata_hash(),
+        Some(rtao_core::digest::metadata_digest(&custom.context().metadata_bytes, info).unwrap()),
+    );
+    assert_ne!(custom.metadata_hash(), fallback.metadata_hash());
+    assert_ne!(custom.payload(), fallback.payload());
+    let again = client
+        .prepare_call(call, &raw, &SubmitOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(again.metadata_hash(), fallback.metadata_hash());
+    assert_eq!(again.payload(), fallback.payload());
 }
 
 #[tokio::test]

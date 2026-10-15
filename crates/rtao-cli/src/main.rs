@@ -4,11 +4,15 @@
 
 mod doctor;
 
+#[cfg(feature = "evm")]
+use rtao_cli::commands::evm;
+#[cfg(feature = "extension")]
+use rtao_cli::commands::extension;
 use rtao_cli::{
     application,
     commands::{
         axon, catalog, collateral, config, conviction, generated, hparams, multisig, proxy, root,
-        stake, subnets, wallet, weights,
+        stake, subnets, timelock, wallet, weights,
     },
     context::AppContext,
     error::CliError,
@@ -76,7 +80,7 @@ async fn run() -> Result<(), CliError> {
         );
         return Ok(());
     }
-    let mut command = application::command_tree([
+    let commands = vec![
         rtao_cli::call::command(),
         config::command(),
         catalog::tools_command(),
@@ -93,12 +97,25 @@ async fn run() -> Result<(), CliError> {
         root::command()?,
         conviction::command()?,
         subnets::command()?,
-        clap::Command::new("misc")
-            .about("Additional chain operations.")
-            .subcommand_required(true)
-            .arg_required_else_help(true)
-            .subcommand(collateral::command()?),
-    ]);
+        {
+            let misc = clap::Command::new("misc")
+                .about("Additional chain operations.")
+                .subcommand_required(true)
+                .arg_required_else_help(true)
+                .subcommand(collateral::command()?)
+                .subcommand(timelock::command());
+            #[cfg(feature = "extension")]
+            let misc = misc.subcommand(extension::command());
+            misc
+        },
+    ];
+    #[cfg(feature = "evm")]
+    let commands = {
+        let mut commands = commands;
+        commands.push(evm::command()?);
+        commands
+    };
+    let mut command = application::command_tree(commands);
     if argv.len() == 1 || argv.get(1).is_some_and(|arg| arg == "help") {
         print!("{}", command.render_long_help());
         return Ok(());
@@ -171,6 +188,8 @@ async fn run() -> Result<(), CliError> {
         "root" => root::reserved(matches)?,
         "conviction" => conviction::reserved(matches)?,
         "collateral" => collateral::reserved(matches)?,
+        #[cfg(feature = "evm")]
+        "evm" => evm::reserved(matches)?,
         _ => Vec::new(),
     };
     let mut app = AppContext::from_store(
@@ -198,6 +217,46 @@ async fn run() -> Result<(), CliError> {
             "tools" => catalog::run_tools(&app.output, &generated::rust_tools()?),
             "explain" => catalog::run_explain(&app.output, matches),
             "wallet" => wallet::run(&mut app, matches, &mut invocation.history).await,
+            "timelock" => timelock::run(&app, matches, &mut invocation.history).await,
+            #[cfg(feature = "extension")]
+            "extension" => extension::run(&app, matches).await,
+            #[cfg(feature = "evm")]
+            "evm" => {
+                evm::validate_before_connect(&app, matches)?;
+                if evm::needs_native(matches)
+                    && !(app.globals.dry_run && matches.subcommand_name() == Some("setup-localnet"))
+                {
+                    let runner = app.clone();
+                    let app_ref = &mut app;
+                    let history = &mut invocation.history;
+                    runner
+                        .run(|client| async move {
+                            evm::run(
+                                app_ref,
+                                Some(&client),
+                                matches,
+                                rtao_cli::context::SubmissionOptions {
+                                    replay: Some(&replay),
+                                    ..Default::default()
+                                },
+                                None,
+                                history,
+                            )
+                            .await
+                        })
+                        .await
+                } else {
+                    evm::run(
+                        &mut app,
+                        None,
+                        matches,
+                        Default::default(),
+                        None,
+                        &mut invocation.history,
+                    )
+                    .await
+                }
+            }
             "multisig" => {
                 multisig::run(&mut app, store.paths(), matches, &mut invocation.history).await
             }

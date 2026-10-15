@@ -515,7 +515,7 @@ impl TxRequest {
                         let account = if ctx.globals.uses_external_signer()
                             && ctx.books.multisig(&ctx.globals.wallet_name).is_none()
                         {
-                            ctx.external_signer_address()?
+                            ctx.external_signer_public_account().await?
                         } else {
                             ctx.resolve_address("coldkey_ss58", None)?
                         };

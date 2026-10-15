@@ -4,12 +4,23 @@
 
 use std::{fmt, future::Future, pin::Pin, sync::Arc};
 
+/// Ledger signing through the core device API and injected backend seam.
+#[cfg(feature = "ledger")]
+pub mod ledger;
 mod roles;
+#[cfg(feature = "ledger")]
+pub use ledger::{LedgerError, LedgerOptions, LedgerSigner};
+#[cfg(feature = "extension")]
+pub mod extension;
+#[cfg(feature = "extension")]
+pub use extension::ExtensionSigner;
 #[cfg(feature = "vault")]
 pub mod vault;
 pub use roles::{
     Coldkey, DynKeySource, Hotkey, IntentKeyView, KeySource, KeyView, Role, SignerRole,
 };
+#[cfg(feature = "vault")]
+pub use vault::VaultSigner;
 
 use rtao_core::keyfile_json::{SecretInput, redacted_derivation_error};
 use rtao_core::{CoreError, keys::Keypair};
@@ -146,6 +157,10 @@ pub enum SignerError {
     RoleUnavailable(SignerRole),
     /// Intent-dependent key defaults cannot be resolved from this public view.
     KeyView(String),
+    /// A browser-extension signing session failed.
+    Extension(String),
+    /// An offline Vault signing session failed.
+    Vault(String),
 }
 
 impl fmt::Display for SignerError {
@@ -168,6 +183,8 @@ impl fmt::Display for SignerError {
                 write!(formatter, "this key source cannot sign as {role}")
             }
             Self::KeyView(message) => formatter.write_str(message),
+            Self::Extension(message) => formatter.write_str(message),
+            Self::Vault(message) => formatter.write_str(message),
         }
     }
 }
@@ -196,6 +213,13 @@ pub trait Signer: Send + Sync + 'static {
     /// Signing formats supported by this implementation.
     fn caps(&self) -> SignerCaps {
         SignerCaps::RAW_PAYLOAD
+    }
+    /// Display constants required by this signer's metadata-verifying device.
+    ///
+    /// `None` uses the submission options. The runtime name, version and SS58
+    /// prefix still come from the client; only token display constants vary.
+    fn metadata_constants(&self) -> Option<(u8, String)> {
+        None
     }
     /// Sign a prepared transaction, using the relevant view of the request.
     fn sign<'a>(
@@ -316,6 +340,9 @@ impl<S: Signer + ?Sized> Signer for Arc<S> {
     }
     fn caps(&self) -> SignerCaps {
         (**self).caps()
+    }
+    fn metadata_constants(&self) -> Option<(u8, String)> {
+        (**self).metadata_constants()
     }
     fn sign<'a>(
         &'a self,

@@ -12,8 +12,82 @@ use std::{
 use super::PowError;
 
 pub(super) const ATTEMPTS: u32 = 1024;
-type Solution = Result<Option<(u64, [u8; 32])>, String>;
+pub(super) type Solution = Result<Option<(u64, [u8; 32])>, String>;
 pub(super) type Miner = Arc<dyn Fn(&[u8], u64, u64, u32) -> Solution + Send + Sync>;
+
+pub(super) enum WorkerFactory {
+    Cpu(Miner),
+    #[cfg(feature = "pow-gpu")]
+    Gpu {
+        options: super::GpuOptions,
+        factory: super::gpu::Factory,
+    },
+}
+
+impl WorkerFactory {
+    pub(super) async fn start(&self, cpu_workers: u8) -> Result<WorkerPool, PowError> {
+        match self {
+            Self::Cpu(miner) => Ok(WorkerPool::Cpu(CpuWorkers::new(
+                cpu_workers,
+                miner.clone(),
+            )?)),
+            #[cfg(feature = "pow-gpu")]
+            Self::Gpu { options, factory } => {
+                match super::gpu::GpuWorker::start(options.clone(), factory.clone()).await? {
+                    Some(worker) => Ok(WorkerPool::Gpu(worker)),
+                    None => Ok(WorkerPool::Cpu(CpuWorkers::new(
+                        cpu_workers,
+                        Arc::new(rtao_core::pow::mine_cpu),
+                    )?)),
+                }
+            }
+        }
+    }
+}
+
+pub(super) enum WorkerPool {
+    Cpu(CpuWorkers),
+    #[cfg(feature = "pow-gpu")]
+    Gpu(super::gpu::GpuWorker),
+}
+
+impl WorkerPool {
+    pub(super) fn dispatch(
+        &self,
+        prefix: Arc<[u8; rtao_core::pow::PREFIX_LEN]>,
+        difficulty: u64,
+        start: u64,
+    ) -> Result<u8, PowError> {
+        match self {
+            Self::Cpu(pool) => pool.dispatch(prefix, difficulty, start),
+            #[cfg(feature = "pow-gpu")]
+            Self::Gpu(pool) => pool.dispatch(prefix, difficulty, start),
+        }
+    }
+
+    pub(super) fn nonce_span(&self) -> u64 {
+        match self {
+            Self::Cpu(pool) => (pool.senders.len() as u64) * u64::from(ATTEMPTS),
+            #[cfg(feature = "pow-gpu")]
+            Self::Gpu(pool) => pool.nonce_span(),
+        }
+    }
+
+    pub(super) async fn result(&mut self) -> Result<Solution, PowError> {
+        match self {
+            Self::Cpu(pool) => pool.result().await,
+            #[cfg(feature = "pow-gpu")]
+            Self::Gpu(pool) => pool.result().await,
+        }
+    }
+
+    pub(super) async fn drain(&mut self, remaining: u8) -> Result<(), PowError> {
+        for _ in 0..remaining {
+            self.result().await?.map_err(PowError::Core)?;
+        }
+        Ok(())
+    }
+}
 
 struct Job {
     prefix: Arc<[u8; rtao_core::pow::PREFIX_LEN]>,
@@ -90,6 +164,7 @@ impl CpuWorkers {
             .ok_or_else(|| PowError::Worker("CPU worker result channel closed".into()))
     }
 
+    #[cfg(test)]
     pub(super) async fn drain(&mut self, remaining: u8) -> Result<(), PowError> {
         for _ in 0..remaining {
             self.result().await?.map_err(PowError::Core)?;

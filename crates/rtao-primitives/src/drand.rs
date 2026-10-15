@@ -139,6 +139,7 @@ impl std::error::Error for TimelockError {}
 /// in any order, with unsigned numbers and optional whitespace before units.
 /// This parser retains negative and non-finite numeric values; callers decide
 /// whether a particular reveal operation permits them.
+#[doc(alias = "bittensor.timelock.parse_duration")]
 pub fn parse_duration<'a>(value: impl Into<DurationInput<'a>>) -> Result<f64, TimelockError> {
     match value.into() {
         DurationInput::Seconds(value) => Ok(value),
@@ -222,6 +223,7 @@ fn parse_duration_units(text: &str) -> Option<f64> {
 /// Render a duration as whole `d h m s` units, truncating fractional seconds.
 ///
 /// Non-positive values render as `"0s"`; a week renders as seven days.
+#[doc(alias = "bittensor.timelock.format_duration")]
 pub fn format_duration<'a>(value: impl Into<DurationInput<'a>>) -> Result<String, TimelockError> {
     let seconds = parse_duration(value)?;
     finite_integer(seconds)?;
@@ -482,6 +484,7 @@ fn round_range() -> TimelockError {
 ///
 /// Times before genesis clamp to round one. Non-finite timestamps and rounds
 /// outside the native `u64` chain range return an error.
+#[doc(alias = "bittensor.timelock.current_round")]
 pub fn current_round(at: Option<f64>) -> Result<u64, TimelockError> {
     let now = at.unwrap_or_else(|| system_timestamp(SystemTime::now()));
     let elapsed = now - GENESIS_TIME as f64;
@@ -511,6 +514,7 @@ pub fn current_round(at: Option<f64>) -> Result<u64, TimelockError> {
 ///
 /// This retains the Python helper's submillisecond behavior: a timestamp less
 /// than one millisecond after a beacon pulse still selects that pulse.
+#[doc(alias = "bittensor.timelock.round_at")]
 pub fn round_at<'a>(when: impl Into<MomentInput<'a>>) -> Result<u64, TimelockError> {
     let elapsed = parse_when(when)? - GENESIS_TIME as f64;
     if elapsed <= 0.0 {
@@ -530,6 +534,7 @@ pub fn round_at<'a>(when: impl Into<MomentInput<'a>>) -> Result<u64, TimelockErr
 ///
 /// Round zero retains Python's meaning, one beacon period before genesis.
 /// Results must fit Python's datetime year range, `1..=9999`.
+#[doc(alias = "bittensor.timelock.reveal_time")]
 pub fn reveal_time(reveal_round: u64) -> Result<DateTime<Utc>, TimelockError> {
     let timestamp =
         i128::from(GENESIS_TIME) + (i128::from(reveal_round) - 1) * i128::from(DRAND_PERIOD);
