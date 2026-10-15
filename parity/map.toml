@@ -796,12 +796,12 @@ notes = "state-discarded archive retry `:366-400` (§3.2.2); submission `:625-81
 
 [[file]]
 py = "sdk/python/bittensor/_subtensor.py"
-rs = ["`rtao::blocking::{Subtensor, set_weights, close_shared_clients}` (facade, feature `blocking`, §2.2, §2.4)"]
+rs = ["rtao::blocking::{Subtensor,SyncClient,set_weights,set_weights_with_retries,WeightsWallet,WeightsKeySource,close_shared_clients}","rtao_client::blocking::BlockingRuntime; rtao_intents::SetWeights"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "1aa56cf3d1174b060cf3242e5904ec0c52926475"
 synced_tag = "v478"
 milestone = "M6"
-notes = "sync-or-async entry point; module-level `set_weights` builds `SetWeights` and resolves wallet names (`:152-158, 167-205`), so the facade feature enables `intents-all`, `metagraph` and `wallet`; shared clients keyed by canonical endpoint (`:129-150`)"
+notes = "Source reconciliation 2026-10-15: complete authenticated class, registry, wallet resolver and convenience-helper source reviewed. Cold construction, shared explicit sync/async mode, canonical endpoint reuse, empty/default/named/object wallet resolution, default two retries and consuming raise_for_failure have concrete native implementations. IntoFuture and Rust ownership/Drop replace Python await/context/weakref machinery. Explicit close_shared_clients drains and attempts every entry, returning its first typed cleanup error; process-global resources otherwise end with the process, without a Python atexit hook. Mode, cold wallet, shared registry and real-executor preview fixture bodies were inspected. Full convenience submission transcripts and current hosted execution are not claimed; underlying intent/executor behavior retains its separate source rows."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/__init__.py"
@@ -1039,12 +1039,12 @@ notes = "Source reconciliation 2026-10-15: Complete authenticated source and all
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/crowd.py"
-rs = ["`rtao-cli` `crowd` group"]
+rs = ["rtao_cli::commands::crowd::{command,run}","rtao_cli::m8_crowd_commands; rtao_reads::reads::m6_delegation"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "51b8d87d51e884b61cfaea7d1a2a38f0e6b256e9"
 synced_tag = "v478"
 milestone = "M8"
-notes = "§10.5; under `misc`"
+notes = "Source reconciliation 2026-10-15: complete authenticated command source, native handlers, routing, dependencies and seven fixture bodies reviewed. misc crowd list/info/contributors preserve read-only globals, hidden aliases, native u32 IDs, distinct empty objects, complete ordered JSON records, human titles/columns/detail fields and status-one missing-info errors. Read failures propagate; fixtures forbid author/payment/nonce RPCs. Native reads retain exact detail balances, numeric TAO summaries, numeric ID sorting and contributor prefix/map order. Installed main routing is source-traced; fixtures execute the real handler over FakeChain. Current hosted execution, installed-binary and external-chain behavior are not claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/__init__.py"
@@ -1462,12 +1462,12 @@ notes = "`wait_for_*` `:376-444` (§3.13); token symbols at connect `:613-633` (
 
 [[file]]
 py = "sdk/python/bittensor/config.py"
-rs = ["`rtao_client::config` (M1): the seven btcli files with their environment overrides, `SETTABLE`, `btcli.json` load and save, the token-symbol and subnet-name caches; `rtao-cli` `books` (readers M4; the multisig book and call-cache writers M5; the proxy and address books M8)"]
+rs = ["rtao_client::config::{Paths,Store,CacheMap}; rtao_catalog::config","rtao_cli::books::{Books,AddressBook,ProxyBook,MultisigBook}","rtao_cli::call::{FsRawCallCache,RawCallCache}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "2958b5d1b8036388354204f0a718f809756cf23a"
 synced_tag = "v478"
 milestone = "M1–M8"
-notes = "paths `:12-18`; overrides `:59, 139, 212, 274, 327, 355, 416`; TTLs `:22-27`; `SETTABLE` `:30-56`, extracted with the builtin type tags of §4.9 layer 4; multisig call cache `:326-352, 470-480` (§10.2); `NeuronConfig` precedence (§9.9)"
+notes = "Source reconciliation 2026-10-15: complete authenticated source and actual implementation/fixture bodies reviewed. Seven paths and overrides, known keys/coercion, ordered book mutations, per-network cache preservation, strict TTLs, timestamp truncation and Python integer/string coercion have concrete native homes. cache_integer_strings_keep_pythons_decimal_digit_limit closes the decimal boundary finding. D-042/D-045 qualify bounded file access, atomic persistence, corruption retention, native multisig validation, explicit overwrite and authenticated call-cache recovery; unrestricted raw dictionary writers are replaced by validated native adapters. Source reconciliation does not establish hosted execution or interoperability acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/error_descriptions/__init__.py"
@@ -2587,12 +2587,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/sync.py"
-rs = ["`rtao::blocking::{SyncClient, SyncSnapshot}` (facade, feature `blocking`) over `rtao_client::blocking::BlockingRuntime`"]
+rs = ["rtao::blocking::{SyncClient,SyncSnapshot,SyncView,Blocks,SyncMultisig}","crates/rtao/src/generated/blocking_namespaces.rs; rtao_client::blocking::BlockingRuntime","rtao_client::ViewExt::query_batch_dyn"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "016c553c25af0acd871346968934cf0bc1a535c6"
 synced_tag = "v478"
 milestone = "M6"
-notes = "private loop `_Loop` `:64-98` → `BlockingRuntime` (§3.1); wraps reads, `plan`/`execute`/`execute_tool`/`submit_shielded`/`submit_call`/`tools`/`multisig` and `mine_pow_registration` (`:401-476`; the last under feature `pow`); all 14 namespaces where Python's `SyncClient` has 13 (D-027)"
+notes = "Source reconciliation 2026-10-15: complete authenticated file and every handwritten forwarding body reviewed. One lazy owned runtime/connection backs client, immutable snapshots and generated static read namespaces; Rust ownership and typed arguments/results replace Python loop/finalizer/dynamic-attribute machinery. D-027 adds collateral. Cached symbol access/balance construction stays cold, preserves connected symbols, ignores root balance metadata and remains available after close. Named empty batches preserve SyncClient's initial connection/lifecycle checks and then skip pinning/metadata/RPC. Native snapshots already own hashes and avoid Python's height re-resolution, including for an empty batch after closure. Namespace/generic/snapshot, duplicate batching, cached-symbol, empty-batch, concurrent first-call, reentry/drop/shutdown and real-executor preview fixture bodies provide shared-path evidence. Underlying read/transaction/PoW behavior is delegated to its separate source rows. No all-forwarder execution, fresh oracle or hosted acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/timelock.py"

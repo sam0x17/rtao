@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/timelock.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Timelock command fixtures inject crypto and beacon replies; no network or real encryption runs.
 
 use rtao::tx::timelock::{OpenOptions, Reveal, TimelockError, Timelocked};
@@ -222,6 +223,54 @@ async fn encrypt_json_has_python_fields_and_native_reveal_selection() -> TestRes
         vec![(2, Reveal::InBlocks(5))]
     );
     assert!(fixture.sink.bytes(Stream::Stderr)?.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn empty_output_paths_print_the_same_payload_as_omitted_paths() -> TestResult {
+    let sealed = sealed(20, 1)?;
+    let encoded = sealed.hex();
+    for json_mode in [true, false] {
+        for name in ["encrypt", "decrypt"] {
+            let mut args = vec!["rtao", "timelock", name];
+            if name == "encrypt" {
+                args.extend(["text", "--in", "1s"]);
+            } else {
+                args.push(&encoded);
+            }
+            args.extend(["--out", ""]);
+            let mut fixture = Fixture::new(&args, json_mode, &[])?;
+            let backend = Fake::default();
+            fixture.run(&backend).await?;
+            if json_mode {
+                let expected = if name == "encrypt" {
+                    json!({"ciphertext":encoded,"reveal_round":1,"reveal_at":sealed.reveal_at()?.to_rfc3339(),"reveal_in_seconds":0,"bytes":20})
+                } else {
+                    json!({"plaintext":"fixture plaintext","plaintext_hex":hex::encode("fixture plaintext"),"reveal_round":1})
+                };
+                assert_eq!(fixture.payload()?, expected);
+                assert!(fixture.sink.bytes(Stream::Stderr)?.is_empty());
+            } else {
+                let expected = if name == "encrypt" {
+                    encoded.as_str()
+                } else {
+                    "fixture plaintext"
+                };
+                assert_eq!(fixture.sink.text(Stream::Stdout)?, format!("{expected}\n"));
+                if name == "encrypt" {
+                    assert_eq!(
+                        fixture.sink.text(Stream::Stderr)?,
+                        format!(
+                            "revealed since {} (round 1)\n",
+                            sealed.reveal_at()?.to_rfc3339()
+                        )
+                    );
+                } else {
+                    assert!(fixture.sink.bytes(Stream::Stderr)?.is_empty());
+                }
+            }
+        }
+    }
     Ok(())
 }
 
@@ -479,7 +528,16 @@ async fn files_accept_raw_or_wrapped_hex_and_output_preserves_binary_bytes() -> 
     let encoded = sealed.hex();
     std::fs::write(
         &wrapped,
-        format!("0x{}\n {}\r\n", &encoded[..64], &encoded[64..]),
+        format!(
+            "0x{}\t\n {}\r\n{}\x1c{}\x1d{}\x1e{}\x1f{}\x0b\x0c",
+            &encoded[..32],
+            &encoded[32..64],
+            &encoded[64..97],
+            &encoded[97..128],
+            &encoded[128..160],
+            &encoded[160..192],
+            &encoded[192..],
+        ),
     )?;
     for (path, explicit) in [(&raw, true), (&wrapped, false)] {
         let path = path.to_str().ok_or("fixture path utf8")?;
