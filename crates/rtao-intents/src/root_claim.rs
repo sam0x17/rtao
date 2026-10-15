@@ -682,10 +682,7 @@ mod tests {
     use super::*;
     use rtao_client::{BlockRef, Client, ClientConfig, Network, Snapshot};
     use rtao_core::runtime::TypeSpec;
-    use rtao_runtime::{
-        CallBytes,
-        calls::{proxy, subtensor_module as calls},
-    };
+    use rtao_runtime::{CallBytes, calls::proxy};
     use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
     use rtao_tx::{IntentInterface, OriginView, SystemClock};
     use serde_json::{Value as Json, json};
@@ -1329,7 +1326,7 @@ mod tests {
                 "BetaBasketRuntimeApi",
                 "get_root_basket_claim_previews",
             )?;
-            let raw = rtao_testkit::fill_defaults(
+            let raw = rtao_testkit::fakes::fill_defaults(
                 &state.runtime,
                 info.output,
                 json!([
