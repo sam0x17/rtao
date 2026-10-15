@@ -155,10 +155,8 @@ fn retriable_pool_rejection(receipt: &ExtrinsicResult) -> bool {
 // Check little-endian work * difficulty <= 2^256 - 1 without rounding.
 fn meets_difficulty(work: &[u8; 32], difficulty: u64) -> bool {
     let mut carry = 0u128;
-    for limb in work.chunks_exact(8) {
-        let mut bytes = [0; 8];
-        bytes.copy_from_slice(limb);
-        let product = u128::from(u64::from_le_bytes(bytes)) * u128::from(difficulty) + carry;
+    for limb in work.as_chunks::<8>().0 {
+        let product = u128::from(u64::from_le_bytes(*limb)) * u128::from(difficulty) + carry;
         carry = product >> 64;
     }
     carry == 0
