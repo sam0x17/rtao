@@ -22,7 +22,7 @@ pub(crate) async fn burned_register<V: rtao_client::View + ?Sized>(
 }
 #[cfg(feature = "coldkey")]
 pub(crate) async fn clear_coldkey_swap_announcement<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::ClearColdkeySwapAnnouncement,
+    _intent: &super::interfaces::ClearColdkeySwapAnnouncement,
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::subtensor_module::clear_coldkey_swap_announcement();
@@ -47,7 +47,7 @@ pub(crate) async fn contribute_crowdloan<V: rtao_client::View + ?Sized>(
 }
 #[cfg(feature = "coldkey")]
 pub(crate) async fn dispute_coldkey_swap<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::DisputeColdkeySwap,
+    _intent: &super::interfaces::DisputeColdkeySwap,
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::subtensor_module::dispute_coldkey_swap();
