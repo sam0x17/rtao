@@ -16,6 +16,51 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal [38787018268](https://github.com/sam0x17/rtao/actions/runs/38787018268)
+at `97090f25ab8648c84b8728aa631f652556c6f329` stops before tests:
+the license gate requires the full `_subtensor.py` source path, which the
+combined `sync.py and _subtensor.py` header omitted. Split it into two canonical
+headers without changing the checker. All five supporting jobs pass, including
+features. Raw main log is 62,078 bytes, SHA256
+`0fdb44523f33c6be5823d05d6c9fd4b0d5cc1c2a5d2b6ce585fe67033c767fcc`;
+bounded proof is `check-38787018268.json`. Tests/doctests/docs were not reached.
+This source includes all three corrections from the prior ordinary run:
+the explicitly absent collateral UID fixture, conviction stderr/singular
+wording, and recovery receipt parsing for both canonical hex and legacy arrays.
+It also retains failed receipt events for native multisig/recovery consumers
+under D-023, while preserving Python result JSON field presence.
+
+Latest report adoption is `fc91-report-adoption.json`, from successful run
+38786488779. That report records 220/357 reconciled files. The next reviewed
+source batch reaches 228/357, with 129 pending files and 20 pending e2e mappings;
+its hosted report refresh and tests remain pending. Strict M8 completeness
+remains off. No milestone has been accepted.
+
+The batch restores command-specific timelock help/prompt guidance; adds async
+snapshot sibling, cached-symbol and balance helpers; preserves exact classifier
+policy payloads alongside sanitized diagnostics; accepts Python edge whitespace
+for EVM secrets/artifacts and bridge tokens; handles CRLF/bare-CR artifact and
+successful macOS password output; and preserves scalar JSON array coercion.
+ABI array acquisition checks entry counts before collection or deserializing
+an excess top-level element. Independent source reviews and root rereads pass;
+no local build/test or native password/browser service ran. Snapshot siblings
+resolve eagerly and need an open connection; D-007 explicitly covers derived
+slot timing from the retained runtime. Timelock parser/deadline, precompile
+table/diagnostic, Vault browser/QR and picker source gaps remain pending.
+
+All 70 selected S9 regressions passed in prior ordinary run 38780323094 at
+`262be704a322e82efcbcaf0ee5764f1adb5519aa`; all 29 selected boundary/test
+files are byte-identical at `97090f2`. Immutable run/job/head identities,
+raw-log digest and exact PASS lines are in
+`m9-security-targeted-ci-38780323094.json`. That run failed three other tests;
+these targeted results do not establish C1 or close the findings. M2-S02
+Ed25519 final-drop erasure remains open and unaccepted.
+
+## Earlier client checkpoints, 2026-10-15
+
+These records retain their own source and execution scope. The current
+checkpoint above supersedes their instructions to dispatch or retry checks.
+
 Hosted generation [38777439872](https://github.com/sam0x17/rtao/actions/runs/38777439872)
 succeeds at clean `5464ccf`. Authenticate two exact archives, all 20 regular
 allowlisted members and all 23 unchanged dependency inputs. Only the new

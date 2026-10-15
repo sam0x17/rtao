@@ -28,6 +28,7 @@ type TestResult = Result<(), Box<dyn Error>>;
 struct TerminalFixture {
     tty: bool,
     answers: VecDeque<String>,
+    messages: Arc<Mutex<Vec<String>>>,
 }
 impl Terminal for TerminalFixture {
     fn stdin_is_tty(&self) -> bool {
@@ -42,7 +43,11 @@ impl Terminal for TerminalFixture {
     fn read_secret(&mut self, _: &str) -> Result<SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn message(&mut self, _: &str) -> Result<(), PromptError> {
+    fn message(&mut self, message: &str) -> Result<(), PromptError> {
+        self.messages
+            .lock()
+            .map_err(|_| PromptError::Io)?
+            .push(message.into());
         Ok(())
     }
 }
@@ -51,6 +56,7 @@ struct Fixture {
     ctx: AppContext,
     sink: MemorySink,
     history: PromptHistory,
+    prompt_messages: Arc<Mutex<Vec<String>>>,
 }
 impl Fixture {
     fn new(args: &[&str], json_mode: bool, answers: &[&str]) -> Result<Self, Box<dyn Error>> {
@@ -64,6 +70,7 @@ impl Fixture {
         globals.apply_with_env(leaf, &[], |_| None)?;
         globals.json = json_mode;
         let sink = MemorySink::default();
+        let prompt_messages = Arc::new(Mutex::new(Vec::new()));
         let mut ctx = AppContext::new(
             globals,
             Default::default(),
@@ -71,6 +78,7 @@ impl Fixture {
             Arc::new(Mutex::new(Box::new(TerminalFixture {
                 tty: !answers.is_empty(),
                 answers: answers.iter().map(|text| (*text).into()).collect(),
+                messages: prompt_messages.clone(),
             }))),
         );
         ctx.output = Output::with_sink(
@@ -86,6 +94,7 @@ impl Fixture {
             ctx,
             sink,
             history: PromptHistory::default(),
+            prompt_messages,
         })
     }
     async fn run(&mut self, backend: &Fake) -> Result<(), rtao_cli::error::CliError> {
@@ -199,6 +208,63 @@ fn routes_preserve_misc_and_hidden_v9_aliases_and_reject_conflicting_sources() -
         ],
     ] {
         assert!(tree().try_get_matches_from(args).is_err());
+    }
+    let mut group = timelock::command();
+    let help = group.render_long_help().to_string();
+    assert!(help.contains("Guide: https://www.bittensor.com/docs/guides/timelock"));
+    for (name, expected) in [
+        (
+            "encrypt",
+            vec![
+                "Seal text or a file until a future moment; prints the ciphertext hex.",
+                "The reveal round is embedded in the ciphertext, so the hex is all anyone needs to decrypt later -- no key, no metadata, no account.",
+                "Text to seal, or a path to a file whose contents to seal.",
+                "Read the payload from this file instead of the argument.",
+                "Write raw ciphertext bytes here instead of printing hex.",
+                "Duration until the reveal: '30s', '15m', '1h30m', '2d', or plain seconds.",
+                "Absolute reveal moment, ISO-8601: '2026-07-08T12:00Z' (no offset = UTC).",
+                "Explicit drand quicknet round number to encrypt to.",
+                "Regular files only; plaintext must be just under 8 MiB.",
+                "Nominal 12-second blocks until reveal (rtao addition D-033).",
+            ],
+        ),
+        (
+            "decrypt",
+            vec![
+                "Open a timelocked ciphertext once its reveal moment has passed.",
+                "Ciphertext hex (from encrypt), or a path to a ciphertext file.",
+                "Read the ciphertext from this file (raw bytes or hex).",
+                "Write the decrypted bytes here instead of printing.",
+                "Sleep until the reveal moment instead of failing early.",
+                "Give up after this many seconds (with --wait).",
+                "Total decryption deadline, including beacon access and crypto. Must be finite and non-negative.",
+                "Regular files only; ciphertext input is limited to 16 MiB.",
+            ],
+        ),
+        (
+            "show",
+            vec![
+                "Show when a ciphertext unlocks, without decrypting it.",
+                "Ciphertext hex (from encrypt), or a path to a ciphertext file.",
+                "Read the ciphertext from this file (raw bytes or hex).",
+                "Regular files only; ciphertext input is limited to 16 MiB.",
+            ],
+        ),
+    ] {
+        let help = group
+            .find_subcommand_mut(name)
+            .ok_or("timelock help command")?
+            .render_long_help()
+            .to_string()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        for expected in expected {
+            assert!(
+                help.contains(expected),
+                "{name}: missing {expected:?} in {help}"
+            );
+        }
     }
     Ok(())
 }
@@ -481,9 +547,37 @@ async fn prompted_large_hex_uses_same_decode_path_and_plaintext_is_omitted_from_
     let encoded = sealed(40 * 1024, 1)?.hex();
     let mut show = Fixture::new(&["rtao", "timelock", "show"], false, &[&encoded])?;
     show.run(&Fake::default()).await?;
+    assert_eq!(
+        show.prompt_messages
+            .lock()
+            .map_err(|_| "prompt messages")?
+            .as_slice(),
+        ["ciphertext: Ciphertext hex (from encrypt), or a path to a ciphertext file."]
+    );
+    let mut decrypt = Fixture::new(&["rtao", "timelock", "decrypt"], false, &[&encoded])?;
+    decrypt.run(&Fake::default()).await?;
+    assert_eq!(
+        decrypt
+            .prompt_messages
+            .lock()
+            .map_err(|_| "prompt messages")?
+            .as_slice(),
+        ["ciphertext: Ciphertext hex (from encrypt), or a path to a ciphertext file."]
+    );
     let secret = "do-not-replay-this-plaintext";
     let mut encrypt = Fixture::new(&["rtao", "timelock", "encrypt"], false, &[secret, "1h"])?;
     encrypt.run(&Fake::default()).await?;
+    assert_eq!(
+        encrypt
+            .prompt_messages
+            .lock()
+            .map_err(|_| "prompt messages")?
+            .as_slice(),
+        [
+            "data: Text to seal, or a path to a file whose contents to seal.",
+            "--in: Duration until the reveal: '30s', '15m', '1h30m', '2d', or plain seconds."
+        ]
+    );
     let replay =
         encrypt
             .history

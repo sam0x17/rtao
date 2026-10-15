@@ -541,10 +541,10 @@ upstream_report = "Existing implementation and named regression bodies were sour
 
 [[divergences]]
 id = "D-007"
-upstream_symbol = "snapshot.Snapshot.constant"
-python_behavior = "read from the head codec"
-rtao_behavior = "read from the snapshot's runtime"
-rationale = "Snapshot constants decode through the runtime retained by that snapshot, without consulting the client head. The fixture gives distinct runtime constant values and requires no RPC for either snapshot. Source review only; hosted validation remains pending."
+upstream_symbol = "snapshot.Snapshot.constant/block_time/is_fast_blocks"
+python_behavior = "Constants use the unpinned client codec; slot-time helpers use the connection's block time."
+rtao_behavior = "Constants and derived slot-time/fast-block reads use the snapshot's retained runtime."
+rationale = "A historical snapshot keeps its runtime across upgrades. The fixture checks distinct runtime constant values and derived block time, with no RPC for either snapshot. The slot-time consequence of the existing D-007 runtime rule is explicit. Source review only; current hosted validation remains pending."
 status = "active"
 class = "improved"
 milestone = "M8"

@@ -64,9 +64,11 @@ impl ContractArtifact {
             ));
         }
         let source = source.into();
-        let text = text.trim();
+        let text = precompiles::python_strip(text);
         if !text.starts_with(['{', '[']) {
-            let code = text.replace('\n', "");
+            // Python's text-file reader normalizes CRLF and bare CR to LF
+            // before the raw-bin branch removes line breaks.
+            let code = text.replace(['\r', '\n'], "");
             return Ok(Self {
                 abi: None,
                 bytecode: Some(normalize_bytecode(&code)?),
@@ -225,12 +227,22 @@ mod tests {
             );
             assert!(encode_deploy(&artifact, &[]).is_err());
         }
-        let bare_abi = ContractArtifact::from_text(&abi.to_string(), "abi.json").unwrap();
-        assert!(bare_abi.constructor().is_some());
-        assert!(encode_deploy(&bare_abi, &[json!(42)]).is_err());
-        let bin = ContractArtifact::from_text("6000\n6000\n", "contract.bin").unwrap();
-        assert_eq!(encode_deploy(&bin, &[]).unwrap(), "0x60006000");
-        assert!(encode_deploy(&bin, &[json!(1)]).is_err());
+        for boundary in ["", "\u{1c}", "\u{1d}", "\u{1e}", "\u{1f}"] {
+            let bare_abi =
+                ContractArtifact::from_text(&format!("{boundary}{abi}{boundary}"), "abi.json")
+                    .unwrap();
+            assert!(bare_abi.constructor().is_some());
+            assert!(encode_deploy(&bare_abi, &[json!(42)]).is_err());
+        }
+        for newline in ["\n", "\r\n", "\r", "\n\r\n\r"] {
+            let bin = ContractArtifact::from_text(
+                &format!("\u{1c}6000{newline}6000{newline}\u{1f}"),
+                "contract.bin",
+            )
+            .unwrap();
+            assert_eq!(encode_deploy(&bin, &[]).unwrap(), "0x60006000");
+            assert!(encode_deploy(&bin, &[json!(1)]).is_err());
+        }
     }
 
     #[test]
@@ -351,5 +363,13 @@ mod tests {
             artifact.function("addStake").unwrap().signature(),
             "addStake(bytes32,uint256,uint256)"
         );
+        let root = tempfile::tempdir().unwrap();
+        let bin = root.path().join("contract.bin");
+        for newline in ["\n", "\r\n", "\r", "\n\r\n\r"] {
+            std::fs::write(&bin, format!("\u{1c}6000{newline}6000{newline}\u{1f}")).unwrap();
+            let artifact = load_artifact(&bin).unwrap();
+            assert_eq!(artifact.source, bin.display().to_string());
+            assert_eq!(encode_deploy(&artifact, &[]).unwrap(), "0x60006000");
+        }
     }
 }

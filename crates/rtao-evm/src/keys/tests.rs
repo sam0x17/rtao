@@ -87,6 +87,18 @@ fn private_key_one_and_bip44_mnemonic_have_independent_known_addresses() {
         account_address(&account_from_mnemonic(phrase, "m/44'/60'/0'/0/1").unwrap()),
         "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
     );
+    for boundary in ['\u{1c}', '\u{1d}', '\u{1e}', '\u{1f}'] {
+        let private_key = Zeroizing::new(format!("{boundary}0x{PRIVATE_ONE}{boundary}"));
+        assert_eq!(
+            account_address(&account_from_private_key(&private_key).unwrap()),
+            ADDRESS_ONE
+        );
+        let mnemonic = Zeroizing::new(format!("{boundary}{phrase}{boundary}"));
+        assert_eq!(
+            account_address(&account_from_mnemonic(&mnemonic, ETH_DERIVATION_PATH).unwrap()),
+            "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+        );
+    }
 }
 
 #[test]
@@ -406,7 +418,8 @@ fn public_import_encrypts_and_unlocks_without_exposing_plaintext_on_disk() {
         password: Some(Zeroizing::new("storage-password".into())),
         ..Default::default()
     };
-    let info = import_evm_key(ImportSource::PrivateKey(PRIVATE_ONE), &options, None).unwrap();
+    let private_key = Zeroizing::new(format!("\u{1c}\u{1d}0x{PRIVATE_ONE}\u{1e}\u{1f}"));
+    let info = import_evm_key(ImportSource::PrivateKey(&private_key), &options, None).unwrap();
     assert_eq!(info.address, ADDRESS_ONE);
     let encrypted = fs::read_to_string(&info.path).unwrap();
     assert!(!encrypted.contains(PRIVATE_ONE));
