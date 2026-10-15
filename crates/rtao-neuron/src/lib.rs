@@ -8,7 +8,11 @@ mod config;
 mod miner;
 #[cfg(feature = "owner")]
 mod owner;
-#[cfg(feature = "miner")]
+#[cfg(feature = "owner")]
+mod owner_monitor;
+#[cfg(feature = "owner")]
+mod owner_ops;
+#[cfg(any(feature = "miner", feature = "owner"))]
 mod prune;
 #[cfg(feature = "miner")]
 mod publisher;
@@ -32,7 +36,14 @@ pub use config::{ConfigError, LogLevel, NeuronConfig};
 pub use miner::{Miner, MinerRuntime};
 #[cfg(feature = "owner")]
 pub use owner::{HparamArg, HparamPlan, HyperparamPlanner, WindowWait};
-#[cfg(feature = "miner")]
+#[cfg(feature = "owner")]
+pub use owner_monitor::{
+    OwnerConviction, OwnerEvent, OwnerEventCursor, OwnerEventStream, OwnerMonitor,
+    OwnerMonitorError, OwnerObservation, OwnerProxyAnnouncement,
+};
+#[cfg(feature = "owner")]
+pub use owner_ops::{OwnerConfig, OwnerOps, RegistrationWait, SubnetIdentity, TrimReport};
+#[cfg(any(feature = "miner", feature = "owner"))]
 pub use prune::{PruneError, PruneNeuron, PruneParameters, PruneRisk};
 #[cfg(feature = "miner")]
 pub use publisher::{

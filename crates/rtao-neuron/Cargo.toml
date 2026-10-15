@@ -15,7 +15,7 @@ workspace = true
 default = ["prometheus"]
 validator = ["rtao-intents/weights", "rtao-intents/serving"]
 miner = ["rtao-intents/serving", "rtao-btauth/server", "rtao-btauth/metagraph-policy", "dep:axum", "dep:reqwest", "dep:rustls", "dep:rustls-native-certs"]
-owner = ["rtao-intents/hyperparameters"]
+owner = ["rtao-intents/hyperparameters", "rtao-intents/registration", "rtao-intents/governance", "rtao-intents/identity"]
 prometheus = ["dep:metrics", "rtao-rpc/metrics"]
 
 [dependencies]
