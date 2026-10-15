@@ -1346,15 +1346,22 @@ async fn args_file_and_shared_cache_preserve_other_entries_and_cleanup_replaceme
     let path = paths.path(rtao::client::config::ConfigFile::MultisigCache);
     std::fs::write(path, "{\"0xold\":{\"target\":\"System.remark\"}}")?;
     let cache = FsRawCallCache::new(&paths);
+    let hash = hex::encode(rtao::core::codec::storage::hash_param(
+        "Blake2_256",
+        &[1, 2],
+    )?);
     cache
         .save(
-            "new".into(),
-            json!({"target":"System.remark","params":{"remark":"0x0102"}}),
+            hash.clone(),
+            json!({"target":"System.remark","params":{"remark":"0x0102"},"call_data":"0x0102"}),
         )
         .await?;
     let saved: Value = serde_json::from_slice(&std::fs::read(path)?)?;
     assert_eq!(saved["0xold"], json!({"target":"System.remark"}));
-    assert_eq!(saved["0xnew"]["params"], json!({"remark":"0x0102"}));
+    assert_eq!(
+        saved[format!("0x{hash}")]["params"],
+        json!({"remark":"0x0102"})
+    );
     assert_eq!(std::fs::read_dir(&temp.0)?.count(), 2);
     assert!(call::load_params(Some("{}"), Some(&args)).is_err());
     Ok(())

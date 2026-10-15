@@ -1,13 +1,15 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional sources at the same commit/license: sdk/python/bittensor/cli/multisig_helpers.py, sdk/python/bittensor/cli/call_names.py and sdk/python/bittensor/config.py.
-//! Read-only books and offline account reference resolution.
+//! Shared books, bounded atomic persistence and offline account resolution.
 
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
-    fs::{self, File},
-    io::Read,
+    fs::{self, File, OpenOptions},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use rtao::{
@@ -21,6 +23,125 @@ use zeroize::Zeroizing;
 
 /// Bound each book or cosmetic keyfile read before parsing untrusted JSON.
 const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Saved multisig writers use the same resolved override as [`Books::load`].
+/// References remain portable names; signing code must resolve and validate
+/// their distinct accounts against the live runtime before approving a call.
+#[derive(Clone, Debug)]
+pub struct MultisigBook {
+    path: PathBuf,
+}
+
+impl MultisigBook {
+    /// Bind an explicit shared path without accessing the filesystem.
+    pub fn new(paths: &Paths) -> Self {
+        Self {
+            path: paths.path(ConfigFile::Multisigs).to_owned(),
+        }
+    }
+
+    /// Read the saved rows without changing malformed input.
+    pub async fn load(&self) -> Result<Vec<Value>, ResolveError> {
+        let path = self.path.clone();
+        rtao::core::offload(move || {
+            let (value, _) = read_public_json_for_update(&path, false)?;
+            Ok(value.as_array().cloned().unwrap_or_default())
+        })
+        .await
+        .map_err(|_| ResolveError::new("multisig book worker failed"))?
+    }
+
+    /// Replace all rows, retaining extra fields and original reference order.
+    /// Invalid existing JSON is retained in a unique `.corrupt.<timestamp>`
+    /// backup only after the replacement has passed its size/depth checks.
+    pub async fn save(&self, entries: Vec<Value>) -> Result<PathBuf, ResolveError> {
+        let path = self.path.clone();
+        rtao::core::offload(move || {
+            let value = Value::Array(entries);
+            validate_multisigs(&value)?;
+            let (_, corrupt) = read_public_json_for_update(&path, false)?;
+            write_public_json(&path, &value, corrupt)?;
+            Ok(path)
+        })
+        .await
+        .map_err(|_| ResolveError::new("multisig book worker failed"))?
+    }
+
+    /// Append or explicitly replace every row with this exact name.
+    /// Other rows and their unknown fields retain their order and values.
+    pub async fn add(&self, entry: Value, overwrite: bool) -> Result<Value, ResolveError> {
+        let path = self.path.clone();
+        rtao::core::offload(move || {
+            validate_multisig(&entry)?;
+            bounded_public_json(&entry)?;
+            let name = entry["name"].as_str().ok_or_else(invalid_multisig)?;
+            let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
+            let entries = value.as_array_mut().ok_or_else(invalid_multisig)?;
+            if !overwrite && named(entries, name).is_some() {
+                return Err(ResolveError::new(
+                    "multisig name already exists; explicit overwrite is required",
+                ));
+            }
+            entries.retain(|row| row.get("name").and_then(Value::as_str) != Some(name));
+            entries.push(entry.clone());
+            write_public_json(&path, &value, corrupt)?;
+            Ok(entry)
+        })
+        .await
+        .map_err(|_| ResolveError::new("multisig book worker failed"))?
+    }
+
+    /// Remove rows with this exact name and report whether any existed.
+    pub async fn remove(&self, name: &str) -> Result<bool, ResolveError> {
+        let path = self.path.clone();
+        let name = name.to_owned();
+        rtao::core::offload(move || {
+            let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
+            let entries = value.as_array_mut().ok_or_else(invalid_multisig)?;
+            let before = entries.len();
+            entries.retain(|row| row.get("name").and_then(Value::as_str) != Some(name.as_str()));
+            let existed = before != entries.len();
+            write_public_json(&path, &value, corrupt)?;
+            Ok(existed)
+        })
+        .await
+        .map_err(|_| ResolveError::new("multisig book worker failed"))?
+    }
+}
+
+fn invalid_multisig() -> ResolveError {
+    ResolveError::new(
+        "multisig entry requires a nonempty string name, a positive u16 threshold, and nonempty string signatory references",
+    )
+}
+
+fn validate_multisig(entry: &Value) -> Result<(), ResolveError> {
+    let name = entry.get("name").and_then(Value::as_str);
+    let threshold = entry
+        .get("threshold")
+        .and_then(Value::as_u64)
+        .and_then(|value| u16::try_from(value).ok());
+    let signatories = entry.get("signatories").and_then(Value::as_array);
+    if !name.is_some_and(|name| !name.is_empty())
+        || !threshold.is_some_and(|threshold| threshold > 0)
+        || !signatories.is_some_and(|refs| {
+            !refs.is_empty()
+                && refs
+                    .iter()
+                    .all(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+        })
+    {
+        return Err(invalid_multisig());
+    }
+    Ok(())
+}
+
+fn validate_multisigs(value: &Value) -> Result<(), ResolveError> {
+    for entry in value.as_array().ok_or_else(invalid_multisig)? {
+        validate_multisig(entry)?;
+    }
+    Ok(())
+}
 
 /// Maximum offline multisig-reference depth and in-memory JSON nesting.
 ///
@@ -138,6 +259,205 @@ fn read_json(path: &Path) -> Result<Value, ResolveError> {
         Ok(rtao::primitives::json::from_slice(&bytes).ok())
     };
     read().map(|value| value.unwrap_or(Value::Null))
+}
+
+/// Mutation readers fail closed on unreadable/special/oversized files. Only
+/// malformed JSON or the wrong top-level shape qualifies for recovery.
+pub(crate) fn read_public_json_for_update(
+    path: &Path,
+    object: bool,
+) -> Result<(Value, bool), ResolveError> {
+    let empty = || {
+        if object {
+            serde_json::json!({})
+        } else {
+            serde_json::json!([])
+        }
+    };
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
+            return Err(ResolveError::new(
+                "public JSON destination must be a regular file, not a symlink",
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok((empty(), false)),
+        Err(_) => return Err(ResolveError::new("cannot inspect public JSON destination")),
+    }
+    // This reader uses O_NONBLOCK on Unix and validates the opened descriptor,
+    // closing the file-type race between the path check and open.
+    let bytes = rtao::wallet::read_keyfile_data(path).map_err(|_| {
+        ResolveError::new("public JSON must be a readable regular file no larger than 16 MiB")
+    })?;
+    match serde_json::from_slice::<Value>(&bytes) {
+        Ok(value)
+            if if object {
+                value.is_object()
+            } else {
+                value.is_array()
+            } =>
+        {
+            Ok((value, false))
+        }
+        _ => Ok((empty(), true)),
+    }
+}
+
+struct PublicJsonBuffer {
+    bytes: Vec<u8>,
+    overflow: bool,
+}
+impl Write for PublicJsonBuffer {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if self
+            .bytes
+            .len()
+            .checked_add(bytes.len())
+            .is_none_or(|size| size as u64 > MAX_FILE_BYTES)
+        {
+            self.overflow = true;
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "public JSON exceeds 16 MiB",
+            ));
+        }
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+fn bounded_public_json(value: &Value) -> Result<Vec<u8>, ResolveError> {
+    fn check_depth(value: &Value, depth: usize) -> Result<(), ResolveError> {
+        if depth >= MAX_NAME_RESOLUTION_DEPTH {
+            return Err(ResolveError::new("public JSON exceeds the nesting limit"));
+        }
+        match value {
+            Value::Array(values) => {
+                for value in values {
+                    check_depth(value, depth + 1)?;
+                }
+            }
+            Value::Object(values) => {
+                for value in values.values() {
+                    check_depth(value, depth + 1)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+    check_depth(value, 0)?;
+    let mut output = PublicJsonBuffer {
+        bytes: Vec::new(),
+        overflow: false,
+    };
+    if serde_json::to_writer_pretty(&mut output, value).is_err() || output.write_all(b"\n").is_err()
+    {
+        return Err(ResolveError::new(if output.overflow {
+            "public JSON exceeds the 16 MiB output limit"
+        } else {
+            "cannot serialize public JSON"
+        }));
+    }
+    Ok(output.bytes)
+}
+
+static NEXT_PUBLIC_TEMP: AtomicU64 = AtomicU64::new(0);
+
+/// One same-directory fsync/rename implementation shared by books and calls.
+/// Callers run this on a blocking worker. Existing modes are retained; new
+/// Unix files are 0600 and new directories are 0700. Paths are caller-owned.
+pub(crate) fn write_public_json(
+    path: &Path,
+    value: &Value,
+    corrupt: bool,
+) -> Result<(), ResolveError> {
+    let bytes = bounded_public_json(value)?;
+    let parent = path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let name = path
+        .file_name()
+        .ok_or_else(|| ResolveError::new("public JSON path has no file name"))?;
+    let fail = |_| ResolveError::new("cannot atomically save public JSON");
+    let permissions = match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+            Some(metadata.permissions())
+        }
+        Ok(_) => {
+            return Err(ResolveError::new(
+                "public JSON destination must be a regular file, not a symlink",
+            ));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+        Err(error) => return Err(fail(error)),
+    };
+    let mut directories = fs::DirBuilder::new();
+    directories.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        directories.mode(0o700);
+    }
+    directories.create(parent).map_err(fail)?;
+    let (temporary, mut file) = loop {
+        let counter = NEXT_PUBLIC_TEMP.fetch_add(1, Ordering::Relaxed);
+        let mut temporary_name = name.to_owned();
+        temporary_name.push(format!(".tmp.{}.{counter}", std::process::id()));
+        let temporary = parent.join(temporary_name);
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        match options.open(&temporary) {
+            Ok(file) => break (temporary, file),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(fail(error)),
+        }
+    };
+    let result = (|| -> io::Result<()> {
+        file.write_all(&bytes)?;
+        if let Some(permissions) = permissions {
+            file.set_permissions(permissions)?;
+        }
+        file.sync_all()?;
+        drop(file);
+        if corrupt {
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(io::Error::other)?
+                .as_secs();
+            for ordinal in 0u64.. {
+                let mut backup = name.to_owned();
+                backup.push(format!(".corrupt.{timestamp}"));
+                if ordinal != 0 {
+                    backup.push(format!(".{ordinal}"));
+                }
+                // Never overwrite an earlier recovery file. A hard link also
+                // leaves the original path present until the atomic replace.
+                match fs::hard_link(path, parent.join(backup)) {
+                    Ok(()) => break,
+                    Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                    Err(error) => return Err(error),
+                }
+            }
+        }
+        fs::rename(&temporary, path)?;
+        #[cfg(unix)]
+        File::open(parent)?.sync_all()?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    result.map_err(fail)
 }
 
 /// An account-reference lookup failure without any secret key material.
