@@ -8,9 +8,11 @@ use std::collections::BTreeMap;
 pub(crate) use crate::children::{children, take};
 #[cfg(any(feature = "crowdloan", feature = "proxy"))]
 pub(crate) use crate::nested_json::check_call_budget as check_nested_json;
+#[cfg(feature = "staking")]
+pub(crate) use crate::staking_baskets::legs as basket_legs;
 
 /// Resolve an exact TAO field without permitting alpha currencies or `all`.
-#[cfg(any(feature = "crowdloan", feature = "root"))]
+#[cfg(any(feature = "crowdloan", feature = "root", feature = "staking"))]
 pub(crate) fn tao_amount(
     amount: &rtao_primitives::Amount,
 ) -> Result<rtao_primitives::Balance<rtao_primitives::Tao>, rtao_tx::IntentError> {
@@ -175,7 +177,7 @@ mod tests {
     }
 }
 
-#[cfg(feature = "crowdloan")]
+#[cfg(any(feature = "crowdloan", feature = "staking"))]
 /// Resolve exact or all-free TAO using the effective coldkey at this view.
 pub(crate) async fn stakeable_amount<V: rtao_client::View + ?Sized>(
     amount: &rtao_primitives::Amount,

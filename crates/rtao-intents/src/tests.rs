@@ -209,6 +209,22 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             args.insert("inner_op".into(), json!("finalize_crowdloan"));
             args.insert("inner_args".into(), json!({"crowdloan_id":1}));
         }
+        if spec.name == "fund_evm_key" {
+            args.insert(
+                "evm_address".into(),
+                json!(format!("0x{}", "11".repeat(20))),
+            );
+        }
+        if matches!(spec.name, "swap_basket" | "swap_basket_many") {
+            if spec.name == "swap_basket" {
+                args.insert("dest_netuid".into(), json!(2));
+            } else {
+                args.insert(
+                    "legs".into(),
+                    json!([{"origin_netuid":1,"dest_netuid":2,"amount":"1"}]),
+                );
+            }
+        }
         let supplied: std::collections::BTreeSet<_> = args.keys().cloned().collect();
         let constructed = AnyIntent::from_tool(spec.name, Value::Object(args));
         assert!(

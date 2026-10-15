@@ -30,6 +30,13 @@ generated dispatch, constructor normalization and availability metadata.
 Ordinary hosted validation remains pending. See
 [m5-proxy-children-association.md](m5-proxy-children-association.md).
 
+The next seventeen source candidates cover lock, collateral, leasing, EVM,
+basket/configuration and root-claim operations. Their generated integration
+and hosted validation are pending; they are not included in 49/83. Review
+also corrected exact money JSON to match Python's decimal serialization,
+with native u64 arithmetic preserved. See
+[m5-lock-basket-claim.md](m5-lock-basket-claim.md).
+
 The binary routes generated transactions/queries, config/tools/explain,
 weights/axon, wallet management, subnet registration/metagraph views and the M4
 hparams commands. Sequential `trim-null` now uses the shared SDK session,
