@@ -17,8 +17,7 @@ async fn hosted_m2_intent_and_read_oracle_replay() -> Result<()> {
     let directory = Path::new(&directory);
     adapter::timelock(&serde_json::from_slice(&fs::read(
         directory.join("pure/timelock.json"),
-    )?)?)
-    .await?;
+    )?)?)?;
     for (kind, expected) in [("intents", 9), ("reads", 15)] {
         let document: Value =
             serde_json::from_slice(&fs::read(directory.join(format!("{kind}.json")))?)?;

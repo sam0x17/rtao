@@ -417,7 +417,7 @@ fn funding_error(
     fee: u64,
     deposit: u64,
 ) -> ChainError {
-    let display = match label.filter(|label| *label != signer.to_string()) {
+    let display = match label.filter(|label| !label.is_empty() && *label != signer.to_string()) {
         Some(label) => format!("{signer} ({label})"),
         None => signer.to_string(),
     };

@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/client.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_subtensor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Blocking access to the single asynchronous SDK implementation.
 //!
@@ -39,6 +40,8 @@ use rtao_tx::{
 #[path = "generated/blocking_namespaces.rs"]
 mod namespaces;
 pub use namespaces::*;
+/// Observed epoch event shared with the asynchronous client.
+pub use rtao_client::EpochEvent;
 
 /// A worker, connection, read or transaction failure from a blocking call.
 #[derive(Debug)]
@@ -124,6 +127,24 @@ error_from!(
     rtao_wallet::WalletError => Wallet,
     rtao_client::HeadError => Head,
 );
+
+impl From<rtao_client::WaitError> for Error {
+    fn from(error: rtao_client::WaitError) -> Self {
+        match error {
+            rtao_client::WaitError::Client(error) => Self::Client(error),
+            rtao_client::WaitError::Head(error) => Self::Head(error),
+            rtao_client::WaitError::Timeout => Self::Timeout,
+            rtao_client::WaitError::StreamEnded => Self::StreamEnded,
+            rtao_client::WaitError::EpochDisabled(netuid) => {
+                Self::Read(rtao_reads::ReadError::InvalidParam {
+                    name: "netuid".into(),
+                    reason: format!("subnet {netuid} has tempo 0 and never runs epochs"),
+                })
+            }
+            error => Self::Client(ClientError::Protocol(error.to_string())),
+        }
+    }
+}
 
 type ConnectFuture = Pin<Box<dyn Future<Output = Result<Client, ClientError>> + Send>>;
 type Connector = dyn Fn(ClientConfig) -> ConnectFuture + Send + Sync;
@@ -585,108 +606,47 @@ impl SyncClient {
     }
 
     /// Wait for a target height, or the next block when the target is omitted.
+    /// `None` is indefinite; `Some(Duration::ZERO)` supplies a zero budget.
     pub fn wait_for_block(
         &self,
         block: Option<u64>,
         timeout: Option<Duration>,
     ) -> Result<BlockHeader, Error> {
         self.view.with_view(move |view| async move {
-            bounded_wait(timeout, async move {
-                let client = view.client();
-                let target = match block {
-                    Some(block) => block,
-                    None => client
-                        .at(BlockRef::Best)
-                        .await?
-                        .block()
-                        .number
-                        .checked_add(1)
-                        .ok_or_else(|| {
-                            ClientError::Protocol("next block number exceeds u64".into())
-                        })?,
-                };
-                let mut blocks = client.blocks(Finality::Best)?;
-                while let Some(header) = blocks.next().await {
-                    let header = header?;
-                    if header.number >= target {
-                        return Ok(header);
-                    }
-                }
-                Err(Error::StreamEnded)
-            })
-            .await
+            view.client()
+                .wait_for_block(block, timeout)
+                .await
+                .map_err(Error::from)
         })
     }
 
-    /// Wait until the chain's timestamp reaches a UTC system time.
-    ///
-    /// Large gaps sleep on the private worker before opening a subscription;
-    /// completion always uses chain time, including each received block's time.
+    /// Wait for chain time, using the asynchronous client's long-gap sleep.
+    /// `None` is indefinite; `Some(Duration::ZERO)` supplies a zero budget.
     pub fn wait_for_timestamp(
         &self,
         when: SystemTime,
         timeout: Option<Duration>,
     ) -> Result<BlockHeader, Error> {
         self.view.with_view(move |view| async move {
-            bounded_wait(timeout, async move {
-                let client = view.client();
-                let slot = client.block_time().await?;
-                let now = client.timestamp().await?;
-                if let Ok(gap) = when.duration_since(now)
-                    && gap > slot.saturating_mul(4)
-                {
-                    tokio::time::sleep(gap.saturating_sub(slot.saturating_mul(2))).await;
-                }
-                let mut blocks = client.blocks(Finality::Best)?;
-                while let Some(header) = blocks.next().await {
-                    let header = header?;
-                    let snapshot = client.at(BlockRef::Hash(header.hash)).await?;
-                    if snapshot.timestamp().await? >= when {
-                        return Ok(header);
-                    }
-                }
-                Err(Error::StreamEnded)
-            })
-            .await
+            view.client()
+                .wait_for_timestamp(when, timeout)
+                .await
+                .map_err(Error::from)
         })
     }
 
-    /// Wait for an observed epoch run, following LastEpochBlock rather than a prediction.
+    /// Wait for an observed epoch run through the asynchronous client.
+    /// `None` is indefinite; `Some(Duration::ZERO)` supplies a zero budget.
     pub fn wait_for_epoch(
         &self,
         netuid: NetUid,
         timeout: Option<Duration>,
     ) -> Result<EpochEvent, Error> {
         self.view.with_view(move |view| async move {
-            bounded_wait(timeout, async move {
-                use rtao_runtime::storage::subtensor_module as st;
-                let client = view.client();
-                let (tempo, baseline) = client
-                    .fetch((st::TEMPO.at((netuid,)), st::LAST_EPOCH_BLOCK.at((netuid,))))
-                    .await?;
-                if tempo == 0 {
-                    return Err(rtao_reads::ReadError::InvalidParam {
-                        name: "netuid".into(),
-                        reason: format!("subnet {netuid} has tempo 0 and never runs epochs"),
-                    }
-                    .into());
-                }
-                let mut blocks = client.blocks(Finality::Best)?;
-                while let Some(header) = blocks.next().await {
-                    let header = header?;
-                    let snapshot = client.at(BlockRef::Hash(header.hash)).await?;
-                    let value = snapshot.storage(&st::LAST_EPOCH_BLOCK, (netuid,)).await?;
-                    if value > baseline {
-                        return Ok(EpochEvent {
-                            netuid,
-                            block: value,
-                            previous: baseline,
-                        });
-                    }
-                }
-                Err(Error::StreamEnded)
-            })
-            .await
+            view.client()
+                .wait_for_epoch(netuid, timeout)
+                .await
+                .map_err(Error::from)
         })
     }
 
@@ -1336,29 +1296,6 @@ pub struct Blocks {
     shared: Arc<Shared>,
     stream: Arc<tokio::sync::Mutex<rtao_client::BlockStream>>,
     ended: bool,
-}
-
-/// A subnet epoch whose advancement was observed in chain storage.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EpochEvent {
-    /// Subnet whose epoch ran.
-    pub netuid: NetUid,
-    /// Observed LastEpochBlock after the run.
-    pub block: u64,
-    /// LastEpochBlock at the beginning of the wait.
-    pub previous: u64,
-}
-
-async fn bounded_wait<T>(
-    timeout: Option<Duration>,
-    wait: impl Future<Output = Result<T, Error>>,
-) -> Result<T, Error> {
-    match timeout {
-        Some(limit) => tokio::time::timeout(limit, wait)
-            .await
-            .map_err(|_| Error::Timeout)?,
-        None => wait.await,
-    }
 }
 
 impl Iterator for Blocks {

@@ -88,7 +88,12 @@ pub trait NativePasswordProvider: Send + Sync {
         message: &'a str,
     ) -> NativePasswordFuture<'a, SecretString>;
 }
-/// Password inputs in Python precedence order, with library prompting disabled.
+/// Wallet password inputs in Python's coldkey-unlock precedence order.
+///
+/// Role-specific wallet encryption writes also reuse these configured sources;
+/// generic [`crate::Keyfile`] writes have a separate explicit/confirming-prompt
+/// policy. Library prompting is disabled by default. A role write does not add
+/// confirmation around a caller's [`PasswordPrompt`]; CLI writing callbacks do.
 #[derive(Clone, Default)]
 pub struct PasswordSources {
     /// Explicit input; an empty secret falls through as in Python.

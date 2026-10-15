@@ -89,6 +89,47 @@ selects machine-readable output. The [transaction reference](tx-reference.md)
 lists catalog operations and their feature requirements. The
 [API index](api-index.md) maps Python names to Rust.
 
+## Wallet sources
+
+`WalletRef` inspects the public btcli layout; `Wallet` adds independent coldkey
+and hotkey sources with lazy shared signer caches. `Wallet::default_wallet()`
+uses `default/default` under the current `HOME`'s `.bittensor/wallets`; explicit
+constructors take the names and root. The library does not read `BT_WALLET_PATH`.
+
+Choose `CryptoType`, a single `RegenerateFrom` source and `WriteOptions` for
+creation or recovery. `WriteOptions::coldkey()` requests encryption and
+`WriteOptions::hotkey()` requests plaintext; both refuse overwrite. Supplying
+a password to a role-specific wallet write forces encryption. New keys return
+a `GeneratedKey` with a guarded mnemonic; the library never prints it. To
+create both keys, call `create_new_coldkey` and `create_new_hotkey` and retain
+both recovery values. The CLI's `wallet create` composes those operations;
+publishing two keys is not one transaction.
+
+Configured `PasswordSources` govern encrypted role-specific writes as well as
+unlocking, unless `WriteOptions.password` overrides them. Coldkey sources can
+include wallet environment values, password files and explicitly supplied
+native services. Hotkeys use their own policy. A role write invokes its SDK
+password callback once; that callback owns confirmation. CLI writing callbacks
+confirm new passwords. Generic `Keyfile` writes use the separate explicit or
+confirming-prompt policy described below. The SDK does not prompt by default.
+
+Wallet methods omit Python's automatic `save_coldkey_to_env` and
+`save_hotkey_to_env` flags. Use an explicit generic `Keyfile` save operation
+over a caller-owned environment, or the CLI's `wallet save-password-env` export.
+Neither makes a wallet automatically save a password or shares a new overlay
+with its password sources.
+
+Wallet inventory and natural sorting currently live in the CLI. There is no
+`rtao_wallet::list_wallets` or `list_wallets_detailed`; the CLI's detailed JSON
+uses formatted scheme labels. Library code selects a typed `CryptoType`
+instead of Python's root string parsing/formatting helpers.
+
+Signer clones share the upstream keypair until the final `Arc` owner drops.
+Guarded SDK buffers do not prove erasure of all signing material: the pinned
+Ed25519 pair has no guaranteed final-drop wipe. M2-S02 remains open and
+unaccepted; dependency internals, allocator and OS copies remain outside the
+SDK's erasure guarantees.
+
 ## Generic keyfiles
 
 `rtao_wallet::Keyfile` reads or writes one explicit path, including a public-only

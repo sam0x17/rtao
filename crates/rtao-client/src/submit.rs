@@ -8,7 +8,7 @@
 use crate::{BlockRef, Client, ClientError, NonceLease, View, ViewExt};
 use bytes::Bytes;
 use futures::StreamExt;
-use rtao_core::{CoreError, codec::Value, digest::ChainInfo, extrinsic::TxParams};
+use rtao_core::{CoreError, DynValue, codec::Value, digest::ChainInfo, extrinsic::TxParams};
 use rtao_primitives::{AccountId, CryptoType, H256, TaoBalance};
 use rtao_runtime::{CallBytes, RuntimeHandle};
 use rtao_signer::{
@@ -281,6 +281,9 @@ pub struct ExtrinsicReport {
     pub extrinsic_id: Option<String>,
     /// Actual event-derived fee in checked native rao.
     pub fee: Option<TaoBalance>,
+    /// Unmodified event-derived weight: null when absent, a WeightV1 integer,
+    /// or a WeightV2 record with `ref_time` and `proof_size` integer fields.
+    pub weight: DynValue,
     /// Triggered event records at the block's parent-selected runtime.
     pub events: Vec<crate::EventRecord>,
     /// Metadata-resolved dispatch failure, if any.
@@ -635,6 +638,7 @@ impl Client {
                 extrinsic_index: None,
                 extrinsic_id: None,
                 fee: None,
+                weight: DynValue::new(Value::Null),
                 events: Vec::new(),
                 error: None,
                 shield: None,
@@ -828,6 +832,7 @@ impl Client {
             extrinsic_index: Some(index),
             extrinsic_id: Some(format!("{number}-{index:04}")),
             fee: Some(TaoBalance(outcome.total_fee_amount)),
+            weight: DynValue::new(outcome.weight),
             events: records,
             error: outcome.error,
             shield: None,

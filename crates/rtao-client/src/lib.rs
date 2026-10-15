@@ -42,6 +42,7 @@ pub mod submit;
 pub mod subxt;
 /// Typed and dynamic read views pinned to immutable chain state.
 pub mod view;
+mod waits;
 
 pub use block_info::BlockInfo;
 pub use cache::RuntimeCache;
@@ -68,3 +69,4 @@ pub use view::{
     BlockRef, DynView, Fetch, FromStorage, HeadPolicy, IntoCoreValues, KeyArgs, PinnedBlock,
     ReadKind, ReadObserver, ReadPlan, ReadSpec, ReadTouch, Snapshot, View, ViewExt,
 };
+pub use waits::{EpochEvent, WaitError};
