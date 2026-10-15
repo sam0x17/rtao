@@ -448,9 +448,12 @@ impl AppContext {
                 "--period must be a power of two between 4 and 65536 blocks",
             ));
         }
-        let payer: AccountId = match intent.spec().signer {
-            "hotkey" => keys.hotkey_address(),
-            _ => keys.coldkey_address(),
+        let role = intent
+            .signer_role_dyn()
+            .map_err(|error| CliError::input(error.to_string()))?;
+        let payer: AccountId = match role {
+            SignerRole::Hotkey => keys.hotkey_address(),
+            SignerRole::Coldkey => keys.coldkey_address(),
         }
         .or_else(|error| keys.bare_signer_account().ok_or(error))
         .map_err(|e| CliError::failure(e.to_string()))?;
@@ -617,9 +620,9 @@ impl AppContext {
         };
         let result = async {
             if acquired.is_some() {
-                let actual = match intent.spec().signer {
-                    "hotkey" => signing.hotkey_address(),
-                    _ => signing.coldkey_address(),
+                let actual = match role {
+                    SignerRole::Hotkey => signing.hotkey_address(),
+                    SignerRole::Coldkey => signing.coldkey_address(),
                 }
                 .or_else(|error| signing.bare_signer_account().ok_or(error))
                 .map_err(|error| CliError::failure(error.to_string()))?;
@@ -1010,6 +1013,191 @@ mod tests {
         out.message("diagnostic")?;
         assert_eq!(sink.text(Stream::Stdout)?, "");
         let _ = LiveTerminal;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn real_hotkey_batch_preview_uses_hotkey_payer_without_coldkey_access_or_unlock()
+    -> Result<(), Box<dyn std::error::Error>> {
+        use rtao::{
+            client::Network,
+            signer::{BoxFuture, KeyView, Signer, SignerError},
+        };
+        use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        const HOTKEY: AccountId = AccountId([8; 32]);
+
+        #[derive(Default)]
+        struct PublicHotkeyOnly {
+            hotkey_reads: AtomicUsize,
+            coldkey_reads: AtomicUsize,
+            acquisitions: AtomicUsize,
+        }
+        impl KeyView for PublicHotkeyOnly {
+            fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+                self.hotkey_reads.fetch_add(1, Ordering::SeqCst);
+                Ok(HOTKEY)
+            }
+            fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+                Ok(HOTKEY.0)
+            }
+            fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+                self.coldkey_reads.fetch_add(1, Ordering::SeqCst);
+                Err(SignerError::KeyUnavailable(SignerRole::Coldkey))
+            }
+        }
+        impl DynKeySource for PublicHotkeyOnly {
+            fn signer_for<'a>(
+                &'a self,
+                _role: SignerRole,
+            ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+                Box::pin(async move {
+                    self.acquisitions.fetch_add(1, Ordering::SeqCst);
+                    Err(SignerError::KeyView(
+                        "preview must never acquire a private signer".into(),
+                    ))
+                })
+            }
+        }
+
+        struct PublicFactory {
+            keys: Arc<PublicHotkeyOnly>,
+            requested_roles: Mutex<Vec<SignerRole>>,
+            releases: AtomicUsize,
+        }
+        impl ExternalSignerFactory for PublicFactory {
+            fn keys<'a>(
+                &'a self,
+                _globals: &'a Globals,
+                role: SignerRole,
+            ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
+                Box::pin(async move {
+                    self.requested_roles
+                        .lock()
+                        .map_err(|_| CliError::failure("fixture role lock poisoned"))?
+                        .push(role);
+                    Ok(self.keys.clone() as Arc<dyn DynKeySource>)
+                })
+            }
+            fn release<'a>(
+                &'a self,
+                _globals: &'a Globals,
+                _keys: &'a dyn DynKeySource,
+                success: bool,
+            ) -> BoxFuture<'a, Result<(), CliError>> {
+                Box::pin(async move {
+                    assert!(!success, "a preview has no submitted receipt");
+                    self.releases.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                })
+            }
+        }
+
+        let batch = rtao_intents::Batch::new(vec![
+            serde_json::json!({"op":"reset_axon","netuid":3}),
+            serde_json::json!({"op":"serve_prometheus","netuid":3,"ip":"127.0.0.1","port":9090}),
+        ])?;
+        assert_eq!(batch.signer_role()?, SignerRole::Hotkey);
+
+        // Exercise both the injected-key path and the real submit entry point
+        // with a public external source. No backend feature or device is needed.
+        for external in [false, true] {
+            let keys = Arc::new(PublicHotkeyOnly::default());
+            let factory = PublicFactory {
+                keys: keys.clone(),
+                requested_roles: Mutex::new(Vec::new()),
+                releases: AtomicUsize::new(0),
+            };
+            let mut state = FakeState::try_default()?;
+            state.seed_python(
+                "System",
+                "Account",
+                &[serde_json::json!(HOTKEY)],
+                serde_json::json!({"data":{"free":1_000_000_000u64}}),
+            )?;
+            let chain = FakeChain::from_state(state);
+            let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+            config.track_heads = false;
+            config.runtime_cache_dir = None;
+            config.config_store = None;
+            let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+            let mut ctx = context(
+                &["--dry-run", "--json", "--no-mev-shield"],
+                Value::Null,
+                terminal(false, ""),
+            )?;
+            let sink = MemorySink::default();
+            ctx.output = Output::new(
+                OutputOptions {
+                    json_mode: true,
+                    ..Default::default()
+                },
+                Arc::new(sink.clone()),
+            );
+            let receipt = if external {
+                // The external factory seam is feature-independent; it returns
+                // public identity without touching a Vault service or key file.
+                ctx.globals.signer_backend = Some("vault".into());
+                ctx.submit(
+                    &client,
+                    &batch,
+                    false,
+                    None,
+                    Some(&factory),
+                    &mut crate::prompt::PromptHistory::default(),
+                )
+                .await?
+            } else {
+                ctx.submit_with(&client, &batch, keys.as_ref(), false, None)
+                    .await?
+            };
+            assert!(receipt.is_none());
+            let preview: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+            assert_eq!(preview["op"], "batch");
+            assert_eq!(preview["signer"], "hotkey");
+            assert_eq!(preview["signer_address"], HOTKEY.to_string());
+            assert_eq!(preview["ok"], true);
+            assert_eq!(preview["violations"], serde_json::json!([]));
+            assert!(!preview["fee_tao"].is_null());
+            assert!(keys.hotkey_reads.load(Ordering::SeqCst) > 0);
+            assert_eq!(keys.coldkey_reads.load(Ordering::SeqCst), 0);
+            assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+
+            // A real fee probe queries this public payer's nonce. This checks
+            // the RPC identity as well as the rendered signer label.
+            let requests = chain.requests();
+            let payer_queries: Vec<_> = requests
+                .iter()
+                .filter(|request| {
+                    matches!(
+                        request.method.as_str(),
+                        "system_accountNextIndex" | "account_nextIndex"
+                    )
+                })
+                .collect();
+            assert!(!payer_queries.is_empty());
+            for request in payer_queries {
+                assert_eq!(request.params[0], HOTKEY.to_string());
+            }
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert_eq!(
+                *factory
+                    .requested_roles
+                    .lock()
+                    .map_err(|_| "fixture roles")?,
+                if external {
+                    vec![SignerRole::Hotkey]
+                } else {
+                    vec![]
+                }
+            );
+            assert_eq!(
+                factory.releases.load(Ordering::SeqCst),
+                usize::from(external)
+            );
+            client.close().await;
+        }
         Ok(())
     }
 }
@@ -1432,9 +1620,7 @@ impl AppContext {
         history: &mut crate::prompt::PromptHistory,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
         let role = intent
-            .spec()
-            .signer
-            .parse::<SignerRole>()
+            .signer_role_dyn()
             .map_err(|e| CliError::input(e.to_string()))?;
         self.confirm_wallet(
             &crate::prompt::WalletConfirmation {
@@ -1735,7 +1921,11 @@ impl AppContext {
             .multisig(&raw.signatories, raw.threshold)
             .await
             .map_err(|error| CliError::failure(error.to_string()))?;
-        if intent.spec().signer == "hotkey" {
+        if intent
+            .signer_role_dyn()
+            .map_err(|error| CliError::input(error.to_string()))?
+            == SignerRole::Hotkey
+        {
             self.output.message(&format!("note: {} runs with the multisig account as its hotkey — {} ({}) must be the registered hotkey on-chain",intent.spec().name,self.globals.wallet_name,group.address)).map_err(|error|CliError::failure(error.to_string()))?;
         }
         let mut inner: Option<rtao_runtime::CallBytes> = None;

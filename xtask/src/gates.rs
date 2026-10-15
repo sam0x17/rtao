@@ -54,6 +54,7 @@ fn options(args: Vec<String>) -> Result<Options> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Step {
+    program: &'static str,
     args: Vec<String>,
     tool: Option<&'static str>,
     // Only the semver comparison, after a verified pre-1.0 baseline, is advisory.
@@ -62,6 +63,7 @@ struct Step {
 
 fn cargo(args: &[&str]) -> Step {
     Step {
+        program: "cargo",
         args: args.iter().map(|arg| (*arg).to_owned()).collect(),
         tool: None,
         informational: false,
@@ -78,6 +80,24 @@ fn tool(name: &'static str, args: &[&str]) -> Step {
     let mut step = cargo(args);
     step.tool = Some(name);
     step
+}
+
+fn docs() -> Step {
+    Step {
+        program: "timeout",
+        args: [
+            "--signal=TERM",
+            "--kill-after=30s",
+            "15m",
+            "bash",
+            "ci/docs-check.sh",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect(),
+        tool: None,
+        informational: false,
+    }
 }
 
 fn step_complete(plan: &str, id: &str) -> bool {
@@ -170,6 +190,7 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                     ],
                 ),
                 cargo(&["test", "--workspace", "--doc", "--all-features", "--locked"]),
+                docs(),
             ]);
             steps
         }
@@ -556,7 +577,7 @@ impl Environment {
                 )
             })
             .collect();
-        let mut command = self.command("cargo");
+        let mut command = self.command(step.program);
         if step.tool == Some("cargo-hack") {
             command.current_dir(self.feature_workspace()?);
         }
@@ -685,13 +706,17 @@ fn accept_status(step: &Step, status: ExitStatus) -> Result<bool> {
         eprintln!("::warning::semver comparison failed (informational before 1.0)");
         return Ok(false);
     }
-    bail!("gate failed ({status}): cargo {}", step.args.join(" "))
+    bail!(
+        "gate failed ({status}): {} {}",
+        step.program,
+        step.args.join(" ")
+    )
 }
 
 fn execute(steps: &[Step], mut run: impl FnMut(&Step) -> Result<bool>) -> Result<bool> {
     let mut clean = true;
     for step in steps {
-        println!("gates: cargo {}", step.args.join(" "));
+        println!("gates: {} {}", step.program, step.args.join(" "));
         clean &= run(step)?;
     }
     Ok(clean)
@@ -757,7 +782,7 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
             clean &= execute(&steps, |step| environment.run(step))?;
         } else {
             for step in steps {
-                println!("cargo {}", step.args.join(" "));
+                println!("{} {}", step.program, step.args.join(" "));
             }
         }
     }

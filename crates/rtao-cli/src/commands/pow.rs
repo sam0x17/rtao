@@ -63,7 +63,7 @@ impl SubmissionExecution for Execution {
                 .map_err(|error| CliError::input(error.to_string()))?;
             // Unlock after the reviewed plan and confirmation. Cache that signer
             // so executor acquisition cannot introduce another password delay.
-            let role = intent.spec().signer.parse().map_err(failure)?;
+            let role = intent.as_dyn().signer_role_dyn().map_err(failure)?;
             let signer = keys.signer_for(role).await.map_err(failure)?;
             let unlocked = UnlockedKeys { keys, signer, role };
             // The signing delegate pays and signs; work still authenticates the

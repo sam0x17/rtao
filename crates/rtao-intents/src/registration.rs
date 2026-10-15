@@ -9,6 +9,7 @@ use smallvec::SmallVec;
 
 pub use crate::{
     BurnedRegister, ClaimRoot, ClaimRootWithHotkey, RegisterSubnet, RootRegister, StartCall,
+    SwapHotkey,
 };
 
 /// Split a subnet's current registration price into burned and locked TAO.

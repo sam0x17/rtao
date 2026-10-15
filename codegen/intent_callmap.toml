@@ -141,10 +141,6 @@ call = "swap_basket_many"
 pallet = "SubtensorModule"
 call = "swap_coldkey_announced"
 
-[passthrough.swap_hotkey]
-pallet = "SubtensorModule"
-call = "swap_hotkey"
-
 [passthrough.terminate_lease]
 pallet = "SubtensorModule"
 call = "terminate_lease"

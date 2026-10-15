@@ -1,20 +1,13 @@
 # Operations awaiting behavior ports; this set only shrinks.
 intents = [
-  "add_stake",
-  "add_stake_limit",
-  "batch",
   "move_stake",
-  "move_swap_stake",
   "multisig_approve",
   "multisig_cancel",
   "multisig_execute",
   "multisig_threshold_1",
   "remove_stake",
   "remove_stake_limit",
-  "set_identity",
   "stake_burn",
-  "swap_hotkey",
-  "swap_stake",
   "transfer_stake",
   "unstake_all",
 ]

@@ -60,7 +60,18 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job check
         # M0: imported hashes, pin/lock, fmt, Clippy, dependencies, surface,
         # staged probes, upstream lints, extraction, all parity layers, nextest,
-        # and doctests. Pending behavior remains explicit until its port lands.
+        # doctests, strict rustdoc and the rendered book/LLM index. Docs use the
+        # same hosted target directory and a separate 15-minute command limit.
+        # Pending behavior remains explicit until its port lands.
+      - name: Retain development documentation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: documentation-${{ github.sha }}
+          path: |
+            target/pr-gates/ci/docs/book-html
+            target/pr-gates/ci/docs/generated
+          if-no-files-found: error
+          retention-days: 7
 
   no-host:
     if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
