@@ -55,6 +55,15 @@ no fuzz campaign ran. The remaining 10 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Latest normal hosted run
+[38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
+at `1c807e1` fails compilation in check and features because `SimSwapResult`
+needs client `ReadValue` registration. The existing model already derives
+typed decoding; the source registration is corrected. Supply, no-host and
+semver pass; MSRV remains in progress. Tests, doctests and documentation builds
+were not reached. Bounded logs and diagnostics are retained privately as
+`check-38705303263.json`.
+
+Earlier normal hosted run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
 at `6470a11` passes supply, MSRV, features, no-host and semver. The check job
 stops at strict Clippy: the leasing pass-through generator clones its Copy
