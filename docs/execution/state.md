@@ -16,49 +16,57 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Pushed source through `3aaabc7` contains 20 of 83 intents and 40 of 102
-read implementations. Generated dispatch still advertises 38 reads until the
-hosted regeneration is reviewed and adopted. No milestone exit is claimed.
+Source through `6d5cf40` implements 20 of 83 intents and 40 of 102 reads.
+The generated read interfaces and dispatch for both M5 owner reads are adopted.
+No milestone exit or current all-job success is claimed.
 
 The binary routes generated transactions/queries, config/tools/explain,
-weights/axon, wallet management, subnet registration/metagraph views and the
-implemented hparams commands. Sequential `trim-null` is not advertised yet;
-its shared SDK session and CLI recovery integration remain in progress.
-M5 strict call-byte import is committed, including bounded metadata traversal,
-nested Option/sequence preservation and canonical re-encoding. The broader
-offline signing API, multisig book and call-cache work remains incomplete.
+weights/axon, wallet management, subnet registration/metagraph views and the M4
+hparams commands. Sequential `trim-null` now uses the shared SDK session,
+canonical progress checks, retained approval opening and durable receipts.
+Source review corrected multi-round continuation and preview waiting. The
+executor refuses rebuilt calls that differ from the journaled review before
+private acquisition. Source fixtures include one command completing both saved
+multisig rounds. This integration awaits hosted compilation and execution.
 
-The latest completed normal run on `2331a32`,
-[38690012949](https://github.com/sam0x17/rtao/actions/runs/38690012949), failed
-compilation because a recovered read used a typed-balance method on a wire
-balance. Commit `e79b6ac` fixes that field access. Earlier CLI fixture
-compilation/Clippy failures are corrected in `9c84e81`, `2e79b66` and
-`b322577`. The normal run on `3aaabc7` is
-[38690242483](https://github.com/sam0x17/rtao/actions/runs/38690242483).
-There is no current all-green test result; nextest and doctests must pass on
-the final source before acceptance.
+M5 offline preparation, strict unsigned-JSON import, signature submission and
+shared multisig book/cache writers are committed. The importer authenticates
+all signing views, refuses serde private carrier injection and preserves nonce
+cache state for invalid, stale, expired or foreign preparations. Cache lookup
+authenticates exact canonical call bytes. The M5 fuzz target is source only;
+no fuzz campaign ran. The remaining 63 intents, other command families and
+later milestones still require implementation and acceptance.
 
-Hosted report/code generation on `3aaabc7` is
-[38690259736](https://github.com/sam0x17/rtao/actions/runs/38690259736).
-Its output is still unadopted. The workflow now retains read interfaces and
-namespace methods as well as availability metadata. Verify the exact source,
-ZIP digests, allowed regular paths, dependency hashes, pending-set changes and
-runtime coverage fields before adopting any artifact. Future manifest changes
-require another report refresh. Generated reports establish declared source
-coverage and graph identity, not executed runtime or native Mac coverage.
+Normal hosted run
+[38692013543](https://github.com/sam0x17/rtao/actions/runs/38692013543)
+on `3afa90b` found a missing HeadProvider import in the subnet fixture;
+`95c4028` corrects it. Earlier runs found CLI Clippy and fixture API issues,
+which are corrected in source. The all-target Clippy gate now keeps going to
+report independent failures in one hosted run. Tests and doctests still need
+to pass on the final combined source. Current runs are listed in the
+[workflow history](https://github.com/sam0x17/rtao/actions/workflows/pr.yml?query=branch%3Amain).
 
-Prior verified artifact adoptions remain recorded in
-`.local/recovery/2026-10-14/generated-adoption.json` and
-`.local/recovery/2026-10-14/parity-adoption.json`. Runtime validation is
-null/empty. The report measures Apple-target dependency graphs on Linux.
+Hosted regeneration
+[38690259736](https://github.com/sam0x17/rtao/actions/runs/38690259736)
+and report refresh
+[38691760795](https://github.com/sam0x17/rtao/actions/runs/38691760795)
+were verified and adopted unchanged in `5f4b8fa` and `3afa90b`.
+Review checked artifact digests, exact regular-file members, all 23 dependency
+hashes, unchanged role package inventories, the two read-status changes and
+D-044/D-045 regression references. Private bounded records are
+`m5-read-adoption.json` and `m5-persistence-adoption.json` under
+`.local/recovery/2026-10-14/`. The new CLI owner feature and sha2 dependency
+require a fresh hosted compatibility report before combined acceptance.
+Runtime validation remains null/empty; Linux graph measurement does not
+establish native Mac, hardware, oracle or chain interoperability coverage.
 
-No local compilation, test, Python process, mining or wallet operation ran
-in this continuation. Local work was source review, formatting and bounded
-Cargo lock resolution. All artifact and archive reads used memory. No active
-temporary root remains; the preserved target output has not been rebuilt.
-Wallets, shared caches and backups remain untouched. See
-[m0-acceptance-audit.md](m0-acceptance-audit.md) for remaining M0 acceptance
-work and [disk-cleanup.md](disk-cleanup.md) for the removal inventory.
+No local compilation, tests, Python, mining, wallet operation or chain service
+ran in this continuation. Local checks were source inspection, rustfmt and
+diff checks. One bounded offline lock resolution added no package versions.
+Archive and artifact handling used memory; no temporary root was created.
+The retained target output was not rebuilt. Wallets, shared caches, backups and
+other projects remain untouched. See [m0-acceptance-audit.md](m0-acceptance-audit.md)
+and [disk-cleanup.md](disk-cleanup.md).
 
 ## Disk cleanup completed
 
