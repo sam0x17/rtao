@@ -1963,6 +1963,18 @@
     ],
     "divergences": [
       {
+        "id": "D-068",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_signer::extension::tests::connection_targets_never_send_tokens_off_host",
+          "rtao_signer::extension::tests::library_defaults_require_explicit_process_launch_permissions",
+          "rtao_signer::extension::tests::request_deadline_includes_waiting_behind_an_approval",
+          "rtao_signer::extension::tests::expired_startup_refuses_spawn_without_touching_state",
+          "rtao_signer::extension::tests::signatures_are_bounded_and_never_change_negotiated_crypto"
+        ]
+      },
+      {
         "id": "D-067",
         "oracle": "unverified",
         "rtao": "active",
@@ -6711,11 +6723,11 @@
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "common/src/proxy.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "vendor/upstream/extracted/chain_rules.json (proxy_contract source/metadata/Python codec reconciliation)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5a9636a7571cafd85cfc2d8ff00205b0d2b6b023"
       },
       {
         "kind": "extracted",
@@ -7602,11 +7614,11 @@
         "milestone": "M0–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao` facade: `prelude`, per-feature re-exports (§2.4)"
+          "crates/rtao/src/lib.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6dce916d2a4037ac0c7d26090fbbd21866a125f5"
       },
       {
         "kind": "n/a",
@@ -8248,11 +8260,11 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/timelock.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `timelock` group"
+          "rtao_cli::commands::timelock"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "24c3d4cc0e500675fb4a7daa47e29aee66f9aa53"
       },
       {
         "kind": "ported",
@@ -9065,22 +9077,22 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/contracts.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_evm` contract artifacts"
+          "rtao_evm::contracts::{ContractArtifact,load_artifact,encode_deploy}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "01b6162ff77293aa661b0704b638e5d4d1f4155a"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/keys.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_evm::EvmKeystore`"
+          "rtao_evm::keys"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2c23c156c4f9b8350248428367ee1e99129dfb1b"
       },
       {
         "kind": "extracted",
@@ -9155,11 +9167,11 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/bridge.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::extension::{BridgeServer, run_bridge}` (feature `extension`): axum page plus a WebSocket upgrade through hyper and tokio-tungstenite 0.30"
+          "rtao_signer::extension::{BridgeServer,BridgeOptions,run_bridge}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b095e5c9b2595918d3ab812a11fdee4eaf28dc61"
       },
       {
         "kind": "ported",
@@ -9177,11 +9189,11 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/client.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::extension::{BridgeClient, connect_extension_signer}` (feature `extension`, tokio-tungstenite)"
+          "rtao_signer::extension::{BridgeClient,ExtensionAccount}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "add0346cbd29ddfaf43ef6ceb5d10320ca7992c5"
       },
       {
         "kind": "ported",
@@ -9199,33 +9211,34 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/picker.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` account picker"
+          "crates/rtao-signer/src/extension/signer.rs",
+          "crates/rtao-cli/src/signer_backends/native.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "81452c3b602e26837f58bc6d89b00facc4a9aae5"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/session.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::extension::{ensure_bridge, stop_bridge_daemon}`"
+          "rtao_signer::extension::{BridgePaths,BridgeFiles,EnsureBridgeOptions,BridgeWaiting,ensure_bridge,start_bridge_daemon,run_bridge_daemon,stop_bridge_daemon}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "607089d2e87d32a44fb9a0838672c565b3188606"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/signer.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::ExtensionSigner`"
+          "rtao_signer::extension::{ExtensionSigner,ExtensionAccountSelection,account_crypto_type,select_extension_account,open_extension_signer,connect_extension_signer}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4181733d556723a826115c4f27a10a49e2dae712"
       },
       {
         "kind": "vendored",
@@ -9994,11 +10007,12 @@
         "milestone": "M1 (helpers), M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/timelock.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_tx::timelock::{seal, open, Timelocked, Reveal, OpenOptions, TimelockError, DrandClient}` over core `timelock`; the pure helpers `current_round`, `round_at`, `reveal_time`, `parse_duration`, `format_duration` → `rtao_primitives::drand`"
+          "rtao_tx::timelock",
+          "rtao_primitives::drand"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9de2a53dcf837286f30a11da737d900453f744cf"
       },
       {
         "kind": "n/a",
@@ -10216,11 +10230,11 @@
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/python/pyproject.toml",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the package version (`python_package_version`) and `[project.scripts]` (the `btcli` entry point)"
+          "xtask/src/compat.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "72175101919b6410cda91381a946a928f3035528"
       },
       {
         "kind": "oracle-only",
@@ -10428,22 +10442,22 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_codec_golden.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
+          "Complete reviewed upstream pytest input; native analogues in crates/rtao-testkit/tests/{goldens,typed_calls,corpus}.rs and related runtime/core-ext fixtures"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5ad19b8b78ac71abc6f31b4b3b1e4fd1a8259563"
       },
       {
         "kind": "oracle-only",
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_codec_properties.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
+          "Complete reviewed upstream pytest input; native analogues in crates/rtao-primitives/tests/primitives.rs, crates/rtao-runtime/src/{handle.rs,models/tests.rs} and recorded codec fixtures"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "db1928ae4c1bb51efafff579d74b55ff64de65b1"
       },
       {
         "kind": "ported",
