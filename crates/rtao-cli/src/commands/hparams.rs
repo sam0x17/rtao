@@ -1318,7 +1318,13 @@ mod validator_tests {
         let help = group.clone().render_help().to_string();
         assert!(help.contains("set-take"));
         assert!(help.contains("stake-burn"));
-        assert!(!help.contains("buyback"));
+        // Python's description includes "buyback"; only the alias is hidden.
+        assert!(help.contains("Execute a stake-burn (buyback) extrinsic."));
+        assert!(
+            group
+                .get_subcommands()
+                .all(|command| command.get_name() != "buyback")
+        );
         Ok(())
     }
 

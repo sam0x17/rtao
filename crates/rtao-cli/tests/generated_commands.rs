@@ -185,25 +185,11 @@ fn leaf(parsed: &clap::ArgMatches) -> Result<&clap::ArgMatches, Box<dyn std::err
 fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability() -> TestResult {
     let tx = generated::tx_command()?;
     assert!(tx.find_subcommand("transfer").is_some());
-    assert!(tx.find_subcommand("set-identity").is_none());
-    assert!(tx.find_subcommand("add-stake").is_none());
+    assert!(tx.find_subcommand("set-identity").is_some());
+    assert!(tx.find_subcommand("add-stake").is_some());
     let rows = rtao_intents::interface_metadata();
-    let pending = rows
-        .iter()
-        .find(|row| row.name == "set_identity")
-        .ok_or("pending interface")?;
-    assert!(pending.compiled && !pending.implemented);
-    assert!(pending.type_name.is_some());
-    let staking = rows
-        .iter()
-        .find(|row| row.name == "add_stake")
-        .ok_or("staking interface")?;
-    assert!(!staking.implemented);
-    // Workspace --all-features enables staking too. Its pending body must
-    // remain unadvertised whether the interface is compiled or disabled.
-    assert_eq!(staking.type_name.is_some(), staking.compiled);
-    assert_eq!(staking.role.is_some(), staking.compiled);
-    assert_eq!(staking.output.is_some(), staking.compiled);
+    assert_eq!(rows.len(), rtao_catalog::INTENTS.len());
+    assert!(rows.iter().all(|row| row.implemented));
     for row in &rows {
         let command = row.name.replace('_', "-");
         assert_eq!(
@@ -217,6 +203,13 @@ fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability()
         assert_eq!(row.output.is_some(), row.compiled, "{}", row.name);
         if !row.compiled || !row.implemented {
             assert!(generated::intent_command(row.name).is_err(), "{}", row.name);
+        } else {
+            assert_eq!(
+                generated::intent_command(row.name)?.get_name(),
+                command,
+                "{}",
+                row.name
+            );
         }
     }
     let transfer = rows
@@ -239,8 +232,21 @@ fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability()
             <rtao_intents::Transfer as IntentInterface>::Output,
         >())
     );
-    assert!(generated::intent_command("set_identity").is_err());
-    assert!(generated::read_command("accepts_locked_alpha".parse()?).is_err());
+    assert!(generated::intent_command("not_a_catalog_operation").is_err());
+    let query = generated::query_command()?;
+    for read in rtao::reads::ReadName::ALL {
+        let name = read.as_str().replace('_', "-");
+        assert_eq!(
+            query.find_subcommand(&name).is_some(),
+            read.implemented(),
+            "{read}"
+        );
+        assert_eq!(
+            generated::read_command(read).is_ok(),
+            read.implemented(),
+            "{read}"
+        );
+    }
     let balance: rtao::reads::ReadName = "balance".parse()?;
     assert!(balance.implemented());
     assert_eq!(
@@ -303,9 +309,11 @@ fn catalog_interface_metadata_covers_every_operation_and_pending_body() -> TestR
 }
 
 #[test]
-fn tools_retain_python_tool_fields_and_leave_pending_cli_null() -> TestResult {
-    let tools = catalog::tools_payload(&generated::rust_tools()?)?;
+fn tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata() -> TestResult {
+    let rust_tools = generated::rust_tools()?;
+    let tools = catalog::tools_payload(&rust_tools)?;
     let tools = tools.as_array().ok_or("tools")?;
+    let metadata = rtao_intents::interface_metadata();
     assert_eq!(tools.len(), rtao_catalog::INTENTS.len());
     // registry.list_tools() projects these nine fields. The extraction catalog
     // additionally carries documentation-generation fields that btcli tools
@@ -327,7 +335,27 @@ fn tools_retain_python_tool_fields_and_leave_pending_cli_null() -> TestResult {
             .find(|row| row["name"] == json!(spec.name))
             .ok_or("catalog row")?
             .clone();
-        actual.as_object_mut().ok_or("tool object")?.remove("rust");
+        let rust = actual
+            .as_object_mut()
+            .ok_or("tool object")?
+            .remove("rust")
+            .ok_or("Rust metadata")?;
+        let interface = metadata
+            .iter()
+            .find(|row| row.name == spec.name)
+            .ok_or("interface metadata")?;
+        assert_eq!(
+            rust,
+            json!({
+                "type": interface.type_name,
+                "role": interface.role,
+                "output": interface.output,
+                "cli": (interface.compiled && interface.implemented)
+                    .then(|| format!("rtao tx {}", spec.name.replace('_', "-"))),
+            }),
+            "{}",
+            spec.name
+        );
         let source: Value = serde_json::from_str(spec.catalog_json)?;
         let mut expected = serde_json::Map::new();
         for field in python_fields {
@@ -346,12 +374,42 @@ fn tools_retain_python_tool_fields_and_leave_pending_cli_null() -> TestResult {
         );
         assert_eq!(actual, Value::Object(expected), "{}", spec.name);
     }
-    let pending = tools
+    // All current intent bodies are implemented. Exercise the catalog's two
+    // unavailable representations explicitly instead of mislabeling one as
+    // pending: a missing feature has no Rust record; a compiled pending body
+    // retains its type/role/output and has no CLI invocation.
+    let transfer = rust_tools
         .iter()
-        .find(|row| row["name"] == json!("set_identity"))
-        .ok_or("pending")?;
-    assert!(pending["rust"]["type"].is_string());
-    assert!(pending["rust"]["cli"].is_null());
+        .find(|tool| tool.name == "transfer")
+        .ok_or("transfer metadata")?;
+    let mut pending = transfer.clone();
+    pending.cli = None;
+    for supplied in [Vec::new(), vec![pending]] {
+        let payload = catalog::tools_payload(&supplied)?;
+        let row = payload
+            .as_array()
+            .ok_or("tools array")?
+            .iter()
+            .find(|row| row["name"] == "transfer")
+            .ok_or("transfer tool")?;
+        assert_eq!(
+            row["rust"],
+            if supplied.is_empty() {
+                json!({"type":null,"role":null,"output":null,"cli":null})
+            } else {
+                json!({"type":transfer.type_name,"role":transfer.role,"output":transfer.output,"cli":null})
+            }
+        );
+        let actual = row.as_object().ok_or("tool object")?;
+        let original = tools
+            .iter()
+            .find(|row| row["name"] == "transfer")
+            .and_then(Value::as_object)
+            .ok_or("original tool")?;
+        for field in python_fields {
+            assert_eq!(actual.get(field), original.get(field), "{field}");
+        }
+    }
     Ok(())
 }
 
