@@ -59,6 +59,14 @@ escape terminal data, bound public file acquisition and avoid owned secret
 output copies. Hosted compilation/regression evidence is missing for these
 repairs. Upstream Ed25519/KDF zeroization limits remain unresolved.
 
+The M4 follow-up found that shield polling exhaustion could still report an
+unknown outcome as ordinary non-inclusion. Its source repair propagates lookup
+errors, preserves the exact attempted carrier hash, and requires finalized
+signed expiry plus a full canonical rescan before claiming absence. Four new
+regression fixtures cover stalled-chain recovery, RPC/malformed hashes,
+finalized absence and reorg recovery. Two independent source reviews find no
+remaining concrete defect in that repair; execution remains pending.
+
 M7 has pure UOS framing source and fourteen hand-derived fixtures, independently
 reviewed, without new dependencies. Vault signing/server/QR, Ledger, extension,
 EVM and timelock UX remain later work; no fresh Python, device or interoperability

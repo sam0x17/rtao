@@ -138,13 +138,23 @@ fn install_inner(fake: &FakeChain, bytes: Bytes, included: u64, failed: bool) {
         state.set_handler("chain_getBlock", move |state, request| {
             let mut reply = state.dispatch(request);
             if let Some(Ok(raw)) = &mut reply.outcome {
-                let number = raw["block"]["header"]["number"].as_str().and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"),16).ok());
+                let number = raw["block"]["header"]["number"]
+                    .as_str()
+                    .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok());
                 if number == Some(included) {
-                    raw["block"]["extrinsics"].as_array_mut().unwrap().push(json!(format!("0x{}",hex::encode(&bytes))));
+                    let extrinsics = raw["block"]["extrinsics"].as_array_mut().unwrap();
+                    let index = u32::try_from(extrinsics.len()).unwrap();
+                    extrinsics.push(json!(format!("0x{}", hex::encode(&bytes))));
                     let inner_event = if failed {
-                        json!({"phase":"ApplyExtrinsic","extrinsic_idx":1,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Token":"FundsUnavailable"},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
-                    } else { success(1) };
-                    state.seed_events(request.params[0].as_str().unwrap(), json!([success(0),inner_event])).unwrap();
+                        json!({"phase":"ApplyExtrinsic","extrinsic_idx":index,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Token":"FundsUnavailable"},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
+                    } else {
+                        success(index)
+                    };
+                    let mut events: Vec<_> = (0..index).map(success).collect();
+                    events.push(inner_event);
+                    state
+                        .seed_events(request.params[0].as_str().unwrap(), json!(events))
+                        .unwrap();
                 }
             }
             reply
@@ -424,20 +434,21 @@ async fn inner_success_and_dispatch_failure_resolve_actual_signed_inner() {
 }
 
 #[tokio::test]
-async fn missing_inner_is_failure_and_invalidates_cache_after_carrier_inclusion() {
+async fn stalled_chain_keeps_carrier_unresolved_and_inner_can_still_execute_later() {
     let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 1).await;
+    let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
     let result = client
-        .submit_shielded(call(&client, 1).await, &signer, &ShieldOptions::default())
-        .await
-        .unwrap();
-    assert!(!result.success);
+        .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+        .await;
+    let error = assert_unknown(result, &fake);
     assert!(
-        result
-            .message
-            .contains("not included before its era expired")
+        matches!(error, SubmitFailure::Unresolved { ref cause, reconciliation: None, .. }
+        if matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Protocol(message))
+            if message.contains("block 102 is unavailable after 36 polls")
+                && message.contains("expiry and absence have not been established")))
     );
-    assert_eq!(result.inclusion, Inclusion::InBlock);
-    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(fake.state().lock().unwrap().block, 101);
     assert_eq!(
         client.nonces().cached(&signer.account().to_string()).await,
         None
@@ -451,6 +462,242 @@ async fn missing_inner_is_failure_and_invalidates_cache_after_carrier_inclusion(
         attempts,
         usize::try_from(rtao_catalog::py::SHIELDED_POLL_ATTEMPTS_PER_BLOCK * 9).unwrap()
     );
+
+    // Null replies exhausted a read budget, not the signed era. Once the
+    // stalled chain resumes, the same signed inner can still execute.
+    fake.mutate_state(|state| {
+        state.advance(1);
+    });
+    install_inner(&fake, inner_bytes, 102, false);
+    let block = client
+        .at(rtao_client::BlockRef::Number(102))
+        .await
+        .unwrap()
+        .block()
+        .hash;
+    let recovered = client
+        .resolve_extrinsic(inner_hash, block, true)
+        .await
+        .unwrap();
+    assert!(recovered.success);
+    assert_eq!(recovered.hash, inner_hash);
+    assert_eq!(recovered.block_number, Some(102));
+    assert_eq!(recovered.extrinsic_index, Some(0));
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
+async fn inner_block_lookup_failures_keep_the_carrier_hash_and_original_cause() {
+    for malformed in [false, true] {
+        let (client, fake, signer) = fixture().await;
+        let inner_call = call(&client, 1).await;
+        let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+        install_inner(&fake, inner_bytes, 101, false);
+        let failures = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let observed = failures.clone();
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getBlockHash", move |state, request| {
+                if !state.submissions.is_empty()
+                    && request.params[0] == 101
+                    && observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 0
+                {
+                    if malformed {
+                        Reply::result(json!("0x01"))
+                    } else {
+                        Reply::error(-32603, "inner block-hash RPC sentinel", None)
+                    }
+                } else {
+                    state.dispatch(request)
+                }
+            });
+        });
+        let error = assert_unknown(
+            client
+                .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+                .await,
+            &fake,
+        );
+        let SubmitFailure::Unresolved {
+            cause,
+            reconciliation: None,
+            ..
+        } = error
+        else {
+            panic!("inner lookup failure lost its original cause");
+        };
+        if malformed {
+            assert!(
+                matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Protocol(message))
+                if message == "RPC hash must contain 32 bytes")
+            );
+        } else {
+            assert!(matches!(
+                cause.as_ref(),
+                SubmitFailure::Client(ClientError::Rpc(_))
+            ));
+            assert!(cause.to_string().contains("inner block-hash RPC sentinel"));
+        }
+        assert_eq!(failures.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+
+        // The carrier and inner were actually included; read recovery must
+        // recover the receipt without submitting either transaction again.
+        let block = client
+            .at(rtao_client::BlockRef::Number(101))
+            .await
+            .unwrap()
+            .block()
+            .hash;
+        let recovered = client
+            .resolve_extrinsic(inner_hash, block, true)
+            .await
+            .unwrap();
+        assert!(recovered.success);
+        assert_eq!(recovered.hash, inner_hash);
+        assert_eq!(recovered.extrinsic_index, Some(1));
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan() {
+    for finalized in [false, true] {
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getBlockHash", move |state, request| {
+                if !state.submissions.is_empty()
+                    && let Some(height) = request.params[0].as_u64()
+                    && height > state.block
+                    && height <= 108
+                {
+                    state.advance(height - state.block);
+                    if !finalized {
+                        state.set_finalized(100).unwrap();
+                    }
+                }
+                state.dispatch(request)
+            });
+        });
+        let result = client
+            .submit_shielded(call(&client, 1).await, &signer, &ShieldOptions::default())
+            .await;
+        if finalized {
+            let report = result.unwrap();
+            assert!(!report.success);
+            assert!(
+                report
+                    .message
+                    .contains("not included before its era expired")
+            );
+            assert_eq!(report.inclusion, Inclusion::InBlock);
+            let requests = fake.requests();
+            let finality_check = requests
+                .iter()
+                .rposition(|request| request.method == "chain_getFinalizedHead")
+                .unwrap();
+            let mut scanned: Vec<_> = requests[finality_check + 1..]
+                .iter()
+                .filter(|request| request.method == "chain_getBlockHash")
+                .filter_map(|request| request.params[0].as_u64())
+                .collect();
+            scanned.sort_unstable();
+            scanned.dedup();
+            assert_eq!(scanned, (100..=108).collect::<Vec<_>>());
+        } else {
+            let error = assert_unknown(result, &fake);
+            assert!(matches!(error, SubmitFailure::Unresolved { ref cause, .. }
+                if cause.to_string().contains("block 108 did not finalize after 36 polls")));
+        }
+        assert_eq!(fake.state().lock().unwrap().block, 108);
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+    }
+}
+
+#[tokio::test]
+async fn finalized_absence_rescan_finds_an_inner_missed_on_the_orphan_branch() {
+    let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 1).await;
+    let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    let canonical_inner = Arc::new(Mutex::new(None::<String>));
+    let before_finality = canonical_inner.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlockHash", move |state, request| {
+            if !state.submissions.is_empty() && before_finality.lock().unwrap().is_none() {
+                // The first scan sees an unfinalized branch without the inner.
+                state.set_finalized(100).unwrap();
+                if let Some(height) = request.params[0].as_u64()
+                    && height > state.block
+                    && height <= 108
+                {
+                    state.advance(height - state.block);
+                    state.set_finalized(100).unwrap();
+                }
+            }
+            state.dispatch(request)
+        });
+    });
+    let finality_branch = canonical_inner.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getFinalizedHead", move |state, request| {
+            if !state.submissions.is_empty()
+                && state.block == 108
+                && finality_branch.lock().unwrap().is_none()
+            {
+                let parent = state.block_hash(100).unwrap();
+                let first = state.fork(&parent).unwrap();
+                let mut tip = first.clone();
+                for _ in 102..=108 {
+                    tip = state.fork(&tip).unwrap();
+                }
+                state.set_best(&tip).unwrap();
+                state.set_finalized(108).unwrap();
+                *finality_branch.lock().unwrap() = Some(first);
+            }
+            state.dispatch(request)
+        });
+    });
+    let receipt_branch = canonical_inner.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", move |state, request| {
+            let mut reply = state.dispatch(request);
+            if receipt_branch.lock().unwrap().as_deref() == request.params[0].as_str()
+                && let Some(Ok(raw)) = &mut reply.outcome
+            {
+                let extrinsics = raw["block"]["extrinsics"].as_array_mut().unwrap();
+                extrinsics.push(json!(format!("0x{}", hex::encode(&state.submissions[0]))));
+                extrinsics.push(json!(format!("0x{}", hex::encode(&inner_bytes))));
+                state
+                    .seed_events(
+                        request.params[0].as_str().unwrap(),
+                        json!([success(0), success(1)]),
+                    )
+                    .unwrap();
+            }
+            reply
+        });
+    });
+    let report = client
+        .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+        .await
+        .unwrap();
+    assert!(report.success);
+    assert_eq!(report.hash, inner_hash);
+    assert_eq!(report.block_number, Some(101));
+    assert_eq!(report.inclusion, Inclusion::Finalized);
+    assert_eq!(report.shield.unwrap().inner_hash, inner_hash);
+    let canonical = canonical_inner.lock().unwrap().clone().unwrap();
+    assert_eq!(
+        format!("0x{}", hex::encode(report.block_hash.unwrap().0)),
+        canonical
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
 }
 
 #[tokio::test]
