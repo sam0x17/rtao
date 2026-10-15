@@ -199,16 +199,16 @@ Hand-written command groups (§10.5); per-command milestones are in [parity-inve
 
 | Python file | Lines | rtao home | Kind | `map.toml` | M | Notes |
 |---|---:|---|---|---|---|---|
-| `cli/commands/evm/__init__.py` | 53 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | group root, `claim-deposit` alias `:51` |
-| `cli/commands/evm/_shared.py` | 287 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | shared helpers, `key`/`stake` subapps |
-| `cli/commands/evm/address.py` | 90 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `mirror`, `pubkey`, `deposit-address` |
-| `cli/commands/evm/association.py` | 55 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `associate` |
-| `cli/commands/evm/contracts_cmd.py` | 68 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `deploy` |
-| `cli/commands/evm/keys.py` | 239 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `key new/import/export/list/show` |
-| `cli/commands/evm/money.py` | 147 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `balance`, `fund`, `send`, `send-to-ss58` |
-| `cli/commands/evm/precompiles_cmd.py` | 228 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `precompiles`, `abi`, `call` |
-| `cli/commands/evm/setup.py` | 300 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `networks`, `config`, `doctor`, `setup-localnet` |
-| `cli/commands/evm/stake.py` | 135 | `rtao-cli` `evm` group (feature `evm`) | ported | `ported` | M7 | `stake add/remove/show` |
+| `cli/commands/evm/__init__.py` | 53 | `rtao_cli::commands::evm` | ported | `ported` | M7 | Complete group registrations and generated claim-deposit alias reviewed; native Clap/feature-gated routing. The 25-route fixture establishes source surface, with execution/terminal limits unclaimed. |
+| `cli/commands/evm/_shared.py` | 287 | `rtao_cli::commands::evm` and `evm::keys` | ported | `ported` | M7 | Complete shared source reviewed: public metadata, password precedence, empty endpoint fallback, typed RPC, preview/confirm/late unlock and recovery. Native u64/parser/security/output boundaries remain; repair fixtures authored, unexecuted. |
+| `cli/commands/evm/address.py` | 90 | `rtao_cli::commands::evm` | ported | `ported` | M7 | Three public-only routes preserve hash/truncation and exact machine fields; native AccountId display is canonical prefix 42. Complete source reviewed; dedicated CLI output execution remains unverified. |
+| `cli/commands/evm/association.py` | 55 | `rtao_cli::commands::evm::association` | ported | `ported` | M7 | Complete proof-to-intent source reviewed; D-051 explicit consent, effective dispatch identity and checked arguments remain. Real signer/network execution is unverified. |
+| `cli/commands/evm/contracts_cmd.py` | 68 | `rtao_cli::commands::evm::contracts` | ported | `ported` | M7 | Complete deploy source reviewed; empty attached value means zero. Injected artifact/calldata/value fixtures retain dry-run, confirmation and checked native bounds; real deployment is unverified. |
+| `cli/commands/evm/keys.py` | 239 | `rtao_cli::commands::evm::keys` | ported | `ported` | M7 | Complete key handlers reviewed; empty export destination selects stdout, with nonempty raw destinations refused. Existing secret/storage protections remain; real clipboard/KDF execution is unverified. |
+| `cli/commands/evm/money.py` | 147 | `rtao_cli::commands::evm` | ported | `ported` | M7 | Balance, native fund intent and EVM sends reviewed; --all companions normalize through shared admission/request code. Exact native monetary policy and shared signing discipline remain. Source fixtures do not establish full command execution. |
+| `cli/commands/evm/precompiles_cmd.py` | 228 | `rtao_cli::commands::evm::precompiles` | ported | `ported` | M7 | Complete ABI/read/write source reviewed; empty attached value means zero, empty custom ABI refuses as missing. Injected fixtures retain view isolation and native bounds; real signed calls are unverified. |
+| `cli/commands/evm/setup.py` | 300 | `rtao_cli::commands::evm::setup` | ported | `ported` | M7 | Complete networks/config/doctor/setup source reviewed. Native exact-call consent and sequential recovery remain; setup configures a selected node without starting infrastructure. Real RPC/Sudo execution is unverified. |
+| `cli/commands/evm/stake.py` | 135 | `rtao_cli::commands::evm` | ported | `ported` | M7 | Actual staking-v2 ABI/JSON and native u64/netuid behavior reviewed; alpha removal rejects root, root add remains. Injected write fixtures assert exact words and no private access; show/live execution remains unverified. |
 
 ## `error_descriptions`
 

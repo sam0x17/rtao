@@ -1058,7 +1058,7 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 id = "D-041"
 upstream_symbol = "bittensor.cli.call / AppContext saved semantic multisig approval rounds / cli.multisig_helpers.await_pending_visible"
 python_behavior = "Automatic later approvals poll briefly for pending visibility, then infer the opening from current pending state. If another signer completes or cancels the operation, a later approval can encode no timepoint and open another operation for the same call hash."
-rtao_behavior = "Automatic later raw and saved semantic approvals retain the first submitted inner call and authenticate its opening from an included matching approval event. A pinned pending lookup refuses absent, replaced or already-approved state and composes Some(expected), preserving the original opening after later state removal. Saved semantic approval options disable owner-rate replanning; the executor also excludes multisig dispatch wrappers from automatic owner retries and returns the included failed receipt."
+rtao_behavior = "Automatic later raw and saved semantic approvals retain the first submitted inner call and authenticate its opening from an included matching approval event. A pinned pending lookup refuses absent, replaced or already-approved state and composes Some(expected), preserving the original opening after later state removal. Null-pruning journals authenticate the first approval from its retained receipt position/event and reviewed explicit timepoint, and repeat that check on restart; block-end pending state cannot replace the receipt's opening. Saved semantic approval options disable owner-rate replanning; the executor also excludes multisig dispatch wrappers from automatic owner retries and returns the included failed receipt."
 rationale = "A successful earlier approval does not authorize opening another operation after the first one disappears. The final approval consumes pending state even when its inner owner call fails, so an automatic owner retry can also create a new opening. Require explicit operator action for another operation while preserving the original receipt and recovery identity. NewMultisig receipt-height inference assumes the reviewed runtime uses BlockNumberProvider = System; the separate automated source guard is not adopted."
 decision = "PLAN.md execution rule 5; CLI source adoption and owner-multisig retry review (2026-10-15)"
 status = "active"
@@ -1074,6 +1074,8 @@ pinning_tests = [
   "rtao_cli::context_contract::saved_semantic_replaced_opening_refuses_before_second_source",
   "rtao_cli::context_contract::saved_semantic_missing_opening_identity_refuses_automatic_continuation",
   "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval",
+  "rtao_neuron::owner_ops::trim::tests::new_approval_binds_receipt_position_and_refuses_later_same_block_opening",
+  "rtao_neuron::owner_ops::trim::tests::explicit_approval_binds_review_and_event_timepoint_before_pending_storage",
 ]
 upstream_report = "No issue or PR filed for D-041. Active denotes implemented source with the named regression bodies present; combined hosted validation remains pending. No live-node or cross-language execution is claimed."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/multisig_helpers.py#L1038-L1059"

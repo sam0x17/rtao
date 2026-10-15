@@ -15,7 +15,9 @@ use crate::{
     output::TableSpec,
 };
 
-use super::{failure, key_info, optional, rpc, submit_evm_tx, tao_to_wei};
+use super::{
+    EvmTxBackend, NativeEvmTx, failure, optional, rpc, submit_evm_tx_with_backend, tao_to_wei,
+};
 
 /// Build the three pinned precompile commands.
 pub fn commands() -> Vec<Command> {
@@ -132,7 +134,7 @@ impl CallTarget {
             // Typed validation also refuses a historical text shape containing
             // whitespace rather than twenty actual address bytes.
             rtao::evm::addresses::parse_h160(&address).map_err(input)?;
-            let path = abi_path.ok_or_else(|| {
+            let path = abi_path.filter(|path| !path.is_empty()).ok_or_else(|| {
                 input(format!(
                     "{address} is a contract address — pass its interface with --abi"
                 ))
@@ -334,6 +336,17 @@ pub async fn run_with_backend(
     leaf: &ArgMatches,
     backend: &dyn ReadBackend,
 ) -> Result<(), CliError> {
+    run_with_backends(ctx, name, leaf, backend, &NativeEvmTx).await
+}
+
+// Keep read-only RPC and transaction authorization as separate injectable boundaries.
+async fn run_with_backends(
+    ctx: &AppContext,
+    name: &str,
+    leaf: &ArgMatches,
+    backend: &dyn ReadBackend,
+    tx_backend: &dyn EvmTxBackend,
+) -> Result<(), CliError> {
     match name {
         "precompiles" => return ctx.output.table(&catalog()).map_err(failure),
         "abi" => {
@@ -392,7 +405,7 @@ pub async fn run_with_backend(
         return ctx.output.value(&result).map_err(failure);
     }
     if let Some(role) = prepared.caller_role {
-        let info = key_info(ctx, optional(leaf, "evm_key")).await?;
+        let info = tx_backend.key_info(ctx, optional(leaf, "evm_key")).await?;
         prepared.preview.insert(
             "caller mirror".into(),
             json!(format!("{} acts as the {role}", info.ss58_mirror)),
@@ -402,10 +415,11 @@ pub async fn run_with_backend(
         ctx.output.message("warning: the caller mirror becomes the subnet owner, and some owner operations (notably start-call, which activates emissions) have no precompile — they require a native coldkey signature").map_err(failure)?;
     }
     let value = optional(leaf, "value_tao")
+        .filter(|value| !value.is_empty())
         .map(tao_to_wei)
         .transpose()?
         .unwrap_or_default();
-    submit_evm_tx(
+    submit_evm_tx_with_backend(
         ctx,
         optional(leaf, "evm_key"),
         Some(&prepared.target.address),
@@ -414,6 +428,7 @@ pub async fn run_with_backend(
         prepared.summary,
         optional(leaf, "rpc_url"),
         prepared.preview,
+        tx_backend,
     )
     .await?;
     Ok(())
@@ -605,6 +620,345 @@ mod tests {
             )
             .is_err()
         );
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod falsy_option_tests {
+    use super::*;
+    use crate::{
+        application,
+        books::Books,
+        commands::evm::{self, EvmFuture, EvmTxBackend},
+        globals::Globals,
+        output::{MemorySink, Output, OutputOptions, Stream},
+        prompt::{PromptError, Terminal},
+    };
+    use rtao::evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
+    use secrecy::SecretString;
+    use std::{
+        error::Error,
+        path::Path,
+        sync::{Arc, Mutex},
+    };
+
+    type TestResult = Result<(), Box<dyn Error>>;
+    struct NoTerminal;
+    impl Terminal for NoTerminal {
+        fn stdin_is_tty(&self) -> bool {
+            false
+        }
+        fn stderr_is_tty(&self) -> bool {
+            false
+        }
+        fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
+            Err(PromptError::Unavailable)
+        }
+        fn read_secret(&mut self, _: &str) -> Result<SecretString, PromptError> {
+            Err(PromptError::Unavailable)
+        }
+        fn message(&mut self, _: &str) -> Result<(), PromptError> {
+            Ok(())
+        }
+    }
+
+    struct Fixture {
+        matches: ArgMatches,
+        ctx: AppContext,
+        sink: MemorySink,
+    }
+    impl Fixture {
+        fn new(
+            target: &str,
+            function: &str,
+            args: &[&str],
+            options: &[&str],
+        ) -> Result<Self, Box<dyn Error>> {
+            let tree = application::command_tree([evm::command()?]);
+            let mut argv = vec!["rtao", "evm", "call", target, function];
+            argv.extend_from_slice(args);
+            argv.extend_from_slice(options);
+            argv.extend(["--dry-run", "--json"]);
+            let matches = tree.try_get_matches_from(argv)?;
+            let leaf = matches
+                .subcommand()
+                .and_then(|(_, group)| group.subcommand())
+                .ok_or("missing call")?
+                .1;
+            let mut globals =
+                Globals::resolve(&matches, &Map::new(), Path::new("/fixture"), |_| None)?;
+            globals.apply_with_env(leaf, &reserved("call"), |_| None)?;
+            let sink = MemorySink::default();
+            let mut ctx = AppContext::new(
+                globals,
+                Map::new(),
+                Books::default(),
+                Arc::new(Mutex::new(Box::new(NoTerminal))),
+            );
+            ctx.output = Output::with_sink(
+                OutputOptions {
+                    json_mode: true,
+                    quiet: false,
+                    network: None,
+                },
+                Arc::new(sink.clone()),
+            );
+            Ok(Self { matches, ctx, sink })
+        }
+        fn leaf(&self) -> Result<&ArgMatches, CliError> {
+            self.matches
+                .subcommand()
+                .and_then(|(_, group)| group.subcommand())
+                .map(|(_, leaf)| leaf)
+                .ok_or_else(|| CliError::input("missing call"))
+        }
+        async fn run(&self, read: &ReadProbe, tx: &TxProbe) -> Result<(), CliError> {
+            run_with_backends(&self.ctx, "call", self.leaf()?, read, tx).await
+        }
+        fn json(&self) -> Result<Value, Box<dyn Error>> {
+            Ok(serde_json::from_slice(&self.sink.bytes(Stream::Stdout)?)?)
+        }
+    }
+
+    #[derive(Default)]
+    struct ReadProbe {
+        calls: Mutex<usize>,
+    }
+    impl ReadBackend for ReadProbe {
+        fn eth_call<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+            _: Value,
+        ) -> ReadFuture<'a> {
+            Box::pin(async move {
+                *self
+                    .calls
+                    .lock()
+                    .map_err(|_| CliError::failure("fixture poisoned"))? += 1;
+                let mut result = vec![0; 32];
+                result[31] = 7;
+                Ok(result)
+            })
+        }
+    }
+
+    type Prepared = (Option<Address>, U256, Vec<u8>);
+
+    #[derive(Default)]
+    struct TxProbe {
+        keys: Mutex<usize>,
+        prepared: Mutex<Vec<Prepared>>,
+        submitted: Mutex<usize>,
+    }
+    impl EvmTxBackend for TxProbe {
+        fn key_info<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+        ) -> EvmFuture<'a, EvmKeyInfo> {
+            Box::pin(async move {
+                *self
+                    .keys
+                    .lock()
+                    .map_err(|_| CliError::failure("fixture poisoned"))? += 1;
+                Ok(EvmKeyInfo {
+                    name: "default".into(),
+                    address: format!("{:#x}", Address::from([7; 20])),
+                    ss58_mirror: "public-mirror".into(),
+                    path: "/fixture/default/evmkeys/default".into(),
+                })
+            })
+        }
+        fn prepare<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+            sender: Address,
+            to: Option<Address>,
+            value: U256,
+            data: Vec<u8>,
+        ) -> EvmFuture<'a, EvmTxPreview> {
+            Box::pin(async move {
+                self.prepared
+                    .lock()
+                    .map_err(|_| CliError::failure("fixture poisoned"))?
+                    .push((to, value, data.clone()));
+                Ok(EvmTxPreview {
+                    sender,
+                    to,
+                    value_wei: value,
+                    data,
+                    gas: 21_000,
+                    gas_price_wei: U256::from(20_000_000_000u64),
+                    nonce: 9,
+                    chain_id: 964,
+                })
+            })
+        }
+        fn submit<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+            _: Option<&'a str>,
+            _: EvmTxPreview,
+        ) -> EvmFuture<'a, Value> {
+            Box::pin(async move {
+                *self
+                    .submitted
+                    .lock()
+                    .map_err(|_| CliError::failure("fixture poisoned"))? += 1;
+                Err(CliError::failure("dry-run crossed the private boundary"))
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn omitted_empty_and_zero_call_values_share_the_zero_dry_run_without_signing()
+    -> TestResult {
+        let key = format!("0x{}", "11".repeat(32));
+        for options in [vec![], vec!["--value-tao", ""], vec!["--value-tao", "0"]] {
+            let fixture = Fixture::new("staking-v2", "addStake", &[&key, "1", "1"], &options)?;
+            if options.get(1) == Some(&"") {
+                assert_eq!(
+                    fixture
+                        .leaf()?
+                        .get_one::<String>("value_tao")
+                        .map(String::as_str),
+                    Some("")
+                );
+            }
+            let read = ReadProbe::default();
+            let tx = TxProbe::default();
+            fixture.run(&read, &tx).await?;
+            let payload = fixture.json()?;
+            assert_eq!(payload["value_wei"], json!(0));
+            assert_eq!(payload["value_tao"], "0");
+            assert_eq!(*read.calls.lock().map_err(|_| "poisoned")?, 0);
+            // Role preview and the existing shared submission helper each inspect public key metadata.
+            assert_eq!(*tx.keys.lock().map_err(|_| "poisoned")?, 2);
+            let prepared = tx.prepared.lock().map_err(|_| "poisoned")?;
+            assert_eq!(prepared.len(), 1);
+            assert_eq!(prepared[0].1, U256::ZERO);
+            let mut target = [0; 20];
+            target[18] = 8;
+            target[19] = 5;
+            assert_eq!(prepared[0].0, Some(Address::from(target)));
+            assert_eq!(prepared[0].2.len(), 100);
+            assert_eq!(&prepared[0].2[4..36], &[0x11; 32]);
+            let mut one = [0; 32];
+            one[31] = 1;
+            assert_eq!(&prepared[0].2[36..68], &one);
+            assert_eq!(&prepared[0].2[68..100], &one);
+            assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn nonempty_call_values_keep_exact_conversion_and_native_refusals() -> TestResult {
+        let key = format!("0x{}", "11".repeat(32));
+        for (text, expected) in [
+            ("0.000000001", U256::from(1_000_000_000u64)),
+            (
+                "18446744073.709551615",
+                U256::from(u64::MAX) * U256::from(1_000_000_000u64),
+            ),
+        ] {
+            let fixture = Fixture::new(
+                "staking-v2",
+                "addStake",
+                &[&key, "1", "1"],
+                &["--value-tao", text],
+            )?;
+            let read = ReadProbe::default();
+            let tx = TxProbe::default();
+            fixture.run(&read, &tx).await?;
+            assert_eq!(tx.prepared.lock().map_err(|_| "poisoned")?[0].1, expected);
+            assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+        }
+        for text in ["18446744073.709551616", "garbage", " ", "\t"] {
+            let fixture = Fixture::new(
+                "staking-v2",
+                "addStake",
+                &[&key, "1", "1"],
+                &["--value-tao", text],
+            )?;
+            let read = ReadProbe::default();
+            let tx = TxProbe::default();
+            let error = fixture
+                .run(&read, &tx)
+                .await
+                .err()
+                .ok_or("invalid value accepted")?;
+            assert_eq!(error.code, 2);
+            assert!(tx.prepared.lock().map_err(|_| "poisoned")?.is_empty());
+            assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+            assert_eq!(*read.calls.lock().map_err(|_| "poisoned")?, 0);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn views_ignore_attached_value_and_key_without_the_write_boundary() -> TestResult {
+        for value in ["", "not-an-amount"] {
+            let fixture = Fixture::new(
+                "metagraph",
+                "getUidCount",
+                &["1"],
+                &["--value-tao", value, "--evm-key", ""],
+            )?;
+            let read = ReadProbe::default();
+            let tx = TxProbe::default();
+            fixture.run(&read, &tx).await?;
+            assert_eq!(fixture.json()?, json!(7));
+            assert_eq!(*read.calls.lock().map_err(|_| "poisoned")?, 1);
+            assert_eq!(*tx.keys.lock().map_err(|_| "poisoned")?, 0);
+            assert!(tx.prepared.lock().map_err(|_| "poisoned")?.is_empty());
+            assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn empty_abi_matches_missing_interface_before_any_backend() -> TestResult {
+        for options in [vec![], vec!["--abi", ""]] {
+            let fixture = Fixture::new(
+                "0x1111111111111111111111111111111111111111",
+                "read",
+                &[],
+                &options,
+            )?;
+            if options.get(1) == Some(&"") {
+                assert_eq!(
+                    fixture
+                        .leaf()?
+                        .get_one::<String>("abi_path")
+                        .map(String::as_str),
+                    Some("")
+                );
+            }
+            let read = ReadProbe::default();
+            let tx = TxProbe::default();
+            let error = fixture
+                .run(&read, &tx)
+                .await
+                .err()
+                .ok_or("missing ABI accepted")?;
+            assert_eq!(error.code, 2);
+            assert!(error.message.contains("pass its interface with --abi"));
+            assert!(
+                error
+                    .help
+                    .as_deref()
+                    .is_some_and(|help| help.contains("Hardhat/Foundry"))
+            );
+            assert_eq!(*read.calls.lock().map_err(|_| "poisoned")?, 0);
+            assert_eq!(*tx.keys.lock().map_err(|_| "poisoned")?, 0);
+            assert!(tx.prepared.lock().map_err(|_| "poisoned")?.is_empty());
+            assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+        }
         Ok(())
     }
 }

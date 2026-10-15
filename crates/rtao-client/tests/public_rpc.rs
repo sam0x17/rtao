@@ -275,7 +275,7 @@ async fn public_connection_error_text_uses_python_strip_without_rewriting_typed_
         ),
         (
             RpcError::FateUnknown {
-                hash: H256([7; 32]),
+                hash: rtao_rpc::H256([7; 32]),
             },
             "Connection dropped while an extrinsic submission was in flight; the transaction may already be in the pool or on chain. Verify chain state before retrying.",
         ),
