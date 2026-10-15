@@ -16,6 +16,23 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Refresh [38771543517](https://github.com/sam0x17/rtao/actions/runs/38771543517)
+succeeds at clean `ddd73e5`. Authenticate and adopt exactly four regular report
+members, archive digest/size and all 23 committed/current dependency inputs.
+Only the explicit rtao-tx serving test-feature manifest hash changes. Role
+inventories and host selection remain unchanged. Matrix differences are exactly
+five reconciled source rows, two corrected pending root-claim homes, three
+qualified client lifecycle bindings and new unverified D064/D065. Source counts
+are 209 reconciled/148 pending; 21 e2e mappings remain pending. Every existing
+oracle classification and compatibility claim is unchanged. Proof is
+`ddd-generation-adoption.json`; no archive/extraction directory remains.
+
+At 16:49 UTC normal run `38770765426` still has main/features active and four
+supporting jobs passing. Retain that run to obtain its ordinary test outcome;
+the report-adoption commit skips automatic CI. Dispatch the next normal hosted
+run on the adoption head after the existing main job concludes. Its results
+cannot validate the later batch. No fresh test/docs or milestone acceptance.
+
 Normal run [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
 validates the isolated compiler correction at `237d189`. At inspection supply,
 MSRV and semver pass; main, features and no-host remain active. It does not

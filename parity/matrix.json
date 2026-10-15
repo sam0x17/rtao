@@ -1,10 +1,10 @@
 {
   "e2e_evidence_classes": {
-    "client-contract": 5,
+    "client-contract": 8,
     "hosted-scenario-source": 6,
     "intent-plan": 72,
     "not-required": 2,
-    "pending": 24,
+    "pending": 21,
     "read-fixture": 6
   },
   "families": {
@@ -1963,6 +1963,23 @@
     ],
     "divergences": [
       {
+        "id": "D-065",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::m8_misc_commands::production_probe_connection_timeout_cancels_the_pending_factory_without_waiting",
+          "rtao_cli::m8_misc_commands::production_probe_query_timeout_closes_the_open_client_without_waiting"
+        ]
+      },
+      {
+        "id": "D-064",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::conviction_collateral_commands::collateral_list_preserves_order_full_json_and_renders_nonempty_and_empty_humans"
+        ]
+      },
+      {
         "id": "D-063",
         "oracle": "unverified",
         "rtao": "active",
@@ -3631,13 +3648,17 @@
       {
         "evidence": {
           "runtime": "unverified",
-          "runtime_limits": [],
-          "scope": "pending"
+          "runtime_limits": [
+            "controlled-receipt-state",
+            "runtime-batch-application-unverified",
+            "runtime-batch-atomicity-unverified"
+          ],
+          "scope": "client-contract"
         },
         "name": "test_batch_applies_all_children_atomically",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::client_transfer_lifecycles::client_batch_reads_both_explicit_recipient_deltas_after_success"
       },
       {
         "evidence": {
@@ -3714,13 +3735,17 @@
       {
         "evidence": {
           "runtime": "unverified",
-          "runtime_limits": [],
-          "scope": "pending"
+          "runtime_limits": [
+            "controlled-receipt-state",
+            "runtime-batch-rollback-unverified",
+            "runtime-batch-atomicity-unverified"
+          ],
+          "scope": "client-contract"
         },
         "name": "test_failed_batch_reverts_everything",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state"
       },
       {
         "evidence": {
@@ -4015,13 +4040,16 @@
       {
         "evidence": {
           "runtime": "unverified",
-          "runtime_limits": [],
-          "scope": "pending"
+          "runtime_limits": [
+            "controlled-receipt-state",
+            "runtime-transfer-state-unverified"
+          ],
+          "scope": "client-contract"
         },
         "name": "test_transfer_moves_exactly_the_amount",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::client_transfer_lifecycles::client_transfer_reads_exact_three_tao_delta_from_explicit_receipt_state"
       },
       {
         "evidence": {
@@ -7921,11 +7949,11 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/collateral.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `collateral` group"
+          "rtao_cli::commands::collateral"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "37cccb2e76f19ca6bfafe2ac0fbcf31564bb70da"
       },
       {
         "kind": "ported",
@@ -8088,11 +8116,11 @@
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/misc.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `misc` group"
+          "rtao_cli::commands::misc"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d1e70356c68e48b9ceb2ae559e1b2e473d4f125a"
       },
       {
         "kind": "ported",
@@ -9234,11 +9262,14 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/_money.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::money`; `rtao_primitives::{Money, Amount, Spend}`"
+          "rtao_primitives::{Money, Amount, ResolvedAmount, Spend}",
+          "rtao_intents::arguments",
+          "rtao_intents::{staking_trades, staking_claims, staking_baskets, collateral, root, lock}",
+          "xtask::regen_intents"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "488ac94eb53fd272ae4618dd8ff22d4fedd49842"
       },
       {
         "kind": "ported",
@@ -9247,7 +9278,7 @@
         "python": "sdk/python/bittensor/intents/_root_claim_fee.py",
         "rtao": "pending",
         "rust": [
-          "`rtao_intents::root_claim_fee`"
+          "rtao_intents::root_claim"
         ],
         "synced_blob": "pending"
       },
@@ -10421,11 +10452,12 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_fee_filters.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "rtao_tx::executor::tests",
+          "rtao_tx::executor (integration target)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0ff32ffa851eb23e5bdb8f712fe032114d6b6a95"
       },
       {
         "kind": "ported",
@@ -10489,11 +10521,11 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_lock_ownership_gate.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "rtao_reads::reads::m6_locks::tests"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "91228d101f98e4835037fbf9a34832a993b8d67b"
       },
       {
         "kind": "ported",
@@ -10568,7 +10600,7 @@
         "python": "sdk/python/tests/unit/test_root_claim_fee.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "rtao_intents::root_claim::tests"
         ],
         "synced_blob": "pending"
       },
