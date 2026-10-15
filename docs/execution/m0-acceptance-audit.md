@@ -39,6 +39,16 @@ identity. These source relationships do not prove runtime conformance.
 
 ## Remaining acceptance work
 
+Latest normal run
+[38693471340](https://github.com/sam0x17/rtao/actions/runs/38693471340)
+at `c6f3025` passes MSRV, features, supply, no-host and semver. Compilation
+and strict Clippy pass. Its main job stops at parity because D-045 references
+a whole-test `#[cfg(unix)]` fixture. The source correction preserves portable
+nonregular-destination assertions and retains Unix-specific file guards in a
+Unix block, leaving the parity checker unchanged. Nextest and doctests were
+not reached. New crowdloan/root source and generated changes also require a
+successful combined run; the earlier result cannot validate them.
+
 1. C1 and exit 10 require a successful normal hosted run on the final pushed
    commit. Run [38690012949](https://github.com/sam0x17/rtao/actions/runs/38690012949)
    targets `2331a32`; all six normal jobs failed. The inspected MSRV log reports

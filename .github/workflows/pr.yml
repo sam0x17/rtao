@@ -222,6 +222,9 @@ jobs:
           ];
           const interfaces = [
             'crates/rtao-intents/src/generated/metadata.rs',
+            'crates/rtao-intents/src/generated/any_intent.rs',
+            'crates/rtao-intents/src/generated/pending.rs',
+            'crates/rtao-intents/src/generated/passthrough.rs',
             'crates/rtao-intents/src/generated/mod.rs', 'crates/rtao-reads/src/generated/names.rs',
             'crates/rtao-reads/src/generated/mod.rs',
             'crates/rtao-reads/src/generated/interfaces.rs',
@@ -256,6 +259,9 @@ jobs:
           name: generated-${{ github.sha }}
           path: |
             crates/rtao-intents/src/generated/metadata.rs
+            crates/rtao-intents/src/generated/any_intent.rs
+            crates/rtao-intents/src/generated/pending.rs
+            crates/rtao-intents/src/generated/passthrough.rs
             crates/rtao-intents/src/generated/mod.rs
             crates/rtao-reads/src/generated/names.rs
             crates/rtao-reads/src/generated/mod.rs

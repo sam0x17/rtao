@@ -3,6 +3,24 @@
 schema = 1
 
 [[divergences]]
+id = "D-046"
+upstream_symbol = "bittensor.intents.crowdloan.CreateCrowdloan.call"
+python_behavior = "Recursively constructs the supplied nested intent dictionary without matching depth, node-count or encoded-byte budgets."
+rtao_behavior = "Checks the nested call iteratively before tool deserialization, recursive cloning or nested construction. Refuses more than 128 JSON levels, 1,048,576 values or 64 MiB of encoded JSON. The node count and encoded size, each multiplied by maximum levels, must also fit those budgets to bound retained subtree copies. Rejects serde private RawValue/Number carrier keys before they can introduce unscanned JSON."
+rationale = "Bound untrusted programmatic inputs before recursive work. Count escaped serialized bytes without allocating another document, and preserve the original public origin and pinned view for accepted nested calls."
+decision = "PLAN.md execution rule 5; bounded client input policy during M5-02 (2026-10-15)"
+status = "active"
+class = "stricter"
+milestone = "M5"
+pinning_tests = [
+  "rtao_intents::crowdloan::tests::programmatic_nested_json_has_depth_node_and_encoded_byte_budgets",
+  "rtao_intents::crowdloan::tests::tool_constructor_bounds_nested_call_before_serde_conversion",
+  "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits",
+]
+upstream_report = "Local input-budget policy; no upstream issue or PR filed. Named fixture source is present; hosted execution and acceptance remain pending."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/crowdloan.py"
+
+[[divergences]]
 id = "D-039"
 upstream_symbol = "Client.multisig / multisig_account"
 python_behavior = "Derives accounts without checking singleton sets, duplicate signatories, invalid thresholds or the connected runtime MaxSignatories cap."
@@ -632,7 +650,7 @@ pinning_tests = [
   "rtao_cli::book_cache_contract::rejected_book_input_preserves_source_and_creates_no_replacement_artifacts",
   "rtao_cli::book_cache_contract::corrupt_inputs_survive_and_rejected_output_creates_no_backups",
   "rtao_cli::book_cache_contract::cache_rejects_hash_or_data_substitution_before_modifying_any_file",
-  "rtao_cli::book_cache_contract::writers_keep_restrictive_modes_and_refuse_symlink_and_fifo_destinations",
+  "rtao_cli::book_cache_contract::writers_refuse_nonregular_destinations_and_keep_platform_file_guards",
   "rtao_cli::book_cache_contract::cache_lookup_decodes_exact_bytes_and_ignores_untrusted_presentation_fields",
 ]
 upstream_report = "Local persistence and input policy, without an upstream defect allegation or new filing. Source and regression fixtures are prepared; hosted validation is pending. See docs/execution/m5-book-cache.md."

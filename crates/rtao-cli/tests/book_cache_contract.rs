@@ -204,48 +204,85 @@ async fn cache_rejects_hash_or_data_substitution_before_modifying_any_file() -> 
     Ok(())
 }
 
-#[cfg(unix)]
 #[tokio::test]
-async fn writers_keep_restrictive_modes_and_refuse_symlink_and_fifo_destinations() -> TestResult {
-    use std::os::unix::fs::{PermissionsExt, symlink};
+async fn writers_refuse_nonregular_destinations_and_keep_platform_file_guards() -> TestResult {
     let fixture = Fixture::new()?;
     let book = fixture.book();
     book.add(entry("first"), false).await?;
-    let path = fixture.path(ConfigFile::Multisigs);
-    assert_eq!(fs::metadata(path)?.permissions().mode() & 0o777, 0o600);
-    assert_eq!(
-        fs::metadata(path.parent().ok_or("parent")?)?
-            .permissions()
-            .mode()
-            & 0o777,
-        0o700
-    );
-    fs::set_permissions(path, fs::Permissions::from_mode(0o640))?;
-    book.add(entry("second"), false).await?;
-    assert_eq!(fs::metadata(path)?.permissions().mode() & 0o777, 0o640);
-    let actual = fixture.root.join("unrelated.json");
-    fs::rename(path, &actual)?;
-    let before = fs::read(&actual)?;
-    symlink(&actual, path)?;
-    assert!(book.add(entry("refused"), true).await.is_err());
-    assert_eq!(fs::read(&actual)?, before);
-    fs::remove_file(path)?;
-    assert!(
-        std::process::Command::new("mkfifo")
-            .arg(path)
-            .status()?
-            .success()
-    );
-    assert!(book.add(entry("refused"), true).await.is_err());
-    let cache_path = fixture.path(ConfigFile::MultisigCache);
-    assert!(
-        std::process::Command::new("mkfifo")
-            .arg(cache_path)
-            .status()?
-            .success()
-    );
+    let cache = fixture.cache();
     let (hash, spec) = cache_spec(&[1, 2])?;
-    assert!(fixture.cache().save(hash, spec).await.is_err());
+    cache.save(hash.clone(), spec.clone()).await?;
+
+    // Every platform must refuse a directory as a public JSON destination.
+    // Exercise the real mutation APIs and preserve both the displaced valid
+    // data and the directory's unrelated contents, without recovery artifacts.
+    for kind in [ConfigFile::Multisigs, ConfigFile::MultisigCache] {
+        let path = fixture.path(kind);
+        let original = fixture.root.join(path.file_name().ok_or("file name")?);
+        fs::rename(path, &original)?;
+        let before = fs::read(&original)?;
+        fs::create_dir(path)?;
+        let marker = path.join("unrelated.txt");
+        fs::write(&marker, b"keep directory contents")?;
+        if kind == ConfigFile::Multisigs {
+            assert!(book.add(entry("refused"), true).await.is_err());
+            assert!(book.save(vec![entry("refused")]).await.is_err());
+            assert!(book.remove("first").await.is_err());
+        } else {
+            assert!(cache.save(hash.clone(), spec.clone()).await.is_err());
+        }
+        assert!(fs::symlink_metadata(path)?.is_dir());
+        assert_eq!(fs::read(&marker)?, b"keep directory contents");
+        assert_eq!(fs::read(&original)?, before);
+        assert_eq!(fs::read_dir(path)?.count(), 1);
+        assert_eq!(fs::read_dir(path.parent().ok_or("parent")?)?.count(), 2);
+        assert!(fixture.backups(kind)?.is_empty());
+        fs::remove_file(marker)?;
+        fs::remove_dir(path)?;
+        fs::rename(original, path)?;
+    }
+
+    // These additional guards have Unix-specific filesystem semantics. The
+    // same harness test always exercises the portable refusal contract above.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let path = fixture.path(ConfigFile::Multisigs);
+        assert_eq!(fs::metadata(path)?.permissions().mode() & 0o777, 0o600);
+        assert_eq!(
+            fs::metadata(path.parent().ok_or("parent")?)?
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        fs::set_permissions(path, fs::Permissions::from_mode(0o640))?;
+        book.add(entry("second"), false).await?;
+        assert_eq!(fs::metadata(path)?.permissions().mode() & 0o777, 0o640);
+        let actual = fixture.root.join("unrelated.json");
+        fs::rename(path, &actual)?;
+        let before = fs::read(&actual)?;
+        symlink(&actual, path)?;
+        assert!(book.add(entry("refused"), true).await.is_err());
+        assert_eq!(fs::read(&actual)?, before);
+        fs::remove_file(path)?;
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(path)
+                .status()?
+                .success()
+        );
+        assert!(book.add(entry("refused"), true).await.is_err());
+        let cache_path = fixture.path(ConfigFile::MultisigCache);
+        fs::remove_file(cache_path)?;
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(cache_path)
+                .status()?
+                .success()
+        );
+        assert!(cache.save(hash, spec).await.is_err());
+    }
     Ok(())
 }
 
