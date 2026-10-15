@@ -929,25 +929,23 @@ async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
     let (executor, _, _) = fixture().await;
     let tools = executor.tools().unwrap();
     assert_eq!(tools.len(), 83);
+    assert!(tools.windows(2).all(|pair| pair[0].name < pair[1].name));
     for (spec, tool) in rtao_catalog::INTENTS.iter().zip(tools) {
         let catalog: Value = serde_json::from_str(spec.catalog_json).unwrap();
-        assert_eq!(tool.input_schema, catalog["input_schema"]);
-        assert_eq!(
-            tool.docs_url,
-            format!(
-                "https://www.bittensor.com/docs/tx/{}",
-                spec.name.replace('_', "-")
-            )
-        );
-        assert_eq!(tool.description, spec.description);
-        assert_eq!(
-            serde_json::to_value(tool)
-                .unwrap()
-                .as_object()
-                .unwrap()
-                .len(),
-            9
-        );
+        let expected = json!({
+            "name":catalog["name"],
+            "summary":catalog["summary"],
+            "description":catalog["description"],
+            "signer":catalog["signer"],
+            "origin":catalog["origin"],
+            "verify":catalog["verify"],
+            "wraps":catalog["wraps"],
+            "docs_url":format!("https://www.bittensor.com/docs/tx/{}",spec.name.replace('_', "-")),
+            "input_schema":catalog["input_schema"]
+        });
+        // Compare every manifest field, including signer/origin/verify/wraps.
+        // Only the catalog's relative docs URL is made absolute by list_tools.
+        assert_eq!(serde_json::to_value(tool).unwrap(), expected);
     }
 }
 

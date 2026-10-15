@@ -3,7 +3,7 @@
 
 use std::collections::BTreeSet;
 
-use rtao_client::{BlockRef, Client, ClientConfig, Network};
+use rtao_client::{BlockRef, Client, ClientConfig, Network, ViewExt};
 use rtao_primitives::{AccountId, NetUid};
 use rtao_reads::{ReadName, dispatch, reads::owner};
 use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
@@ -237,6 +237,11 @@ async fn balances_keep_u64_precision_and_batch_heterogeneous_duplicates() {
     assert_eq!(queries[0].params[0].as_array().unwrap().len(), 2);
     assert_eq!(owner::balance(&client, COLD).await.unwrap().rao, u64::MAX);
     assert_eq!(owner::balance(&client, OTHER).await.unwrap().rao, 0);
+    let existential_deposit = client
+        .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
+        .await
+        .unwrap();
+    assert!(existential_deposit.0 > 0);
     assert!(owner::balances(&client, vec![]).await.unwrap().is_empty());
     client.close().await;
 }

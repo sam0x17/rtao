@@ -239,7 +239,8 @@ pending = "M5"
 pending = "M5"
 
 [tests."test_balance_and_existential_deposit"]
-pending = "M4"
+# Encoded client reads; runtime funding remains outside Q30 fixture evidence.
+rtao = "rtao_reads::owner::balances_keep_u64_precision_and_batch_heterogeneous_duplicates"
 
 [tests."test_batch_applies_all_children_atomically"]
 pending = "M5"
@@ -281,7 +282,8 @@ rtao = "rtao_reads::m6_delegation::leases_preserve_cost_precision_perpetual_expi
 rtao = "rtao_reads::m6_accounts::neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum"
 
 [tests."test_mev_shield_next_key_is_mlkem768"]
-pending = "M4"
+# Encoded client reads; authority key announcement remains unexecuted.
+rtao = "rtao_reads::owner::owner_scalar_identity_epoch_and_hyperparameter_projections_match_python"
 
 [tests."test_netuid_allowlist_blocks_live"]
 pending = "M5"
@@ -344,4 +346,4 @@ pending = "M2"
 pending = "M4"
 
 [tests."test_unsettable_hyperparameter_rejected_at_construction"]
-pending = "M4"
+na = "The core test rejects tempo, but pinned Python intents/hyperparameters.py:33 permits it and the runtime's do_set_tempo accepts subnet owners. Follow Python behavior: retain tempo and reject actual unsettable names."

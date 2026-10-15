@@ -2,25 +2,31 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Live registration cost disclosure at the application boundary.
 
+use futures::TryStreamExt;
 use rtao::{
-    client::View,
+    client::{View, ViewExt},
     primitives::{DynBalance, NetUid},
     tx::DynIntent,
 };
+use rtao_runtime::{runtime_apis as api, storage::subtensor_module as st};
 
 use crate::error::CliError;
 
 pub(super) struct RegistrationReview {
     pub suffix: String,
     pub cost: String,
-    pub notes: [String; 2],
+    pub notes: Vec<String>,
 }
 
 pub(super) async fn live<V: View + ?Sized>(
     view: &V,
     intent: &dyn DynIntent,
+    assume_yes: bool,
 ) -> Result<Option<RegistrationReview>, CliError> {
     let semantic = intent.semantic_intent_dyn();
+    if intent.spec().name == "register_subnet" {
+        return subnet_creation(view, assume_yes).await.map(Some);
+    }
     let recycled = match semantic.spec().name {
         "root_register" => true,
         "burned_register" => false,
@@ -59,9 +65,9 @@ pub(super) async fn live<V: View + ?Sized>(
         "lock none (full cost is burned)".into()
     };
     Ok(Some(RegistrationReview {
-        suffix: format!("burn {burn} · lock {lock_part}"),
+        suffix: format!(" — burn {burn} · lock {lock_part}"),
         cost,
-        notes: [
+        notes: vec![
             format!(
                 "burn {burn} ({})",
                 if recycled {
@@ -73,4 +79,85 @@ pub(super) async fn live<V: View + ?Sized>(
             lock_line,
         ],
     }))
+}
+
+async fn subnet_creation<V: View + ?Sized>(
+    view: &V,
+    assume_yes: bool,
+) -> Result<RegistrationReview, CliError> {
+    let snapshot = view
+        .pin()
+        .await
+        .map_err(|error| CliError::failure(error.to_string()))?;
+    let quote = snapshot
+        .call(
+            &api::subnet_registration_runtime_api::GET_NETWORK_REGISTRATION_COST,
+            (),
+        )
+        .await
+        .map_err(|error| CliError::failure(error.to_string()))?;
+    let quote = DynBalance::from_rao(quote.0, NetUid::ROOT);
+    // Python formats Balance.decimal, not Balance.tao: keep all native rao
+    // digits before adding the thousands separators.
+    let decimal = quote.to_decimal_string();
+    let integer_len = decimal.find('.').unwrap_or(decimal.len());
+    let mut grouped = String::with_capacity(decimal.len() + integer_len / 3);
+    for (index, digit) in decimal.chars().enumerate() {
+        if index != 0 && index < integer_len && (integer_len - index).is_multiple_of(3) {
+            grouped.push(',');
+        }
+        grouped.push(digit);
+    }
+    let notes = if assume_yes {
+        Vec::new()
+    } else {
+        let (networks, (limit, cleanup, registrations)) = futures::try_join!(
+            snapshot
+                .storage_iter(&st::NETWORKS_ADDED, ())
+                .try_collect::<Vec<_>>(),
+            snapshot.fetch((
+                st::SUBNET_LIMIT.at(()),
+                st::DISSOLVE_CLEANUP_QUEUE.at(()),
+                st::NETWORK_REGISTRATION_QUEUE.at(()),
+            )),
+        )
+        .map_err(|error| CliError::failure(error.to_string()))?;
+        let mut active = 0usize;
+        for (keys, added) in networks {
+            let netuid = keys
+                .last()
+                .and_then(rtao::core::DynValue::as_u128)
+                .and_then(|netuid| u16::try_from(netuid).ok())
+                .ok_or_else(|| CliError::failure("registration preview has a non-native netuid"))?;
+            if netuid != 0 && added {
+                active += 1;
+            }
+        }
+        let flow = if active.saturating_add(cleanup.len()) < usize::from(limit) {
+            "immediate · no deregistration needed".into()
+        } else if cleanup.len() > registrations.len() {
+            let mut flow = "queued · waits for deregistration cleanup".to_owned();
+            if let Some(target) = cleanup.first() {
+                flow.push_str(&format!(" of subnet {target}"));
+            }
+            flow
+        } else {
+            match snapshot
+                .call(&api::subnet_info_runtime_api::GET_SUBNET_TO_PRUNE, ())
+                .await
+                .map_err(|error| CliError::failure(error.to_string()))?
+            {
+                None => "blocked · no subnet is eligible for deregistration".into(),
+                Some(target) => {
+                    format!("queued · deregisters subnet {target} before registration")
+                }
+            }
+        };
+        vec![flow]
+    };
+    Ok(RegistrationReview {
+        suffix: format!(" for {grouped} TAO"),
+        cost: quote.to_string(),
+        notes,
+    })
 }

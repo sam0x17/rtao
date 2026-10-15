@@ -19,6 +19,11 @@ use toml_edit::DocumentMut;
 
 use super::{Resolver, header, pretty, rust_string, rustfmt};
 
+#[path = "extract_proxy_contract.rs"]
+mod proxy_contract;
+#[path = "extract_reveal_contract.rs"]
+mod reveal_contract;
+
 const TRANSACTION_ERRORS: &str = "common/src/transaction_error.rs";
 const FEE_FILTERS: &str = "runtime/src/fee_filters.rs";
 const MORTALITY: &str = "runtime/src/check_mortality.rs";
@@ -817,6 +822,10 @@ pub(super) fn outputs(
     rules["rate_limiting_provenance"] =
         document(&resolver, pins, RATE_LIMITING, Value::Null)["provenance"].clone();
     rules["mortality"] = mortality.clone();
+    let proxy_contract = proxy_contract::output(root, pins, tables)?;
+    let reveal_contract = reveal_contract::output(root, pins)?;
+    rules["proxy_contract"] = proxy_contract;
+    rules["reveal_contract"] = reveal_contract;
     let (pool_rust, pool_outputs) = super::pool_rpc::outputs(root)?;
     let mut runtime = render_runtime(&mortality, &errors, &fees, &rules)?;
     runtime.extend_from_slice(pool_rust.as_bytes());

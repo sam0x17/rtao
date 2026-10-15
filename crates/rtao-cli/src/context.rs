@@ -558,10 +558,10 @@ impl AppContext {
             .await?;
         // A live quote is disclosure only; it never changes the reviewed call
         // or the SDK's dry-run summary and output schema.
-        let registration = registration::live(client, intent).await?;
+        let registration = registration::live(client, intent, self.globals.assume_yes).await?;
         let mut review_summary = plan.summary.clone();
         if let Some(registration) = &registration {
-            review_summary.push_str(&format!(" — {}", registration.suffix));
+            review_summary.push_str(&registration.suffix);
             if !self.globals.assume_yes {
                 for note in &registration.notes {
                     self.output

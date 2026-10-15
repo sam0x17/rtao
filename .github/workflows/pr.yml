@@ -345,6 +345,7 @@ jobs:
             'crates/rtao-cli/src/root_helpers/basket_index_data.rs',
             'crates/rtao-catalog/src/py.rs',
             'vendor/upstream/extracted/env_vars.json',
+            'vendor/upstream/extracted/chain_rules.json',
           ];
           const allowed = new Set([...reports, ...(process.env.REFRESH_CODEGEN === 'true' ? interfaces : [])]);
           for (const path of allowed) {
@@ -388,5 +389,6 @@ jobs:
             crates/rtao-cli/src/root_helpers/basket_index_data.rs
             crates/rtao-catalog/src/py.rs
             vendor/upstream/extracted/env_vars.json
+            vendor/upstream/extracted/chain_rules.json
           if-no-files-found: error
           retention-days: 3
