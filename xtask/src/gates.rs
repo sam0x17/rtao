@@ -146,6 +146,9 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 xtask(&["pin", "--check", "--prepare-cache"]),
                 xtask(&["pin", "--check"]),
                 cargo(&["fmt", "--all", "--check"]),
+                // Resolve source-map and witness errors before the longer
+                // compile/probe stages. All existing gates remain mandatory.
+                xtask(&["parity", "check"]),
                 cargo(&[
                     "clippy",
                     "--workspace",
@@ -176,7 +179,6 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
             }
             steps.extend([
                 xtask(&["extract", "--check"]),
-                xtask(&["parity", "check"]),
                 tool(
                     "cargo-nextest",
                     &[
@@ -1304,6 +1306,26 @@ only_target = { package = "actual-target-dev", path = "target-dev" }
                 .any(|step| step.args.contains(&"nextest".into())
                     && step.args.contains(&"--all-features".into())),
             "ordinary all-feature behavior tests disappeared"
+        );
+        let parity = checks
+            .iter()
+            .position(|step| step.args.ends_with(&["parity".into(), "check".into()]))
+            .context("mandatory parity command missing")?;
+        let clippy = checks
+            .iter()
+            .position(|step| step.args.first().is_some_and(|arg| arg == "clippy"))
+            .context("mandatory Clippy command missing")?;
+        ensure!(
+            parity < clippy,
+            "source evidence must fail before compiler/probe work"
+        );
+        ensure!(
+            checks
+                .iter()
+                .filter(|step| step.args.ends_with(&["parity".into(), "check".into()]))
+                .count()
+                == 1,
+            "source evidence must not be checked twice"
         );
         Ok(())
     }

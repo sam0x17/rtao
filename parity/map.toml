@@ -940,12 +940,12 @@ notes = "6 nested wrappers `:8-16`, MevShield failures, fee fallback `:75-96` (�
 
 [[file]]
 py = "sdk/python/bittensor/balance.py"
-rs = ["`rtao_primitives::{DynBalance, Balance<U>, pyfmt}`"]
+rs = ["rtao_primitives::{Balance, DynBalance, Tao, Alpha, Symbol, UnitError}","rtao_primitives::pyfmt"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "9fdb0d2f1eebf71b22e4f8259e159297138a1e65"
 synced_tag = "v478"
 milestone = "M0"
-notes = "`str(Balance)` byte for byte (`:113-149`, §5.3); pinned by 10,000 oracle vectors (§11.5)"
+notes = "Source reconciliation 2026-10-15: complete authenticated Python module and all native money.rs production/helper/serde/fixture source reviewed. Q25/D035 deliberately replace signed/arbitrary-size arithmetic, negation and permissive rounding with checked native u64 rao, typed currencies and explicit lossy input APIs. Within that domain, DynBalance retains rao/netuid equality/hash, nonraising cross-currency inequality, unit-checked order/add/sub, integer-rao comparisons, unit accessors, exact decimal money strings and Python human formatting through pyfmt. Symbols remain display-only, root ignores custom symbols and arithmetic preserves the first truthy tag. Existing native properties, boundary/sum/unit/JSON fixtures and three compile-fail comparison examples supply authored evidence. Optional 10000-vector Python execution is not a prerequisite for this source audit under Q30 and is not claimed. Current hosted execution and independent follow-up review remain separate."
 
 [[file]]
 py = "sdk/python/bittensor/basket_index.py"
@@ -1147,7 +1147,7 @@ notes = "§10.5; under `misc`; feature `extension`"
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/lock.py"
-rs = ["rtao_cli::commands::conviction","rtao_cli::commands::{generated, schema}","rtao_cli::application::compatibility_aliases","rtao_reads::reads::m6_locks"]
+rs = ["rtao_cli::commands::conviction","rtao_cli::commands::{generated, schema}","rtao_cli::application::compatibility_aliases"]
 kind = "ported"
 synced_blob = "10cce2a5b71c33c946844f1b82da78993c9eda7a"
 synced_tag = "v478"
@@ -2155,7 +2155,7 @@ notes = "10 intents (9 generated `build()`, 1 ported); see [parity-inventory.md 
 
 [[file]]
 py = "sdk/python/bittensor/intents/evm.py"
-rs = ["rtao_intents::evm::{FundEvmKey, EvmWithdraw}","rtao_intents::generated::interfaces","rtao_primitives::evm"]
+rs = ["rtao_intents::evm::{FundEvmKey, EvmWithdraw}","rtao_intents::generated::interfaces"]
 kind = "ported"
 synced_blob = "62274b85ee0d003ae650099b83bb1e73dba37533"
 synced_tag = "v478"
@@ -2173,7 +2173,7 @@ notes = "Source reconciliation 2026-10-15: complete authenticated source and all
 
 [[file]]
 py = "sdk/python/bittensor/intents/hyperparameters.py"
-rs = ["rtao_intents::hyperparameters::{SetHyperparameter, owner_parameter, owner_value, owner_call, HyperparamPlanner}","rtao_intents::generated::interfaces","rtao_catalog::owner_map::OWNER_HYPERPARAMETERS","rtao_primitives::hyperparams"]
+rs = ["rtao_intents::hyperparameters::{SetHyperparameter, owner_parameter, owner_value, owner_call, HyperparamPlanner}","rtao_intents::generated::interfaces","rtao_catalog::owner_map::OWNER_HYPERPARAMETERS"]
 kind = "ported"
 synced_blob = "809d9c6000e203b1f5f439defaf6eea2d27a4a63"
 synced_tag = "v478"
@@ -2254,7 +2254,7 @@ notes = "Source reconciliation 2026-10-15: complete authenticated registry sourc
 
 [[file]]
 py = "sdk/python/bittensor/intents/root.py"
-rs = ["rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}","rtao_intents::generated::interfaces","rtao_tx::Executor (outer Sudo wrapper)"]
+rs = ["rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}","rtao_intents::generated::interfaces"]
 kind = "ported"
 synced_blob = "dc097fe4177bb426a24552cc0e7109c43e62b438"
 synced_tag = "v478"
@@ -2902,12 +2902,12 @@ notes = "Source reconciliation 2026-10-15: Reviewed source is exactly empty (Git
 
 [[file]]
 py = "sdk/python/tests/unit/test_balance_properties.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["rtao_primitives::money::tests","rtao_primitives::DynBalance (compile-fail comparison examples)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "3c6bc6ebf4ba1a1cc4f9ac9433a48857deabc2c9"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: all ten authenticated upstream property names compared with substantive native money.rs bodies and exact // pyt provenance. Nine native property bodies combine the two exact-decimal properties. Q25/D035 restrict generated amounts to 0..=u64::MAX and replace signed overflow/underflow/negation expectations with explicit native refusal; no full Python signed strategy port is claimed. Exact decimal round trips, checked arithmetic, unit mismatch precedence, equality/hash independent of symbols, ordering and unit accessors remain tested. Compile-fail examples reject float/bool comparisons and currency-blind integer equality; ordinary fixtures pin negative/oversized inputs including 2^80, native boundaries, sums and JSON. Source evidence agrees with the earlier m0-acceptance audit; current hosted execution and independent follow-up review remain separate."
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli.py"
@@ -3010,7 +3010,7 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_http_auth.py"
-rs = ["rtao_btauth::conformance","rtao_btauth::nonce::tests","vendor/upstream/extracted/btauth.json (produced by xtask::extract)"]
+rs = ["rtao_btauth::conformance","rtao_btauth::nonce::tests","vendor/upstream/extracted/btauth.json"]
 kind = "ported"
 synced_blob = "0a2fdf4710f4c6a3868aad7f300414775e218d71"
 synced_tag = "v478"
