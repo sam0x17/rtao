@@ -34,10 +34,12 @@ use std::{
 const OTHER: AccountId = AccountId([8; 32]);
 const DEST: AccountId = AccountId([9; 32]);
 
+type SignedCalls = Arc<Mutex<Vec<(SignPurpose, Vec<u8>)>>>;
+
 #[derive(Clone)]
 struct RecordingSigner {
     key: KeypairSigner,
-    signed: Arc<Mutex<Vec<(SignPurpose, Vec<u8>)>>>,
+    signed: SignedCalls,
 }
 
 impl Signer for RecordingSigner {
