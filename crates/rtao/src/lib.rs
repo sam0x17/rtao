@@ -22,6 +22,11 @@ pub use rtao_intents as intents;
 pub use rtao_metagraph as metagraph;
 #[cfg(feature = "neuron")]
 pub use rtao_neuron as neuron;
+#[cfg(feature = "owner")]
+pub use rtao_neuron::{
+    HparamArg, OwnerConfig, OwnerMonitor, OwnerOps, RegistrationWait, SubnetIdentity, TrimReport,
+    WindowWait,
+};
 #[cfg(feature = "reads")]
 pub use rtao_reads as reads;
 #[cfg(feature = "tx")]
@@ -35,6 +40,11 @@ pub use rtao_wallet as wallet;
 pub mod prelude {
     #[cfg(feature = "tx")]
     pub use crate::Executor;
+    #[cfg(feature = "owner")]
+    pub use crate::{
+        HparamArg, OwnerConfig, OwnerMonitor, OwnerOps, RegistrationWait, SubnetIdentity,
+        WindowWait,
+    };
     #[cfg(feature = "client")]
     pub use rtao_client::{BlockRef, Client, ClientConfig, Snapshot, View, ViewExt};
     #[cfg(feature = "metagraph")]

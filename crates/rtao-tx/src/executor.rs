@@ -71,8 +71,12 @@ pub struct ExecuteOptions {
     pub wait_for_inclusion: bool,
     /// Await and resolve finalized inclusion.
     pub wait_for_finalization: bool,
-    /// Additional transient pool attempts; dispatch failures never retry.
+    /// Additional transient pool attempts; separate from the controlled owner replan.
     pub retries: u32,
+    /// Replan once for an exact owner TxRateLimitExceeded dispatch failure.
+    ///
+    /// Owner orchestration disables this when it owns the same bounded retry.
+    pub replan_owner_rate_limit: bool,
     /// Inner proxy dispatch account.
     pub proxy_for: Option<AccountId>,
     /// Optional exact proxy category.
@@ -101,6 +105,7 @@ impl Default for ExecuteOptions {
             wait_for_inclusion: true,
             wait_for_finalization: true,
             retries: 0,
+            replan_owner_rate_limit: true,
             proxy_for: None,
             force_proxy_type: None,
             policy: None,
@@ -837,7 +842,10 @@ impl Executor {
                 reviewed.built.extras,
                 intent.semantic_intent_dyn().spec().name == "create_pure_proxy",
             )?;
-            if owner_rate_replan(intent, &result) && !owner_replanned {
+            if opts.execute.replan_owner_rate_limit
+                && owner_rate_replan(intent, &result)
+                && !owner_replanned
+            {
                 owner_replanned = true;
                 continue;
             }
@@ -1044,7 +1052,10 @@ impl Executor {
                         self.client.network().label(),
                         Map::new(),
                     );
-                    if owner_rate_replan(intent, &result) && !owner_replanned {
+                    if opts.replan_owner_rate_limit
+                        && owner_rate_replan(intent, &result)
+                        && !owner_replanned
+                    {
                         owner_replanned = true;
                         continue;
                     }

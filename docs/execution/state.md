@@ -18,14 +18,25 @@ this cleanup, and no current hosted success is claimed.
 
 Canonical source implements 20 of 83 intents and 38 of 102 reads. It includes
 M0-M4 foundations and the feature-harness repair; prepared owner/CLI/offline
-candidates remain in the private source recovery archive until reviewed and
-integrated. This source checkpoint is being sent to the first hosted CI run.
+candidates are retained in the private source recovery archive. Owner
+orchestration/proxy routing and its example are now restored to the canonical
+worktree for source review; their current hosted acceptance is still pending.
+CLI/offline candidates remain unadopted. Source checkpoint `450c914335daa6a5da76a6c30908186e84f05e6e` is pushed.
+The first hosted workflow exposed fresh-runner cache gaps. CI repair
+`45b7b4dcc3270ea52052a8dfb293ca6a82d06eae` is pushed; its workflow is
+https://github.com/sam0x17/rtao/actions/runs/38681101185.
 No current all-job success or milestone exit is claimed.
 
 The plan's license expression list now includes the already required PSF and
 Unicode clauses. This clarifies Q1's existing obligations; implementation and
 license guards are unchanged. Private recovery is durably excluded from Git
 and Docker contexts.
+
+The source-only `target/client-integration-20261015` task root was removed
+after exact path, contents, symlink and open-file checks. It held seven small
+patch/handoff/metadata files, no builds, services, configurations, virtual
+environments or workspace copies. Canonical source and the private recovery
+archive retain all useful work. No active temporary root remains.
 
 ## Disk cleanup completed
 
