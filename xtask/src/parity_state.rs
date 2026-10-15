@@ -99,6 +99,11 @@ fn baseline(root: &Path, explicit: Option<&str>) -> Result<Option<String>> {
         let event_path = std::env::var_os("GITHUB_EVENT_PATH")
             .context("CI parity needs its event file for shrink-only validation")?;
         let event: Value = serde_json::from_slice(&fs::read(event_path)?)?;
+        if std::env::var("GITHUB_EVENT_NAME").as_deref() == Ok("workflow_dispatch") {
+            let sha = std::env::var("GITHUB_SHA")
+                .context("manual CI parity needs its selected commit SHA")?;
+            return dispatch_baseline(root, &sha).map(Some);
+        }
         return event_baseline(root, &event);
     }
     // HEAD compares working-tree edits. A clean committed local check compares
@@ -109,6 +114,36 @@ fn baseline(root: &Path, explicit: Option<&str>) -> Result<Option<String>> {
     } else {
         Ok(git(root, "HEAD^", "parity/pending.toml")?.map(|_| "HEAD^".into()))
     }
+}
+
+pub(super) fn dispatch_baseline(root: &Path, sha: &str) -> Result<String> {
+    ensure!(
+        super::valid_sha(sha) && !sha.bytes().all(|byte| byte == b'0'),
+        "manual CI parity selected SHA invalid"
+    );
+    let head = oracle_history_git(root)
+        .args(["rev-parse", "--verify", "HEAD^{commit}"])
+        .output()?;
+    ensure!(
+        head.status.success() && String::from_utf8(head.stdout)?.trim() == sha,
+        "manual CI parity checkout differs from selected commit"
+    );
+    // A dispatch has no push/PR change range. Compare its selected commit with
+    // its first parent, retaining both in oracle-history inspection. Never
+    // infer a baseline from the mutable branch ref or omit history checks.
+    let parent = oracle_history_git(root)
+        .args(["rev-parse", "--verify", &format!("{sha}^1^{{commit}}")])
+        .output()?;
+    ensure!(
+        parent.status.success(),
+        "manual CI parity parent unavailable; checkout full history"
+    );
+    let parent = String::from_utf8(parent.stdout)?.trim().to_owned();
+    ensure!(
+        super::valid_sha(&parent),
+        "manual CI parity parent SHA invalid"
+    );
+    Ok(parent)
 }
 
 fn event_baseline(root: &Path, event: &Value) -> Result<Option<String>> {

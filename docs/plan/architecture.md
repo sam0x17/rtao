@@ -4241,7 +4241,9 @@ The planner encodes the owner rules ([R] G §1.5, [R] C1 §5.2):
   `decrypt_with_signature`. Before the reveal time it returns `TimelockError::NotReady { reveal_round, reveal_at,
   remaining }`; after it, it retries the beacon fetch every 1 s for up to 30 s (`:307-358`). The async `open` defaults
   to `wait: true`, like `decrypt_async` (`:361-377`); `rtao::blocking`'s `decrypt` defaults to `wait: false`, like the
-  sync `decrypt`.
+  sync `decrypt`. Native `Option<Duration>` bounds the whole operation; the CLI rejects nonfinite and negative
+  values, and zero starts no attempt. This stricter deadline policy is D-066. Dropping the waiter cancels waits
+  and HTTP; an already running blocking crypto task finishes independently with its plaintext guarded.
 - **Pure helpers.** `current_round`, `round_at`, `reveal_time`, `parse_duration` and `format_duration` live in
   `rtao_primitives::drand`, over `rtao_core::timelock::constants::{GENESIS_TIME, DRAND_PERIOD}` (equal to Python's
   `QUICKNET_GENESIS` = 1,692,803,367 and `QUICKNET_PERIOD` = 3, `PY/timelock.py:53-62`). They land in M1, because
@@ -5703,6 +5705,7 @@ divergences. Classes:
 
 | ID | Upstream symbol | Python behavior | rtao behavior | Class | Test | Upstream |
 |---|---|---|---|---|---|---|
+| D-066 | timelock decryption deadline | accepts arbitrary floats and attempts an already revealed envelope before checking retry expiry; async fetch gets at least one second | checked nonnegative Duration bounds the whole operation; zero starts no attempt; running blocking crypto may finish independently | stricter | `zero_timeout_does_not_start_a_beacon_request`, `deadline_caps_reveal_wait_and_fetch_together`, `deadline_drops_an_in_flight_attempt_future` | Existing local I/O policy; source review only, hosted execution pending |
 | D-061 | epoch-consensus setter example | prints raw 0/1 although its setter requires Yuma/Null | suggests the accepted symbolic mode while retaining raw display/JSON and encoding | improved | `epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json` | Pinned source contradiction independently reviewed; no new filing, hosted execution pending |
 | D-062 | owner-intent preflight | inherits empty blocks hooks | existing native planner checks effective owner, freeze and cooldown; matching Null continuation skips only cooldown | stricter | `owner_windows_use_dispatch_owner_and_keep_freeze_and_cooldown`, `matching_null_continuation_skips_only_cooldown`, `registration_policy_and_owner_preflight_refuse_before_unlock` | Local client policy source independently reviewed; runtime acceptance and hosted execution remain unverified |
 | D-063 | btauth replay identity | keys entries by literal sender spelling and nonce | authenticates exact signed text, then shares account/nonce replay identity across SS58 prefixes | stricter | `alternate_sender_ss58_prefix_preserves_exact_signed_text_and_normalizes_replay_identity` | Existing native identity policy source reviewed; no exploit or new filing claimed; hosted execution pending |

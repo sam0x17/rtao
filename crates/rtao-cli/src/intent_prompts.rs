@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/intent_prompts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_intent_prompts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Declarative transformations for richer generated transaction prompts.
 
 use crate::prompt::{
@@ -159,8 +160,70 @@ mod tests {
     fn specs(fields: &[&str]) -> Vec<PromptSpec> {
         fields
             .iter()
-            .map(|field| PromptSpec::new(*field, format!("--{field}")))
+            .map(|field| PromptSpec::new(*field, format!("--{}", field.replace('_', "-"))))
             .collect()
+    }
+
+    // pyt: unit/test_cli_intent_prompts.py::test_add_stake_policy_places_target_before_decorated_amount
+    #[test]
+    fn add_stake_policy_places_target_before_decorated_amount() {
+        let mut terminal = TerminalFixture {
+            interactive: true,
+            ..Default::default()
+        };
+        let result = apply_intent_prompt_policy(
+            &PromptContext::default(),
+            &mut terminal,
+            "add_stake",
+            specs(&["netuid", "hotkey_ss58", "amount_tao"]),
+            &Map::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            result
+                .iter()
+                .map(|spec| spec.field.as_str())
+                .collect::<Vec<_>>(),
+            ["netuid", "hotkey_ss58", "amount_tao"]
+        );
+        assert_eq!(result[1].flow, PromptFlow::StakeTarget);
+        assert!(result[1].custom());
+        // Python wraps the ordinary amount ask with a custom free-balance
+        // decorator. Native prompting represents that decorator separately
+        // from the picker flow, and the command consumer uses both fields.
+        assert_eq!(result[2].flow, PromptFlow::Plain);
+        assert!(result[2].free_balance);
+    }
+
+    // pyt: unit/test_cli_intent_prompts.py::test_remove_stake_policy_moves_source_picker_first
+    #[test]
+    fn remove_stake_policy_moves_source_picker_first() {
+        let mut terminal = TerminalFixture {
+            interactive: true,
+            ..Default::default()
+        };
+        let result = apply_intent_prompt_policy(
+            &PromptContext::default(),
+            &mut terminal,
+            "remove_stake",
+            specs(&["netuid", "hotkey_ss58", "amount_alpha"]),
+            &Map::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            result
+                .iter()
+                .map(|spec| spec.field.as_str())
+                .collect::<Vec<_>>(),
+            ["hotkey_ss58", "netuid", "amount_alpha"]
+        );
+        assert_eq!(
+            result[0].flow,
+            PromptFlow::StakeSource {
+                netuid_field: Some("netuid".into())
+            }
+        );
+        assert!(result[0].custom());
     }
 
     #[test]

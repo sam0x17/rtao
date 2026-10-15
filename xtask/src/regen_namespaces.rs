@@ -330,6 +330,10 @@ pub(super) fn run(root: &Path, pins: &DocumentMut, check: bool) -> Result<()> {
 }
 
 #[cfg(test)]
+#[path = "facade_contract_tests.rs"]
+mod facade_contract_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;

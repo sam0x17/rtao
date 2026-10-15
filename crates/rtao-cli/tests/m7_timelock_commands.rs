@@ -10,7 +10,7 @@ use rtao_cli::{
     },
     context::AppContext,
     globals::Globals,
-    output::{MemorySink, Output, OutputOptions, Stream},
+    output::{DiagnosticContext, MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
 use secrecy::SecretString;
@@ -181,7 +181,7 @@ impl TimelockBackend for Fake {
 }
 
 #[test]
-fn routes_preserve_misc_and_hidden_v9_aliases_and_reject_conflicting_sources() -> TestResult {
+fn routes_preserve_misc_and_hidden_v9_aliases_and_native_reveal_boundaries() -> TestResult {
     for path in [
         vec!["rtao", "misc", "timelock"],
         vec!["rtao", "utils", "timelock"],
@@ -192,9 +192,6 @@ fn routes_preserve_misc_and_hidden_v9_aliases_and_reject_conflicting_sources() -
         let _ = tree().try_get_matches_from(args)?;
     }
     for args in [
-        vec![
-            "rtao", "timelock", "encrypt", "text", "--file", "missing", "--in", "1s",
-        ],
         vec![
             "rtao", "timelock", "encrypt", "text", "--in", "1s", "--round", "3",
         ],
@@ -266,6 +263,70 @@ fn routes_preserve_misc_and_hidden_v9_aliases_and_reject_conflicting_sources() -
             );
         }
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn conflicting_sources_keep_python_callback_errors_in_human_and_json_modes() -> TestResult {
+    let backend = Fake::default();
+    for json_mode in [false, true] {
+        for name in ["encrypt", "show", "decrypt"] {
+            for (data, file) in [("text", "missing"), ("", "")] {
+                // Encrypt has no reveal option: the source conflict must win before prompts.
+                let mut fixture = Fixture::new(
+                    &["rtao", "timelock", name, data, "--file", file],
+                    json_mode,
+                    &["must not be prompted"],
+                )?;
+                let error = fixture
+                    .run(&backend)
+                    .await
+                    .err()
+                    .ok_or("conflicting sources unexpectedly succeeded")?;
+                let (message, help) = if name == "encrypt" {
+                    (
+                        "give the payload exactly one way",
+                        "pass text or a file path as an argument, or use --file",
+                    )
+                } else {
+                    (
+                        "give the ciphertext exactly one way",
+                        "pass the hex or a file path as an argument, or use --file",
+                    )
+                };
+                assert_eq!(error.code, 1);
+                assert_eq!(error.message, message);
+                assert_eq!(error.help.as_deref(), Some(help));
+                assert!(
+                    fixture
+                        .prompt_messages
+                        .lock()
+                        .map_err(|_| "prompt messages")?
+                        .is_empty()
+                );
+                // Render through the same shared Output call as main's error boundary.
+                fixture.ctx.output.error(
+                    &error.message,
+                    DiagnosticContext {
+                        help: error.help.as_deref(),
+                        ..Default::default()
+                    },
+                )?;
+                assert!(fixture.sink.bytes(Stream::Stdout)?.is_empty());
+                let rendered = fixture.sink.text(Stream::Stderr)?;
+                if json_mode {
+                    assert_eq!(
+                        serde_json::from_str::<Value>(&rendered)?,
+                        json!({"error":message,"help":help})
+                    );
+                } else {
+                    assert_eq!(rendered, format!("error: {message}\n  help: {help}\n"));
+                }
+            }
+        }
+    }
+    let state = backend.state.lock().map_err(|_| "fixture lock")?;
+    assert!(state.seals.is_empty() && state.opens.is_empty());
     Ok(())
 }
 
@@ -466,6 +527,125 @@ async fn missing_inputs_and_invalid_deadlines_fail_before_crypto() -> TestResult
 }
 
 #[tokio::test]
+async fn input_acquisition_errors_precede_reveal_and_deadline_validation() -> TestResult {
+    let root = FileRoot::new()?;
+    let missing = root.0.join("missing-payload.bin");
+    let path = missing.to_str().ok_or("missing path utf8")?;
+    let backend = Fake::default();
+    // Python reads the file before encrypt validates a supplied reveal moment.
+    for (reveal_args, answers) in [
+        (vec!["--in", "not-a-duration"], vec![]),
+        (vec![], vec!["0"]),
+    ] {
+        let mut argv = vec!["rtao", "timelock", "encrypt", "--file", path];
+        argv.extend(reveal_args);
+        let mut fixture = Fixture::new(&argv, false, &answers)?;
+        let error = fixture
+            .run(&backend)
+            .await
+            .err()
+            .ok_or("missing payload unexpectedly succeeded")?;
+        assert_eq!(error.code, 1);
+        assert!(error.message.contains(path), "{}", error.message);
+        assert!(!error.message.contains("duration"));
+        assert!(fixture.sink.bytes(Stream::Stdout)?.is_empty());
+    }
+    // A syntactically valid hex value with no trailer is rejected before timeout policy.
+    for timeout in ["2.5", "NaN", "-1"] {
+        let mut fixture = Fixture::new(
+            &["rtao", "timelock", "decrypt", "00", "--timeout", timeout],
+            true,
+            &[],
+        )?;
+        let error = fixture
+            .run(&backend)
+            .await
+            .err()
+            .ok_or("malformed ciphertext unexpectedly succeeded")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(
+            error.message,
+            "not a timelock ciphertext (missing the reveal-round trailer)"
+        );
+        assert!(fixture.sink.bytes(Stream::Stdout)?.is_empty());
+    }
+    let state = backend.state.lock().map_err(|_| "fixture lock")?;
+    assert!(state.seals.is_empty() && state.opens.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn duration_prompt_accepts_python_grammar_before_checked_encryption() -> TestResult {
+    let backend = Fake::default();
+    for answer in ["0", "0s", "-1", "-1.5", "-0.0"] {
+        let mut fixture = Fixture::new(
+            &["rtao", "timelock", "encrypt", "payload"],
+            false,
+            &[answer],
+        )?;
+        let error = fixture
+            .run(&backend)
+            .await
+            .err()
+            .ok_or("nonpositive reveal unexpectedly succeeded")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(error.message, "reveal_in must be a positive duration");
+        assert_eq!(
+            fixture
+                .prompt_messages
+                .lock()
+                .map_err(|_| "prompt messages")?
+                .as_slice(),
+            ["--in: Duration until the reveal: '30s', '15m', '1h30m', '2d', or plain seconds."]
+        );
+        assert_eq!(
+            fixture.history.replay_command(&[
+                "rtao".into(),
+                "timelock".into(),
+                "encrypt".into(),
+                "payload".into()
+            ]),
+            format!("rtao timelock encrypt payload --in {answer}")
+        );
+        assert!(fixture.sink.bytes(Stream::Stdout)?.is_empty());
+    }
+    let state = backend.state.lock().map_err(|_| "fixture lock")?;
+    assert!(state.seals.is_empty() && state.opens.is_empty());
+    drop(state);
+    let mut fixture = Fixture::new(
+        &["rtao", "timelock", "encrypt", "payload"],
+        false,
+        &["-1s", "1h30m"],
+    )?;
+    fixture.run(&backend).await?;
+    assert_eq!(
+        fixture
+            .prompt_messages
+            .lock()
+            .map_err(|_| "prompt messages")?
+            .as_slice(),
+        [
+            "--in: Duration until the reveal: '30s', '15m', '1h30m', '2d', or plain seconds.",
+            "cannot parse duration '-1s'; use seconds or units like '90s', '15m', '1h30m', '2d'"
+        ]
+    );
+    assert_eq!(
+        backend.state.lock().map_err(|_| "fixture lock")?.seals,
+        vec![(7, Reveal::In(Duration::from_secs(5400)))]
+    );
+    assert_eq!(
+        fixture.history.replay_command(&[
+            "rtao".into(),
+            "timelock".into(),
+            "encrypt".into(),
+            "payload".into()
+        ]),
+        "rtao timelock encrypt payload --in 1h30m"
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn not_ready_error_has_reveal_remediation_and_no_plaintext_output() -> TestResult {
     let encoded = sealed(20, 1)?.hex();
     let mut fixture = Fixture::new(&["rtao", "timelock", "decrypt", &encoded], true, &[])?;
@@ -564,6 +744,48 @@ async fn prompted_large_hex_uses_same_decode_path_and_plaintext_is_omitted_from_
             .as_slice(),
         ["ciphertext: Ciphertext hex (from encrypt), or a path to a ciphertext file."]
     );
+    for (name, fixture) in [("show", &show), ("decrypt", &decrypt)] {
+        let replay =
+            fixture
+                .history
+                .replay_command(&["rtao".into(), "timelock".into(), name.into()]);
+        assert_eq!(replay, format!("rtao timelock {name} {encoded}"));
+        let argv = replay.split_whitespace().collect::<Vec<_>>();
+        let mut replayed = Fixture::new(&argv, false, &[])?;
+        replayed.run(&Fake::default()).await?;
+        assert_eq!(
+            replayed.sink.bytes(Stream::Stdout)?,
+            fixture.sink.bytes(Stream::Stdout)?
+        );
+    }
+    // Prompted public ciphertext uses the ordinary shell quoting path. An invalid
+    // answer is re-prompted and must never enter the replay command.
+    let short = sealed(20, 1)?.hex();
+    let wrapped = format!("0x{} {}", &short[..2], &short[2..]);
+    for name in ["show", "decrypt"] {
+        let mut fixture = Fixture::new(
+            &["rtao", "timelock", name],
+            false,
+            &["invalid-ciphertext", &wrapped],
+        )?;
+        fixture.run(&Fake::default()).await?;
+        let replay =
+            fixture
+                .history
+                .replay_command(&["rtao".into(), "timelock".into(), name.into()]);
+        let prefix = format!("rtao timelock {name} '");
+        assert_eq!(replay, format!("{prefix}{wrapped}'"));
+        let replayed_data = replay
+            .strip_prefix(&prefix)
+            .and_then(|value| value.strip_suffix('\''))
+            .ok_or("missing quoted ciphertext replay")?;
+        let mut replayed = Fixture::new(&["rtao", "timelock", name, replayed_data], false, &[])?;
+        replayed.run(&Fake::default()).await?;
+        assert_eq!(
+            replayed.sink.bytes(Stream::Stdout)?,
+            fixture.sink.bytes(Stream::Stdout)?
+        );
+    }
     let secret = "do-not-replay-this-plaintext";
     let mut encrypt = Fixture::new(&["rtao", "timelock", "encrypt"], false, &[secret, "1h"])?;
     encrypt.run(&Fake::default()).await?;

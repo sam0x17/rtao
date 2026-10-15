@@ -1,10 +1,11 @@
 // Derived from RaoFoundation/subtensor sdk/python/scripts/record_golden.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_codec_golden.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Replay every M0 golden section through rtao's argument conversions.
 
 use std::{error::Error, path::PathBuf};
 
 use rtao_core::{
-    codec::Value,
+    codec::{Value, value::to_corpus_json},
     extrinsic::{TxParams, multisig_account_id},
     runtime::Runtime,
 };
@@ -385,6 +386,62 @@ fn golden_signature_payloads() -> Result {
 }
 
 #[test]
+fn golden_short_immortal_signature_payload_parts() -> Result {
+    let fixture = golden()?;
+    let immortal = fixture
+        .signature_payloads
+        .first()
+        .ok_or("missing immortal signature payload vector")?;
+    let bob: AccountId = fixture
+        .ss58
+        .get(1)
+        .ok_or("missing Bob SS58 vector")?
+        .address
+        .parse()?;
+    let params = tx_params(
+        &fixture,
+        &Json::String("00".into()),
+        immortal.nonce,
+        0,
+        None,
+    )?;
+    for runtime in [fixture.runtime()?, fixture.runtime_v14()?] {
+        // Rebuild the source inputs; expected call/payload bytes remain outputs.
+        let call = runtime.compose_call(
+            "Balances",
+            "transfer_keep_alive",
+            &record([
+                ("dest", bob.into_core_value()),
+                ("value", TaoBalance(12345).into_core_value()),
+            ]),
+        )?;
+        assert_eq!(
+            call,
+            decode_hex(&immortal.call_data_hex)?,
+            "immortal split-payload call (V15={})",
+            runtime.is_v15
+        );
+        // Native callers own the call bytes; the split API returns the two
+        // remaining sections instead of echoing those bytes in a third item.
+        let (extra, additional) = runtime.signature_payload_parts(&params)?;
+        assert!(
+            additional.len() >= 72,
+            "spec/tx versions, genesis and era block hashes must be additional signed data (V15={})",
+            runtime.is_v15
+        );
+        let payload = [call, extra, additional].concat();
+        assert!(payload.len() <= 256, "this vector must remain unhashed");
+        assert_eq!(
+            payload,
+            decode_hex(&immortal.payload_hex)?,
+            "immortal call + extra + additional (V15={})",
+            runtime.is_v15
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn golden_extrinsics() -> Result {
     let fixture = golden()?;
     assert_eq!(fixture.extrinsics.len(), 2);
@@ -415,6 +472,45 @@ fn golden_extrinsics() -> Result {
                 hash,
                 decode_fixed_hex(&case.extrinsic_hash)?,
                 "extrinsic hash #{index}"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn golden_block_extrinsics_decode_to_complete_recorded_dicts() -> Result {
+    let fixture = golden()?;
+    let block = fixture
+        .sections
+        .get("block")
+        .ok_or("missing golden block section")?;
+    let raws = block
+        .pointer("/raw/block/extrinsics")
+        .and_then(Json::as_array)
+        .ok_or("missing raw golden block extrinsics")?;
+    let expected = field(block, "decoded_extrinsics")?
+        .as_array()
+        .ok_or("expected decoded golden block extrinsics array")?;
+    assert!(!raws.is_empty(), "recorded block must contain extrinsics");
+    // A fresh recorder can capture a differently sized block. Require all of
+    // its inputs and expected outputs; the pinned block has exactly three.
+    if std::env::var_os("RTAO_RECORDED_ROOT").is_none() {
+        assert_eq!(raws.len(), 3, "pinned block extrinsic inventory");
+    }
+    assert_eq!(
+        raws.len(),
+        expected.len(),
+        "raw/expected counts must agree before zip"
+    );
+    for runtime in [fixture.runtime()?, fixture.runtime_v14()?] {
+        for (index, (raw, old)) in raws.iter().zip(expected).enumerate() {
+            let decoded = runtime.decode_extrinsic(&decode_hex(string(raw)?)?, true)?;
+            assert_eq!(
+                &to_corpus_json(&decoded),
+                old,
+                "complete decoded block extrinsic #{index} (V15={})",
+                runtime.is_v15
             );
         }
     }
