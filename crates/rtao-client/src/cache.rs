@@ -652,7 +652,7 @@ fn open_offline_metadata(path: &Path) -> std::io::Result<fs::File> {
 }
 
 fn load_disk(path: &Path) -> Option<(Vec<u8>, u32)> {
-    let data = fs::read(path).ok()?;
+    let data = crate::bounded_file::read(path, MAX_OFFLINE_METADATA_BYTES).ok()?;
     let decoded = decode_disk(&data);
     if decoded.is_none() {
         let _ = fs::remove_file(path);
@@ -684,6 +684,12 @@ fn save_disk(
     transaction_version: u32,
     is_v15: bool,
 ) -> std::io::Result<()> {
+    if metadata.len() as u64 > MAX_OFFLINE_METADATA_BYTES.saturating_sub(9) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "metadata cache exceeds 64 MiB limit",
+        ));
+    }
     let directory = path
         .parent()
         .ok_or_else(|| std::io::Error::other("metadata cache has no parent directory"))?;
@@ -920,6 +926,63 @@ mod tests {
             assert!(load_disk(&path).is_none());
             assert!(!path.exists());
         }
+    }
+
+    #[test]
+    fn oversized_save_counts_header_and_preserves_existing_entry() {
+        let directory = TestDirectory::new();
+        let path = disk_path(&directory.0, GENESIS, 478);
+        save_disk(&path, b"previous metadata", 7, true).unwrap();
+        let original = fs::read(&path).unwrap();
+        // The body is individually below the file cap; the nine-byte header
+        // puts the complete representation exactly one byte over it.
+        let metadata = vec![0; (MAX_OFFLINE_METADATA_BYTES - 8) as usize];
+        assert_eq!(
+            save_disk(&path, &metadata, 8, true).unwrap_err().kind(),
+            std::io::ErrorKind::InvalidData
+        );
+        assert_eq!(fs::read(path).unwrap(), original);
+        assert_eq!(fs::read_dir(&directory.0).unwrap().count(), 1);
+    }
+
+    #[tokio::test]
+    async fn live_cache_treats_oversized_files_as_misses_and_fetches_bounded_replacements() {
+        let directory = TestDirectory::new();
+        let path = disk_path(&directory.0, GENESIS, 478);
+        let file = fs::File::create(&path).unwrap();
+        file.set_len(MAX_OFFLINE_METADATA_BYTES + 1).unwrap();
+        drop(file);
+        // Failed acquisition does not classify or remove a file's contents.
+        assert!(load_disk(&path).is_none());
+        assert_eq!(
+            fs::metadata(&path).unwrap().len(),
+            MAX_OFFLINE_METADATA_BYTES + 1
+        );
+        let rpc = FakeRpc::new(usual_response);
+        let cache = RuntimeCache::new(
+            RpcClient::new(rpc.clone()),
+            GENESIS,
+            42,
+            Some(directory.0.clone()),
+        );
+        let runtime = cache.runtime_at(None).await.unwrap();
+        assert_eq!(runtime.spec_version(), 478);
+        assert!(
+            rpc.requests
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|(method, _)| method == "state_call")
+        );
+        assert_eq!(load_disk(&path).unwrap().0, METADATA);
+        assert!(fs::metadata(&path).unwrap().len() <= MAX_OFFLINE_METADATA_BYTES);
+        assert!(fs::read_dir(&directory.0).unwrap().all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".rtao-md-")
+        }));
     }
 
     #[tokio::test]

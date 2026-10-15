@@ -1191,7 +1191,9 @@ pub struct SessionConfig {
     pub max_retries: u32,                   // 5 consecutive failures per endpoint before rotating (rpc.py:322)
     pub retry_forever: bool,                // false → give up after max_retries × endpoints
     pub subscription_buffer: usize,         // 2048, oldest dropped   `_SUBSCRIPTION_QUEUE_MAXSIZE`
+    pub subscription_buffer_bytes: usize,   // 32 MiB aggregate across active/retained streams, including reconnects (D-056)
     pub early_notification_ids: usize,      // 64: notifications racing the subscribe response (rpc.py:297-300)
+    pub early_notification_bytes: usize,    // 8 MiB aggregate; requires a live transmitted subscription request (D-056)
     pub max_message_bytes: usize,           // 256 MiB [I] (Python: ws max_size = 2**32); sets tungstenite's max_message_size
                                             // AND max_frame_size (default 16 MiB): Substrate sends each response as one frame
     pub extra_roots: Vec<CertificateDer<'static>>,  // added to the native roots (private nodes, the TLS FakeNode; §2.7)
@@ -2323,6 +2325,15 @@ pub struct IntentPreflight { pub effects: Vec<String>, pub warnings: Vec<String>
   Python's quirk of building the inner intent against the signing wallet ([R] A1 §10 item 6). That is listed in
   `divergences.toml` as `kept`, not changed.
 
+  Native typed adapters own their semantic intent and acquire only a member's
+  coldkey. Exact-byte continuation uses an opaque `MultisigContinuation` minted
+  by `adapter.review(executor, keys, options)` after a concrete executor plan;
+  calling the public wrap hook alone cannot mint one. The proof binds semantic
+  JSON, canonical group, effective dispatch origin and the stamped call.
+  Subsequent approvals preserve those bytes and still recheck current policy
+  and preflight. The CLI's equivalent controller is crate-private. S9-10 tracks
+  the source repair and its pending hosted evidence.
+
 ### 4.3 Generated pass-through bodies, and their limits
 
 Checked against the `build()` bodies, **46 of 83** intents compose exactly one call whose arguments are fields renamed
@@ -3361,6 +3372,13 @@ is rate limiting keyed by the verified hotkey (`UP/docs/migration.mdx:455-480`, 
 
 ### 7.1 Core (no I/O, no tokio)
 
+D-054 limits authentication fields before decoding: 4,096 bytes per value and
+8,192 total, counting duplicate values. Sender spellings must fit the native
+49-byte AccountId32 SS58 bound before signature decoding. The legacy bridge
+includes its supplied body hash in the same budget. Within the bounds, existing
+numeric/signature parsing and diagnostic order are preserved. The authored
+fixtures and independent source review do not establish hosted execution.
+
 ```rust
 pub const PROTOCOL: &str = "btauth/1";  pub const VERSION: &str = "1";  pub const NO_RECEIVER: &str = "-";
 pub const DEFAULT_MAX_AGE: Duration = Duration::from_secs(10);         // PY/http_auth.py:68
@@ -3563,6 +3581,7 @@ pub struct FanOut {
     pub deadline: Option<Duration>,  // Some(timeout + 1 s), measured from the call; covers queueing and retries;
                                      // unfinished targets resolve to FanOutError::Deadline
     pub retries: u8,                 // 0; re-signs each attempt, only while the deadline allows
+    pub max_response_bytes: usize,   // 1 MiB per response, positive; checked during acquisition before JSON decoding (D-055)
 }
 // rtao_primitives::axon (re-exported here): AxonTarget { uid: Uid, hotkey: AccountId, base_url: Url } and
 // axon_base_url(ip: u128, ip_type: u8, port: u16) -> Option<Url>: http://ip:port or http://[v6]:port, None when
@@ -3579,6 +3598,13 @@ replies from `fan_out_stream`.
 The body is materialized before signing. The target is `url.path()` plus `?` plus `url.query()`, which reqwest keeps
 percent-encoded. **Every attempt re-signs with a fresh nonce.** Retries live above the signing step, because a
 transport-level retry of an already-signed request is rejected as a replay (`signed-requests.mdx:101-102, 163-167`).
+
+An oversized declared Content-Length is refused before body consumption. Chunked
+responses are checked before retaining each chunk. `ResponseTooLarge` remains
+permanent across attempt/deadline timing boundaries, so retry settings cannot
+repeat an oversized response. The lower-level signed request API retains
+streaming access. This budget bounds retained body length, without bounding
+vector capacity, transport storage, parsed JSON or aggregate concurrent memory.
 
 ### 7.4 Legacy v10 bridge (feature `legacy-v10`)
 
@@ -3961,8 +3987,12 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
    path, `n·limit ≤ 1` (uniform), single self-weight, and 2,500-entry rows (§11.5).
 
    `RawU16` requires Null consensus: the preflight mints a `NullProof` only when `SubnetEpochConsensus == Null` and this
-   hotkey is the sole permit holder. Values pass verbatim (`PYT/unit/test_null_weights.py:13-45`). The chain's
-   `MaxWeightExceeded` is dead code ([R] C1 §0.7), but rtao clips anyway for parity.
+   hotkey is the sole permit holder. The framework preserves every supplied UID/value pair, including zeros and
+   order, without scaling. It checks the population-capped chain destination count, the non-root self exemption,
+   and the exact integer maximum-share inequality. The configured `MaxWeightsLimit` remains an additional client
+   guard: v478's `get_max_weight_limit` returns `u16::MAX`, although the dispatch inequality is present. Both direct
+   and decrypted commit-reveal rows enter that dispatch path. Python's ordinary raw intent conformer drops zeros
+   before its positive-count check; framework `RawU16` deliberately preserves the chain-native vector (D-058).
 5. **Hold-previous guard.** A row whose only positive weights are self or owner is not submitted (SN2's guard,
    [R] G §2.6 item 21).
 6. **Path.**
@@ -5670,39 +5700,46 @@ divergences. Classes:
 
 | ID | Upstream symbol | Python behavior | rtao behavior | Class | Test | Upstream |
 |---|---|---|---|---|---|---|
+| D-059 | nested/deferred intent policy | wrappers can hide child requirements | validated recursive/pinned callback safety with bounded authenticated inspection; deferred mandatory shielding refuses | stricter | `nested_tools_preserve_child_subnet_and_global_restrictions`, `stored_callbacks_propagate_spend_subnets_and_global_policy_through_tools` | S9-02/S9-03 source repair; final review and hosted validation pending |
+| D-060 | multisig retained inner call | independent raw bytes and semantic label | executor-issued opaque continuation binds exact bytes, semantic JSON, group, effective origin and runtime | stricter | `directly_wrapping_an_unrelated_call_cannot_mint_a_semantic_continuation`, `hotkey_batch_continuations_preserve_dynamic_origin_and_exact_bytes_at_both_thresholds` | S9-10 source repair; final review and hosted validation pending |
+| D-054 | authentication fields | parses unbounded field/sender spellings | 4,096 bytes per value, 8,192 aggregate including duplicates, 49-byte native sender maximum before signature decode | stricter | `maximum_length_native_sender_addresses_verify_under_both_policies_and_algorithms`, `oversized_sender_never_reaches_the_native_signature_decoder` | S9-01 source repair; hosted execution pending, no new filing |
+| D-055 | signed HTTP fan-out | collects response JSON without the same cap | positive 1 MiB default body budget before JSON, declared/chunked overflow permanent across timeout boundaries | stricter | `both_fanout_apis_stop_chunked_overflow_before_eof_decoding_or_retry`, `completed_oversize_rejection_remains_permanent_across_timing_boundaries` | S9-04 source repair; hosted execution pending, no new filing |
+| D-056 | RPC subscription queues/raw logs | count limits and unescaped raw diagnostics | aggregate 8 MiB early/32 MiB active queues across streams/reconnects; transmitted-request correlation, global eviction and escaped logs | stricter | `reconnect_resets_early_storage_and_old_streams_share_the_active_byte_budget`, `raw_receive_logs_escape_terminal_controls_while_protocol_values_stay_exact` | S9-05/S9-08 source repairs; hosted execution pending, no new filing |
+| D-057 | persisted cache/metagraph/framework state | no matching shared limits | descriptor-based regular-file acquisition, bounded growth, 64/256/64 MiB complete-file caps and guarded rotation | stricter | `fifos_without_writers_are_refused_without_blocking`, `oversized_rotation_sources_preserve_current_and_remove_all_owned_temporaries` | S9-09 source repair; hosted execution pending, no new filing |
+| D-058 | framework `RawU16` | Python raw conform drops zeros | framework preserves every pair with exact count/share validation and no scaling; ordinary intents retain Python conforming | addition | `raw_shared_preparation_enforces_chain_count_and_exact_share`, `raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs` | Native framework contract, source-reviewed; hosted execution pending, no new filing |
 | D-053 | `masked_input` | interpreter-selected codec, terminal signal keys and getpass fallback | UTF-8, fixed editing keys and owned hidden fallback; restore before Ctrl-C, including escape parsing; external signals have no restoration guarantee | improved (native lifecycle adaptation) | `rtao_cli::prompt::masked_input::tests::{cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes,controlling_terminal_fallback_cancellation_restores_and_never_retries_plain_input}` | Rule 5 design gap; source fixtures authored, hosted execution pending; no new filing |
-| D-001 | `reads.neurons.hotkey_owner`, `reads.collateral.miner_collateral` (+ `Keys`, `SubnetOwner`, `SubnetOwnerHotkey`) | zero-account default rendered as an ss58 address; `None` check never fires (the metadata defaults are 32 zero bytes) | `DefaultAccount::get()` returns `None` for the zero account; JSON unchanged; applied by rule over the pinned metadata | typed-only | `zero_account_default_decodes_to_zero_bytes` (offline, vendored metadata), `default_account_json_parity` (e2e 15 is a sanity check) | issue: dead `None` check |
-| D-002 | `delegate_take`, `coldkey_swap_announcement`, `hotkey_identities`, `miner_collateral` | gather at head without pinning (may straddle blocks) | pinned to one block | improved | `RecordingView` single-block test | issue |
-| D-003 | `wallets.resolve_wallet_password` / keyfile prompting | the library may prompt | the library never prompts (`PromptPolicy::Never`); the CLI prompts on a TTY | improved | `library_never_prompts` | — |
-| D-004 | connect | no genesis check | signing refused on a genesis mismatch for named networks | stricter | `genesis_mismatch_disables_signing` | — |
-| D-005 | `http_auth.NonceStore` | synchronous `check_and_store` | async (`BoxFuture`) | addition (API) | `redis_store_does_not_block` | — |
+| D-001 | `reads.neurons.hotkey_owner / reads.collateral.miner_collateral; Keys, SubnetOwner and SubnetOwnerHotkey` | zero-account default rendered as an ss58 address; `None` check never fires (the metadata defaults are 32 zero bytes) | `DefaultAccount::get()` returns `None` for the zero account; JSON unchanged; applied by rule over the pinned metadata | typed-only | `rtao_runtime::generated::zero_account_default_decodes_to_zero_bytes`; `rtao_primitives::primitives::account_default_is_typed_optional_but_keeps_zero_account_ss58` | Active source; hosted validation pending; no new filing |
+| D-002 | `delegate_take / coldkey_swap_announcement / hotkey_identities / miner_collateral` | gather at head without pinning (may straddle blocks) | pinned to one block | improved | `rtao_reads::owner::delegate_take_and_hotkey_identities_pin_their_batches_and_deduplicate`; `rtao_reads::m6_accounts::fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history`; `rtao_reads::m6_locks::nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_blocks` | Active source; hosted validation pending; no new filing |
+| D-003 | `wallets.resolve_wallet_password / keyfile prompting` | the library may prompt | Library password resolution defaults to PromptPolicy::Never and has no implicit terminal input. Explicit caller callbacks require an enabled policy; the CLI uses injected TTY-gated prompts. | improved | `rtao_wallet::password::tests::library_never_prompts_and_explicit_cli_callback_runs_once`; `rtao_wallet::password::tests::if_tty_uses_the_callback_terminal_authority_and_never_stays_silent`; `rtao_cli::prompt::tests::every_noninteractive_mode_refuses_reads_and_collects_missing_flags` | Active source; hosted validation pending; no new filing |
+| D-004 | connect | no genesis check | signing refused on a genesis mismatch for named networks | stricter | `rtao_client::connect::genesis_mismatch_keeps_reads_and_refuses_signing_with_both_hashes` | Active source; hosted validation pending; no new filing |
+| D-005 | http_auth.NonceStore | synchronous `check_and_store` | async (`BoxFuture`) | addition | `rtao_btauth::redis::tests::redis_store_does_not_block` | Active source; hosted validation pending; no new filing |
 | D-006 | `timelock.get_encrypted_commit_v2` → core `epoch_schedule` | safety net `> MAX_TEMPO` | pallet predicate `> tempo`, with the counter cap | improved | `epoch_schedule_agrees_except_safety_net` | PR-U5 |
-| D-007 | `snapshot.Snapshot.constant` | read from the head codec | read from the snapshot's runtime | improved | `constants_follow_snapshot_spec` | issue |
-| D-008 | `_transport.interface.attach_signature` | refuses on a `spec_version` change only | also refuses on a `transaction_version` change | stricter | `submit_signature_refuses_tx_version_change` | issue |
-| D-009 | `http_auth.verify` retention check | `ValueError` after a verified signature | `ConfigError` at `Verifier::new` | stricter | `verifier_rejects_short_retention` | — |
-| D-010 | `_transport.runtime` V14 path | signs with V14 metadata if ever selected | V14 runtimes are read-only (runtime APIs via the legacy table only) | stricter | `v14_degraded_refuses_signing` | — |
+| D-007 | `snapshot.Snapshot.constant` | read from the head codec | read from the snapshot's runtime | improved | `rtao_client::view::tests::typed_golden_constants_use_snapshot_runtime_without_rpc` | Active source; hosted validation pending; no new filing |
+| D-008 | `_transport.interface.attach_signature` | refuses on a `spec_version` change only | also refuses on a `transaction_version` change | stricter | `rtao_client::submission::prepared_signature_refuses_same_spec_transaction_version_change` | Active source; hosted validation pending; no new filing |
+| D-009 | `http_auth.verify retention check` | `ValueError` after a verified signature | `ConfigError` at `Verifier::new` | stricter | `rtao_btauth::conformance::test_window_wider_than_store_retention_refused` | Active source; hosted validation pending; no new filing |
+| D-010 | `_transport.runtime V14 path` | signs with V14 metadata if ever selected | V14 runtimes are read-only (runtime APIs via the legacy table only) | stricter | `rtao_runtime::handle::tests::v14_is_readable_but_signing_and_digest_are_refused`; `rtao_client::view::tests::v14_archive_calls_use_only_frozen_double_encoded_api_definitions` | Active source; hosted validation pending; no new filing |
 | D-011 | *withdrawn* | Python never retries shielded submissions (`PY/executor.py:812-824` returns before the retry loop at `:833-845`; `submit_shielded` has no `retries`, `:897-909`) | the same: shielded submissions are not retried (§3.9.6) | — | — | — |
-| D-012 | `Client.blocks` / subscriptions | the stream dies on reconnect | resubscribes and backfills by number (`blocks_strict` keeps Python semantics) | improved | `blocks_gap_free_across_reconnect` | — |
-| D-013 | `Executor.execute` | composes and submits, even across a runtime upgrade | refuses spec-mismatched `CallBytes` and re-plans once | stricter | `execute_replans_on_spec_change` | — |
-| D-014 | `btcli query` | no block flag | `rtao query <read> --block <n>` | addition | `query_block_flag` | — |
-| D-015 | `RpcSession` | no client-side rate limit | token bucket on public presets (timing only) | addition | `ratelimit_paces_public_presets` | — |
-| D-016 | `SetWeights` path, framework only | n/a (no framework) | `WeightScheduler` refuses when `CommitRevealWeightsVersion ≠ 4`; the intents are unchanged | addition | e2e scenario 6 | — |
+| D-012 | `Client.blocks / subscriptions` | the stream dies on reconnect | resubscribes and backfills by number (`blocks_strict` keeps Python semantics) | improved | `rtao_client::head::tests::reconnect_resubscribes_and_backfills_without_duplicate_finalized_heights`; `rtao_client::head::tests::best_fork_reports_common_ancestor_then_each_replacement_once`; `rtao_client::head::tests::strict_stream_keeps_subscription_loss_terminal` | Active source; hosted validation pending; no new filing |
+| D-013 | `Executor.execute` | composes and submits, even across a runtime upgrade | refuses spec-mismatched `CallBytes` and re-plans once | stricter | `rtao_tx::executor::spec_version_change_replans_once_and_refuses_a_second_change`; `rtao_tx::executor::transaction_version_change_replans_once_and_rechecks_policy` | Active source and independent review; hosted validation pending; no new filing |
+| D-014 | `btcli query` | no block flag | `rtao query <read> --block <n>` | addition | `rtao_cli::generated_commands::block_query_pins_real_storage_and_does_not_read_the_current_head_value` | Active source; hosted validation pending; no new filing |
+| D-015 | RpcSession | no client-side rate limit | With the rate-limit feature enabled, public presets pace requests through a shared token bucket; accepted request and result bytes are unchanged. | addition | `rtao_testkit::rpc::ratelimit_paces_public_presets`; `rtao_testkit::rpc::rate_bucket_prioritizes_submissions_and_drops_cancelled_queue_entries` | Active source; hosted validation pending; no new filing |
+| D-016 | `WeightScheduler / SetWeights` | n/a (no framework) | When commit-reveal is enabled, WeightScheduler refuses CommitRevealWeightsVersion other than 4 through its public preflight check; the low-level intents are unchanged. | addition | `rtao_neuron::weights::tests::preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates` | Active source; hosted validation pending; no new filing |
 | D-017 | `ServeAxonTls` | a certificate over 65 bytes is silently dropped on chain | rejected client-side after hex syntax validation | stricter | `rtao_intents::serving::tests::{certificate_length_counts_decoded_bytes_at_the_chain_boundary,tls_validation_orders_ip_then_hex_syntax_then_certificate_length}` | Source fixtures authored; current hosted run pending; no new filing |
-| D-018 | docs `advanced.mdx:146-150` | the docs claim a hotkey-shield refusal that the code lacks | follows the code (no refusal) | kept | `hotkey_shield_not_refused` | issue: docs drift |
-| D-019 | `Metagraph.total_stake` | alpha-tagged `Balance` | `StakeWeight` type; JSON unchanged | typed-only | `stake_weight_json_parity` | question (§15.2 Q14) |
+| D-018 | `Python advanced documentation on hotkey shielding` | the docs claim a hotkey-shield refusal that the code lacks | follows the code (no refusal) | kept | `rtao_tx::executor::tests::dynamic_shield_acquires_only_the_instance_hotkey_after_review` | Active source; hosted validation pending; no new filing |
+| D-019 | Metagraph.total_stake | alpha-tagged `Balance` | `StakeWeight` type; JSON unchanged | typed-only | `rtao_runtime::generated::semantic_model_fields_and_native_fixed_fraction_are_typed`; `rtao_metagraph::decode::stake_weight_accessors_preserve_alpha_tagged_total_stake_json` | Active source and independent review; hosted validation pending; no new filing |
 | D-020 | `execute_proxy_announced` | builds the inner intent against the signing wallet ([R] A1 §10 item 6) | same | kept | oracle vector | — |
-| D-021 | `Policy.allowed_netuids` | intents without a `netuid` field pass any allowlist ([R] A1 §10 item 20) | same | kept | oracle vector | — |
-| D-022 | generated call builders: limit-price arguments (`limit_price` of 88, 89, 90, 103, 144, 149; `limit` of `add_stake_burn`, 132) | `TaoBalance` declared; a price in practice | `PriceRao` / `Option<PriceRao>` | typed-only | `limit_price_is_price` | issue: type annotation |
-| D-023 | `ExtrinsicResult` | no inclusion level; fate unknown visible only in the message | adds `inclusion` and `fate_unknown` fields; `to_json()` unchanged | addition | `extrinsic_result_json_parity` | — |
-| D-024 | `_transport.extrinsics` watch statuses | `retracted`, `finalityTimeout` and `dropped` are fatal, like `usurped` and `invalid` (`PY/_transport/extrinsics.py:352, 364-369`) | `retracted` keeps watching, then reconciles; `finalityTimeout(h)` resolves from block h; `dropped` reconciles when `reconcile` is on (§3.9.3) | improved | `retracted_then_finalized_is_success`, `finality_timeout_resolves_from_block` | issue |
-| D-025 | shielded submission era | submits a carrier whose era the finality lag has already expired, and fails | refuses with `TxError::ShieldEraExpired` when B + 2 ≥ F + p; `ShieldPeriod` accepts only 4 and 8 (§3.11 step 1) | stricter | `shield_era_refused_at_lag` (`P8` at lags 5 and 6, `P4` at lags 1 and 2) | issue |
-| D-026 | `executor._submit_encrypted_call` nonces | takes n, pins n+1 then n; the cache is left at n, so the next submission reuses n+1 and gets `Stale` (`PY/executor.py:1037-1052`) | `lease_pair` leaves `next = n + 2`; settle rules per lease (§3.11 step 2) | improved | `shielded_then_plain_uses_n_plus_2`, `shield_inner_missing_clears_nonce_cache`, `shield_wait_pool_keeps_n_plus_2` | issue |
+| D-021 | `Policy.allowed_netuids` | unscoped leaf operations pass allowlists | same for leaves; D-059 requires wrappers to retain child subnet effects | kept | `trusted_m2_constructors_have_identical_policy_violation_sets`, `nested_tools_preserve_child_subnet_and_global_restrictions` | Rule 5 resolves broad no-netuid wording in favor of child safety; hosted validation pending |
+| D-022 | generated call builders: limit-price arguments (`limit_price` of 88, 89, 90, 103, 144, 149; `limit` of `add_stake_burn`, 132) | `TaoBalance` declared; a price in practice | `PriceRao` / `Option<PriceRao>` | typed-only | `xtask::regen::tests::price_gate_requires_every_semantic_override_and_refuses_unreviewed_additions`; `rtao_runtime::limit_prices::all_seven_public_limit_arguments_use_price_rao`; `rtao_runtime::limit_prices::required_price_arguments_preserve_exact_u64_wire_bytes`; `rtao_runtime::limit_prices::optional_price_arguments_preserve_some_and_none_wire_bytes` | Active source and independent review; hosted validation pending; no new filing |
+| D-023 | ExtrinsicResult | no inclusion level; fate unknown visible only in the message | adds `inclusion` and `fate_unknown` fields; `to_json()` unchanged | addition | `rtao_tx::output::tests::rejected_result_has_only_python_failure_fields_and_retains_native_fate`; `rtao_tx::result_json::included_results_keep_complete_python_json_without_native_tracking_fields`; `rtao_tx::result_json::fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_hash` | Active source and independent review; hosted validation pending; no new filing |
+| D-024 | `_transport.extrinsics watch statuses` | `retracted`, `finalityTimeout` and `dropped` are fatal, like `usurped` and `invalid` (`PY/_transport/extrinsics.py:352, 364-369`) | `retracted` keeps watching, then reconciles; `finalityTimeout(h)` resolves from block h; `dropped` reconciles when `reconcile` is on (§3.9.3) | improved | `rtao_client::submission::retracted_status_keeps_watching_for_later_finalized_inclusion`; `rtao_client::submission::dropped_after_retraction_reconciles_even_without_the_dropped_opt_in`; `rtao_client::submission::finality_timeout_resolves_actual_inclusion_and_confirms_finality`; `rtao_client::submission::finality_timeout_returns_inclusion_when_finality_was_not_requested`; `rtao_client::submission::dropped_watch_preserves_python_failure_without_reconcile_and_expiry_is_definite` | Active source; hosted validation pending; no new filing |
+| D-025 | shielded submission era | submits a carrier whose era the finality lag has already expired, and fails | refuses with `TxError::ShieldEraExpired` when B + 2 ≥ F + p; `ShieldPeriod` accepts only 4 and 8 (§3.11 step 1) | stricter | `rtao_client::shield::ciphertext_and_period_bounds_are_closed`; `rtao_client::shield::finality_lag_refuses_exact_expiry_boundary_before_signing`; `rtao_tx::shield_raw::shield_era_failure_maps_to_typed_error` | Active source; hosted validation pending; no new filing |
+| D-026 | `executor._submit_encrypted_call nonces` | takes n, pins n+1 then n; the cache is left at n, so the next submission reuses n+1 and gets `Stale` (`PY/executor.py:1037-1052`) | Atomic pair allocation reserves n and n+1, so the next lease is n+2 after acknowledged pool submission; an unresolved or unsettled half invalidates the shared account cache. | improved | `rtao_client::shield::pool_transmits_only_signed_carrier_and_preserves_pair_nonce_and_anchor`; `rtao_client::shield::stalled_chain_keeps_carrier_unresolved_and_inner_can_still_execute_later`; `rtao_client::shield::author_ack_timeout_keeps_carrier_hash_and_clears_pair`; `rtao_client::nonces::adjacent_pair_is_atomic_and_any_unsettled_half_invalidates_account` | Active source; hosted validation pending; no new filing |
 | D-027 | `sync.SyncClient` namespaces | 13 attributes, `collateral` absent (`PY/sync.py:186-241`) | all 14 namespaces | improved | `sync_client_has_all_namespaces` | issue |
-| D-028 | `result.chain_error_from_dispatch` (nested module errors) | resolved through the package's generated table (`PY/result.py:636-656`) | resolved through the block's runtime, as top-level errors are (§4.7) | improved | `nested_module_error_follows_block_runtime` | issue |
-| D-029 | `btcli tools` / `list_tools` | 9 keys per tool (`PY/intents/registry.py:43-66`) | adds `rust {type, role, output, cli}` | addition | `tools_json_equals_python_on_upstream_fields` | — |
-| D-030 | `btcli tx` | no era flag (period 128, `PY/settings.py:22`) | `--period <n>` | addition | `tx_period_flag` | — |
-| D-031 | `--signer` | wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`) | adds `remote` (lands with `RemoteSigner` in M10) | addition | `signer_remote_flag` | — |
-| D-032 | btauth server adapter | the recipe applies policy after `verify`, so a replayed request from a denied hotkey gets 401 (`signed-requests.mdx:143-156`) | authenticate → policy → commit → limit: the same request gets 403; `Verifier::verify` keeps Python's order (§7.2) | addition | `policy_before_replay_check` | — |
+| D-028 | `result.chain_error_from_dispatch (nested module errors)` | resolved through the package's generated table (`PY/result.py:636-656`) | resolved through the block's runtime, as top-level errors are (§4.7) | improved | `rtao_client::nested_module_receipt::every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_upgrade` | Active source and independent review; hosted validation pending; no new filing |
+| D-029 | `btcli tools / list_tools` | 9 keys per tool (`PY/intents/registry.py:43-66`) | adds `rust {type, role, output, cli}` | addition | `rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_83_ops`; `rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata` | Active source; hosted validation pending; no new filing |
+| D-030 | `btcli tx` | no era flag (period 128, `PY/settings.py:22`) | `--period <n>` | addition | `rtao_cli::generated_commands::generated_transfer_submits_real_semantic_bytes_hooks_and_requested_period`; `rtao_cli::generated_commands::invalid_period_refuses_before_unlock_and_any_submission` | Active source; hosted validation pending; no new filing |
+| D-031 | --signer | wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`) | adds `remote` (lands with `RemoteSigner` in M10) | addition |  | Pending: Intentionally deferred to M10: RemoteSigner and the remote CLI selection are outside the through-M9 acceptance scope. No implementation or fixture is claimed for this addition. |
+| D-032 | btauth server adapter | the recipe applies policy after `verify`, so a replayed request from a denied hotkey gets 401 (`signed-requests.mdx:143-156`) | authenticate → policy → commit → limit: the same request gets 403; `Verifier::verify` keeps Python's order (§7.2) | addition | `rtao_btauth::server::authentication_policy_commit_limit_order_protects_capacity_and_tokens`; `rtao_btauth::server::replay_does_not_spend_limiter_tokens`; `rtao_btauth::conformance::authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_replay_last` | Active source; hosted validation pending; no new filing |
 | D-033 | `timelock.encrypt` | `reveal_in`, `reveal_at` or `reveal_round` | adds `Reveal::InBlocks(n)` (§9.8) | addition | `timelock_reveal_in_blocks` | — |
 | D-034 | `multisig_approve` plan | sends a hash-only `approve_as_multi` at the threshold without comment | same call, plus the warning "this approval cannot execute the call; send multisig_execute" (§3.12) | addition | `approve_at_threshold_warns` | — |
 | D-035 | `balance.Balance` local arithmetic | arbitrary signed integer rao | all balances use u64 rao with checked underflow/overflow; valid-chain formatting retained (Q25) | stricter | `native_balance_rejects_negative_and_oversized_input`, `native_balance_arithmetic_reports_overflow_and_underflow`, `native_balance_keeps_valid_chain_json` | user-directed API choice; no upstream defect |

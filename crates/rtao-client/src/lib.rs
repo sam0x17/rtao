@@ -6,6 +6,7 @@ mod block_info;
 /// Private runtime thread used by the facade's synchronous adapters.
 #[cfg(feature = "blocking")]
 pub mod blocking;
+pub mod bounded_file;
 /// Runtime metadata resolution, coalescing, and Python-compatible disk cache.
 pub mod cache;
 mod client;

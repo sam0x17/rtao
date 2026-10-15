@@ -5,7 +5,7 @@
 use rtao::{
     client::{Client, ClientError, DynView, ViewExt},
     primitives::{AccountId, CryptoType, NetUid, Spend},
-    signer::{BoxFuture, KeyView, SignerRole},
+    signer::{BoxFuture, IntentKeyView, KeyView, SignerRole},
     tx::{
         BuildCx, Built, DynIntent, IntentError, IntentPreflight, Multisig, OriginView,
         PolicySubject, PreflightCx, TxError,
@@ -21,7 +21,34 @@ use std::sync::{Mutex, MutexGuard};
 #[derive(Default)]
 struct DispatchState {
     timepoint: Option<MultisigTimepoint>,
-    inner: Option<CallBytes>,
+    inner: Option<ReviewedInnerCall>,
+}
+
+/// Exact continuation bytes with their originating semantic and multisig identity.
+///
+/// Private fields prevent an unrelated call from inheriting semantic policy.
+#[derive(Clone)]
+pub struct ReviewedInnerCall {
+    call: CallBytes,
+    semantic: Value,
+    multisig: AccountId,
+    origin: AccountId,
+}
+
+impl ReviewedInnerCall {
+    pub(crate) fn call(&self) -> &CallBytes {
+        &self.call
+    }
+
+    fn validate(&self, semantic: &dyn DynIntent, multisig: AccountId) -> Result<(), IntentError> {
+        if self.multisig != multisig || self.semantic != semantic.to_json_dyn() {
+            return Err(IntentError::InvalidArgument(
+                "retained multisig call differs from its reviewed semantic intent or account"
+                    .into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// An unregistered CLI adapter that preserves a semantic intent's safety contract.
@@ -37,7 +64,7 @@ pub struct SemanticMultisig<'a> {
     crypto: CryptoType,
     others: Vec<AccountId>,
     dispatch_spec: &'static IntentSpec,
-    pinned_call: Option<CallBytes>,
+    pinned_call: Option<ReviewedInnerCall>,
     expected_opening: Option<MultisigTimepoint>,
     state: Mutex<DispatchState>,
 }
@@ -54,12 +81,13 @@ impl<'a> SemanticMultisig<'a> {
         group: Multisig,
         member: AccountId,
         crypto: CryptoType,
-        pinned_call: Option<CallBytes>,
+        pinned_call: Option<ReviewedInnerCall>,
     ) -> Result<Self, IntentError> {
         let runtime = client.refresh_runtime().await?;
         let canonical = validated_group(&runtime, &group, member)?;
         if let Some(call) = &pinned_call {
-            call.ensure_runtime(&runtime)?;
+            call.validate(semantic, canonical.address)?;
+            call.call.ensure_runtime(&runtime)?;
         }
         semantic.validate_dyn()?;
         let op = if canonical.threshold == 1 {
@@ -92,6 +120,7 @@ impl<'a> SemanticMultisig<'a> {
     }
 
     /// Borrow the runtime-validated, canonically ordered signer set.
+    #[cfg(test)]
     pub fn group(&self) -> &Multisig {
         &self.group
     }
@@ -99,7 +128,17 @@ impl<'a> SemanticMultisig<'a> {
     /// Copy the exact semantic, sudo and proxy bytes used by the latest review.
     ///
     /// The caller carries this stamped call into subsequent approval rounds.
+    #[cfg(test)]
     pub fn reviewed_inner_call(&self) -> Result<Option<CallBytes>, IntentError> {
+        Ok(self
+            .state()?
+            .inner
+            .as_ref()
+            .map(|review| review.call.clone()))
+    }
+
+    /// Retain an opaque continuation proof for the same semantic intent/account.
+    pub fn reviewed_call(&self) -> Result<Option<ReviewedInnerCall>, IntentError> {
         Ok(self.state()?.inner.clone())
     }
 
@@ -114,6 +153,7 @@ impl<'a> SemanticMultisig<'a> {
 
     /// Copy the pending opening used by the latest successful review.
     /// A newly opening approval has no timepoint until its receipt is included.
+    #[cfg(test)]
     pub fn reviewed_timepoint(&self) -> Result<Option<MultisigTimepoint>, IntentError> {
         Ok(self.state()?.timepoint.clone())
     }
@@ -135,6 +175,18 @@ impl<'a> SemanticMultisig<'a> {
                 self.semantic.spec().name
             )
         }
+    }
+
+    fn dispatch_origin(
+        &self,
+        cx: &BuildCx<'_, dyn DynView + '_>,
+    ) -> Result<AccountId, IntentError> {
+        let role = self.semantic.signer_role_dyn()?;
+        let keys = IntentKeyView::new(&cx.origin, role, self.semantic.spec().name);
+        Ok(match role {
+            SignerRole::Coldkey => keys.coldkey_address()?,
+            SignerRole::Hotkey => keys.hotkey_address(None)?,
+        })
     }
 }
 
@@ -184,6 +236,9 @@ impl PolicySubject for SemanticMultisig<'_> {
     fn is_raw(&self) -> bool {
         self.semantic.is_raw()
     }
+    fn contains_raw_calls(&self) -> bool {
+        self.semantic.contains_raw_calls()
+    }
 }
 
 impl DynIntent for SemanticMultisig<'_> {
@@ -229,6 +284,9 @@ impl DynIntent for SemanticMultisig<'_> {
         format!("{approval}: {}", self.semantic.summary_dyn())
     }
     fn validate_dyn(&self) -> Result<(), IntentError> {
+        if let Some(call) = &self.pinned_call {
+            call.validate(self.semantic, self.group.address)?;
+        }
         self.semantic.validate_dyn()
     }
     fn spend_dyn(&self) -> Spend {
@@ -240,11 +298,29 @@ impl DynIntent for SemanticMultisig<'_> {
     fn affects_all_subnets_dyn(&self) -> bool {
         self.semantic.affects_all_subnets_dyn()
     }
+    fn safety_dyn(&self) -> Result<rtao::tx::IntentSafety, IntentError> {
+        self.semantic.safety_dyn()
+    }
+    fn safety_at_dyn<'b>(
+        &'b self,
+        cx: &'b BuildCx<'b, dyn DynView + 'b>,
+    ) -> BoxFuture<'b, Result<rtao::tx::IntentSafety, IntentError>> {
+        Box::pin(async move {
+            let semantic_cx = BuildCx {
+                view: cx.view,
+                origin: OriginView::Account(self.group.address),
+                runtime: cx.runtime,
+                clock: cx.clock,
+                spec: self.semantic.spec(),
+            };
+            self.semantic.safety_at_dyn(&semantic_cx).await
+        })
+    }
     fn semantic_intent_dyn(&self) -> &dyn DynIntent {
         self.semantic
     }
     fn inner_call_data_dyn(&self) -> Option<&CallBytes> {
-        self.pinned_call.as_ref()
+        self.pinned_call.as_ref().map(ReviewedInnerCall::call)
     }
     fn origin_view_dyn<'b>(&'b self, _keys: &'b dyn KeyView) -> OriginView<'b> {
         OriginView::Account(self.group.address)
@@ -255,7 +331,7 @@ impl DynIntent for SemanticMultisig<'_> {
     ) -> BoxFuture<'b, Result<Built, IntentError>> {
         Box::pin(async move {
             if let Some(call) = &self.pinned_call {
-                return self.wrap_call_dyn(cx, call.clone()).await;
+                return self.wrap_call_dyn(cx, call.call.clone()).await;
             }
             let semantic_cx = BuildCx {
                 view: cx.view,
@@ -376,7 +452,18 @@ impl DynIntent for SemanticMultisig<'_> {
     ) -> BoxFuture<'b, Result<Built, IntentError>> {
         Box::pin(async move {
             validated_group(cx.runtime, &self.group, self.member)?;
-            let inner = self.pinned_call.as_ref().unwrap_or(&call).clone();
+            let inner = if let Some(review) = &self.pinned_call {
+                review.validate(self.semantic, self.group.address)?;
+                let origin = self.dispatch_origin(cx)?;
+                if origin != review.origin {
+                    return Err(IntentError::InvalidArgument(
+                        "retained multisig call differs from its reviewed dispatch origin".into(),
+                    ));
+                }
+                review.call.clone()
+            } else {
+                call
+            };
             inner.ensure_runtime(cx.runtime)?;
             let (outer, timepoint) = if self.group.threshold == 1 {
                 (
@@ -466,7 +553,12 @@ impl DynIntent for SemanticMultisig<'_> {
             }
             let mut state = self.state()?;
             state.timepoint = timepoint;
-            state.inner = Some(inner);
+            state.inner = Some(ReviewedInnerCall {
+                call: inner,
+                semantic: self.semantic.to_json_dyn(),
+                multisig: self.group.address,
+                origin: self.dispatch_origin(cx)?,
+            });
             Ok(built)
         })
     }

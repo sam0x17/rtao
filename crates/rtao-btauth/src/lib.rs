@@ -62,6 +62,17 @@ pub const HEADER_CRYPTO: &str = "X-Bittensor-Crypto";
 /// Hexadecimal signature header.
 pub const HEADER_SIGNATURE: &str = "X-Bittensor-Signature";
 
+// AccountId32 SS58 has a one/two-byte prefix, 32-byte key and two-byte checksum.
+// For the longest (36-byte) form its first byte is <=127: the value is <2^287,
+// while 58^49 >2^287. The shorter prefix-zero form, including leading zero
+// characters, takes at most 48 bytes. Hex public keys are not accepted by the
+// pinned core's public_key_from_ss58/from_ss58check entry point.
+const MAX_SENDER_SS58_BYTES: usize = 49;
+const MAX_AUTH_FIELD_BYTES: usize = 4_096;
+const MAX_AUTH_TOTAL_BYTES: usize = 8_192;
+const AUTH_BUDGET_ERROR: &str =
+    "authentication fields exceed the 4096-byte field or 8192-byte total budget";
+
 /// Supplies Unix nanoseconds for fresh signing nonces.
 pub trait Clock: Send + Sync {
     /// Return a nonce for this signing attempt. Retries must obtain a fresh value.
@@ -381,6 +392,12 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
     }
 
     /// Check shape, receiver, freshness, and signature without touching a store.
+    ///
+    /// Authentication fields are limited to 4,096 bytes each and 8,192 bytes in
+    /// total, checked before parsing or payload allocation. Larger spellings
+    /// fail as malformed. Sender SS58 spellings must fit the native 49-byte
+    /// maximum; valid prefixes and both supported cryptographic schemes retain
+    /// their upstream verification rules.
     pub fn authenticate(
         &self,
         headers: &HeaderMap,
@@ -389,6 +406,34 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
         body: &[u8],
         now_ns: u64,
     ) -> Result<Authenticated, AuthError> {
+        let verify = match self.cfg.wrapped {
+            WrappedPolicy::AcceptLikePython => rtao_core::keys::verify,
+            WrappedPolicy::Strict => rtao_core::keys::verify_strict,
+        };
+        self.authenticate_with_verifier(headers, method, target, body, now_ns, verify)
+    }
+
+    fn authenticate_with_verifier<E>(
+        &self,
+        headers: &HeaderMap,
+        method: &Method,
+        target: &str,
+        body: &[u8],
+        now_ns: u64,
+        verify: impl FnOnce(&[u8], &[u8], &str, u8) -> Result<bool, E>,
+    ) -> Result<Authenticated, AuthError> {
+        check_auth_header_budget(
+            headers,
+            &[
+                HEADER_VERSION,
+                HEADER_HOTKEY,
+                HEADER_NONCE,
+                HEADER_CRYPTO,
+                HEADER_SIGNATURE,
+                HEADER_RECEIVER,
+            ],
+            0,
+        )?;
         if text_header(headers, HEADER_VERSION)? != Some(VERSION) {
             return Err(AuthError::MalformedAuth(
                 "missing or unsupported X-Bittensor-Version (expected '1')".into(),
@@ -424,11 +469,14 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
             _ => {}
         }
         self.check_freshness(&nonce, now_ns)?;
+        // Preserve receiver/freshness diagnostics, but never copy an oversized
+        // claimed address into the payload or pass it to quadratic base58 decode.
+        if sender.len() > MAX_SENDER_SS58_BYTES {
+            return Err(AuthError::MalformedAuth(
+                "invalid hotkey address or signature encoding".into(),
+            ));
+        }
         let payload = build_payload_text(crypto, method, target, body, &nonce, sender, receiver);
-        let verify = match self.cfg.wrapped {
-            WrappedPolicy::AcceptLikePython => rtao_core::keys::verify,
-            WrappedPolicy::Strict => rtao_core::keys::verify_strict,
-        };
         let valid = verify(&payload, &signature, sender, u8::from(crypto)).map_err(|_| {
             AuthError::MalformedAuth("invalid hotkey address or signature encoding".into())
         })?;
@@ -490,6 +538,29 @@ fn text_header<'a>(headers: &'a HeaderMap, name: &str) -> Result<Option<&'a str>
                 .map_err(|_| AuthError::MalformedAuth(format!("{name} is not valid text")))
         })
         .transpose()
+}
+
+fn check_auth_header_budget(
+    headers: &HeaderMap,
+    names: &[&str],
+    additional_bytes: usize,
+) -> Result<(), AuthError> {
+    let mut total = additional_bytes;
+    if total > MAX_AUTH_FIELD_BYTES {
+        return Err(AuthError::MalformedAuth(AUTH_BUDGET_ERROR.into()));
+    }
+    for name in names {
+        for value in headers.get_all(*name).iter() {
+            let length = value.as_bytes().len();
+            // Each previous sum is <=8,192, so checking the field before addition
+            // also rules out integer overflow without walking header contents.
+            if length > MAX_AUTH_FIELD_BYTES || total + length > MAX_AUTH_TOTAL_BYTES {
+                return Err(AuthError::MalformedAuth(AUTH_BUDGET_ERROR.into()));
+            }
+            total += length;
+        }
+    }
+    Ok(())
 }
 
 fn parse_crypto(value: &str) -> Option<CryptoType> {
@@ -582,6 +653,130 @@ fn decode_signature(signature: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn oversized_sender_never_reaches_the_native_signature_decoder()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receiver = AccountId::ZERO;
+        let verifier = Verifier::new(
+            receiver,
+            VerifyConfig::default(),
+            Arc::new(InMemoryNonceStore::new()),
+        )?;
+        for length in [MAX_SENDER_SS58_BYTES + 1, 100_000] {
+            let mut headers = HeaderMap::new();
+            for (name, value) in [
+                (HEADER_VERSION, VERSION.to_string()),
+                (HEADER_HOTKEY, "z".repeat(length)),
+                (HEADER_NONCE, "0".to_string()),
+                (HEADER_SIGNATURE, "00".repeat(64)),
+                (HEADER_RECEIVER, receiver.to_string()),
+            ] {
+                insert_header(&mut headers, name, value)?;
+            }
+            let calls = std::cell::Cell::new(0);
+            let result = verifier.authenticate_with_verifier(
+                &headers,
+                &Method::POST,
+                "/",
+                b"body",
+                0,
+                |_, _, _, _| {
+                    calls.set(calls.get() + 1);
+                    Ok::<bool, ()>(false)
+                },
+            );
+            assert_eq!(
+                result.err(),
+                Some(AuthError::MalformedAuth(
+                    if length > MAX_AUTH_FIELD_BYTES {
+                        AUTH_BUDGET_ERROR
+                    } else {
+                        "invalid hotkey address or signature encoding"
+                    }
+                    .into()
+                ))
+            );
+            assert_eq!(calls.get(), 0);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn numeric_crypto_and_signature_budgets_precede_parsing_and_preserve_bounded_spellings()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receiver = AccountId::ZERO;
+        let verifier = Verifier::new(
+            receiver,
+            VerifyConfig::default(),
+            Arc::new(InMemoryNonceStore::new()),
+        )?;
+        for field in [
+            HEADER_NONCE,
+            HEADER_CRYPTO,
+            HEADER_SIGNATURE,
+            HEADER_RECEIVER,
+        ] {
+            let mut headers = HeaderMap::new();
+            insert_header(&mut headers, field, "9".repeat(MAX_AUTH_FIELD_BYTES + 1))?;
+            let result = verifier.authenticate_with_verifier(
+                &headers,
+                &Method::POST,
+                "/",
+                b"",
+                0,
+                |_, _, _, _| Ok::<bool, ()>(false),
+            );
+            assert_eq!(
+                result.err(),
+                Some(AuthError::MalformedAuth(AUTH_BUDGET_ERROR.into()))
+            );
+        }
+        let mut headers = HeaderMap::new();
+        for field in [HEADER_NONCE, HEADER_CRYPTO, HEADER_SIGNATURE] {
+            insert_header(&mut headers, field, "0".repeat(3_000))?;
+        }
+        assert_eq!(
+            check_auth_header_budget(
+                &headers,
+                &[HEADER_NONCE, HEADER_CRYPTO, HEADER_SIGNATURE],
+                0,
+            ),
+            Err(AuthError::MalformedAuth(AUTH_BUDGET_ERROR.into()))
+        );
+        let mut boundary = HeaderMap::new();
+        insert_header(
+            &mut boundary,
+            HEADER_NONCE,
+            "0".repeat(MAX_AUTH_FIELD_BYTES),
+        )?;
+        insert_header(
+            &mut boundary,
+            HEADER_SIGNATURE,
+            "0".repeat(MAX_AUTH_FIELD_BYTES),
+        )?;
+        assert!(check_auth_header_budget(&boundary, &[HEADER_NONCE, HEADER_SIGNATURE], 0).is_ok());
+        boundary.append(
+            http::header::HeaderName::from_bytes(HEADER_NONCE.as_bytes())?,
+            HeaderValue::from_static("0"),
+        );
+        assert!(check_auth_header_budget(&boundary, &[HEADER_NONCE, HEADER_SIGNATURE], 0).is_err());
+        assert!(check_auth_header_budget(&HeaderMap::new(), &[], MAX_AUTH_FIELD_BYTES).is_ok());
+        assert!(
+            check_auth_header_budget(&HeaderMap::new(), &[], MAX_AUTH_FIELD_BYTES + 1).is_err()
+        );
+        let zeros = "0".repeat(3_000);
+        assert_eq!(parse_nonce(&format!("{zeros}1")), Some(BigInt::from(1)));
+        assert_eq!(
+            parse_crypto(&format!("{zeros}1")),
+            Some(CryptoType::Sr25519)
+        );
+        assert_eq!(
+            decode_signature(&format!("0x{zeros}")),
+            Some(vec![0; 1_500])
+        );
+        Ok(())
+    }
 
     #[test]
     fn python_nonce_spellings_parse_as_exact_signed_integers() {

@@ -59,6 +59,18 @@ uses `anyhow`.
 Balances use checked native `u64` rao. Keep TAO and subnet alpha units distinct;
 negative amounts and values above the chain's balance range are rejected.
 
+RPC subscription storage has separate aggregate byte limits: 8 MiB for early
+notifications and 32 MiB for active streams by default, configured through
+`SessionConfig::early_notification_bytes` and `subscription_buffer_bytes`.
+Overflow drops the oldest queued updates and emits an overflow event. Retained
+streams share the budget across reconnects. These limits cover queued data;
+frames, parsing and application-owned results require additional memory.
+
+Persisted metadata cache entries are capped at 64 MiB, and metagraph files at
+256 MiB, including their headers. Readers validate the opened regular file and
+also bound acquisition if a file grows after validation. Oversized metadata
+cache entries are treated as misses. Invalid metagraph files return an error.
+
 ## Choose the client surface
 
 Add `intents-all` and `wallet-encrypted` for the full intent catalog and

@@ -4,11 +4,16 @@
 use crate::arguments::check_nested_json as check_call_budget;
 #[cfg(test)]
 use crate::nested_json::{MAX_CALL_DEPTH, check_call_limits, inspect_call_limits};
-use rtao_client::View;
-use rtao_primitives::{Amount, DynBalance, NetUid, Spend, TaoBalance};
-use rtao_runtime::calls::crowdloan;
-use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
+use rtao_client::{DynView, View, ViewExt};
+use rtao_core::{codec::Value as CoreValue, value_ext::ValueExt};
+use rtao_primitives::{Amount, Balance, DynBalance, NetUid, Spend, TaoBalance};
+use rtao_runtime::{
+    CallBytes, calls::crowdloan, models::CrowdloanCall, storage::crowdloan::CROWDLOANS,
+};
+use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, PreflightCx};
 use serde_json::Value;
+use smallvec::SmallVec;
+use std::collections::BTreeSet;
 
 pub use crate::generated::{
     ContributeCrowdloan, CreateCrowdloan, DissolveCrowdloan, FinalizeCrowdloan, RefundCrowdloan,
@@ -50,7 +55,586 @@ pub(crate) fn check_constructor_input(args: &Value) -> Result<(), IntentError> {
     Ok(())
 }
 
+fn base_safety(op: &'static str, spend: Spend) -> IntentSafety {
+    IntentSafety {
+        op,
+        spend,
+        netuids: SmallVec::new(),
+        affects_all_subnets: false,
+        contains_raw_calls: false,
+        mev_shield_required: false,
+    }
+}
+
+fn child_intent(call: &Value) -> Result<crate::AnyIntent, IntentError> {
+    check_call_budget(call)?;
+    let fields = call
+        .as_object()
+        .ok_or_else(|| IntentError::validation("crowdloan 'call' must be an intent object"))?;
+    let op = fields
+        .get("op")
+        .and_then(Value::as_str)
+        .filter(|op| !op.is_empty())
+        .ok_or_else(|| IntentError::validation("crowdloan 'call' needs an 'op' key"))?;
+    crate::AnyIntent::from_tool(op, call.clone())
+}
+
+fn deferred_shield_refusal(safety: &IntentSafety) -> Result<(), IntentError> {
+    if safety.mev_shield_required {
+        return Err(IntentError::validation(
+            "crowdloan callbacks requiring MEV shielding are unsupported: shielding creation or finalization cannot protect the deferred child dispatch",
+        ));
+    }
+    Ok(())
+}
+
+fn stored_deferred_source_refusal(call: &CoreValue) -> Result<(), IntentError> {
+    let mut pending = vec![call];
+    let mut visits = 0usize;
+    while let Some(call) = pending.pop() {
+        visits += 1;
+        if visits > MAX_DEFERRED_CALLS {
+            return Err(callback_error(
+                "callback exceeds its inspection node budget",
+            ));
+        }
+        match (
+            call.field("call_module").and_then(ValueExt::as_str),
+            call.field("call_function").and_then(ValueExt::as_str),
+        ) {
+            (Some("Crowdloan"), Some("finalize")) => {
+                return Err(callback_error(
+                    "a future callback cannot authorize another stored finalization whose source may change before dispatch",
+                ));
+            }
+            (Some("Utility"), Some("batch" | "batch_all" | "force_batch")) => {
+                let children = core_list(call_arg(call, "calls")?)
+                    .ok_or_else(|| callback_error("invalid callback batch"))?;
+                if children
+                    .len()
+                    .saturating_add(pending.len())
+                    .saturating_add(visits)
+                    > MAX_DEFERRED_CALLS
+                {
+                    return Err(callback_error(
+                        "callback exceeds its inspection node budget",
+                    ));
+                }
+                pending.extend(children);
+            }
+            (Some("Proxy"), Some("proxy" | "proxy_announced"))
+            | (Some("Multisig"), Some("as_multi" | "as_multi_threshold_1"))
+            | (Some("Sudo"), Some("sudo" | "sudo_unchecked_weight")) => {
+                pending.push(call_arg(call, "call")?)
+            }
+            (Some("Crowdloan"), Some("create")) => {
+                let child = call_arg(call, "call")?;
+                if !matches!(child, CoreValue::Null) {
+                    pending.push(child);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn callback_error(detail: impl std::fmt::Display) -> IntentError {
+    IntentError::validation(format!(
+        "cannot verify deferred crowdloan callback: {detail}"
+    ))
+}
+
+fn call_args(call: &CoreValue) -> Result<&[CoreValue], IntentError> {
+    call.field("call_args")
+        .and_then(core_list)
+        .ok_or_else(|| callback_error("missing decoded call arguments"))
+}
+
+fn core_list(value: &CoreValue) -> Option<&[CoreValue]> {
+    match value {
+        CoreValue::List(values) | CoreValue::Tuple(values) => Some(values),
+        _ => None,
+    }
+}
+
+fn call_arg<'a>(call: &'a CoreValue, name: &str) -> Result<&'a CoreValue, IntentError> {
+    call_args(call)?
+        .iter()
+        .find(|field| field.field("name").and_then(ValueExt::as_str) == Some(name))
+        .and_then(|field| field.field("value"))
+        .ok_or_else(|| callback_error(format!("missing decoded argument {name}")))
+}
+
+fn unsigned(value: &CoreValue, name: &str) -> Result<u64, IntentError> {
+    value
+        .as_u128()
+        .and_then(|value| u64::try_from(value).ok())
+        .ok_or_else(|| callback_error(format!("{name} is not a native u64")))
+}
+
+fn netuid(value: &CoreValue) -> Result<NetUid, IntentError> {
+    u16::try_from(unsigned(value, "netuid")?)
+        .map(NetUid)
+        .map_err(|_| callback_error("netuid exceeds u16"))
+}
+
+const MAX_DEFERRED_DEPTH: usize = 32;
+const MAX_DEFERRED_CALLS: usize = 4096;
+const MAX_DEFERRED_BYTES: usize = 4 * 1024 * 1024;
+
+async fn bounded_preimage<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    bounded: CrowdloanCall,
+    bytes_left: usize,
+) -> Result<Vec<u8>, IntentError> {
+    let (hash, len) = match bounded {
+        CrowdloanCall::Inline(bytes) => {
+            if bytes.len() > bytes_left || bytes.len() > 128 {
+                return Err(callback_error(
+                    "inline call exceeds its inspection byte budget",
+                ));
+            }
+            return Ok(bytes);
+        }
+        CrowdloanCall::Lookup { hash, len } => (hash, len),
+        CrowdloanCall::Legacy { hash } => {
+            let status_name = ["RequestStatusFor", "StatusFor"]
+                .into_iter()
+                .find(|name| cx.runtime.storage_entry("Preimage", name).is_some())
+                .ok_or_else(|| callback_error("legacy preimage length is unavailable"))?;
+            let status = cx
+                .view
+                .storage_dyn("Preimage", status_name, &[CoreValue::Bytes(hash.to_vec())])
+                .await?;
+            let len = status
+                .as_core()
+                .variant("Requested")
+                .or_else(|| status.as_core().variant("Unrequested"))
+                .and_then(|status| status.field("len"))
+                .and_then(ValueExt::as_u128)
+                .and_then(|len| u32::try_from(len).ok())
+                .ok_or_else(|| callback_error("legacy preimage has no authenticated length"))?;
+            (hash, len)
+        }
+    };
+    if usize::try_from(len).ok().is_none_or(|len| len > bytes_left) {
+        return Err(callback_error(
+            "preimage exceeds its inspection byte budget",
+        ));
+    }
+    let entry = cx
+        .runtime
+        .storage_entry("Preimage", "PreimageFor")
+        .ok_or_else(|| callback_error("preimage storage is unavailable"))?;
+    let hash_value = CoreValue::Bytes(hash.to_vec());
+    let len_value = CoreValue::Uint(u128::from(len));
+    let keys = match entry.key_types.len() {
+        1 => vec![CoreValue::Tuple(vec![hash_value, len_value])],
+        2 => vec![hash_value, len_value],
+        _ => return Err(callback_error("unsupported preimage storage key shape")),
+    };
+    let value = cx
+        .view
+        .storage_dyn("Preimage", "PreimageFor", &keys)
+        .await?;
+    let bytes = value
+        .as_core()
+        .value_bytes()
+        .filter(|bytes| bytes.len() == len as usize)
+        .ok_or_else(|| callback_error("preimage is missing or its length does not match"))?;
+    let call = CallBytes::decode(&bytes, cx.runtime)?;
+    if call.hash() != hash {
+        return Err(callback_error(
+            "preimage hash does not match its stored commitment",
+        ));
+    }
+    Ok(bytes)
+}
+
+/// Inspect only positively reviewed wire semantics. Unknown calls, opaque
+/// approvals and new catalog operations never inherit a default no-spend label.
+fn leaf_safety(
+    call: &CoreValue,
+    descriptor: &'static rtao_runtime::CallDescriptor,
+) -> Result<IntentSafety, IntentError> {
+    let (pallet, name) = (descriptor.pallet, descriptor.name);
+    let mut safety = base_safety(name, Spend::None);
+    if rtao_catalog::INTENTS
+        .iter()
+        .any(|spec| spec.mev_shield_required && spec.wraps.contains(&(pallet, name)))
+    {
+        safety.mev_shield_required = true;
+        deferred_shield_refusal(&safety)?;
+    }
+    let spend_field = match (pallet, name) {
+        ("Balances", "transfer_keep_alive" | "transfer_allow_death") => Some("value"),
+        ("SubtensorModule", "add_stake" | "add_stake_limit" | "stake_into_basket") => {
+            Some("amount_staked")
+        }
+        ("SubtensorModule", "add_stake_burn") | ("Crowdloan", "contribute") => Some("amount"),
+        ("Balances", "transfer_all")
+        | (
+            "SubtensorModule",
+            "register_network"
+            | "register_leased_network"
+            | "transfer_stake"
+            | "transfer_stake_and_hotkey",
+        ) => {
+            safety.spend = Spend::Unbounded;
+            None
+        }
+        (
+            "Proxy",
+            "add_proxy" | "create_pure" | "kill_pure" | "remove_proxies" | "remove_proxy",
+        )
+        | ("Multisig", "cancel_as_multi")
+        | ("EVM", "withdraw")
+        | (
+            "Crowdloan",
+            "dissolve"
+            | "refund"
+            | "withdraw"
+            | "set_max_contribution"
+            | "update_cap"
+            | "update_end"
+            | "update_min_contribution",
+        )
+        | (
+            "SubtensorModule",
+            "announce_coldkey_swap"
+            | "associate_evm_key"
+            | "try_associate_hotkey"
+            | "claim_root"
+            | "claim_root_with_hotkey"
+            | "clear_coldkey_swap_announcement"
+            | "commit_timelocked_mechanism_weights"
+            | "decrease_take"
+            | "dispute_coldkey_swap"
+            | "increase_take"
+            | "lock_stake"
+            | "move_lock"
+            | "move_stake"
+            | "move_stake_limit"
+            | "pow_register"
+            | "remove_stake"
+            | "remove_stake_limit"
+            | "reveal_weights"
+            | "root_register"
+            | "serve_axon"
+            | "serve_axon_tls"
+            | "serve_prometheus"
+            | "set_coldkey_auto_stake_hotkey"
+            | "set_childkey_take"
+            | "set_children"
+            | "set_identity"
+            | "set_min_collateral"
+            | "set_perpetual_lock"
+            | "set_reject_locked_alpha"
+            | "sudo_set_root_claim_threshold"
+            | "set_subnet_identity"
+            | "set_mechanism_weights"
+            | "start_call"
+            | "swap_basket"
+            | "swap_basket_many"
+            | "swap_coldkey_announced"
+            | "swap_hotkey"
+            | "swap_stake"
+            | "swap_stake_limit"
+            | "terminate_lease"
+            | "unstake_all"
+            | "unstake_all_alpha"
+            | "update_symbol",
+        )
+        | (
+            "AdminUtils",
+            "sudo_set_epoch_consensus"
+            | "sudo_set_tempo"
+            | "sudo_set_immunity_period"
+            | "sudo_set_min_allowed_weights"
+            | "sudo_set_weights_version_key"
+            | "sudo_set_activity_cutoff_factor"
+            | "sudo_set_min_burn"
+            | "sudo_set_max_burn"
+            | "sudo_set_bonds_moving_average"
+            | "sudo_set_bonds_penalty"
+            | "sudo_set_serving_rate_limit"
+            | "sudo_set_commit_reveal_weights_interval"
+            | "sudo_set_max_allowed_uids"
+            | "sudo_set_burn_increase_mult"
+            | "sudo_set_burn_half_life"
+            | "sudo_set_collateral_lock_share"
+            | "sudo_set_collateral_drain_ratio"
+            | "sudo_set_adjustment_alpha"
+            | "sudo_set_rho"
+            | "sudo_set_max_difficulty"
+            | "sudo_set_alpha_sigmoid_steepness"
+            | "sudo_set_min_childkey_take_per_subnet"
+            | "sudo_set_owner_immune_neuron_limit"
+            | "sudo_set_alpha_values"
+            | "sudo_set_commit_reveal_weights_enabled"
+            | "sudo_set_liquid_alpha_enabled"
+            | "sudo_set_network_registration_allowed"
+            | "sudo_set_network_pow_registration_allowed"
+            | "sudo_set_yuma3_enabled"
+            | "sudo_set_bonds_reset_enabled"
+            | "sudo_set_toggle_transfer"
+            | "sudo_set_owner_cut_enabled"
+            | "sudo_set_owner_cut_auto_lock_enabled"
+            | "sudo_set_mechanism_count"
+            | "sudo_set_subnet_emission_enabled"
+            | "sudo_trim_null_uids_batch"
+            | "sudo_trim_to_max_allowed_uids",
+        ) => None,
+        _ => {
+            return Err(callback_error(format!("unreviewed call {pallet}.{name}")));
+        }
+    };
+    if let Some(field) = spend_field {
+        safety.spend = Spend::Bounded(Balance::from_rao(unsigned(call_arg(call, field)?, field)?));
+    }
+    safety.affects_all_subnets = matches!(
+        name,
+        "swap_coldkey_announced" | "unstake_all" | "unstake_all_alpha"
+    );
+    if (pallet, name) == ("SubtensorModule", "root_register") {
+        safety.netuids.push(NetUid::ROOT);
+    }
+    for field in call_args(call)? {
+        let name = field
+            .field("name")
+            .and_then(ValueExt::as_str)
+            .ok_or_else(|| callback_error("decoded argument has no name"))?;
+        let value = field
+            .field("value")
+            .ok_or_else(|| callback_error("decoded argument has no value"))?;
+        // sudo_set_root_claim_threshold always encodes root, but its semantic
+        // API has no netuid field and deliberately retains the empty scope.
+        if (pallet, descriptor.name) == ("SubtensorModule", "sudo_set_root_claim_threshold") {
+            continue;
+        }
+        if (name == "netuid" || name.ends_with("_netuid")) && !matches!(value, CoreValue::Null) {
+            safety.netuids.push(netuid(value)?);
+        }
+        if name == "netuids" || name.ends_with("_netuids") {
+            for uid in core_list(value).ok_or_else(|| callback_error("invalid subnet list"))? {
+                safety.netuids.push(netuid(uid)?);
+            }
+        }
+    }
+    if (pallet, name) == ("SubtensorModule", "swap_basket_many") {
+        for leg in core_list(call_arg(call, "legs")?)
+            .ok_or_else(|| callback_error("invalid basket legs"))?
+        {
+            let leg = core_list(leg)
+                .filter(|leg| leg.len() == 4)
+                .ok_or_else(|| callback_error("invalid basket leg"))?;
+            safety.netuids.extend([netuid(&leg[0])?, netuid(&leg[1])?]);
+        }
+    }
+    safety.netuids.sort_unstable();
+    safety.netuids.dedup();
+    Ok(safety)
+}
+
+async fn finalize_safety_at<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    id: u32,
+) -> Result<IntentSafety, IntentError> {
+    enum Pending {
+        Finalize(u32, usize, bool),
+        Encoded(CrowdloanCall, usize, bool),
+        Call(CoreValue, usize, bool),
+    }
+    let mut safety = base_safety(FinalizeCrowdloan::SPEC.name, Spend::None);
+    let mut pending = vec![Pending::Finalize(id, 0, false)];
+    let mut seen = BTreeSet::new();
+    let mut visits = 0usize;
+    let mut bytes_left = MAX_DEFERRED_BYTES;
+    while let Some(item) = pending.pop() {
+        visits += 1;
+        if visits > MAX_DEFERRED_CALLS {
+            return Err(callback_error(
+                "callback exceeds its inspection node budget",
+            ));
+        }
+        match item {
+            Pending::Finalize(id, depth, future) => {
+                if future {
+                    return Err(callback_error(
+                        "a future callback cannot authorize another stored finalization whose source may change before dispatch",
+                    ));
+                }
+                if depth > MAX_DEFERRED_DEPTH || !seen.insert(id) {
+                    return Err(callback_error("cyclic or repeated deferred finalization"));
+                }
+                let loan = cx
+                    .view
+                    .storage(&CROWDLOANS, (id,))
+                    .await?
+                    .ok_or_else(|| callback_error(format!("crowdloan {id} is unavailable")))?;
+                match (loan.target_address, loan.call) {
+                    (Some(_), None) => safety.spend = Spend::Unbounded,
+                    (None, Some(call)) => pending.push(Pending::Encoded(call, depth + 1, future)),
+                    _ => {
+                        return Err(callback_error(
+                            "stored crowdloan needs exactly one target or callback",
+                        ));
+                    }
+                }
+            }
+            Pending::Encoded(bounded, depth, future) => {
+                if depth > MAX_DEFERRED_DEPTH {
+                    return Err(callback_error(
+                        "callback exceeds its inspection depth budget",
+                    ));
+                }
+                let bytes = bounded_preimage(cx, bounded, bytes_left).await?;
+                bytes_left = bytes_left.checked_sub(bytes.len()).ok_or_else(|| {
+                    callback_error("callbacks exceed their total inspection byte budget")
+                })?;
+                CallBytes::decode(&bytes, cx.runtime)?;
+                let decoded = cx
+                    .runtime
+                    .core()
+                    .decode_spec(&rtao_core::runtime::TypeSpec::Call, &bytes, true)
+                    .map_err(rtao_core::CoreError::from)?;
+                pending.push(Pending::Call(decoded, depth, future));
+            }
+            Pending::Call(call, depth, future) => {
+                if depth > MAX_DEFERRED_DEPTH {
+                    return Err(callback_error(
+                        "callback exceeds its inspection depth budget",
+                    ));
+                }
+                let pallet = call
+                    .field("call_module")
+                    .and_then(ValueExt::as_str)
+                    .ok_or_else(|| callback_error("call has no pallet"))?;
+                let name = call
+                    .field("call_function")
+                    .and_then(ValueExt::as_str)
+                    .ok_or_else(|| callback_error("call has no function"))?;
+                let descriptor = rtao_runtime::calls::ALL
+                    .iter()
+                    .copied()
+                    .find(|descriptor| descriptor.pallet == pallet && descriptor.name == name)
+                    .ok_or_else(|| callback_error(format!("unsupported call {pallet}.{name}")))?;
+                let report = rtao_runtime::verify_surface_with(
+                    cx.runtime,
+                    &[rtao_runtime::SurfaceDescriptor::Call(descriptor)],
+                );
+                if report
+                    .changes
+                    .iter()
+                    .any(|change| change.class == rtao_runtime::SurfaceClass::Breaking)
+                {
+                    return Err(callback_error(format!(
+                        "call surface changed for {pallet}.{name}"
+                    )));
+                }
+                match (pallet, name) {
+                    ("Utility", "batch" | "batch_all" | "force_batch") => {
+                        let children = core_list(call_arg(&call, "calls")?)
+                            .ok_or_else(|| callback_error("invalid batched callback"))?;
+                        if children
+                            .len()
+                            .saturating_add(pending.len())
+                            .saturating_add(visits)
+                            > MAX_DEFERRED_CALLS
+                        {
+                            return Err(callback_error(
+                                "callback exceeds its inspection node budget",
+                            ));
+                        }
+                        pending.extend(
+                            children
+                                .iter()
+                                .cloned()
+                                .map(|call| Pending::Call(call, depth + 1, future)),
+                        );
+                    }
+                    ("Proxy", "proxy" | "proxy_announced")
+                    | ("Multisig", "as_multi" | "as_multi_threshold_1")
+                    | ("Sudo", "sudo" | "sudo_unchecked_weight") => {
+                        pending.push(Pending::Call(
+                            call_arg(&call, "call")?.clone(),
+                            depth + 1,
+                            future,
+                        ));
+                    }
+                    ("Crowdloan", "finalize") => {
+                        let id = u32::try_from(unsigned(
+                            call_arg(&call, "crowdloan_id")?,
+                            "crowdloan_id",
+                        )?)
+                        .map_err(|_| callback_error("crowdloan ID exceeds u32"))?;
+                        pending.push(Pending::Finalize(id, depth + 1, future));
+                    }
+                    ("Crowdloan", "create") => {
+                        let deposit = unsigned(call_arg(&call, "deposit")?, "deposit")?;
+                        safety.include(base_safety(
+                            "create_crowdloan",
+                            Spend::Bounded(Balance::from_rao(deposit)),
+                        ));
+                        let child = call_arg(&call, "call")?;
+                        let target = call_arg(&call, "target_address")?;
+                        if matches!(child, CoreValue::Null) == matches!(target, CoreValue::Null) {
+                            return Err(callback_error(
+                                "nested creation needs exactly one target or callback",
+                            ));
+                        }
+                        if !matches!(child, CoreValue::Null) {
+                            pending.push(Pending::Call(child.clone(), depth + 1, true));
+                        }
+                    }
+                    ("System", "remark" | "remark_with_event") => {}
+                    _ => safety.include(leaf_safety(&call, descriptor)?),
+                }
+            }
+        }
+    }
+    deferred_shield_refusal(&safety)?;
+    Ok(safety)
+}
+
 impl Intent for CreateCrowdloan {
+    fn safety(&self) -> Result<IntentSafety, IntentError> {
+        self.validate()?;
+        let mut safety = base_safety(Self::SPEC.name, bounded_spend(&self.deposit_tao));
+        if let Some(call) = self.call.as_ref().filter(|call| truthy(call)) {
+            let child = child_intent(call)?.as_dyn().safety_dyn()?;
+            deferred_shield_refusal(&child)?;
+            safety.include(child);
+        }
+        Ok(safety)
+    }
+
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        let safety = self.safety()?;
+        if let Some(call) = self.call.as_ref().filter(|call| truthy(call)) {
+            let child = child_intent(call)?;
+            let borrowed = cx.view;
+            let resolved = child
+                .as_dyn()
+                .safety_at_dyn(&BuildCx {
+                    view: &borrowed as &dyn DynView,
+                    origin: cx.origin,
+                    runtime: cx.runtime,
+                    clock: cx.clock,
+                    spec: child.spec(),
+                })
+                .await?;
+            deferred_shield_refusal(&resolved)?;
+        }
+        // Authorization happens now; later state-dependent amounts remain
+        // unbounded even when today's pinned state happens to be cheap.
+        Ok(safety)
+    }
+
     fn summary(&self) -> String {
         format!(
             "create crowdloan (cap {}, deposit {}, end {})",
@@ -61,20 +645,9 @@ impl Intent for CreateCrowdloan {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        self.validate()?;
+        self.safety()?;
         let inner = if let Some(call) = self.call.as_ref().filter(|value| truthy(value)) {
-            let fields = call.as_object().ok_or_else(|| {
-                IntentError::validation("crowdloan 'call' must be an intent object")
-            })?;
-            let op = fields
-                .get("op")
-                .and_then(Value::as_str)
-                .filter(|op| !op.is_empty())
-                .ok_or_else(|| IntentError::validation("crowdloan 'call' needs an 'op' key"))?;
-            // validate() bounds the tree before this recursive Value clone.
-            let mut args = fields.clone();
-            args.remove("op");
-            let intent = crate::AnyIntent::from_tool(op, Value::Object(args))?;
+            let intent = child_intent(call)?;
             let borrowed = cx.view;
             let inner_cx = BuildCx {
                 view: &borrowed as &dyn rtao_client::DynView,
@@ -85,7 +658,14 @@ impl Intent for CreateCrowdloan {
             };
             // Python invokes the nested semantic build directly. Executor
             // sudo/proxy adapters and nested build extras do not enter create.
-            Some(intent.as_dyn().build_dyn(&inner_cx).await?.call)
+            let inner = intent.as_dyn().build_dyn(&inner_cx).await?.call;
+            let decoded = cx
+                .runtime
+                .core()
+                .decode_spec(&rtao_core::runtime::TypeSpec::Call, inner.as_bytes(), true)
+                .map_err(rtao_core::CoreError::from)?;
+            stored_deferred_source_refusal(&decoded)?;
+            Some(inner)
         } else {
             None
         };
@@ -103,7 +683,19 @@ impl Intent for CreateCrowdloan {
     }
 
     fn spend(&self) -> Spend {
-        bounded_spend(&self.deposit_tao)
+        self.safety()
+            .map_or(Spend::Unbounded, |safety| safety.spend)
+    }
+
+    fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
+        self.safety()
+            .map(|safety| safety.netuids)
+            .unwrap_or_default()
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        self.safety()
+            .map_or(true, |safety| safety.affects_all_subnets)
     }
 
     fn validate(&self) -> Result<(), IntentError> {
@@ -170,10 +762,29 @@ impl Intent for ContributeCrowdloan {
 }
 
 impl Intent for FinalizeCrowdloan {
+    fn spend(&self) -> Spend {
+        // The callback is stored on chain; target-only loans transfer a live
+        // raised amount. Neither can be bounded from the ID alone.
+        Spend::Unbounded
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        true
+    }
+
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        finalize_safety_at(cx, self.crowdloan_id).await
+    }
+
     fn summary(&self) -> String {
         format!("finalize crowdloan {}", self.crowdloan_id)
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        // Building bytes also serves cancellation/hash discovery, which does
+        // not authorize the callback. Execution owns pinned safety_at review.
         crate::generated::passthrough::finalize_crowdloan(self, cx).await
     }
 }
@@ -301,6 +912,14 @@ mod tests {
             json!({"data":{"free":u64::MAX}}),
         )?;
         state.seed_constant("Balances", "ExistentialDeposit", json!(deposit))?;
+        state.seed_python(
+            "Crowdloan",
+            "Crowdloans",
+            &[json!(42)],
+            json!({
+                "creator":ORIGIN,"target_address":OTHER,"call":null,"raised":100u64
+            }),
+        )?;
         let chain = FakeChain::from_state(state);
         let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
         config.track_heads = false;
@@ -493,7 +1112,11 @@ mod tests {
             );
             assert_eq!(intent.spec().signer, "coldkey", "{op}");
             assert!(intent.as_dyn().touches_netuids_dyn().is_empty(), "{op}");
-            assert!(!intent.as_dyn().affects_all_subnets_dyn(), "{op}");
+            assert_eq!(
+                intent.as_dyn().affects_all_subnets_dyn(),
+                op == "finalize_crowdloan",
+                "{op}"
+            );
         }
         assert!(chain.state().lock().unwrap().submissions.is_empty());
         client.close().await;
@@ -624,7 +1247,7 @@ mod tests {
         .compose(cx.runtime)?;
         assert_eq!(built.call.as_bytes(), expected.as_bytes());
         assert!(built.extras.is_empty());
-        assert_eq!(create.spend(), Spend::Bounded(Balance::<Tao>::ZERO));
+        assert_eq!(create.spend(), Spend::Unbounded);
         let preflight = PreflightCx {
             view: &snapshot,
             runtime: cx.runtime,

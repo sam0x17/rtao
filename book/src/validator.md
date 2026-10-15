@@ -31,6 +31,13 @@ guards cannot cross an await in a framework callback. `EmaScores` stores scores
 by hotkey and removes replaced or deregistered identities when your
 `on_metagraph` calls `state.apply(diff)`.
 
+`FanOut::max_response_bytes` defaults to 1 MiB per miner response and must be
+positive. Both query APIs reject an oversized declared length or stop collecting
+when a chunk crosses the budget, before JSON decoding. `ResponseTooLarge` is
+permanent and is never retried. Set an explicit larger budget if your protocol
+needs it, accounting for concurrent responses and decoded JSON. The lower-level
+signed request API returns a stream for caller-controlled consumption.
+
 Return `WeightsProposal::Set` from the synchronous `weights` callback, or
 `HoldPrevious` to keep the previous row and `Skip(reason)` when scores are not
 ready. A row containing positive weights only for self or owner is held. Every
@@ -74,6 +81,9 @@ package version, subnet, hotkey, finalized block and save time. Writes use fsync
 and atomic replacement, with three generations retained. Identity or schema
 mismatches refuse recovery; a corrupt current generation can recover its
 preceding valid checkpoint.
+Each complete checkpoint is limited to 64 MiB. Load and rotation accept regular
+files only and enforce the limit during acquisition. Failed rotation keeps the
+current checkpoint intact.
 Override `Validator::state_schema_version` when changing the application's saved
 state format. The runtime refuses an incompatible checkpoint before invoking
 `on_start`.

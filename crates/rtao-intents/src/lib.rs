@@ -74,6 +74,10 @@ pub mod leasing;
 pub mod lock;
 #[cfg(feature = "multisig")]
 pub mod multisig;
+#[cfg(feature = "multisig")]
+pub mod multisig_adapter;
+#[cfg(feature = "multisig")]
+pub use multisig_adapter::{MultisigAdapter, MultisigContinuation, MultisigThreshold1Adapter};
 #[cfg(feature = "proxy")]
 pub mod proxy;
 #[cfg(feature = "registration")]

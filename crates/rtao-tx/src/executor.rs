@@ -202,6 +202,7 @@ impl Default for ShieldOptions {
 
 struct ReviewedIntent {
     built: crate::Built,
+    safety: crate::IntentSafety,
     preview: IntentPreflight,
     warnings: Vec<String>,
     role: SignerRole,
@@ -367,13 +368,13 @@ impl Executor {
     ) -> Result<(Plan, IntentPreflight), TxError> {
         let ReviewedIntent {
             mut built,
+            safety,
             preview,
             warnings,
             role,
         } = self
             .review_with_keys(intent, keys, signer_address, opts, false)
             .await?;
-        let semantic = intent.semantic_intent_dyn();
         let mut plan = Plan::new(
             built.call,
             intent.spec().name,
@@ -390,11 +391,11 @@ impl Executor {
         }
         plan.warnings = warnings;
         if let Some(policy) = opts.policy.as_ref().or(self.policy.as_ref()) {
-            plan.violations = policy.check(semantic, plan.fee);
+            plan.violations = policy.check(&safety, plan.fee);
         }
         plan.violations.extend(preview.blocks.clone());
         plan.extras = std::mem::take(&mut built.extras);
-        plan.spend = semantic.spend_dyn();
+        plan.spend = safety.spend;
         plan.args = intent.to_json_dyn();
         if let Some(args) = plan.args.as_object_mut() {
             args.remove("op");
@@ -412,7 +413,7 @@ impl Executor {
     ) -> Result<ReviewedIntent, TxError> {
         intent.validate_dyn()?;
         let semantic = intent.semantic_intent_dyn();
-        semantic.validate_dyn()?;
+        let declared_safety = semantic.safety_dyn()?;
         let snapshot = View::pin(&self.client).await?;
         // Queries remain pinned to one block; new calls use the head's signing
         // runtime rather than a historical block's execution runtime.
@@ -445,6 +446,15 @@ impl Executor {
             clock: self.clock.as_ref(),
             spec: semantic.spec(),
         };
+        let safety = semantic.safety_at_dyn(&cx).await?;
+        if !shielded && safety.mev_shield_required && !declared_safety.mev_shield_required {
+            return Err(TxError::Policy(PolicyError {
+                violations: vec![format!(
+                    "{} requires MEV-shielded submission after pinned state review; use submit_shielded",
+                    safety.op
+                )],
+            }));
+        }
         let mut built = if let Some(call) = intent.inner_call_data_dyn() {
             call.ensure_runtime(&runtime)
                 .map_err(rtao_client::ClientError::from)?;
@@ -552,6 +562,7 @@ impl Executor {
         }
         Ok(ReviewedIntent {
             built,
+            safety,
             preview,
             warnings,
             role,
@@ -811,7 +822,7 @@ impl Executor {
                 )
                 .await?;
             let mut violations = active_policy.as_ref().map_or_else(Vec::new, |policy| {
-                policy.check(intent.semantic_intent_dyn(), reviewed.preview.estimated_fee)
+                policy.check(&reviewed.safety, reviewed.preview.estimated_fee)
             });
             violations.extend(reviewed.preview.blocks);
             if !violations.is_empty() {
@@ -1003,7 +1014,11 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
-        if intent.semantic_intent_dyn().spec().mev_shield_required {
+        if intent
+            .semantic_intent_dyn()
+            .safety_dyn()?
+            .mev_shield_required
+        {
             return self
                 .submit_shielded_with_keys(
                     intent,
@@ -1520,6 +1535,7 @@ mod tests {
         previews: AtomicUsize,
         origins: Mutex<Vec<(AccountId, AccountId)>>,
         access: Arc<RoleAccess>,
+        required_at: bool,
     }
 
     impl IntentInterface for InstanceHotkey {
@@ -1536,6 +1552,14 @@ mod tests {
     }
 
     impl Intent for InstanceHotkey {
+        async fn safety_at<V: View + ?Sized>(
+            &self,
+            _cx: &BuildCx<'_, V>,
+        ) -> Result<crate::IntentSafety, IntentError> {
+            let mut safety = self.safety()?;
+            safety.mev_shield_required |= self.required_at;
+            Ok(safety)
+        }
         fn signer_role(&self) -> Result<SignerRole, IntentError> {
             Ok(SignerRole::Hotkey)
         }
@@ -1595,8 +1619,39 @@ mod tests {
             previews: AtomicUsize::new(0),
             origins: Mutex::new(vec![]),
             access,
+            required_at: false,
         };
         Ok((Executor::new(client), chain, keys, intent))
+    }
+
+    #[tokio::test]
+    async fn pinned_state_only_shield_requirement_refuses_ordinary_execution_before_build_or_unlock()
+    -> TestResult {
+        let (executor, chain, keys, mut intent) = role_fixture().await?;
+        intent.required_at = true;
+        assert!(!intent.safety()?.mev_shield_required);
+        let error = executor
+            .execute_dyn(
+                &intent,
+                &keys,
+                &ExecuteOptions {
+                    wait_for_inclusion: false,
+                    wait_for_finalization: false,
+                    ..Default::default()
+                },
+            )
+            .await
+            .expect_err("state-only required shield must not submit unshielded");
+        assert!(
+            error
+                .to_string()
+                .contains("requires MEV-shielded submission after pinned state review")
+        );
+        assert_eq!(intent.builds.load(Ordering::SeqCst), 0);
+        assert_no_private_role_access(&keys);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        executor.client().close().await;
+        Ok(())
     }
 
     fn assert_no_private_role_access(keys: &RoleKeys) {
@@ -1867,7 +1922,18 @@ mod tests {
 
     #[tokio::test]
     async fn dynamic_shield_acquires_only_the_instance_hotkey_after_review() -> TestResult {
-        let (executor, chain, keys, intent) = role_fixture().await?;
+        dynamic_shield_with_state_requirement(false).await
+    }
+
+    #[tokio::test]
+    async fn pinned_state_only_shield_requirement_allows_explicit_shield_submission() -> TestResult
+    {
+        dynamic_shield_with_state_requirement(true).await
+    }
+
+    async fn dynamic_shield_with_state_requirement(required_at: bool) -> TestResult {
+        let (executor, chain, keys, mut intent) = role_fixture().await?;
+        intent.required_at = required_at;
         let result = executor
             .submit_shielded_dyn(
                 &intent,

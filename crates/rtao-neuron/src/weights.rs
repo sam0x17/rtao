@@ -50,7 +50,8 @@ pub enum WeightsInput {
     },
     /// Resolve account identities using the current last-good graph.
     ByHotkey(Vec<(AccountId, f64)>),
-    /// Preserve integer ratios under a sole-permit Null consensus proof.
+    /// Preserve every integer UID/value pair under a sole-permit Null consensus proof.
+    /// Chain count and configured share limits apply without scaling or dropping zeros.
     RawU16 {
         /// Destinations in submission order.
         uids: Vec<Uid>,
@@ -889,21 +890,33 @@ fn prepare_row(
         "weight destination UID is outside the current subnet population"
     );
     if raw {
-        // Null passes raw u16 values verbatim; its sole-permit proof does not
-        // impose the Yuma maximum-share rule implemented by Python conform.
+        // Pinned Null direct dispatch preserves zeros and checks length before
+        // max/sum. The raw API promises those exact bytes, unlike Python's
+        // positive-only conform path; never normalize or filter this vector.
+        // The configured limit is a client guard: v478's chain getter currently
+        // returns u16::MAX even when MaxWeightsLimit storage is smaller.
+        let values = weights
+            .into_iter()
+            .map(|weight| weight as u16)
+            .collect::<Vec<_>>();
         anyhow::ensure!(
-            weights.iter().any(|value| *value > 0.0),
+            values.iter().any(|value| *value > 0),
             "all raw weights are zero"
         );
-        let min = state.min_allowed_weights.min(state.population);
+        let self_weight = uids == [uid];
+        let minimum = state.min_allowed_weights.min(state.population);
         anyhow::ensure!(
-            uids == [uid] || uids.len() >= usize::from(min),
-            "raw row is below the minimum destination count"
+            (netuid.0 != 0 && self_weight) || values.len() >= usize::from(minimum),
+            "raw row is below the chain minimum destination count"
         );
-        return Ok((
-            uids,
-            weights.into_iter().map(|weight| weight as u16).collect(),
-        ));
+        let total: u128 = values.iter().map(|value| u128::from(*value)).sum();
+        let maximum = u128::from(values.iter().copied().max().unwrap_or(0));
+        anyhow::ensure!(
+            self_weight
+                || maximum * u128::from(u16::MAX) <= total * u128::from(state.max_weights_limit),
+            "raw weights exceed the configured maximum share; change integer ratios or the subnet limit"
+        );
+        return Ok((uids, values));
     }
     Ok(conform(
         &uids,

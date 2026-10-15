@@ -985,12 +985,12 @@ notes = "raw call; the CLI builds its executor without a `Policy`, as btcli does
 
 [[file]]
 py = "sdk/python/bittensor/cli/call_names.py"
-rs = ["`rtao-cli` name resolution inside JSON arguments [I]"]
+rs = ["rtao_cli::call_names::{resolve_builder_params, resolve_builder_params_with, resolve_intent_args, resolve_intent_args_with}","rtao_cli::call_names::report_resolved_account (crate-private)","rtao_cli::books::NameResolver::closest_name"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "729db3207778374a3f3d908a3ace48416569af24"
 synced_tag = "v478"
 milestone = "M4"
-notes = "address-book, proxy-book, multisig and wallet names inside `call --args` and nested intent specs; used by `cli/call.py`, `cli/tx.py`"
+notes = "Source reconciliation 2026-10-15: exact authenticated source compared with raw-builder and nested-intent resolution, canonical book/wallet lookup and Python SequenceMatcher suggestions. Account field identities, both keyed call shapes, known runtime variants, signer-list order/duplicates, unknown targets, malformed nested-data passthrough and inherited option hints retain their contracts. CLI callbacks register names/key classifications and print public resolutions; explicit format-42 addresses stay silent. Programmatic nesting uses the existing native 128-level input bound. Authored fixture sources: call_names::tests::{raw_scalar_accounts_use_generated_field_types_and_canonical_books, raw_nested_calls_cover_both_keyed_shapes_and_known_runtime_variants, raw_multisig_signer_lists_resolve_without_sorting_or_deduplicating_json, arbitrary_lists_numeric_accounts_and_multiaddress_variants_are_left_for_codec, unknown_target_preserves_fields_but_recurses_into_known_keyed_calls, malformed_nested_params_and_mixed_call_lists_retain_their_original_shapes, intent_accounts_and_nested_batch_multisig_specs_resolve_recursively, intent_resolver_does_not_guess_raw_fields_or_plain_nested_args, unresolved_accounts_supply_did_you_mean_and_inherited_option_hints, renderer_callback_receives_only_resolved_names_and_correct_key_classification, programmatic_json_nesting_refuses_before_clone_or_name_lookup, injected_metadata_schema_controls_resolution_without_field_name_guessing}; books::tests::suggestions_match_sequence_direction_cutoff_ties_and_book_precedence; raw_call_contract::raw_nested_names_register_labels_kinds_and_public_resolution_messages; generated_commands::generated_nested_names_render_public_resolution_and_preserve_raw_address_silence. These are authored source proofs, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/__init__.py"
@@ -1278,7 +1278,7 @@ kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M4"
-notes = "`address_cli_name` (§10.1); MEV precedence `:260-292`, downgrade `:1047-1080` (§3.11); re-prompt `:1900-1935` (§6.2); non-interactive discipline `:2088-2103` (§10.3)"
+notes = "Source audit 2026-10-15: live burned/root registration now uses context::registration to add the exact burn/lock suffix, transaction cost row and root recycling notes before confirmation/unlock; dry-run SDK summary and machine fields remain unchanged. Authored context_contract fixtures: live_registration_review_discloses_exact_burn_lock_and_root_recycling_before_unlock and dry_run_registration_keeps_the_sdk_summary_and_machine_schema. Keep pending: register_subnet still lacks the live creation-price/queue-flow disclosure from upstream context.py:1090-1128, and the full application-context source surface remains under review. No execution or acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/globals.py"
@@ -1309,12 +1309,12 @@ notes = "`wallet balance`/`inspect` rows (M4); overview and registration rows (M
 
 [[file]]
 py = "sdk/python/bittensor/cli/hyperparams_view.py"
-rs = ["`rtao-cli` `hparams get`, `subnets hyperparameters`"]
+rs = ["rtao_cli::commands::hparams::{fetch_hyperparameters, render_hyperparameters}", "rtao_cli::commands::{hparams, subnets} route dispatch"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "§10.5"
+notes = "Source audit 2026-10-15: authenticated blob c778b47718b99085def53920fb3e21b3bd31a6c5. Native pinned fetch supplements missing owner storage and unwraps a sole bits field. Human views now use 6-digit normalized readings, 4-digit fraction examples, exact-before-rounding 6-digit TAO/fixed128 examples, decimal markers and lowercase boolean examples; listing selects kappa/first/tempo and setter flow overrides the hint. Raw JSON values remain exact. Authored hparams_commands fixtures: parameter_listing_keeps_runtime_values_and_augments_missing_fixed128_storage, single_parameter_machine_record_is_exact_and_missing_names_refuse, parameter_examples_use_human_units_and_preserve_raw_machine_values and parameter_listing_hint_selects_a_present_name_or_the_empty_default. Keep pending for independent review and an explicit disposition of the existing native epoch_consensus example adaptation: symbolic Yuma/Null remains a valid setter command, while the Python view prints the integer rejected by its own setter. No execution or acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/intent_prompts.py"
@@ -2209,12 +2209,12 @@ notes = "4 intents (4 generated `build()`, 0 ported); see [parity-inventory.md s
 
 [[file]]
 py = "sdk/python/bittensor/intents/multisig.py"
-rs = ["`rtao_intents::multisig` (feature `multisig`)"]
+rs = ["rtao_intents::multisig", "rtao_intents::multisig_adapter::{MultisigAdapter, MultisigThreshold1Adapter, MultisigContinuation}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
 synced_tag = "v478"
 milestone = "M5"
-notes = "4 intents (0 generated `build()`, 4 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); adapters `:276-398` → `MultisigAdapter`, `MultisigThreshold1Adapter` (§4.2)"
+notes = "Source reconciliation 2026-10-15: four registered multisig intents and both owned typed adapters are implemented under feature multisig. Exact source blob matches tree.txt. Canonical attribution covers registered behavior and adapter source; executor/FakeChain fixtures pin semantic previews, member/group/deposit/runtime checks, origin and sudo/proxy layer order, fixed call bytes, opening continuity, typed output and policy/shield forwarding. D060 replaces independent pinned bytes with executor-issued bound continuation proofs; real hotkey Batch continuation uses dynamic role under both thresholds. Independent reviews informed the proof provenance and dynamic-role corrections; final corrected-source rereads and hosted compilation/execution remain pending, and no device or oracle execution is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/intents/plan.py"
@@ -2353,12 +2353,12 @@ notes = "`Multisig.approve` `:166-313` (§4.6; `rtao call --multisig` is CLI v0)
 
 [[file]]
 py = "sdk/python/bittensor/namespaces.py"
-rs = ["`rtao_reads` namespace types (14) and curated extras"]
+rs = ["rtao_reads::generated::{namespaces, namespace_methods} and Namespaces","rtao_reads::reads::namespaces curated Balances/Staking/Subnets/Neurons aliases","rtao_reads::Subnets::commitments","rtao_metagraph::SubnetsMetagraphExt::{metagraph, metagraph_with}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "04a2c7110a402d59f20af52f705b4a5e65243ce1"
 synced_tag = "v478"
 milestone = "M1–M6"
-notes = "one accessor per catalog `category` (§4.8); curated `:99-213` hand-written; curated `Subnets::commitments` in `rtao_reads::commitments`, curated `Subnets::metagraph` as `rtao_metagraph::SubnetsMetagraphExt` in the prelude (no inherent `Subnets::metagraph` is generated, `:161-188`); the catalog `metagraph` read stays the raw `get_metagraph` dict (`PY/reads/subnets.py:170-190`); the generated `Subnets` accessor lands in M1"
+notes = "Source reconciliation 2026-10-15: exact authenticated source reviewed against all fourteen generated namespace categories and curated aliases. Immutable generated methods replace dynamic __getattr__/__dir__, typed arguments replace Python optional positional defaults, and explicit client.at(...).await? snapshots replace block=. Curated Subnets::metagraph is provided only by the metagraph extension; the catalog raw metagraph remains available through dispatch/free functions. Authored producer fixtures: xtask::regen_namespaces::tests::{categories_drive_accessors_without_shadowing_curated_metagraph, rejects_category_prefix_drift_aliases_and_rebindings, every_pinned_catalog_category_has_exactly_one_namespace}. Authored functional sources: rtao_reads::commitments::{live_and_revealed_only_records_use_core_accounts_and_same_hash, existing_snapshot_retains_its_block_after_head_advances}; rtao_metagraph::fetch::{curated_default_fetches_commitments_and_graph_at_one_block, snapshot_retains_block_and_commitment_opt_out_avoids_scans, missing_subnet_returns_none}; thin balance/stake/subnet/neuron aliases delegate to the separately mapped read implementations. This reconciles native API/source structure without claiming exhaustive alias execution, a newly executed suite or an oracle run."
 
 [[file]]
 py = "sdk/python/bittensor/namespaces.pyi"
@@ -2398,21 +2398,21 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/reads/accounts.py"
-rs = ["`rtao_reads::reads::accounts`"]
+rs = ["rtao_reads::reads::owner::{balance, balances, proxies}","rtao_reads::reads::m6_accounts::{existential_deposit, coldkey_swap_announcement, multisig}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "6 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all six reads compared with the exact authenticated source. Native balances remain exact; batched balances retain duplicate-key replacement and absent-account zero, proxy definitions retain chain order and deposit, pending multisig uses validated bare/prefixed call hashes, and swap announcements retain optional dispute-block truthiness. D-002 single-block pinning remains a separate divergence decision. Authored regression sources: owner::{balances_keep_u64_precision_and_batch_heterogeneous_duplicates, m5_proxies_keep_model_fields_chain_order_and_native_deposit, m5_read_misses_decode_metadata_defaults, all_twenty_two_owner_reads_observe_exact_hit_sets_at_one_state_hash}; m6_accounts::{swap_dispute_truthiness_and_absence_match_python, native_deposits_and_rate_limits_keep_all_u64_bits, fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/base.py"
-rs = ["`rtao_reads` generated `ReadSpec`, `ReadName`, `dispatch`; `utf8_text`"]
+rs = ["rtao_reads::generated::{ReadName, ReadSpec, ParamSpec, RenderHint, READ_SPECS, dispatch, fill_defaults, interfaces}","rtao_reads::reads::subnets::utf8_text (crate-private)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "f74a29405503ad610431ceded37c31c23be73c40"
 synced_tag = "v478"
 milestone = "M1"
-notes = "render hints `:33-54`; `scalar_read` `:156-166` generated whole (§4.8); `_coercing` address rule"
+notes = "Source reconciliation 2026-10-15: exact authenticated source reviewed against all 102 immutable generated read records, complete catalog descriptions/parameters/render hints, closed ReadName and exhaustive dispatch/default filling. Existing export decisions replace dynamic decorators/reflection with authenticated generated records and Python object coercion with explicit typed AccountId inputs. The crate-private utf8_text preserves Python integer-string/float array conversion with the default 4,300 decimal-digit limit, original-array retention on conversion failure, invalid UTF-8 hex output and fromhex ASCII whitespace/non-ASCII diagnostic priority. Authored producer/catalog fixtures: xtask::extract_read_params::tests::{pinned_read_params_preserve_defaults_requiredness_and_spans, scalar_and_decorator_rules_reject_changed_registration_semantics}; xtask::parity_catalog::tests::{catalog_contracts_match_complete_pinned_records, registry_mutations_reject_duplicate_replacements_and_name_drift, render_mutations_reject_missing_changed_and_reordered_labels}; rtao_reads::m2::all_read_names_have_authenticated_defaults_and_parameters; rtao_catalog::specs::every_intent_and_read_retains_its_complete_catalog_record. Authored text fixtures: reads::subnets::tests::{utf8_text_retains_invalid_nonbyte_sequences_and_reports_invalid_hex, utf8_text_truncates_numeric_items_before_checking_byte_bounds, utf8_text_accepts_python_signed_underscored_unicode_decimal_items, utf8_text_keeps_the_entire_original_array_when_integer_coercion_fails, utf8_text_hex_accepts_vertical_tabs_and_keeps_python_non_ascii_priority, utf8_text_retains_arrays_above_pythons_default_decimal_digit_limit}. This is independently reviewed source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/chain.py"
@@ -2434,12 +2434,12 @@ notes = "Source reconciliation 2026-10-15: all three reads compared with the exa
 
 [[file]]
 py = "sdk/python/bittensor/reads/delegation.py"
-rs = ["`rtao_reads::reads::delegation`"]
+rs = ["rtao_reads::reads::m6_delegation::{delegates, delegate, is_delegate, children, parents, pending_children, childkey_threshold_suspended}","rtao_reads::reads::owner::{delegate_take, delegated, DelegateInfo, DelegatedStake}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "9 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all nine reads and delegate presentation models compared with the exact authenticated source. Runtime and edge ordering, duplicate registrations/nominations, optional delegate distinction, PerU16 take identity/fallback, exact u64 child proportions, reversed pending-child key order and present-unit suspension markers are retained. Delegated balances retain subnet currency; D-002 pinning of multi-read delegate_take remains an explicit separate divergence decision. Authored regression sources: m6_delegation::{all_twelve_reads_cover_exact_descriptors_at_head_and_pinned_history, delegates_keep_native_boundaries_and_runtime_sequence_without_deduplication, optional_delegate_and_empty_delegate_list_preserve_absence, child_relations_keep_exact_proportions_and_distinguish_present_unit_markers, malformed_present_storage_and_runtime_payloads_are_errors_not_empty_defaults}; owner::{all_twenty_two_owner_reads_observe_exact_hit_sets_at_one_state_hash, delegate_take_and_hotkey_identities_pin_their_batches_and_deduplicate, delegation_and_stake_valuation_keep_chain_order_units_and_symbols}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/epochs.py"
@@ -2461,75 +2461,75 @@ notes = "Source reconciliation 2026-10-15: all seven scalar reads compared with 
 
 [[file]]
 py = "sdk/python/bittensor/reads/identity.py"
-rs = ["`rtao_reads::reads::identity`"]
+rs = ["rtao_reads::reads::owner::{identity, hotkey_identities}","rtao_reads::reads::m6_accounts::{commitment, revealed_commitment, commitments}","rtao_reads::commitments::{fetch_commitments, NeuronCommitment::to_read_json}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "bc990ef15644d4278b3e5c4802288746199a41c1"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "5 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102); `commitments` calls `metagraph.fetch_commitments`, which lives in `rtao_reads::commitments` (§4.8)"
+notes = "Source reconciliation 2026-10-15: all five reads compared with the exact authenticated source. Identity owner lookups retain deduplication and UTF-8/hex presentation; live commitment reads preserve raw fields, revealed history keeps raw entries, and commitment maps preserve newest-first ordering, stable duplicate replacement, status and age projections. Shared fromhex decoding now accepts every Python ASCII separator only between complete bytes and gives the first non-ASCII diagnostic priority. D-001/D-002 native accessor/pinning choices remain separate divergence decisions. Authored regression sources: owner::{delegate_take_and_hotkey_identities_pin_their_batches_and_deduplicate, owner_scalar_identity_epoch_and_hyperparameter_projections_match_python}; m6_accounts::{commitment_read_raw_fields_differ_from_metagraph_hash_rendering, raw_commitment_non_utf8_is_hex_and_hash_only_is_empty, revealed_history_retains_core_utf8_hex_and_empty_vectors, fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history}; commitments::{live_and_revealed_only_records_use_core_accounts_and_same_hash, existing_snapshot_retains_its_block_after_head_advances}; commitments::tests::{json_rows_match_python_fields_and_reveal_timestamp, status_precedence_preserves_plaintext_and_ignores_old_reveals, newest_first_sort_is_stable_and_duplicate_rows_replace_in_place, hex_fields_accept_all_python_ascii_separators_only_between_complete_bytes, hex_fields_report_first_non_ascii_before_earlier_ascii_syntax_errors}. This is independently reviewed source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/leasing.py"
-rs = ["`rtao_reads::reads::leasing`"]
+rs = ["rtao_reads::reads::m6_delegation::{lease, leases, crowdloan, crowdloans, crowdloan_contributors}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "d7e536fe64be15f851d440bf29afcd447e7b73f7"
 synced_tag = "v478"
 milestone = "M6"
-notes = "5 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all five reads compared with the exact authenticated source. Lease native cost and optional zero/perpetual expiry, crowdloan details, absent entries, map iteration versus numeric ID sorting, scoped contributor prefixes, exact balances and Python float TAO summaries retain their contracts. Authored regression sources: m6_delegation::{all_twelve_reads_cover_exact_descriptors_at_head_and_pinned_history, leases_preserve_cost_precision_perpetual_expiry_and_map_order, crowdloans_sort_ids_but_contributors_keep_prefix_map_order_and_python_float_values, empty_maps_return_empty_lists_at_one_recorded_hash, malformed_present_storage_and_runtime_payloads_are_errors_not_empty_defaults, contributor_prefix_scan_matches_native_keys_without_fetching_other_crowdloans}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/locks.py"
-rs = ["`rtao_reads::reads::locks`"]
+rs = ["rtao_reads::reads::m6_locks::{coldkey_lock, locks_for_coldkey, locks_for_hotkey, accepts_locked_alpha, hotkey_conviction, subnet_convictions}","rtao_reads::reads::owner::most_convicted_hotkey","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "40115bfe96fec8bda42351d18fbe3477e342ec25"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "7 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102); `subnet_convictions` float math ported exactly (`:188-286`, §4.8)"
+notes = "Source reconciliation 2026-10-15: all seven reads compared with the exact authenticated source. Lock lists retain Python ordering/absent-record filtering; runtime APIs supply rolled mass and whole-rao conviction, perpetual mode requires a present false DecayingLock, and acceptance checks bit zero. Pinned subnet projections retain bucket order, owner behavior, native rate distinctions, Python summation, eligible-alpha deductions, strict individual-hotkey 18% admission, first crossing search, raw metadata owner defaults and wide age counters. Monetary results follow the approved checked native u64 contract. Authored regression sources: m6_locks::{nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_blocks, lock_records_use_runtime_roll_forward_and_distinguish_absent_decay_mode, acceptance_uses_only_bit_zero_and_runtime_conviction_discards_fraction_without_float, subnet_accounting_gates_each_hotkey_instead_of_the_global_conviction_sum, perpetual_owner_projection_keeps_maximum_mass_and_refuses_aggregate_overflow, bucket_sums_compensate_globally_and_per_hotkey_without_reusing_rounded_totals, elapsed_buckets_roll_mass_and_conviction_forward_and_future_updates_clamp_to_now, metadata_default_owner_is_the_raw_account_and_keeps_present_owner_buckets}; owner::{all_twenty_two_owner_reads_observe_exact_hit_sets_at_one_state_hash, owner_scalar_identity_epoch_and_hyperparameter_projections_match_python}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/neurons.py"
-rs = ["`rtao_reads::reads::neurons`"]
+rs = ["rtao_reads::reads::m6_accounts::{neurons, hotkey_owner, owned_hotkeys, netuids_for_hotkey, associated_evm_key}","rtao_reads::reads::neurons::uid","rtao_reads::generated::{dispatch, interfaces, defaults}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "ee4441181f73a1b2a8a57c49d3154fa49ce014de"
 synced_tag = "v478"
 milestone = "M2–M6"
-notes = "6 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all six reads compared with the exact authenticated source. Full/lite selection preserves raw records and authenticated lite=true default; neuron UID sorting, native checked stake sum and subnet symbols, registration filtering, duplicate owned hotkeys, optional UID/EVM values and raw zero-owner JSON behavior retain their contracts. D-001 typed Owner adaptation remains separate from the JSON read and divergence acceptance. Authored regression sources: m6_accounts::{neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum, owners_memberships_and_evm_preserve_defaults_and_order, fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history}; m2::{every_ported_read_has_exact_hits_and_one_state_hash, thirteen_reads_preserve_python_outputs_and_float_tokens}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/prices.py"
-rs = ["`rtao_reads::reads::prices`"]
+rs = ["rtao_reads::reads::m6_staking::{alpha_price, alpha_prices, quote_stake, quote_unstake, SwapQuote}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "6378a57c520ce155b075830fd53e752bffe40eef"
 synced_tag = "v478"
 milestone = "M6"
-notes = "4 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all four reads and SwapQuote compared with the exact authenticated source. Spot prices retain exact rao plus Python integer-division binary64 output and last duplicate netuid behavior. Swap inputs use Python Decimal(str(float)) ties-to-even rao conversion; all six result balances retain TAO/alpha currency and symbol distinctions, including root quotes. Invalid or unencodable inputs fail before I/O under the approved native u64 balance contract. Authored regression sources: m6_staking::{all_thirteen_reads_have_exact_descriptor_hits_and_one_head_or_pinned_hash, prices_keep_native_rao_and_python_integer_division_with_last_duplicate_winning, quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding, invalid_quote_amounts_fail_before_any_runtime_or_head_request, truncated_scale_fails_instead_of_inventing_zero_stake_or_swap_values}; reads::m6_staking::tests::quote_decimal_rounding_matches_python_ties_even_without_binary_multiplication. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/root.py"
-rs = ["`rtao_reads::reads::root`"]
+rs = ["rtao_reads::reads::owner::{root_basket_owed, root_claim_threshold, validator_basket_summary}","rtao_reads::reads::m6_root::{basket_position, root_basket_portfolio, root_basket_owed_breakdown, validator_basket, validator_basket_nav, root_basket_total_nav, root_baskets, basket_trading_status}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "11 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102); its reads belong to the `Staking` namespace"
+notes = "Source reconciliation 2026-10-15: all eleven reads compared with the exact authenticated source. Native beta/TAO amounts, own-currency holdings, zero-supply ratios, stable value/NAV ordering, rate fixed-point fractions, exact threshold integer parts, paginated pricing and whole-rao turnover bucket accounting retain their contracts. Single-summary and board enrichment share the narrow defaulted PricingRow projection, allowing omitted historical presentation fields and ignoring unused native fields. Both raw native u128 bits and bits records are accepted, including null/missing zero payloads. RPC/page failures discard partial board enrichment; presented row projection happens after all pages and propagates malformed values, while null single pricing remains absent. Monetary results follow the approved checked native u64 contract. Authored regression sources: m6_root::{all_fourteen_reads_have_exact_descriptor_hits_and_one_head_or_pinned_state, basket_positions_keep_native_beta_and_stable_value_order_with_zero_supply, basket_payouts_and_holdings_preserve_chain_values_and_currencies, basket_board_batches_rates_and_prices_all_pages_before_stable_nav_sort, basket_board_discards_partial_pricing_on_failure_and_skips_empty_enrichment, turnover_bucket_uses_integer_refills_and_clamps_excess_availability}; owner::{owner_scalar_identity_epoch_and_hyperparameter_projections_match_python, validator_summary_flattens_pricing_and_omits_it_when_the_request_fails, basket_reads_keep_compatible_older_api_versions, m5_root_claim_threshold_discards_fractional_rao_and_reads_only_root, m5_root_claim_threshold_rejects_negative_and_overflowing_native_balances}; reads::owner::tests::{single_summary_pricing_defaults_historical_fields_and_ignores_unused_native_fields, single_summary_pricing_keeps_null_absence_and_refuses_malformed_presented_fields, single_summary_pricing_accepts_legacy_raw_bits_and_null_fixed_point_values}; reads::m6_root::tests::{pricing_projection_refuses_malformed_presented_rows_without_returning_partial_pricing, pricing_pages_keep_prior_rows_when_later_arrays_are_null_or_missing}. This is independently reviewed source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/staking.py"
-rs = ["`rtao_reads::reads::staking`"]
+rs = ["rtao_reads::reads::m6_staking::{stake, stake_for_coldkey, stake_for_coldkeys, stake_availability, stake_availability_for_coldkey, total_alpha_staked, staking_hotkeys, auto_stake, auto_stake_all}","rtao_reads::reads::owner::{StakePosition, StakeValuation, stake_value_for_coldkey, stake_value_for_coldkeys}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "e4cc43d182d8b897fa0472de74f6d44c437473e9"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "11 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all eleven reads and the public StakePosition/StakeValuation surfaces compared with the exact authenticated source. Positions keep runtime order, own-currency tagging and last duplicate records; valuations pin prices/positions together, preserve exact root rao and Python binary64 multiply/truncate for alpha, including public spot_value and missing-price zero. Availability accepts native/decoder string keys, deduplicates/sorts requested netuids and does no I/O for an empty request; destination scans retain coldkey scope, numeric order and metadata defaults. Monetary conversion and valuation sums follow the approved checked native u64 contract. Authored regression sources: m6_staking::{all_thirteen_reads_have_exact_descriptor_hits_and_one_head_or_pinned_hash, positions_keep_runtime_order_exact_native_amounts_and_only_reported_coldkeys, availability_sorts_deduplicates_and_fills_only_requested_missing_rows, destination_scan_is_coldkey_scoped_and_numerically_sorted_with_native_storage_defaults, truncated_scale_fails_instead_of_inventing_zero_stake_or_swap_values}; owner::{delegation_and_stake_valuation_keep_chain_order_units_and_symbols, spot_valuations_reject_native_overflow_without_wrapping_or_saturating}; reads::owner::tests::{public_spot_value_keeps_root_u64_max_exact_and_defaults_missing_prices_to_zero, public_spot_value_uses_binary64_product_truncation_and_returns_tao, public_spot_value_rejects_nonfinite_negative_and_overflowing_native_results}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/subnets.py"
-rs = ["`rtao_reads::reads::subnets`"]
+rs = ["rtao_reads::reads::subnets::{metagraph, token_symbols, commit_reveal_enabled, mechanism_count}","rtao_reads::reads::owner::{burn, subnet_hyperparameters, subnet_identity, subnet_names, subnet_start_schedule, mechanism_emission_split}","rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}","rtao_reads::generated::{dispatch, interfaces}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "ad3143c03524a250fe99501ebd74888f5c69a684"
 synced_tag = "v478"
 milestone = "M1–M6"
-notes = "14 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+notes = "Source reconciliation 2026-10-15: all fourteen reads compared with the exact authenticated source. Subnet listing retains four pinned complete map joins and zero missing join values; raw metagraph changes only present name/symbol text; symbols/identities preserve invalid UTF-8 as hex. Forward-compatible hyperparameter flattening retains raw U64F64 and signed I32F32 integer parts; flow EMA retains signed fractional rao, and mechanism values remain raw ordered chain values. D-040 deliberately follows mutable StartCallDelay plus saturating native eligibility rather than the upstream initial constant. Authored regression sources: subnets::{raw_metagraph_preserves_runtime_record_and_decodes_compact_text, token_symbols_retains_invalid_utf8_as_hex}; m2::{every_ported_read_has_exact_hits_and_one_state_hash, thirteen_reads_preserve_python_outputs_and_float_tokens}; m6_root::{all_fourteen_reads_have_exact_descriptor_hits_and_one_head_or_pinned_state, subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows, signed_flow_ema_retains_fractional_rao_and_omits_unrecorded_subnets}; owner::{owner_scalar_identity_epoch_and_hyperparameter_projections_match_python, d040_mutable_start_delay_overrides_initial_default, d040_lower_mutable_start_delay_overrides_initial_default, d040_zero_mutable_start_delay_overrides_initial_default, d040_start_schedule_saturates_u64_eligibility_bound, d040_start_schedule_descriptor_coverage_is_exact_at_pinned_hashes}. This is source reconciliation, not newly executed tests or an oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/weights.py"

@@ -23,7 +23,7 @@ use std::{
     },
 };
 use tokio::sync::Mutex;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 const MAX_KEYFILE_BYTES: u64 = 16 * 1024 * 1024;
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
@@ -93,7 +93,7 @@ pub(crate) struct FileState {
     pub cold_public: Option<PathBuf>,
     pub sources: PasswordSources,
     pub role: SignerRole,
-    signer: Mutex<Option<Arc<dyn Signer>>>,
+    signer: Arc<Mutex<Option<Arc<dyn Signer>>>>,
 }
 impl fmt::Debug for FileState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -117,7 +117,7 @@ impl FileState {
             cold_public,
             role,
             sources: PasswordSources::default(),
-            signer: Mutex::new(None),
+            signer: Arc::new(Mutex::new(None)),
         })
     }
     pub(crate) async fn unlock(&self) -> Result<Arc<dyn Signer>, WalletError> {
@@ -215,7 +215,18 @@ impl FileState {
         keypair: Keypair,
         options: WriteOptions,
     ) -> Result<AccountId, WalletError> {
-        let mut cached = self.signer.lock().await;
+        self.store_with(keypair, options, || Ok(())).await
+    }
+    // The callback lets unit fixtures pause the actual worker after it owns
+    // the operation lock, before it can install either file. Its returned owner
+    // stays alive until publication finishes, including errors and unwind.
+    async fn store_with<T: Send + 'static>(
+        &self,
+        keypair: Keypair,
+        options: WriteOptions,
+        before_install: impl FnOnce() -> Result<T, WalletError> + Send + 'static,
+    ) -> Result<AccountId, WalletError> {
+        let mut cached = self.signer.clone().lock_owned().await;
         preflight(&self.path, options.overwrite)?;
         preflight(&self.public, options.overwrite)?;
         let account = AccountId(keypair.public_key_bytes());
@@ -245,37 +256,46 @@ impl FileState {
         };
         let path = self.path.clone();
         let public_path = self.public.clone();
-        // A failed filesystem operation may already have installed the secret
-        // file. Never retain a signer for the previous on-disk key after a write.
+        // A failed or cancelled write may still install the secret file. The
+        // blocking worker retains this owned guard until publication finishes,
+        // even if its async caller is dropped. No unlock or later replacement
+        // can cache/interleave an older key while that worker is still running.
         *cached = None;
         rtao_core::offload(move || {
-            let public = Keypair::new(
-                None,
-                Some(&keypair.public_key_bytes()),
-                keypair.crypto_type(),
-                keypair.ss58_format(),
-            )?;
-            let bytes = Zeroizing::new(keyfile_json::serialized_keypair_to_keyfile_data(&keypair)?);
-            #[cfg(feature = "encrypted")]
-            let bytes = if let Some(password) = password {
-                Zeroizing::new(rtao_core::keyfiles::encrypt_keyfile_data(
-                    &bytes,
-                    password.expose_secret(),
-                )?)
-            } else {
-                bytes
-            };
-            #[cfg(not(feature = "encrypted"))]
-            let _ = password;
-            let public_bytes =
-                Zeroizing::new(keyfile_json::serialized_keypair_to_keyfile_data(&public)?);
-            atomic_write(&path, &bytes, options.overwrite)?;
-            atomic_write(&public_path, &public_bytes, options.overwrite)?;
-            Ok::<_, WalletError>(())
+            let result = (|| {
+                let _installation = before_install()?;
+                let public = Keypair::new(
+                    None,
+                    Some(&keypair.public_key_bytes()),
+                    keypair.crypto_type(),
+                    keypair.ss58_format(),
+                )?;
+                let bytes =
+                    Zeroizing::new(keyfile_json::serialized_keypair_to_keyfile_data(&keypair)?);
+                #[cfg(feature = "encrypted")]
+                let bytes = if let Some(password) = password {
+                    Zeroizing::new(rtao_core::keyfiles::encrypt_keyfile_data(
+                        &bytes,
+                        password.expose_secret(),
+                    )?)
+                } else {
+                    bytes
+                };
+                #[cfg(not(feature = "encrypted"))]
+                let _ = password;
+                let public_bytes =
+                    Zeroizing::new(keyfile_json::serialized_keypair_to_keyfile_data(&public)?);
+                atomic_write(&path, &bytes, options.overwrite)?;
+                atomic_write(&public_path, &public_bytes, options.overwrite)?;
+                Ok::<_, WalletError>(())
+            })();
+            // Covers success and partial-write errors. If the worker panics,
+            // the cache was already empty and the guard is released by unwind.
+            *cached = None;
+            result
         })
         .await
         .map_err(|error| WalletError::Blocking(error.to_string()))??;
-        *cached = None;
         Ok(account)
     }
     pub(crate) fn hot_address(&self) -> Result<AccountId, SignerError> {
@@ -369,7 +389,7 @@ impl HotkeyFile {
             cold_public: self.0.cold_public.clone(),
             role: self.0.role,
             sources,
-            signer: Mutex::new(None),
+            signer: Arc::new(Mutex::new(None)),
         });
         self
     }
@@ -412,7 +432,7 @@ impl ColdkeyFile {
             cold_public: None,
             role: self.0.role,
             sources,
-            signer: Mutex::new(None),
+            signer: Arc::new(Mutex::new(None)),
         });
         self
     }
@@ -506,14 +526,57 @@ pub(crate) fn read_secret_file(
     if metadata.len() > MAX_KEYFILE_BYTES {
         return Err(oversized());
     }
-    let mut bytes = Zeroizing::new(Vec::new());
-    file.take(MAX_KEYFILE_BYTES + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|error| io_error(path, error))?;
-    if bytes.len() as u64 > MAX_KEYFILE_BYTES {
-        return Err(oversized());
+    read_secret_bytes(
+        file,
+        metadata.len() as usize,
+        MAX_KEYFILE_BYTES as usize,
+        path,
+        description,
+        |_| {},
+    )
+}
+
+// A file can grow after metadata was read. Copy to a new guarded allocation
+// before every required growth, wipe the initialized old prefix, then drop its
+// wiping owner. Neither extend_from_slice below can reallocate secret bytes.
+// The retirement observer is a no-op outside unit fixtures.
+fn read_secret_bytes(
+    mut reader: impl Read,
+    size_hint: usize,
+    limit: usize,
+    path: &Path,
+    description: &str,
+    mut retired: impl FnMut(&[u8]),
+) -> Result<Zeroizing<Vec<u8>>, WalletError> {
+    let mut bytes = Zeroizing::new(Vec::with_capacity(size_hint.min(limit)));
+    let mut chunk = Zeroizing::new([0u8; 8192]);
+    loop {
+        // Read one byte beyond the remaining allowance to detect growth while
+        // bounding acquisition. The extra byte stays in the wiping scratch.
+        let allowed = (limit - bytes.len()).saturating_add(1).min(chunk.len());
+        let count = match reader.read(&mut chunk[..allowed]) {
+            Ok(0) => return Ok(bytes),
+            Ok(count) => count,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(io_error(path, error)),
+        };
+        let needed = bytes.len() + count;
+        if needed > limit {
+            return Err(WalletError::Core(rtao_core::CoreError::Keyfile(format!(
+                "{description} exceeds 16 MiB limit"
+            ))));
+        }
+        if needed > bytes.capacity() {
+            let capacity = bytes.capacity().saturating_mul(2).max(needed).min(limit);
+            let mut replacement = Zeroizing::new(Vec::with_capacity(capacity));
+            replacement.extend_from_slice(&bytes);
+            bytes.as_mut_slice().zeroize();
+            retired(&bytes);
+            // Dropping Zeroizing also wipes spare capacity before freeing it.
+            bytes = replacement;
+        }
+        bytes.extend_from_slice(&chunk[..count]);
     }
-    Ok(bytes)
 }
 
 /// Inspect only public JSON fields; this never calls the secret-key decoder.
@@ -704,10 +767,296 @@ pub(crate) fn atomic_write(
 }
 
 #[cfg(test)]
+mod replacement_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+    use super::*;
+    use crate::testsupport::TempRoot;
+    use std::{future::Future, pin::Pin, sync::mpsc, task::Poll, time::Duration};
+    use tokio::sync::oneshot;
+
+    struct ReleaseWorker {
+        resume: Option<mpsc::Sender<()>>,
+        finished: Option<mpsc::Receiver<()>>,
+    }
+    impl ReleaseWorker {
+        fn release(mut self) {
+            self.finish().unwrap();
+        }
+        fn finish(&mut self) -> Result<(), mpsc::RecvTimeoutError> {
+            if let Some(sender) = self.resume.take() {
+                let _ = sender.send(());
+            }
+            if let Some(finished) = self.finished.take() {
+                finished.recv_timeout(Duration::from_secs(30))?;
+            }
+            Ok(())
+        }
+    }
+    impl Drop for ReleaseWorker {
+        fn drop(&mut self) {
+            // Join publication before TempRoot cleanup even if an assertion
+            // panics. The worker does not depend on this Tokio task to finish.
+            let _ = self.finish();
+        }
+    }
+    struct WorkerFinished {
+        finished: Option<mpsc::Sender<()>>,
+        // Keep disposable files alive until publication ends even if a fixture
+        // assertion fails and its bounded completion wait expires.
+        _root: Arc<TempRoot>,
+    }
+    impl Drop for WorkerFinished {
+        fn drop(&mut self) {
+            if let Some(sender) = self.finished.take() {
+                let _ = sender.send(());
+            }
+        }
+    }
+    fn paused_worker(
+        root: Arc<TempRoot>,
+    ) -> (
+        oneshot::Receiver<()>,
+        ReleaseWorker,
+        impl FnOnce() -> Result<WorkerFinished, WalletError> + Send + 'static,
+    ) {
+        let (started, observed) = oneshot::channel();
+        let (release, resume) = mpsc::channel();
+        let (finished, completion) = mpsc::channel();
+        let pause = move || {
+            let finished = WorkerFinished {
+                finished: Some(finished),
+                _root: root,
+            };
+            let _ = started.send(());
+            resume.recv_timeout(Duration::from_secs(30)).map_err(|_| {
+                WalletError::Blocking("disposable replacement worker was not released".into())
+            })?;
+            Ok(finished)
+        };
+        (
+            observed,
+            ReleaseWorker {
+                resume: Some(release),
+                finished: Some(completion),
+            },
+            pause,
+        )
+    }
+    async fn pending_once<F: Future>(mut future: Pin<&mut F>) -> bool {
+        std::future::poll_fn(|cx| Poll::Ready(future.as_mut().poll(cx).is_pending())).await
+    }
+    fn replacement() -> WriteOptions {
+        WriteOptions {
+            overwrite: Overwrite::Yes,
+            ..WriteOptions::hotkey()
+        }
+    }
+    fn state(root: &TempRoot) -> Arc<FileState> {
+        FileState::new(
+            root.path().join("hotkey"),
+            root.path().join("hotkeypub.txt"),
+            None,
+            SignerRole::Hotkey,
+        )
+    }
+    fn key(uri: &str) -> Keypair {
+        Keypair::from_uri(uri, 1).unwrap()
+    }
+    fn account(uri: &str) -> AccountId {
+        AccountId(key(uri).public_key_bytes())
+    }
+
+    #[tokio::test]
+    async fn cancelled_replacement_keeps_worker_lock_and_unlocks_only_the_installed_key() {
+        let root = Arc::new(TempRoot::new());
+        let state = state(&root);
+        state.store(key("//Alice"), replacement()).await.unwrap();
+        let old = state.unlock().await.unwrap();
+        assert_eq!(old.account(), account("//Alice"));
+        let (started, release, pause) = paused_worker(root.clone());
+        let replacing = {
+            let state = state.clone();
+            tokio::spawn(async move { state.store_with(key("//Bob"), replacement(), pause).await })
+        };
+        started.await.unwrap();
+        replacing.abort();
+        assert!(replacing.await.unwrap_err().is_cancelled());
+        assert!(state.signer.try_lock().is_err());
+
+        let mut unlocking = Box::pin(state.unlock());
+        // Poll the actual unlock through its lock acquisition. No elapsed-time
+        // or scheduler-yield assumption is used to establish that it waits.
+        assert!(pending_once(unlocking.as_mut()).await);
+        assert_eq!(public_account(&state.path).unwrap(), old.account());
+        release.release();
+
+        let fresh = unlocking.await.unwrap();
+        assert_eq!(fresh.account(), account("//Bob"));
+        assert_eq!(state.hot_address().unwrap(), fresh.account());
+        assert!(Arc::ptr_eq(&fresh, &state.unlock().await.unwrap()));
+        let signature = fresh
+            .sign_raw(b"cancelled wallet replacement")
+            .await
+            .unwrap();
+        assert!(
+            rtao_core::keys::verify_strict(
+                b"cancelled wallet replacement",
+                &signature,
+                &fresh.account().to_string(),
+                1,
+            )
+            .unwrap()
+        );
+        assert_ne!(old.account(), fresh.account());
+    }
+
+    #[tokio::test]
+    async fn cancelled_earlier_replacement_cannot_overwrite_a_later_completed_replacement() {
+        let root = Arc::new(TempRoot::new());
+        let state = state(&root);
+        state.store(key("//Alice"), replacement()).await.unwrap();
+        state.unlock().await.unwrap();
+        let (started, release, pause) = paused_worker(root.clone());
+        let earlier = {
+            let state = state.clone();
+            tokio::spawn(async move { state.store_with(key("//Bob"), replacement(), pause).await })
+        };
+        started.await.unwrap();
+        earlier.abort();
+        assert!(earlier.await.unwrap_err().is_cancelled());
+
+        let mut later = Box::pin(state.store(key("//Charlie"), replacement()));
+        assert!(pending_once(later.as_mut()).await);
+        assert!(state.signer.try_lock().is_err());
+        assert_eq!(public_account(&state.path).unwrap(), account("//Alice"));
+        release.release();
+
+        assert_eq!(later.await.unwrap(), account("//Charlie"));
+        // Acquiring the same lock proves the abandoned earlier worker finished
+        // before these observations, so it cannot publish afterward.
+        let signer = state.unlock().await.unwrap();
+        assert_eq!(signer.account(), account("//Charlie"));
+        assert_eq!(public_account(&state.path).unwrap(), signer.account());
+        assert_eq!(public_account(&state.public).unwrap(), signer.account());
+    }
+
+    #[tokio::test]
+    async fn partial_replacement_failure_discards_the_previous_cached_signer() {
+        let root = TempRoot::new();
+        let state = state(&root);
+        state.store(key("//Alice"), replacement()).await.unwrap();
+        let old = state.unlock().await.unwrap();
+        fs::remove_file(&state.public).unwrap();
+        fs::create_dir(&state.public).unwrap();
+        assert!(state.store(key("//Bob"), replacement()).await.is_err());
+        assert_eq!(public_account(&state.path).unwrap(), account("//Bob"));
+        let fresh = state.unlock().await.unwrap();
+        assert_eq!(fresh.account(), account("//Bob"));
+        assert_ne!(fresh.account(), old.account());
+    }
+}
+
+#[cfg(test)]
 mod read_security_tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::testsupport::TempRoot;
+
+    struct Fragmented<'a> {
+        input: &'a [u8],
+        fragment: usize,
+        read: usize,
+        interrupt_once: bool,
+    }
+    impl Read for Fragmented<'_> {
+        fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+            if self.interrupt_once {
+                self.interrupt_once = false;
+                return Err(std::io::Error::from(std::io::ErrorKind::Interrupted));
+            }
+            let count = output.len().min(self.fragment).min(self.input.len());
+            output[..count].copy_from_slice(&self.input[..count]);
+            self.input = &self.input[count..];
+            self.read += count;
+            Ok(count)
+        }
+    }
+
+    #[test]
+    fn growing_secret_reads_wipe_each_retired_prefix_before_releasing_its_allocation() {
+        let input = b"disposable-secret-prefix-continued-after-the-metadata-length-was-read";
+        let mut reader = Fragmented {
+            input,
+            fragment: 3,
+            read: 0,
+            interrupt_once: true,
+        };
+        let mut retired_lengths = Vec::new();
+        let bytes = read_secret_bytes(
+            &mut reader,
+            1,
+            128,
+            Path::new("disposable-growing-keyfile"),
+            "keyfile",
+            |retired| {
+                assert!(retired.iter().all(|byte| *byte == 0));
+                retired_lengths.push(retired.len());
+            },
+        )
+        .unwrap();
+        assert_eq!(bytes.as_slice(), input);
+        assert_eq!(reader.read, input.len());
+        assert!(retired_lengths.iter().filter(|length| **length > 0).count() >= 3);
+    }
+
+    #[test]
+    fn accurate_secret_size_hint_never_retires_a_secret_allocation() {
+        let input = b"disposable-password-file";
+        let reader = Fragmented {
+            input,
+            fragment: 2,
+            read: 0,
+            interrupt_once: false,
+        };
+        let mut retirements = 0;
+        let bytes = read_secret_bytes(
+            reader,
+            input.len(),
+            128,
+            Path::new("disposable-stable-password-file"),
+            "password file",
+            |_| retirements += 1,
+        )
+        .unwrap();
+        assert_eq!(bytes.as_slice(), input);
+        assert_eq!(retirements, 0);
+    }
+
+    #[test]
+    fn secret_growth_refuses_at_one_byte_beyond_the_budget_without_reading_the_tail() {
+        let input = [0x5a; 128];
+        let mut reader = Fragmented {
+            input: &input,
+            fragment: 3,
+            read: 0,
+            interrupt_once: false,
+        };
+        let error = read_secret_bytes(
+            &mut reader,
+            1,
+            32,
+            Path::new("disposable-over-budget-keyfile"),
+            "keyfile",
+            |retired| assert!(retired.iter().all(|byte| *byte == 0)),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "keyfile error: keyfile exceeds 16 MiB limit"
+        );
+        assert_eq!(reader.read, 33);
+        assert_eq!(reader.input.len(), input.len() - 33);
+    }
 
     #[test]
     fn plaintext_hotkey_public_fallback_validates_whole_json_and_preserves_alias_precedence() {

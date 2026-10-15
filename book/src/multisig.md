@@ -7,6 +7,21 @@ approval, and retain the opening timepoint when approving an existing operation.
 A hash-only approval cannot execute the inner call at the threshold; execution
 requires the full call.
 
+For a typed semantic operation, use `MultisigAdapter<I>` for thresholds of two
+or more and `MultisigThreshold1Adapter<I>` for immediate one-of-N dispatch.
+Both own the inner intent, retain its policy/preflight/shield requirements and
+sign with the member's coldkey. The effective semantic origin is the multisig
+account, with semantic Sudo and proxy layers inside the multisig wrapper.
+
+Call `adapter.review(executor, keys, options)` to obtain a plan and an opaque
+`MultisigContinuation`. Pass that continuation to a later adapter constructor
+to reuse the exact reviewed bytes, including randomized calls. It binds the
+semantic arguments, signer set, effective origin and runtime; a different
+intent cannot inherit its policy label. For a pending operation, also retain
+and require its opening timepoint with `with_opening_timepoint`. An absent or
+replaced opening refuses. A continuation proves where the bytes came from;
+each approval still performs current policy and preflight checks.
+
 An external signer signs the member's prepared approval transaction. Compose
 proxy, Sudo and multisig wrappers before preparing it, then call
 `Executor::prepare_call(call, member_address, &PrepareOptions)`. Preparation uses

@@ -236,11 +236,16 @@ where
     }
     tokio::time::sleep(response.delay).await;
     let mut bytes = format!(
-        "HTTP/1.1 {} Fixture\r\nContent-Length: {}\r\nConnection: close\r\n",
-        response.status,
-        response.body.len()
+        "HTTP/1.1 {} Fixture\r\nConnection: close\r\n",
+        response.status
     )
     .into_bytes();
+    if !response.headers.iter().any(|(name, _)| {
+        name.eq_ignore_ascii_case("content-length")
+            || name.eq_ignore_ascii_case("transfer-encoding")
+    }) {
+        bytes.extend_from_slice(format!("Content-Length: {}\r\n", response.body.len()).as_bytes());
+    }
     for (name, value) in response.headers {
         bytes.extend_from_slice(format!("{name}: {value}\r\n").as_bytes());
     }

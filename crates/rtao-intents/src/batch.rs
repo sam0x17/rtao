@@ -4,10 +4,13 @@
 use std::collections::BTreeSet;
 
 use rtao_client::{DynView, View};
-use rtao_primitives::{Balance, NetUid, Spend, Tao, pyfmt};
+use rtao_primitives::{NetUid, Spend, pyfmt};
 use rtao_runtime::calls::utility;
 use rtao_signer::SignerRole;
-use rtao_tx::{BuildCx, Built, DynIntent, Intent, IntentError, IntentPreflight, PreflightCx};
+use rtao_tx::{
+    BuildCx, Built, DynIntent, Intent, IntentError, IntentInterface, IntentPreflight, IntentSafety,
+    PreflightCx,
+};
 use serde_json::Value;
 use smallvec::SmallVec;
 
@@ -305,6 +308,36 @@ async fn preflight_children<V: View + ?Sized>(
 }
 
 impl Intent for Batch {
+    async fn safety_at<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+    ) -> Result<IntentSafety, IntentError> {
+        let mut safety = IntentSafety {
+            op: Self::SPEC.name,
+            spend: Spend::None,
+            netuids: SmallVec::new(),
+            affects_all_subnets: false,
+            contains_raw_calls: false,
+            mev_shield_required: Self::SPEC.mev_shield_required,
+        };
+        let borrowed = cx.view;
+        for child in children(self)? {
+            safety.include(
+                child
+                    .as_dyn()
+                    .safety_at_dyn(&BuildCx {
+                        view: &borrowed as &dyn DynView,
+                        origin: cx.origin,
+                        runtime: cx.runtime,
+                        clock: cx.clock,
+                        spec: child.spec(),
+                    })
+                    .await?,
+            );
+        }
+        Ok(safety)
+    }
+
     fn signer_role(&self) -> Result<SignerRole, IntentError> {
         Batch::signer_role(self)
     }
@@ -357,52 +390,34 @@ impl Intent for Batch {
     }
 
     fn spend(&self) -> Spend {
-        let Ok(children) = children(self) else {
-            return Spend::Unbounded;
-        };
-        let mut total = Balance::<Tao>::ZERO;
-        let mut bounded = false;
-        for child in children {
-            match child.as_dyn().spend_dyn() {
-                Spend::Unbounded => return Spend::Unbounded,
-                Spend::None => {}
-                Spend::Bounded(amount) => {
-                    let Ok(sum) = total.checked_add(amount) else {
-                        // Q25 keeps the native u64 range. Such a sum exceeds
-                        // every representable configured spend cap.
-                        return Spend::Unbounded;
-                    };
-                    total = sum;
-                    bounded = true;
-                }
-            }
-        }
-        if bounded {
-            Spend::Bounded(total)
-        } else {
-            Spend::None
-        }
+        self.safety()
+            .map_or(Spend::Unbounded, |safety| safety.spend)
     }
 
     fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
-        children(self)
-            .map(|children| {
-                children
-                    .iter()
-                    .flat_map(|child| child.as_dyn().touches_netuids_dyn())
-                    .collect::<BTreeSet<_>>()
-                    .into_iter()
-                    .collect()
-            })
+        self.safety()
+            .map(|safety| safety.netuids)
             .unwrap_or_default()
     }
 
     fn affects_all_subnets(&self) -> bool {
-        children(self).map_or(true, |children| {
-            children
-                .iter()
-                .any(|child| child.as_dyn().affects_all_subnets_dyn())
-        })
+        self.safety()
+            .map_or(true, |safety| safety.affects_all_subnets)
+    }
+
+    fn safety(&self) -> Result<IntentSafety, IntentError> {
+        let mut safety = IntentSafety {
+            op: Self::SPEC.name,
+            spend: Spend::None,
+            netuids: SmallVec::new(),
+            affects_all_subnets: false,
+            contains_raw_calls: false,
+            mev_shield_required: Self::SPEC.mev_shield_required,
+        };
+        for child in children(self)? {
+            safety.include(child.as_dyn().safety_dyn()?);
+        }
+        Ok(safety)
     }
 
     fn validate(&self) -> Result<(), IntentError> {
@@ -416,7 +431,7 @@ impl Intent for Batch {
 mod tests {
     use super::*;
     use rtao_client::{BlockRef, Client, ClientConfig, Network, Snapshot};
-    use rtao_primitives::AccountId;
+    use rtao_primitives::{AccountId, Balance, Tao};
     use rtao_runtime::{CallBytes, RuntimeHandle, calls::system};
     use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
     use rtao_tx::{Clock, FactsTitle, IntentInterface, OriginView};

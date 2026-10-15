@@ -103,7 +103,26 @@ pub(crate) fn utf8_text(value: JsonValue) -> Result<JsonValue, ReadError> {
                     (0.0..256.0).contains(&truncated).then_some(truncated as u8)
                 }
                 JsonValue::Bool(value) => Some(u8::from(*value)),
-                JsonValue::String(value) => rtao_primitives::pyfmt::parse_integer(value)?.to_u8(),
+                JsonValue::String(value) => {
+                    // CPython's default decimal-int limit counts digits,
+                    // including leading zeros, but excludes signs/separators.
+                    // CPython v3.12.11 longobject.c:2630-2700 (git blob
+                    // c366034fe4bf90d7f2680647f38b47703a2080f3); default 4300
+                    // is defined in Include/internal/pycore_long.h:29.
+                    // Invalid syntax is rejected by parse_integer below.
+                    let digits = value
+                        .chars()
+                        .filter(|character| {
+                            !character.is_whitespace() && !matches!(*character, '_' | '+' | '-')
+                        })
+                        .take(4301)
+                        .count();
+                    if digits > 4300 {
+                        None
+                    } else {
+                        rtao_primitives::pyfmt::parse_integer(value)?.to_u8()
+                    }
+                }
                 _ => None,
             })
             .collect::<Option<Vec<_>>>(),
@@ -172,6 +191,48 @@ mod tests {
             panic!("wrong error")
         };
         assert!(message.contains("position 0"));
+    }
+
+    #[test]
+    fn utf8_text_hex_accepts_vertical_tabs_and_keeps_python_non_ascii_priority() {
+        assert_eq!(
+            utf8_text(json!("0x61\u{b}62\u{b}63")).unwrap(),
+            json!("abc")
+        );
+        for (input, position) in [("0xggé", 2), ("0x6\u{b}1", 1)] {
+            let ReadError::Commitment(CommitmentError { field, message }) =
+                utf8_text(json!(input)).unwrap_err()
+            else {
+                panic!("wrong error")
+            };
+            assert_eq!(field, "text");
+            assert_eq!(
+                message,
+                format!("non-hexadecimal number found in fromhex() arg at position {position}")
+            );
+        }
+    }
+
+    #[test]
+    fn utf8_text_retains_arrays_above_pythons_default_decimal_digit_limit() {
+        for numeral in [
+            "0".repeat(4300),
+            format!("\u{2003}+{}\u{a0}", "0_".repeat(4299) + "0"),
+            "٠".repeat(4300),
+        ] {
+            assert_eq!(
+                utf8_text(json!([65, numeral, 66])).unwrap(),
+                json!("A\u{0}B")
+            );
+        }
+        for numeral in [
+            "0".repeat(4301),
+            format!("\u{2003}-{}\u{a0}", "0_".repeat(4300) + "0"),
+            "٠".repeat(4301),
+        ] {
+            let original = json!([65, numeral, 66]);
+            assert_eq!(utf8_text(original.clone()).unwrap(), original);
+        }
     }
 
     #[test]
