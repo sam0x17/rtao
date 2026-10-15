@@ -1,5 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/{commands/root.py,commands/root_move.py,commands/root_swap.py,root_helpers.py}
-// @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/root.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Additional sources at the same commit/license: sdk/python/bittensor/cli/commands/root_move.py, sdk/python/bittensor/cli/commands/root_swap.py, sdk/python/bittensor/cli/root_helpers.py.
 //! Root baskets, accrued-yield claims and root position moves.
 
 use super::generated::{self, TxRequest};
