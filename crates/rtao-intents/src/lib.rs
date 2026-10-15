@@ -49,12 +49,20 @@ pub mod association;
 pub mod children;
 #[cfg(feature = "coldkey")]
 pub mod coldkey;
+#[cfg(feature = "collateral")]
+pub mod collateral;
 #[cfg(feature = "crowdloan")]
 pub mod crowdloan;
+#[cfg(feature = "evm")]
+pub mod evm;
 #[cfg(feature = "governance")]
 pub mod governance;
 #[cfg(feature = "identity")]
 pub mod identity;
+#[cfg(feature = "leasing")]
+pub mod leasing;
+#[cfg(feature = "lock")]
+pub mod lock;
 #[cfg(feature = "proxy")]
 pub mod proxy;
 #[cfg(feature = "registration")]
@@ -63,6 +71,10 @@ pub mod registration;
 mod registration_pow;
 #[cfg(feature = "root")]
 pub mod root;
+#[cfg(feature = "registration")]
+pub mod root_claim;
+#[cfg(feature = "staking")]
+mod staking_baskets;
 
 // The generated records contain only infallibly serializable primitive values.
 #[allow(clippy::expect_used)]

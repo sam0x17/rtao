@@ -7,7 +7,9 @@ use rtao_runtime::storage::subtensor_module as st;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
 use smallvec::SmallVec;
 
-pub use crate::{BurnedRegister, RegisterSubnet, RootRegister, StartCall};
+pub use crate::{
+    BurnedRegister, ClaimRoot, ClaimRootWithHotkey, RegisterSubnet, RootRegister, StartCall,
+};
 
 /// Split a subnet's current registration price into burned and locked TAO.
 ///
