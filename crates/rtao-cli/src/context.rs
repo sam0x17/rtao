@@ -441,12 +441,12 @@ impl AppContext {
         let spec = intent.semantic_intent_dyn().spec();
         let mut choice =
             self.resolve_mev_shield(spec.mev_shield_default, spec.mev_shield_required, spec.name)?;
-        if let Some(period) = control.period {
-            if !(4..=65_536).contains(&period) || !period.is_power_of_two() {
-                return Err(CliError::input(
-                    "--period must be a power of two between 4 and 65536 blocks",
-                ));
-            }
+        if let Some(period) = control.period
+            && (!(4..=65_536).contains(&period) || !period.is_power_of_two())
+        {
+            return Err(CliError::input(
+                "--period must be a power of two between 4 and 65536 blocks",
+            ));
         }
         let payer: AccountId = match intent.spec().signer {
             "hotkey" => keys.hotkey_address(),
