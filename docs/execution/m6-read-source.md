@@ -38,7 +38,14 @@ The frozen archive runtime API table already exists and is reused.
 Runtime review corrected an unbounded join during thread-local teardown.
 Worker shutdown now has one deadline, with cancellation replies and a bounded
 reaper wait. Its fixture releases blocked teardown before assertions. Facade
-teardown receives a separate review for concurrent and reentrant close.
+review also found an unbounded coordinator join after acknowledgement: thread
+local teardown can still be pending at that point. The facade now detaches the
+coordinator after its bounded acknowledgement wait. Source review covers
+concurrent and reentrant close; hosted execution remains required.
+
+Hosted generation at `afd989a` failed on an unmatched brace in the new
+blocking-accessor format string before producing outputs. The generator source
+is corrected, with no generated artifact adopted from the failed run.
 
 Only source inspection, rustfmt, Bash syntax checks and offline lock resolution
 ran locally. The lock adds edges to existing packages without version changes.

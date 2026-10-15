@@ -23,6 +23,14 @@ adapters are prepared; hosted generation and combined execution remain pending.
 Generated availability still records 40/102 reads until the reviewed hosted
 artifact is adopted. See [m6-read-source.md](m6-read-source.md).
 
+Normal run [38714093697](https://github.com/sam0x17/rtao/actions/runs/38714093697)
+at `745f3f3` passes features, semver, no-host, MSRV and supply; the main check
+job is still running at inspection. These results exclude the newer M6 source.
+Generation run [38714402721](https://github.com/sam0x17/rtao/actions/runs/38714402721)
+at `afd989a` fails before regeneration because the new blocking-accessor format
+string has an unmatched closing brace. The generator source now escapes each
+generated scope explicitly. No output from the failed run is adopted.
+
 Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
 at `06a3598` passes all five other jobs, compilation, strict Clippy and parity.
 Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. Source fixes
