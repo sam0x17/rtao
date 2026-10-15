@@ -3,7 +3,12 @@
 #![deny(missing_docs)]
 
 mod arguments;
-#[cfg(any(feature = "batch", feature = "crowdloan", feature = "proxy"))]
+#[cfg(any(
+    feature = "batch",
+    feature = "crowdloan",
+    feature = "multisig",
+    feature = "proxy"
+))]
 mod nested_json;
 mod registry;
 /// Python's mapping-or-list weight input carrier.
@@ -67,6 +72,8 @@ mod identity_account;
 pub mod leasing;
 #[cfg(feature = "lock")]
 pub mod lock;
+#[cfg(feature = "multisig")]
+pub mod multisig;
 #[cfg(feature = "proxy")]
 pub mod proxy;
 #[cfg(feature = "registration")]
@@ -77,10 +84,14 @@ mod registration_pow;
 mod registration_swap;
 #[cfg(feature = "root")]
 pub mod root;
-#[cfg(feature = "registration")]
+#[cfg(any(feature = "registration", feature = "staking"))]
 pub mod root_claim;
 #[cfg(feature = "staking")]
 mod staking_baskets;
+#[cfg(feature = "governance")]
+mod staking_burn;
+#[cfg(feature = "staking")]
+pub mod staking_claims;
 #[cfg(feature = "staking")]
 pub mod staking_trades;
 

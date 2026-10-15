@@ -11,10 +11,16 @@ pub mod axon;
 pub mod generated;
 /// Subnet owner settings and read commands.
 pub mod hparams;
+/// Saved multisig signer sets, public pending operations and proposal discovery.
+pub mod multisig;
 /// Public preparation and late proof refresh for registration.
 pub mod pow;
+/// Proxy delegation, pure-account lifecycle and pending proxy execution.
+pub mod proxy;
 /// Schema-derived argument coercion and defaults.
 pub mod schema;
+/// Stake aliases of ordinary generated transaction operations.
+pub mod stake;
 /// Subnet creation, registration and metagraph views.
 pub mod subnets;
 /// Local wallet management and public account views.

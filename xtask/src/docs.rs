@@ -1,18 +1,217 @@
-//! Generate the downloadable documentation's parity index and LLM text.
+//! Generate the downloadable parity index, transaction reference and LLM text.
 
 use std::{
+    collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
 };
 
 use anyhow::{Context, Result, bail, ensure};
+use rtao_catalog::{INTENTS, IntentSpec, ParamSpec};
+use serde_json::Value;
 use toml_edit::DocumentMut;
 
 fn escaped(value: &str) -> String {
     value.replace('|', "\\|").replace(['\n', '\r'], " ")
 }
 
-fn content(root: &Path) -> Result<(String, String)> {
+fn table_text(value: &str) -> String {
+    let mut text = String::new();
+    for character in value.chars() {
+        text.push_str(match character {
+            '&' => "&amp;",
+            '<' => "&lt;",
+            '>' => "&gt;",
+            '|' => "&#124;",
+            '\\' => "&#92;",
+            '`' => "&#96;",
+            '*' => "&#42;",
+            '_' => "&#95;",
+            '[' => "&#91;",
+            ']' => "&#93;",
+            '~' => "&#126;",
+            '\n' => "<br>",
+            '\r' => continue,
+            _ => {
+                text.push(character);
+                continue;
+            }
+        });
+    }
+    text
+}
+
+fn code(value: &str) -> String {
+    format!("<code>{}</code>", table_text(value))
+}
+
+fn pending_intents(source: &str) -> Result<BTreeSet<String>> {
+    let document: DocumentMut = source.parse()?;
+    let mut pending = BTreeSet::new();
+    for item in document["intents"].as_array().context("pending intents")? {
+        let name = item.as_str().context("pending intent must be a string")?;
+        ensure!(
+            INTENTS.iter().any(|spec| spec.name == name),
+            "unknown pending intent {name}"
+        );
+        ensure!(
+            pending.insert(name.to_owned()),
+            "duplicate pending intent {name}"
+        );
+    }
+    Ok(pending)
+}
+
+fn default_text(field: &ParamSpec) -> Result<String> {
+    let Some(default) = field.default_json else {
+        return Ok("—".into());
+    };
+    // JSON keeps null, false, zero, empty strings and fresh collections distinct.
+    let default: Value = serde_json::from_str(default)?;
+    let mut text = code(&serde_json::to_string(&default)?);
+    if field.default_factory {
+        text.push_str(" (fresh factory)");
+    }
+    Ok(text)
+}
+
+fn constructor_fields(spec: &IntentSpec, schema: &Value) -> Result<String> {
+    let properties = schema["properties"]
+        .as_object()
+        .context("intent schema properties")?;
+    let fields: BTreeSet<_> = spec.fields.iter().map(|field| field.name).collect();
+    ensure!(
+        fields == properties.keys().map(String::as_str).collect(),
+        "{} constructor/schema fields disagree",
+        spec.name
+    );
+    let required: BTreeSet<_> = schema
+        .get("required")
+        .map(|value| {
+            value
+                .as_array()
+                .context("required fields must be an array")?
+                .iter()
+                .map(|value| value.as_str().context("required field must be a string"))
+                .collect::<Result<BTreeSet<_>>>()
+        })
+        .transpose()?
+        .unwrap_or_default();
+    ensure!(
+        required
+            == spec
+                .fields
+                .iter()
+                .filter(|field| field.required)
+                .map(|field| field.name)
+                .collect(),
+        "{} constructor/schema required fields disagree",
+        spec.name
+    );
+    if spec.fields.is_empty() {
+        return Ok("No constructor fields.\n".into());
+    }
+    let mut text = "| Field | Python type | Required | Default (JSON) | Description |\n|---|---|---|---|---|\n".to_owned();
+    for field in spec.fields {
+        text.push_str(&format!(
+            "| {} | {} | {} | {} | {} |\n",
+            code(field.name),
+            code(field.annotation.unwrap_or("undeclared")),
+            if field.required { "yes" } else { "no" },
+            default_text(field)?,
+            table_text(
+                properties[field.name]
+                    .get("description")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+            ),
+        ));
+    }
+    Ok(text)
+}
+
+fn schema_block(schema: &Value) -> Result<String> {
+    let schema = serde_json::to_string_pretty(schema)?;
+    // Catalog strings may contain Markdown fences; a longer fence keeps
+    // every schema byte literal rather than turning it into book markup.
+    let fence = "`".repeat(
+        3.max(
+            schema
+                .split(|character| character != '`')
+                .map(str::len)
+                .max()
+                .unwrap_or_default()
+                + 1,
+        ),
+    );
+    Ok(format!("{fence}json\n{schema}\n{fence}\n"))
+}
+
+fn transaction_reference(pending: &BTreeSet<String>) -> Result<String> {
+    let mut text = format!(
+        "# Transaction reference\n\nAll {} operations from the authenticated Python catalog are indexed below. Constructor fields, defaults, descriptions and schemas retain the pinned Python shape. Rust amounts use checked native u64 rao; see the compatibility record for deliberate differences.\n\nImplementation status comes from the source pending register, independently of the features compiled into the documentation generator. An implemented source entry is available through the CLI's generated transaction family; it does not assert successful hosted acceptance, chain interoperability or device coverage. Pending entries have no executable command. Required means required by the Python constructor; the CLI may prompt or resolve documented wallet defaults.\n\n| Operation | Summary | Source status | CLI |\n|---|---|---|---|\n",
+        INTENTS.len()
+    );
+    for spec in &INTENTS {
+        let implemented = !pending.contains(spec.name);
+        text.push_str(&format!(
+            "| [{}](#tx-{}) | {} | {} | {} |\n",
+            code(spec.name),
+            spec.name.replace('_', "-"),
+            table_text(spec.summary),
+            if implemented {
+                "implemented"
+            } else {
+                "pending behavior port"
+            },
+            if implemented {
+                code(&format!("rtao tx {}", spec.name.replace('_', "-")))
+            } else {
+                "unavailable".into()
+            },
+        ));
+    }
+    for spec in &INTENTS {
+        let catalog: Value = serde_json::from_str(spec.catalog_json)?;
+        let schema = catalog.get("input_schema").context("intent input schema")?;
+        text.push_str(&format!(
+            "\n<a id=\"tx-{}\"></a>\n\n## {}\n\n{}\n\n",
+            spec.name.replace('_', "-"),
+            spec.name,
+            spec.description
+        ));
+        text.push_str(if pending.contains(spec.name) {
+            "**Status:** pending behavior port; unavailable in the CLI.\n\n"
+        } else {
+            "**Status:** implemented source; hosted acceptance is recorded separately.\n\n"
+        });
+        if !pending.contains(spec.name) {
+            text.push_str(&format!(
+                "**CLI:** {}\n\n",
+                code(&format!("rtao tx {}", spec.name.replace('_', "-")))
+            ));
+        }
+        let calls = spec
+            .wraps
+            .iter()
+            .map(|(pallet, call)| code(&format!("{pallet}.{call}")))
+            .collect::<Vec<_>>()
+            .join(", ");
+        text.push_str(&format!(
+            "| Contract | Value |\n|---|---|\n| Python class | {} |\n| Signing role | {} |\n| Dispatch origin | {} |\n| MEV shield default | {} |\n| MEV shield required | {} |\n| Verification read | {} |\n| Catalog calls | {} |\n| Fields accepting `all` | {} |\n\n",
+            code(spec.python_class), code(spec.signer), code(spec.origin), spec.mev_shield_default, spec.mev_shield_required,
+            spec.verify.map_or_else(|| "none".into(), code), calls,
+            if spec.all_amount_fields.is_empty() { "none".into() } else { spec.all_amount_fields.iter().map(|name| code(name)).collect::<Vec<_>>().join(", ") },
+        ));
+        text.push_str("**Constructor fields**\n\n");
+        text.push_str(&constructor_fields(spec, schema)?);
+        text.push_str("\n**Input schema**\n\n");
+        text.push_str(&schema_block(schema)?);
+    }
+    Ok(text)
+}
+
+fn content(root: &Path) -> Result<(String, String, String)> {
     let map: DocumentMut = fs::read_to_string(root.join("parity/map.toml"))?.parse()?;
     let rows = map
         .get("file")
@@ -63,7 +262,11 @@ fn content(root: &Path) -> Result<(String, String)> {
             fs::read_to_string(root.join(file))?
         ));
     }
+    let pending = pending_intents(&fs::read_to_string(root.join("parity/pending.toml"))?)?;
+    let transactions = transaction_reference(&pending)?;
     llms.push_str(&index);
+    llms.push('\n');
+    llms.push_str(&transactions);
     llms.push_str("\n## Rust API surface\n\nThe complete rustdoc tree is included in `api/` in the book archive. The following item signatures come from this source checkout.\n\n");
     // Rustdoc JSON is unstable. Walk the parsed source AST instead, keeping
     // module and impl context so signatures remain useful without inventing
@@ -89,7 +292,7 @@ fn content(root: &Path) -> Result<(String, String)> {
             llms.push('\n');
         }
     }
-    Ok((index, llms))
+    Ok((index, transactions, llms))
 }
 
 fn source_files(dir: &Path, output: &mut Vec<PathBuf>) -> Result<()> {
@@ -233,8 +436,12 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
         out.is_dir() && !fs::symlink_metadata(&out)?.file_type().is_symlink(),
         "docs output must be an existing regular directory"
     );
-    let (index, text) = content(root)?;
-    for (name, bytes) in [("api-index.md", index), ("llms.txt", text)] {
+    let (index, transactions, text) = content(root)?;
+    for (name, bytes) in [
+        ("api-index.md", index),
+        ("tx-reference.md", transactions),
+        ("llms.txt", text),
+    ] {
         if name == "llms.txt" && !llms {
             continue;
         }
@@ -261,6 +468,118 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn transaction_reference_covers_exact_catalog_and_does_not_advertise_pending_commands()
+    -> Result<()> {
+        let pending = pending_intents("intents = ['add_collateral']")?;
+        let reference = transaction_reference(&pending)?;
+        let headings: Vec<_> = reference
+            .lines()
+            .filter_map(|line| line.strip_prefix("## "))
+            .collect();
+        assert_eq!(headings.len(), 83);
+        assert_eq!(
+            headings.into_iter().collect::<BTreeSet<_>>(),
+            INTENTS.iter().map(|spec| spec.name).collect()
+        );
+        for spec in &INTENTS {
+            assert!(reference.contains(&format!(
+                "<a id=\"tx-{}\"></a>",
+                spec.name.replace('_', "-")
+            )));
+        }
+        let collateral = reference
+            .split("## add_collateral\n")
+            .nth(1)
+            .context("collateral section")?
+            .split("\n## ")
+            .next()
+            .context("collateral body")?;
+        assert!(collateral.contains("pending behavior port; unavailable in the CLI"));
+        assert!(!reference.contains("rtao tx add-collateral"));
+        assert!(reference.contains("rtao tx transfer"));
+        assert!(reference.contains("implemented source; hosted acceptance is recorded separately"));
+        assert!(pending_intents("intents = ['unknown_operation']").is_err());
+        assert!(pending_intents("intents = ['transfer', 'transfer']").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn transaction_fields_keep_schema_text_and_distinct_json_defaults() -> Result<()> {
+        const FIELDS: &[ParamSpec] = &[
+            ParamSpec {
+                name: "union",
+                annotation: Some("int | str"),
+                json_type: None,
+                required: true,
+                own_key: false,
+                default_json: None,
+                default_factory: false,
+                provenance_json: "{}",
+            },
+            ParamSpec {
+                name: "empty",
+                annotation: Some("list"),
+                json_type: None,
+                required: false,
+                own_key: false,
+                default_json: Some("[]"),
+                default_factory: true,
+                provenance_json: "{}",
+            },
+        ];
+        let spec = IntentSpec {
+            fields: FIELDS,
+            ..INTENTS[0]
+        };
+        let schema = serde_json::json!({
+            "properties": {
+                "union": {"description":"a|b\n`x` <tag> & *value*", "anyOf":[{"type":"integer"},{"type":"string"}]},
+                "empty": {"type":"array"}
+            },
+            "required":["union"]
+        });
+        let text = constructor_fields(&spec, &schema)?;
+        assert!(text.contains("| <code>union</code> | <code>int &#124; str</code> | yes | — |"));
+        assert!(text.contains("a&#124;b<br>&#96;x&#96; &lt;tag&gt; &amp; &#42;value&#42;"));
+        assert!(text.contains("| no | <code>&#91;&#93;</code> (fresh factory) |"));
+        let literal_schema =
+            serde_json::json!({"description":"``` | <tag> &", "enum":["",0,false,null]});
+        let block = schema_block(&literal_schema)?;
+        assert!(block.starts_with("````json\n"));
+        assert!(block.ends_with("\n````\n"));
+        let body = block
+            .strip_prefix("````json\n")
+            .and_then(|text| text.strip_suffix("\n````\n"))
+            .context("schema fence")?;
+        assert_eq!(serde_json::from_str::<Value>(body)?, literal_schema);
+        for (json, expected) in [
+            ("null", "<code>null</code>"),
+            ("false", "<code>false</code>"),
+            ("0", "<code>0</code>"),
+            ("\"\"", "<code>\"\"</code>"),
+            ("\"a\\\\b\"", "<code>\"a&#92;&#92;b\"</code>"),
+            ("\"|`<&\"", "<code>\"&#124;&#96;&lt;&amp;\"</code>"),
+        ] {
+            let field = ParamSpec {
+                default_json: Some(json),
+                default_factory: false,
+                ..FIELDS[1]
+            };
+            assert_eq!(default_text(&field)?, expected);
+        }
+        let mut missing = schema.clone();
+        missing["properties"]
+            .as_object_mut()
+            .context("schema properties")?
+            .remove("union");
+        assert!(constructor_fields(&spec, &missing).is_err());
+        let mut wrong_required = schema;
+        wrong_required["required"] = serde_json::json!([]);
+        assert!(constructor_fields(&spec, &wrong_required).is_err());
+        Ok(())
+    }
 
     #[test]
     fn llm_signatures_keep_owner_and_public_visibility() -> Result<()> {

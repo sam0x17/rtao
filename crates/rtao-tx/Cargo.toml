@@ -28,5 +28,5 @@ smallvec = "1"
 
 [dev-dependencies]
 rtao-testkit = { workspace = true, features = ["core-policy"] }
-rtao-intents = { workspace = true, features = ["transfer", "registration", "hyperparameters"] }
+rtao-intents = { workspace = true, features = ["transfer", "registration", "hyperparameters", "staking", "children", "evm"] }
 

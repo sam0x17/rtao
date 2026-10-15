@@ -713,7 +713,7 @@ mod tests {
 
     // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_add_stake_composes_limit_call
     // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_custom_tolerance_moves_the_limit
-    // pyt: unit/test_slippage_protection.py::TestDisabledProtection::test_disabled_composes_plain_call
+    // pyt: unit/test_slippage_protection.py::TestOptOut::test_disabled_composes_plain_call
     #[tokio::test]
     async fn add_stake_encodes_default_custom_and_explicit_limits_and_unprotected_u64()
     -> anyhow::Result<()> {
@@ -732,7 +732,7 @@ mod tests {
             ),
             (false, 0.05, add_bytes(2, NetUid(1), 1_000_000_001, None)),
         ] {
-            let mut intent = add(amount.clone(), NetUid(1), protected)?;
+            let mut intent: AddStake = add(amount.clone(), NetUid(1), protected)?;
             intent.rate_tolerance = Ratio::new(tolerance)?;
             let before = chain.requests().len();
             let built = build(&intent, &snapshot).await?;
@@ -852,7 +852,7 @@ mod tests {
                 None,
             ),
         ] {
-            let intent = swap(amount, origin, protected)?;
+            let intent: SwapStake = swap(amount, origin, protected)?;
             let before = chain.requests().len();
             let built = build(&intent, &snapshot).await?;
             assert_eq!(
@@ -909,7 +909,7 @@ mod tests {
     }
 
     // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_move_swap_stake_is_the_named_batch
-    // pyt: unit/test_slippage_protection.py::TestDisabledProtection::test_unprotected_move_swap_still_batches_plain_swap
+    // pyt: unit/test_slippage_protection.py::TestOptOut::test_unprotected_move_swap_still_batches_plain_swap
     #[tokio::test]
     async fn move_then_swap_is_atomic_ordered_and_leaves_exactly_one_rao_of_dust()
     -> anyhow::Result<()> {
@@ -931,7 +931,7 @@ mod tests {
                 Some(950_000_000),
             ),
         ] {
-            let intent = move_swap(amount, origin, protected)?;
+            let intent: MoveSwapStake = move_swap(amount, origin, protected)?;
             let built = build(&intent, &snapshot).await?;
             let mut expected = vec![11, 2, 8]; // Utility.batch_all, two calls.
             expected.extend_from_slice(&[7, 85]);

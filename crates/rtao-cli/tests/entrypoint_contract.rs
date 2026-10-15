@@ -69,6 +69,48 @@ fn help_version_and_missing_raw_target_have_real_statuses() -> Result<(), Box<dy
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }
+
+#[test]
+fn m5_families_and_hidden_aliases_are_registered_by_the_real_binary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Root::new()?;
+    for (args, expected) in [
+        (
+            vec!["stake", "--help"],
+            vec!["move-swap", "transfer", "burn"],
+        ),
+        (
+            vec!["st", "add", "--help"],
+            vec!["--amount-tao", "--hotkey"],
+        ),
+        (vec!["proxy", "--help"], vec!["create", "execute", "kill"]),
+        (
+            vec!["multisig", "--help"],
+            vec!["pending", "show", "remove"],
+        ),
+        (
+            vec!["hparams", "set-take", "--help"],
+            vec!["--take", "--hotkey"],
+        ),
+        (
+            vec!["hparams", "buyback", "--help"],
+            vec!["--limit-price", "--amount"],
+        ),
+    ] {
+        let output = root.command().args(&args).output()?;
+        assert!(
+            output.status.success(),
+            "{args:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let text = String::from_utf8(output.stdout)?;
+        for fragment in expected {
+            assert!(text.contains(fragment), "{args:?} lacks {fragment}: {text}");
+        }
+    }
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
+    Ok(())
+}
 #[test]
 fn invalid_raw_role_is_a_framework_diagnostic_and_never_connects()
 -> Result<(), Box<dyn std::error::Error>> {

@@ -465,6 +465,16 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             "crate::evm::fund_json(self)".to_owned()
         } else if spec.name == "batch" {
             "crate::batch::to_json(self)".to_owned()
+        } else if spec.name.starts_with("multisig_") {
+            let timepoint = match spec.name {
+                "multisig_threshold_1" => "None",
+                "multisig_cancel" => "Some(&self.timepoint)",
+                _ => "self.timepoint.as_ref()",
+            };
+            format!(
+                "crate::multisig::intent_json({:?},self,&self.other_signatories,&self.call,{timepoint})",
+                spec.name
+            )
         } else {
             format!("crate::args_with_op({:?},self)", spec.name)
         };
@@ -634,6 +644,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         } else if spec.name == "batch" {
             format!(
                 "crate::batch::check_constructor_input(&args)?; let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::batch::canonicalize(&mut intent)?;"
+            )
+        } else if spec.name.starts_with("multisig_") {
+            format!(
+                "crate::multisig::check_constructor_input(&args)?; let intent:super::interfaces::{class}=serde_json::from_value(args)?;"
             )
         } else if matches!(
             spec.name,

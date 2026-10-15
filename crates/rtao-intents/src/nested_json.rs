@@ -50,12 +50,12 @@ fn check_retained_work(
 }
 
 /// Check a borrowed child slice as one JSON array without cloning that array.
-#[cfg(feature = "batch")]
+#[cfg(any(feature = "batch", feature = "multisig"))]
 pub(crate) fn check_items_budget(items: &[Value]) -> Result<(), IntentError> {
     check_items_limits(items, MAX_CALL_DEPTH, MAX_CALL_NODES, MAX_CALL_JSON_BYTES)
 }
 
-#[cfg(feature = "batch")]
+#[cfg(any(feature = "batch", feature = "multisig"))]
 fn check_items_limits(
     items: &[Value],
     max_depth: usize,

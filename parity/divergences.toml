@@ -3,8 +3,40 @@
 schema = 1
 
 [[divergences]]
+id = "D-048"
+upstream_symbol = "bittensor.cli.commands.upgrade.upgrade_record_fields"
+python_behavior = "A matched release without sudo_layer details is displayed as not opened yet, including when asset fetching or authentication prevented the sudo-layer lookup."
+rtao_behavior = "Displays an unknown sudo multisig layer until the proposal bytes are authenticated and that layer has actually been queried. A successful query returning no pending operation still displays not opened yet. Public JSON retains the original fields."
+rationale = "An unavailable lookup does not prove the absence of a pending approval. Human proposal status must distinguish missing evidence from a confirmed unopened layer."
+decision = "PLAN.md execution rule 5; M5-05 multisig proposal source review (2026-10-15)"
+status = "active"
+class = "improved"
+milestone = "M5"
+pinning_tests = [
+  "rtao_cli::commands::multisig::tests::unknown_upgrade_layer_is_not_rendered_as_absent_after_failed_asset_enrichment",
+]
+upstream_report = "Human status evidence correction; source fixture exists and hosted execution remains pending. No new upstream issue or PR is filed under the user's current filing constraint."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/upgrade.py"
+
+[[divergences]]
+id = "D-047"
+upstream_symbol = "bittensor.cli.commands.proxy.kill_proxy"
+python_behavior = "Removes a named pure-proxy book entry after a successful submission result, including a multisig approval that has not executed the kill."
+rtao_behavior = "Keeps the pure-proxy recovery coordinates after approval-only success. Removes the entry after successful ordinary dispatch, threshold-one dispatch, or a receipt containing MultisigExecuted. Refused or failed kills retain the entry."
+rationale = "Approval success does not establish that the pure account was retired. Preserve the public creation coordinates needed to finish the pending operation. No automatic transfer or reclaim is added."
+decision = "PLAN.md execution rule 5; M5-05 proxy lifecycle review (2026-10-15)"
+status = "active"
+class = "improved"
+milestone = "M5"
+pinning_tests = [
+  "rtao_cli::commands::proxy::tests::pure_lifecycle_persists_event_coordinates_only_after_actual_success",
+]
+upstream_report = "Local book lifecycle correction with source fixtures; hosted execution remains pending. No new upstream issue or PR is filed under the user's current filing constraint."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/proxy.py"
+
+[[divergences]]
 id = "D-046"
-upstream_symbol = "bittensor.intents.crowdloan.CreateCrowdloan.call / proxy.ExecuteProxyAnnounced.inner_args / batch.Batch.intents"
+upstream_symbol = "bittensor.intents.crowdloan.CreateCrowdloan.call / proxy.ExecuteProxyAnnounced.inner_args / batch.Batch.intents / multisig call and signer inputs"
 python_behavior = "Recursively constructs supplied nested intent dictionaries without matching depth, node-count or encoded-byte budgets."
 rtao_behavior = "Checks the nested call iteratively before tool deserialization, recursive cloning or nested construction. Refuses more than 128 JSON levels, 1,048,576 values or 64 MiB of encoded JSON. The node count and encoded size, each multiplied by maximum levels, must also fit those budgets to bound retained subtree copies. Rejects serde private RawValue/Number carrier keys before they can introduce unscanned JSON."
 rationale = "Bound untrusted programmatic inputs before recursive work. Count escaped serialized bytes without allocating another document, and preserve the original public origin and pinned view for accepted nested calls."
@@ -18,6 +50,7 @@ pinning_tests = [
   "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits",
   "rtao_intents::proxy::tests::announced_proxy_refusals_preserve_nested_error_order_and_never_read",
   "rtao_intents::batch::tests::batch_constructor_and_programmatic_guards_reject_private_carriers_and_depth",
+  "rtao_intents::multisig::tests::raw_multisig_timepoint_coercion_defaults_and_bounded_nested_inputs",
 ]
 upstream_report = "Local input-budget policy; no upstream issue or PR filed. Named fixture source is present; hosted execution and acceptance remain pending."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/crowdloan.py"

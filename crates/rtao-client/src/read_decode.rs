@@ -205,6 +205,7 @@ typed_leaves!(
     rtao_runtime::models::StakeInfo,
     rtao_runtime::models::SimSwapResult,
     rtao_runtime::models::MinerCollateralState,
+    rtao_runtime::models::LockState,
     rtao_runtime::models::SubnetPrice,
     rtao_runtime::models::MultisigInfo,
     rtao_runtime::models::ProxyDefinition,
