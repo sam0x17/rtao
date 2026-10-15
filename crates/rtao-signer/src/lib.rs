@@ -5,6 +5,8 @@
 use std::{fmt, future::Future, pin::Pin, sync::Arc};
 
 mod roles;
+#[cfg(feature = "vault")]
+pub mod vault;
 pub use roles::{
     Coldkey, DynKeySource, Hotkey, IntentKeyView, KeySource, KeyView, Role, SignerRole,
 };
