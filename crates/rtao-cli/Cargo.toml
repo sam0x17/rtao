@@ -18,7 +18,7 @@ extension = ["rtao/extension"]
 evm = ["rtao/evm"]
 
 [dependencies]
-rtao = { workspace = true, features = ["client", "reads", "tx", "intents", "wallet-encrypted", "keychain"] }
+rtao = { workspace = true, features = ["client", "reads", "tx", "intents", "wallet-encrypted", "keychain", "owner"] }
 rtao-catalog.workspace = true
 rtao-runtime.workspace = true
 rtao-rpc.workspace = true
@@ -36,6 +36,7 @@ rpassword = "7"
 comfy-table = "7"
 url.workspace = true
 hex.workspace = true
+sha2.workspace = true
 futures.workspace = true
 which = "8"
 smallvec = "1"

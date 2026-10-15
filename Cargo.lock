@@ -4549,6 +4549,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "smallvec",
  "tokio",
  "toml_edit 0.23.10+spec-1.0.0",
