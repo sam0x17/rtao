@@ -16,6 +16,15 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38751673871](https://github.com/sam0x17/rtao/actions/runs/38751673871)
+at `4f28dbf` passes semver, MSRV, no-host and supply at inspection; features is
+still running. The three fixture type errors are gone. Main check stops before
+tests on one Clippy type-complexity finding in the nested-policy signing
+recorder. Name that fixture type without suppressing the lint. Retained evidence
+is `check-38751673871.json`. Final independent rereads find no remaining defect
+in the corrected multisig dynamic-role continuation or pinned-only shielding
+guard; executed regression closure remains pending. No local build or test ran.
+
 Normal run [38750380241](https://github.com/sam0x17/rtao/actions/runs/38750380241)
 at `eefbfa2` passes semver, MSRV and supply at inspection; features and no-host
 are still running. Main check stops before tests on three fixture compiler
@@ -24,6 +33,8 @@ metadata exposes `error`, not `errors`. Correct those fixtures and remove the
 unused descriptor import. Formatting and diff checks pass; execution of the
 corrected source requires the next normal hosted run. The bounded failure
 record is `check-38750380241.json`. No local build or test ran.
+That run is now terminal: no-host also passed, and its features job was
+cancelled when the fixture-correction push superseded the run.
 
 The source batch is committed in `4c9473c`. Generation run
 [38749149983](https://github.com/sam0x17/rtao/actions/runs/38749149983) succeeds;
