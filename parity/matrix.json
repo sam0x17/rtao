@@ -7734,11 +7734,12 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/errors.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_rpc::{RpcError, PolicyRefusal}`; `rtao_client` read errors"
+          "rtao_rpc::{RpcError,PolicyRefusal,policy::format_rpc_error}",
+          "rtao_client::ClientError"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d48b44e8d8edb184c51005137a2de2f3a99198b2"
       },
       {
         "kind": "ported",
@@ -7778,11 +7779,12 @@
         "milestone": "M2–M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/protocols.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::SignerCaps`"
+          "rtao_signer::{Signer,SignerCaps,SigningRequest,SigningContext,MultiSignature,KeypairSigner}",
+          "rtao_client::submit capability-selected public preparation"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "caf179b51ddedd2758fc865e76168cf5cac32064"
       },
       {
         "kind": "ported",
@@ -9086,22 +9088,23 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/rpc.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_evm::EvmRpc`"
+          "rtao_evm::rpc::EvmRpc",
+          "rtao_evm::{money,error}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "375378c36cd4dc7b9c94921a23df27abeefae6aa"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/transactions.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_evm` transactions and `association_proof`"
+          "rtao_evm::transactions::{EvmTxPreview,prepare_transaction,sign_transaction,send_transaction,send_transaction_with_timeout,EvmTxResult,association_message,association_proof,recover_association_owner}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "56c63bdd5f3f5c1af1537e416f4a5f2f238ff321"
       },
       {
         "kind": "ported",
@@ -9219,11 +9222,12 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/tokens.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_signer::extension` (bridge token file)"
+          "rtao_signer::extension::BridgePaths::{from_environment,read_token,publish} and private token publication/cleanup",
+          "crates/rtao-signer/src/extension/session.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2738077e1d7d2d85f88e7550d6bdad980b8ac7d3"
       },
       {
         "kind": "extracted",
@@ -9477,11 +9481,12 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/proxy.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::proxy` (feature `proxy`)"
+          "rtao_intents::proxy::{PROXY_TYPES,check_proxy_type,AddProxy,RemoveProxy,RemoveProxies,CreatePureProxy,KillPureProxy,ExecuteProxyAnnounced}",
+          "rtao_intents::generated::{interfaces,defaults,passthrough,any_intent}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e19113d503ef0b2f488af38bec57cadb934e1f56"
       },
       {
         "kind": "ported",
@@ -9591,11 +9596,11 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/macos_password.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_wallet` feature `keychain`"
+          "rtao_cli::macos_password::{MacosPasswords,NativePasswordAdapter,ProcessRunner}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "46960bae3da3416b27b0cd4671840bde6cc535b2"
       },
       {
         "kind": "ported",
@@ -9934,11 +9939,12 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/snapshot.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_client::Snapshot`"
+          "rtao_client::view::{Snapshot,View,ViewExt}",
+          "crates/rtao-client/tests/snapshot.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3fba1f5a9cf2b3c19aa6e5974384dc0c82a73a7f"
       },
       {
         "kind": "n/a",
