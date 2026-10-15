@@ -17,9 +17,16 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-15
 
 Normal run [38767926902](https://github.com/sam0x17/rtao/actions/runs/38767926902)
-at `bbfa09a` is active. At 16:24 UTC supply, MSRV, no-host and semver pass;
-main check and features remain in progress. Do not infer ordinary tests,
-doctests or docs success yet.
+at `bbfa09a` has failed its main check. Supply, MSRV, no-host and semver pass;
+features remains active at 16:28 UTC. The earlier parity check now passes the
+corrected attribution/discovery layers and all 115 e2e keys, then exposes an
+ordering bug: optional pending M10 D031 is required to have pinning tests before
+the validator reaches its documented deferral. Limit the empty-list allowance
+to that exact pending/M10/addition tuple. A full-register regression exercises
+the actual strict validator, then rejects active/M9/changed-class mutations.
+Independent source rereview clears the correction. Proof is
+`check-38767926902.json`; Clippy, ordinary tests, doctests and docs were not
+reached. A fresh normal combined hosted run is required.
 
 Independent review clears the balance/property source mappings, workspace
 test discovery and earlier parity-gate ordering. It finds a mapping escape:
@@ -40,8 +47,13 @@ The `_money.py` audit traces all eleven current call-amount sites to correct
 native currency/sibling-netuid handling. Its whole row stays pending: generic
 unit-table selection, override-value validation and an inactive alpha generator
 branch still need implementation/coverage. Three new transfer/batch transcript
-fixtures are being reviewed separately, with no mapping or runtime acceptance
-yet. No local build/test, service, temporary directory or upstream filing.
+fixtures preserve exact upstream amounts, production Executor signing, independent
+expected calls, explicit receipt state and exact hash/key-qualified balance reads.
+Two negative fixtures reject wrong calls and script exhaustion before submission
+or state advance. Root and independent source rereview find no remaining defect;
+hosted compilation/execution and mapping integration are pending. No chain
+economics, atomicity or rollback is claimed. No local build/test, service,
+temporary directory or upstream filing.
 
 Refresh [38766936693](https://github.com/sam0x17/rtao/actions/runs/38766936693)
 succeeds at clean `41f3838`. Verify and adopt its four exact regular report
