@@ -853,7 +853,7 @@ rtao/
 | `rtao-metagraph` | metagraph (§8.2-8.5) | `Metagraph`, `MetagraphNeuron`, `MetagraphView`, `NeuronRef`, `SubnetsMetagraphExt` (`metagraph`, `metagraph_with`), `MetagraphOptions`, `Preset`, `MetagraphSync`, `MetagraphHandle`, `MetagraphDiff`, `SyncPolicy`, `persist::{save, load}` | `persist` | `rtao-reads`, `rtao-runtime` |
 | `rtao-btauth` | btauth/1 (§7) | `build_payload`, `sign`, `Verifier` (`authenticate`, `Authenticated::commit`, `verify`), `VerifyConfig`, `WrappedPolicy`, `Caller`, `AuthError`, `NonceStore`, `InMemoryNonceStore`; `server::{BtAuthLayer, VerifiedCaller, CallerPolicy, MetagraphPolicy, PerHotkeyLimiter, Json}` (`Json<T>`: the `Value`-first extractor, §7.2); `client::{SignedClient, FanOut}`; `RedisNonceStore`; `legacy::verify_v10` | `server`, `client`, `redis`, `metagraph-policy`, `legacy-v10` | `rtao-signer`, `rtao-core`, `rtao-primitives` (`AxonTarget`); `rtao-metagraph` (opt) |
 | `rtao-neuron` | framework (§9) | `NeuronConfig`, `NeuronRuntime`, `NeuronCx`, `StateCell`, `Validator`, `Miner`, `StepPolicy`, `WeightsProposal`, `WeightScheduler`, `WeightPolicy`, `AxonPublisher`, `Registration`, `OwnerOps`, `HyperparamPlanner`, `OwnerMonitor`, `StateStore`, `EmaScores`, `telemetry`, `anyhow` (re-export, §2.5) | `validator`, `miner`, `owner`, `prometheus` (default), `auto-update` | `rtao-intents`, `rtao-metagraph`, `rtao-btauth`, `rtao-wallet` |
-| `rtao-evm` | `PY/evm/*` parity (§6.6) | `EvmKeystore`, `Precompiles` (ABIs from `PY/evm/abi/*.json`), `EvmRpc`, `EvmNetwork`, `association_proof`, wei/rao conversions | none | `rtao-client`, `rtao-wallet` |
+| `rtao-evm` | `PY/evm/*` parity (§6.6) | `EvmKeystore`, `Precompile`/`PRECOMPILES` and ABI helpers (ABIs from `PY/evm/abi/*.json`), `EvmRpc`, `EvmNetwork`, `association_proof`, wei/rao conversions | none | `rtao-client`, `rtao-wallet` |
 | `rtao-cli` | `rtao` binary (§10) | — | `ledger`, `vault`, `extension`, `evm` (all default on) | `rtao` (`full`) |
 | `rtao-testkit` | test infrastructure (§11) | `FakeNode`, `FakeChain`, `FakeState`, `Fault`, `RecordingView`, `Localnet`, `LocalnetProfile`, `Scenario`, `PinProxy` (block-pinning JSON-RPC proxy for interop lane 9, §11.6), `fixtures::*`, `oracle::*`, `ledger_emu::*` (the Speculos harness, with the Speculos TCP and replay transports that `LedgerDevice::with_transport` takes from the core patch, §1.11, §11.9) | `docker`, `interop`, `core-oracle`, `ledger-emu` (each gates its own `[[test]]` target, §11.1) | `rtao-client`, `rtao-rpc`, `rtao-tx`, `rtao-wallet` (plus `subxt-rpcs` for `FakeChain`), `rtao-signer` (feature `ledger-emu` enables its `test-util`, §2.3 rule 8) |
 | `rtao` | facade (§2.4) | `prelude` (contents per feature, §2.4), re-exports per feature, `blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` (ports of `PY/sync.py` and `PY/_subtensor.py`, driven by `rtao_client::blocking::BlockingRuntime`; shared clients keyed by canonical endpoint, `PY/_subtensor.py:129-150`; `SyncClient` exposes all 14 namespaces, where Python's has 13, D-027) | §2.4 | all, optional per feature |
@@ -1312,6 +1312,17 @@ impl PolicyRefusal {
   `retry_after` from `Retry-After`, else `X-RateLimit-Reset`. The response body (sanitized, ≤500 chars) is appended to the
   message. Other handshake statuses are a non-terminal `RpcError::Handshake { status, detail }`, so the endpoint
   rotates, as Python's `SubstrateRequestException` path does.
+  HTTP detail is best effort: capture at most 4096 decoded entity bytes, process at most 64 KiB of post-header
+  wire data and bound each chunk-size line to 1024 bytes. The original handshake deadline spans TCP, TLS,
+  WebSocket upgrade and optional body capture. A single Content-Length, a single chunked coding or EOF framing
+  selects the reader; duplicate/conflicting framing or detected malformed syntax yields no detail. Trusted
+  partial entity bytes can survive EOF, the deadline or the wire cap. The stream is closed after capture,
+  without draining a large body, waiting for trailers or issuing another request. Known status and original
+  headers survive optional capture failures; known 403/429 stays terminal. This does not promise Python's
+  complete body acquisition or validation for every dependency version.
+  The retained transport includes TLS state. Successful upgrade transfers direct stream ownership inside the
+  same verified WebSocket, preserving buffered frames and avoiding a mutex in normal RPC traffic. TLS trust,
+  sensitive headers, upgrade validation and the dependency's header attack checks remain in effect.
 - **JSON-RPC.** The error is a policy refusal only when the code is in the set **and** either the case-folded message
   equals a listed message, or `data` is an object with at least one metadata key. Any other `-32004`/`-32005` is an
   ordinary RPC error, as in Python.
@@ -3520,6 +3531,25 @@ already running Python daemon on port 39295. `rtao-cli`'s `extension bridge` com
   (`PY/intents/association.py:44-95`).
 - **Dependencies**: `alloy-primitives`, `alloy-sol-types`, `alloy-json-abi`, `alloy-signer-local`. They stay behind
   feature `evm` and out of neuron graphs.
+
+`Precompile`, `PRECOMPILES` and the public `precompiles` helpers implement the reviewed
+`PY/evm/precompiles.py` behavior. Its five declaration tables generate `precompile_catalog.rs`,
+`PYTHON_TABLES` and `named_tables.json` from authenticated source; production includes the native catalog.
+The exact embedded SDK ABI arrays preserve function order and first-overload bare-name lookup. Canonical
+signatures additionally select exact overloads, and CLI metadata follows the resolved function name.
+
+The native input boundary is `serde_json::Value` plus typed Alloy ABI values. The static catalog uses `u16`
+indices, user contracts use `ContractArtifact`, diagnostics are structured, and argument previews return sorted
+map keys. Native rao input admission checks `u64`; generic contract encoding and decoded output integers retain
+full Solidity widths. Coercion and decoding share aggregate byte/item budgets and a 64-level depth limit,
+with a 16 MiB encoded-data limit and reply checks before nested allocation. These boundaries define the
+supported native domain alongside the reviewed Python text, byte, array and preview behavior.
+
+The complete source review authenticates 21 catalog entries and their SDK ABI files, including an inventory
+of 352 function declarations. Hosted generated output adoption is recorded. The inventory and finite authored
+fixtures establish source relationships; current functional test acceptance, fresh Python/oracle coverage,
+execution of every selector, runtime ABI regeneration, live-runtime agreement and milestone acceptance remain
+separate and unclaimed.
 
 ---
 

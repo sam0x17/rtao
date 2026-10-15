@@ -447,3 +447,98 @@ async fn raw_adapter_and_failed_batch_members_retry_archive_once() -> Result {
     session.close().await;
     Ok(())
 }
+
+#[tokio::test]
+async fn fragmented_handshake_refusal_preserves_details_over_ws_and_trusted_wss() -> Result {
+    use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+    async fn reject<S: AsyncRead + AsyncWrite + Unpin>(mut stream: S, chunked: bool) -> Result {
+        let mut request = Vec::new();
+        let mut byte = [0_u8; 1];
+        while !request.ends_with(b"\r\n\r\n") {
+            if stream.read(&mut byte).await? == 0 || request.len() >= 8192 {
+                return Err("incomplete test upgrade request".into());
+            }
+            request.push(byte[0]);
+        }
+        let body = br#"{"message":"deployment blocked"}"#;
+        let framing = if chunked {
+            "Transfer-Encoding: chunked\r\n".to_string()
+        } else {
+            format!("Content-Length: {}\r\n", body.len())
+        };
+        stream.write_all(format!("HTTP/1.1 403 Forbidden\r\n{framing}X-RateLimit-Policy: first\r\nX-RateLimit-Policy: second\r\nRetry-After: 12\r\nConnection: close\r\n\r\n").as_bytes()).await?;
+        stream.flush().await?;
+        // The deterministic generic-helper regression supplies the strict read
+        // barrier. This socket fixture additionally exercises actual TLS state.
+        tokio::time::sleep(Duration::from_millis(40)).await;
+        if chunked {
+            stream
+                .write_all(format!("{:x};fixture=yes\r\n", body.len()).as_bytes())
+                .await?;
+        }
+        for fragment in body.chunks(3) {
+            stream.write_all(fragment).await?;
+        }
+        if chunked {
+            stream.write_all(b"\r\n0\r\n\r\n").await?;
+        }
+        stream.shutdown().await?;
+        Ok(())
+    }
+    for secure in [false, true] {
+        let listener = TcpListener::bind("127.0.0.1:0").await?;
+        let address = listener.local_addr()?;
+        let certified =
+            rcgen::generate_simple_self_signed(vec!["localhost".into(), "127.0.0.1".into()])?;
+        let root = certified.cert.der().clone();
+        let key = rustls::pki_types::PrivateKeyDer::Pkcs8(
+            rustls::pki_types::PrivatePkcs8KeyDer::from(certified.signing_key.serialize_der()),
+        );
+        let tls = rustls::ServerConfig::builder_with_provider(Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_safe_default_protocol_versions()?
+        .with_no_client_auth()
+        .with_single_cert(vec![root.clone()], key)?;
+        let server = tokio::spawn(async move {
+            let (tcp, _) = listener.accept().await?;
+            if secure {
+                let stream = tokio_rustls::TlsAcceptor::from(Arc::new(tls))
+                    .accept(tcp)
+                    .await?;
+                reject(stream, true).await
+            } else {
+                reject(tcp, false).await
+            }
+        });
+        let fallback = FakeNode::start().await?;
+        let url = Url::parse(&format!(
+            "{}://{address}",
+            if secure { "wss" } else { "ws" }
+        ))?;
+        let mut cfg = SessionConfig::new(url);
+        cfg.pool.urls.push(Url::parse(fallback.url())?);
+        cfg.retry_forever = true;
+        cfg.handshake_timeout = Duration::from_secs(1);
+        if secure {
+            cfg.extra_roots.push(root);
+        }
+        let error = timeout(Duration::from_secs(2), Session::connect(cfg))
+            .await?
+            .err()
+            .ok_or("HTTP refusal unexpectedly connected")?;
+        let RpcError::Policy(refusal) = error else {
+            return Err(format!("unexpected refusal: {error}").into());
+        };
+        assert_eq!(refusal.status_code, Some(403));
+        assert_eq!(refusal.policy.as_deref(), Some("first"));
+        assert_eq!(refusal.retry_after.as_deref(), Some("12"));
+        assert_eq!(
+            refusal.message,
+            "RPC endpoint rejected this source under its access policy (HTTP 403): deployment blocked (policy=first)"
+        );
+        assert_eq!(fallback.connect_attempts(), 0);
+        server.await??;
+    }
+    Ok(())
+}

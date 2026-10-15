@@ -21,6 +21,7 @@ fuzzing = []
 [dependencies]
 tokio = { workspace = true, features = ["net", "io-util"] }
 tokio-tungstenite = { workspace = true }
+tokio-rustls = { workspace = true }
 subxt-rpcs = { workspace = true }
 rustls = { workspace = true }
 rustls-native-certs = { workspace = true }
@@ -38,3 +39,5 @@ primitive-types = { workspace = true }
 hex = { workspace = true }
 blake2 = { workspace = true }
 
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
