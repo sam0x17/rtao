@@ -80,4 +80,10 @@ sequence is bounded and disposable roots have ownership/cleanup guards.
 Remaining acceptance work includes final-range security reports, unresolved
 dependency zeroization findings, ordinary fixture mapping for the remaining
 upstream test keys, generated per-operation documentation and full hosted
-success. The 24 M6 CLI commands and later milestones still require work.
+success. The 24 M6 CLI commands now have independently reviewed source and
+authored parser, entrypoint and FakeChain fixtures. All four M6 upstream e2e
+keys map to ordinary read fixtures; the neuron test compares typed records with
+raw runtime output. Hosted execution and acceptance remain pending. The root
+basket table is adopted from `c281803` generation: 45 samples and 171 baselines
+match the authenticated extraction. The shared catalog exclusion and latest
+matrix need the next hosted refresh. Later milestones still require work.
