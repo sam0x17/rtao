@@ -1,22 +1,38 @@
 # Release verification
 
-Releases include CLI archives for Linux x86_64, Linux ARM64, Apple ARM macOS
-and Intel macOS. Linux builds target glibc 2.35. ARM Linux checks use QEMU;
-Apple ARM checks are native, and Intel macOS checks use Rosetta.
+Release tags, binary distribution, publishing and release-provenance setup
+are deferred under PLAN.md Q30. Current development delivers reviewed source
+and applicable hosted client checks. It does not establish that CLI archives
+exist, that a release was verified or that the project is ready for a release.
 
-Check `SHA256SUMS` after downloading assets. Checksums establish integrity only
-after the provenance has been authenticated. Linux and docs have GitHub build
-attestations from this repository's release workflow. Mac binaries have a
-separate signed local build record containing the source tag, toolchain,
-artifact hashes and check logs. The workflow does not claim to build Mac assets.
+## Development artifacts and coverage
 
-From the exact clean source tag, run:
+The active `pr-gates` workflow runs on free `ubuntu-latest` Linux x64 runners.
+When its documentation stage succeeds, it can retain the book, rustdoc and
+generated reference files as a `documentation-<commit>` Actions artifact.
+Check the run's source commit and job results before using its outputs. A docs
+artifact is development output and carries no release or platform acceptance
+claim.
 
-```sh
-cargo xtask release verify --tag rtao-v0.1.0 --dir /path/to/downloaded/assets
-```
+Native macOS, ARM, Keychain and hardware verification remain unverified unless
+separate executed evidence is recorded. Cross-platform release rehearsals,
+local Mac builds and device runs are deferred; they are not prerequisites for
+client development. The former release workflows are retained outside
+GitHub's active workflow directory in `.github/deferred-workflows/`.
 
-Verification fails if any target or required provenance is missing. Local Mac
-verification also requires the repository's approved Ed25519 trust anchor.
-`COMPAT.md` and `compat.json` record runtime validation. The book and rustdoc
-archives can be extracted and viewed offline.
+`COMPAT.md` and `compat.json` record pins, metadata inputs and any validated
+runtime range. A metadata pin or successful Linux build is not proof of
+live-chain, interoperability or hardware coverage. Read the execution state
+and the exact commit's hosted results alongside those records.
+
+## Future release verification
+
+The repository retains release builder and verifier source for future work.
+Its presence does not demonstrate that the workflows ran, attestations were
+issued or a local signing trust anchor was approved. A future distribution
+effort must review that contract and record its own executed evidence.
+
+For any future download, checksums establish integrity only after the source
+and artifact provenance have been authenticated. Platform claims must be
+supported by builds and checks for those platforms. No local release rehearsal
+is required by this guide or by the current development plan.

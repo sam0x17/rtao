@@ -4,20 +4,36 @@ use anyhow::{Context, Result, bail, ensure};
 use quote::ToTokens;
 use std::{
     fs,
+    io::{Read, Seek, SeekFrom},
     path::{Component, Path, PathBuf},
     process::{Command, Stdio},
+    time::{Duration, Instant},
 };
 use toml_edit::DocumentMut;
 
 const GENERATOR_VERSION: &str = "0.23.12";
 const SDK_SOURCE: &str = "https://github.com/sam0x17/rtao";
+const OWNERSHIP: &[u8] = b"rtao generated hosted template fixture\n";
+const MAX_LOG_BYTES: u64 = 1024 * 1024;
+
+fn localnet_option(args: &[String]) -> Result<bool> {
+    match args {
+        [command] if command == "check" => Ok(false),
+        [command, option] if command == "check" && option == "--native-only" => Ok(false),
+        [command, option] if command == "check" && option == "--localnet" => Ok(true),
+        _ => bail!("usage: cargo xtask template check [--localnet]"),
+    }
+}
 
 pub(crate) fn run(args: Vec<String>) -> Result<()> {
-    let native_only = match args.as_slice() {
-        [command] if command == "check" => false,
-        [command, option] if command == "check" && option == "--native-only" => true,
-        _ => bail!("usage: cargo xtask template check [--native-only]"),
-    };
+    let localnet = localnet_option(&args)?;
+    ensure!(
+        cfg!(target_os = "linux")
+            && std::env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
+            && std::env::var("RUNNER_OS").as_deref() == Ok("Linux")
+            && std::env::var("RUNNER_ENVIRONMENT").as_deref() == Ok("github-hosted"),
+        "template validation runs only on disposable GitHub-hosted Linux runners (PLAN.md Q30)"
+    );
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .context("workspace root missing")?
@@ -37,24 +53,34 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
     fs::create_dir_all(&task_root)?;
     let task_root = task_root.canonicalize()?;
     fs::create_dir_all(task_root.join("tmp"))?;
+    let target = PathBuf::from(
+        std::env::var_os("CARGO_TARGET_DIR")
+            .context("CARGO_TARGET_DIR must reuse the hosted gate target directory")?,
+    );
+    ensure!(
+        target.is_absolute()
+            && !target
+                .components()
+                .any(|c| matches!(c, Component::ParentDir))
+            && target == task_root.join("build"),
+        "CARGO_TARGET_DIR must be the hosted task root's shared build directory"
+    );
     let run_root = task_root.join(format!("template-check-{}", std::process::id()));
     fs::create_dir(&run_root)
         .context("template check directory already exists; audit it before retrying")?;
-    fs::write(
-        run_root.join(".template-check-owned"),
-        b"rtao generated localnet development fixture\n",
-    )?;
+    fs::write(run_root.join(".template-check-owned"), OWNERSHIP)?;
     let evidence = task_root.join(format!("template-evidence-{}", std::process::id()));
     fs::create_dir(&evidence)?;
-    let result = check_project(&source, &run_root, &evidence, native_only);
+    let deadline = Instant::now() + Duration::from_secs(if localnet { 45 * 60 } else { 20 * 60 });
+    let result = check_project(&source, &run_root, &evidence, &target, localnet, deadline);
     // All child commands have exited and the generated check's EXIT trap has
     // removed its compose project. Do not silently delete any live dependency.
     let cleanup = cleanup(&run_root);
     let report = serde_json::json!({
         "schema": 1, "source": source, "generator": GENERATOR_VERSION,
-        "native_only": native_only, "passed": result.is_ok(),
+        "native_only": !localnet, "passed": result.is_ok(),
         "error": result.as_ref().err().map(|error| format!("{error:#}")),
-        "milestone_acceptance": !native_only && result.is_ok() && cleanup.is_ok(),
+        "milestone_acceptance": false,
         "cleanup_passed": cleanup.is_ok(),
         "cleanup_error": cleanup.as_ref().err().map(|error| format!("{error:#}")),
         "retained_project": cleanup.as_ref().err().map(|_| &run_root)
@@ -68,9 +94,9 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
     }
     result?;
     cleanup?;
-    if native_only {
+    if !localnet {
         println!(
-            "template native checks passed; Docker/localnet acceptance remains pending ({})",
+            "generated template client checks passed; optional image/localnet checks were not run ({})",
             evidence.display()
         );
     } else {
@@ -82,14 +108,24 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-fn check_project(source: &Path, run_root: &Path, evidence: &Path, native_only: bool) -> Result<()> {
+fn check_project(
+    source: &Path,
+    run_root: &Path,
+    evidence: &Path,
+    target: &Path,
+    localnet: bool,
+    deadline: Instant,
+) -> Result<()> {
     let generator =
         std::env::var_os("RTAO_CARGO_GENERATE").unwrap_or_else(|| "cargo-generate".into());
-    let mut version = Command::new(&generator);
-    version.arg("--version");
+    let mut version = Command::new("timeout");
+    version
+        .args(["--kill-after=10s", "30s"])
+        .arg(&generator)
+        .arg("--version");
     let output = version
         .output()
-        .context("install cargo-generate 0.23.12 or set RTAO_CARGO_GENERATE")?;
+        .context("use ci/template-check.sh to supply the verified prebuilt cargo-generate")?;
     ensure!(
         output.status.success()
             && String::from_utf8_lossy(&output.stdout).trim()
@@ -110,19 +146,19 @@ fn check_project(source: &Path, run_root: &Path, evidence: &Path, native_only: b
             "--silent",
             "--no-workspace",
         ]);
-    step(generate, evidence, "generate")?;
+    step(generate, evidence, "generate", deadline)?;
     let mut patch = Command::new("bash");
     patch
         .current_dir(&project)
         .arg("ci/patch-source.sh")
         .arg(source);
-    step(patch, evidence, "source-patch")?;
+    step(patch, evidence, "source-patch", deadline)?;
     let mut lock = Command::new("cargo");
     lock.current_dir(&project).arg("generate-lockfile");
-    step(lock, evidence, "lock")?;
+    step(lock, evidence, "lock", deadline)?;
     let mut fetch = Command::new("cargo");
     fetch.current_dir(&project).args(["fetch", "--locked"]);
-    step(fetch, evidence, "fetch")?;
+    step(fetch, evidence, "fetch", deadline)?;
     fs::copy(project.join("Cargo.lock"), evidence.join("Cargo.lock"))?;
     let fixture = run_root.join("fixture");
     fs::create_dir(&fixture)?;
@@ -130,28 +166,18 @@ fn check_project(source: &Path, run_root: &Path, evidence: &Path, native_only: b
     check
         .current_dir(&project)
         .arg("ci/check.sh")
-        .env("RTAO_TEMP_ROOT", &fixture);
+        .env("RTAO_TEMP_ROOT", &fixture)
+        .env("CARGO_TARGET_DIR", target);
     let mut build_doctor = Command::new("cargo");
     build_doctor
         .current_dir(source)
         .args(["build", "--locked", "-p", "rtao-cli"]);
-    step(build_doctor, evidence, "build-doctor")?;
-    let target = std::env::var_os("CARGO_TARGET_DIR").map_or_else(
-        || source.join("target"),
-        |path| {
-            let path = PathBuf::from(path);
-            if path.is_absolute() {
-                path
-            } else {
-                source.join(path)
-            }
-        },
-    );
+    step(build_doctor, evidence, "build-doctor", deadline)?;
     check.env("RTAO_DOCTOR", target.join("debug/rtao"));
-    if native_only {
-        check.arg("native");
+    if localnet {
+        check.arg("--localnet");
     }
-    let result = step(check, evidence, "project-ci");
+    let result = step(check, evidence, "project-ci", deadline);
     for entry in fs::read_dir(&fixture)? {
         let entry = entry?;
         let path = entry.path();
@@ -162,17 +188,63 @@ fn check_project(source: &Path, run_root: &Path, evidence: &Path, native_only: b
                 extension == "json" || extension == "log" || extension == "txt"
             })
         {
+            if path
+                .extension()
+                .is_some_and(|extension| extension == "json")
+            {
+                ensure!(
+                    metadata.len() <= MAX_LOG_BYTES,
+                    "template JSON evidence exceeds one MiB"
+                );
+            } else {
+                cap_log(&path)?;
+            }
             fs::copy(&path, evidence.join(entry.file_name()))?;
         }
     }
     result
 }
 
-fn step(mut command: Command, evidence: &Path, name: &str) -> Result<()> {
-    command
-        // Cargo/rustup can export the parent workspace's active toolchain.
-        // Each command must honor the toolchain file of its own working dir.
-        .env_remove("RUSTUP_TOOLCHAIN")
+fn cap_log(path: &Path) -> Result<()> {
+    let mut file = fs::File::open(path)?;
+    if file.metadata()?.len() > MAX_LOG_BYTES {
+        file.seek(SeekFrom::End(-(MAX_LOG_BYTES as i64)))?;
+        let mut tail = Vec::with_capacity(MAX_LOG_BYTES as usize);
+        file.read_to_end(&mut tail)?;
+        drop(file);
+        fs::write(path, tail)?;
+    }
+    Ok(())
+}
+
+fn step(command: Command, evidence: &Path, name: &str, deadline: Instant) -> Result<()> {
+    let remaining = deadline.saturating_duration_since(Instant::now()).as_secs();
+    ensure!(
+        remaining > 0,
+        "template validation deadline expired before {name}"
+    );
+    // GNU timeout owns a separate process group so a timed-out command's
+    // children stop before the caller audits and removes the generated root.
+    let mut timed = Command::new("timeout");
+    timed
+        .args(["--signal=TERM", "--kill-after=30s"])
+        .arg(format!("{remaining}s"))
+        .arg(command.get_program())
+        .args(command.get_args());
+    if let Some(directory) = command.get_current_dir() {
+        timed.current_dir(directory);
+    }
+    for (name, value) in command.get_envs() {
+        if let Some(value) = value {
+            timed.env(name, value);
+        } else {
+            timed.env_remove(name);
+        }
+    }
+    timed
+        // Keep the caller's installed toolchain, selected by the wrapper, so
+        // this source check reuses the existing gate's compiled dependencies.
+        // The generated project's own CI selects its declared toolchain.
         .env("PYO3_NO_PYTHON", "1")
         .env(
             "TMPDIR",
@@ -187,12 +259,13 @@ fn step(mut command: Command, evidence: &Path, name: &str) -> Result<()> {
         .create_new(true)
         .write(true)
         .open(evidence.join(format!("{name}.log")))?;
-    let status = command
+    let status = timed
         .stdout(Stdio::from(log.try_clone()?))
         .stderr(Stdio::from(log.try_clone()?))
         .status()
         .with_context(|| format!("start template {name}"))?;
     log.sync_all()?;
+    cap_log(&evidence.join(format!("{name}.log")))?;
     ensure!(
         status.success(),
         "template {name} failed; see {}",
@@ -227,7 +300,11 @@ fn check_source(root: &Path) -> Result<()> {
             .is_some_and(|table| table.len() == 1),
         "template must carry only the BLS patch, never a core patch"
     );
-    for role in ["validator", "miner"] {
+    for (role, profile) in [
+        ("validator", "validator"),
+        ("miner", "miner"),
+        ("owner-tool", "owner"),
+    ] {
         let member: DocumentMut =
             fs::read_to_string(template.join(role).join("Cargo.toml"))?.parse()?;
         ensure!(
@@ -237,14 +314,14 @@ fn check_source(root: &Path) -> Result<()> {
         ensure!(
             manifest["workspace"]["dependencies"]["rtao"]["default-features"].as_bool()
                 == Some(false),
-            "template neuron must disable default SDK features"
+            "template members must disable default SDK features"
         );
         ensure!(
             member["dependencies"]["rtao"]["features"]
                 .as_array()
                 .is_some_and(|features| features.len() == 1
-                    && features.get(0).and_then(toml_edit::Value::as_str) == Some(role)),
-            "template {role} must select only its no-host SDK profile"
+                    && features.get(0).and_then(toml_edit::Value::as_str) == Some(profile)),
+            "template {role} must select only its SDK role profile"
         );
         check_ring_first(&fs::read_to_string(
             template.join(role).join("src/main.rs"),
@@ -402,8 +479,7 @@ fn check_ring_first(source: &str) -> Result<()> {
 
 fn cleanup(root: &Path) -> Result<()> {
     ensure!(
-        fs::read(root.join(".template-check-owned"))?
-            == b"rtao generated localnet development fixture\n",
+        fs::read(root.join(".template-check-owned"))? == OWNERSHIP,
         "generated ownership marker changed"
     );
     let compose_identity = root.join("fixture/compose-project.txt");
@@ -463,6 +539,19 @@ fn cleanup(root: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn live_integration_requires_an_explicit_option() -> Result<()> {
+        assert!(!localnet_option(&["check".into()])?);
+        assert!(!localnet_option(&["check".into(), "--native-only".into()])?);
+        assert!(localnet_option(&["check".into(), "--localnet".into()])?);
+        assert!(localnet_option(&["check".into(), "--unknown".into()]).is_err());
+        assert!(
+            localnet_option(&["check".into(), "--localnet".into(), "--native-only".into()])
+                .is_err()
+        );
+        Ok(())
+    }
 
     #[test]
     fn container_license_bytes_and_both_stage_guards_match() -> Result<()> {
@@ -549,7 +638,7 @@ mod tests {
             .parent()
             .context("root missing")?;
         check_source(root)?;
-        for role in ["validator", "miner"] {
+        for role in ["validator", "miner", "owner-tool"] {
             let source =
                 fs::read_to_string(root.join("templates/subnet").join(role).join("src/main.rs"))?;
             let changed = source.replacen(

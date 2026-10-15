@@ -309,6 +309,21 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 "--no-default-features",
             ]));
             steps.extend(examples(root, plan)?);
+            steps.push(Step {
+                program: "timeout",
+                args: [
+                    "--signal=TERM",
+                    "--kill-after=30s",
+                    "22m",
+                    "bash",
+                    "ci/template-check.sh",
+                ]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+                tool: None,
+                informational: false,
+            });
             steps
         }
         "supply" => vec![

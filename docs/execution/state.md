@@ -16,6 +16,25 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Working source adds the remaining 62 reads and the blocking facade. All five
+read groups have fixture source and independent source reviews. Shared wiring,
+public block lookup, strict decoding, curated aliases and generated blocking
+adapters are prepared; hosted generation and combined execution remain pending.
+Generated availability still records 40/102 reads until the reviewed hosted
+artifact is adopted. See [m6-read-source.md](m6-read-source.md).
+
+Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
+at `06a3598` passes all five other jobs, compilation, strict Clippy and parity.
+Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. Source fixes
+retain the original behavior and strengthen fixtures for fixed-width multisig
+timepoints, exact business-probe counting, typed storage batching, runtime UTF-8
+decoding, all implemented command advertisement, distinct account spellings,
+last-allocated nonce semantics and the valid subnet boundary 4095. Explicit
+refusals for 4096/65535 are added to the native policy fixture. No assertion or
+gate is disabled. The all-83 planning test passes; doctests and docs are not
+reached. Evidence: private `check-38710720744.json`. The new read/facade source
+was not included in that run and has no compiled/tested claim.
+
 Source through `a929bcd` implements all 83 intents and 40 of 102 reads,
 with the corresponding hosted generated output verified and adopted.
 The newer crowdloan/root and coldkey intent ports have verified hosted generated

@@ -125,6 +125,22 @@ impl Snapshot {
     pub fn client(&self) -> &Client {
         &self.client
     }
+
+    /// Describe this block, or resolve a requested height while retaining observers.
+    pub async fn block_info(
+        &self,
+        block: Option<u64>,
+    ) -> Result<Option<crate::BlockInfo>, ClientError> {
+        let Some(number) = block.filter(|number| *number != self.block.number) else {
+            return crate::block_info::fetch(self).await;
+        };
+        let Some(mut snapshot) = crate::block_info::select(&self.client, Some(number)).await?
+        else {
+            return Ok(None);
+        };
+        snapshot.observer = self.observer.clone();
+        crate::block_info::fetch(&snapshot).await
+    }
 }
 
 /// Transport-independent primitive reads used by namespace methods.

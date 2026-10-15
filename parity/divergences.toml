@@ -475,13 +475,13 @@ id = "D-027"
 upstream_symbol = "sync.SyncClient` namespaces"
 python_behavior = "13 attributes, `collateral` absent (`PY/sync.py:186-241`)"
 rtao_behavior = "all 14 namespaces"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-027); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "The blocking facade exposes every catalog namespace, including collateral, so asynchronous and blocking clients use the same 14 namespace groups. This is the explicit design decision recorded in architecture.md Appendix C. Source and fixture are authored; hosted execution remains pending."
+status = "active"
 class = "improved"
-milestone = "M8"
-pinning_tests = ["`sync_client_has_all_namespaces`"]
+milestone = "M6"
+pinning_tests = ["rtao::blocking::tests::sync_client_has_all_namespaces"]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+upstream_report = "Recorded design improvement; no new filing. Active denotes implemented source and named fixture, with combined hosted validation pending."
 
 [[divergences]]
 id = "D-028"
