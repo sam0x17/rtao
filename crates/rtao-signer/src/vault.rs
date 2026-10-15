@@ -77,80 +77,26 @@ pub(crate) fn random_id() -> Result<String, VaultPageError> {
     Ok(hex::encode(bytes))
 }
 
-/// Explicitly open an already started session page without a shell.
+/// Explicitly spawn the chosen browser without waiting for it to exit.
 pub(crate) async fn open_page(url: &str, browser: Option<&str>) -> Result<(), VaultPageError> {
-    use std::process::Stdio;
-    use tokio::{process::Command, time::timeout};
-
-    let choice = browser
-        .map(str::to_owned)
-        .or_else(|| std::env::var("BT_EXTENSION_BROWSER").ok());
-    let choice = choice.as_deref().map(str::trim).filter(|choice| {
-        !choice.is_empty() && !matches!(choice.to_ascii_lowercase().as_str(), "default" | "system")
-    });
-    let mut command = if let Some(browser) = choice {
-        if browser.is_empty() || browser.chars().any(char::is_control) {
-            return Err(page_error("invalid browser executable"));
-        }
-        #[cfg(target_os = "macos")]
-        let command = {
-            let mut command = Command::new("open");
-            let application = match browser.to_ascii_lowercase().as_str() {
-                "firefox" | "ff" => "Firefox",
-                "chrome" | "google-chrome" => "Google Chrome",
-                "chromium" => "Chromium",
-                "brave" => "Brave Browser",
-                "edge" => "Microsoft Edge",
-                "safari" => "Safari",
-                _ => browser,
-            };
-            command.arg("-a").arg(application).arg(url);
-            command
-        };
-        #[cfg(not(target_os = "macos"))]
-        let command = {
-            let mut command = Command::new(browser);
-            command.arg(url);
-            command
-        };
-        command
-    } else {
-        #[cfg(target_os = "macos")]
-        let command = {
-            let mut command = Command::new("open");
-            command.arg(url);
-            command
-        };
-        #[cfg(target_os = "windows")]
-        let command = {
-            let mut command = Command::new("rundll32.exe");
-            command.arg("url.dll,FileProtocolHandler").arg(url);
-            command
-        };
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-        let command = {
-            let mut command = Command::new("xdg-open");
-            command.arg(url);
-            command
-        };
-        command
-    };
-    command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .kill_on_drop(true);
-    let status = timeout(Duration::from_secs(10), command.status())
+    crate::browser::open_page(url, browser)
         .await
-        .map_err(|_| page_error("opening the Vault page timed out"))?
-        .map_err(|_| page_error("cannot open the Vault page; open its URL manually"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(page_error(
-            "cannot open the Vault page; open its URL manually",
-        ))
-    }
+        .map_err(|failure| {
+            page_error(match failure {
+                #[cfg(not(unix))]
+                crate::browser::OpenError::Unsupported => {
+                    "explicit browser opening is unsupported on this platform"
+                }
+                #[cfg(unix)]
+                crate::browser::OpenError::Selection => {
+                    "cannot select the Vault browser; open its URL manually"
+                }
+                #[cfg(unix)]
+                crate::browser::OpenError::Spawn => {
+                    "cannot open the Vault page; open its URL manually"
+                }
+            })
+        })
 }
 
 #[cfg(test)]

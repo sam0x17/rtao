@@ -320,6 +320,10 @@ jobs:
           cargo run --locked -p xtask -- regen
       - name: Refresh the declared parity inventory
         run: cargo run --locked -p xtask -- parity matrix
+      - name: Verify refreshed client source parity
+        # Catch source, attribution and generated-output failures in this
+        # bounded refresh before starting the ordinary hosted test jobs.
+        run: cargo run --locked -p xtask -- parity check
       - name: Verify generated output paths
         env:
           REFRESH_CODEGEN: ${{ inputs.refresh_codegen && 'true' || 'false' }}

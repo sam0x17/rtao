@@ -16,14 +16,22 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Normal [38787018268](https://github.com/sam0x17/rtao/actions/runs/38787018268)
-at `97090f25ab8648c84b8728aa631f652556c6f329` stops before tests:
-the license gate requires the full `_subtensor.py` source path, which the
-combined `sync.py and _subtensor.py` header omitted. Split it into two canonical
-headers without changing the checker. All five supporting jobs pass, including
-features. Raw main log is 62,078 bytes, SHA256
-`0fdb44523f33c6be5823d05d6c9fd4b0d5cc1c2a5d2b6ce585fe67033c767fcc`;
-bounded proof is `check-38787018268.json`. Tests/doctests/docs were not reached.
+Normal [38790070632](https://github.com/sam0x17/rtao/actions/runs/38790070632)
+at `da99c3deb6886bca32a1d3c04eb098977068d8d3` stops before tests on
+`_subtensor.py`'s extra helper-crate mapping. All five supporting jobs pass.
+Raw main log is 61,923 bytes, SHA256
+`dc01e374fe32111e15206f169f139132dd17361e8e2dc8ca775f790359584fb8`;
+bounded proof is `check-38790070632.json`. Tests/doctests/docs were not reached.
+The preceding 97090f2 run caught the combined header's incomplete source path;
+splitting that header exposed the remaining helper mappings.
+
+A complete source-header preflight now distinguishes direct derived homes
+from reused dependencies in `_subtensor`, sync, crowd and result mappings.
+Config, result and root-claim ports receive their actual canonical origins.
+The named-table producer emits module origins before its array declaration
+so rustfmt preserves column-zero headers. Its generated catalog still needs
+hosted regeneration/adoption. The refresh job now runs full source parity
+before uploading artifacts, catching these errors before ordinary test jobs.
 This source includes all three corrections from the prior ordinary run:
 the explicitly absent collateral UID fixture, conviction stderr/singular
 wording, and recovery receipt parsing for both canonical hex and legacy arrays.
@@ -39,8 +47,21 @@ Role inventories and host flags are unchanged; graph changes are only CPU,
 time and source provenance. All compatibility, runtime and oracle claims
 remain unchanged. Proofs are `564-report-review.json` and
 `564-report-adoption.json`; no archive or extraction directory is retained.
-Combined hosted tests remain pending. Strict M8 completeness remains off.
-No milestone has been accepted.
+The next source batch reaches 236/357 reconciled files, with 121 pending and
+20 pending e2e mappings; its generated reports and tests remain pending.
+Strict M8 completeness remains off. No milestone has been accepted.
+
+That batch shares the Vault/extension browser selector and launcher: opening
+returns after spawn and does not kill an application after ten seconds. A
+bounded pipe-child regression exercises lifetime and process-group separation
+without a browser or filesystem fixture. Vault enables the existing Unix nix
+dependency for executable discovery. QR encoding now preserves Python's actual
+single-mode selection and capacity limits; decoded SVG fixtures cover all
+three modes and boundary refusals. The plan's byte-only interpretation of
+`optimize=0` was a factual error; binary UOS frames still use byte mode.
+Eight named natural-name/wallet-compat fixtures preserve the original cases
+with explicit native API dispositions. Browser/QR/scan/daemon and two shared
+core primitive test-source rows have qualified whole-file source reviews.
 
 The batch restores command-specific timelock help/prompt guidance; adds async
 snapshot sibling, cached-symbol and balance helpers; preserves exact classifier

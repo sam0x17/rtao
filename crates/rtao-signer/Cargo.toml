@@ -13,7 +13,7 @@ workspace = true
 
 [features]
 ledger = ["rtao-core/ledger","rtao-core/offload"]
-vault = ["rtao-core/offload", "dep:tokio", "dep:tokio-util", "dep:axum", "dep:hyper", "dep:hyper-util", "dep:tokio-tungstenite", "dep:futures", "dep:base64", "dep:hex", "dep:getrandom", "dep:qrcodegen"]
+vault = ["rtao-core/offload", "dep:tokio", "dep:tokio-util", "dep:axum", "dep:hyper", "dep:hyper-util", "dep:tokio-tungstenite", "dep:futures", "dep:base64", "dep:hex", "dep:getrandom", "dep:qrcodegen", "dep:nix"]
 extension = ["dep:tokio", "dep:tokio-tungstenite", "dep:axum", "dep:hyper", "dep:hyper-util", "dep:futures", "dep:serde", "dep:http", "dep:url", "dep:hex", "dep:zeroize", "dep:rustls", "dep:rustls-native-certs", "dep:getrandom", "dep:nix", "dep:base64", "dep:subtle", "serde_json/preserve_order"]
 test-util = []
 

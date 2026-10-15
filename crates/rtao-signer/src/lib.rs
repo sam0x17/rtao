@@ -5,6 +5,9 @@
 
 use std::{fmt, future::Future, pin::Pin, sync::Arc};
 
+#[cfg(any(feature = "vault", feature = "extension"))]
+mod browser;
+
 /// Ledger signing through the core device API and injected backend seam.
 #[cfg(feature = "ledger")]
 pub mod ledger;
