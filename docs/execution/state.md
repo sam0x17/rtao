@@ -16,6 +16,21 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Hosted generation [38777439872](https://github.com/sam0x17/rtao/actions/runs/38777439872)
+succeeds at clean `5464ccf`. Authenticate two exact archives, all 20 regular
+allowlisted members and all 23 unchanged dependency inputs. Only the new
+22,297-byte root-claim fixture differs among generated interfaces; both source
+blobs/SHA256s and case inventories are checked. The matrix changes exactly
+three reviewed rows: 212 reconciled/145 pending, with 21 e2e keys pending.
+Existing oracle and compatibility claims, role package inventories and host
+flags stay unchanged. Record the hosted CPU accurately as measurement provenance.
+
+Proofs are `546-generation-review.json` and `546-generation-adoption.json`;
+no archive/extraction directory remains. Root replaces test-only unwraps with
+checked fixture diagnostics, retaining all assertions and workspace lints.
+Push this adoption head for normal combined hosted validation. No current
+passing tests/doctests/docs or milestone acceptance is claimed.
+
 Generation38776671979 atd7b4a27 compiles and extracts, then regeneration
 finds the generic money selector incorrectly requiring a Python helper-table
 entry before a custom Crowdloan resolver. Preserve custom resolvers first;
