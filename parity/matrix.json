@@ -7702,11 +7702,18 @@
         "milestone": "M1–M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_substrate.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_client` (`Client`; `View`/`DynView` play the `Substrate` contract)"
+          "crates/rtao-client/src/client.rs",
+          "crates/rtao-client/src/error.rs",
+          "crates/rtao-client/src/view.rs",
+          "crates/rtao-client/src/submit.rs",
+          "crates/rtao-client/src/block_info.rs",
+          "crates/rtao-tx/src/output.rs",
+          "crates/rtao-tx/src/executor.rs",
+          "crates/rtao-rpc/src/session.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e6c51b0314b60e179500076bc3bda712ae7c303f"
       },
       {
         "kind": "ported",
@@ -7800,11 +7807,17 @@
         "milestone": "M1–M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/interface.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_client::Client` internals"
+          "crates/rtao-client/src/client.rs",
+          "crates/rtao-client/src/view.rs",
+          "crates/rtao-client/src/block_info.rs",
+          "crates/rtao-client/src/submit.rs",
+          "crates/rtao-client/src/compose.rs",
+          "crates/rtao-core-ext/src/ops/fee.rs",
+          "crates/rtao-core-ext/src/ops/extrinsic_lookup.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ea4b9a701522142c1c9b78f7e6274fe52d445d3b"
       },
       {
         "kind": "n/a",

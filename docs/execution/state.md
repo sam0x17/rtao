@@ -16,6 +16,15 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Hosted report refresh
+[38819346876](https://github.com/sam0x17/rtao/actions/runs/38819346876) passed
+full source parity at clean `d8db07d43f5c7e32623e8614b2e09f07629abeb9`. Adopted
+exactly four report files after authenticating and independently refetching
+the archive. Matrix changes are limited to the two reviewed substrate/interface
+rows. All 23 dependency inputs, role counts, host flags and other compatibility
+claims are unchanged. Bounded proofs are `d8db07d-report-inspection.json` and
+`d8db07d-report-adoption.json`; no archive or extraction tree is retained.
+
 Hosted generation
 [38816297566](https://github.com/sam0x17/rtao/actions/runs/38816297566) passed
 source parity at clean `2ad5d1b41673dc4804640edc11e4703ed834ec19`. Both artifact
@@ -27,10 +36,9 @@ unchanged. Existing legacy runtime-API output is unchanged. Bounded proofs
 `2ad5d1b-artifact-inspection.json` and `2ad5d1b-artifact-adoption.json` remain
 under `.local/recovery/2026-10-15/`, without archives or extraction directories.
 
-The published matrix has 280/357 source rows reconciled, 77 pending, 20 pending
-e2e mappings and 68 divergences. The five new dispositions cover codec, runtime
-API, registration, crowdloan and Ledger pytest input, with explicit native
-API/strictness and coverage limits. These are source reconciliation results.
+The published matrix has 282/357 source rows reconciled, 75 pending, 20 pending
+e2e mappings and 68 divergences. Source mappings retain explicit native API,
+strictness and coverage limits. These are source reconciliation results.
 Strict M8 completeness remains off; no milestone is accepted. M2-S02 remains
 open and unaccepted, and upstream issue #3251 is still open.
 
@@ -61,19 +69,20 @@ has not been executed or validated, and no sanitizer coverage is claimed.
 
 Ordinary [38818850318](https://github.com/sam0x17/rtao/actions/runs/38818850318)
 is running at `f21c0919fcf42a73c09e9903d8a8bffa3180d562`, covering the adopted
-precompile output and corrected CLI documentation link. Preserve this run.
+precompile output and corrected CLI documentation link. All five supporting
+jobs have passed; preserve its live main check.
 
-The next source checkpoint repairs terminal policy refusals during paced
+Source checkpoint `d8db07d` repairs terminal policy refusals during paced
 reconnect setup, with four real-session regression fixtures. It also normalizes
 public RPC diagnostic text while retaining typed causes and policy metadata,
 with eleven fake-startup vectors. Both patches passed independent source review
 and direct formatting checks; neither has executed in hosted tests yet.
-Complete substrate/interface reviews add two qualified source dispositions,
-bringing the map to 282 reconciled and 75 pending; the generated matrix remains
-at 280 until hosted refresh/adoption. Native read/write API ownership, raw
-pool-only submission and map-presence capability/coverage limits are documented.
+Complete substrate/interface reviews add two qualified source dispositions;
+the source map and generated matrix agree at 282 reconciled and 75 pending.
+Native read/write API ownership, raw pool-only submission and map-presence
+capability/coverage limits are documented.
 The RPC source row stays pending: fragmented HTTP rejection bodies can still
-lose diagnostic text, and that separate repair remains under design review.
+lose diagnostic text, and that separate repair is being prepared.
 
 All current work follows Q30. Local target output remains 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.
