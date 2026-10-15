@@ -1,0 +1,70 @@
+name: live-probe
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: live-probe
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/live-probe
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/live-probe/build
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          toolchain: "1.89"
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/live-probe/build
+          cache-directories: ~/.cargo/git
+      - name: Check immutable digest pins
+        run: cargo xtask probe pins --check
+      - name: Observe Finney and testnet without submitting transactions
+        run: cargo xtask probe --networks finney,testnet --output target/live-probe/probe.json --report target/live-probe/probe.md
+      - name: Upload reproducible observations
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: live-probe-${{ github.run_id }}
+          path: |
+            target/live-probe/probe.json
+            target/live-probe/probe.md
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Update the live-probe issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PROBE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p target/live-probe
+          if [ ! -f target/live-probe/probe.md ]; then
+            printf 'Live probe could not start. Inspect the build or pin-check failure.\n' > target/live-probe/probe.md
+          fi
+          printf '\nWorkflow: %s\n' "$PROBE_RUN_URL" >> target/live-probe/probe.md
+          gh label create live-probe --description 'Read-only public-chain probe failures' --color D93F0B --force
+          issue_number="$(gh issue list --label live-probe --state open --json number,title --jq '.[] | select(.title == "live probe failed") | .number' | head -n 1)"
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --body-file target/live-probe/probe.md
+          else
+            gh issue create --label live-probe --title 'live probe failed' --body-file target/live-probe/probe.md
+          fi

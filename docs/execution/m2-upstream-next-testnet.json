@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "branch": "testnet",
+  "base_commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+  "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+  "changed": [],
+  "catalogs": [
+    {
+      "catalog": "intents",
+      "semantic_change": false,
+      "added": [],
+      "removed": []
+    },
+    {
+      "catalog": "reads",
+      "semantic_change": false,
+      "added": [],
+      "removed": []
+    },
+    {
+      "catalog": "errors",
+      "semantic_change": false,
+      "added": [],
+      "removed": []
+    }
+  ],
+  "core": {
+    "fingerprint": "b3:edc9f51ac0953af2b9b60665398e0146567ae4ca9988d7f018d3788f01a73b86",
+    "changed": false,
+    "extrinsic_changed": false
+  },
+  "diff_stat": "",
+  "has_changes": false,
+  "pins_modified": false
+}

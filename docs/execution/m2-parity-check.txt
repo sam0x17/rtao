@@ -1,0 +1,130 @@
+cross-checked Python: 311 calls, 402 storage entries, 136 constants, 124 API methods, 405 errors
+runtime descriptors match pinned metadata (18 scoped pallets, 25 APIs)
+Verified 14 catalog-derived namespace accessors
+102 read interfaces and 86 pending behaviors match
+83 intent interfaces and 74 pending behaviors match
+Error: parity failed:
+oracle: No such file or directory (os error 2)
+
+{
+  "schema": 1,
+  "strict": false,
+  "layers": {
+    "files": {
+      "status": "checked",
+      "details": {
+        "watched": 357,
+        "pending": 357
+      }
+    },
+    "licenses": {
+      "status": "checked",
+      "details": {
+        "attribution": "checked"
+      }
+    },
+    "symbols": {
+      "status": "checked",
+      "details": {
+        "aliases": 269,
+        "changed": []
+      }
+    },
+    "catalog": {
+      "status": "checked",
+      "details": {
+        "intents": 83,
+        "reads": 102,
+        "semantic_errors": 18,
+        "chain_errors": 390
+      }
+    },
+    "extraction": {
+      "status": "checked",
+      "details": {
+        "all_outputs": "checked"
+      }
+    },
+    "chain_source": {
+      "status": "checked",
+      "details": {
+        "selective_fields": 77,
+        "proxy_variants": 19,
+        "freeze_struct": "checked",
+        "source_constants": "checked_by_extraction",
+        "consumer_assertions": {
+          "shield_period_max": "pending_M4-03"
+        },
+        "pending": 1
+      }
+    },
+    "coverage": {
+      "status": "checked",
+      "details": {
+        "pallets": 13,
+        "calls": 262,
+        "raw_only": 147,
+        "raw_only_extra": 0,
+        "wrapped": 116
+      }
+    },
+    "environment": {
+      "status": "checked",
+      "details": {
+        "consumers": 12,
+        "divergences": 17,
+        "path": "parity/env.toml",
+        "pending": 16,
+        "status": "matches"
+      }
+    },
+    "pending": {
+      "status": "checked",
+      "details": {
+        "pending_intents": 74,
+        "pending_reads": 86,
+        "implemented_intents": 9,
+        "implemented_reads": 16
+      }
+    },
+    "exports": {
+      "status": "checked",
+      "details": {
+        "lists": 15,
+        "names": 399,
+        "aliased": 13,
+        "decisions": 222,
+        "pending": 222
+      }
+    },
+    "divergences": {
+      "status": "checked",
+      "details": {
+        "total": 35,
+        "active": 2,
+        "pending": 32,
+        "withdrawn": 1
+      }
+    },
+    "e2e": {
+      "status": "checked",
+      "details": {
+        "keys": 115,
+        "mapped": 6,
+        "pending": 108,
+        "na": 1
+      }
+    },
+    "oracle": {
+      "status": "failed",
+      "error": "No such file or directory (os error 2)"
+    },
+    "matrix": {
+      "status": "checked",
+      "details": {
+        "families": 10,
+        "rows": 1529
+      }
+    }
+  }
+}

@@ -1,0 +1,318 @@
+{
+  "format": 1,
+  "provenance": {
+    "blob": "0b735429b0e11a172e6079ca7ba561cd7d350cfb",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "common/src/transaction_error.rs",
+    "tag": "v478"
+  },
+  "python_mirror": {
+    "provenance": {
+      "blob": "d326d758a6c2921208d96a96ac31a0a1a939bf16",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/error_map.py",
+      "tag": "v478"
+    },
+    "source": {
+      "end_line": 518,
+      "line": 488,
+      "value": {
+        "dict": [
+          [
+            0,
+            "ColdkeySwapAnnounced"
+          ],
+          [
+            1,
+            "StakeAmountTooLow"
+          ],
+          [
+            2,
+            "NotEnoughBalanceToStake"
+          ],
+          [
+            3,
+            "SubnetNotExists"
+          ],
+          [
+            4,
+            "HotKeyAccountNotExists"
+          ],
+          [
+            5,
+            "NotEnoughStakeToWithdraw"
+          ],
+          [
+            6,
+            "RateLimitExceeded"
+          ],
+          [
+            7,
+            "InsufficientLiquidity"
+          ],
+          [
+            8,
+            "SlippageTooHigh"
+          ],
+          [
+            9,
+            "TransferDisallowed"
+          ],
+          [
+            10,
+            "HotKeyNotRegisteredInNetwork"
+          ],
+          [
+            11,
+            "InvalidIpAddress"
+          ],
+          [
+            12,
+            "ServingRateLimitExceeded"
+          ],
+          [
+            13,
+            "InvalidPort"
+          ],
+          [
+            14,
+            "ZeroMaxAmount"
+          ],
+          [
+            15,
+            "InvalidRevealRound"
+          ],
+          [
+            16,
+            "NoWeightsCommitFound"
+          ],
+          [
+            17,
+            "RevealTooEarly"
+          ],
+          [
+            18,
+            "InputLengthsUnequal"
+          ],
+          [
+            19,
+            "HotKeyNotRegisteredInSubNet"
+          ],
+          [
+            20,
+            "EvmKeyAssociateRateLimitExceeded"
+          ],
+          [
+            21,
+            "ColdkeySwapDisputed"
+          ],
+          [
+            22,
+            "InvalidRealAccount"
+          ],
+          [
+            23,
+            "FailedShieldedTxParsing"
+          ],
+          [
+            24,
+            "InvalidShieldedTxPubKeyHash"
+          ],
+          [
+            25,
+            "NonAssociatedColdKey"
+          ],
+          [
+            26,
+            "DelegateTakeTooLow"
+          ],
+          [
+            27,
+            "DelegateTakeTooHigh"
+          ],
+          [
+            255,
+            "BadRequest"
+          ]
+        ]
+      }
+    },
+    "table": "CUSTOM_TRANSACTION_ERRORS"
+  },
+  "values": [
+    {
+      "alias": true,
+      "code": 0,
+      "python_name": "ColdkeySwapAnnounced",
+      "runtime_variant": "ColdkeyInSwapSchedule"
+    },
+    {
+      "alias": false,
+      "code": 1,
+      "python_name": "StakeAmountTooLow",
+      "runtime_variant": "StakeAmountTooLow"
+    },
+    {
+      "alias": true,
+      "code": 2,
+      "python_name": "NotEnoughBalanceToStake",
+      "runtime_variant": "BalanceTooLow"
+    },
+    {
+      "alias": false,
+      "code": 3,
+      "python_name": "SubnetNotExists",
+      "runtime_variant": "SubnetNotExists"
+    },
+    {
+      "alias": true,
+      "code": 4,
+      "python_name": "HotKeyAccountNotExists",
+      "runtime_variant": "HotkeyAccountDoesntExist"
+    },
+    {
+      "alias": false,
+      "code": 5,
+      "python_name": "NotEnoughStakeToWithdraw",
+      "runtime_variant": "NotEnoughStakeToWithdraw"
+    },
+    {
+      "alias": false,
+      "code": 6,
+      "python_name": "RateLimitExceeded",
+      "runtime_variant": "RateLimitExceeded"
+    },
+    {
+      "alias": false,
+      "code": 7,
+      "python_name": "InsufficientLiquidity",
+      "runtime_variant": "InsufficientLiquidity"
+    },
+    {
+      "alias": false,
+      "code": 8,
+      "python_name": "SlippageTooHigh",
+      "runtime_variant": "SlippageTooHigh"
+    },
+    {
+      "alias": false,
+      "code": 9,
+      "python_name": "TransferDisallowed",
+      "runtime_variant": "TransferDisallowed"
+    },
+    {
+      "alias": false,
+      "code": 10,
+      "python_name": "HotKeyNotRegisteredInNetwork",
+      "runtime_variant": "HotKeyNotRegisteredInNetwork"
+    },
+    {
+      "alias": false,
+      "code": 11,
+      "python_name": "InvalidIpAddress",
+      "runtime_variant": "InvalidIpAddress"
+    },
+    {
+      "alias": false,
+      "code": 12,
+      "python_name": "ServingRateLimitExceeded",
+      "runtime_variant": "ServingRateLimitExceeded"
+    },
+    {
+      "alias": false,
+      "code": 13,
+      "python_name": "InvalidPort",
+      "runtime_variant": "InvalidPort"
+    },
+    {
+      "alias": false,
+      "code": 14,
+      "python_name": "ZeroMaxAmount",
+      "runtime_variant": "ZeroMaxAmount"
+    },
+    {
+      "alias": false,
+      "code": 15,
+      "python_name": "InvalidRevealRound",
+      "runtime_variant": "InvalidRevealRound"
+    },
+    {
+      "alias": true,
+      "code": 16,
+      "python_name": "NoWeightsCommitFound",
+      "runtime_variant": "CommitNotFound"
+    },
+    {
+      "alias": true,
+      "code": 17,
+      "python_name": "RevealTooEarly",
+      "runtime_variant": "CommitBlockNotInRevealRange"
+    },
+    {
+      "alias": false,
+      "code": 18,
+      "python_name": "InputLengthsUnequal",
+      "runtime_variant": "InputLengthsUnequal"
+    },
+    {
+      "alias": true,
+      "code": 19,
+      "python_name": "HotKeyNotRegisteredInSubNet",
+      "runtime_variant": "UidNotFound"
+    },
+    {
+      "alias": false,
+      "code": 20,
+      "python_name": "EvmKeyAssociateRateLimitExceeded",
+      "runtime_variant": "EvmKeyAssociateRateLimitExceeded"
+    },
+    {
+      "alias": false,
+      "code": 21,
+      "python_name": "ColdkeySwapDisputed",
+      "runtime_variant": "ColdkeySwapDisputed"
+    },
+    {
+      "alias": false,
+      "code": 22,
+      "python_name": "InvalidRealAccount",
+      "runtime_variant": "InvalidRealAccount"
+    },
+    {
+      "alias": false,
+      "code": 23,
+      "python_name": "FailedShieldedTxParsing",
+      "runtime_variant": "FailedShieldedTxParsing"
+    },
+    {
+      "alias": false,
+      "code": 24,
+      "python_name": "InvalidShieldedTxPubKeyHash",
+      "runtime_variant": "InvalidShieldedTxPubKeyHash"
+    },
+    {
+      "alias": false,
+      "code": 25,
+      "python_name": "NonAssociatedColdKey",
+      "runtime_variant": "NonAssociatedColdKey"
+    },
+    {
+      "alias": false,
+      "code": 26,
+      "python_name": "DelegateTakeTooLow",
+      "runtime_variant": "DelegateTakeTooLow"
+    },
+    {
+      "alias": false,
+      "code": 27,
+      "python_name": "DelegateTakeTooHigh",
+      "runtime_variant": "DelegateTakeTooHigh"
+    },
+    {
+      "alias": false,
+      "code": 255,
+      "python_name": "BadRequest",
+      "runtime_variant": "BadRequest"
+    }
+  ]
+}

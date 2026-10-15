@@ -1,0 +1,196 @@
+[
+  {
+    "toolchain": "1.89.0",
+    "kind": "portable",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/portable_fee_dispatch-6e10068b4f7604af",
+    "sha256": "c7d0042d4f028094ad41157556f38a56374df6536f5581db632c166a4ecfd24b",
+    "bytes": 2113120,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/portable_fee_dispatch-6e10068b4f7604af.d",
+    "dependency_sha256": "801f7883648228d5cf83b2116eb0dabd21edb29e18be7d1ddaf51ef10d77e1de",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/tests/portable_fee_dispatch.rs": "a6466a0868903a2bf6620963a53a2cd7aef676a9af4bdab1017ae4994d870eff",
+      "sdk/bittensor-core/tests/fixtures/finney-v478.v15.scale": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502"
+    }
+  },
+  {
+    "toolchain": "1.89.0",
+    "kind": "portable",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/protocol_ops-08662d2006547900",
+    "sha256": "349416a463bdd916ff835b309af5c560706955e8d7ee9dabd99e1400133f41b2",
+    "bytes": 1960704,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/protocol_ops-08662d2006547900.d",
+    "dependency_sha256": "cc57cf1b6757e4fc51562ac3258cab7c32605740c8e8ae5c7af076cc044f1da6",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/tests/protocol_ops.rs": "1ffa3139f2836bf79552156823adc701802762304206c1688f9158d82fc264b9"
+    }
+  },
+  {
+    "toolchain": "1.89.0",
+    "kind": "portable",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/value_navigation-5eb36f3637b9ece4",
+    "sha256": "b300ef684817fa63b208a4e55e1e3dc78fda98cf74fcda8b606a712bfa876683",
+    "bytes": 1021920,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/value_navigation-5eb36f3637b9ece4.d",
+    "dependency_sha256": "e25cc9bb814e179153bb537faa9c425ef2908ed6b805fe0900d82b51dbad5ee0",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/tests/value_navigation.rs": "837a08dae02f61be561cfff90c577e144971f727689d61996dd787435c838531"
+    }
+  },
+  {
+    "toolchain": "1.89.0",
+    "kind": "lib",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/bittensor_core-c395681e29f93ded",
+    "sha256": "de18f56f76fcbe9be42ae6056590cc5e013ec4143d8394fcc8e31f59d8cee9e3",
+    "bytes": 11585552,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/bittensor_core-c395681e29f93ded.d",
+    "dependency_sha256": "45b2ee0055b54b4e37a089beccbf4015232bb3816fc9de969402def6f041242e",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [
+      "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core"
+    ],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/src/lib.rs": "c69df3af21c728c168ca6c366b76b9130f5c35acd6cd8d1a2f7f7c30f0e3d7cc",
+      "sdk/bittensor-core/src/client.rs": "147663e7b738bb35dd235d8f52527dd9dd6388e9f3e9a8b82f3c5b1098505c58",
+      "sdk/bittensor-core/src/codec/mod.rs": "02adad8e8004db9890765023ed6dbd5b8e6a145477743ba97fe2b55cb136b15d",
+      "sdk/bittensor-core/src/codec/batch.rs": "7acc8ae75f5a1e566347318c687059c7eb561814d42d7e6c9ddfc665c7f930c5",
+      "sdk/bittensor-core/src/codec/decode.rs": "f0b2f4951a4390d6f1515019438dc1af258a71cb48ec5e8e8beec06900cdd46b",
+      "sdk/bittensor-core/src/codec/encode.rs": "944300d5ae121ff6725678526c0060cfbdbb52d285180a146764e7301048936a",
+      "sdk/bittensor-core/src/codec/extrinsic.rs": "9ad81b2004ac96f0d88120d1be065d8dd9a24eba4e471efc4cee911f56702306",
+      "sdk/bittensor-core/src/codec/storage.rs": "8c528f7ef95234ce019d2e9b8692eb7729f2bed65c2ccb1213fceb28f45a2865",
+      "sdk/bittensor-core/src/codec/value.rs": "bc2d286fc7d93d2d66b2a796bc6e3d145e53e26e70dbef962eb7462c6dc95b14",
+      "sdk/bittensor-core/src/codec/value_navigation.rs": "e4157099b32b280a30e8b82110ba53d498b15ad6cdf8247be0757d7dc62a4d09",
+      "sdk/bittensor-core/src/digest/mod.rs": "ee8c44e14250f414139aafd218797749903756c4eb05c8d6cf79c7bcc15050f5",
+      "sdk/bittensor-core/src/error.rs": "bb0b9ce1e0e697e5c93ab610a343a8b9c11e17a0a7a5e3ce792b6cd314641b3c",
+      "sdk/bittensor-core/src/keyfiles/mod.rs": "806dc72bfe2decc43739262a9cf96d4b1b9e78b328d27abda4d8ab4e4e2b3087",
+      "sdk/bittensor-core/src/keys/mod.rs": "46ed45c6926538876af8d45ae099a1f39bff7a54f8ce0cc20ba9e1907591357d",
+      "sdk/bittensor-core/src/keys/base58.rs": "62efdbc2fdb0f2687d12bf9181c35236f1027513df4ed5b3ba069af64962cba3",
+      "sdk/bittensor-core/src/keys/encrypted_json.rs": "bab9e87bb7e5b635d2a0306207a40425a7896fbe0763f349e2b1fcd011afa65a",
+      "sdk/bittensor-core/src/mlkem/mod.rs": "8cd45cfd18e96f2eef299c48261849b3a8ac01e3d18d1d7f0c9c57c67f788a20",
+      "sdk/bittensor-core/src/pow/mod.rs": "3caab016a53f12b9083b17bbb3f7c3baef90766fec6f9a83aef63a4671906ffe",
+      "sdk/bittensor-core/src/pow/opencl.rs": "c63f7d0b30e1a0d8344a90f2f8144422503c016fc7851b028f17b8c0c1a7dba0",
+      "sdk/bittensor-core/src/protocol/mod.rs": "7e8ccab11fe1308de96718c851bb3b6f78427eb45a90ba871be890e3f4e7de88",
+      "sdk/bittensor-core/src/protocol/dispatch_error.rs": "8715d833de363ee60bd0259b8f393b14762c0000f668f3950dc6c08412e49acf",
+      "sdk/bittensor-core/src/protocol/python_printable.rs": "08217cfdb20bd504427b71b2e6ed6006b0bc382633c4d6d66fcdbb33054dfdde",
+      "sdk/bittensor-core/src/protocol/dispatch_error_tables.rs": "984cc365d8c1197375973855355ea696f2bd5f64314e7fa00cbc38d90c9c075c",
+      "sdk/bittensor-core/src/protocol/extrinsic_lookup.rs": "a56af733ebb9717470d4258a4e39327d6eef3927b891a8c01a2446aeedc6acc7",
+      "sdk/bittensor-core/src/protocol/fee.rs": "1454d2daf7e3742d717ae6b1c591582a0e77cc5e54acae29a73e8fe2ddc95f4f",
+      "sdk/bittensor-core/src/protocol/metadata.rs": "94d3d14b970f6ab628ff6eea56467926b6873e9207b4ebcf11d74bc5f7a0504a",
+      "sdk/bittensor-core/src/protocol/runtime_api.rs": "1900fb9c6c1b49d92156434bb5e4ca57cfdd65f343af4d340c28516d22204fea",
+      "sdk/bittensor-core/src/protocol/storage.rs": "d2ac90c6df2fd0fe271ffcac39c2edcee9673063351141f830f9ff16ab7d1a80",
+      "sdk/bittensor-core/src/runtime/mod.rs": "cff75febd4022aff93d8c221d63af084358f8b71d6c027c51b3995ca704111e8",
+      "sdk/bittensor-core/src/runtime/type_string.rs": "b6cf4563abac59ed089b15adde8cc8a19be38f3fe21b17703a8da8d0fbcddf1c",
+      "sdk/bittensor-core/src/signers/mod.rs": "5c4d52003591615c9d3d9a8066fea356d2dce4e942d29e739fa5c65970ca3cad",
+      "sdk/bittensor-core/src/signers/hid.rs": "90ba168d3498f7b24c1267842b3024618fd50f774b8485b8614f3199e1cdba6a",
+      "sdk/bittensor-core/src/signers/ledger.rs": "3d04824dd663f6b79985f2af1c22b047b4ca1ca80b6c1ee000624157f29d18cc",
+      "sdk/bittensor-core/src/timelock/mod.rs": "4af219f4b2faeefb19d48add595b1a23982ad4515695c094420b636721e7aa47",
+      "sdk/bittensor-core/src/timelock/constants.rs": "9413f4ac1cead8ec219aeb0738862ca3af67435cfcf4b95a5717e9ed761d9d3b",
+      "sdk/bittensor-core/src/timelock/epoch_schedule.rs": "cf34e79dbe3574b868a475999c9d77fcdf3e0f0521a9909e5fb56902aff277f7",
+      "sdk/bittensor-core/src/timelock/epoch_schedule_vectors.rs": "7aa89dd42ecd825758a880af651dfe52125f7ffd24eaa501c3b5709a692a2715",
+      "sdk/bittensor-core/src/transaction.rs": "f676e8f3d0636533a1d36234906c9c0f44d8b859b62b874f6726ed38028cf687",
+      "sdk/bittensor-core/src/pow/kernel.cl": "61fa297312531e5b527a957d6edf65e488ac2549ad3b02fdfad5307258f30313"
+    }
+  },
+  {
+    "toolchain": "stable",
+    "kind": "portable",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/portable_fee_dispatch-acc2f56a462d63a5",
+    "sha256": "912cd5fc746964d009212cd1fadbe376bc0207c600d2feb9d4bb212cf6a7f262",
+    "bytes": 2211720,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/portable_fee_dispatch-acc2f56a462d63a5.d",
+    "dependency_sha256": "0c2a516e4b0242e23ceca91d39146e89b0ecbf61cfd7a0bc06a42a1f91456408",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/tests/portable_fee_dispatch.rs": "a6466a0868903a2bf6620963a53a2cd7aef676a9af4bdab1017ae4994d870eff",
+      "sdk/bittensor-core/tests/fixtures/finney-v478.v15.scale": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502"
+    }
+  },
+  {
+    "toolchain": "stable",
+    "kind": "portable",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/protocol_ops-f3b2239022d58c14",
+    "sha256": "204f31f6bda2f4a84b562d180b95d1bebe7987f7e0cc5a39ace3ab3587034bd9",
+    "bytes": 2079776,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/protocol_ops-f3b2239022d58c14.d",
+    "dependency_sha256": "04b304d9e502550ef1c6a7efb82e0dc669b3a6f38353377a5d2a2b8ce5bba441",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/tests/protocol_ops.rs": "1ffa3139f2836bf79552156823adc701802762304206c1688f9158d82fc264b9"
+    }
+  },
+  {
+    "toolchain": "stable",
+    "kind": "portable",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/value_navigation-60ed3464f66d9e29",
+    "sha256": "92687ba314867c98cc22ae9fd9803c52d07bad2570433e2c525e4cce08bd02b0",
+    "bytes": 1132608,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/value_navigation-60ed3464f66d9e29.d",
+    "dependency_sha256": "e28f853e32bd2bddc51cd3704bb1138697bbd2af03f2628f38fcf38fdb14b8df",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/tests/value_navigation.rs": "837a08dae02f61be561cfff90c577e144971f727689d61996dd787435c838531"
+    }
+  },
+  {
+    "toolchain": "stable",
+    "kind": "lib",
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/bittensor_core-88f4d0a2a72ecedf",
+    "sha256": "b55136a85b31f89dcc10bf612e6608818015b7fe630abb7771a456aca195bede",
+    "bytes": 11948480,
+    "dependency_file": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication/pr-3246/functional/debug/deps/bittensor_core-88f4d0a2a72ecedf.d",
+    "dependency_sha256": "aefdfac336a53f610218995737437a786ebec247851ff16d532433aa7ce88d93",
+    "own_checkout": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "absolute_source_references": [
+      "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core"
+    ],
+    "workspace_relative_source_hashes": {
+      "sdk/bittensor-core/src/lib.rs": "c69df3af21c728c168ca6c366b76b9130f5c35acd6cd8d1a2f7f7c30f0e3d7cc",
+      "sdk/bittensor-core/src/client.rs": "147663e7b738bb35dd235d8f52527dd9dd6388e9f3e9a8b82f3c5b1098505c58",
+      "sdk/bittensor-core/src/codec/mod.rs": "02adad8e8004db9890765023ed6dbd5b8e6a145477743ba97fe2b55cb136b15d",
+      "sdk/bittensor-core/src/codec/batch.rs": "7acc8ae75f5a1e566347318c687059c7eb561814d42d7e6c9ddfc665c7f930c5",
+      "sdk/bittensor-core/src/codec/decode.rs": "f0b2f4951a4390d6f1515019438dc1af258a71cb48ec5e8e8beec06900cdd46b",
+      "sdk/bittensor-core/src/codec/encode.rs": "944300d5ae121ff6725678526c0060cfbdbb52d285180a146764e7301048936a",
+      "sdk/bittensor-core/src/codec/extrinsic.rs": "9ad81b2004ac96f0d88120d1be065d8dd9a24eba4e471efc4cee911f56702306",
+      "sdk/bittensor-core/src/codec/storage.rs": "8c528f7ef95234ce019d2e9b8692eb7729f2bed65c2ccb1213fceb28f45a2865",
+      "sdk/bittensor-core/src/codec/value.rs": "bc2d286fc7d93d2d66b2a796bc6e3d145e53e26e70dbef962eb7462c6dc95b14",
+      "sdk/bittensor-core/src/codec/value_navigation.rs": "e4157099b32b280a30e8b82110ba53d498b15ad6cdf8247be0757d7dc62a4d09",
+      "sdk/bittensor-core/src/digest/mod.rs": "ee8c44e14250f414139aafd218797749903756c4eb05c8d6cf79c7bcc15050f5",
+      "sdk/bittensor-core/src/error.rs": "bb0b9ce1e0e697e5c93ab610a343a8b9c11e17a0a7a5e3ce792b6cd314641b3c",
+      "sdk/bittensor-core/src/keyfiles/mod.rs": "806dc72bfe2decc43739262a9cf96d4b1b9e78b328d27abda4d8ab4e4e2b3087",
+      "sdk/bittensor-core/src/keys/mod.rs": "46ed45c6926538876af8d45ae099a1f39bff7a54f8ce0cc20ba9e1907591357d",
+      "sdk/bittensor-core/src/keys/base58.rs": "62efdbc2fdb0f2687d12bf9181c35236f1027513df4ed5b3ba069af64962cba3",
+      "sdk/bittensor-core/src/keys/encrypted_json.rs": "bab9e87bb7e5b635d2a0306207a40425a7896fbe0763f349e2b1fcd011afa65a",
+      "sdk/bittensor-core/src/mlkem/mod.rs": "8cd45cfd18e96f2eef299c48261849b3a8ac01e3d18d1d7f0c9c57c67f788a20",
+      "sdk/bittensor-core/src/pow/mod.rs": "3caab016a53f12b9083b17bbb3f7c3baef90766fec6f9a83aef63a4671906ffe",
+      "sdk/bittensor-core/src/pow/opencl.rs": "c63f7d0b30e1a0d8344a90f2f8144422503c016fc7851b028f17b8c0c1a7dba0",
+      "sdk/bittensor-core/src/protocol/mod.rs": "7e8ccab11fe1308de96718c851bb3b6f78427eb45a90ba871be890e3f4e7de88",
+      "sdk/bittensor-core/src/protocol/dispatch_error.rs": "8715d833de363ee60bd0259b8f393b14762c0000f668f3950dc6c08412e49acf",
+      "sdk/bittensor-core/src/protocol/python_printable.rs": "08217cfdb20bd504427b71b2e6ed6006b0bc382633c4d6d66fcdbb33054dfdde",
+      "sdk/bittensor-core/src/protocol/dispatch_error_tables.rs": "984cc365d8c1197375973855355ea696f2bd5f64314e7fa00cbc38d90c9c075c",
+      "sdk/bittensor-core/src/protocol/extrinsic_lookup.rs": "a56af733ebb9717470d4258a4e39327d6eef3927b891a8c01a2446aeedc6acc7",
+      "sdk/bittensor-core/src/protocol/fee.rs": "1454d2daf7e3742d717ae6b1c591582a0e77cc5e54acae29a73e8fe2ddc95f4f",
+      "sdk/bittensor-core/src/protocol/metadata.rs": "94d3d14b970f6ab628ff6eea56467926b6873e9207b4ebcf11d74bc5f7a0504a",
+      "sdk/bittensor-core/src/protocol/runtime_api.rs": "1900fb9c6c1b49d92156434bb5e4ca57cfdd65f343af4d340c28516d22204fea",
+      "sdk/bittensor-core/src/protocol/storage.rs": "d2ac90c6df2fd0fe271ffcac39c2edcee9673063351141f830f9ff16ab7d1a80",
+      "sdk/bittensor-core/src/runtime/mod.rs": "cff75febd4022aff93d8c221d63af084358f8b71d6c027c51b3995ca704111e8",
+      "sdk/bittensor-core/src/runtime/type_string.rs": "b6cf4563abac59ed089b15adde8cc8a19be38f3fe21b17703a8da8d0fbcddf1c",
+      "sdk/bittensor-core/src/signers/mod.rs": "5c4d52003591615c9d3d9a8066fea356d2dce4e942d29e739fa5c65970ca3cad",
+      "sdk/bittensor-core/src/signers/hid.rs": "90ba168d3498f7b24c1267842b3024618fd50f774b8485b8614f3199e1cdba6a",
+      "sdk/bittensor-core/src/signers/ledger.rs": "3d04824dd663f6b79985f2af1c22b047b4ca1ca80b6c1ee000624157f29d18cc",
+      "sdk/bittensor-core/src/timelock/mod.rs": "4af219f4b2faeefb19d48add595b1a23982ad4515695c094420b636721e7aa47",
+      "sdk/bittensor-core/src/timelock/constants.rs": "9413f4ac1cead8ec219aeb0738862ca3af67435cfcf4b95a5717e9ed761d9d3b",
+      "sdk/bittensor-core/src/timelock/epoch_schedule.rs": "cf34e79dbe3574b868a475999c9d77fcdf3e0f0521a9909e5fb56902aff277f7",
+      "sdk/bittensor-core/src/timelock/epoch_schedule_vectors.rs": "7aa89dd42ecd825758a880af651dfe52125f7ffd24eaa501c3b5709a692a2715",
+      "sdk/bittensor-core/src/transaction.rs": "f676e8f3d0636533a1d36234906c9c0f44d8b859b62b874f6726ed38028cf687",
+      "sdk/bittensor-core/src/pow/kernel.cl": "61fa297312531e5b527a957d6edf65e488ac2549ad3b02fdfad5307258f30313"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+M0-13 file parity implementation verified.
+parity/map.toml: exactly357 explicit rows, all pending;220 package rows plus137 other watched files.
+Source: complete canonical v478 git ls-tree, identical to imported vendor/upstream/tree.txt.
+Latest workspace parity tests:13 passed,0 failed.
+Latest offline CLI check:357 watched files covered,357 pending, licenses and attribution checked.
+Isolated all-targets Clippy -D warnings: pass.
+Workspace Clippy: unrelated concurrent-file findings reported to root.
+License: pending homes prospective; blessed derived homes plus actual canonical source headers require compound Apache SPDX.
+Cleanup audit: no live process/launchd/config dependencies; 76 config/source files inspected; 0 internal symlinks, no venvs.

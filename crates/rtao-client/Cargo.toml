@@ -1,0 +1,53 @@
+[package]
+name = "rtao-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Asynchronous Bittensor chain access."
+
+[lints]
+workspace = true
+
+[features]
+blocking = []
+subxt = []
+metrics = ["rtao-rpc/metrics","dep:metrics"]
+test-util = []
+
+[dependencies]
+rtao-rpc = { workspace = true, features = ["rate-limit"] }
+rtao-runtime = { workspace = true }
+rtao-catalog = { workspace = true }
+rtao-signer = { workspace = true }
+rtao-core = { workspace = true, features = ["offload"] }
+rtao-primitives.workspace = true
+url.workspace = true
+bytes.workspace = true
+futures.workspace = true
+hex.workspace = true
+serde.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
+tokio.workspace = true
+tokio-util.workspace = true
+subxt-rpcs.workspace = true
+tracing.workspace = true
+blake2.workspace = true
+parity-scale-codec.workspace = true
+scale-decode.workspace = true
+scale-info.workspace = true
+num-bigint.workspace = true
+num-traits.workspace = true
+unicode-general-category.workspace = true
+metrics = { workspace = true, optional = true }
+regex.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+frame-metadata.workspace = true
+rtao-testkit.workspace = true
+

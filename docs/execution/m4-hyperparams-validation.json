@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "tests": [
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-current-tests.log",
+      "sha256": "4e5aa9542610938b486dc77c2c7cf52795e5be39fb6064a2fa1380a2b3b42dce",
+      "suites": 17,
+      "passed": 151,
+      "failed": 0,
+      "ignored": 1
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-msrv-tests.log",
+      "sha256": "822a63cc795337f5a8487b117a9a48a915b14b7aed61f6df4e47576b099be568",
+      "suites": 17,
+      "passed": 151,
+      "failed": 0,
+      "ignored": 1
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-btauth-box-msrv.log",
+      "sha256": "7ee2eb2faef8e31489d66f5ad0113be9a3fb7070e15f3dea7fd9ff7a8e1885e8",
+      "suites": 1,
+      "passed": 14,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-staged-current.log",
+      "sha256": "d483bfb5ea7a5740340a1b9fb01c9d6ea437d5a806d121e1e0b56cfa4a0fbb72",
+      "suites": 2,
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-staged-msrv.log",
+      "sha256": "aa5379e28fe0416be478959c122c4a3b60e484b2681cbbae9824b363badac4dc",
+      "suites": 2,
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "checks": [
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-extract.log",
+      "sha256": "30d9c6138c9ce62cf2f021abdadf1431c60a69e8e7f0b57dc7a340e9c7cc6b9d"
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-regen.log",
+      "sha256": "5b85dd7ab25ba17f2dbda4da488a1d0e48c6e8e2c2473346fa6fe6d881abcda8"
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-parity.log",
+      "sha256": "eaa1e95eb39d037f3f47394224e838204b44f976f343b7c8267d34b900f72f79"
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-deps.log",
+      "sha256": "40988e31de62b855cdaba19aab6d8a3efe040f62a6587dde363d52c7040cae19"
+    },
+    {
+      "path": "target/execute-plan.6Ro0PC/tmp/root-m4-01-build-weight-refresh.log",
+      "sha256": "afa4bdef7b7caf9f43676a6ac01e0ae8deb4715ba64f114e40c127e32c1075da"
+    }
+  ],
+  "full_gates": {
+    "status": "live; workspace test enumeration",
+    "session_id": 7448,
+    "log": "target/execute-plan.6Ro0PC/tmp/root-m4-01-gates-weight-fixed.log"
+  },
+  "hosted_oracle": "pending",
+  "milestone_exit": false
+}

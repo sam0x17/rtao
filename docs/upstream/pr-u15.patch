@@ -1,0 +1,622 @@
+From 1ac10f67ff3dcf8306d18183471158b8a648cdb4 Mon Sep 17 00:00:00 2001
+From: Sam Johnson <sam@durosoft.com>
+Date: Wed, 14 Oct 2026 03:05:33 -0400
+Subject: [PATCH] sdk: expose decoded value navigation without host
+
+---
+ sdk/bittensor-core/src/client.rs              |  95 +------
+ sdk/bittensor-core/src/codec/value.rs         |   9 +
+ .../src/codec/value_navigation.rs             | 194 +++++++++++++
+ sdk/bittensor-core/tests/value_navigation.rs  | 266 ++++++++++++++++++
+ 4 files changed, 474 insertions(+), 90 deletions(-)
+ create mode 100644 sdk/bittensor-core/src/codec/value_navigation.rs
+ create mode 100644 sdk/bittensor-core/tests/value_navigation.rs
+
+diff --git a/sdk/bittensor-core/src/client.rs b/sdk/bittensor-core/src/client.rs
+index 15af650c0..b32d7705c 100644
+--- a/sdk/bittensor-core/src/client.rs
++++ b/sdk/bittensor-core/src/client.rs
+@@ -21,6 +21,11 @@ use serde_json::{json, Value as JsonValue};
+ 
+ use crate::codec::extrinsic::{era_birth, TxParams};
+ use crate::codec::value::Value;
++// Preserve the existing host-client exports while portable users import from codec::value.
++pub use crate::codec::value::{
++    as_bool, as_str, as_u128, field, value_bytes, variant, variant_name,
++};
++use crate::codec::value::{first_byte, tuple_item};
+ use crate::error::CoreError;
+ use crate::keys::Keypair;
+ use crate::mlkem;
+@@ -1512,96 +1517,6 @@ fn flatten_hyperparam_value(tagged: Value) -> Value {
+     payload.clone()
+ }
+ 
+-pub fn field<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
+-    let Value::Dict(entries) = value else {
+-        return None;
+-    };
+-    entries.iter().find_map(|(key, value)| match key {
+-        Value::Str(key) if key == name => Some(value),
+-        _ => None,
+-    })
+-}
+-
+-pub fn variant<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
+-    field(value, name)
+-}
+-
+-pub fn variant_name(value: &Value) -> Option<String> {
+-    match value {
+-        Value::Str(name) => Some(name.clone()),
+-        Value::Dict(entries) if entries.len() == 1 => entries.first().and_then(|(key, _)| {
+-            if let Value::Str(name) = key {
+-                Some(name.clone())
+-            } else {
+-                None
+-            }
+-        }),
+-        _ => None,
+-    }
+-}
+-
+-pub fn as_str(value: &Value) -> Option<&str> {
+-    match value {
+-        Value::Str(value) => Some(value),
+-        _ => None,
+-    }
+-}
+-
+-pub fn as_u128(value: &Value) -> Option<u128> {
+-    match value {
+-        Value::Int(value) => u128::try_from(*value).ok(),
+-        Value::Uint(value) => Some(*value),
+-        _ => None,
+-    }
+-}
+-
+-pub fn as_bool(value: &Value) -> Option<bool> {
+-    match value {
+-        Value::Bool(value) => Some(*value),
+-        _ => None,
+-    }
+-}
+-
+-pub fn value_bytes(value: &Value) -> Option<Vec<u8>> {
+-    match value {
+-        Value::Bytes(bytes) => Some(bytes.clone()),
+-        Value::Str(value) => {
+-            if value.starts_with("0x") {
+-                decode_hex(value).ok()
+-            } else {
+-                Some(value.as_bytes().to_vec())
+-            }
+-        }
+-        Value::List(items) | Value::Tuple(items) => {
+-            let direct = items
+-                .iter()
+-                .map(as_u128)
+-                .map(|value| value.and_then(|value| u8::try_from(value).ok()))
+-                .collect::<Option<Vec<_>>>();
+-            direct.or_else(|| match items.as_slice() {
+-                [inner] => value_bytes(inner),
+-                _ => None,
+-            })
+-        }
+-        Value::Dict(entries) => match entries.as_slice() {
+-            [(_, inner)] => value_bytes(inner),
+-            _ => None,
+-        },
+-        _ => None,
+-    }
+-}
+-
+-fn tuple_item(value: &Value, index: usize) -> Option<&Value> {
+-    match value {
+-        Value::Tuple(items) | Value::List(items) => items.get(index),
+-        _ => None,
+-    }
+-}
+-
+-fn first_byte(value: &Value) -> Option<u8> {
+-    value_bytes(value).and_then(|bytes| bytes.first().copied())
+-}
+-
+ fn required_u128(value: &Value, name: &str) -> Result<u128, CoreError> {
+     field(value, name)
+         .and_then(as_u128)
+diff --git a/sdk/bittensor-core/src/codec/value.rs b/sdk/bittensor-core/src/codec/value.rs
+index 224c6d912..b46658df6 100644
+--- a/sdk/bittensor-core/src/codec/value.rs
++++ b/sdk/bittensor-core/src/codec/value.rs
+@@ -7,6 +7,15 @@
+ 
+ use std::fmt;
+ 
++#[path = "value_navigation.rs"]
++mod navigation;
++
++/// Portable navigation helpers for decoded SCALE values.
++pub use navigation::{
++    as_bool, as_str, as_u128, field, first_byte, tuple_item, value_bytes, variant, variant_name,
++    ValueExt,
++};
++
+ /// One decoded SCALE value in cyscale's shape conventions.
+ #[derive(Debug, Clone, PartialEq)]
+ pub enum Value {
+diff --git a/sdk/bittensor-core/src/codec/value_navigation.rs b/sdk/bittensor-core/src/codec/value_navigation.rs
+new file mode 100644
+index 000000000..64778b5e2
+--- /dev/null
++++ b/sdk/bittensor-core/src/codec/value_navigation.rs
+@@ -0,0 +1,194 @@
++//! Portable navigation of decoded SCALE values.
++
++use super::Value;
++
++// The pinned codec's encode/decode recursion limits are also 256 levels.
++const MAX_BYTE_WRAPPERS: usize = 256;
++
++/// Borrowing navigation helpers for the core's decoded SCALE carrier.
++///
++/// Implemented directly on [`Value`], so the methods also work on `&Value`
++/// through ordinary method dereferencing. The equivalent free functions are
++/// useful when composing `Option::and_then` chains.
++pub trait ValueExt {
++    /// Borrow the first dictionary field whose string key equals `name`.
++    fn field(&self, name: &str) -> Option<&Value>;
++
++    /// Borrow a named variant's payload using the dictionary field rules.
++    fn variant(&self, name: &str) -> Option<&Value>;
++
++    /// Read a unit variant's string or a single string-keyed variant's name.
++    fn variant_name(&self) -> Option<String>;
++
++    /// Borrow a string without converting other value types.
++    fn as_str(&self) -> Option<&str>;
++
++    /// Read an unsigned integer, rejecting negative and non-integer values.
++    fn as_u128(&self) -> Option<u128>;
++
++    /// Read a boolean without converting other value types.
++    fn as_bool(&self) -> Option<bool>;
++
++    /// Extract bytes from a byte value, string, integer sequence or wrapper.
++    ///
++    /// Lowercase `0x` strings are decoded as hex; other strings use UTF-8.
++    /// Lists and tuples accept integers in `0..=255`. A singleton sequence
++    /// or dictionary can wrap another supported shape, up to 256 times.
++    fn value_bytes(&self) -> Option<Vec<u8>>;
++
++    /// Borrow an element of a tuple or list, returning `None` out of bounds.
++    fn tuple_item(&self, index: usize) -> Option<&Value>;
++
++    /// Read the first extracted byte, returning `None` for empty byte values.
++    fn first_byte(&self) -> Option<u8>;
++}
++
++impl ValueExt for Value {
++    fn field(&self, name: &str) -> Option<&Value> {
++        field(self, name)
++    }
++
++    fn variant(&self, name: &str) -> Option<&Value> {
++        variant(self, name)
++    }
++
++    fn variant_name(&self) -> Option<String> {
++        variant_name(self)
++    }
++
++    fn as_str(&self) -> Option<&str> {
++        as_str(self)
++    }
++
++    fn as_u128(&self) -> Option<u128> {
++        as_u128(self)
++    }
++
++    fn as_bool(&self) -> Option<bool> {
++        as_bool(self)
++    }
++
++    fn value_bytes(&self) -> Option<Vec<u8>> {
++        value_bytes(self)
++    }
++
++    fn tuple_item(&self, index: usize) -> Option<&Value> {
++        tuple_item(self, index)
++    }
++
++    fn first_byte(&self) -> Option<u8> {
++        first_byte(self)
++    }
++}
++
++/// Borrow the first dictionary field whose string key equals `name`.
++pub fn field<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
++    let Value::Dict(entries) = value else {
++        return None;
++    };
++    entries.iter().find_map(|(key, value)| match key {
++        Value::Str(key) if key == name => Some(value),
++        _ => None,
++    })
++}
++
++/// Borrow a variant payload using the same matching rules as [`field`].
++pub fn variant<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
++    field(value, name)
++}
++
++/// Return the name of a string variant or a single string-keyed dictionary.
++pub fn variant_name(value: &Value) -> Option<String> {
++    match value {
++        Value::Str(name) => Some(name.clone()),
++        Value::Dict(entries) if entries.len() == 1 => entries.first().and_then(|(key, _)| {
++            if let Value::Str(name) = key {
++                Some(name.clone())
++            } else {
++                None
++            }
++        }),
++        _ => None,
++    }
++}
++
++/// Borrow a string without converting other value types.
++pub fn as_str(value: &Value) -> Option<&str> {
++    match value {
++        Value::Str(value) => Some(value),
++        _ => None,
++    }
++}
++
++/// Read an unsigned integer, rejecting negative and non-integer values.
++pub fn as_u128(value: &Value) -> Option<u128> {
++    match value {
++        Value::Int(value) => u128::try_from(*value).ok(),
++        Value::Uint(value) => Some(*value),
++        _ => None,
++    }
++}
++
++/// Read a boolean without converting other value types.
++pub fn as_bool(value: &Value) -> Option<bool> {
++    match value {
++        Value::Bool(value) => Some(*value),
++        _ => None,
++    }
++}
++
++/// Extract bytes with the v478 client's shape and integer conversion rules.
++///
++/// Strings with a lowercase `0x` prefix decode as hex. Other strings encode
++/// as UTF-8. Integer lists and tuples accept only values in `0..=255`. If a
++/// sequence cannot be read as integers, its sole element can be another byte
++/// value. A singleton dictionary similarly wraps its value, ignoring the key.
++/// At most 256 wrappers are followed; deeper input returns `None` without
++/// recursing on the process stack.
++pub fn value_bytes(mut value: &Value) -> Option<Vec<u8>> {
++    for _ in 0..=MAX_BYTE_WRAPPERS {
++        match value {
++            Value::Bytes(bytes) => return Some(bytes.clone()),
++            Value::Str(text) => {
++                return if text.starts_with("0x") {
++                    hex::decode(text.trim_start_matches("0x")).ok()
++                } else {
++                    Some(text.as_bytes().to_vec())
++                };
++            }
++            Value::List(items) | Value::Tuple(items) => {
++                let direct = items
++                    .iter()
++                    .map(as_u128)
++                    .map(|value| value.and_then(|value| u8::try_from(value).ok()))
++                    .collect::<Option<Vec<_>>>();
++                if let Some(bytes) = direct {
++                    return Some(bytes);
++                }
++                match items.as_slice() {
++                    [inner] => value = inner,
++                    _ => return None,
++                }
++            }
++            Value::Dict(entries) => match entries.as_slice() {
++                [(_, inner)] => value = inner,
++                _ => return None,
++            },
++            _ => return None,
++        }
++    }
++    None
++}
++
++/// Borrow a tuple or list element, returning `None` for other shapes or indexes.
++pub fn tuple_item(value: &Value, index: usize) -> Option<&Value> {
++    match value {
++        Value::Tuple(items) | Value::List(items) => items.get(index),
++        _ => None,
++    }
++}
++
++/// Return the first byte extracted by [`value_bytes`], if one exists.
++pub fn first_byte(value: &Value) -> Option<u8> {
++    value_bytes(value).and_then(|bytes| bytes.first().copied())
++}
+diff --git a/sdk/bittensor-core/tests/value_navigation.rs b/sdk/bittensor-core/tests/value_navigation.rs
+new file mode 100644
+index 000000000..afe862426
+--- /dev/null
++++ b/sdk/bittensor-core/tests/value_navigation.rs
+@@ -0,0 +1,266 @@
++//! Portable coverage of the v478 client's decoded-value navigation rules.
++
++use bittensor_core::codec::value::{self as value_ext, ValueExt};
++use bittensor_core::codec::Value;
++
++#[test]
++fn fields_and_variants_preserve_string_keys_and_first_match() {
++    let value = Value::Dict(vec![
++        (Value::Int(7), Value::str("numeric key")),
++        (Value::str("name"), Value::Uint(1)),
++        (Value::str("name"), Value::Uint(2)),
++        (Value::str("variant"), Value::Bool(true)),
++    ]);
++    assert_eq!(value.field("name"), Some(&Value::Uint(1)));
++    assert_eq!(value.variant("variant"), Some(&Value::Bool(true)));
++    assert_eq!(value.field("7"), None);
++    assert_eq!(value.field("missing"), None);
++    assert_eq!(value.variant("missing"), None);
++    assert_eq!(value_ext::field(&value, "name"), value.field("name"));
++    assert_eq!(
++        value_ext::variant(&value, "variant"),
++        value.variant("variant")
++    );
++    assert!(matches!(
++        value.field("name").and_then(ValueExt::as_u128),
++        Some(1)
++    ));
++    assert_eq!(Value::str("name").field("name"), None);
++    assert_eq!(Value::List(vec![Value::str("name")]).field("name"), None);
++    assert_eq!(Value::Dict(vec![]).field("name"), None);
++}
++
++#[test]
++fn variant_names_accept_only_unit_strings_and_one_string_key() {
++    let cases = [
++        (Value::str("None"), Some("None")),
++        (Value::str(""), Some("")),
++        (
++            Value::Dict(vec![(Value::str("Some"), Value::Null)]),
++            Some("Some"),
++        ),
++        (Value::Dict(vec![(Value::Int(1), Value::Null)]), None),
++        (Value::Dict(vec![]), None),
++        (
++            Value::Dict(vec![
++                (Value::str("A"), Value::Null),
++                (Value::str("B"), Value::Null),
++            ]),
++            None,
++        ),
++        (Value::Tuple(vec![Value::str("Some")]), None),
++        (Value::Null, None),
++    ];
++    for (value, expected) in cases {
++        assert_eq!(value.variant_name().as_deref(), expected);
++        assert_eq!(value_ext::variant_name(&value).as_deref(), expected);
++    }
++}
++
++#[test]
++fn scalar_accessors_do_not_coerce_shapes_or_truncate_integers() {
++    for value in [Value::Int(0), Value::Uint(0)] {
++        assert_eq!(ValueExt::as_u128(&value), Some(0));
++        assert_eq!(value_ext::as_u128(&value), Some(0));
++    }
++    assert_eq!(
++        ValueExt::as_u128(&Value::Int(i128::MAX)),
++        u128::try_from(i128::MAX).ok()
++    );
++    assert_eq!(ValueExt::as_u128(&Value::Uint(u128::MAX)), Some(u128::MAX));
++    for value in [
++        Value::Int(-1),
++        Value::Int(i128::MIN),
++        Value::str("1"),
++        Value::Bool(true),
++        Value::U256([0; 32]),
++        Value::List(vec![Value::Int(1)]),
++        Value::Null,
++    ] {
++        assert_eq!(ValueExt::as_u128(&value), None);
++        assert_eq!(value_ext::as_u128(&value), None);
++    }
++    let borrowed = &Value::str("borrowed");
++    assert_eq!(borrowed.as_str(), Some("borrowed"));
++    assert_eq!(value_ext::as_str(borrowed), Some("borrowed"));
++    assert_eq!(Value::Bytes(b"borrowed".to_vec()).as_str(), None);
++    assert_eq!(Value::Int(1).as_str(), None);
++    for flag in [true, false] {
++        assert_eq!(Value::Bool(flag).as_bool(), Some(flag));
++        assert_eq!(value_ext::as_bool(&Value::Bool(flag)), Some(flag));
++    }
++    assert_eq!(Value::Int(1).as_bool(), None);
++    assert_eq!(Value::str("true").as_bool(), None);
++    assert_eq!(Value::Null.as_bool(), None);
++}
++
++#[test]
++fn strings_keep_the_client_hex_prefix_and_utf8_rules() {
++    for (text, expected) in [
++        ("", Some(vec![])),
++        ("ordinary", Some(b"ordinary".to_vec())),
++        ("\u{03b1}", Some(vec![0xce, 0xb1])),
++        ("0x", Some(vec![])),
++        ("0x0001fF", Some(vec![0, 1, 255])),
++        ("0x0x12", Some(vec![0x12])),
++        ("0X12", Some(b"0X12".to_vec())),
++        ("0x1", None),
++        ("0xgg", None),
++        ("0x 00", None),
++    ] {
++        assert_eq!(Value::str(text).value_bytes(), expected, "{text:?}");
++        assert_eq!(
++            value_ext::value_bytes(&Value::str(text)),
++            expected,
++            "{text:?}"
++        );
++    }
++}
++
++#[test]
++fn bytes_and_integer_sequences_include_empty_and_boundary_values() {
++    let bytes = Value::Bytes(vec![0, 1, 255]);
++    let mut extracted = bytes.value_bytes();
++    if let Some(copy) = &mut extracted {
++        copy.clear();
++    }
++    assert_eq!(bytes.value_bytes(), Some(vec![0, 1, 255]));
++    for value in [
++        bytes,
++        Value::List(vec![Value::Int(0), Value::Uint(1), Value::Int(255)]),
++        Value::Tuple(vec![Value::Uint(0), Value::Int(1), Value::Uint(255)]),
++    ] {
++        assert_eq!(value.value_bytes(), Some(vec![0, 1, 255]));
++        assert_eq!(value_ext::value_bytes(&value), Some(vec![0, 1, 255]));
++        assert_eq!(value.first_byte(), Some(0));
++        assert_eq!(value_ext::first_byte(&value), Some(0));
++    }
++    for value in [
++        Value::Bytes(vec![]),
++        Value::List(vec![]),
++        Value::Tuple(vec![]),
++        Value::str(""),
++    ] {
++        assert_eq!(value.value_bytes(), Some(vec![]));
++        assert_eq!(value.first_byte(), None);
++    }
++    for value in [
++        Value::Null,
++        Value::Bool(false),
++        Value::Int(1),
++        Value::Uint(1),
++        Value::U256([1; 32]),
++        Value::List(vec![Value::Int(-1)]),
++        Value::List(vec![Value::Uint(256)]),
++        Value::Tuple(vec![Value::Uint(u128::MAX)]),
++        Value::List(vec![Value::Uint(0), Value::str("1")]),
++        Value::Tuple(vec![Value::Bool(true)]),
++    ] {
++        assert_eq!(value.value_bytes(), None, "{value:?}");
++        assert_eq!(value.first_byte(), None, "{value:?}");
++    }
++}
++
++#[test]
++fn singleton_sequences_and_dictionaries_wrap_supported_bytes() {
++    let value = Value::List(vec![Value::Tuple(vec![Value::Dict(vec![(
++        Value::Int(99),
++        Value::str("0x1234"),
++    )])])]);
++    assert_eq!(value.value_bytes(), Some(vec![0x12, 0x34]));
++    assert_eq!(value.first_byte(), Some(0x12));
++    assert_eq!(
++        Value::List(vec![Value::Int(7)]).value_bytes(),
++        Some(vec![7])
++    );
++    assert_eq!(
++        Value::Dict(vec![(Value::str("ignored"), Value::Bytes(vec![]))]).value_bytes(),
++        Some(vec![])
++    );
++    for value in [
++        Value::Dict(vec![]),
++        Value::Dict(vec![(Value::str("ignored"), Value::Int(7))]),
++        Value::Dict(vec![
++            (Value::str("A"), Value::Bytes(vec![1])),
++            (Value::str("B"), Value::Bytes(vec![2])),
++        ]),
++        Value::List(vec![Value::Bytes(vec![1]), Value::Bytes(vec![2])]),
++        Value::Tuple(vec![Value::str("A"), Value::str("B")]),
++    ] {
++        assert_eq!(value.value_bytes(), None);
++    }
++}
++
++#[test]
++fn tuple_navigation_accepts_lists_and_never_panics_on_indexes() {
++    for value in [
++        Value::Tuple(vec![Value::Int(1), Value::Bool(true)]),
++        Value::List(vec![Value::Int(1), Value::Bool(true)]),
++    ] {
++        assert_eq!(value.tuple_item(0), Some(&Value::Int(1)));
++        assert_eq!(value.tuple_item(1), Some(&Value::Bool(true)));
++        assert_eq!(value.tuple_item(2), None);
++        assert_eq!(value.tuple_item(usize::MAX), None);
++        assert_eq!(value_ext::tuple_item(&value, 1), value.tuple_item(1));
++    }
++    for value in [Value::Tuple(vec![]), Value::Dict(vec![]), Value::Null] {
++        assert_eq!(value.tuple_item(0), None);
++    }
++}
++
++#[test]
++fn wrapper_bound_accepts_the_limit_and_rejects_the_next_level() {
++    for shape in [Wrapper::List, Wrapper::Tuple, Wrapper::Dict] {
++        for depth in [0, 1, 255, 256] {
++            let value = wrap(Value::Bytes(vec![7]), depth, shape);
++            assert_eq!(value.value_bytes(), Some(vec![7]), "depth {depth}");
++            drop_iteratively(value);
++        }
++        let value = wrap(Value::Bytes(vec![7]), 257, shape);
++        assert_eq!(value.value_bytes(), None);
++        drop_iteratively(value);
++    }
++}
++
++#[test]
++fn deep_malformed_nesting_is_bounded_without_stack_recursion() {
++    for shape in [Wrapper::List, Wrapper::Tuple, Wrapper::Dict] {
++        for leaf in [Value::Null, Value::str("0xgg"), Value::Bytes(vec![7])] {
++            let value = wrap(leaf, 65_536, shape);
++            assert_eq!(value.value_bytes(), None);
++            assert_eq!(value.first_byte(), None);
++            drop_iteratively(value);
++        }
++    }
++}
++
++#[derive(Clone, Copy)]
++enum Wrapper {
++    List,
++    Tuple,
++    Dict,
++}
++
++fn wrap(mut value: Value, depth: usize, shape: Wrapper) -> Value {
++    for _ in 0..depth {
++        value = match shape {
++            Wrapper::List => Value::List(vec![value]),
++            Wrapper::Tuple => Value::Tuple(vec![value]),
++            Wrapper::Dict => Value::Dict(vec![(Value::Int(0), value)]),
++        };
++    }
++    value
++}
++
++fn drop_iteratively(value: Value) {
++    let mut pending = vec![value];
++    while let Some(value) = pending.pop() {
++        match value {
++            Value::List(items) | Value::Tuple(items) => pending.extend(items),
++            Value::Dict(entries) => {
++                pending.extend(entries.into_iter().flat_map(|(key, value)| [key, value]));
++            }
++            _ => {}
++        }
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

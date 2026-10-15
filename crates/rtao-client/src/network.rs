@@ -1,0 +1,279 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/settings.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+//! Network labels and endpoint pools derived from Python settings.
+
+use std::{error::Error, fmt};
+
+use rtao_catalog::py;
+use rtao_primitives::H256;
+use rtao_rpc::{EndpointPool, RateLimit};
+use url::Url;
+
+use crate::generated::network_pins;
+
+/// A named network or explicit WebSocket endpoint.
+///
+/// Known endpoint strings retain Python's corresponding network label. An
+/// explicit URL that differs from the preset is a custom unpinned endpoint.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Network {
+    label: String,
+    endpoint: String,
+}
+
+impl Network {
+    /// Resolve against the current process environment.
+    pub fn resolve(input: &str) -> Result<Self, NetworkError> {
+        Self::resolve_with(input, |name| std::env::var(name).ok())
+    }
+
+    /// Resolve against an injected environment reader.
+    pub fn resolve_with(
+        input: &str,
+        mut read: impl FnMut(&str) -> Option<String>,
+    ) -> Result<Self, NetworkError> {
+        let endpoints = py::NETWORKS
+            .iter()
+            .map(|(name, endpoint)| (*name, endpoint.resolve(&mut read)))
+            .collect::<Vec<_>>();
+        let (label, endpoint) = if input.starts_with("ws://") || input.starts_with("wss://") {
+            (
+                endpoints
+                    .iter()
+                    .find(|(_, endpoint)| endpoint == input)
+                    .map(|(name, _)| (*name).to_owned())
+                    .unwrap_or_else(|| input.to_owned()),
+                input.to_owned(),
+            )
+        } else {
+            let endpoint = endpoints
+                .iter()
+                .find(|(name, _)| *name == input)
+                .map(|(_, endpoint)| endpoint.clone())
+                .ok_or_else(|| NetworkError::Unknown(input.to_owned()))?;
+            (input.to_owned(), endpoint)
+        };
+        endpoint_url(&endpoint)?;
+        Ok(Self { label, endpoint })
+    }
+
+    /// Resolve the extracted default against an injected environment.
+    pub fn default_with(read: impl FnMut(&str) -> Option<String>) -> Result<Self, NetworkError> {
+        Self::resolve_with(py::DEFAULT_NETWORK, read)
+    }
+
+    /// Python's label, or the original explicit endpoint for a custom network.
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// Primary endpoint exactly as configured.
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
+
+    /// Primary and extracted default failover/archive endpoints.
+    ///
+    /// A custom URL is pinned to that single endpoint. Explicit pool overrides
+    /// belong in ClientConfig and replace these defaults.
+    pub fn endpoint_pool(&self) -> Result<EndpointPool, NetworkError> {
+        let mut urls = vec![endpoint_url(&self.endpoint)?];
+        if let Some((_, fallbacks)) = py::FALLBACK_ENDPOINTS
+            .iter()
+            .find(|(name, _)| *name == self.label)
+        {
+            for fallback in *fallbacks {
+                if *fallback != self.endpoint {
+                    urls.push(endpoint_url(fallback)?);
+                }
+            }
+        }
+        let archive = py::ARCHIVE_ENDPOINTS
+            .iter()
+            .find(|(name, _)| *name == self.label)
+            .map(|(_, endpoints)| {
+                endpoints
+                    .iter()
+                    .map(|endpoint| endpoint_url(endpoint))
+                    .collect()
+            })
+            .transpose()?
+            .unwrap_or_default();
+        Ok(EndpointPool { urls, archive })
+    }
+
+    /// Immutable identity for a public named network; custom/local are unpinned.
+    pub fn genesis(&self) -> Result<Option<H256>, NetworkError> {
+        let value = match self.label.as_str() {
+            "finney" | "archive" => network_pins::FINNEY_GENESIS,
+            "test" => network_pins::TEST_GENESIS,
+            "devnet" => network_pins::DEVNET_GENESIS,
+            _ => return Ok(None),
+        };
+        let bytes = hex::decode(
+            value
+                .strip_prefix("0x")
+                .ok_or(NetworkError::InvalidPinnedGenesis)?,
+        )
+        .map_err(|_| NetworkError::InvalidPinnedGenesis)?;
+        let bytes: [u8; 32] = bytes
+            .try_into()
+            .map_err(|_| NetworkError::InvalidPinnedGenesis)?;
+        Ok(Some(H256(bytes)))
+    }
+
+    /// Default pacing for public presets, with local/custom endpoints unpaced.
+    pub fn rate_limit(&self) -> Option<RateLimit> {
+        matches!(
+            self.label.as_str(),
+            "finney" | "test" | "devnet" | "archive"
+        )
+        .then_some(RateLimit::PUBLIC)
+    }
+}
+
+impl fmt::Debug for Network {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Network")
+            .field("endpoint", &rtao_rpc::policy::safe_endpoint(&self.endpoint))
+            .finish()
+    }
+}
+
+/// Invalid network configuration.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum NetworkError {
+    /// An input is neither an extracted label nor a WebSocket URL.
+    Unknown(String),
+    /// The endpoint is not a valid ws/wss URL with a hostname.
+    InvalidEndpoint,
+    /// A generated immutable identity is not a valid 32-byte hash.
+    InvalidPinnedGenesis,
+}
+
+impl fmt::Display for NetworkError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unknown(input) => {
+                let mut names = py::NETWORKS
+                    .iter()
+                    .map(|(name, _)| *name)
+                    .collect::<Vec<_>>();
+                names.sort_unstable();
+                let known = names
+                    .iter()
+                    .map(|name| format!("'{name}'"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(
+                    formatter,
+                    "Unknown network {}. Known networks: [{known}], or pass a ws:// / wss:// endpoint directly.",
+                    rtao_rpc::policy::python_string_repr(input)
+                )
+            }
+            Self::InvalidEndpoint => {
+                formatter.write_str("configured RPC endpoint is not a valid ws:// or wss:// URL")
+            }
+            Self::InvalidPinnedGenesis => {
+                formatter.write_str("generated network genesis is invalid")
+            }
+        }
+    }
+}
+
+impl Error for NetworkError {}
+
+fn endpoint_url(input: &str) -> Result<Url, NetworkError> {
+    let url = Url::parse(input).map_err(|_| NetworkError::InvalidEndpoint)?;
+    if !matches!(url.scheme(), "ws" | "wss") || url.host_str().is_none() {
+        return Err(NetworkError::InvalidEndpoint);
+    }
+    Ok(url)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // pyt: settings.py::resolve_endpoint, default_fallback_endpoints,
+    // default_archive_endpoints (no standalone upstream unit tests).
+    #[test]
+    fn every_extracted_label_and_exact_url_resolves_to_the_same_network() -> Result<(), NetworkError>
+    {
+        for (name, endpoint) in py::NETWORKS {
+            let expected = endpoint.resolve(|_| None);
+            let named = Network::resolve_with(name, |_| None)?;
+            let direct = Network::resolve_with(&expected, |_| None)?;
+            assert_eq!(named, direct);
+            assert_eq!(named.endpoint(), expected);
+            assert_eq!(named.label(), *name);
+            assert_eq!(named.genesis()?.is_some(), *name != "local");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn raw_endpoints_do_not_inherit_a_named_identity_or_failover_pool() -> Result<(), NetworkError>
+    {
+        let custom = Network::resolve_with("wss://private.invalid:9944/rpc", |_| None)?;
+        let pool = custom.endpoint_pool()?;
+        assert_eq!(pool.urls.len(), 1);
+        assert!(pool.archive.is_empty());
+        assert!(custom.genesis()?.is_none());
+        assert!(custom.rate_limit().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn local_environment_and_empty_override_match_extracted_contract() -> Result<(), NetworkError> {
+        let overridden = Network::resolve_with("local", |_| Some("ws://127.0.0.1:12345".into()))?;
+        assert_eq!(overridden.endpoint(), "ws://127.0.0.1:12345");
+        let default = Network::resolve_with("local", |_| Some(String::new()))?;
+        assert_eq!(default, Network::resolve_with("local", |_| None)?);
+        assert!(overridden.genesis()?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn public_pools_preserve_extracted_fallback_and_archive_order() -> Result<(), NetworkError> {
+        let finney = Network::resolve_with("finney", |_| None)?;
+        let pool = finney.endpoint_pool()?;
+        let expected = py::FALLBACK_ENDPOINTS
+            .iter()
+            .find(|(name, _)| *name == "finney");
+        assert_eq!(
+            pool.urls.len(),
+            1 + expected.map_or(0, |(_, values)| values.len())
+        );
+        if let Some((_, endpoints)) = expected {
+            for (actual, expected) in pool.urls.iter().skip(1).zip(*endpoints) {
+                assert_eq!(*actual, endpoint_url(expected)?);
+            }
+        }
+        assert_eq!(
+            Network::resolve_with("archive", |_| None)?.genesis()?,
+            finney.genesis()?
+        );
+        assert!(finney.rate_limit().is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn unknown_labels_case_and_secret_endpoint_debug_are_checked() -> Result<(), NetworkError> {
+        let error = Network::resolve_with("FINNEY", |_| None)
+            .err()
+            .ok_or(NetworkError::InvalidEndpoint)?;
+        assert!(error.to_string().contains("Unknown network"));
+        let secret = Network::resolve_with(
+            "wss://alice:password@private.invalid/rpc?token=secret",
+            |_| None,
+        )?;
+        let debug = format!("{secret:?}");
+        assert!(
+            !debug.contains("password") && !debug.contains("secret") && !debug.contains("alice")
+        );
+        assert!(Network::resolve_with("ws://", |_| None).is_err());
+        Ok(())
+    }
+}

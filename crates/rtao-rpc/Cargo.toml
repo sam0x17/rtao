@@ -1,0 +1,40 @@
+[package]
+name = "rtao-rpc"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Asynchronous Bittensor JSON-RPC transport."
+
+[lints]
+workspace = true
+
+[features]
+default = ["rate-limit"]
+rate-limit = []
+metrics = ["dep:metrics"]
+# Offline access to the production frame dispatcher for the standalone fuzz crate.
+fuzzing = []
+
+[dependencies]
+tokio = { workspace = true, features = ["net", "io-util"] }
+tokio-tungstenite = { workspace = true }
+subxt-rpcs = { workspace = true }
+rustls = { workspace = true }
+rustls-native-certs = { workspace = true }
+rustls-pki-types = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+http = { workspace = true }
+httpdate = { workspace = true }
+url = { workspace = true }
+tracing = { workspace = true }
+metrics = { workspace = true, optional = true }
+unicode-general-category = { workspace = true }
+primitive-types = { workspace = true }
+hex = { workspace = true }
+blake2 = { workspace = true }
+

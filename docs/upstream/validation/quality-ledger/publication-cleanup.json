@@ -1,0 +1,20 @@
+{
+  "published_head": "8645ebdc31d188a722e22396d26fb52144246da4",
+  "paths": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/cpp-pr",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/native-deps",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/native-tools"
+  ],
+  "removed": true,
+  "open_files": 0,
+  "external_symlink_or_venv_dependencies": 0,
+  "launchd_or_configuration_dependencies": 0,
+  "external_git_worktrees": 0,
+  "native_linkage": "system libc++ and libSystem only",
+  "retained_live_dependencies": [
+    "root-owned Subtensor PR3242 checkout",
+    "shared Rust/Git caches"
+  ],
+  "bounded_results": "docs/upstream/validation/quality-ledger"
+}

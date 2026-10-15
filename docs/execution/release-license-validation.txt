@@ -1,0 +1,64 @@
+    Blocking waiting for file lock on artifact directory
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.90s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-3a859553da605b74)
+
+running 10 tests
+test release::tests::local_provenance_rejects_host_or_source_substitution ... ok
+test release::tests::local_mac_provenance_fails_without_an_approved_key ... ok
+test release::tests::release_requires_both_builders_and_all_four_targets ... ok
+test release::tests::rejects_an_unpinned_toolchain ... ok
+test release::tests::rejects_extra_assets_and_missing_targets ... ok
+test release::tests::license_asset_is_required_exact_and_in_checksums ... ok
+Good "rtao-release" signature for rtao-mac with ED25519 key SHA256:0tWV+RsO2e7VK4sDKk5qUBOFK17gg+dz7HvFZZfAX0k
+Signature verification failed: incorrect signature
+Could not verify signature.
+test release::tests::authenticates_local_record_and_rejects_tampering ... ok
+test release::tests::rejects_asset_tampering_and_archive_traversal ... ok
+test release::tests::docs_archive_requires_facade_and_rejects_links ... ok
+test release::tests::archive_requires_license_and_rejects_modified_and_linked_license ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 227 filtered out; finished in 0.05s
+
+    Blocking waiting for file lock on build directory
+   Compiling rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+   Compiling rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.86s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-431dde25bb630036)
+
+running 10 tests
+test release::tests::local_provenance_rejects_host_or_source_substitution ... ok
+test release::tests::local_mac_provenance_fails_without_an_approved_key ... ok
+test release::tests::rejects_extra_assets_and_missing_targets ... ok
+test release::tests::release_requires_both_builders_and_all_four_targets ... ok
+test release::tests::rejects_an_unpinned_toolchain ... ok
+test release::tests::license_asset_is_required_exact_and_in_checksums ... ok
+Good "rtao-release" signature for rtao-mac with ED25519 key SHA256:08rJAPnaPzDX6L+Kokr2BIGM7A4gIOf85UOX7Bi/ErI
+Signature verification failed: incorrect signature
+Could not verify signature.
+test release::tests::authenticates_local_record_and_rejects_tampering ... ok
+test release::tests::rejects_asset_tampering_and_archive_traversal ... ok
+test release::tests::docs_archive_requires_facade_and_rejects_links ... ok
+test release::tests::archive_requires_license_and_rejects_modified_and_linked_license ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 227 filtered out; finished in 0.05s
+
+    Blocking waiting for file lock on build directory
+    Checking rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+    Checking rtao-rpc v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-rpc)
+    Checking rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+    Checking rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+    Checking rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+    Checking rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+    Checking rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+    Checking rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+    Checking rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+    Checking rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+    Checking rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+    Checking rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+    Checking rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 26.19s
+License staging valid; tampered and symlinked assets refused without overwrite.

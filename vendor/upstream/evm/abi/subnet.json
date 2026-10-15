@@ -1,0 +1,1924 @@
+[
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getActivityCutoff",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getActivityCutoffFactor",
+		"outputs": [
+			{
+				"internalType": "uint32",
+				"name": "",
+				"type": "uint32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getAdjustmentAlpha",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getAlphaValues",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getBondsMovingAverage",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getBondsResetEnabled",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getCommitRevealWeightsEnabled",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getCommitRevealWeightsInterval",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getDifficulty",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"name": "getImmunityPeriod",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"name": "getKappa",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "isSubnetDissolving",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getLiquidAlphaEnabled",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getYuma3Enabled",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getMaxBurn",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getMaxDifficulty",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getMaxWeightLimit",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getMinAllowedWeights",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getMinBurn",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getMinDifficulty",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getNetworkRegistrationBlock",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getServingRateLimit",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getNetworkPowRegistrationAllowed",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getNetworkRegistrationAllowed",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"name": "getRho",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getAlphaSigmoidSteepness",
+		"outputs": [
+			{
+				"internalType": "uint16",
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getWeightsSetRateLimit",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getWeightsVersionKey",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "hotkey",
+				"type": "bytes32"
+			}
+		],
+		"name": "registerNetwork",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "hotkey",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "string",
+				"name": "subnetName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "githubRepo",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "subnetContact",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "subnetUrl",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "discord",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "additional",
+				"type": "string"
+			}
+		],
+		"name": "registerNetwork",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "hotkey",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "string",
+				"name": "subnetName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "githubRepo",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "subnetContact",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "subnetUrl",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "discord",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "logoUrl",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "additional",
+				"type": "string"
+			}
+		],
+		"name": "registerNetwork",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "activityCutoff",
+				"type": "uint16"
+			}
+		],
+		"name": "setActivityCutoff",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint32",
+				"name": "factorMilli",
+				"type": "uint32"
+			}
+		],
+		"name": "setActivityCutoffFactor",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "adjustmentAlpha",
+				"type": "uint64"
+			}
+		],
+		"name": "setAdjustmentAlpha",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "alphaLow",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "alphaHigh",
+				"type": "uint16"
+			}
+		],
+		"name": "setAlphaValues",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "bondsMovingAverage",
+				"type": "uint64"
+			}
+		],
+		"name": "setBondsMovingAverage",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "bondsResetEnabled",
+				"type": "bool"
+			}
+		],
+		"name": "setBondsResetEnabled",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "commitRevealWeightsEnabled",
+				"type": "bool"
+			}
+		],
+		"name": "setCommitRevealWeightsEnabled",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "commitRevealWeightsInterval",
+				"type": "uint64"
+			}
+		],
+		"name": "setCommitRevealWeightsInterval",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "difficulty",
+				"type": "uint64"
+			}
+		],
+		"name": "setDifficulty",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "immunityPeriod",
+				"type": "uint16"
+			}
+		],
+		"name": "setImmunityPeriod",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "kappa",
+				"type": "uint16"
+			}
+		],
+		"name": "setKappa",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "liquidAlphaEnabled",
+				"type": "bool"
+			}
+		],
+		"name": "setLiquidAlphaEnabled",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "yuma3Enabled",
+				"type": "bool"
+			}
+		],
+		"name": "setYuma3Enabled",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "maxBurn",
+				"type": "uint64"
+			}
+		],
+		"name": "setMaxBurn",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "maxDifficulty",
+				"type": "uint64"
+			}
+		],
+		"name": "setMaxDifficulty",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "minAllowedWeights",
+				"type": "uint16"
+			}
+		],
+		"name": "setMinAllowedWeights",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "minBurn",
+				"type": "uint64"
+			}
+		],
+		"name": "setMinBurn",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "minDifficulty",
+				"type": "uint64"
+			}
+		],
+		"name": "setMinDifficulty",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "networkPowRegistrationAllowed",
+				"type": "bool"
+			}
+		],
+		"name": "setNetworkPowRegistrationAllowed",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "networkRegistrationAllowed",
+				"type": "bool"
+			}
+		],
+		"name": "setNetworkRegistrationAllowed",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "rho",
+				"type": "uint16"
+			}
+		],
+		"name": "setRho",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "steepness",
+				"type": "uint16"
+			}
+		],
+		"name": "setAlphaSigmoidSteepness",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "servingRateLimit",
+				"type": "uint64"
+			}
+		],
+		"name": "setServingRateLimit",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "weightsSetRateLimit",
+				"type": "uint64"
+			}
+		],
+		"name": "setWeightsSetRateLimit",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint64",
+				"name": "weightsVersionKey",
+				"type": "uint64"
+			}
+		],
+		"name": "setWeightsVersionKey",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "toggle",
+				"type": "bool"
+			}
+		],
+		"name": "toggleTransfers",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			}
+		],
+		"name": "getOwnerCutAutoLockEnabled",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint16",
+				"name": "netuid",
+				"type": "uint16"
+			},
+			{
+				"internalType": "bool",
+				"name": "enabled",
+				"type": "bool"
+			}
+		],
+		"name": "setOwnerCutAutoLockEnabled",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "string",
+        "name": "subnetName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "githubRepo",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "subnetContact",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "subnetUrl",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "discord",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "logoUrl",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "additional",
+        "type": "string"
+      }
+    ],
+    "name": "setSubnetIdentity",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      }
+    ],
+    "name": "updateSubnetSymbol",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "triggerEpoch",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "bondsPenalty",
+        "type": "uint16"
+      }
+    ],
+    "name": "setBondsPenalty",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "maxAllowedUids",
+        "type": "uint16"
+      }
+    ],
+    "name": "setMaxAllowedUids",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "maxBurn",
+        "type": "uint64"
+      }
+    ],
+    "name": "setMaxBurnV2",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "mechanismCount",
+        "type": "uint8"
+      }
+    ],
+    "name": "setMechanismCount",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "bool",
+        "name": "hasSplit",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint16[]",
+        "name": "split",
+        "type": "uint16[]"
+      }
+    ],
+    "name": "setMechanismEmissionSplit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "minBurn",
+        "type": "uint64"
+      }
+    ],
+    "name": "setMinBurnV2",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      }
+    ],
+    "name": "setOwnerCutEnabled",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "immuneNeurons",
+        "type": "uint16"
+      }
+    ],
+    "name": "setOwnerImmuneNeuronLimit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "tempo",
+        "type": "uint16"
+      }
+    ],
+    "name": "setTempo",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "maxUids",
+        "type": "uint16"
+      }
+    ],
+    "name": "trimToMaxAllowedUids",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+{
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getBurnConfig",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "halfLife",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint128",
+        "name": "increaseMultiplier",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getGlobalNetworkLimits",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "minActivityCutoff",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "adminFreezeWindow",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "ownerHyperparamRateLimit",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "dissolveScheduleDuration",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint16",
+        "name": "subnetLimit",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "totalNetworks",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "networkImmunityPeriod",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "startCallDelay",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "minNetworkLockCost",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "lastNetworkLockCost",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "networkLockReductionInterval",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint16",
+        "name": "subnetOwnerCut",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getGlobalProtocolConfig",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "maxMechanismCount",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint16",
+        "name": "commitRevealWeightsVersion",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "networkRegistrationStartBlock",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "taoInRefundDeploymentBlock",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getGlobalRateLimits",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "networkRateLimit",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "weightsVersionKeyRateLimit",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "transactionRateLimit",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "delegateTakeRateLimit",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "childkeyTakeRateLimit",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint8",
+        "name": "maxEpochsPerBlock",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getMechanismEmissionSplit",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint16[]",
+        "name": "split",
+        "type": "uint16[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getSubnetCapacityConfig",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "minAllowedUids",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "maxAllowedUids",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "maxAllowedValidators",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "adjustmentInterval",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "targetRegistrationsPerInterval",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "minNonImmuneUids",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "immuneOwnerUidsLimit",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "bondsPenalty",
+        "type": "uint16"
+      },
+      {
+        "internalType": "bool",
+        "name": "ownerCutEnabled",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "transfersEnabled",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint16",
+        "name": "maxRegistrationsPerBlock",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "mechanismCount",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getSubnetMetadata",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "tokenSymbol",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "owner",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "ownerHotkey",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint16",
+        "name": "tempo",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "recycleOrBurn",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getRegisteredSubnetCounter",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getSubnetDissolutionStatus",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "isDissolving",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "cleanupInProgress",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint8",
+        "name": "cleanupPhase",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getEpochConsensus",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getNullConsensusLimits",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "uidBudget",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint32",
+        "name": "payloadBytes",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "queueBytes",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "queueCount",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "mode",
+        "type": "uint8"
+      }
+    ],
+    "name": "setEpochConsensus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getNullPruningBatchSize",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getNullPruningState",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint16",
+        "name": "target",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "remaining",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      }
+    ],
+    "name": "getSavedYumaValidatorLimit",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "present",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint16",
+        "name": "limit",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "netuid",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "target",
+        "type": "uint16"
+      }
+    ],
+    "name": "trimNullUidsBatch",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

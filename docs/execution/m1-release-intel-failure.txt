@@ -1,0 +1,25 @@
+        PASS [  18.884s] (631/631) rtao-runtime models::tests::all_typed_wire_models_equal_core_registry
+────────────
+     Summary [  28.347s] 631 tests run: 630 passed, 1 failed, 2 skipped
+        FAIL [   0.364s] (168/631) rtao-core::lock single_bls_source_matches_core_pin
+  stdout ───
+
+    running 1 test
+    test single_bls_source_matches_core_pin ... FAILED
+
+    failures:
+
+    failures:
+        single_bls_source_matches_core_pin
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.03s
+
+  stderr ───
+
+    thread 'single_bls_source_matches_core_pin' (11739577) panicked at crates/rtao-core/tests/lock.rs:41:5:
+    assertion `left == right` failed: exactly one BLS implementation must define timelock bytes
+      left: 2
+     right: 1
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+error: test run failed

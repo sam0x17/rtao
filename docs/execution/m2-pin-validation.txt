@@ -1,0 +1,240 @@
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.15s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-cd73d7ddb02493fb)
+
+running 18 tests
+test pin::tests::core_canary_mode_requires_explicit_no_commit_and_excludes_release_modes ... ok
+test pin::tests::canonical_release_tags_only ... ok
+test pin::tests::check_is_explicit_and_has_no_implicit_parity ... ok
+test pin::tests::replay_and_poll_flags_require_their_explicit_modes ... ok
+test metadata_pin::tests::opaque_metadata_requires_exact_some_envelope ... ok
+test pin::tests::manifest_dependency_rejects_alternate_sources ... ok
+test pin::tests::malformed_pin_schema_returns_errors ... ok
+test network_pin::tests::malformed_or_noncanonical_genesis_is_rejected ... ok
+test network_pin::tests::recorded_identity_cannot_be_changed_or_overwritten ... ok
+test network_pin::tests::generator_preserves_existing_pins_and_uses_extracted_endpoints ... ok
+test network_pin::tests::incomplete_named_inputs_cannot_generate_a_partial_signing_guard ... ok
+test metadata_pin::tests::metadata_hex_is_bounded_and_strict ... ok
+test pin::tests::registry_digest_is_hash_of_exact_manifest ... ok
+test pin::tests::release_provenance_fails_closed_on_each_identity ... ok
+test metadata_pin::tests::full_upstream_metadata_rejects_corruption_and_trailing_bytes ... ok
+test metadata_pin::tests::fetch_pins_every_runtime_read_and_fails_closed_on_identity ... ok
+test metadata_pin::tests::offline_index_detects_blob_pin_and_provenance_tampering ... ok
+test metadata_pin::tests::repeat_fetch_preserves_immutable_bytes_and_original_provenance ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 199 filtered out; finished in 0.47s
+
+    Blocking waiting for file lock on build directory
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 03s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-8959e793de20c207)
+
+running 3 tests
+test pin_pipeline::tests::unsafe_source_paths_are_rejected ... ok
+test pin_pipeline::tests::source_races_and_nonempty_replays_cannot_adopt ... ok
+test pin_pipeline::tests::adoption_refuses_symlink_ancestors_and_preserves_other_files ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 222 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.30s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-cd73d7ddb02493fb)
+
+running 1 test
+test upstream_next::tests::catalog_location_changes_do_not_report_behavior_changes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 216 filtered out; finished in 0.00s
+
+    Blocking waiting for file lock on build directory
+   Compiling rtao-rpc v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-rpc)
+   Compiling rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+   Compiling rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+   Compiling rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+   Compiling rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+   Compiling rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+   Compiling rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.31s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-a9419f691f224066)
+
+running 18 tests
+test pin::tests::check_is_explicit_and_has_no_implicit_parity ... ok
+test pin::tests::manifest_dependency_rejects_alternate_sources ... ok
+test pin::tests::core_canary_mode_requires_explicit_no_commit_and_excludes_release_modes ... ok
+test pin::tests::replay_and_poll_flags_require_their_explicit_modes ... ok
+test network_pin::tests::malformed_or_noncanonical_genesis_is_rejected ... ok
+test pin::tests::canonical_release_tags_only ... ok
+test network_pin::tests::recorded_identity_cannot_be_changed_or_overwritten ... ok
+test metadata_pin::tests::metadata_hex_is_bounded_and_strict ... ok
+test pin::tests::malformed_pin_schema_returns_errors ... ok
+test network_pin::tests::incomplete_named_inputs_cannot_generate_a_partial_signing_guard ... ok
+test network_pin::tests::generator_preserves_existing_pins_and_uses_extracted_endpoints ... ok
+test metadata_pin::tests::opaque_metadata_requires_exact_some_envelope ... ok
+test pin::tests::registry_digest_is_hash_of_exact_manifest ... ok
+test pin::tests::release_provenance_fails_closed_on_each_identity ... ok
+test metadata_pin::tests::full_upstream_metadata_rejects_corruption_and_trailing_bytes ... ok
+test metadata_pin::tests::fetch_pins_every_runtime_read_and_fails_closed_on_identity ... ok
+test metadata_pin::tests::offline_index_detects_blob_pin_and_provenance_tampering ... ok
+test metadata_pin::tests::repeat_fetch_preserves_immutable_bytes_and_original_provenance ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 201 filtered out; finished in 0.49s
+
+    Blocking waiting for file lock on build directory
+   Compiling rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+   Compiling rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+   Compiling rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+   Compiling rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+   Compiling rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+   Compiling rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+   Compiling rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+   Compiling rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+   Compiling rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+   Compiling rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+   Compiling rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+   Compiling rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 37.53s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-3d2b1cb06837415a)
+
+running 3 tests
+test pin_pipeline::tests::unsafe_source_paths_are_rejected ... ok
+test pin_pipeline::tests::source_races_and_nonempty_replays_cannot_adopt ... ok
+test pin_pipeline::tests::adoption_refuses_symlink_ancestors_and_preserves_other_files ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 222 filtered out; finished in 0.00s
+
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.75s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-a9419f691f224066)
+
+running 1 test
+test upstream_next::tests::catalog_location_changes_do_not_report_behavior_changes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 218 filtered out; finished in 0.00s
+
+    Blocking waiting for file lock on build directory
+    Blocking waiting for file lock on artifact directory
+    Checking generic-array v0.14.9
+   Compiling expander v2.2.1
+   Compiling sp-runtime-interface-proc-macro v19.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+    Checking crypto-common v0.1.6
+    Checking block-buffer v0.10.4
+    Checking inout v0.1.4
+    Checking crypto-bigint v0.5.5
+    Checking sec1 v0.7.3
+    Checking digest v0.9.0
+    Checking sp-runtime-interface v30.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+    Checking libsecp256k1-core v0.3.0
+    Checking digest v0.10.7
+    Checking cipher v0.4.4
+    Checking universal-hash v0.5.1
+    Checking aead v0.5.2
+    Checking polyval v0.6.2
+    Checking poly1305 v0.8.0
+    Checking aes v0.8.4
+    Checking chacha20 v0.9.1
+    Checking ctr v0.9.2
+    Checking sha2 v0.10.9
+    Checking sha3 v0.10.9
+    Checking ark-serialize v0.4.2
+    Checking hmac v0.12.1
+    Checking signature v2.2.0
+    Checking blake2 v0.10.6
+    Checking twox-hash v1.6.3
+    Checking curve25519-dalek v4.1.3
+    Checking elliptic-curve v0.13.8
+    Checking pbkdf2 v0.12.2
+    Checking sha1 v0.10.7
+    Checking libsecp256k1 v0.7.2
+    Checking ghash v0.5.1
+    Checking chacha20poly1305 v0.10.1
+    Checking ed25519 v2.2.3
+    Checking ml-kem v0.2.3
+    Checking rfc6979 v0.4.0
+    Checking sp-crypto-hashing v0.1.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+    Checking ark-ff v0.4.2
+    Checking rtao-rpc v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-rpc)
+    Checking schnorrkel v0.11.5
+    Checking aes-gcm v0.10.3
+    Checking ed25519-zebra v4.2.0
+    Checking ecdsa v0.16.9
+    Checking procedural-fork v1.10.0-rc3 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+    Checking substrate-bip39 v0.6.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+    Checking ark-poly v0.4.2
+    Checking k256 v0.13.4
+    Checking ark-ec v0.4.2
+    Checking sp-core v37.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+    Checking subtensor-linting v0.1.0 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+    Checking ark-bls12-381 v0.4.0
+    Checking ark-bls12-377 v0.4.0
+    Checking w3f-bls v0.1.3 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+    Checking tle v0.1.0 (https://github.com/ideal-lab5/timelock?rev=5416406cfd32799e31e1795393d4916894de4468#5416406c)
+    Checking bittensor-core v0.1.0 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+    Checking rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+    Checking rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+    Checking rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+    Checking rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+    Checking rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+    Checking rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+    Checking rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+    Checking rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+    Checking rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+    Checking rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+    Checking rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+    Checking xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6m 03s
+    Blocking waiting for file lock on build directory
+   Compiling rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+   Compiling rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+   Compiling rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+   Compiling rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+   Compiling rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+   Compiling rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+   Compiling rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.02s
+     Running tests/corpus.rs (target/execute-plan.6Ro0PC/build/debug/deps/corpus-889ecdbb0ca315bf)
+
+running 2 tests
+test corpus_primitive_visitors ... ok
+test corpus_replay ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/goldens.rs (target/execute-plan.6Ro0PC/build/debug/deps/goldens-d5efa8b8234ea256)
+
+running 6 tests
+test golden_ss58 ... ok
+test golden_multisig ... ok
+test golden_signature_payloads ... ok
+test golden_extrinsics ... ok
+test golden_calls ... ok
+test golden_storage_keys ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/typed_calls.rs (target/execute-plan.6Ro0PC/build/debug/deps/typed_calls-ff01d8a29fcfaaad)
+
+running 1 test
+test all_ten_golden_calls_use_generated_builders ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+    Checking rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+    Checking rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+    Checking rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+    Checking rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+    Checking rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-wallet v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-wallet)
+    Checking rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+    Checking rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+    Checking rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+    Checking rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+    Checking rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+    Checking rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+    Checking rtao-neuron v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-neuron)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.34s
+1.7.7
+installed by downloading from release page
+built with go1.23.4 compiler for darwin/arm64

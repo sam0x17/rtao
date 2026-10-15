@@ -1,0 +1,578 @@
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor` (manifest) generated 4 warnings
+warning: pallets/proxy/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-proxy` (manifest) generated 4 warnings
+warning: Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor` (manifest) generated 4 warnings
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-swap-interface` (manifest) generated 4 warnings
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-crowdloan` (manifest) generated 4 warnings
+warning: common/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-runtime-common` (manifest) generated 4 warnings
+warning: pallets/swap/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-swap` (manifest) generated 4 warnings
+warning: chain-extensions/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-chain-extensions` (manifest) generated 4 warnings
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-transaction-fee` (manifest) generated 4 warnings
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-admin-utils` (manifest) generated 4 warnings
+warning: pallets/utility/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-utility` (manifest) generated 4 warnings
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-limit-orders` (manifest) generated 4 warnings
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core-py` (manifest) generated 4 warnings
+warning: support/linting/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-linting` (manifest) generated 4 warnings
+warning: node/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `node-subtensor` (manifest) generated 4 warnings
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-alpha-assets` (manifest) generated 4 warnings
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `safe-math` (manifest) generated 4 warnings
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-custom-rpc` (manifest) generated 4 warnings
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core` (manifest) generated 4 warnings
+warning: runtime/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `node-subtensor-runtime` (manifest) generated 4 warnings
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-custom-rpc-runtime-api` (manifest) generated 4 warnings
+warning: precompiles/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-precompiles` (manifest) generated 4 warnings
+warning: support/macros/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-macros` (manifest) generated 4 warnings
+warning: pallets/commitments/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-commitments` (manifest) generated 4 warnings
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `share-pool` (manifest) generated 4 warnings
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core-wasm` (manifest) generated 4 warnings
+    Blocking waiting for file lock on build directory
+       Fresh unicode-ident v1.0.19
+       Fresh version_check v0.9.5
+       Fresh shlex v1.3.0
+       Fresh find-msvc-tools v0.1.3
+       Fresh const-oid v0.9.6
+       Fresh autocfg v1.5.0
+       Fresh bytes v1.12.1
+       Fresh arrayvec v0.7.6
+       Fresh winnow v0.7.13
+       Fresh proc-macro2 v1.0.101
+       Fresh cc v1.2.40
+       Fresh hashbrown v0.16.0
+       Fresh toml_parser v1.0.3
+       Fresh unicode-xid v0.2.6
+       Fresh toml_datetime v0.7.2
+       Fresh quote v1.0.41
+       Fresh indexmap v2.11.4
+       Fresh smallvec v1.15.1
+       Fresh pin-project-lite v0.2.16
+       Fresh byte-slice-cast v1.2.3
+       Fresh stable_deref_trait v1.2.0
+       Fresh opaque-debug v0.3.1
+       Fresh syn v2.0.106
+       Fresh getrandom v0.2.17
+       Fresh ppv-lite86 v0.2.21
+       Fresh cpufeatures v0.2.17
+       Fresh toml_edit v0.23.6
+       Fresh rustversion v1.0.22
+       Fresh const_format_proc_macros v0.2.34
+       Fresh typenum v1.19.0
+       Fresh pkg-config v0.3.32
+       Fresh futures-core v0.3.31
+       Fresh subtle v2.6.1
+       Fresh futures-sink v0.3.31
+       Fresh arrayref v0.3.9
+       Fresh zeroize_derive v1.4.2
+       Fresh rand_core v0.6.4
+       Fresh serde_derive v1.0.228
+       Fresh proc-macro-crate v3.4.0
+       Fresh synstructure v0.13.2
+       Fresh impl-trait-for-tuples v0.2.3
+       Fresh const_format v0.2.35
+       Fresh zerovec-derive v0.11.1
+       Fresh syn v1.0.109
+       Fresh displaydoc v0.2.5
+       Fresh either v1.15.0
+       Fresh byteorder v1.5.0
+       Fresh memchr v2.7.6
+       Fresh num-traits v0.2.19
+       Fresh futures-channel v0.3.31
+       Fresh zeroize v1.8.2
+       Fresh rand_chacha v0.3.1
+       Fresh zerofrom-derive v0.1.6
+       Fresh parity-scale-codec-derive v3.7.5
+       Fresh yoke-derive v0.8.0
+       Fresh pin-utils v0.1.0
+       Fresh aho-corasick v1.1.3
+       Fresh num-integer v0.1.46
+       Fresh derive_more-impl v1.0.0
+       Fresh keccak v0.1.6
+       Fresh futures-macro v0.3.31
+       Fresh tracing-core v0.1.34
+       Fresh futures-io v0.3.31
+       Fresh generic-array v0.14.7
+       Fresh rand v0.8.6
+       Fresh zerofrom v0.1.6
+       Fresh parity-scale-codec v3.7.5
+       Fresh futures-task v0.3.31
+       Fresh writeable v0.6.1
+       Fresh slab v0.4.11
+       Fresh litemap v0.8.0
+       Fresh derive_more v1.0.0
+       Fresh num-bigint v0.4.6
+       Fresh ark-serialize-derive v0.4.2
+       Fresh scale-info-derive v2.11.6
+       Fresh yoke v0.8.0
+       Fresh inout v0.1.4
+       Fresh futures-util v0.3.31
+       Fresh paste v1.0.15
+       Fresh ark-std v0.4.0
+       Fresh tracing-attributes v0.1.30
+       Fresh mio v1.0.4
+       Fresh socket2 v0.6.0
+       Fresh static_assertions v1.1.0
+       Fresh log v0.4.28
+       Fresh fnv v1.0.7
+       Fresh zerovec v0.11.4
+       Fresh zerotrie v0.2.2
+       Fresh cipher v0.4.4
+       Fresh base64ct v1.8.0
+       Fresh semver v1.0.27
+       Fresh http v1.3.1
+       Fresh crunchy v0.2.4
+       Fresh regex v1.11.3
+       Fresh tokio v1.47.1
+       Fresh tracing v0.1.41
+       Fresh scale-info v2.11.6
+       Fresh ark-ff-macros v0.4.2
+       Fresh tinystr v0.8.1
+       Fresh sha2 v0.10.9
+       Fresh potential_utf v0.1.3
+       Fresh ark-serialize v0.4.2
+       Fresh hmac v0.12.1
+       Fresh rustc_version v0.4.1
+       Fresh der v0.7.10
+       Fresh derivative v2.2.0
+       Fresh digest v0.9.0
+       Fresh itertools v0.10.5
+       Fresh ark-ff-asm v0.4.2
+       Fresh bitflags v2.9.4
+       Fresh percent-encoding v2.3.2
+       Fresh icu_locale_core v2.0.0
+       Fresh icu_collections v2.0.0
+       Fresh ark-ff v0.4.2
+       Fresh Inflector v0.11.4
+       Fresh icu_normalizer_data v2.0.0
+       Fresh icu_properties_data v2.0.1
+       Fresh hashbrown v0.13.2
+       Fresh serde_core v1.0.228
+       Fresh http-body v1.0.1
+       Fresh universal-hash v0.5.1
+       Fresh rustls-pki-types v1.12.0
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.6
+       Fresh openssl-src v300.5.4+3.5.4
+       Fresh icu_provider v2.0.0
+       Fresh vcpkg v0.2.15
+       Fresh regex-syntax v0.8.6
+       Fresh core-foundation-sys v0.8.7
+       Fresh untrusted v0.9.0
+       Fresh hex v0.4.3
+       Fresh base16ct v0.2.0
+       Fresh digest v0.10.7
+       Fresh ark-poly v0.4.2
+       Fresh icu_normalizer v2.0.0
+       Fresh ring v0.17.14
+       Fresh serdect v0.2.0
+       Fresh libc v0.2.176
+       Fresh icu_properties v2.0.1
+       Fresh regex-automata v0.4.11
+       Fresh spki v0.7.3
+       Fresh sha3 v0.10.8
+       Fresh signature v2.2.0
+       Fresh block-buffer v0.9.0
+       Fresh impl-serde v0.5.0
+       Fresh ff v0.13.1
+       Fresh ref-cast-impl v1.0.25
+       Fresh itoa v1.0.15
+       Fresh tower-service v0.3.3
+       Fresh lazy_static v1.5.0
+       Fresh same-file v1.0.6
+       Fresh try-lock v0.2.5
+       Fresh deranged v0.5.8
+       Fresh time-core v0.1.9
+       Fresh num-conv v0.2.2
+       Fresh base64 v0.22.1
+       Fresh constant_time_eq v0.3.1
+       Fresh tinyvec_macros v0.1.1
+       Fresh powerfmt v0.2.0
+       Fresh group v0.13.0
+       Fresh tinyvec v1.10.0
+       Fresh sharded-slab v0.1.7
+       Fresh want v0.3.1
+       Fresh ref-cast v1.0.25
+       Fresh time v0.3.53
+       Fresh walkdir v2.5.0
+       Fresh rustls-webpki v0.103.15
+       Fresh bitcoin-internals v0.2.0
+       Fresh idna_adapter v1.2.1
+       Fresh serde v1.0.228
+       Fresh matchers v0.2.0
+       Fresh file-guard v0.2.0
+       Fresh sec1 v0.7.3
+       Fresh sha2 v0.9.9
+       Fresh httparse v1.10.1
+       Fresh pkcs8 v0.10.2
+       Fresh crossbeam-utils v0.8.21
+       Fresh curve25519-dalek v4.1.3
+       Fresh ark-ec v0.4.2
+       Fresh core-foundation v0.10.1
+       Fresh security-framework-sys v2.15.0
+       Fresh fs-err v2.11.0
+       Fresh uint v0.10.0
+       Fresh prettyplease v0.2.37
+       Fresh libsecp256k1-gen-genmult v0.3.0
+       Fresh libsecp256k1-gen-ecmult v0.3.0
+       Fresh form_urlencoded v1.2.2
+       Fresh password-hash v0.5.0
+       Fresh tracing-log v0.2.0
+       Fresh crypto-bigint v0.5.5
+       Fresh cipher v0.2.5
+       Fresh integer-sqrt v0.1.5
+       Fresh sp-debug-derive v14.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh thiserror-impl v2.0.17
+       Fresh thread_local v1.1.9
+       Fresh atomic-waker v1.1.2
+       Fresh hex-conservative v0.1.2
+       Fresh utf8_iter v1.0.4
+       Fresh nu-ansi-term v0.50.3
+       Fresh ryu v1.0.20
+       Fresh rustc-hex v2.1.0
+       Fresh expander v2.2.1
+       Fresh pbkdf2 v0.12.2
+       Fresh idna v1.1.0
+       Fresh impl-num-traits v0.2.0
+       Fresh tracing-subscriber v0.3.20
+       Fresh fixed-hash v0.8.0
+       Fresh bitcoin_hashes v0.13.0
+       Fresh elliptic-curve v0.13.8
+       Fresh hyper v1.7.0
+       Fresh sp-storage v22.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh thiserror v2.0.17
+       Fresh crossbeam-epoch v0.9.18
+       Fresh security-framework v3.5.1
+       Fresh rustls v0.23.45
+       Fresh unicode-normalization v0.1.22
+       Fresh polyval v0.6.2
+       Fresh rfc6979 v0.4.0
+       Fresh aead v0.5.2
+       Fresh getrandom_or_panic v0.0.3
+       Fresh crypto-mac v0.10.0
+       Fresh impl-codec v0.7.1
+       Fresh merlin v3.0.0
+       Fresh sync_wrapper v1.0.2
+       Fresh serde_bytes v0.11.19
+       Fresh num_cpus v1.17.0
+       Fresh equivalent v1.0.2
+       Fresh ipnet v2.11.0
+       Fresh foldhash v0.1.5
+       Fresh foreign-types-shared v0.1.1
+       Fresh heck v0.5.0
+       Fresh scale-type-resolver v0.2.0
+       Fresh allocator-api2 v0.2.21
+       Fresh tower-layer v0.3.3
+       Fresh environmental v1.1.4
+       Fresh scopeguard v1.2.0
+       Fresh snafu-derive v0.8.9
+       Fresh hyper-util v0.1.17
+       Fresh hmac v0.10.1
+       Fresh primitive-types v0.13.1
+       Fresh ecdsa v0.16.9
+       Fresh ghash v0.5.1
+       Fresh foreign-types v0.3.2
+       Fresh schnorrkel v0.11.5
+       Fresh futures-executor v0.3.31
+       Fresh tower v0.5.3
+       Fresh sp-externalities v0.30.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh lock_api v0.4.14
+       Fresh hashbrown v0.15.5
+       Fresh scale-bits v0.7.0
+       Fresh zerocopy v0.8.27
+       Fresh serde_json v1.0.145
+       Fresh rustls-native-certs v0.8.1
+       Fresh url v2.5.7
+       Fresh tokio-rustls v0.26.4
+       Fresh crossbeam-deque v0.8.6
+       Fresh sp-tracing v17.1.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh parking_lot_core v0.9.12
+       Fresh secp256k1-sys v0.9.2
+       Fresh aes-soft v0.6.4
+       Fresh ctr v0.6.0
+       Fresh sp-runtime-interface-proc-macro v19.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh ark-bls12-377 v0.4.0
+       Fresh ark-bls12-381 v0.4.0
+       Fresh openssl-sys v0.9.117
+       Fresh blake2b_simd v1.0.3
+       Fresh ed25519 v2.2.3
+       Fresh poly1305 v0.8.0
+       Fresh libsecp256k1-core v0.3.0
+       Fresh ctr v0.9.2
+       Fresh twox-hash v1.6.3
+       Fresh password-hash v0.1.4
+       Fresh aes v0.8.4
+       Fresh chacha20 v0.9.1
+       Fresh sp-wasm-interface v22.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh openssl-macros v0.1.1
+       Fresh thiserror-impl v1.0.69
+       Fresh num-format v0.4.4
+       Fresh signature v1.6.4
+       Fresh array-bytes v6.2.3
+       Fresh half v1.8.3
+       Fresh sp-std v14.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh once_cell v1.21.3
+       Fresh cfg-if v1.0.3
+       Fresh pbkdf2 v0.7.5
+       Fresh aes-ctr v0.6.0
+       Fresh ed25519-zebra v4.1.0
+       Fresh aes-gcm v0.10.3
+       Fresh libsecp256k1 v0.7.2
+       Fresh sp-crypto-hashing v0.1.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh w3f-bls v0.1.3 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3242/vendor/w3f-bls)
+       Fresh openssl v0.10.81
+       Fresh thiserror v1.0.69
+       Fresh ed25519 v1.5.3
+       Fresh ss58-registry v1.51.0
+       Fresh serde_cbor v0.11.2
+       Fresh sp-runtime-interface v30.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh ahash v0.8.12
+       Fresh chacha20poly1305 v0.10.1
+       Fresh parking_lot v0.12.5
+       Fresh rayon-core v1.13.0
+       Fresh secp256k1 v0.28.2
+       Fresh scale-decode v0.16.0
+       Fresh libsodium-sys v0.2.7
+       Fresh tower-http v0.6.11
+       Fresh hyper-rustls v0.27.7
+       Fresh k256 v0.13.4
+       Fresh blake3 v1.8.2
+       Fresh futures v0.3.31
+       Fresh snafu v0.8.9
+       Fresh substrate-bip39 v0.6.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+       Fresh array-bytes v9.3.0
+       Fresh parity-bip39 v2.0.1
+       Fresh serde_urlencoded v0.7.1
+       Fresh http-body-util v0.1.3
+       Fresh bounded-collections v0.2.4
+       Fresh salsa20 v0.10.2
+       Fresh frame-metadata v23.0.0
+       Fresh blake2 v0.10.6
+       Fresh hash256-std-hasher v0.15.2
+       Fresh kem v0.3.0-pre.0
+       Fresh secrecy v0.8.0
+       Fresh itertools v0.11.0
+       Fresh hybrid-array v0.2.3
+       Fresh base64 v0.21.7
+       Fresh bs58 v0.5.1
+       Fresh bitflags v1.3.2
+       Fresh block-padding v0.2.1
+       Fresh dyn-clone v1.0.20
+       Fresh hash-db v0.16.0
+       Fresh no-std-compat v0.4.1
+       Fresh ml-kem v0.2.2
+       Fresh reqwest v0.12.28
+       Fresh fernet v0.2.1
+       Fresh scrypt v0.11.0
+       Fresh merkleized-metadata v0.5.1
+       Fresh hidapi v2.6.6
+       Fresh tle v0.1.0 (https://github.com/ideal-lab5/timelock?rev=5416406cfd32799e31e1795393d4916894de4468#5416406c)
+       Fresh subtensor-macros v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3242/support/macros)
+warning: stripping debug info with `rust-objcopy` failed: signal: 6 (SIGABRT)
+  |
+  = note: dyld[7061]: Library not loaded: @rpath/libLLVM.dylib
+            Referenced from: <D6B3C499-A2AF-3E42-8F77-C42BD658AAB5> /Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/rust-objcopy
+            Reason: tried: '/Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file), '/Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file)
+          
+
+       Fresh rayon v1.11.0
+       Fresh sodiumoxide v0.2.7
+       Fresh bip39 v2.2.0
+       Fresh libloading v0.8.9
+       Fresh twox-hash v2.1.2
+warning: `subtensor-macros` (lib) generated 1 warning
+       Fresh ledger-apdu v0.11.0
+       Fresh ansible-vault v0.2.1
+       Fresh sp-core v37.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3242/sdk/bittensor-core)
+     Running `/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3242.sh /Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --test --cfg 'feature="default"' --cfg 'feature="host"' --cfg 'feature="ledger"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=d4cbbc5a9b83a72e -C extra-filename=-2d98ea2d24d43ac8 --out-dir /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps -C incremental=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental -C strip=debuginfo -L dependency=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps --extern ansible_vault=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libansible_vault-fc97ca3a7caad05b.rlib --extern ark_serialize=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libark_serialize-7e01057adc0afc12.rlib --extern base64=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libbase64-14d22592b5114608.rlib --extern bip39=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libbip39-98e827b1a0894cdc.rlib --extern bs58=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libbs58-179b39d0c90ebf1a.rlib --extern chacha20poly1305=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libchacha20poly1305-94652efa05192da2.rlib --extern fernet=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libfernet-2249dffb24049f32.rlib --extern frame_metadata=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libframe_metadata-6358e2da809fe76a.rlib --extern hex=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libhex-d3b488d9b3805920.rlib --extern hidapi=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libhidapi-31ccb1df69716045.rlib --extern ledger_apdu=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libledger_apdu-38fad3f040aca2b7.rlib --extern libloading=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/liblibloading-9c88b5f8db1fd8c4.rlib --extern merkleized_metadata=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libmerkleized_metadata-705f19ef55c57298.rlib --extern ml_kem=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libml_kem-b047839e7f2b606a.rlib --extern openssl=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libopenssl-07dd34b40217bde7.rlib --extern codec=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libparity_scale_codec-d66abe6017e3923c.rlib --extern pbkdf2=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libpbkdf2-d4662bdc49bc8a7c.rlib --extern rand_core=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/librand_core-6c3f1e9836ade6b8.rlib --extern rayon=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/librayon-18e6469d16dc04af.rlib --extern reqwest=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libreqwest-aafb458df3d5bab2.rlib --extern scale_info=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libscale_info-32d73b3f4b1f1356.rlib --extern schnorrkel=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libschnorrkel-d178bc8fe71dcc98.rlib --extern scrypt=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libscrypt-2cf6e54e1fa5fa13.rlib --extern serde=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libserde-69db1d601f6100d1.rlib --extern serde_json=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libserde_json-6ea1113afadf3577.rlib --extern sha2=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libsha2-0b65d115966aea71.rlib --extern sodiumoxide=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libsodiumoxide-eacac1efb4056d2b.rlib --extern sp_core=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libsp_core-8b9525913337160b.rlib --extern subtensor_macros=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libsubtensor_macros-2af13116beb76b2b.dylib --extern tle=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libtle-477deb542754aafd.rlib --extern twox_hash=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libtwox_hash-8bb35ab97cd80b9b.rlib --extern w3f_bls=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libw3f_bls-3d9b994235bfc0d2.rlib --extern zeroize=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/libzeroize-776b22badb9cd748.rlib -L native=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/openssl-sys-28bbec3ce66d901c/out/openssl-build/install/lib -L native=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/hidapi-fd37cc363744f310/out -L native=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/blake3-72910fb67ccb157f/out -L native=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/ring-2c9fed6fecb5a2b5/out -L native=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/libsodium-sys-52de0beaf5f11b5d/out/installed/lib -L native=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/secp256k1-sys-85a3b4bc0c60dac5/out`
+warning: stripping debug info with `rust-objcopy` failed: signal: 6 (SIGABRT)
+  |
+  = note: dyld[88820]: Library not loaded: @rpath/libLLVM.dylib
+            Referenced from: <D6B3C499-A2AF-3E42-8F77-C42BD658AAB5> /Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/rust-objcopy
+            Reason: tried: '/Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file), '/Users/sam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file)
+          
+
+warning: `bittensor-core` (lib test) generated 1 warning
+    Finished `test` profile [optimized] target(s) in 4m 55s
+     Running `/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/bittensor_core-2d98ea2d24d43ac8`
+
+running 75 tests
+test client::reorg_finalization_tests::canonical_inclusion_finalizes_at_or_above_its_height ... ok
+test client::reorg_finalization_tests::canonical_inclusion_remains_pending_below_finalized_height ... ok
+test client::reorg_finalization_tests::replaced_or_missing_inclusion_hash_is_a_reorg ... ok
+test digest::tests::rejects_garbage_metadata ... ok
+test keyfiles::tests::env_password_roundtrip ... ok
+test codec::corpus_tests::multisig_accounts_match_the_golden_vectors ... ok
+test keyfiles::tests::crypto_type_as_string_is_accepted ... ok
+test keyfiles::tests::ed25519_keyfile_roundtrip ... ok
+test keyfiles::tests::legacy_keyfile_without_crypto_type_defaults_sr25519 ... ok
+test keyfiles::tests::mnemonic_keypair_writes_legacy_secret_fields ... ok
+test keyfiles::tests::mnemonic_with_derivation_password_omits_phrase_keeps_seed ... ok
+test keyfiles::tests::missing_crypto_type_recovered_from_stored_ss58 ... ok
+test keyfiles::tests::polkadotjs_export_gets_actionable_error ... ok
+test codec::corpus_tests::pathological_nesting_errors_instead_of_overflowing ... ok
+test keyfiles::tests::raw_hex_private_key_fallback ... ok
+test keyfiles::tests::raw_hex_seed_fallback ... ok
+test codec::corpus_tests::composed_calls_match_the_golden_vectors ... ok
+test codec::corpus_tests::extrinsics_decode_like_the_golden_block ... ok
+test codec::corpus_tests::storage_keys_match_the_golden_vectors ... ok
+test codec::corpus_tests::composed_calls_decode_back ... ok
+test keyfiles::tests::unknown_json_error_names_found_fields ... ok
+test codec::corpus_tests::map_keys_recover_from_the_golden_query_maps ... ok
+test keys::encrypted_json::tests::accepts_standard_scrypt_cost ... ok
+test codec::corpus_tests::signed_extrinsics_match_the_golden_vectors ... ok
+test keys::encrypted_json::tests::rejects_excessive_scrypt_cost ... ok
+test keys::encrypted_json::tests::rejects_unsupported_version ... ok
+test codec::corpus_tests::signature_payloads_match_the_golden_vectors ... ok
+test keyfiles::tests::raw_mnemonic_fallback ... ok
+test keyfiles::tests::stored_ss58_mismatch_is_rejected ... ok
+test keys::tests::alice_uri_matches_known_address ... ok
+test keyfiles::tests::sr25519_keyfile_roundtrip ... ok
+test keys::encrypted_json::tests::ed25519_passphrase_import_wrong_password ... ok
+test mlkem::tests::seal_rejects_bad_public_key ... ok
+test keys::encrypted_json::tests::ed25519_passphrase_import_roundtrip ... ok
+test mlkem::tests::seal_with_key_hash_prefixes_twox ... ok
+test mlkem::tests::twox_128_matches_substrate ... ok
+test pow::tests::cpu_mining_preserves_nonce_and_little_endian_target ... ok
+test pow::tests::gpu_mines_and_revalidates_chain_compatible_work ... ignored, requires physical OpenCL GPUs; run explicitly on the GPU test host
+test mlkem::tests::seal_roundtrip_with_decapsulation ... ok
+test pow::tests::invalid_challenges_and_unbounded_batches_are_rejected ... ok
+test keys::base58::tests::matches_bs58_reference ... ok
+test pow::tests::seal_matches_independent_python_vectors ... ok
+test signers::ledger::tests::bip44_path_matches_generic_app_layout ... ok
+test signers::ledger::tests::device_error_formats ... ok
+test signers::ledger::tests::ledger_device_is_send_and_sync ... ok
+test signers::ledger::tests::with_transport_carries_the_chunked_sign ... ok
+test signers::ledger::tests::with_transport_maps_user_refusal ... ok
+test timelock::epoch_schedule::integration::commit_epoch_at_extrinsic_block_table ... ok
+test timelock::epoch_schedule::integration::predict_first_reveal_block_table ... ok
+test timelock::epoch_schedule::integration::reveal_uses_exact_equality_not_gte ... ok
+test timelock::epoch_schedule::tests::should_run_epoch_auto_fire ... ok
+test timelock::epoch_schedule::tests::should_run_epoch_tempo_zero ... ok
+test timelock::tests::inner_ciphertext_unwraps_user_data_envelope ... ok
+test keys::tests::sr25519_verify_bytes_wrapping ... ok
+test keys::tests::public_only_from_ss58_matches_full_key ... ok
+test transaction::tests::allowing_raw_does_not_disable_spend_or_subnet_guardrails ... ok
+test transaction::tests::arbitrary_call_fails_closed_for_every_policy_dimension ... ok
+test transaction::tests::compatibility_builders_cannot_downgrade_arbitrary_calls ... ok
+test transaction::tests::compatibility_builders_cannot_lower_trusted_spend_or_scope ... ok
+test transaction::tests::trusted_move_stake_limit_uses_constructor_derived_netuids ... ok
+test keys::tests::sr25519_verify_roundtrip ... ok
+test keys::tests::ss58_rendering_matches_sp_core ... ok
+test transaction::tests::trusted_move_stake_uses_constructor_derived_netuids ... ok
+test transaction::tests::trusted_transfer_uses_constructor_derived_bounded_spend ... ok
+test digest::tests::digest_matches_polkadot_js_merkleize_metadata ... ok
+test digest::tests::extrinsic_proof_matches_pinned_vectors ... ok
+test timelock::tests::test_encrypt_commitment_format ... ok
+test timelock::tests::test_generate_commit_v2_structure ... ok
+test codec::corpus_tests::decoder_reproduces_the_shape_corpus ... ok
+test keyfiles::tests::ansible_vault_roundtrip ... ok
+test digest::tests::digest_is_deterministic_and_spec_version_sensitive ... ok
+test keyfiles::tests::nacl_roundtrip ... ok
+test timelock::tests::test_encrypt_and_decrypt_static_key ... ok
+test timelock::tests::test_get_round_info_and_signature ... ok
+test keyfiles::tests::legacy_fernet_roundtrip ... ok
+
+test result: ok. 74 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.19s
+

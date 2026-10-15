@@ -1,0 +1,11 @@
+[==========] Running 5604 tests from 4 test suites.
+swap_stake_limit normal 6 | limit_price : 950000000
+swap_stake_limit expert 6 | limit_price : 950000000
+move_stake_limit normal 7 | limit_price : 950000000
+move_stake_limit expert 7 | limit_price : 950000000
+batch_swap_move normal 7 | limit_price : 950000000
+batch_swap_move normal 15 | limit_price : 950000000
+batch_swap_move expert 7 | limit_price : 950000000
+batch_swap_move expert 15 | limit_price : 950000000
+[==========] 5604 tests from 4 test suites ran. (3935 ms total)
+[  PASSED  ] 5604 tests.

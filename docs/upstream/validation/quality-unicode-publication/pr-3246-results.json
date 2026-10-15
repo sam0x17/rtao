@@ -1,0 +1,38 @@
+{
+  "pr": 3246,
+  "results": {
+    "1.89.0": {
+      "portable": 27,
+      "unicode_public_test": 1,
+      "unicode_cases": 21,
+      "library": 71,
+      "physical_OpenCL_GPU_ignored": 1,
+      "binding": "all-feature/all-target compile; no Rust unit tests defined"
+    },
+    "stable": {
+      "portable": 27,
+      "unicode_public_test": 1,
+      "unicode_cases": 21,
+      "library": 71,
+      "physical_OpenCL_GPU_ignored": 1,
+      "binding": "all-feature/all-target compile; no Rust unit tests defined"
+    }
+  },
+  "strict_clippy": "1.89.0, all features/targets, core and binding, separate disposable target, warnings denied",
+  "portable_wasm": [
+    "1.89 alias (rustc 1.89.0)",
+    "stable (rustc 1.99.0)"
+  ],
+  "log_hashes": {
+    "pr-3246-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr-3246-1.89.0-portable.log": "65289344891e56b330c19c9cc28e0b12f8434bd2bf81e6c6b5d1b3935cb26356",
+    "pr-3246-1.89.0-lib.log": "eb47196bd1db3934b55601ba450dbe005db4e1ca866ea9c278917f6ba7d75301",
+    "pr-3246-1.89.0-binding.log": "fbb88867c534fee0117e74263ac197ecf5ba9640face2267328c6b76c43da156",
+    "pr-3246-stable-portable.log": "36e6dfad49652aeea3355766504ee9f3674928ed3f06b410b1e3dbebc5f748d0",
+    "pr-3246-stable-lib.log": "19b377e66eb228d1fca46703b2f8067c7c4d95449d6adb7b253d8a14deb9b468",
+    "pr-3246-stable-binding.log": "340e480bc71801fc3e58c8d6f797f28322ac8eb50161008aa0a87428e34d9615",
+    "pr-3246-clippy-msrv.log": "050d7fec2a8a48482c2905ecd53d8533df1c52284dadae2346d87406c1e22697",
+    "pr-3246-wasm-msrv.log": "14231b884200b85857f831797e353307e7204b61514c00414675c96be8fdca88",
+    "pr-3246-wasm-current.log": "520fcc4ad524f3de84870fb86186e1b88e5f2d33c0cdce67567adaccbd737e71"
+  }
+}

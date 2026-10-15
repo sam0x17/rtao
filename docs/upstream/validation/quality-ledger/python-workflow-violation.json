@@ -1,0 +1,16 @@
+{
+  "initial": [
+    "-- [hunter *** DEBUG *** 2026-10-14T10:27:55] Linking done: , Link files using Python: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\n",
+    "-- Found Python3: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14 (found version \"3.14.8\") found components: Interpreter\n",
+    "-- Found Python3: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14 (found version \"3.14.8\") found components: Interpreter\n",
+    "-- [hunter *** DEBUG *** 2026-10-14T10:28:04] Linking done: , Link files using Python: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\n"
+  ],
+  "erroneous_home_cache_run": [
+    "-- [hunter *** DEBUG *** 2026-10-14T10:32:40] Linking done: , Link files using Python: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\n",
+    "-- Found Python3: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14 (found version \"3.14.8\") found components: Interpreter\n",
+    "-- Found Python3: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14 (found version \"3.14.8\") found components: Interpreter\n",
+    "-- [hunter *** DEBUG *** 2026-10-14T10:32:54] Linking done: , Link files using Python: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\n"
+  ],
+  "mitigation": "Task-local Hunter find_python.cmake now exits before discovery; shell fallback remains available. No further configure planned.",
+  "sdk_or_test_python": false
+}

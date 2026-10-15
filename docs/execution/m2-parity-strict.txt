@@ -1,0 +1,450 @@
+Error: parity failed:
+files: file parity failed:
+pending parity row: common/src/proxy.rs (M1-M2)
+pending parity row: common/src/transaction_error.rs (M1-M2)
+pending parity row: docs/guides/signed-requests.mdx (M0)
+pending parity row: eco-tests/Cargo.toml (—)
+pending parity row: eco-tests/src/helpers.rs (—)
+pending parity row: eco-tests/src/lib.rs (—)
+pending parity row: eco-tests/src/mock.rs (—)
+pending parity row: eco-tests/src/tests.rs (—)
+pending parity row: eco-tests/src/tests_mentat_indexer.rs (—)
+pending parity row: eco-tests/src/tests_taocom_indexer.rs (—)
+pending parity row: pallets/admin-utils/src/lib.rs (M2-M4)
+pending parity row: pallets/subtensor/src/coinbase/reveal_commits.rs (M1-M2)
+pending parity row: pallets/subtensor/src/coinbase/run_coinbase.rs (M1-M2)
+pending parity row: pallets/subtensor/src/coinbase/tempo_control.rs (M2-M4)
+pending parity row: pallets/subtensor/src/rpc_info/basket_info.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/delegate_info.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/dynamic_info.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/metagraph.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/mod.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/neuron_info.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/show_subnet.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/stake_info.rs (M1)
+pending parity row: pallets/subtensor/src/rpc_info/subnet_info.rs (M1)
+pending parity row: pallets/subtensor/src/subnets/serving.rs (M2-M4)
+pending parity row: pallets/subtensor/src/subnets/subnet.rs (M2-M4)
+pending parity row: pallets/subtensor/src/subnets/weights.rs (M2-M4)
+pending parity row: pallets/subtensor/src/utils/misc.rs (M2-M4)
+pending parity row: pallets/subtensor/src/utils/rate_limiting.rs (M2-M4)
+pending parity row: runtime/src/check_mortality.rs (M1-M2)
+pending parity row: runtime/src/fee_filters.rs (M1-M2)
+pending parity row: runtime/src/transaction_payment_wrapper.rs (M1-M2)
+pending parity row: sdk/bittensor-core-py/Cargo.toml (M0)
+pending parity row: sdk/bittensor-core-py/README.md (M0)
+pending parity row: sdk/bittensor-core-py/pyproject.toml (M0)
+pending parity row: sdk/bittensor-core-py/src/digest.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/errors.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/keys.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/ledger.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/lib.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/pow.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/runtime.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/timelock.rs (M0)
+pending parity row: sdk/bittensor-core-py/src/values.rs (M0)
+pending parity row: sdk/bittensor-core/Cargo.toml (M0)
+pending parity row: sdk/bittensor-core/fixtures/ledger_proof_vector.json (M0)
+pending parity row: sdk/bittensor-core/src/client.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/batch.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/decode.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/encode.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/extrinsic.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/storage.rs (M0)
+pending parity row: sdk/bittensor-core/src/codec/value.rs (M0)
+pending parity row: sdk/bittensor-core/src/digest/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/error.rs (M0)
+pending parity row: sdk/bittensor-core/src/keyfiles/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/keys/base58.rs (M0)
+pending parity row: sdk/bittensor-core/src/keys/encrypted_json.rs (M0)
+pending parity row: sdk/bittensor-core/src/keys/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/lib.rs (M0)
+pending parity row: sdk/bittensor-core/src/mlkem/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/pow/kernel.cl (M0)
+pending parity row: sdk/bittensor-core/src/pow/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/pow/opencl.rs (M0)
+pending parity row: sdk/bittensor-core/src/runtime/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/runtime/type_string.rs (M0)
+pending parity row: sdk/bittensor-core/src/signers/hid.rs (M0)
+pending parity row: sdk/bittensor-core/src/signers/ledger.rs (M0)
+pending parity row: sdk/bittensor-core/src/signers/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/timelock/constants.rs (M0)
+pending parity row: sdk/bittensor-core/src/timelock/epoch_schedule.rs (M0)
+pending parity row: sdk/bittensor-core/src/timelock/epoch_schedule_vectors.rs (M0)
+pending parity row: sdk/bittensor-core/src/timelock/mod.rs (M0)
+pending parity row: sdk/bittensor-core/src/transaction.rs (M0)
+pending parity row: sdk/bittensor-core/tests/Dockerfile.localnet-fast (M0)
+pending parity row: sdk/bittensor-core/tests/e2e-manifest.json (M0)
+pending parity row: sdk/bittensor-core/tests/e2e.rs (M0)
+pending parity row: sdk/bittensor-core/tests/e2e_support/mod.rs (M0)
+pending parity row: sdk/python/bittensor/__init__.py (M0–M8)
+pending parity row: sdk/python/bittensor/_generated/__init__.py (—)
+pending parity row: sdk/python/bittensor/_generated/calls.py (M1)
+pending parity row: sdk/python/bittensor/_generated/constants.py (M1)
+pending parity row: sdk/python/bittensor/_generated/errors.py (M1)
+pending parity row: sdk/python/bittensor/_generated/runtime_apis.py (M1)
+pending parity row: sdk/python/bittensor/_generated/storage.py (M1)
+pending parity row: sdk/python/bittensor/_live.py (M4)
+pending parity row: sdk/python/bittensor/_substrate.py (M1–M2)
+pending parity row: sdk/python/bittensor/_subtensor.py (M6)
+pending parity row: sdk/python/bittensor/_transport/__init__.py (—)
+pending parity row: sdk/python/bittensor/_transport/codec.py (M1)
+pending parity row: sdk/python/bittensor/_transport/const.py (M1)
+pending parity row: sdk/python/bittensor/_transport/contract.py (M2–M7)
+pending parity row: sdk/python/bittensor/_transport/errors.py (M1)
+pending parity row: sdk/python/bittensor/_transport/extrinsics.py (M2)
+pending parity row: sdk/python/bittensor/_transport/interface.py (M1–M5)
+pending parity row: sdk/python/bittensor/_transport/lru.py (M1)
+pending parity row: sdk/python/bittensor/_transport/protocols.py (M2–M7)
+pending parity row: sdk/python/bittensor/_transport/rpc.py (M1)
+pending parity row: sdk/python/bittensor/_transport/runtime.py (M1)
+pending parity row: sdk/python/bittensor/_transport/runtime_api.py (M1–M6)
+pending parity row: sdk/python/bittensor/_transport/storage.py (M1)
+pending parity row: sdk/python/bittensor/_transport/utils/__init__.py (—)
+pending parity row: sdk/python/bittensor/_transport/utils/receipt.py (M2)
+pending parity row: sdk/python/bittensor/balance.py (M0)
+pending parity row: sdk/python/bittensor/basket_index.py (M6)
+pending parity row: sdk/python/bittensor/basket_index_data.py (M6)
+pending parity row: sdk/python/bittensor/cli/__init__.py (—)
+pending parity row: sdk/python/bittensor/cli/call.py (M4)
+pending parity row: sdk/python/bittensor/cli/call_names.py (M4)
+pending parity row: sdk/python/bittensor/cli/commands/__init__.py (—)
+pending parity row: sdk/python/bittensor/cli/commands/addresses.py (M8)
+pending parity row: sdk/python/bittensor/cli/commands/axon.py (M4)
+pending parity row: sdk/python/bittensor/cli/commands/collateral.py (M6)
+pending parity row: sdk/python/bittensor/cli/commands/config.py (M4)
+pending parity row: sdk/python/bittensor/cli/commands/crowd.py (M8)
+pending parity row: sdk/python/bittensor/cli/commands/evm/__init__.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/_shared.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/address.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/association.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/contracts_cmd.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/keys.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/money.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/setup.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/evm/stake.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/extension.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/lock.py (M6)
+pending parity row: sdk/python/bittensor/cli/commands/misc.py (M8)
+pending parity row: sdk/python/bittensor/cli/commands/multisig.py (M5)
+pending parity row: sdk/python/bittensor/cli/commands/proxy.py (M5–M8)
+pending parity row: sdk/python/bittensor/cli/commands/root.py (M6)
+pending parity row: sdk/python/bittensor/cli/commands/root_move.py (M6)
+pending parity row: sdk/python/bittensor/cli/commands/root_swap.py (M6)
+pending parity row: sdk/python/bittensor/cli/commands/stake.py (M5–M8)
+pending parity row: sdk/python/bittensor/cli/commands/subnets.py (M4–M6)
+pending parity row: sdk/python/bittensor/cli/commands/sudo.py (M4–M5)
+pending parity row: sdk/python/bittensor/cli/commands/timelock.py (M7)
+pending parity row: sdk/python/bittensor/cli/commands/upgrade.py (M8)
+pending parity row: sdk/python/bittensor/cli/commands/wallet.py (M4–M8)
+pending parity row: sdk/python/bittensor/cli/commands/weights.py (M4)
+pending parity row: sdk/python/bittensor/cli/context.py (M4)
+pending parity row: sdk/python/bittensor/cli/globals.py (M4)
+pending parity row: sdk/python/bittensor/cli/help_theme.py (M8)
+pending parity row: sdk/python/bittensor/cli/helpers.py (M4–M8)
+pending parity row: sdk/python/bittensor/cli/hyperparams_view.py (M4–M6)
+pending parity row: sdk/python/bittensor/cli/intent_prompts.py (M4)
+pending parity row: sdk/python/bittensor/cli/logs.py (M4)
+pending parity row: sdk/python/bittensor/cli/main.py (M4)
+pending parity row: sdk/python/bittensor/cli/metagraph_view.py (M4)
+pending parity row: sdk/python/bittensor/cli/multisig_helpers.py (M5)
+pending parity row: sdk/python/bittensor/cli/null_pruning.py (M4)
+pending parity row: sdk/python/bittensor/cli/output.py (M4–M8)
+pending parity row: sdk/python/bittensor/cli/prompt.py (M4)
+pending parity row: sdk/python/bittensor/cli/query.py (M4–M6)
+pending parity row: sdk/python/bittensor/cli/root_helpers.py (M6)
+pending parity row: sdk/python/bittensor/cli/secrets.py (M4)
+pending parity row: sdk/python/bittensor/cli/stake_exit.py (M8)
+pending parity row: sdk/python/bittensor/cli/stake_picker.py (M8)
+pending parity row: sdk/python/bittensor/cli/tx.py (M4–M5)
+pending parity row: sdk/python/bittensor/cli/upgrade_helpers.py (M8)
+pending parity row: sdk/python/bittensor/client.py (M1–M5)
+pending parity row: sdk/python/bittensor/config.py (M1–M8)
+pending parity row: sdk/python/bittensor/error_descriptions/__init__.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/admin_utils.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/balances.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/commitments.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/contracts.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/crowdloan.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/drand.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/ethereum.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/evm.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/grandpa.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/limit_orders.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/mev_shield.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/multisig.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/preimage.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/proxy.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/safe_mode.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/scheduler.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/subtensor.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/sudo.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/swap.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/system.py (M2)
+pending parity row: sdk/python/bittensor/error_descriptions/utility.py (M2)
+pending parity row: sdk/python/bittensor/error_map.py (M2)
+pending parity row: sdk/python/bittensor/evm/__init__.py (M7)
+pending parity row: sdk/python/bittensor/evm/abi/addressMapping.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/alpha.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/balance.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/balanceTransfer.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/crowdloan.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/drand.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/ed25519Verify.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/leasing.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/metagraph.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/neuron.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/proxy.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/registry.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/runtimeConfiguration.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/scheduler.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/sr25519Verify.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/staking.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/stakingV2.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/subnet.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/timestamp.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/uidLookup.json (M7)
+pending parity row: sdk/python/bittensor/evm/abi/votingPower.json (M7)
+pending parity row: sdk/python/bittensor/evm/addresses.py (M5–M7)
+pending parity row: sdk/python/bittensor/evm/contracts.py (M7)
+pending parity row: sdk/python/bittensor/evm/keys.py (M7)
+pending parity row: sdk/python/bittensor/evm/networks.py (M7)
+pending parity row: sdk/python/bittensor/evm/precompiles.py (M7)
+pending parity row: sdk/python/bittensor/evm/rpc.py (M7)
+pending parity row: sdk/python/bittensor/evm/transactions.py (M7)
+pending parity row: sdk/python/bittensor/executor.py (M2–M5)
+pending parity row: sdk/python/bittensor/extension/__init__.py (—)
+pending parity row: sdk/python/bittensor/extension/bridge.py (M7)
+pending parity row: sdk/python/bittensor/extension/browser.py (M7)
+pending parity row: sdk/python/bittensor/extension/client.py (M7)
+pending parity row: sdk/python/bittensor/extension/daemon.py (M7)
+pending parity row: sdk/python/bittensor/extension/picker.py (M7)
+pending parity row: sdk/python/bittensor/extension/session.py (M7)
+pending parity row: sdk/python/bittensor/extension/signer.py (M7)
+pending parity row: sdk/python/bittensor/extension/static/bridge.html (M7)
+pending parity row: sdk/python/bittensor/extension/tokens.py (M7)
+pending parity row: sdk/python/bittensor/fee_filters.py (M2)
+pending parity row: sdk/python/bittensor/http_auth.py (M0–M3)
+pending parity row: sdk/python/bittensor/hyperparams.py (M1–M4)
+pending parity row: sdk/python/bittensor/intents/__init__.py (—)
+pending parity row: sdk/python/bittensor/intents/_money.py (M2)
+pending parity row: sdk/python/bittensor/intents/_root_claim_fee.py (M5)
+pending parity row: sdk/python/bittensor/intents/association.py (M5)
+pending parity row: sdk/python/bittensor/intents/base.py (M2)
+pending parity row: sdk/python/bittensor/intents/batch.py (M5)
+pending parity row: sdk/python/bittensor/intents/children.py (M5)
+pending parity row: sdk/python/bittensor/intents/coldkey.py (M5)
+pending parity row: sdk/python/bittensor/intents/collateral.py (M5)
+pending parity row: sdk/python/bittensor/intents/crowdloan.py (M5)
+pending parity row: sdk/python/bittensor/intents/evm.py (M5)
+pending parity row: sdk/python/bittensor/intents/governance.py (M4–M5)
+pending parity row: sdk/python/bittensor/intents/hyperparameters.py (M4)
+pending parity row: sdk/python/bittensor/intents/identity.py (M4–M5)
+pending parity row: sdk/python/bittensor/intents/leasing.py (M5)
+pending parity row: sdk/python/bittensor/intents/lock.py (M5)
+pending parity row: sdk/python/bittensor/intents/multisig.py (M5)
+pending parity row: sdk/python/bittensor/intents/plan.py (M2)
+pending parity row: sdk/python/bittensor/intents/proxy.py (M5)
+pending parity row: sdk/python/bittensor/intents/registration.py (M4–M5)
+pending parity row: sdk/python/bittensor/intents/registry.py (M2)
+pending parity row: sdk/python/bittensor/intents/root.py (M5)
+pending parity row: sdk/python/bittensor/intents/serving.py (M2)
+pending parity row: sdk/python/bittensor/intents/staking.py (M5)
+pending parity row: sdk/python/bittensor/intents/transfer.py (M2)
+pending parity row: sdk/python/bittensor/intents/weights.py (M2)
+pending parity row: sdk/python/bittensor/keyfiles.py (M2)
+pending parity row: sdk/python/bittensor/ledger.py (M7)
+pending parity row: sdk/python/bittensor/macos_password.py (M4)
+pending parity row: sdk/python/bittensor/masked_input.py (M4)
+pending parity row: sdk/python/bittensor/metagraph.py (M1)
+pending parity row: sdk/python/bittensor/multisig.py (M4)
+pending parity row: sdk/python/bittensor/namespaces.py (M1–M6)
+pending parity row: sdk/python/bittensor/namespaces.pyi (—)
+pending parity row: sdk/python/bittensor/pow_registration.py (M4–M7)
+pending parity row: sdk/python/bittensor/py.typed (—)
+pending parity row: sdk/python/bittensor/reads/__init__.py (—)
+pending parity row: sdk/python/bittensor/reads/accounts.py (M4–M6)
+pending parity row: sdk/python/bittensor/reads/base.py (M1)
+pending parity row: sdk/python/bittensor/reads/chain.py (M2–M6)
+pending parity row: sdk/python/bittensor/reads/collateral.py (M6)
+pending parity row: sdk/python/bittensor/reads/delegation.py (M4–M6)
+pending parity row: sdk/python/bittensor/reads/epochs.py (M2–M4)
+pending parity row: sdk/python/bittensor/reads/hyperparameters.py (M2–M4)
+pending parity row: sdk/python/bittensor/reads/identity.py (M4–M6)
+pending parity row: sdk/python/bittensor/reads/leasing.py (M6)
+pending parity row: sdk/python/bittensor/reads/locks.py (M4–M6)
+pending parity row: sdk/python/bittensor/reads/neurons.py (M2–M6)
+pending parity row: sdk/python/bittensor/reads/prices.py (M6)
+pending parity row: sdk/python/bittensor/reads/root.py (M4–M6)
+pending parity row: sdk/python/bittensor/reads/staking.py (M4–M6)
+pending parity row: sdk/python/bittensor/reads/subnets.py (M1–M6)
+pending parity row: sdk/python/bittensor/reads/weights.py (M2–M6)
+pending parity row: sdk/python/bittensor/result.py (M2)
+pending parity row: sdk/python/bittensor/settings.py (M1)
+pending parity row: sdk/python/bittensor/signing.py (M2)
+pending parity row: sdk/python/bittensor/snapshot.py (M1)
+pending parity row: sdk/python/bittensor/sp_core.py (M0)
+pending parity row: sdk/python/bittensor/sync.py (M6)
+pending parity row: sdk/python/bittensor/timelock.py (M1 (helpers), M7)
+pending parity row: sdk/python/bittensor/vault/__init__.py (—)
+pending parity row: sdk/python/bittensor/vault/qr.py (M7)
+pending parity row: sdk/python/bittensor/vault/scan.py (M7)
+pending parity row: sdk/python/bittensor/vault/server.py (M7)
+pending parity row: sdk/python/bittensor/vault/signer.py (M7)
+pending parity row: sdk/python/bittensor/vault/static/bittensor-chain-specs.png (M7)
+pending parity row: sdk/python/bittensor/vault/static/vault.html (M7)
+pending parity row: sdk/python/bittensor/vault/uos.py (M7)
+pending parity row: sdk/python/bittensor/wallet.py (M2)
+pending parity row: sdk/python/bittensor/wallets.py (M2–M8)
+pending parity row: sdk/python/codegen/__init__.py (M2)
+pending parity row: sdk/python/codegen/__main__.py (M2)
+pending parity row: sdk/python/codegen/check.py (M2)
+pending parity row: sdk/python/codegen/emit_namespaces.py (M2)
+pending parity row: sdk/python/codegen/emit_python.py (M2)
+pending parity row: sdk/python/codegen/metadata.py (M2)
+pending parity row: sdk/python/completions/_btcli (M8)
+pending parity row: sdk/python/completions/btcli.bash (M8)
+pending parity row: sdk/python/completions/btcli.fish (M8)
+pending parity row: sdk/python/pyproject.toml (M0)
+pending parity row: sdk/python/scripts/build_basket_index.py (M2, M6)
+pending parity row: sdk/python/scripts/record_golden.py (M2, M6)
+pending parity row: sdk/python/scripts/record_shape_corpus.py (M2, M6)
+pending parity row: sdk/python/tests/e2e/test_null_consensus.py (M2-M7)
+pending parity row: sdk/python/tests/e2e/test_pow_registration.py (M2-M7)
+pending parity row: sdk/python/tests/e2e/test_timelock_commitment.py (M2-M7)
+pending parity row: sdk/python/tests/fixtures/golden.json (M0)
+pending parity row: sdk/python/tests/fixtures/shape_corpus/corpus.json (M0)
+pending parity row: sdk/python/tests/harness/__init__.py (—)
+pending parity row: sdk/python/tests/harness/fake_node.py (M1)
+pending parity row: sdk/python/tests/harness/fake_substrate.py (M2)
+pending parity row: sdk/python/tests/harness/samples.py (M2)
+pending parity row: sdk/python/tests/unit/__init__.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_balance_properties.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_cli.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_cli_commands.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_cli_intent_prompts.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_cli_null_pruning.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_codec_golden.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_codec_properties.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_evm.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_extension_bridge.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_extension_signer.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_facades.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_fee_filters.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_http_auth.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_hyperparams_units.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_intents_table.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_keyfiles_golden.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_ledger_signer.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_lock_ownership_gate.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_multisig_safety.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_natural_name_key.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_null_weights.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_pow_registration.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_prepare_attach.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_reads_table.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_root_claim_fee.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_rpc.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_shape_corpus.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_slippage_protection.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_sp_core_keypair.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_sp_core_parity.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_storage_golden.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_v446_accounting_and_commitments.py (the milestone of the code each tests)
+pending parity row: sdk/python/tests/unit/test_wallet_compat.py (the milestone of the code each tests)
+pending parity row: website/apps/bittensor-website/public/catalog/errors.json (M0)
+pending parity row: website/apps/bittensor-website/public/catalog/intents.json (M0)
+pending parity row: website/apps/bittensor-website/public/catalog/reads.json (M0)
+chain_source: strict chain parity refuses pending ShieldPeriod maximum assertion
+environment: strict parity refuses pending environment behavior
+pending: strict parity refuses pending intent/read behavior
+exports: strict export parity refuses bittensor.basket_index.EPOCH_BLOCK pending
+divergences: strict divergence parity refuses D-001 pending
+e2e: strict e2e parity refuses intent_add_proxy pending
+oracle: No such file or directory (os error 2)
+
+{
+  "schema": 1,
+  "strict": true,
+  "layers": {
+    "files": {
+      "status": "failed",
+      "error": "file parity failed:\npending parity row: common/src/proxy.rs (M1-M2)\npending parity row: common/src/transaction_error.rs (M1-M2)\npending parity row: docs/guides/signed-requests.mdx (M0)\npending parity row: eco-tests/Cargo.toml (—)\npending parity row: eco-tests/src/helpers.rs (—)\npending parity row: eco-tests/src/lib.rs (—)\npending parity row: eco-tests/src/mock.rs (—)\npending parity row: eco-tests/src/tests.rs (—)\npending parity row: eco-tests/src/tests_mentat_indexer.rs (—)\npending parity row: eco-tests/src/tests_taocom_indexer.rs (—)\npending parity row: pallets/admin-utils/src/lib.rs (M2-M4)\npending parity row: pallets/subtensor/src/coinbase/reveal_commits.rs (M1-M2)\npending parity row: pallets/subtensor/src/coinbase/run_coinbase.rs (M1-M2)\npending parity row: pallets/subtensor/src/coinbase/tempo_control.rs (M2-M4)\npending parity row: pallets/subtensor/src/rpc_info/basket_info.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/delegate_info.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/dynamic_info.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/metagraph.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/mod.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/neuron_info.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/show_subnet.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/stake_info.rs (M1)\npending parity row: pallets/subtensor/src/rpc_info/subnet_info.rs (M1)\npending parity row: pallets/subtensor/src/subnets/serving.rs (M2-M4)\npending parity row: pallets/subtensor/src/subnets/subnet.rs (M2-M4)\npending parity row: pallets/subtensor/src/subnets/weights.rs (M2-M4)\npending parity row: pallets/subtensor/src/utils/misc.rs (M2-M4)\npending parity row: pallets/subtensor/src/utils/rate_limiting.rs (M2-M4)\npending parity row: runtime/src/check_mortality.rs (M1-M2)\npending parity row: runtime/src/fee_filters.rs (M1-M2)\npending parity row: runtime/src/transaction_payment_wrapper.rs (M1-M2)\npending parity row: sdk/bittensor-core-py/Cargo.toml (M0)\npending parity row: sdk/bittensor-core-py/README.md (M0)\npending parity row: sdk/bittensor-core-py/pyproject.toml (M0)\npending parity row: sdk/bittensor-core-py/src/digest.rs (M0)\npending parity row: sdk/bittensor-core-py/src/errors.rs (M0)\npending parity row: sdk/bittensor-core-py/src/keys.rs (M0)\npending parity row: sdk/bittensor-core-py/src/ledger.rs (M0)\npending parity row: sdk/bittensor-core-py/src/lib.rs (M0)\npending parity row: sdk/bittensor-core-py/src/pow.rs (M0)\npending parity row: sdk/bittensor-core-py/src/runtime.rs (M0)\npending parity row: sdk/bittensor-core-py/src/timelock.rs (M0)\npending parity row: sdk/bittensor-core-py/src/values.rs (M0)\npending parity row: sdk/bittensor-core/Cargo.toml (M0)\npending parity row: sdk/bittensor-core/fixtures/ledger_proof_vector.json (M0)\npending parity row: sdk/bittensor-core/src/client.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/batch.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/decode.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/encode.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/extrinsic.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/storage.rs (M0)\npending parity row: sdk/bittensor-core/src/codec/value.rs (M0)\npending parity row: sdk/bittensor-core/src/digest/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/error.rs (M0)\npending parity row: sdk/bittensor-core/src/keyfiles/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/keys/base58.rs (M0)\npending parity row: sdk/bittensor-core/src/keys/encrypted_json.rs (M0)\npending parity row: sdk/bittensor-core/src/keys/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/lib.rs (M0)\npending parity row: sdk/bittensor-core/src/mlkem/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/pow/kernel.cl (M0)\npending parity row: sdk/bittensor-core/src/pow/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/pow/opencl.rs (M0)\npending parity row: sdk/bittensor-core/src/runtime/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/runtime/type_string.rs (M0)\npending parity row: sdk/bittensor-core/src/signers/hid.rs (M0)\npending parity row: sdk/bittensor-core/src/signers/ledger.rs (M0)\npending parity row: sdk/bittensor-core/src/signers/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/timelock/constants.rs (M0)\npending parity row: sdk/bittensor-core/src/timelock/epoch_schedule.rs (M0)\npending parity row: sdk/bittensor-core/src/timelock/epoch_schedule_vectors.rs (M0)\npending parity row: sdk/bittensor-core/src/timelock/mod.rs (M0)\npending parity row: sdk/bittensor-core/src/transaction.rs (M0)\npending parity row: sdk/bittensor-core/tests/Dockerfile.localnet-fast (M0)\npending parity row: sdk/bittensor-core/tests/e2e-manifest.json (M0)\npending parity row: sdk/bittensor-core/tests/e2e.rs (M0)\npending parity row: sdk/bittensor-core/tests/e2e_support/mod.rs (M0)\npending parity row: sdk/python/bittensor/__init__.py (M0–M8)\npending parity row: sdk/python/bittensor/_generated/__init__.py (—)\npending parity row: sdk/python/bittensor/_generated/calls.py (M1)\npending parity row: sdk/python/bittensor/_generated/constants.py (M1)\npending parity row: sdk/python/bittensor/_generated/errors.py (M1)\npending parity row: sdk/python/bittensor/_generated/runtime_apis.py (M1)\npending parity row: sdk/python/bittensor/_generated/storage.py (M1)\npending parity row: sdk/python/bittensor/_live.py (M4)\npending parity row: sdk/python/bittensor/_substrate.py (M1–M2)\npending parity row: sdk/python/bittensor/_subtensor.py (M6)\npending parity row: sdk/python/bittensor/_transport/__init__.py (—)\npending parity row: sdk/python/bittensor/_transport/codec.py (M1)\npending parity row: sdk/python/bittensor/_transport/const.py (M1)\npending parity row: sdk/python/bittensor/_transport/contract.py (M2–M7)\npending parity row: sdk/python/bittensor/_transport/errors.py (M1)\npending parity row: sdk/python/bittensor/_transport/extrinsics.py (M2)\npending parity row: sdk/python/bittensor/_transport/interface.py (M1–M5)\npending parity row: sdk/python/bittensor/_transport/lru.py (M1)\npending parity row: sdk/python/bittensor/_transport/protocols.py (M2–M7)\npending parity row: sdk/python/bittensor/_transport/rpc.py (M1)\npending parity row: sdk/python/bittensor/_transport/runtime.py (M1)\npending parity row: sdk/python/bittensor/_transport/runtime_api.py (M1–M6)\npending parity row: sdk/python/bittensor/_transport/storage.py (M1)\npending parity row: sdk/python/bittensor/_transport/utils/__init__.py (—)\npending parity row: sdk/python/bittensor/_transport/utils/receipt.py (M2)\npending parity row: sdk/python/bittensor/balance.py (M0)\npending parity row: sdk/python/bittensor/basket_index.py (M6)\npending parity row: sdk/python/bittensor/basket_index_data.py (M6)\npending parity row: sdk/python/bittensor/cli/__init__.py (—)\npending parity row: sdk/python/bittensor/cli/call.py (M4)\npending parity row: sdk/python/bittensor/cli/call_names.py (M4)\npending parity row: sdk/python/bittensor/cli/commands/__init__.py (—)\npending parity row: sdk/python/bittensor/cli/commands/addresses.py (M8)\npending parity row: sdk/python/bittensor/cli/commands/axon.py (M4)\npending parity row: sdk/python/bittensor/cli/commands/collateral.py (M6)\npending parity row: sdk/python/bittensor/cli/commands/config.py (M4)\npending parity row: sdk/python/bittensor/cli/commands/crowd.py (M8)\npending parity row: sdk/python/bittensor/cli/commands/evm/__init__.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/_shared.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/address.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/association.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/contracts_cmd.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/keys.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/money.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/setup.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/evm/stake.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/extension.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/lock.py (M6)\npending parity row: sdk/python/bittensor/cli/commands/misc.py (M8)\npending parity row: sdk/python/bittensor/cli/commands/multisig.py (M5)\npending parity row: sdk/python/bittensor/cli/commands/proxy.py (M5–M8)\npending parity row: sdk/python/bittensor/cli/commands/root.py (M6)\npending parity row: sdk/python/bittensor/cli/commands/root_move.py (M6)\npending parity row: sdk/python/bittensor/cli/commands/root_swap.py (M6)\npending parity row: sdk/python/bittensor/cli/commands/stake.py (M5–M8)\npending parity row: sdk/python/bittensor/cli/commands/subnets.py (M4–M6)\npending parity row: sdk/python/bittensor/cli/commands/sudo.py (M4–M5)\npending parity row: sdk/python/bittensor/cli/commands/timelock.py (M7)\npending parity row: sdk/python/bittensor/cli/commands/upgrade.py (M8)\npending parity row: sdk/python/bittensor/cli/commands/wallet.py (M4–M8)\npending parity row: sdk/python/bittensor/cli/commands/weights.py (M4)\npending parity row: sdk/python/bittensor/cli/context.py (M4)\npending parity row: sdk/python/bittensor/cli/globals.py (M4)\npending parity row: sdk/python/bittensor/cli/help_theme.py (M8)\npending parity row: sdk/python/bittensor/cli/helpers.py (M4–M8)\npending parity row: sdk/python/bittensor/cli/hyperparams_view.py (M4–M6)\npending parity row: sdk/python/bittensor/cli/intent_prompts.py (M4)\npending parity row: sdk/python/bittensor/cli/logs.py (M4)\npending parity row: sdk/python/bittensor/cli/main.py (M4)\npending parity row: sdk/python/bittensor/cli/metagraph_view.py (M4)\npending parity row: sdk/python/bittensor/cli/multisig_helpers.py (M5)\npending parity row: sdk/python/bittensor/cli/null_pruning.py (M4)\npending parity row: sdk/python/bittensor/cli/output.py (M4–M8)\npending parity row: sdk/python/bittensor/cli/prompt.py (M4)\npending parity row: sdk/python/bittensor/cli/query.py (M4–M6)\npending parity row: sdk/python/bittensor/cli/root_helpers.py (M6)\npending parity row: sdk/python/bittensor/cli/secrets.py (M4)\npending parity row: sdk/python/bittensor/cli/stake_exit.py (M8)\npending parity row: sdk/python/bittensor/cli/stake_picker.py (M8)\npending parity row: sdk/python/bittensor/cli/tx.py (M4–M5)\npending parity row: sdk/python/bittensor/cli/upgrade_helpers.py (M8)\npending parity row: sdk/python/bittensor/client.py (M1–M5)\npending parity row: sdk/python/bittensor/config.py (M1–M8)\npending parity row: sdk/python/bittensor/error_descriptions/__init__.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/admin_utils.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/balances.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/commitments.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/contracts.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/crowdloan.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/drand.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/ethereum.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/evm.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/grandpa.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/limit_orders.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/mev_shield.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/multisig.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/preimage.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/proxy.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/safe_mode.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/scheduler.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/subtensor.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/sudo.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/swap.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/system.py (M2)\npending parity row: sdk/python/bittensor/error_descriptions/utility.py (M2)\npending parity row: sdk/python/bittensor/error_map.py (M2)\npending parity row: sdk/python/bittensor/evm/__init__.py (M7)\npending parity row: sdk/python/bittensor/evm/abi/addressMapping.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/alpha.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/balance.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/balanceTransfer.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/crowdloan.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/drand.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/ed25519Verify.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/leasing.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/metagraph.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/neuron.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/proxy.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/registry.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/runtimeConfiguration.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/scheduler.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/sr25519Verify.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/staking.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/stakingV2.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/subnet.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/timestamp.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/uidLookup.json (M7)\npending parity row: sdk/python/bittensor/evm/abi/votingPower.json (M7)\npending parity row: sdk/python/bittensor/evm/addresses.py (M5–M7)\npending parity row: sdk/python/bittensor/evm/contracts.py (M7)\npending parity row: sdk/python/bittensor/evm/keys.py (M7)\npending parity row: sdk/python/bittensor/evm/networks.py (M7)\npending parity row: sdk/python/bittensor/evm/precompiles.py (M7)\npending parity row: sdk/python/bittensor/evm/rpc.py (M7)\npending parity row: sdk/python/bittensor/evm/transactions.py (M7)\npending parity row: sdk/python/bittensor/executor.py (M2–M5)\npending parity row: sdk/python/bittensor/extension/__init__.py (—)\npending parity row: sdk/python/bittensor/extension/bridge.py (M7)\npending parity row: sdk/python/bittensor/extension/browser.py (M7)\npending parity row: sdk/python/bittensor/extension/client.py (M7)\npending parity row: sdk/python/bittensor/extension/daemon.py (M7)\npending parity row: sdk/python/bittensor/extension/picker.py (M7)\npending parity row: sdk/python/bittensor/extension/session.py (M7)\npending parity row: sdk/python/bittensor/extension/signer.py (M7)\npending parity row: sdk/python/bittensor/extension/static/bridge.html (M7)\npending parity row: sdk/python/bittensor/extension/tokens.py (M7)\npending parity row: sdk/python/bittensor/fee_filters.py (M2)\npending parity row: sdk/python/bittensor/http_auth.py (M0–M3)\npending parity row: sdk/python/bittensor/hyperparams.py (M1–M4)\npending parity row: sdk/python/bittensor/intents/__init__.py (—)\npending parity row: sdk/python/bittensor/intents/_money.py (M2)\npending parity row: sdk/python/bittensor/intents/_root_claim_fee.py (M5)\npending parity row: sdk/python/bittensor/intents/association.py (M5)\npending parity row: sdk/python/bittensor/intents/base.py (M2)\npending parity row: sdk/python/bittensor/intents/batch.py (M5)\npending parity row: sdk/python/bittensor/intents/children.py (M5)\npending parity row: sdk/python/bittensor/intents/coldkey.py (M5)\npending parity row: sdk/python/bittensor/intents/collateral.py (M5)\npending parity row: sdk/python/bittensor/intents/crowdloan.py (M5)\npending parity row: sdk/python/bittensor/intents/evm.py (M5)\npending parity row: sdk/python/bittensor/intents/governance.py (M4–M5)\npending parity row: sdk/python/bittensor/intents/hyperparameters.py (M4)\npending parity row: sdk/python/bittensor/intents/identity.py (M4–M5)\npending parity row: sdk/python/bittensor/intents/leasing.py (M5)\npending parity row: sdk/python/bittensor/intents/lock.py (M5)\npending parity row: sdk/python/bittensor/intents/multisig.py (M5)\npending parity row: sdk/python/bittensor/intents/plan.py (M2)\npending parity row: sdk/python/bittensor/intents/proxy.py (M5)\npending parity row: sdk/python/bittensor/intents/registration.py (M4–M5)\npending parity row: sdk/python/bittensor/intents/registry.py (M2)\npending parity row: sdk/python/bittensor/intents/root.py (M5)\npending parity row: sdk/python/bittensor/intents/serving.py (M2)\npending parity row: sdk/python/bittensor/intents/staking.py (M5)\npending parity row: sdk/python/bittensor/intents/transfer.py (M2)\npending parity row: sdk/python/bittensor/intents/weights.py (M2)\npending parity row: sdk/python/bittensor/keyfiles.py (M2)\npending parity row: sdk/python/bittensor/ledger.py (M7)\npending parity row: sdk/python/bittensor/macos_password.py (M4)\npending parity row: sdk/python/bittensor/masked_input.py (M4)\npending parity row: sdk/python/bittensor/metagraph.py (M1)\npending parity row: sdk/python/bittensor/multisig.py (M4)\npending parity row: sdk/python/bittensor/namespaces.py (M1–M6)\npending parity row: sdk/python/bittensor/namespaces.pyi (—)\npending parity row: sdk/python/bittensor/pow_registration.py (M4–M7)\npending parity row: sdk/python/bittensor/py.typed (—)\npending parity row: sdk/python/bittensor/reads/__init__.py (—)\npending parity row: sdk/python/bittensor/reads/accounts.py (M4–M6)\npending parity row: sdk/python/bittensor/reads/base.py (M1)\npending parity row: sdk/python/bittensor/reads/chain.py (M2–M6)\npending parity row: sdk/python/bittensor/reads/collateral.py (M6)\npending parity row: sdk/python/bittensor/reads/delegation.py (M4–M6)\npending parity row: sdk/python/bittensor/reads/epochs.py (M2–M4)\npending parity row: sdk/python/bittensor/reads/hyperparameters.py (M2–M4)\npending parity row: sdk/python/bittensor/reads/identity.py (M4–M6)\npending parity row: sdk/python/bittensor/reads/leasing.py (M6)\npending parity row: sdk/python/bittensor/reads/locks.py (M4–M6)\npending parity row: sdk/python/bittensor/reads/neurons.py (M2–M6)\npending parity row: sdk/python/bittensor/reads/prices.py (M6)\npending parity row: sdk/python/bittensor/reads/root.py (M4–M6)\npending parity row: sdk/python/bittensor/reads/staking.py (M4–M6)\npending parity row: sdk/python/bittensor/reads/subnets.py (M1–M6)\npending parity row: sdk/python/bittensor/reads/weights.py (M2–M6)\npending parity row: sdk/python/bittensor/result.py (M2)\npending parity row: sdk/python/bittensor/settings.py (M1)\npending parity row: sdk/python/bittensor/signing.py (M2)\npending parity row: sdk/python/bittensor/snapshot.py (M1)\npending parity row: sdk/python/bittensor/sp_core.py (M0)\npending parity row: sdk/python/bittensor/sync.py (M6)\npending parity row: sdk/python/bittensor/timelock.py (M1 (helpers), M7)\npending parity row: sdk/python/bittensor/vault/__init__.py (—)\npending parity row: sdk/python/bittensor/vault/qr.py (M7)\npending parity row: sdk/python/bittensor/vault/scan.py (M7)\npending parity row: sdk/python/bittensor/vault/server.py (M7)\npending parity row: sdk/python/bittensor/vault/signer.py (M7)\npending parity row: sdk/python/bittensor/vault/static/bittensor-chain-specs.png (M7)\npending parity row: sdk/python/bittensor/vault/static/vault.html (M7)\npending parity row: sdk/python/bittensor/vault/uos.py (M7)\npending parity row: sdk/python/bittensor/wallet.py (M2)\npending parity row: sdk/python/bittensor/wallets.py (M2–M8)\npending parity row: sdk/python/codegen/__init__.py (M2)\npending parity row: sdk/python/codegen/__main__.py (M2)\npending parity row: sdk/python/codegen/check.py (M2)\npending parity row: sdk/python/codegen/emit_namespaces.py (M2)\npending parity row: sdk/python/codegen/emit_python.py (M2)\npending parity row: sdk/python/codegen/metadata.py (M2)\npending parity row: sdk/python/completions/_btcli (M8)\npending parity row: sdk/python/completions/btcli.bash (M8)\npending parity row: sdk/python/completions/btcli.fish (M8)\npending parity row: sdk/python/pyproject.toml (M0)\npending parity row: sdk/python/scripts/build_basket_index.py (M2, M6)\npending parity row: sdk/python/scripts/record_golden.py (M2, M6)\npending parity row: sdk/python/scripts/record_shape_corpus.py (M2, M6)\npending parity row: sdk/python/tests/e2e/test_null_consensus.py (M2-M7)\npending parity row: sdk/python/tests/e2e/test_pow_registration.py (M2-M7)\npending parity row: sdk/python/tests/e2e/test_timelock_commitment.py (M2-M7)\npending parity row: sdk/python/tests/fixtures/golden.json (M0)\npending parity row: sdk/python/tests/fixtures/shape_corpus/corpus.json (M0)\npending parity row: sdk/python/tests/harness/__init__.py (—)\npending parity row: sdk/python/tests/harness/fake_node.py (M1)\npending parity row: sdk/python/tests/harness/fake_substrate.py (M2)\npending parity row: sdk/python/tests/harness/samples.py (M2)\npending parity row: sdk/python/tests/unit/__init__.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_balance_properties.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_cli.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_cli_commands.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_cli_intent_prompts.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_cli_null_pruning.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_codec_golden.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_codec_properties.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_evm.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_extension_bridge.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_extension_signer.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_facades.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_fee_filters.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_http_auth.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_hyperparams_units.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_intents_table.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_keyfiles_golden.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_ledger_signer.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_lock_ownership_gate.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_multisig_safety.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_natural_name_key.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_null_weights.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_pow_registration.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_prepare_attach.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_reads_table.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_root_claim_fee.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_rpc.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_shape_corpus.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_slippage_protection.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_sp_core_keypair.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_sp_core_parity.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_storage_golden.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_v446_accounting_and_commitments.py (the milestone of the code each tests)\npending parity row: sdk/python/tests/unit/test_wallet_compat.py (the milestone of the code each tests)\npending parity row: website/apps/bittensor-website/public/catalog/errors.json (M0)\npending parity row: website/apps/bittensor-website/public/catalog/intents.json (M0)\npending parity row: website/apps/bittensor-website/public/catalog/reads.json (M0)"
+    },
+    "licenses": {
+      "status": "checked",
+      "details": {
+        "attribution": "checked"
+      }
+    },
+    "symbols": {
+      "status": "checked",
+      "details": {
+        "aliases": 269,
+        "changed": []
+      }
+    },
+    "catalog": {
+      "status": "checked",
+      "details": {
+        "intents": 83,
+        "reads": 102,
+        "semantic_errors": 18,
+        "chain_errors": 390
+      }
+    },
+    "extraction": {
+      "status": "checked",
+      "details": {
+        "all_outputs": "checked"
+      }
+    },
+    "chain_source": {
+      "status": "failed",
+      "error": "strict chain parity refuses pending ShieldPeriod maximum assertion"
+    },
+    "coverage": {
+      "status": "checked",
+      "details": {
+        "pallets": 13,
+        "calls": 262,
+        "raw_only": 147,
+        "raw_only_extra": 0,
+        "wrapped": 116
+      }
+    },
+    "environment": {
+      "status": "failed",
+      "error": "strict parity refuses pending environment behavior"
+    },
+    "pending": {
+      "status": "failed",
+      "error": "strict parity refuses pending intent/read behavior"
+    },
+    "exports": {
+      "status": "failed",
+      "error": "strict export parity refuses bittensor.basket_index.EPOCH_BLOCK pending"
+    },
+    "divergences": {
+      "status": "failed",
+      "error": "strict divergence parity refuses D-001 pending"
+    },
+    "e2e": {
+      "status": "failed",
+      "error": "strict e2e parity refuses intent_add_proxy pending"
+    },
+    "oracle": {
+      "status": "failed",
+      "error": "No such file or directory (os error 2)"
+    },
+    "matrix": {
+      "status": "checked",
+      "details": {
+        "families": 10,
+        "rows": 1529
+      }
+    }
+  }
+}

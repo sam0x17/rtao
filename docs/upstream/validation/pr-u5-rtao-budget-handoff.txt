@@ -1,0 +1,14 @@
+PR-U5's follow-up commit rejects an overflowing simulation budget before
+searching. The rtao-owned staged predict_first_reveal_block used the saturating
+result of max_simulation_blocks(), so reveal_period_epochs = u64::MAX with
+commit_epoch = 0 could begin an enormous search.
+
+Upstream now uses checked_mul(MAX_TEMPO_U64), checked_add(MAX_TEMPO_U64), and
+a checked addition for the last simulated block. Its portable regression
+expects BoundExceeded before iteration. The root-owned rtao epoch_schedule
+helper should carry this guard and regression. This worker changed no rtao
+product file.
+
+All six original safety regressions still pass; the final gate ran seven
+schedule tests and four clock/API tests. Large, nonoverflowing valid budgets
+still follow the existing linear model. No arbitrary search cap was added.

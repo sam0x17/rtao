@@ -1,0 +1,14 @@
+   Compiling rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+   Compiling rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+   Compiling rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+   Compiling rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+   Compiling rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+   Compiling rtao-btauth-two-provider-check v0.0.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/m2-btauth-two-providers)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.09s
+     Running /Users/sam/workspace/rtao/crates/rtao-btauth/tests/client.rs (target/execute-plan.6Ro0PC/build/debug/deps/signed_client_https-c5b72634dd3f1078)
+
+running 1 test
+test https_uses_explicit_ring_and_requires_the_fixture_root ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.41s
+

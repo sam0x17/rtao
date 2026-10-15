@@ -1,0 +1,40 @@
+
+warning: function `skipped` is never used
+ --> src/lib.rs:5:4
+  |
+5 | fn skipped() -> EpochScheduleState {
+  |    ^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `rtao-epoch-proof` (lib) generated 2 warnings (run `cargo fix --lib -p rtao-epoch-proof` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 34.56s
+     Running unittests src/lib.rs (target/execute-plan.6Ro0PC/build/debug/deps/rtao_epoch_proof-d8e0daf9cd6c1297)
+
+running 2 tests
+test scheduled_skip_and_lowered_tempo_safety_net ... FAILED
+test inclusion_counter_fire_assigns_post_coinbase_epoch ... FAILED
+
+failures:
+
+---- scheduled_skip_and_lowered_tempo_safety_net stdout ----
+
+thread 'scheduled_skip_and_lowered_tempo_safety_net' (12230154) panicked at src/lib.rs:18:5:
+assertion failed: should_run_epoch(&skipped(), 121)
+
+---- inclusion_counter_fire_assigns_post_coinbase_epoch stdout ----
+
+thread 'inclusion_counter_fire_assigns_post_coinbase_epoch' (12230153) panicked at src/lib.rs:36:5:
+assertion `left == right` failed
+  left: Ok(110)
+ right: Ok(126)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    inclusion_counter_fire_assigns_post_coinbase_epoch
+    scheduled_skip_and_lowered_tempo_safety_net
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

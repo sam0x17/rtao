@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "tag": "v478",
+  "force": true,
+  "isolated_candidate": true,
+  "python_execution": "designated github-hosted Ubuntu oracle/record lanes only",
+  "steps": [
+    "release finality/image provenance (reuse immutable committed pins for --force)",
+    "re-vendor watched tree and artifacts",
+    "extract",
+    "regen",
+    "oracle image/dump and offline verification",
+    "current-spec localnet recordings and Rust replay",
+    "conditional core manifest/lock/surface move",
+    "parity report --autobless with symbol/table/oracle proof",
+    "all pr-gates",
+    "pinned localnet e2e and core-oracle",
+    "adopt validated changes (pinned replay requires identical bytes)"
+  ]
+}

@@ -1,0 +1,295 @@
+--- a/xtask/src/supply.rs
++++ b/xtask/src/supply.rs
+@@ -1,4 +1,4 @@
+-//! Raw lockfile audits with one provenance-pinned, dormant-only lru exception.
++//! Raw lockfile audits with exact exceptions limited to dormant dependencies.
+ 
+ use std::{
+     collections::BTreeSet,
+@@ -15,6 +15,33 @@
+ const SOURCE: &str = "registry+https://github.com/rust-lang/crates.io-index";
+ const CHECKSUM: &str = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39";
+ const FIXED: &str = "0.18.2";
++const RUZSTD_ADVISORY: &str = "RUSTSEC-2026-0344";
++const RUZSTD_CHECKSUM: &str = "a7c1c839d570d835527c9a5e4db7cb2198683a988cb9d7293fc8674e6bd58fc8";
++
++struct DormantException {
++    name: &'static str,
++    version: &'static str,
++    checksum: &'static str,
++    advisory: &'static str,
++    fixed: &'static str,
++}
++
++const EXCEPTIONS: &[DormantException] = &[
++    DormantException {
++        name: "lru",
++        version: "0.16.4",
++        checksum: CHECKSUM,
++        advisory: ADVISORY,
++        fixed: FIXED,
++    },
++    DormantException {
++        name: "ruzstd",
++        version: "0.8.3",
++        checksum: RUZSTD_CHECKSUM,
++        advisory: RUZSTD_ADVISORY,
++        fixed: "0.9.1",
++    },
++];
+ // These existing maintenance notices remain visible and nonblocking. Any new
+ // notice requires investigation rather than inheriting a blanket allowance.
+ const MAINTENANCE: &[(&str, &str)] = &[
+@@ -55,16 +82,25 @@
+ }
+ 
+ impl Identity {
++    fn exception(&self) -> Option<&'static DormantException> {
++        EXCEPTIONS.iter().find(|rule| {
++            self.name == rule.name
++                && self.version == rule.version
++                && self.source.as_deref() == Some(SOURCE)
++                && self.checksum.as_deref() == Some(rule.checksum)
++        })
++    }
++
+     fn approved(&self) -> bool {
+-        self.name == "lru"
+-            && self.version == "0.16.4"
+-            && self.source.as_deref() == Some(SOURCE)
+-            && self.checksum.as_deref() == Some(CHECKSUM)
++        self.exception().is_some()
+     }
+ }
+ 
+ fn affected(name: &str, version: &str) -> Result<bool> {
+-    Ok(name == "lru" && semver::Version::parse(version)? < semver::Version::parse(FIXED)?)
++    let Some(rule) = EXCEPTIONS.iter().find(|rule| rule.name == name) else {
++        return Ok(false);
++    };
++    Ok(semver::Version::parse(version)? < semver::Version::parse(rule.fixed)?)
+ }
+ 
+ fn lock_identities(text: &str) -> Result<BTreeSet<Identity>> {
+@@ -97,7 +133,7 @@
+         semver::Version::parse(&identity.version)?;
+         ensure!(
+             !affected(&identity.name, &identity.version)? || identity.approved(),
+-            "unexpected affected lru lock entry: {identity:?}"
++            "unexpected affected dependency lock entry: {identity:?}"
+         );
+         ensure!(identities.insert(identity), "duplicate lockfile identity");
+     }
+@@ -180,14 +216,16 @@
+         );
+     }
+     // Validate the patch range even if upstream later recategorizes this advisory.
+-    if id == ADVISORY {
++    if let Some(rule) = EXCEPTIONS.iter().find(|rule| rule.advisory == id) {
+         ensure!(
+-            identity.approved(),
+-            "unapproved package for {ADVISORY}: {identity:?}"
++            identity
++                .exception()
++                .is_some_and(|exact| exact.advisory == id),
++            "unapproved package for {id}: {identity:?}"
+         );
+         ensure!(
+             kind.is_none() || kind == Some("unsound"),
+-            "unexpected {ADVISORY} warning category"
++            "unexpected {id} warning category"
+         );
+         object_keys(&value["versions"], &["patched", "unaffected"])?;
+         let patched = value["versions"]["patched"]
+@@ -196,9 +234,9 @@
+         ensure!(
+             patched.len() == 1
+                 && semver::VersionReq::parse(patched[0].as_str().context("invalid patch range")?)?
+-                    == semver::VersionReq::parse(">=0.18.2")?
++                    == semver::VersionReq::parse(&format!(">={}", rule.fixed))?
+                 && value["versions"]["unaffected"] == json!([]),
+-            "{ADVISORY} version ranges changed; investigate before extending the exception"
++            "{id} version ranges changed; investigate before extending the exception"
+         );
+         return Ok(true);
+     }
+@@ -428,8 +466,8 @@
+         }
+     }
+     ensure!(
+-        audit.exceptions <= 1,
+-        "multiple dormant lru exception findings"
++        audit.exceptions <= EXCEPTIONS.len(),
++        "too many dormant exception findings"
+     );
+     Ok(audit)
+ }
+@@ -446,7 +484,7 @@
+         semver::Version::parse(version).context("invalid cargo tree package version")?;
+         ensure!(
+             !affected(name, version)?,
+-            "affected lru {version} is active in a shipped or test graph"
++            "affected {name} {version} is active in a shipped or test graph"
+         );
+         packages.insert(name.to_owned());
+     }
+@@ -632,11 +670,11 @@
+     Ok(selections)
+ }
+ 
+-/// Run unfiltered audits, then prove the only exception is dormant everywhere.
++/// Run unfiltered audits, then prove each exact exception is dormant everywhere.
+ pub(crate) fn run(args: Vec<String>) -> Result<()> {
+     if args == ["--help"] || args == ["-h"] {
+         println!(
+-            "cargo xtask supply\nRetains raw cargo-audit text/JSON and graph evidence under RTAO_TEMP_ROOT/ci/supply-<pid>.\nOnly provenance-pinned dormant lru RUSTSEC-2026-0253 and known maintenance notices may pass; tool/schema errors and activation block."
++            "cargo xtask supply\nRetains raw cargo-audit text/JSON and graph evidence under RTAO_TEMP_ROOT/ci/supply-<pid>.\nOnly exact dormant lru RUSTSEC-2026-0253, ruzstd RUSTSEC-2026-0344 and known maintenance notices may pass; tool/schema errors and activation block."
+         );
+         return Ok(());
+     }
+@@ -746,7 +784,7 @@
+         .collect::<Result<Vec<_>>>()?;
+     for (label, audit) in ["workspace", "fuzz"].iter().zip(audits) {
+         println!(
+-            "supply: {label}: {} exact dormant {ADVISORY} finding; {} retained maintenance notices; active affected lru absent from every checked graph",
++            "supply: {label}: {} exact dormant advisory findings; {} retained maintenance notices; active affected dependencies absent from every checked graph",
+             audit.exceptions, audit.maintenance
+         );
+     }
+@@ -1000,8 +1038,136 @@
+                     .iter()
+                     .any(|selection| selection.roots == [package.to_owned()]
+                         && selection.args.contains(&feature.to_owned()))
++            );
++        }
++        Ok(())
++    }
++
++    fn ruzstd_lock() -> String {
++        format!(
++            "[[package]]\nname = 'ruzstd'\nversion = '0.8.3'\nsource = '{SOURCE}'\nchecksum = '{RUZSTD_CHECKSUM}'\n"
++        )
++    }
++
++    fn combined_report() -> Json {
++        let mut report = report();
++        report["lockfile"]["dependency-count"] = json!(2);
++        let mut ruzstd = finding(None);
++        ruzstd["package"]["name"] = json!("ruzstd");
++        ruzstd["package"]["version"] = json!("0.8.3");
++        ruzstd["package"]["checksum"] = json!(RUZSTD_CHECKSUM);
++        ruzstd["advisory"]["id"] = json!(RUZSTD_ADVISORY);
++        ruzstd["advisory"]["package"] = json!("ruzstd");
++        ruzstd["versions"]["patched"] = json!([">=0.9.1"]);
++        report["vulnerabilities"] = json!({"found": true, "count": 1, "list": [ruzstd]});
++        report
++    }
++
++    #[test]
++    fn exact_dormant_ruzstd_keeps_raw_failure_and_the_existing_lru_rule() -> Result<()> {
++        let locks = lock_identities(&format!("{}{}", lock(), ruzstd_lock()))?;
++        let report = combined_report();
++        ensure!(
++            validate_audit(&report, &locks)?
++                == Audit {
++                    exceptions: 2,
++                    maintenance: 0,
++                    failing_status: true,
++                }
++        );
++        check_graph(
++            "rtao v0.1.0\n\nlru v0.18.2\nruzstd v0.9.1\n",
++            &["rtao".into()],
++        )?;
++        #[cfg(unix)]
++        {
++            let terminal = format!(
++                "      Loaded 1300 security advisories\n    Scanning Cargo.lock for vulnerabilities (2 crate dependencies)\nID:        {RUZSTD_ADVISORY}\nID:        {ADVISORY}\nerror: 1 vulnerability found!\nerror: 1 denied warning found!\n"
+             );
++            ensure!(
++                raw_audit(1, &terminal, &report)?
++                    .validate(&locks)?
++                    .exceptions
++                    == 2
++            );
++            ensure!(raw_audit(0, &terminal, &report)?.validate(&locks).is_err());
+         }
+         Ok(())
+     }
++
++    #[test]
++    fn ruzstd_activation_and_unknown_affected_lock_entries_block() -> Result<()> {
++        for version in ["0.7.0", "0.8.2", "0.8.3", "0.9.0"] {
++            let graph = format!("rtao v0.1.0\nruzstd v{version}\n");
++            ensure!(check_graph(&graph, &["rtao".into()]).is_err());
++        }
++        for changed in [
++            ruzstd_lock().replace("0.8.3", "0.8.2"),
++            ruzstd_lock().replace("0.8.3", "0.9.0"),
++            ruzstd_lock().replace(SOURCE, "git+https://example.test/ruzstd#1234"),
++            ruzstd_lock().replace(RUZSTD_CHECKSUM, "changed"),
++            ruzstd_lock().replace(&format!("checksum = '{RUZSTD_CHECKSUM}'\n"), ""),
++            format!("{}{}", ruzstd_lock(), ruzstd_lock()),
++        ] {
++            ensure!(lock_identities(&changed).is_err());
++        }
++        Ok(())
++    }
++
++    #[test]
++    fn ruzstd_exception_rejects_other_advisories_identities_ranges_and_filters() -> Result<()> {
++        let locks = lock_identities(&format!("{}{}", lock(), ruzstd_lock()))?;
++        let baseline = combined_report();
++        let mut variants = Vec::new();
++        for (section, key, changed) in [
++            ("advisory", "id", "RUSTSEC-2099-9999"),
++            ("advisory", "id", ADVISORY),
++            ("advisory", "package", "lru"),
++            ("package", "name", "unexpected"),
++            ("package", "version", "0.8.2"),
++            ("package", "source", "git+https://example.test/ruzstd#1234"),
++            ("package", "checksum", "changed"),
++        ] {
++            let mut report = baseline.clone();
++            report["vulnerabilities"]["list"][0][section][key] = json!(changed);
++            variants.push(report);
++        }
++        for (key, changed) in [
++            ("patched", json!([">=0.9.0"])),
++            ("patched", json!([">=0.9.1", ">=1.0.0"])),
++            ("unaffected", json!(["<0.1.0"])),
++        ] {
++            let mut report = baseline.clone();
++            report["vulnerabilities"]["list"][0]["versions"][key] = changed;
++            variants.push(report);
++        }
++        for (key, changed) in [
++            ("ignore", json!([RUZSTD_ADVISORY])),
++            ("severity", json!("high")),
++            ("target_os", json!(["linux"])),
++        ] {
++            let mut report = baseline.clone();
++            report["settings"][key] = changed;
++            variants.push(report);
++        }
++        let mut cross_identity = baseline.clone();
++        cross_identity["vulnerabilities"]["list"][0]["advisory"]["id"] = json!(ADVISORY);
++        cross_identity["vulnerabilities"]["list"][0]["versions"]["patched"] = json!([">=0.18.2"]);
++        variants.push(cross_identity);
++        let mut cross_identity = baseline.clone();
++        cross_identity["warnings"]["unsound"][0]["advisory"]["id"] = json!(RUZSTD_ADVISORY);
++        cross_identity["warnings"]["unsound"][0]["versions"]["patched"] = json!([">=0.9.1"]);
++        variants.push(cross_identity);
++        let mut duplicate = baseline.clone();
++        duplicate["vulnerabilities"]["count"] = json!(2);
++        duplicate["vulnerabilities"]["list"] = json!([
++            baseline["vulnerabilities"]["list"][0].clone(),
++            baseline["vulnerabilities"]["list"][0].clone(),
++        ]);
++        variants.push(duplicate);
++        for report in variants {
++            ensure!(validate_audit(&report, &locks).is_err());
++        }
++        Ok(())
++    }
+ }

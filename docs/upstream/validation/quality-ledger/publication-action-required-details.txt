@@ -1,0 +1,9 @@
+
+X fix/tao-balance Verify PRs to main Zondax/ledger-polkadot#296 · 38592915868
+Triggered via pull_request about 12 minutes ago
+
+JOBS
+
+
+To see what failed, try: gh run view 38592915868 --log-failed
+View this run on GitHub: https://github.com/Zondax/ledger-polkadot/actions/runs/38592915868

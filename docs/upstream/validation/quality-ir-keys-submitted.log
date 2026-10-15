@@ -1,0 +1,390 @@
+c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a  Cargo.lock
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 6.45s
+     Running tests/metadata_ir.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/metadata_ir-e7ba9a899b4ceba8)
+
+running 8 tests
+test v14_ir_has_no_runtime_api_signatures_or_invented_versions ... ok
+test api_versions_are_explicit_and_apply_atomically ... ok
+test recursive_type_graphs_terminate_without_rejecting_valid_references ... ok
+test dangling_nested_type_and_error_field_references_are_rejected ... ok
+test ir_keeps_python_fields_and_adds_key_event_and_api_identities ... ok
+test v16_versions_require_the_same_api_and_method_sets ... ok
+test invalid_metadata_references_and_shapes_fail_closed ... ok
+test pinned_golden_metadata_exports_every_real_storage_and_api_method ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/review_ir_independent.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/review_ir_independent-841553de2b824914)
+
+running 5 tests
+test cycles_are_safe_but_do_not_hide_other_bad_edges ... ok
+test single_tuple_key_stays_whole_and_plain_storage_has_no_key_components ... ok
+test every_old_binding_field_matches_on_entire_pinned_golden ... ok
+test v16_all_api_guards_are_atomic_and_allow_only_method_reordering ... ok
+test every_reachable_reference_kind_rejects_dangling_id ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `share-pool` (manifest) generated 4 warnings
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core-wasm` (manifest) generated 4 warnings
+warning: common/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-runtime-common` (manifest) generated 4 warnings
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor` (manifest) generated 4 warnings
+warning: chain-extensions/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-chain-extensions` (manifest) generated 4 warnings
+warning: pallets/proxy/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-proxy` (manifest) generated 4 warnings
+warning: Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor` (manifest) generated 4 warnings
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-swap-interface` (manifest) generated 4 warnings
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-crowdloan` (manifest) generated 4 warnings
+warning: pallets/swap/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-swap` (manifest) generated 4 warnings
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-custom-rpc` (manifest) generated 4 warnings
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-custom-rpc-runtime-api` (manifest) generated 4 warnings
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-transaction-fee` (manifest) generated 4 warnings
+warning: node/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `node-subtensor` (manifest) generated 4 warnings
+warning: pallets/utility/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-utility` (manifest) generated 4 warnings
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-admin-utils` (manifest) generated 4 warnings
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-limit-orders` (manifest) generated 4 warnings
+warning: support/linting/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-linting` (manifest) generated 4 warnings
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core-py` (manifest) generated 4 warnings
+warning: precompiles/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-precompiles` (manifest) generated 4 warnings
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-alpha-assets` (manifest) generated 4 warnings
+warning: runtime/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `node-subtensor-runtime` (manifest) generated 4 warnings
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `safe-math` (manifest) generated 4 warnings
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core` (manifest) generated 4 warnings
+warning: support/macros/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-macros` (manifest) generated 4 warnings
+warning: pallets/commitments/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-commitments` (manifest) generated 4 warnings
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 26.62s
+     Running tests/metadata_ir.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/metadata_ir-7265ec136c78d93f)
+
+running 8 tests
+test v14_ir_has_no_runtime_api_signatures_or_invented_versions ... ok
+test recursive_type_graphs_terminate_without_rejecting_valid_references ... ok
+test api_versions_are_explicit_and_apply_atomically ... ok
+test dangling_nested_type_and_error_field_references_are_rejected ... ok
+test v16_versions_require_the_same_api_and_method_sets ... ok
+test ir_keeps_python_fields_and_adds_key_event_and_api_identities ... ok
+test invalid_metadata_references_and_shapes_fail_closed ... ok
+test pinned_golden_metadata_exports_every_real_storage_and_api_method ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/review_ir_independent.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/review_ir_independent-21e8ce068ac563f4)
+
+running 5 tests
+test cycles_are_safe_but_do_not_hide_other_bad_edges ... ok
+test single_tuple_key_stays_whole_and_plain_storage_has_no_key_components ... ok
+test every_old_binding_field_matches_on_entire_pinned_golden ... ok
+test v16_all_api_guards_are_atomic_and_allow_only_method_reordering ... ok
+test every_reachable_reference_kind_rejects_dangling_id ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a  Cargo.lock
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 5.69s
+     Running tests/password_environment.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/password_environment-60e9256f3cd06850)
+
+running 4 tests
+test decoder_retains_whitespace_and_error_boundaries ... ok
+test empty_encoding_key_retains_the_legacy_error ... ok
+test encoding_does_not_create_or_replace_a_process_variable ... ok
+test encoding_matches_legacy_ascii_unicode_and_empty_vectors ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/review_keys_independent.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/review_keys_independent-5a736c9eeeb31963)
+
+running 5 tests
+test guarded_preallocation_covers_both_success_and_partial_error_without_growth ... ok
+test base64_invalid_suffix_can_leave_partial_decoded_secret_bytes ... ok
+test independent_legacy_codec_matches_all_utf8_lengths_and_keys ... ok
+test strict_agrees_with_actual_pinned_substrate_algorithms ... ok
+
+running 1 test
+test pure_encoding_preserves_a_preexisting_child_environment_value ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+test pure_encoding_preserves_a_preexisting_child_environment_value ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verify_strict.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/verify_strict-10af0b8a9eea638e)
+
+running 2 tests
+test malformed_encoding_matches_the_core_error_boundary ... ok
+test raw_signatures_verify_and_wrapped_signatures_are_rejected ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+warning: Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor` (manifest) generated 4 warnings
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/transaction-fee/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-transaction-fee` (manifest) generated 4 warnings
+warning: pallets/utility/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/utility/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-utility` (manifest) generated 4 warnings
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/admin-utils/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-admin-utils` (manifest) generated 4 warnings
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/limit-orders/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-limit-orders` (manifest) generated 4 warnings
+warning: support/linting/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: support/linting/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-linting` (manifest) generated 4 warnings
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core-py/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core-py` (manifest) generated 4 warnings
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/alpha-assets/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-alpha-assets` (manifest) generated 4 warnings
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/safe-math/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `safe-math` (manifest) generated 4 warnings
+warning: common/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: common/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-runtime-common` (manifest) generated 4 warnings
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core` (manifest) generated 4 warnings
+warning: chain-extensions/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: chain-extensions/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-chain-extensions` (manifest) generated 4 warnings
+warning: support/macros/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: support/macros/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-macros` (manifest) generated 4 warnings
+warning: pallets/commitments/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/commitments/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-commitments` (manifest) generated 4 warnings
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/share-pool/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `share-pool` (manifest) generated 4 warnings
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: sdk/bittensor-core-wasm/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `bittensor-core-wasm` (manifest) generated 4 warnings
+warning: node/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: node/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `node-subtensor` (manifest) generated 4 warnings
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor` (manifest) generated 4 warnings
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/rpc/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-custom-rpc` (manifest) generated 4 warnings
+warning: pallets/proxy/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/proxy/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-proxy` (manifest) generated 4 warnings
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: primitives/swap-interface/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-swap-interface` (manifest) generated 4 warnings
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/subtensor/runtime-api/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-custom-rpc-runtime-api` (manifest) generated 4 warnings
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/crowdloan/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-crowdloan` (manifest) generated 4 warnings
+warning: runtime/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: runtime/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `node-subtensor-runtime` (manifest) generated 4 warnings
+warning: precompiles/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: precompiles/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `subtensor-precompiles` (manifest) generated 4 warnings
+warning: pallets/swap/Cargo.toml: `lints.clippy.arithmetic-side-effects` is deprecated in favor of `lints.clippy.arithmetic_side_effects` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.expect-used` is deprecated in favor of `lints.clippy.expect_used` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.indexing-slicing` is deprecated in favor of `lints.clippy.indexing_slicing` and will not work in a future edition
+warning: pallets/swap/Cargo.toml: `lints.clippy.unwrap-used` is deprecated in favor of `lints.clippy.unwrap_used` and will not work in a future edition
+warning: `pallet-subtensor-swap` (manifest) generated 4 warnings
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 5.04s
+     Running tests/password_environment.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/password_environment-6f1dbee48eb48207)
+
+running 4 tests
+test empty_encoding_key_retains_the_legacy_error ... ok
+test encoding_does_not_create_or_replace_a_process_variable ... ok
+test decoder_retains_whitespace_and_error_boundaries ... ok
+test encoding_matches_legacy_ascii_unicode_and_empty_vectors ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/review_keys_independent.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/review_keys_independent-dd3575812a5b8eeb)
+
+running 5 tests
+test guarded_preallocation_covers_both_success_and_partial_error_without_growth ... ok
+test base64_invalid_suffix_can_leave_partial_decoded_secret_bytes ... ok
+test independent_legacy_codec_matches_all_utf8_lengths_and_keys ... ok
+test strict_agrees_with_actual_pinned_substrate_algorithms ... ok
+
+running 1 test
+test pure_encoding_preserves_a_preexisting_child_environment_value ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+test pure_encoding_preserves_a_preexisting_child_environment_value ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verify_strict.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/verify_strict-89d328893857fc66)
+
+running 2 tests
+test malformed_encoding_matches_the_core_error_boundary ... ok
+test raw_signatures_verify_and_wrapped_signatures_are_rejected ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

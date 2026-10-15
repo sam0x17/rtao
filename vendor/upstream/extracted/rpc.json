@@ -1,0 +1,165 @@
+{
+  "format": 1,
+  "provenance": {
+    "blob": "132871ca8047858efc2d6c0991dcf818312b5303",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "sdk/python/bittensor/_transport/rpc.py",
+    "tag": "v478"
+  },
+  "values": {
+    "POLICY_BODY_LIMIT": {
+      "end_line": 177,
+      "expression": "inline diagnostic bound",
+      "line": 177,
+      "value": 4096
+    },
+    "POLICY_DETAIL_LIMIT": {
+      "end_line": 187,
+      "expression": "inline diagnostic bound",
+      "line": 187,
+      "uses": [
+        {
+          "end_line": 187,
+          "line": 187
+        },
+        {
+          "end_line": 212,
+          "line": 212
+        },
+        {
+          "end_line": 237,
+          "line": 237
+        },
+        {
+          "end_line": 641,
+          "line": 641
+        }
+      ],
+      "value": 500
+    },
+    "POLICY_METADATA_LIMIT": {
+      "end_line": 170,
+      "expression": "inline diagnostic bound",
+      "line": 170,
+      "uses": [
+        {
+          "end_line": 170,
+          "line": 170
+        },
+        {
+          "end_line": 224,
+          "line": 224
+        },
+        {
+          "end_line": 226,
+          "line": 226
+        },
+        {
+          "end_line": 227,
+          "line": 227
+        }
+      ],
+      "value": 200
+    },
+    "RpcSession.__init__.connect_factory": {
+      "end_line": 366,
+      "line": 316,
+      "value": null
+    },
+    "RpcSession.__init__.fallback_urls": {
+      "end_line": 366,
+      "line": 316,
+      "value": null
+    },
+    "RpcSession.__init__.max_retries": {
+      "end_line": 366,
+      "line": 316,
+      "value": 5
+    },
+    "RpcSession.__init__.response_timeout": {
+      "end_line": 366,
+      "line": 316,
+      "value": 60.0
+    },
+    "RpcSession.__init__.retry_forever": {
+      "end_line": 366,
+      "line": 316,
+      "value": false
+    },
+    "_CLOSED_IDS_REMEMBERED": {
+      "end_line": 299,
+      "line": 299,
+      "value": 256
+    },
+    "_HANDSHAKE_TIMEOUT": {
+      "end_line": 60,
+      "line": 60,
+      "value": 10.0
+    },
+    "_MAX_EARLY_BUFFERS": {
+      "end_line": 300,
+      "line": 300,
+      "value": 64
+    },
+    "_NON_IDEMPOTENT_METHODS": {
+      "end_line": 66,
+      "line": 66,
+      "value": {
+        "frozenset": [
+          "author_submitAndWatchExtrinsic",
+          "author_submitExtrinsic"
+        ]
+      }
+    },
+    "_POLICY_RPC_ERROR_CODES": {
+      "end_line": 53,
+      "line": 53,
+      "value": {
+        "frozenset": [
+          -32004,
+          -32005
+        ]
+      }
+    },
+    "_POLICY_RPC_ERROR_MESSAGES": {
+      "end_line": 59,
+      "line": 57,
+      "value": {
+        "dict": [
+          [
+            -32004,
+            {
+              "frozenset": [
+                "storage work rate limit exceeded"
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    "_POLICY_RPC_METADATA_KEYS": {
+      "end_line": 56,
+      "line": 54,
+      "value": {
+        "frozenset": [
+          "policy",
+          "reason",
+          "retryAfter",
+          "retryAfterMs",
+          "retry_after",
+          "retry_after_ms"
+        ]
+      }
+    },
+    "_STATE_DISCARDED_NEEDLE": {
+      "end_line": 52,
+      "line": 52,
+      "value": "State already discarded for "
+    },
+    "_SUBSCRIPTION_QUEUE_MAXSIZE": {
+      "end_line": 70,
+      "line": 70,
+      "value": 2048
+    }
+  }
+}

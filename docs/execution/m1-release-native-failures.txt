@@ -1,0 +1,40 @@
+────────────
+     Summary [  24.869s] 633 tests run: 631 passed, 2 failed, 2 skipped
+        FAIL [   0.031s] (159/633) rtao-core::lock single_bls_source_matches_core_pin
+  stdout ───
+
+    running 1 test
+    test single_bls_source_matches_core_pin ... FAILED
+
+    failures:
+
+    failures:
+        single_bls_source_matches_core_pin
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'single_bls_source_matches_core_pin' (11805424) panicked at crates/rtao-core/tests/lock.rs:41:5:
+    assertion `left == right` failed: exactly one BLS implementation must define timelock bytes
+      left: 2
+     right: 1
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.013s] (466/633) xtask::bin/xtask compat::tests::canary_records_actual_revision_and_keeps_release_provenance_separate
+  stdout ───
+
+    running 1 test
+    test compat::tests::canary_records_actual_revision_and_keeps_release_provenance_separate ... FAILED
+
+    failures:
+
+    failures:
+        compat::tests::canary_records_actual_revision_and_keeps_release_provenance_separate
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 155 filtered out; finished in 0.00s
+
+  stderr ───
+    Error: missing evidence string tag
+
+error: test run failed

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "helper_version": "0.1.0",
+  "network": "test",
+  "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
+  "root": "/Users/sam/.local/share/rtao/testnet-soak",
+  "wallet_name": "m2-soak",
+  "phase": "prepared",
+  "password_path": "/Users/sam/.local/share/rtao/testnet-soak/recovery/coldkey.password",
+  "password_created": true,
+  "coldkey": {
+    "state": "complete",
+    "secret_path": "/Users/sam/.local/share/rtao/testnet-soak/wallets/m2-soak/coldkey",
+    "public_path": "/Users/sam/.local/share/rtao/testnet-soak/wallets/m2-soak/coldkeypub.txt",
+    "address": "5G3pwJ3ptR4x83zuKzFvTC2TA8WeivVtP1NhgxDxPmi2RAvX"
+  },
+  "validator": {
+    "state": "complete",
+    "secret_path": "/Users/sam/.local/share/rtao/testnet-soak/wallets/m2-soak/hotkeys/validator",
+    "public_path": "/Users/sam/.local/share/rtao/testnet-soak/wallets/m2-soak/hotkeys/validatorpub.txt",
+    "address": "5Hj38RZ9MsP7JdxPHpbu2vxPyQgUXnK6hVNBoSovJgfUg3qK"
+  },
+  "miner": {
+    "state": "complete",
+    "secret_path": "/Users/sam/.local/share/rtao/testnet-soak/wallets/m2-soak/hotkeys/miner",
+    "public_path": "/Users/sam/.local/share/rtao/testnet-soak/wallets/m2-soak/hotkeys/minerpub.txt",
+    "address": "5DXkuFf4Fw7VV4fCx3briJTQ9YUtJZqfmf62FRDVX5rJaWmK"
+  }
+}

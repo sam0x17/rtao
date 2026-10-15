@@ -1,0 +1,26 @@
+2026-10-14 Mac Studio verification, Rust/Cargo 1.99.0
+
+cargo build --offline --manifest-path <task-root>/tmp/endpoint-quotas/Cargo.toml
+exit 0; isolated Rust read-only observation fixture
+
+cargo clippy --locked --manifest-path <task-root>/tmp/endpoint-quotas/Cargo.toml -- -D warnings
+exit 0; after equivalent conditional-style fix
+
+cargo test --locked -p rtao-testkit --test rpc --features rpc-rate-limit ratelimit_paces_public_presets
+1 passed, no failures/ignored; 2.44s
+
+cargo test --locked -p rtao-testkit --test rpc --features rpc-rate-limit rate_bucket_prioritizes_submissions_and_drops_cancelled_queue_entries
+1 passed, no failures/ignored; 1.08s
+
+cargo test --locked -p rtao-testkit --test rpc --features rpc-rate-limit
+39 passed, no failures/ignored; 4.41s
+
+cargo clippy --locked -p rtao-rpc --all-features --all-targets -- -D warnings
+exit 0
+
+cargo clippy --locked -p rtao-testkit --test rpc --features rpc-rate-limit -- -D warnings
+exit 0; 6.35s
+
+Raw validation: seven HTTP101 upgrades, all 252 response IDs/results, 12 calls/method/endpoint,
+245 intervals >=1000ms, zero errors/policy refusals/timeouts/server closes.
+No Python execution or chain writes.

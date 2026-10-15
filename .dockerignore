@@ -1,0 +1,8 @@
+.git
+.local
+target
+**/target
+docs/plan/bench
+**/.venv
+**/__pycache__
+**/.DS_Store

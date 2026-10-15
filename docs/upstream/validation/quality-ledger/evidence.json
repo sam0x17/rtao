@@ -1,0 +1,105 @@
+{
+  "subtensor_pr": {
+    "head": "eafe84e8a97376e7902118ebb204b9c53e3df55e",
+    "msrv": "1.89.0",
+    "all_feature_library": {
+      "passed": 74,
+      "ignored": 1
+    },
+    "independent_public_api_and_generator": {
+      "passed": 3
+    },
+    "initial_shared_target_results_require_unique_wrapper_rerun": false,
+    "final_current_and_msrv_wrapper_checks": "passed",
+    "unique_wrapper_msrv_public_tests": {
+      "passed": 3,
+      "binary": "ledger_quality-27d0a6babe0f4ddb"
+    },
+    "unique_wrapper_current_public_tests": {
+      "passed": 3,
+      "compiler": "1.99.0",
+      "binary": "ledger_quality-52ecb5bd7080ff19"
+    },
+    "unique_wrapper_msrv_library_tests": {
+      "passed": 74,
+      "ignored": 1,
+      "binary": "bittensor_core-8ea32f600bb7592a"
+    },
+    "unique_wrapper_current_library_tests": {
+      "passed": 74,
+      "ignored": 1,
+      "compiler": "1.99.0"
+    },
+    "wrapper": "target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3242.sh",
+    "ratio_fixture_identical_on_current_and_msrv": true
+  },
+  "zondax": {
+    "head": "9edd5fa5f9e609046e6bdd0f5e77239a7cf6f20d",
+    "posted_head": {
+      "passed": 5603,
+      "failed": 0
+    },
+    "baseline_with_new_vectors": {
+      "passed": 5597,
+      "failed": 6
+    },
+    "ratio_regression_on_posted_head": {
+      "passed": 0,
+      "failed": 1,
+      "incorrect_screens": 8
+    },
+    "local_conservative_fix": {
+      "passed": 5604,
+      "failed": 0
+    },
+    "self_contained_final_regression": {
+      "passed": 1,
+      "failed": 0
+    },
+    "published": true,
+    "restored_direct_native_build": {
+      "passed": 5604,
+      "failed": 0,
+      "cmake_executed": false,
+      "python_executed": false,
+      "raw_log_sha256": "a369f21ec9a07fc710d197d8f20896b726e8af8dabeacffc7157cc05984e7297"
+    },
+    "corrected_published_head": "8645ebdc31d188a722e22396d26fb52144246da4",
+    "committed_head_pre_push": {
+      "passed": 5604,
+      "failed": 0,
+      "python": false,
+      "cmake": false,
+      "hunter": false,
+      "actor": "sam0x17",
+      "normal_push": true,
+      "hook_bypass": false
+    },
+    "posted_descriptions_verified": true,
+    "published_patch_sha256": "32dea297f4642bd574e4fa6ee0cd3580a576632d66ef99ea74784cedf83098b5",
+    "upstream_workflows": "7 action_required; no job results"
+  },
+  "limits": {
+    "physical_device": false,
+    "fresh_emulator": false,
+    "fresh_network_transaction_validation": false,
+    "optional_tao_balance_fixture": false
+  },
+  "workflow_violation": {
+    "local_python_helper_execution": true,
+    "details": "python-workflow-violation.json"
+  },
+  "housekeeping": {
+    "accidental_home_hunter_cache_removed": true,
+    "details": "home-hunter-cleanup.json",
+    "restored_live_zondax_source": false,
+    "prior_cpp_build_removed_before_root_keep_request": true,
+    "restored_live_cpp_build": false,
+    "restored_live_native_dependencies": false,
+    "owned_publication_worktree_build_dependencies_tools_removed": true,
+    "retained_live_dependencies": [
+      "root-owned Subtensor PR3242 checkout",
+      "shared Rust/Git caches"
+    ]
+  }
+}

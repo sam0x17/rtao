@@ -1,0 +1,30 @@
+{
+  "completed_at": "2026-10-14T11:40:23Z",
+  "removed_root": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-filings",
+  "removed_regular_files": 12344,
+  "removed_directories": 1711,
+  "removed_symlinks": 3,
+  "regular_file_bytes": 566281754,
+  "final_process_matches": 0,
+  "open_files_under_root": 0,
+  "lsof_limitation": "An unrelated SMB backup mount was unavailable; the scoped local-tree query returned no open files.",
+  "gui_launchd_matches": 0,
+  "system_launchd_matches": 0,
+  "configuration_references": 0,
+  "symlinks_inspected": 219,
+  "environment_and_git_dependency_files_inspected": 122,
+  "external_dependency_references": 0,
+  "audit_errors": 0,
+  "additional_cargo_git_external_references": 0,
+  "removed_notes": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-python-discovery-incident.txt",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-epoch-budget-root-note.txt"
+  ],
+  "retained_live_dependencies": [
+    "shared task pin cache",
+    "shared task build cache",
+    "shared task tools",
+    "other agents task directories"
+  ],
+  "preserved_user_state": "No task-created wallet, validator/miner state, model asset, private dataset or recovery journal was present."
+}

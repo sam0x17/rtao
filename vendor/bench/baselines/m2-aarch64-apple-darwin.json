@@ -1,0 +1,416 @@
+{
+  "schema": 1,
+  "context": {
+    "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: aarch64-apple-darwin\nrelease: 1.99.0\nLLVM version: 23.1.1",
+    "os": "macos",
+    "machine": "Apple M5 Max",
+    "sample_size": 30,
+    "measurement_seconds": 1.0,
+    "warmup_seconds": 1.0,
+    "criterion_version": "0.7.0",
+    "fixtures_sha256": {
+      "vendor/bench/finney-1.scale": "14fb54add55d23b005093a1fc7b89149df497331a53f83bc4bd2e250524b854d",
+      "vendor/bench/finney-3.scale": "8bc11a5d31b67cd75cb92c6ff302b5641d3fc36098fc193cbe3375545f7f06bf",
+      "vendor/bench/finney-64.scale": "b37cc80d8df9c518a3d356ecbc157be1209afee4b0608f518dc7067e8458eba3",
+      "vendor/bench/synthetic-2500.scale": "1bf16bda091a8e66433135e8df80ccd657e68d6f219fe8091f79ec05c2a12a5f",
+      "vendor/metadata/finney/478.v15.scale": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502"
+    },
+    "rustflags": "",
+    "profile": "release",
+    "cargo_features": [
+      "rtao-intents/weights"
+    ],
+    "suites": [
+      [
+        "rtao-core-ext",
+        "protocol"
+      ],
+      [
+        "rtao-runtime",
+        "runtime"
+      ],
+      [
+        "rtao-metagraph",
+        "metagraph"
+      ],
+      [
+        "rtao-btauth",
+        "btauth"
+      ],
+      [
+        "rtao-intents",
+        "weights"
+      ]
+    ]
+  },
+  "source": {
+    "commit": "7efef6f68eedc7cfb85e6e9d0a5ae3da7c8d442a",
+    "dirty": true,
+    "snapshot_sha256": "f6623effee5c6ecd5afc6fc45717fbe0c2015b14a6809a47ef65a3703a89e273",
+    "core_pin_sha256": "0ce662b29ec6f7b8699f4c6411adbd0b92de36c99295c900c6117761e02aecdf",
+    "lock_sha256": "aef7e67e83507fcb75a886c1fba8db9822954a73295734b3712f7d7d42b82dd9"
+  },
+  "measured_unix_seconds": 1791971891,
+  "benchmarks": {
+    "btauth/authenticate_ed25519": {
+      "mean_ns": 32278.107212255607,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 31956.805783840107,
+        "upper_bound": 32600.032493504037
+      },
+      "median_ns": 32266.503921568627,
+      "samples": 30
+    },
+    "btauth/authenticate_sr25519": {
+      "mean_ns": 35578.42358702964,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 34915.55129516681,
+        "upper_bound": 36311.049222129586
+      },
+      "median_ns": 35106.14713541667,
+      "samples": 30
+    },
+    "btauth/sign_ed25519": {
+      "mean_ns": 19367.49635559086,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 19134.261469719935,
+        "upper_bound": 19601.468149343993
+      },
+      "median_ns": 19460.395461309523,
+      "samples": 30
+    },
+    "btauth/sign_sr25519": {
+      "mean_ns": 21167.463987992855,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 20910.578672300137,
+        "upper_bound": 21440.849794936144
+      },
+      "median_ns": 21047.35231023102,
+      "samples": 30
+    },
+    "btauth/verify_and_commit_ed25519": {
+      "mean_ns": 31929.271660342267,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 31626.530268274346,
+        "upper_bound": 32242.807158863707
+      },
+      "median_ns": 31854.634615384617,
+      "samples": 30
+    },
+    "btauth/verify_and_commit_sr25519": {
+      "mean_ns": 33236.923875211636,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 32965.04902800019,
+        "upper_bound": 33525.37107381598
+      },
+      "median_ns": 33154.86815044859,
+      "samples": 30
+    },
+    "extrinsic/sign_and_assemble": {
+      "mean_ns": 11486.047020386251,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 11366.36344001348,
+        "upper_bound": 11601.021581510513
+      },
+      "median_ns": 11523.014010446077,
+      "samples": 30
+    },
+    "metagraph_decode/dynamic/finney-1": {
+      "mean_ns": 343710.4485536822,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 341572.71431712335,
+        "upper_bound": 345762.9966239719
+      },
+      "median_ns": 344221.70238095237,
+      "samples": 30
+    },
+    "metagraph_decode/dynamic/finney-3": {
+      "mean_ns": 339603.9382155903,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 337704.731162355,
+        "upper_bound": 341435.03345942934
+      },
+      "median_ns": 342627.5841269841,
+      "samples": 30
+    },
+    "metagraph_decode/dynamic/finney-64": {
+      "mean_ns": 360923.67392555566,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 357539.9829142598,
+        "upper_bound": 364226.11179924366
+      },
+      "median_ns": 359902.69886363635,
+      "samples": 30
+    },
+    "metagraph_decode/dynamic/synthetic-2500": {
+      "mean_ns": 3576535.846622963,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 3480686.141732952,
+        "upper_bound": 3663359.350143759
+      },
+      "median_ns": 3661807.25,
+      "samples": 30
+    },
+    "metagraph_decode/typed/finney-1": {
+      "mean_ns": 1267549.9682082513,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1252471.1170494356,
+        "upper_bound": 1284688.9782055006
+      },
+      "median_ns": 1265001.7215909092,
+      "samples": 30
+    },
+    "metagraph_decode/typed/finney-3": {
+      "mean_ns": 1190136.7512590906,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1182708.2908617253,
+        "upper_bound": 1198567.306429874
+      },
+      "median_ns": 1180714.528508772,
+      "samples": 30
+    },
+    "metagraph_decode/typed/finney-64": {
+      "mean_ns": 1323332.5181300272,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1308872.2775078763,
+        "upper_bound": 1337128.6316589913
+      },
+      "median_ns": 1334501.5416666665,
+      "samples": 30
+    },
+    "metagraph_decode/typed/synthetic-2500": {
+      "mean_ns": 11481577.416666666,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 10605555.006666666,
+        "upper_bound": 12346726.947916668
+      },
+      "median_ns": 11196536.375,
+      "samples": 30
+    },
+    "metagraph_decode/view/finney-1": {
+      "mean_ns": 157671.3268786386,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 155840.74417317906,
+        "upper_bound": 159390.76454467842
+      },
+      "median_ns": 159279.75,
+      "samples": 30
+    },
+    "metagraph_decode/view/finney-3": {
+      "mean_ns": 151226.41342021435,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 150022.7352838696,
+        "upper_bound": 152364.17778119526
+      },
+      "median_ns": 151147.93128205126,
+      "samples": 30
+    },
+    "metagraph_decode/view/finney-64": {
+      "mean_ns": 168220.7003680532,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 162254.461801675,
+        "upper_bound": 175441.39282898823
+      },
+      "median_ns": 163248.34726708074,
+      "samples": 30
+    },
+    "metagraph_decode/view/synthetic-2500": {
+      "mean_ns": 307991.0932654087,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 305979.4314422848,
+        "upper_bound": 310004.91195181286
+      },
+      "median_ns": 308080.9025041051,
+      "samples": 30
+    },
+    "metagraph_projection/dynamic/finney-1": {
+      "mean_ns": 1026394.8794321956,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1010960.0024388016,
+        "upper_bound": 1041203.6156319946
+      },
+      "median_ns": 1035559.3611111111,
+      "samples": 30
+    },
+    "metagraph_projection/dynamic/finney-3": {
+      "mean_ns": 939498.0095746026,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 924494.8354867317,
+        "upper_bound": 954969.719182958
+      },
+      "median_ns": 928754.5770202021,
+      "samples": 30
+    },
+    "metagraph_projection/dynamic/finney-64": {
+      "mean_ns": 1043158.1217184507,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1025774.1073754225,
+        "upper_bound": 1059233.5183270834
+      },
+      "median_ns": 1054479.8472222222,
+      "samples": 30
+    },
+    "metagraph_projection/dynamic/synthetic-2500": {
+      "mean_ns": 6768574.072222223,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 6482315.659444445,
+        "upper_bound": 7071483.790833334
+      },
+      "median_ns": 6485638.833333333,
+      "samples": 30
+    },
+    "metagraph_projection/typed/finney-1": {
+      "mean_ns": 2810732.4110634234,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 2737060.231949176,
+        "upper_bound": 2882416.720775643
+      },
+      "median_ns": 2861215.5535714286,
+      "samples": 30
+    },
+    "metagraph_projection/typed/finney-3": {
+      "mean_ns": 2320664.4349136925,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 2279698.056261046,
+        "upper_bound": 2363102.2288251864
+      },
+      "median_ns": 2302409.11865942,
+      "samples": 30
+    },
+    "metagraph_projection/typed/finney-64": {
+      "mean_ns": 2543639.9821722363,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 2490263.693141804,
+        "upper_bound": 2592422.3588830265
+      },
+      "median_ns": 2538523.28125,
+      "samples": 30
+    },
+    "metagraph_projection/typed/synthetic-2500": {
+      "mean_ns": 15556352.333333336,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 15335491.580833336,
+        "upper_bound": 15773448.414722221
+      },
+      "median_ns": 15545694.5,
+      "samples": 30
+    },
+    "metagraph_projection/view/finney-1": {
+      "mean_ns": 294223.2025411986,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 286563.9504745436,
+        "upper_bound": 302341.4006161884
+      },
+      "median_ns": 290814.38630952383,
+      "samples": 30
+    },
+    "metagraph_projection/view/finney-3": {
+      "mean_ns": 298408.85176490596,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 292425.1313573528,
+        "upper_bound": 304466.8090037718
+      },
+      "median_ns": 301709.1979166666,
+      "samples": 30
+    },
+    "metagraph_projection/view/finney-64": {
+      "mean_ns": 335315.185827318,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 331203.8728636552,
+        "upper_bound": 339501.5532612671
+      },
+      "median_ns": 333878.7666666667,
+      "samples": 30
+    },
+    "metagraph_projection/view/synthetic-2500": {
+      "mean_ns": 592063.1577562199,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 577591.3167214942,
+        "upper_bound": 606992.8833771996
+      },
+      "median_ns": 586511.1354166667,
+      "samples": 30
+    },
+    "runtime/v15_parse": {
+      "mean_ns": 1503890.6032412718,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1430716.4638625835,
+        "upper_bound": 1591208.2810478583
+      },
+      "median_ns": 1421945.3125,
+      "samples": 30
+    },
+    "storage/keys_10000": {
+      "mean_ns": 2871654.8638089304,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 2764532.1937203286,
+        "upper_bound": 2983156.102699559
+      },
+      "median_ns": 2750422.448717949,
+      "samples": 30
+    },
+    "storage/map_page_decode_256": {
+      "mean_ns": 2556370.1817139653,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 2515083.3742574686,
+        "upper_bound": 2597155.894767164
+      },
+      "median_ns": 2570635.0,
+      "samples": 30
+    },
+    "weights/conform_2500": {
+      "mean_ns": 6780.336747247236,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 6729.393670520487,
+        "upper_bound": 6832.049024119705
+      },
+      "median_ns": 6771.05305907173,
+      "samples": 30
+    },
+    "weights/conform_256": {
+      "mean_ns": 1166.8701300076898,
+      "mean_confidence_interval": {
+        "confidence_level": 0.95,
+        "lower_bound": 1150.467767447706,
+        "upper_bound": 1184.8639293103477
+      },
+      "median_ns": 1162.8673658203227,
+      "samples": 30
+    }
+  }
+}

@@ -1,0 +1,13 @@
+    Blocking waiting for file lock on build directory
+   Compiling subtensor-macros v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3242/support/macros)
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3242/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 2m 50s
+     Running tests/ledger_quality.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/ledger_quality-27d0a6babe0f4ddb)
+
+running 3 tests
+test public_short_responses_status_words_and_invalid_address_are_bounded ... ok
+test public_sign_chunk_boundaries_and_payload_limit ... ok
+test ledger_quality_generate_ratio_vectors ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

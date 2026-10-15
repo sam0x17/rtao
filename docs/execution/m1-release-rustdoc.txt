@@ -1,0 +1,38 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Checking rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+ Documenting rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+ Documenting rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+ Documenting rtao-rpc v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-rpc)
+ Documenting rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+    Checking rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+    Checking rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+ Documenting rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+ Documenting rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+ Documenting rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-wallet v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-wallet)
+ Documenting rtao-wallet v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-wallet)
+    Checking rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+ Documenting rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+ Documenting rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+    Checking rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+    Checking rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+    Checking rtao-evm v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-evm)
+ Documenting rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+ Documenting rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+ Documenting rtao-evm v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-evm)
+    Checking rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+ Documenting rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+ Documenting rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+ Documenting rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+    Checking rtao-neuron v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-neuron)
+ Documenting xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+ Documenting rtao-neuron v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-neuron)
+ Documenting rtao v0.1.0 (/Users/sam/workspace/rtao/crates/rtao)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.58s
+   Generated /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/doc/rtao/index.html and 18 other files

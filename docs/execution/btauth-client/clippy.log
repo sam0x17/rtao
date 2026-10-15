@@ -1,0 +1,17 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Blocking waiting for file lock on artifact directory
+    Checking rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+    Checking rtao-rpc v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-rpc)
+    Checking rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+    Checking rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+    Checking rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+    Checking rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+    Checking rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+    Checking rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+    Checking rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 38s

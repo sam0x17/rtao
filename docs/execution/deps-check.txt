@@ -1,0 +1,38 @@
+M0-11 deps-check verification
+
+Implementation: xtask/src/deps_check.rs; no other repository files edited.
+
+Passed:
+  cargo test -p xtask --locked --offline deps_check::tests -- --nocapture
+  11 passed, 0 failed
+  cargo clippy -p xtask --locked --offline -- -D warnings
+  rustfmt --edition 2024 xtask/src/deps_check.rs
+
+Independent read-only review found a valid dev-only test-util forwarding case
+was rejected. Fixed, regression tested, and refined source parsing to preserve
+non-HTTPS Git URLs and reject ambiguous implicit registry identities.
+
+Actual command:
+  cargo run -p xtask --locked --offline -- deps-check
+  FAIL: Cargo.lock must contain exactly one w3f-bls, found 2.
+
+Current locked copies:
+  0.1.3 git+https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755bb05a3851f948489f0ab27b0645cebce
+  0.1.9 registry+https://github.com/rust-lang/crates.io-index
+
+Source evidence:
+  sp-core at polkadot-sdk cacb431 has optional w3f-bls ^0.1.9.
+  sp-core resolved features do not include bls-experimental.
+  cargo tree --workspace --all-features --target all -e normal,build
+    -i w3f-bls@0.1.9 prints nothing.
+  core host normal/build graph contains only git w3f-bls 0.1.3.
+  Both upstream v477 and v478 Cargo.lock contain 0.1.3 and registry 0.1.9.
+
+Literal rule6 remains fail-closed pending the parent's plan decision.
+
+Temporary build output used the existing shared task build root:
+  /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build
+TMPDIR used the existing shared task tmp root. No standalone disposable
+directories, processes, launchd units or configuration paths were created by
+this agent. Shared build output is a live dependency of other task agents and
+was retained for parent cleanup.

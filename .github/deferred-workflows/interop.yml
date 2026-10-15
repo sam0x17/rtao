@@ -1,0 +1,103 @@
+name: interop
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: '11 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: interop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/core-oracle-ci
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/core-oracle-ci/build
+  TMPDIR: ${{ github.workspace }}/target/core-oracle-ci/tmp
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      pin: ${{ steps.diff.outputs.pin }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: diff
+        env:
+          BASE: ${{ github.event.before }}
+        run: |
+          pin=true
+          if test -n "$BASE" && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            pin=false
+            if git diff --name-only "$BASE" HEAD -- upstream.toml | rg -q .; then
+              pin=true
+            fi
+          fi
+          printf 'pin=%s\n' "$pin" >> "$GITHUB_OUTPUT"
+
+  core-oracle:
+    needs: changes
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && needs.changes.outputs.pin == 'true') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'pin-bump'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/core-oracle-ci/build
+          cache-directories: |
+            ~/.cargo/git
+            target/core-oracle-ci/tools
+      - name: Provision the digest-pinned Rust oracle localnet
+        run: |
+          mkdir -p "$RTAO_TEMP_ROOT/tmp"
+          curl -fsS --proto '=https' --tlsv1.2 https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/latest -o "$RTAO_TEMP_ROOT/drand-preflight.json"
+          cargo run --locked -p xtask -- localnet up --lane pinned --profile fast --out "$RTAO_TEMP_ROOT/node.json"
+          cargo install cargo-nextest --version 0.9.143 --locked --root "$RTAO_TEMP_ROOT/tools"
+      - name: Compare Rust clients on one finalized localnet block
+        run: |
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          E2E_ENDPOINT=$(jq -er .endpoint "$RTAO_TEMP_ROOT/node.json") \
+            cargo nextest run --locked -p rtao-testkit --features core-oracle --test core_oracle --profile core-oracle --no-tests fail
+      - name: Capture logs and remove the exact owned container
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$RTAO_TEMP_ROOT/node.json"
+          test -f "$report" || exit 0
+          id=$(jq -er .container_id "$report")
+          [[ "$id" =~ ^[0-9a-f]{64}$ ]]
+          test "$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$id")" = e2e
+          docker logs --tail 1000 "$id" > "$RTAO_TEMP_ROOT/node.log" 2>&1 || true
+          docker rm -f "$id"
+      - name: Upload bounded oracle evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: core-oracle
+          path: |
+            target/core-oracle-ci/*.json
+            target/core-oracle-ci/*.log
+            target/core-oracle-ci/e2e/*.log
+            target/core-oracle-ci/nextest/**/junit.xml
+          if-no-files-found: ignore
+      # Python interop lanes join with their implemented M3/M4 protocols.

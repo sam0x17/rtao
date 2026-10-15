@@ -1,0 +1,66 @@
+name: upstream-next
+on:
+  schedule:
+    - cron: '37 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: upstream-next
+  cancel-in-progress: false
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/upstream-next
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/upstream-next/build
+  TMPDIR: ${{ github.workspace }}/target/upstream-next/tmp
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [main, testnet]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - name: Compare immutable branch revision with committed pins
+        env:
+          UPSTREAM_BRANCH: ${{ matrix.branch }}
+        run: |
+          cargo run --locked -p xtask -- upstream-next --branch "$UPSTREAM_BRANCH" --out "$RTAO_TEMP_ROOT/report.json"
+          git diff --exit-code
+      - name: Open or refresh an informational issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_BRANCH: ${{ matrix.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e .has_changes "$RTAO_TEMP_ROOT/report.json" >/dev/null || exit 0
+          title="upstream-next($UPSTREAM_BRANCH): watched upstream changes"
+          jq -r '"Upstream commit: `\(.commit)`\nParity base: `\(.base_commit)`\n\nCore-input fingerprint changed: \(.core.changed)\nExtrinsic codec changed: \(.core.extrinsic_changed)\n\nChanged watched blobs: \(.changed|length)\n\n```\n\(.diff_stat)```"' "$RTAO_TEMP_ROOT/report.json" > "$RTAO_TEMP_ROOT/issue.md"
+          printf '\nFull JSON report: %s/%s/actions/runs/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> "$RTAO_TEMP_ROOT/issue.md"
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if test -n "$number"; then
+            gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --body-file "$RTAO_TEMP_ROOT/issue.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RTAO_TEMP_ROOT/issue.md"
+          fi
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: upstream-next-${{ matrix.branch }}
+          path: target/upstream-next/report.json
+          if-no-files-found: warn
+          retention-days: 14

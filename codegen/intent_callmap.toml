@@ -1,0 +1,196 @@
+# Reviewed single-call builds. Argument values name constructor fields.
+# Code generation validates all maps, and emits only ported operations.
+
+[passthrough.add_proxy]
+pallet = "Proxy"
+call = "add_proxy"
+
+[passthrough.associate_evm_key]
+pallet = "SubtensorModule"
+call = "associate_evm_key"
+
+[passthrough.associate_hotkey]
+pallet = "SubtensorModule"
+call = "try_associate_hotkey"
+
+[passthrough.burned_register]
+pallet = "SubtensorModule"
+call = "burned_register"
+
+[passthrough.claim_root]
+pallet = "SubtensorModule"
+call = "claim_root"
+
+[passthrough.claim_root_with_hotkey]
+pallet = "SubtensorModule"
+call = "claim_root_with_hotkey"
+
+[passthrough.clear_coldkey_swap_announcement]
+pallet = "SubtensorModule"
+call = "clear_coldkey_swap_announcement"
+
+[passthrough.contribute_crowdloan]
+pallet = "Crowdloan"
+call = "contribute"
+[passthrough.contribute_crowdloan.args]
+amount = "amount_tao"
+
+[passthrough.create_pure_proxy]
+pallet = "Proxy"
+call = "create_pure"
+
+[passthrough.decrease_take]
+pallet = "SubtensorModule"
+call = "decrease_take"
+
+[passthrough.dispute_coldkey_swap]
+pallet = "SubtensorModule"
+call = "dispute_coldkey_swap"
+
+[passthrough.dissolve_crowdloan]
+pallet = "Crowdloan"
+call = "dissolve"
+
+[passthrough.finalize_crowdloan]
+pallet = "Crowdloan"
+call = "finalize"
+
+[passthrough.increase_take]
+pallet = "SubtensorModule"
+call = "increase_take"
+
+[passthrough.kill_pure_proxy]
+pallet = "Proxy"
+call = "kill_pure"
+
+[passthrough.lock_stake]
+pallet = "SubtensorModule"
+call = "lock_stake"
+[passthrough.lock_stake.args]
+amount = "amount_alpha"
+
+[passthrough.move_lock]
+pallet = "SubtensorModule"
+call = "move_lock"
+
+[passthrough.refund_crowdloan]
+pallet = "Crowdloan"
+call = "refund"
+
+[passthrough.register_leased_network]
+pallet = "SubtensorModule"
+call = "register_leased_network"
+
+[passthrough.register_subnet]
+pallet = "SubtensorModule"
+call = "register_network"
+
+[passthrough.remove_proxies]
+pallet = "Proxy"
+call = "remove_proxies"
+
+[passthrough.remove_proxy]
+pallet = "Proxy"
+call = "remove_proxy"
+
+[passthrough.root_register]
+pallet = "SubtensorModule"
+call = "root_register"
+
+[passthrough.set_auto_stake]
+pallet = "SubtensorModule"
+call = "set_coldkey_auto_stake_hotkey"
+
+[passthrough.set_childkey_take]
+pallet = "SubtensorModule"
+call = "set_childkey_take"
+
+[passthrough.set_children]
+pallet = "SubtensorModule"
+call = "set_children"
+
+[passthrough.set_crowdloan_max_contribution]
+pallet = "Crowdloan"
+call = "set_max_contribution"
+
+[passthrough.set_identity]
+pallet = "SubtensorModule"
+call = "set_identity"
+
+[passthrough.set_mechanism_count]
+pallet = "AdminUtils"
+call = "sudo_set_mechanism_count"
+
+[passthrough.set_perpetual_lock]
+pallet = "SubtensorModule"
+call = "set_perpetual_lock"
+
+[passthrough.set_reject_locked_alpha]
+pallet = "SubtensorModule"
+call = "set_reject_locked_alpha"
+
+[passthrough.set_subnet_identity]
+pallet = "SubtensorModule"
+call = "set_subnet_identity"
+
+[passthrough.start_call]
+pallet = "SubtensorModule"
+call = "start_call"
+
+[passthrough.swap_basket_many]
+pallet = "SubtensorModule"
+call = "swap_basket_many"
+
+[passthrough.swap_coldkey_announced]
+pallet = "SubtensorModule"
+call = "swap_coldkey_announced"
+
+[passthrough.swap_hotkey]
+pallet = "SubtensorModule"
+call = "swap_hotkey"
+
+[passthrough.terminate_lease]
+pallet = "SubtensorModule"
+call = "terminate_lease"
+
+[passthrough.transfer_all]
+pallet = "Balances"
+call = "transfer_all"
+
+[passthrough.trim_null_subnet_batch]
+pallet = "AdminUtils"
+call = "sudo_trim_null_uids_batch"
+
+[passthrough.trim_subnet]
+pallet = "AdminUtils"
+call = "sudo_trim_to_max_allowed_uids"
+
+[passthrough.unstake_all_alpha]
+pallet = "SubtensorModule"
+call = "unstake_all_alpha"
+
+[passthrough.update_crowdloan_cap]
+pallet = "Crowdloan"
+call = "update_cap"
+
+[passthrough.update_crowdloan_end]
+pallet = "Crowdloan"
+call = "update_end"
+
+[passthrough.update_crowdloan_min_contribution]
+pallet = "Crowdloan"
+call = "update_min_contribution"
+
+[passthrough.update_symbol]
+pallet = "SubtensorModule"
+call = "update_symbol"
+
+[passthrough.withdraw_crowdloan]
+pallet = "Crowdloan"
+call = "withdraw"
+
+[passthrough.contribute_crowdloan.resolvers]
+amount_tao = "stakeable_amount"
+
+[passthrough.lock_stake.resolvers]
+amount_alpha = "lockable_amount"

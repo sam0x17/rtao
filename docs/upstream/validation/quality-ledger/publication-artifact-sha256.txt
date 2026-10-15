@@ -1,0 +1,4 @@
+32dea297f4642bd574e4fa6ee0cd3580a576632d66ef99ea74784cedf83098b5  ../zondax-ratio-correction-published.patch
+5fc7a0ba05e9419472f5f3cfe14bbfa9e677294ea6cd9f59bf415618610fd823  ../publication-gate.rb
+1d6215fbcee987048120e8c974281778d913116c4725de24efd0e6bf779041c0  .git/hooks/pre-commit
+887189d3b50fb56e12d74f0cf364ef845f86aa894829615e7c2fdd06c22d6181  .git/hooks/pre-push

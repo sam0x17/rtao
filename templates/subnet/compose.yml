@@ -1,0 +1,35 @@
+services:
+  localnet:
+    image: ${LOCALNET_IMAGE:?Resolve the SDK localnet pin with ci/source.sh}
+    command: ["True"]
+    ports:
+      - "127.0.0.1:9944:9944"
+      - "127.0.0.1:9945:9945"
+    labels:
+      io.rtao.template: "localnet"
+  validator:
+    image: ${VALIDATOR_IMAGE:-subnet-validator:local}
+    profiles: [neurons]
+    network_mode: host
+    user: "${NEURON_UID:-65532}:${NEURON_GID:-65532}"
+    read_only: true
+    tmpfs: [/tmp]
+    stop_signal: SIGTERM
+    stop_grace_period: 90s
+    volumes:
+      - "${TEMPLATE_WALLET_ROOT:-./wallets}:/wallet:ro"
+      - "${TEMPLATE_STATE_ROOT:-./state}/validator:/state"
+    command: ["--network", "local", "--chain-endpoint", "ws://127.0.0.1:9944", "--fallback-endpoints", "none", "--archive-endpoints", "none", "--netuid", "${NETUID:-1}", "--wallet", "development", "--wallet-hotkey", "validator", "--wallet-path", "/wallet", "--state-dir", "/state", "--log", "info"]
+  miner:
+    image: ${MINER_IMAGE:-subnet-miner:local}
+    profiles: [neurons]
+    network_mode: host
+    user: "${NEURON_UID:-65532}:${NEURON_GID:-65532}"
+    read_only: true
+    tmpfs: [/tmp]
+    stop_signal: SIGTERM
+    stop_grace_period: 90s
+    volumes:
+      - "${TEMPLATE_WALLET_ROOT:-./wallets}:/wallet:ro"
+      - "${TEMPLATE_STATE_ROOT:-./state}/miner:/state"
+    command: ["--network", "local", "--chain-endpoint", "ws://127.0.0.1:9944", "--fallback-endpoints", "none", "--archive-endpoints", "none", "--netuid", "${NETUID:-1}", "--wallet", "development", "--wallet-hotkey", "miner", "--wallet-path", "/wallet", "--state-dir", "/state", "--axon.external-ip", "127.0.0.1", "--axon.port", "8091", "--log", "info"]

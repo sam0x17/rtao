@@ -1,0 +1,16 @@
+error: failed to run custom build command for `pyo3-build-config v0.23.5`
+
+Caused by:
+  process didn't exit successfully: `/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/build/pyo3-build-config-53953759bf4756d2/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-env-changed=PYO3_CONFIG_FILE
+  cargo:rerun-if-env-changed=PYO3_NO_PYTHON
+  cargo:rerun-if-env-changed=PYO3_ENVIRONMENT_SIGNATURE
+  cargo:rerun-if-env-changed=PYO3_PYTHON
+  cargo:rerun-if-env-changed=VIRTUAL_ENV
+  cargo:rerun-if-env-changed=CONDA_PREFIX
+  cargo:rerun-if-env-changed=PATH
+
+  --- stderr
+  error: cannot set a minimum Python version 3.10 higher than the interpreter version 3.9 (the minimum Python version is implied by the abi3-py310 feature)
+warning: build failed, waiting for other jobs to finish...

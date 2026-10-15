@@ -1,0 +1,26 @@
+{
+  "completed_at": "2026-10-14T12:33:19Z",
+  "removed_root": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10",
+  "removed_regular_files": 3160,
+  "removed_directories": 568,
+  "removed_symlinks": 1,
+  "regular_file_bytes": 206562912,
+  "review_head_verified": "c0208a82ab2a17a91c87654f3d6ebc0dc887cd20",
+  "patch_sha256_verified": "269fc23b74651935e4b239d6a9cffdb48d81eeccc9d8de48554d318e4a47b2f0",
+  "final_process_matches": 0,
+  "open_files_under_root": 0,
+  "lsof_limitation": "Unrelated SMB backup mount unavailable; scoped local-tree query found no open file.",
+  "gui_launchd_matches": 0,
+  "system_launchd_matches": 0,
+  "symlinks_inspected": 42,
+  "configuration_and_environment_files_inspected": 97,
+  "external_dependency_references": 0,
+  "audit_errors": 0,
+  "retained_live_dependencies": [
+    "shared task pin cache",
+    "shared task build cache",
+    "shared task tools",
+    "other agents task directories"
+  ],
+  "preserved_user_state": "No task-created wallets, private datasets, model assets, miner/validator state or recovery journals were present."
+}

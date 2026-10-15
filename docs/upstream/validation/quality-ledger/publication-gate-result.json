@@ -1,0 +1,19 @@
+{
+  "head": "8645ebdc31d188a722e22396d26fb52144246da4",
+  "parent": "9edd5fa5f9e609046e6bdd0f5e77239a7cf6f20d",
+  "actor": "sam0x17",
+  "remote": "git@github.com:sam0x17/ledger-polkadot.git",
+  "branch": "refs/heads/fix/tao-balance",
+  "files": [
+    "app/src/metadata_parser.c",
+    "docs/format.md",
+    "tests/ledger_quality.cpp",
+    "tests/quality/README.md",
+    "tests/quality/relative-price-v478.json",
+    "tests/supported_chains/bittensor-477.json"
+  ],
+  "passed": 5604,
+  "local_python": false,
+  "cmake_or_hunter": false,
+  "clang_format": "clang-format version 21.1.8"
+}

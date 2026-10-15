@@ -1,0 +1,7 @@
+{
+  "pid": 76343,
+  "command": "76343 38154 /Users/sam/.rustup/toolchains/1.89.0-aarch64-apple-darwin/bin/cargo test --locked --offline -p bittensor-core --all-features --lib\n",
+  "cwd": "p76343\nfcwd\nn/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246\n",
+  "children": "",
+  "action": "TERM idle owned outgoing stage after transport closure and shared-target wait; parent-authorized isolated retry; shared jobs untouched."
+}

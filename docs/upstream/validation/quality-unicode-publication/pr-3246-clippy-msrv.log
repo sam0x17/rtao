@@ -1,0 +1,4 @@
+   Compiling subtensor-macros v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/support/macros)
+    Checking bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core)
+    Checking bittensor-core-py v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core-py)
+    Finished `dev` profile [unoptimized] target(s) in 1.98s

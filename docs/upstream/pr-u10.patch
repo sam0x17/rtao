@@ -1,0 +1,441 @@
+From c0208a82ab2a17a91c87654f3d6ebc0dc887cd20 Mon Sep 17 00:00:00 2001
+From: Sam Johnson <sam@durosoft.com>
+Date: Wed, 14 Oct 2026 08:19:57 -0400
+Subject: [PATCH] sdk: expose portable password encoding and strict
+ verification
+
+---
+ sdk/bittensor-core-py/src/keys.rs             | 21 +++++
+ sdk/bittensor-core/src/keyfile_env.rs         | 40 +++++++++
+ sdk/bittensor-core/src/keyfiles/mod.rs        | 38 +++------
+ sdk/bittensor-core/src/keys/mod.rs            | 16 ++++
+ sdk/bittensor-core/src/lib.rs                 |  1 +
+ .../tests/password_environment.rs             | 57 +++++++++++++
+ sdk/bittensor-core/tests/verify_strict.rs     | 81 +++++++++++++++++++
+ sdk/python/bittensor/sp_core.py               |  2 +
+ sdk/python/tests/unit/test_sp_core_parity.py  | 32 ++++++++
+ 9 files changed, 263 insertions(+), 25 deletions(-)
+ create mode 100644 sdk/bittensor-core/src/keyfile_env.rs
+ create mode 100644 sdk/bittensor-core/tests/password_environment.rs
+ create mode 100644 sdk/bittensor-core/tests/verify_strict.rs
+
+diff --git a/sdk/bittensor-core-py/src/keys.rs b/sdk/bittensor-core-py/src/keys.rs
+index d2f9fa02e..cfa7f2fa7 100644
+--- a/sdk/bittensor-core-py/src/keys.rs
++++ b/sdk/bittensor-core-py/src/keys.rs
+@@ -193,6 +193,18 @@ fn verify(message: &[u8], signature: &[u8], ss58_address: &str, crypto_type: u8)
+     keys::verify(message, signature, ss58_address, crypto_type).map_err(to_py_err)
+ }
+ 
++/// Verify exactly the supplied bytes without a `<Bytes>` wrapper retry.
++#[pyfunction]
++#[pyo3(signature = (message, signature, ss58_address, crypto_type=CRYPTO_SR25519))]
++fn verify_strict(
++    message: &[u8],
++    signature: &[u8],
++    ss58_address: &str,
++    crypto_type: u8,
++) -> PyResult<bool> {
++    keys::verify_strict(message, signature, ss58_address, crypto_type).map_err(to_py_err)
++}
++
+ /// Decode an SS58 address to its raw 32-byte public key.
+ #[pyfunction]
+ fn ss58_decode<'py>(py: Python<'py>, ss58_address: &str) -> PyResult<Bound<'py, PyBytes>> {
+@@ -276,6 +288,13 @@ fn get_password_from_environment(env_var_name: &str) -> PyResult<Option<String>>
+     keyfiles::get_password_from_environment(env_var_name).map_err(to_py_err)
+ }
+ 
++/// Encode a wallet password without consulting or changing the environment.
++#[pyfunction]
++fn encode_password_for_environment(env_var_name: &str, password: &str) -> PyResult<String> {
++    bittensor_core::keyfile_env::encode_password_for_environment(env_var_name, password)
++        .map_err(to_py_err)
++}
++
+ #[pyfunction]
+ fn save_password_to_environment(env_var_name: &str, password: &str) -> PyResult<String> {
+     keyfiles::save_password_to_environment(env_var_name, password).map_err(to_py_err)
+@@ -284,6 +303,7 @@ fn save_password_to_environment(env_var_name: &str, password: &str) -> PyResult<
+ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+     m.add_class::<Keypair>()?;
+     m.add_function(wrap_pyfunction!(verify, m)?)?;
++    m.add_function(wrap_pyfunction!(verify_strict, m)?)?;
+     m.add_function(wrap_pyfunction!(ss58_decode, m)?)?;
+     m.add_function(wrap_pyfunction!(ss58_encode, m)?)?;
+     // Backwards-compatible aliases for pre-migration bittensor.sp_core names.
+@@ -301,6 +321,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+     m.add_function(wrap_pyfunction!(keyfile_data_encryption_method, m)?)?;
+     m.add_function(wrap_pyfunction!(get_password_from_environment, m)?)?;
+     m.add_function(wrap_pyfunction!(save_password_to_environment, m)?)?;
++    m.add_function(wrap_pyfunction!(encode_password_for_environment, m)?)?;
+     m.add("CRYPTO_ED25519", keys::CRYPTO_ED25519)?;
+     m.add("CRYPTO_SR25519", keys::CRYPTO_SR25519)?;
+     Ok(())
+diff --git a/sdk/bittensor-core/src/keyfile_env.rs b/sdk/bittensor-core/src/keyfile_env.rs
+new file mode 100644
+index 000000000..afedc87a2
+--- /dev/null
++++ b/sdk/bittensor-core/src/keyfile_env.rs
+@@ -0,0 +1,40 @@
++//! Pure environment password compatibility, without changing process variables.
++
++use crate::CoreError;
++use base64::{engine::general_purpose, Engine as _};
++use zeroize::Zeroizing;
++
++fn xor(data: &[u8], name: &str) -> Result<Zeroizing<Vec<u8>>, CoreError> {
++    if name.is_empty() {
++        return Err(CoreError::Crypto("env var name must not be empty".into()));
++    }
++    Ok(Zeroizing::new(
++        data.iter()
++            .zip(name.bytes().cycle())
++            .map(|(byte, key)| byte ^ key)
++            .collect(),
++    ))
++}
++
++/// Return the wallet-compatible XOR/base64 value without reading or changing
++/// the process environment. The encoding key must be nonempty; its UTF-8
++/// bytes are used exactly as in the legacy wallet format.
++pub fn encode_password_for_environment(name: &str, password: &str) -> Result<String, CoreError> {
++    Ok(general_purpose::STANDARD.encode(xor(password.as_bytes(), name)?.as_slice()))
++}
++
++/// Decode a caller-supplied environment value without consulting process state.
++pub fn decode_password_from_environment(name: &str, value: &str) -> Result<String, CoreError> {
++    if name.is_empty() {
++        return Err(CoreError::Crypto("env var name must not be empty".into()));
++    }
++    let bytes = Zeroizing::new(
++        general_purpose::STANDARD
++            .decode(value.trim())
++            .map_err(|_| CoreError::Keyfile("invalid base64 in wallet password env var".into()))?,
++    );
++    let decoded = xor(&bytes, name)?;
++    std::str::from_utf8(&decoded)
++        .map(str::to_owned)
++        .map_err(|_| CoreError::Keyfile("invalid wallet password env var: corrupt UTF-8".into()))
++}
+diff --git a/sdk/bittensor-core/src/keyfiles/mod.rs b/sdk/bittensor-core/src/keyfiles/mod.rs
+index 340ee8ae7..a679b9367 100644
+--- a/sdk/bittensor-core/src/keyfiles/mod.rs
++++ b/sdk/bittensor-core/src/keyfiles/mod.rs
+@@ -19,6 +19,8 @@ use zeroize::{Zeroize, Zeroizing};
+ use crate::error::CoreError;
+ use crate::keys::{ensure_sodium, Keypair, CRYPTO_ED25519, CRYPTO_SR25519};
+ 
++pub use crate::keyfile_env::{decode_password_from_environment, encode_password_for_environment};
++
+ const NACL_SALT: &[u8] = b"\x13q\x83\xdf\xf1Z\t\xbc\x9c\x90\xb5Q\x879\xe9\xb1";
+ const LEGACY_SALT: &[u8] = b"Iguesscyborgslikemyselfhaveatendencytobeparanoidaboutourorigins";
+ 
+@@ -94,46 +96,32 @@ pub fn encrypt_keyfile_data(keyfile_data: &[u8], password: &str) -> Result<Vec<u
+     Ok(result)
+ }
+ 
+-fn xor_with_key(data: &[u8], key: &str) -> Vec<u8> {
+-    let key_bytes = key.as_bytes();
+-    data.iter()
+-        .enumerate()
+-        .map(|(index, byte)| byte ^ key_bytes[index % key_bytes.len()])
+-        .collect()
+-}
+-
+-fn decrypt_password(data: &[u8], key: &str) -> Result<String, CoreError> {
+-    let decrypted_bytes = xor_with_key(data, key);
+-    String::from_utf8(decrypted_bytes)
+-        .map_err(|_| key_err("invalid wallet password env var: corrupt UTF-8"))
+-}
+-
+ pub fn get_password_from_environment(env_var_name: &str) -> Result<Option<String>, CoreError> {
+     if env_var_name.is_empty() {
+         return Err(CoreError::Crypto("env var name must not be empty".into()));
+     }
+     match std::env::var(env_var_name) {
+-        Ok(encrypted_password_base64) => {
+-            let encrypted_password = general_purpose::STANDARD
+-                .decode(encrypted_password_base64.trim())
+-                .map_err(|_| key_err("invalid base64 in wallet password env var"))?;
+-            Ok(Some(decrypt_password(&encrypted_password, env_var_name)?))
+-        }
++        Ok(encrypted_password_base64) => Ok(Some(decode_password_from_environment(
++            env_var_name,
++            &encrypted_password_base64,
++        )?)),
+         Err(_) => Ok(None),
+     }
+ }
+ 
++/// Compatibility wrapper that stores the password in the process environment.
++///
++/// This retains the legacy mutation behavior. Prefer the pure
++/// [`encode_password_for_environment`] helper when managing process state
++/// externally; `set_var` can race with reads from other threads.
+ pub fn save_password_to_environment(
+     env_var_name: &str,
+     password: &str,
+ ) -> Result<String, CoreError> {
+-    if env_var_name.is_empty() {
+-        return Err(CoreError::Crypto("env var name must not be empty".into()));
+-    }
+-    let encrypted = xor_with_key(password.as_bytes(), env_var_name);
++    let encrypted = encode_password_for_environment(env_var_name, password)?;
+     // Inherited btwallet behavior: set_var is not thread-safe and can race with
+     // concurrent getenv calls from other (non-GIL-holding) threads.
+-    std::env::set_var(env_var_name, general_purpose::STANDARD.encode(encrypted));
++    std::env::set_var(env_var_name, encrypted);
+     Ok(env_var_name.to_string())
+ }
+ 
+diff --git a/sdk/bittensor-core/src/keys/mod.rs b/sdk/bittensor-core/src/keys/mod.rs
+index 7e52a25bd..85539779e 100644
+--- a/sdk/bittensor-core/src/keys/mod.rs
++++ b/sdk/bittensor-core/src/keys/mod.rs
+@@ -453,6 +453,22 @@ impl Keypair {
+     }
+ }
+ 
++/// Verify exactly the supplied message bytes against an SS58 address.
++///
++/// Uses the pinned Substrate sr25519/ed25519 verifier, without the legacy
++/// `<Bytes>` wrapper retry performed by [`verify`]. Invalid SS58 addresses,
++/// unsupported crypto types and incorrect signature lengths return errors.
++/// Well-sized signatures that do not verify return `Ok(false)`.
++pub fn verify_strict(
++    message: &[u8],
++    signature: &[u8],
++    ss58_address: &str,
++    crypto_type: u8,
++) -> Result<bool, CoreError> {
++    let public_key = public_key_from_ss58(ss58_address)?;
++    verify_with_crypto(crypto_type, &public_key, message, signature)
++}
++
+ /// Verify a signature against an SS58 address without holding the secret key.
+ pub fn verify(
+     message: &[u8],
+diff --git a/sdk/bittensor-core/src/lib.rs b/sdk/bittensor-core/src/lib.rs
+index c9be56a32..e4892df7e 100644
+--- a/sdk/bittensor-core/src/lib.rs
++++ b/sdk/bittensor-core/src/lib.rs
+@@ -12,6 +12,7 @@ pub mod client;
+ pub mod codec;
+ pub mod digest;
+ pub mod error;
++pub mod keyfile_env;
+ #[cfg(feature = "host")]
+ pub mod keyfiles;
+ pub mod keys;
+diff --git a/sdk/bittensor-core/tests/password_environment.rs b/sdk/bittensor-core/tests/password_environment.rs
+new file mode 100644
+index 000000000..df8a9fa0b
+--- /dev/null
++++ b/sdk/bittensor-core/tests/password_environment.rs
+@@ -0,0 +1,57 @@
++//! Verify wallet-compatible password encoding without global environment writes.
++
++use std::error::Error;
++
++use bittensor_core::{
++    keyfile_env::{decode_password_from_environment, encode_password_for_environment},
++    CoreError,
++};
++
++#[test]
++fn encoding_matches_legacy_ascii_unicode_and_empty_vectors() -> Result<(), Box<dyn Error>> {
++    for (name, password, expected) in [
++        ("BT_PW_TEST", "native-test", "LDUrOSE6eTE2JzY="),
++        ("WALLET_α", "pässwörd\0\n", "J4LoPzYjnHjDM0FG"),
++        ("A", "", ""),
++        ("A", "a\0\n", "IEFL"),
++    ] {
++        assert_eq!(encode_password_for_environment(name, password)?, expected);
++        assert_eq!(decode_password_from_environment(name, expected)?, password);
++    }
++    Ok(())
++}
++
++#[test]
++fn empty_encoding_key_retains_the_legacy_error() {
++    assert!(matches!(
++        encode_password_for_environment("", "password"),
++        Err(CoreError::Crypto(message)) if message == "env var name must not be empty"
++    ));
++}
++
++#[test]
++fn encoding_does_not_create_or_replace_a_process_variable() -> Result<(), Box<dyn Error>> {
++    let name = format!("BT_PW_PURE_ENCODING_REGRESSION_{}", std::process::id());
++    let before = std::env::var_os(&name);
++    let value = encode_password_for_environment(&name, "test-password")?;
++    assert!(!value.is_empty());
++    assert_eq!(std::env::var_os(&name), before);
++    // Encoding is defined by UTF-8 bytes, independently of OS variable syntax.
++    assert!(!encode_password_for_environment("not=an\0os-variable", "secret")?.is_empty());
++    Ok(())
++}
++
++#[test]
++fn decoder_retains_whitespace_and_error_boundaries() -> Result<(), Box<dyn Error>> {
++    assert_eq!(
++        decode_password_from_environment("BT_PW_TEST", " \nLDUrOSE6eTE2JzY=\t ")?,
++        "native-test"
++    );
++    assert!(matches!(decode_password_from_environment("", ""),
++        Err(CoreError::Crypto(message)) if message == "env var name must not be empty"));
++    assert!(matches!(decode_password_from_environment("A", "!!!"),
++        Err(CoreError::Keyfile(message)) if message == "invalid base64 in wallet password env var"));
++    assert!(matches!(decode_password_from_environment("A", "vg=="),
++        Err(CoreError::Keyfile(message)) if message == "invalid wallet password env var: corrupt UTF-8"));
++    Ok(())
++}
+diff --git a/sdk/bittensor-core/tests/verify_strict.rs b/sdk/bittensor-core/tests/verify_strict.rs
+new file mode 100644
+index 000000000..fe844f194
+--- /dev/null
++++ b/sdk/bittensor-core/tests/verify_strict.rs
+@@ -0,0 +1,81 @@
++//! Differential acceptance checks against the pinned core's public verifier.
++
++use std::error::Error;
++
++use bittensor_core::keys::verify_strict;
++use bittensor_core::keys::{self, Keypair, CRYPTO_ED25519, CRYPTO_SR25519};
++
++#[test]
++fn raw_signatures_verify_and_wrapped_signatures_are_rejected() -> Result<(), Box<dyn Error>> {
++    let payload = b"btauth/1\nPOST\n/submit?task=1\nbody\n123\nsender\n-";
++    for scheme in [CRYPTO_SR25519, CRYPTO_ED25519] {
++        let key = Keypair::from_seed(&[7; 32], scheme)?;
++        let address = key.ss58_address();
++        let signature = key.sign(payload)?;
++        assert!(verify_strict(payload, &signature, &address, scheme)?);
++        assert!(keys::verify(payload, &signature, &address, scheme)?);
++        assert!(!verify_strict(
++            b"changed message",
++            &signature,
++            &address,
++            scheme
++        )?);
++        let wrong_key = Keypair::from_seed(&[8; 32], scheme)?;
++        assert!(!verify_strict(
++            payload,
++            &signature,
++            &wrong_key.ss58_address(),
++            scheme
++        )?);
++        let wrapped = [
++            b"<Bytes>".as_slice(),
++            payload.as_slice(),
++            b"</Bytes>".as_slice(),
++        ]
++        .concat();
++        let wrapped_signature = key.sign(&wrapped)?;
++        assert!(keys::verify(payload, &wrapped_signature, &address, scheme)?);
++        assert!(!verify_strict(
++            payload,
++            &wrapped_signature,
++            &address,
++            scheme
++        )?);
++        assert!(verify_strict(
++            &wrapped,
++            &wrapped_signature,
++            &address,
++            scheme
++        )?);
++    }
++    Ok(())
++}
++
++#[test]
++fn malformed_encoding_matches_the_core_error_boundary() -> Result<(), Box<dyn Error>> {
++    for scheme in [CRYPTO_SR25519, CRYPTO_ED25519] {
++        let key = Keypair::from_seed(&[9; 32], scheme)?;
++        let address = key.ss58_address();
++        for signature in [vec![0; 63], vec![0; 65]] {
++            let strict = verify_strict(b"message", &signature, &address, scheme)
++                .err()
++                .ok_or("strict accepted wrong length")?;
++            let upstream = keys::verify(b"message", &signature, &address, scheme)
++                .err()
++                .ok_or("core accepted wrong length")?;
++            assert_eq!(strict.to_string(), upstream.to_string());
++        }
++        assert!(!verify_strict(b"message", &[0; 64], &address, scheme)?);
++        assert!(verify_strict(b"message", &[0; 64], "bad SS58", scheme).is_err());
++    }
++    let address = keys::ss58_from_public([255; 32], 42);
++    assert!(!verify_strict(
++        b"message",
++        &[0; 64],
++        &address,
++        CRYPTO_SR25519
++    )?);
++    let address = Keypair::from_seed(&[9; 32], CRYPTO_ED25519)?.ss58_address();
++    assert!(verify_strict(b"message", &[0; 64], &address, 255).is_err());
++    Ok(())
++}
+diff --git a/sdk/python/bittensor/sp_core.py b/sdk/python/bittensor/sp_core.py
+index 85209ae8e..21810aeb1 100644
+--- a/sdk/python/bittensor/sp_core.py
++++ b/sdk/python/bittensor/sp_core.py
+@@ -14,11 +14,13 @@ WrongPasswordError = _backend.WrongPasswordError
+ 
+ # Native bittensor_core names
+ verify = _backend.verify
++verify_strict = _backend.verify_strict
+ ss58_decode = _backend.ss58_decode
+ ss58_encode = _backend.ss58_encode
+ decrypt_keyfile_data = _backend.decrypt_keyfile_data
+ deserialize_keypair_from_keyfile_data = _backend.deserialize_keypair_from_keyfile_data
+ encrypt_keyfile_data = _backend.encrypt_keyfile_data
++encode_password_for_environment = _backend.encode_password_for_environment
+ get_password_from_environment = _backend.get_password_from_environment
+ keyfile_data_encryption_method = _backend.keyfile_data_encryption_method
+ keyfile_data_is_encrypted = _backend.keyfile_data_is_encrypted
+diff --git a/sdk/python/tests/unit/test_sp_core_parity.py b/sdk/python/tests/unit/test_sp_core_parity.py
+index 0739cc047..b83e325aa 100644
+--- a/sdk/python/tests/unit/test_sp_core_parity.py
++++ b/sdk/python/tests/unit/test_sp_core_parity.py
+@@ -42,3 +42,35 @@ def test_keyfile_roundtrip_preserves_signing() -> None:
+     message = b"keyfile-roundtrip"
+     signature = bytes(restored.sign(message))
+     assert original.verify(message, signature)
++
++
++@pytest.mark.parametrize("crypto_type", [CRYPTO_ED25519, CRYPTO_SR25519])
++def test_strict_verifier_omits_only_legacy_wrapper_fallback(crypto_type: int) -> None:
++    key = Keypair.create_from_mnemonic(
++        "abandon abandon abandon abandon abandon abandon "
++        "abandon abandon abandon abandon abandon about",
++        crypto_type,
++    )
++    message = b"strict-verification"
++    signature = bytes(key.sign(message))
++    assert bittensor_core.verify_strict(message, signature, key.ss58_address, crypto_type)
++    assert not bittensor_core.verify_strict(b"changed", signature, key.ss58_address, crypto_type)
++    wrapped = b"<Bytes>" + message + b"</Bytes>"
++    signature = bytes(key.sign(wrapped))
++    assert bittensor_core.verify(message, signature, key.ss58_address, crypto_type)
++    assert not bittensor_core.verify_strict(message, signature, key.ss58_address, crypto_type)
++    assert bittensor_core.verify_strict(wrapped, signature, key.ss58_address, crypto_type)
++    with pytest.raises(ValueError, match="signature length"):
++        bittensor_core.verify_strict(message, signature[:-1], key.ss58_address, crypto_type)
++
++
++def test_pure_password_encoding_matches_legacy_bytes_without_environment_writes() -> None:
++    import os
++
++    name = "WALLET_α"
++    before = os.environ.get(name)
++    password = "pässwörd\0\n"
++    assert bittensor_core.encode_password_for_environment(name, password) == "J4LoPzYjnHjDM0FG"
++    assert os.environ.get(name) == before
++    with pytest.raises(ValueError, match="env var name must not be empty"):
++        bittensor_core.encode_password_for_environment("", password)
+-- 
+2.54.0 (Apple Git-157)
+

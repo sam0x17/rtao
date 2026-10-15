@@ -1,0 +1,43 @@
+{
+  "all_features_tests": {
+    "unit": 19,
+    "client": 28,
+    "conformance": 44,
+    "total": 91,
+    "failed": 0,
+    "ignored": 0
+  },
+  "msrv": "1.89.0",
+  "msrv_client_tests": 28,
+  "strict_clippy": "all-features/all-targets including dependencies",
+  "two_provider_test": {
+    "test": "all client adapter tests",
+    "passed": 28,
+    "rustls": "0.23.45",
+    "ring": "0.17.14",
+    "aws_lc_rs": "1.18.2",
+    "independent_lock_sha256": "d601d6b1278e7d07c0f8d4bb59dcbb858603e08b40f93ee0144ee1ea28e0b160",
+    "global_provider_consulted_or_installed": false,
+    "msrv_passed": 28
+  },
+  "client_graph": {
+    "reqwest": "0.13.5",
+    "chain_crates": [],
+    "aws_lc": false,
+    "native_tls": false
+  },
+  "host": "Mac Studio aarch64-apple-darwin",
+  "python_executed": false,
+  "chain_writes": false,
+  "source_sha256": {
+    "client.rs": "134b52db019e5ffee48a9979d2fe087c3e807d30ac4a2c6536bd847b97e1ec98",
+    "tests/client.rs": "167de47f126a18f043614ec8e659b4ccde3c8d3e4cefdee3da2c5b384817b665"
+  },
+  "logs": {
+    "all_features": "all-tests.log",
+    "msrv": "msrv-tests.log",
+    "clippy": "clippy.log",
+    "two_provider_current": "two-provider-tests.log",
+    "two_provider_msrv": "two-provider-msrv.log"
+  }
+}

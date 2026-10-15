@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "changed": 0,
+  "changes": [],
+  "extraction": {
+    "unchanged": true,
+    "error": null
+  },
+  "oracle": {
+    "unchanged": false,
+    "error": "proof unavailable: oracle source extraction authentication: read vendored extraction input sdk/python/tests/unit/test_http_auth.py: No such file or directory (os error 2)"
+  },
+  "auto_blessed": [],
+  "catalog_deltas": {
+    "intents": {
+      "added": [],
+      "removed": [],
+      "pending_before": 74,
+      "pending_after": 74
+    },
+    "reads": {
+      "added": [],
+      "removed": [],
+      "pending_before": 87,
+      "pending_after": 87
+    }
+  },
+  "pending_intents": 74,
+  "pending_reads": 87,
+  "proof_policy": "Only previously reconciled non-vendored files qualify; unchanged symbols, complete extracted behavior and authenticated passing oracle evidence are required. This report never marks a pending file implemented."
+}

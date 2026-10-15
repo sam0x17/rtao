@@ -1,0 +1,2 @@
+0646ca577bb7bcee2e94a1f6e3eac60aaeae3d02999ced4f5ae172e600f366dd  native-tools/clang-format-21
+9a78fabba6b382866819b42a7b220d235a3baf6128a40fb7bd590c037f69879b  clang-format-21-native.whl

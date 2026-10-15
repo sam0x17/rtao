@@ -1,0 +1,38 @@
+Q25 / D-035 native balance implementation (2026-10-14)
+This supersedes the earlier Q24 signed-balance implementation and evidence.
+
+Stable source:
+- Balance<Tao>, Balance<Alpha>, and DynBalance store native u64 rao.
+- Typed/dynamic checked_add, checked_sub, and try_sum return Result<Self,UnitError>, reporting Overflow or Underflow; currency mismatches remain explicit and are checked even after a sum overflow.
+- DynBalance.from_rao(u64,NetUid); try_from_rao(i128,NetUid) rejects negatives/oversize; try_from_unsigned_rao(u128,NetUid) rejects oversize. Exact decimal/numeric input rejects negative values, excess precision, and native overflow.
+- DynBalance.amount()->f64 and to_python_string()->String are infallible within u64; tao()/alpha() remain checked typed conversions. unit() uses Cow for synthesized alpha symbols.
+- No signed DynBalance compatibility, negation, arbitrary-size balance APIs, RaoOperand, or bigint balance formatter remains. General fixed-point/f64 formatting still uses BigUint internally; it is not a balance representation.
+- Public DynBalance.try_into_core_value validates NetUid before passing native rao through core; typed/wire IntoCoreValue remains direct.
+- Explicit saturating_sub retains its descriptive name; checked_sub never saturates.
+- All original property source references annotate Q25/D-035 adaptation to 0..=u64::MAX; NETUID0..=4095/SUBNET1..=4095 remain unchanged. No full-signed-Python parity claim remains.
+
+Validation commands (CARGO_TARGET_DIR=target/execute-plan.6Ro0PC/build):
+PROPTEST_CASES=10000 cargo test -p rtao-primitives --all-features --no-fail-fast
+27 unit, 11 JSON, 8 integration and 4 compile-fail doctests pass.
+cargo test -p rtao-primitives --no-default-features
+26 unit, 10 JSON, 7 integration and 4 compile-fail doctests pass.
+cargo clippy -p rtao-primitives --all-targets --all-features -- -D warnings
+cargo clippy -p rtao-primitives --all-targets --no-default-features -- -D warnings
+Both configurations pass.
+cargo +1.89 check -p rtao-primitives --all-features
+cargo +1.89 check -p rtao-primitives --no-default-features
+Both configurations pass.
+Formatting of the native balance files and git diff --check pass. A later wholecratefmt check identified only the M1 worker's newly in-progress text.rs/compact_text.rs; worker notified and owns their formatting.
+
+D-035 pin candidates:
+money::tests::native_balance_rejects_negative_and_oversized_input
+money::tests::native_balance_arithmetic_reports_overflow_and_underflow
+money::tests::native_balance_currency_checks_precede_arithmetic_errors
+money::tests::native_balance_subnet_conversion_rejects_invalid_ids
+money::tests::native_balance_keeps_valid_chain_json
+money::tests::native_arithmetic_matches_checked_u64
+money::tests::native_decimal_serialization_roundtrip_is_exact
+
+M2 10000Python str(Balance) oracle remains required over native valid-chain range. No Python was executed.
+
+Cleanup: exact native/rewrite.rb and native/tests.rs rehearsal files and directory removed after process/openfile/launchd/config/symlink/venv dependency checks found no live dependency. Current bounded logs retained next to this file. Shared recordedbuild remains used by parent/M1 tasks. Earlier unscoped cache cleanup remains completed (seeunscoped-cleanup.txt).

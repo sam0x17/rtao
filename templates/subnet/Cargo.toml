@@ -1,0 +1,30 @@
+[workspace]
+resolver = "3"
+members = ["validator", "miner", "e2e"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# Use the first released rtao-v tag here when M3 is released. Before release,
+# the generated project's lockfile records the exact main commit it resolved.
+rtao = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false }
+rtao-testkit = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false, features = ["docker"] }
+rtao-runtime = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false }
+anyhow = "1.0"
+axum = "0.8"
+clap = { version = "4.5", features = ["derive", "env"] }
+futures = "0.3"
+http = "1.3"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+serde_json = { version = "1.0.132", features = ["arbitrary_precision"] }
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "time", "signal"] }
+toml_edit = "0.23"
+
+# Cargo ignores patches in dependencies and workspace members. Keep this once,
+# in the final workspace root, at the core pin used by rtao.
+[patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }

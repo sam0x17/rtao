@@ -1,0 +1,91 @@
+# Price arguments must have explicit semantics; the gate rejects new unmatched names.
+[[arguments]]
+pallet = "SubtensorModule"
+call = "add_stake_limit"
+argument = "limit_price"
+kind = "price"
+[[arguments]]
+pallet = "SubtensorModule"
+call = "remove_stake_limit"
+argument = "limit_price"
+kind = "price"
+[[arguments]]
+pallet = "SubtensorModule"
+call = "swap_stake_limit"
+argument = "limit_price"
+kind = "price"
+[[arguments]]
+pallet = "SubtensorModule"
+call = "remove_stake_full_limit"
+argument = "limit_price"
+kind = "price"
+[[arguments]]
+pallet = "SubtensorModule"
+call = "add_collateral"
+argument = "limit_price"
+kind = "price"
+[[arguments]]
+pallet = "SubtensorModule"
+call = "move_stake_limit"
+argument = "limit_price"
+kind = "price"
+[[arguments]]
+pallet = "SubtensorModule"
+call = "add_stake_burn"
+argument = "limit"
+kind = "price"
+[[arguments]]
+pallet = "Contracts"
+call = "call"
+argument = "storage_deposit_limit"
+kind = "amount"
+[[arguments]]
+pallet = "Contracts"
+call = "instantiate"
+argument = "storage_deposit_limit"
+kind = "amount"
+[[arguments]]
+pallet = "Contracts"
+call = "instantiate_with_code"
+argument = "storage_deposit_limit"
+kind = "amount"
+
+[[arguments]]
+pallet = "Contracts"
+call = "call_old_weight"
+argument = "storage_deposit_limit"
+kind = "amount"
+
+[[arguments]]
+pallet = "Contracts"
+call = "instantiate_old_weight"
+argument = "storage_deposit_limit"
+kind = "amount"
+
+[[arguments]]
+pallet = "Contracts"
+call = "instantiate_with_code_old_weight"
+argument = "storage_deposit_limit"
+kind = "amount"
+
+[[arguments]]
+pallet = "Contracts"
+call = "upload_code"
+argument = "storage_deposit_limit"
+kind = "amount"
+
+[storage]
+zero_account_default = true
+
+[fields]
+"Metagraph.netuid" = "rtao_primitives::NetUidStorageIndex"
+"SelectiveMetagraph.netuid" = "rtao_primitives::NetUidStorageIndex"
+"Metagraph.total_stake" = "Vec<rtao_primitives::StakeWeight>"
+"SelectiveMetagraph.total_stake" = "Option<Vec<rtao_primitives::StakeWeight>>"
+"Metagraph.name" = "rtao_primitives::CompactBytesText"
+"Metagraph.symbol" = "rtao_primitives::CompactBytesText"
+"SelectiveMetagraph.name" = "Option<rtao_primitives::CompactBytesText>"
+"SelectiveMetagraph.symbol" = "Option<rtao_primitives::CompactBytesText>"
+"DynamicInfo.subnet_name" = "rtao_primitives::CompactBytesText"
+"DynamicInfo.token_symbol" = "rtao_primitives::CompactBytesText"
+"SubnetPrice.price" = "rtao_primitives::PriceRao"

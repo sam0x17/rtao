@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "base": "vendor/metadata/finney/477.v15.scale",
+  "base_sha256": "64d37ffe1ee7e006d74f0a01c8e4bfb82e04a8907ac92c5600a49510862a76fa",
+  "fixtures": [
+    {"mutation": "add-call", "pallet": "SubtensorModule", "class": "additive"},
+    {"mutation": "storage-default", "pallet": "SubtensorModule", "class": "behavioural"},
+    {"mutation": "move-call", "pallet": "SubtensorModule", "class": "breaking"},
+    {"mutation": "extension-payload", "class": "breaking"},
+    {"mutation": "append-field", "model": "Metagraph", "class": "behavioural"}
+  ]
+}

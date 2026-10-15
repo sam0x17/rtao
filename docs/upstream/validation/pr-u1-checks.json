@@ -1,0 +1,7 @@
+[
+  {
+    "name": "Vercel",
+    "state": "FAILURE",
+    "limitation": "Authorization required to deploy; no authorization attempted."
+  }
+]

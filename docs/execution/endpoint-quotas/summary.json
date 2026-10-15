@@ -1,0 +1,185 @@
+{
+  "started_utc": "2026-10-14T08:10:00Z",
+  "finished_utc": "2026-10-14T08:14:10Z",
+  "host": "Mac Studio, aarch64-apple-darwin",
+  "configured_per_second": 1.0,
+  "configured_burst": 1,
+  "aggregate_concurrency": 1,
+  "total_requests": 252,
+  "rate_formula": "(request_count - 1) / (last_send_seconds - first_send_seconds)",
+  "p95_rule": "nearest rank: sorted_response_ms[ceil(n * 0.95) - 1]",
+  "provider_quota_ceiling": null,
+  "endpoints": [
+    {
+      "label": "finney-primary",
+      "endpoint": "wss://entrypoint-finney.opentensor.ai:443",
+      "http_status": 101,
+      "headers": {
+        "connection": "upgrade",
+        "upgrade": "websocket",
+        "date": "Wed, 14 Oct 2026 08:10:01 GMT"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35104.178417,
+      "observed_requests_per_second": 0.9970323072153271,
+      "minimum_send_interval_ms": 1001.2679579999999,
+      "response_median_ms": 114.151937,
+      "response_p95_ms": 120.01725,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    },
+    {
+      "label": "test-primary",
+      "endpoint": "wss://test.finney.opentensor.ai:443",
+      "http_status": 101,
+      "headers": {
+        "connection": "upgrade",
+        "upgrade": "websocket",
+        "date": "Wed, 14 Oct 2026 08:10:36 GMT"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35101.766334,
+      "observed_requests_per_second": 0.9971008201401698,
+      "minimum_send_interval_ms": 1001.7996250000001,
+      "response_median_ms": 106.59172899999999,
+      "response_p95_ms": 109.321917,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    },
+    {
+      "label": "devnet-primary",
+      "endpoint": "wss://dev.chain.opentensor.ai:443",
+      "http_status": 101,
+      "headers": {
+        "server": "nginx/1.29.5",
+        "date": "Wed, 14 Oct 2026 08:11:12 GMT",
+        "connection": "upgrade",
+        "upgrade": "websocket"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35110.63175,
+      "observed_requests_per_second": 0.9968490527089419,
+      "minimum_send_interval_ms": 1000.6155830000001,
+      "response_median_ms": 108.2523955,
+      "response_p95_ms": 110.964708,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    },
+    {
+      "label": "finney-otf-lite",
+      "endpoint": "wss://lite.chain.opentensor.ai:443",
+      "http_status": 101,
+      "headers": {
+        "connection": "upgrade",
+        "upgrade": "websocket",
+        "date": "Wed, 14 Oct 2026 08:11:48 GMT"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35103.863166999996,
+      "observed_requests_per_second": 0.9970412610570556,
+      "minimum_send_interval_ms": 1001.225834,
+      "response_median_ms": 114.3328545,
+      "response_p95_ms": 118.49125000000001,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    },
+    {
+      "label": "finney-latent-lite",
+      "endpoint": "wss://lite.sub.latent.to:443",
+      "http_status": 101,
+      "headers": {
+        "date": "Wed, 14 Oct 2026 08:12:24 GMT",
+        "connection": "upgrade",
+        "upgrade": "websocket",
+        "server": "cloudflare"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35095.0115,
+      "observed_requests_per_second": 0.9972927348948154,
+      "minimum_send_interval_ms": 1000.8665000000001,
+      "response_median_ms": 37.64150050000001,
+      "response_p95_ms": 40.10475,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    },
+    {
+      "label": "finney-otf-archive",
+      "endpoint": "wss://archive.chain.opentensor.ai:443",
+      "http_status": 101,
+      "headers": {
+        "connection": "upgrade",
+        "upgrade": "websocket",
+        "date": "Wed, 14 Oct 2026 08:12:59 GMT"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35091.835125,
+      "observed_requests_per_second": 0.9973830059136869,
+      "minimum_send_interval_ms": 1000.998583,
+      "response_median_ms": 106.8803335,
+      "response_p95_ms": 166.58875,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    },
+    {
+      "label": "finney-latent-archive",
+      "endpoint": "wss://archive.sub.latent.to:443",
+      "http_status": 101,
+      "headers": {
+        "date": "Wed, 14 Oct 2026 08:13:35 GMT",
+        "connection": "upgrade",
+        "upgrade": "websocket",
+        "server": "cloudflare"
+      },
+      "requests": 36,
+      "methods": {
+        "chain_getFinalizedHead": 12,
+        "state_getStorage": 12,
+        "system_health": 12
+      },
+      "send_span_ms": 35089.516584000005,
+      "observed_requests_per_second": 0.9974489080296757,
+      "minimum_send_interval_ms": 1000.831542,
+      "response_median_ms": 35.505917,
+      "response_p95_ms": 39.177583,
+      "policy_refusals": 0,
+      "quota_headers": {},
+      "quota_ceiling_measured": false
+    }
+  ]
+}

@@ -7,5 +7,42 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+anyhow = "1.0"
+blake2 = "0.10"
+blake3 = "1.8"
+semver = "1.0"
+serde_json.workspace = true
+frame-metadata.workspace = true
+parity-scale-codec.workspace = true
+sha2 = "0.10"
+sha1 = "0.10"
+toml_edit.workspace = true
+rustpython-parser = { version = "0.4.0", default-features = false, features = ["num-bigint"] }
+rustpython-ast = { version = "0.4.0", default-features = false, features = ["num-bigint", "visitor"] }
+syn = { version = "2", features = ["full", "visit", "extra-traits"] }
+quote = "1"
+subtensor-linting.workspace = true
+bittensor-core.workspace = true
+rtao-core.workspace = true
+rtao-catalog.workspace = true
+rtao-btauth.workspace = true
+scale-info.workspace = true
+tokio.workspace = true
+rtao-client.workspace = true
+rtao-runtime.workspace = true
+rtao-primitives.workspace = true
+rtao-reads.workspace = true
+rtao-intents = { workspace = true, features = ["weights", "serving", "transfer"] }
+rtao-signer.workspace = true
+rtao-tx.workspace = true
+rtao-metagraph.workspace = true
+rtao-rpc.workspace = true
+rtao-testkit = { workspace = true, features = ["docker"] }
+bytes.workspace = true
+serde.workspace = true
+hex.workspace = true
+url.workspace = true
+
 [lints]
 workspace = true

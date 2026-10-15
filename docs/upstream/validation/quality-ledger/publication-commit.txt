@@ -1,0 +1,15 @@
+commit 8645ebdc31d188a722e22396d26fb52144246da4
+Author:     Sam Johnson <sam@durosoft.com>
+AuthorDate: Wed Oct 14 11:49:36 2026 -0400
+Commit:     Sam Johnson <sam@durosoft.com>
+CommitDate: Wed Oct 14 11:49:36 2026 -0400
+
+    fix: keep TaoBalance price fields in raw units
+
+ app/src/metadata_parser.c                 | 12 +++++++
+ docs/format.md                            |  6 ++++
+ tests/ledger_quality.cpp                  | 59 +++++++++++++++++++++++++++++++
+ tests/quality/README.md                   | 21 +++++++++++
+ tests/quality/relative-price-v478.json    | 20 +++++++++++
+ tests/supported_chains/bittensor-477.json |  6 ++--
+ 6 files changed, 121 insertions(+), 3 deletions(-)

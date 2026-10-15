@@ -1,0 +1,480 @@
+{
+  "commands": {
+    "surface": "Production core_surface::run --check: generated file current; cargo test -p rtao-core --test core_surface --all-features --locked passed",
+    "lint": "Production lint_upstream::run: pinned monorepo lints passed on 12 staged Rust files",
+    "staged": "Production staged::run --check: seven modules absent in portable and host probes against v478"
+  },
+  "regressions": "13 guard regression tests passed in the isolated harness; all 13 also passed in workspace cargo test (80/81 total, one unrelated extractor failure)",
+  "clippy": "Isolated Clippy on these modules passed with -D warnings, workspace unwrap/expect/panic denies; workspace Clippy reports only concurrent extract_resolved/metadata_pin issues",
+  "sources": {
+    "xtask/src/core_surface.rs": "7d9289383164744afa5d09ee3afd2599e0901c2d9c87c22fa3d45ac1807b9fcf",
+    "xtask/src/staged.rs": "e506bf7a5246faa1b18fee4dae642b7693d71136f978c12099d2da92edb30da7",
+    "xtask/src/lint_upstream.rs": "8a3070e91cda8b86df81ddd6ccf888ebc15d34c0fb85d3280ba8b5f0041b298d"
+  },
+  "probes": [
+    {
+      "probe": "ir",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ir#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ir/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ir/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0599",
+          "message": "no associated function or constant named `metadata_ir` found for struct `Runtime` in the current scope",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ir",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ir#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ir/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ir/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0599",
+          "message": "no associated function or constant named `metadata_ir` found for struct `Runtime` in the current scope",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0432",
+          "message": "unresolved import `bittensor_core::protocol`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0432",
+          "message": "unresolved import `bittensor_core::protocol`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops_metadata",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_metadata#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_metadata/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_metadata/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0433",
+          "message": "cannot find `protocol` in `bittensor_core`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops_metadata",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_metadata#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_metadata/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_metadata/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0433",
+          "message": "cannot find `protocol` in `bittensor_core`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops_runtime_api",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_runtime_api#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_runtime_api/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_runtime_api/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0433",
+          "message": "cannot find `protocol` in `bittensor_core`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops_runtime_api",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_runtime_api#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_runtime_api/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_runtime_api/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0433",
+          "message": "cannot find `protocol` in `bittensor_core`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops_storage",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_storage#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_storage/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_storage/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0433",
+          "message": "cannot find `protocol` in `bittensor_core`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "ops_storage",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_storage#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_storage/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/ops_storage/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0433",
+          "message": "cannot find `protocol` in `bittensor_core`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "value_ext",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/value_ext#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/value_ext/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/value_ext/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0432",
+          "message": "unresolved import `bittensor_core::codec::value::ValueExt`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": false
+            },
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "value_ext",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/value_ext#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/value_ext/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/value_ext/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0432",
+          "message": "unresolved import `bittensor_core::codec::value::ValueExt`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": false
+            },
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "verify_strict",
+      "mode": "compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/verify_strict#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/verify_strict/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/verify_strict/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0432",
+          "message": "unresolved import `bittensor_core::keys::verify_strict`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": false
+            },
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "probe": "verify_strict",
+      "mode": "host-compiler.jsonl",
+      "errors": [
+        {
+          "package_id": "path+file:///Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/verify_strict#rtao-staged-probe@0.0.0",
+          "manifest_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/verify_strict/Cargo.toml",
+          "target": {
+            "kind": [
+              "bin"
+            ],
+            "crate_types": [
+              "bin"
+            ],
+            "name": "rtao-staged-probe",
+            "src_path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/staged-probe/verify_strict/src/main.rs",
+            "edition": "2024",
+            "doc": true,
+            "doctest": false,
+            "test": true
+          },
+          "code": "E0432",
+          "message": "unresolved import `bittensor_core::keys::verify_strict`",
+          "spans": [
+            {
+              "file": "src/main.rs",
+              "primary": false
+            },
+            {
+              "file": "src/main.rs",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+Running main() from /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/hunter/_Base/e41ac7a/5b15af2/5905775/Build/GTest/Source/googletest/src/gtest_main.cc
+Number of testcases: 1
+Number of testcases: 5
+Number of testcases: 763
+Number of testcases: 1
+Number of testcases: 666
+Number of testcases: 714
+Number of testcases: 647
+Number of testcases: 1
+Number of testcases: 5
+Number of testcases: 763
+Number of testcases: 1
+Number of testcases: 666
+Number of testcases: 714
+Number of testcases: 647
+Note: Google Test filter = LedgerQuality.*
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from LedgerQuality
+[ RUN      ] LedgerQuality.RatiosKeepExactRawUnitsInDirectAndNestedCalls
+swap_stake_limit normal 6 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: swap_stake_limit normal
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 18
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: swap_stake_limit normal
+
+swap_stake_limit expert 6 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: swap_stake_limit expert
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 18
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: swap_stake_limit expert
+
+move_stake_limit normal 7 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: move_stake_limit normal
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 18
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: move_stake_limit normal
+
+move_stake_limit expert 7 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: move_stake_limit expert
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 18
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: move_stake_limit expert
+
+batch_swap_move normal 7 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move normal
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 18
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move normal
+
+batch_swap_move normal 15 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move normal
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 19
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move normal
+
+batch_swap_move expert 7 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move expert
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 18
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move expert
+
+batch_swap_move expert 15 | limit_price : TAO 0.95
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:43: Failure
+Expected: (line.find("limit_price : 950000000")) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move expert
+
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:44: Failure
+Expected equality of these values:
+  line.find("TAO")
+    Which is: 19
+  std::string::npos
+    Which is: 18446744073709551615
+Google Test trace:
+/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax/tests/ledger_quality.cpp:21: batch_swap_move expert
+
+[  FAILED  ] LedgerQuality.RatiosKeepExactRawUnitsInDirectAndNestedCalls (4 ms)
+[----------] 1 test from LedgerQuality (4 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (5 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] LedgerQuality.RatiosKeepExactRawUnitsInDirectAndNestedCalls
+
+ 1 FAILED TEST

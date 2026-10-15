@@ -1,0 +1,814 @@
+//! Signed shield carriers, paired nonce accounting and canonical inner receipts.
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use bytes::Bytes;
+use rtao_client::{
+    Client, ClientConfig, ClientError, Inclusion, Mortality, Network, NoncePolicy, Period,
+    ShieldCiphertext, ShieldOptions, ShieldPeriod, SubmitFailure, SubmitOptions, Wait,
+};
+use rtao_core::{codec::Value, value_ext::ValueExt};
+use rtao_primitives::{Balance, H256, Tao};
+use rtao_signer::{
+    AccountId, BoxFuture, CryptoType, KeypairSigner, MultiSignature, SignPurpose, Signer,
+    SignerCaps, SignerError, SigningRequest,
+};
+use rtao_testkit::{FakeChain, FakeState, Reply, SubmitScript};
+use serde_json::json;
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+use subxt_rpcs::RpcClient;
+
+#[derive(Clone, Debug)]
+struct SignedView {
+    purpose: SignPurpose,
+    call: Vec<u8>,
+    payload: Vec<u8>,
+    extra: Vec<u8>,
+    additional: Vec<u8>,
+    json: rtao_signer::SignerPayloadJson,
+}
+struct RecordingSigner {
+    key: KeypairSigner,
+    signed: Arc<Mutex<Vec<SignedView>>>,
+    delay: Duration,
+    after_inner: Option<FakeChain>,
+}
+impl Signer for RecordingSigner {
+    fn account(&self) -> AccountId {
+        self.key.account()
+    }
+    fn crypto_type(&self) -> CryptoType {
+        self.key.crypto_type()
+    }
+    fn caps(&self) -> SignerCaps {
+        self.key.caps()
+    }
+    fn sign<'a>(
+        &'a self,
+        request: &'a SigningRequest<'a>,
+    ) -> BoxFuture<'a, Result<MultiSignature, SignerError>> {
+        Box::pin(async move {
+            self.signed.lock().unwrap().push(SignedView {
+                purpose: request.purpose,
+                call: request.call.to_vec(),
+                payload: request.payload.to_vec(),
+                extra: request.included_in_extrinsic.to_vec(),
+                additional: request.included_in_signed_data.to_vec(),
+                json: request.payload_json.clone(),
+            });
+            if !self.delay.is_zero() {
+                tokio::time::sleep(self.delay).await;
+            }
+            if request.purpose == SignPurpose::ShieldInner
+                && let Some(fake) = &self.after_inner
+            {
+                fake.mutate_state(|state| {
+                    state.advance(1);
+                });
+            }
+            self.key.sign(request).await
+        })
+    }
+}
+
+async fn fixture() -> (Client, FakeChain, RecordingSigner) {
+    let mut state = FakeState::default();
+    state
+        .seed_constant("Aura", "SlotDuration", json!(1))
+        .unwrap();
+    // An encoded 1184-byte ML-KEM-768 encapsulation key accepted by the core.
+    state
+        .seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])
+        .unwrap();
+    let fake = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config)
+        .await
+        .unwrap();
+    let signer = RecordingSigner {
+        key: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
+        signed: Arc::new(Mutex::new(Vec::new())),
+        delay: Duration::ZERO,
+        after_inner: None,
+    };
+    (client, fake, signer)
+}
+async fn call(client: &Client, length: usize) -> rtao_client::CallBytes {
+    rtao_runtime::calls::system::remark(vec![42; length])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap()
+}
+fn pool() -> ShieldOptions {
+    ShieldOptions {
+        wait: Wait::Pool,
+        ..Default::default()
+    }
+}
+fn success(index: u32) -> serde_json::Value {
+    json!({"phase":"ApplyExtrinsic","extrinsic_idx":index,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
+}
+async fn signed_inner(
+    client: &Client,
+    signer: &RecordingSigner,
+    call: rtao_client::CallBytes,
+    nonce: u64,
+) -> (Bytes, H256) {
+    let opts = SubmitOptions {
+        nonce: NoncePolicy::Explicit(nonce),
+        mortality: Mortality::Mortal(Period::new(8)),
+        ..Default::default()
+    };
+    let prepared = client.prepare_call(call, &signer.key, &opts).await.unwrap();
+    let signature = signer
+        .key
+        .sign(&prepared.signing_request(SignPurpose::ShieldInner))
+        .await
+        .unwrap();
+    client.attach_signature(&prepared, signature).await.unwrap()
+}
+// The fake author exposes the exact signed inner in its decrypted block, while
+// author requests themselves record only the encrypted carrier bytes.
+fn install_inner(fake: &FakeChain, bytes: Bytes, included: u64, failed: bool) {
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", move |state, request| {
+            let mut reply = state.dispatch(request);
+            if let Some(Ok(raw)) = &mut reply.outcome {
+                let number = raw["block"]["header"]["number"].as_str().and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"),16).ok());
+                if number == Some(included) {
+                    raw["block"]["extrinsics"].as_array_mut().unwrap().push(json!(format!("0x{}",hex::encode(&bytes))));
+                    let inner_event = if failed {
+                        json!({"phase":"ApplyExtrinsic","extrinsic_idx":1,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Token":"FundsUnavailable"},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
+                    } else { success(1) };
+                    state.seed_events(request.params[0].as_str().unwrap(), json!([success(0),inner_event])).unwrap();
+                }
+            }
+            reply
+        });
+    });
+}
+fn assert_unknown(result: Result<rtao_client::ExtrinsicReport, SubmitFailure>, fake: &FakeChain) {
+    use blake2::{Blake2b, Digest, digest::consts::U32};
+    let state = fake.state();
+    let state = state.lock().unwrap();
+    assert_eq!(state.submissions.len(), 1);
+    let expected = rtao_rpc::H256(Blake2b::<U32>::digest(&state.submissions[0]).into());
+    assert!(
+        matches!(result,Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {hash})) if hash==expected)
+    );
+}
+
+#[test]
+fn ciphertext_and_period_bounds_are_closed() {
+    assert_eq!(ShieldPeriod::default(), ShieldPeriod::P8);
+    assert_eq!(
+        ShieldPeriod::P8.get(),
+        rtao_catalog::rt::MAX_SHIELD_ERA_PERIOD
+    );
+    assert!(ShieldPeriod::try_from(rtao_catalog::rt::MAX_SHIELD_ERA_PERIOD + 1).is_err());
+    for period in [0, 1, 2, 3, 5, 7, 9, 128, u64::MAX] {
+        assert!(ShieldPeriod::try_from(period).is_err());
+    }
+    assert_eq!(ShieldPeriod::try_from(4).unwrap(), ShieldPeriod::P4);
+    assert_eq!(ShieldPeriod::try_from(8).unwrap(), ShieldPeriod::P8);
+    let bound = usize::try_from(rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES).unwrap();
+    assert!(ShieldCiphertext::new(vec![0; bound]).is_ok());
+    assert!(ShieldCiphertext::new(vec![0; bound + 1]).is_err());
+}
+
+#[tokio::test]
+async fn pool_transmits_only_signed_carrier_and_preserves_pair_nonce_and_anchor() {
+    let (client, fake, mut signer) = fixture().await;
+    fake.mutate_state(|state| {
+        state.set_nonce(signer.account().to_string(), 7);
+        state.finalized = 98;
+    });
+    signer.after_inner = Some(fake.clone());
+    let inner_call = call(&client, 3).await;
+    let report = client
+        .submit_shielded(inner_call.clone(), &signer, &pool())
+        .await
+        .unwrap();
+    assert_eq!(report.inclusion, Inclusion::PoolAccepted);
+    assert_eq!(report.shield.unwrap().carrier_hash, report.hash);
+    let signed = signer.signed.lock().unwrap().clone();
+    assert_eq!(signed.len(), 2);
+    assert_eq!(signed[0].purpose, SignPurpose::ShieldInner);
+    assert_eq!(signed[1].purpose, SignPurpose::ShieldCarrier);
+    assert_eq!(signed[0].call, inner_call.as_bytes());
+    assert_eq!(signed[0].json["nonce"], json!("0x00000008"));
+    assert_eq!(signed[1].json["nonce"], json!("0x00000007"));
+    assert_eq!(signed[0].json["era"], signed[1].json["era"]);
+    assert_eq!(signed[0].json["blockHash"], signed[1].json["blockHash"]);
+    assert_eq!(signed[0].extra[0..2], signed[1].extra[0..2]);
+    assert_eq!(signed[0].additional, signed[1].additional);
+    assert!(!signed[0].payload.is_empty());
+    {
+        let state = fake.state();
+        let state = state.lock().unwrap();
+        assert_eq!(state.submissions.len(), 1);
+        let decoded = state
+            .runtime
+            .decode_extrinsic(&state.submissions[0], true)
+            .unwrap();
+        let encoded = rtao_runtime::calls::mev_shield::SUBMIT_ENCRYPTED;
+        assert_eq!(
+            &signed[1].call[0..2],
+            &[encoded.pallet_index, encoded.call_index]
+        );
+        assert_eq!(decoded.field("nonce").and_then(ValueExt::as_u128), Some(7));
+        let ciphertext = signed[1].call[2..].to_vec();
+        assert!(
+            !ciphertext
+                .windows(inner_call.as_bytes().len())
+                .any(|w| w == inner_call.as_bytes())
+        );
+    }
+    let next = client.nonces().lease(&signer.account()).await.unwrap();
+    assert_eq!(next.value(), 9);
+    next.settle();
+}
+
+#[tokio::test]
+async fn conservative_carrier_probe_is_public_bounded_and_does_not_mutate_nonce() {
+    let (client, fake, signer) = fixture().await;
+    client.nonces().pin(&signer.account(), 44);
+    let fee = client
+        .estimate_shielded_carrier_fee(signer.account())
+        .await
+        .unwrap();
+    assert_eq!(fee.rao(), fake.state().lock().unwrap().fee);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        Some(44)
+    );
+    assert!(signer.signed.lock().unwrap().is_empty());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    let request = fake
+        .requests()
+        .into_iter()
+        .find(|r| r.method == "state_call" && r.params[0] == "TransactionPaymentApi_query_info")
+        .unwrap();
+    let args = hex::decode(request.params[1].as_str().unwrap().trim_start_matches("0x")).unwrap();
+    let probe = &args[..args.len() - 4];
+    let state = fake.state();
+    let state = state.lock().unwrap();
+    let decoded = state.runtime.decode_extrinsic(probe, true).unwrap();
+    let call = decoded.field("call").unwrap();
+    let Value::List(args) = call.field("call_args").unwrap() else {
+        panic!("call args are not a list");
+    };
+    let ciphertext = args[0].field("value").unwrap();
+    let length = match ciphertext {
+        Value::Bytes(bytes) => bytes.len(),
+        Value::List(bytes) => bytes.len(),
+        Value::Str(bytes) => bytes.len(),
+        other => panic!("unexpected ciphertext {other:?}"),
+    };
+    assert_eq!(length, 8192);
+}
+
+#[tokio::test]
+async fn finality_lag_refuses_exact_expiry_boundary_before_signing() {
+    for (period, allowed, refused) in [(ShieldPeriod::P4, 1, 2), (ShieldPeriod::P8, 5, 6)] {
+        for lag in [allowed, refused, refused + 1] {
+            let (client, fake, signer) = fixture().await;
+            fake.mutate_state(|s| s.finalized = s.block - lag);
+            let opts = ShieldOptions { period, ..pool() };
+            let result = client
+                .submit_shielded(call(&client, 1).await, &signer, &opts)
+                .await;
+            if lag == allowed {
+                assert!(result.is_ok());
+            } else {
+                assert!(
+                    matches!(result,Err(SubmitFailure::ShieldEraExpired {period:p,finality_lag:l}) if p==period.get() && l==lag)
+                );
+                assert!(signer.signed.lock().unwrap().is_empty());
+                assert!(fake.state().lock().unwrap().submissions.is_empty());
+                assert!(
+                    !fake
+                        .requests()
+                        .iter()
+                        .any(|r| r.method == "account_nextIndex")
+                );
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn oversized_inner_ciphertext_is_rejected_before_carrier_signature() {
+    let (client, fake, signer) = fixture().await;
+    let result = client
+        .submit_shielded(call(&client, 8192).await, &signer, &pool())
+        .await;
+    assert!(
+        matches!(result,Err(SubmitFailure::Client(ClientError::Protocol(ref message))) if message.contains("shield ciphertext"))
+    );
+    assert_eq!(signer.signed.lock().unwrap().len(), 1);
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn fee_limit_and_probe_failure_fail_before_signing() {
+    for failed_probe in [false, true] {
+        let (client, fake, signer) = fixture().await;
+        if failed_probe {
+            fake.mutate_state(|s| {
+                s.queue_reply("state_call", Reply::error(-32603, "fee unavailable", None))
+            });
+        }
+        let opts = ShieldOptions {
+            max_fee: Some(Balance::<Tao>::ZERO),
+            ..pool()
+        };
+        assert!(
+            client
+                .submit_shielded(call(&client, 1).await, &signer, &opts)
+                .await
+                .is_err()
+        );
+        assert!(signer.signed.lock().unwrap().is_empty());
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn absent_next_key_is_retried_twice_one_block_apart_then_refused() {
+    let (client, fake, signer) = fixture().await;
+    let key_prefix = rtao_core::mlkem::twox_128(b"MevShield");
+    fake.mutate_state(|state| {
+        state.set_handler("state_queryStorageAt", move |state, request| {
+            let key = request.params[0][0].as_str().unwrap();
+            if hex::decode(key.trim_start_matches("0x"))
+                .unwrap()
+                .starts_with(&key_prefix)
+            {
+                Reply::result(json!([{"block":request.params[1],"changes":[[key,null]]}]))
+            } else {
+                state.dispatch(request)
+            }
+        });
+    });
+    let started = tokio::time::Instant::now();
+    assert!(
+        matches!(client.submit_shielded(call(&client,1).await,&signer,&pool()).await,Err(SubmitFailure::Client(ClientError::Protocol(ref msg))) if msg.contains("NextKey not available"))
+    );
+    let reads = fake
+        .requests()
+        .iter()
+        .filter(|r| r.method == "state_queryStorageAt")
+        .count();
+    assert_eq!(reads, 3);
+    assert!(started.elapsed() >= Duration::from_millis(2));
+    assert!(signer.signed.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn carrier_rejection_never_retries_and_drops_both_leases() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| state.queue_submit(SubmitScript::Invalid("Stale".into())));
+    let result = client
+        .submit_shielded(call(&client, 1).await, &signer, &ShieldOptions::default())
+        .await;
+    assert!(matches!(result, Err(SubmitFailure::Pool(_))));
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn inner_success_and_dispatch_failure_resolve_actual_signed_inner() {
+    for failed in [false, true] {
+        let (client, fake, signer) = fixture().await;
+        let inner_call = call(&client, 3).await;
+        let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+        install_inner(&fake, inner_bytes, 101, failed);
+        let report = client
+            .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+            .await
+            .unwrap();
+        assert_eq!(report.hash, inner_hash);
+        assert_eq!(report.shield.unwrap().inner_hash, inner_hash);
+        assert_eq!(report.block_number, Some(101));
+        assert_eq!(report.extrinsic_index, Some(1));
+        assert_eq!(report.success, !failed);
+        assert_eq!(report.error.is_some(), failed);
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        let next = client.nonces().lease(&signer.account()).await.unwrap();
+        assert_eq!(next.value(), 2);
+        next.settle();
+    }
+}
+
+#[tokio::test]
+async fn missing_inner_is_failure_and_invalidates_cache_after_carrier_inclusion() {
+    let (client, fake, signer) = fixture().await;
+    let result = client
+        .submit_shielded(call(&client, 1).await, &signer, &ShieldOptions::default())
+        .await
+        .unwrap();
+    assert!(!result.success);
+    assert!(
+        result
+            .message
+            .contains("not included before its era expired")
+    );
+    assert_eq!(result.inclusion, Inclusion::InBlock);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+    let attempts = fake
+        .requests()
+        .iter()
+        .filter(|r| r.method == "chain_getBlockHash" && r.params[0] == 102)
+        .count();
+    assert_eq!(
+        attempts,
+        usize::try_from(rtao_catalog::py::SHIELDED_POLL_ATTEMPTS_PER_BLOCK * 9).unwrap()
+    );
+}
+
+#[tokio::test]
+async fn missing_height_uses_shared_budget_until_delayed_inner_appears() {
+    let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 3).await;
+    let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    install_inner(&fake, inner_bytes, 102, false);
+    let misses = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = misses.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlockHash", move |state, request| {
+            if request.params[0] == 102 {
+                if observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst) < 5 {
+                    return Reply::result(serde_json::Value::Null);
+                }
+                state.advance(1);
+            }
+            state.dispatch(request)
+        })
+    });
+    let report = client
+        .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+        .await
+        .unwrap();
+    assert!(report.success);
+    assert_eq!(report.hash, inner_hash);
+    assert_eq!(report.block_number, Some(102));
+    assert_eq!(misses.load(std::sync::atomic::Ordering::SeqCst), 6);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    let next = client.nonces().lease(&signer.account()).await.unwrap();
+    assert_eq!(next.value(), 2);
+    next.settle();
+}
+
+#[tokio::test]
+async fn admission_timeout_after_synchronous_stage_does_not_broadcast() {
+    let (client, fake, mut signer) = fixture().await;
+    signer.delay = Duration::from_millis(50);
+    let opts = ShieldOptions {
+        submit: SubmitOptions {
+            submit_deadline: Some(Duration::from_millis(10)),
+            ..Default::default()
+        },
+        ..pool()
+    };
+    assert!(matches!(
+        client
+            .submit_shielded(call(&client, 1).await, &signer, &opts)
+            .await,
+        Err(SubmitFailure::Client(ClientError::Rpc(
+            rtao_rpc::RpcError::Timeout { .. }
+        )))
+    ));
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn watch_timeout_keeps_exact_attempted_carrier_hash_without_retransmission() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| state.queue_submit(SubmitScript::Statuses(vec![json!("ready")])));
+    let opts = ShieldOptions {
+        submit: SubmitOptions {
+            deadline: Some(Duration::from_secs(2)),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let result = client
+        .submit_shielded(call(&client, 1).await, &signer, &opts)
+        .await;
+    assert_unknown(result, &fake);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+    assert!(
+        fake.requests()
+            .iter()
+            .any(|r| r.method == "author_unwatchExtrinsic")
+    );
+}
+
+#[tokio::test]
+async fn cancellation_of_waiting_shield_drops_pair_and_unwatches_carrier() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| state.queue_submit(SubmitScript::Statuses(vec![json!("ready")])));
+    let inner_call = call(&client, 1).await;
+    let account = signer.account();
+    let task_client = client.clone();
+    let task = tokio::spawn(async move {
+        task_client
+            .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+            .await
+    });
+    for _ in 0..100 {
+        if !fake.state().lock().unwrap().submissions.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    task.abort();
+    let _ = task.await;
+    assert_eq!(client.nonces().cached(&account.to_string()).await, None);
+    assert!(
+        fake.requests()
+            .iter()
+            .any(|r| r.method == "author_unwatchExtrinsic")
+    );
+}
+
+#[tokio::test]
+async fn finality_rpc_failure_retries_four_then_refuses_without_resubmitting() {
+    let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 1).await;
+    let (bytes, _) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    install_inner(&fake, bytes, 101, false);
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getFinalizedHead", |state, request| {
+            if !state.submissions.is_empty() {
+                Reply::error(-32603, "temporarily unavailable", None)
+            } else {
+                state.dispatch(request)
+            }
+        })
+    });
+    let opts = ShieldOptions {
+        wait: Wait::Finalization,
+        ..Default::default()
+    };
+    let result = client.submit_shielded(inner_call, &signer, &opts).await;
+    assert!(
+        matches!(result,Err(SubmitFailure::Client(ClientError::Protocol(ref msg))) if msg.contains("4 consecutive finalized-head RPC attempts"))
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn finalized_inner_reorg_is_resolved_on_the_canonical_branch() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| state.finalized = 100);
+    let inner_call = call(&client, 1).await;
+    let (bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    install_inner(&fake, bytes.clone(), 101, false);
+    let canonical_seen = Arc::new(Mutex::new(None::<String>));
+    let canonical_slot = canonical_seen.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getFinalizedHead", move |state, request| {
+            if !state.submissions.is_empty() && canonical_slot.lock().unwrap().is_none() {
+                let old = state.block_hash(101).unwrap();
+                let parent = state.block_hash(100).unwrap();
+                // The observed inner's block is still unfinalized when the branch
+                // changes. A different block at the same height includes it.
+                state.finalized = 100;
+                let canonical = state.fork(&parent).unwrap();
+                state.set_best(&canonical).unwrap();
+                state.set_finalized(101).unwrap();
+                state
+                    .seed_events(&canonical, json!([success(0), success(1)]))
+                    .unwrap();
+                *canonical_slot.lock().unwrap() = Some(canonical.clone());
+                assert_ne!(canonical, old);
+            }
+            state.dispatch(request)
+        })
+    });
+    let opts = ShieldOptions {
+        wait: Wait::Finalization,
+        ..Default::default()
+    };
+    let report = client
+        .submit_shielded(inner_call, &signer, &opts)
+        .await
+        .unwrap();
+    assert_eq!(report.hash, inner_hash);
+    assert_eq!(report.inclusion, Inclusion::Finalized);
+    let expected = canonical_seen.lock().unwrap().clone().unwrap();
+    assert_eq!(
+        format!("0x{}", hex::encode(report.block_hash.unwrap().0)),
+        expected
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
+async fn finalization_failure_never_returns_an_unfinalized_carrier_failure() {
+    let (client, fake, signer) = fixture().await;
+    let failed = json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Token":"FundsUnavailable"},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}]);
+    fake.mutate_state(|state| {
+        state.queue_submit(SubmitScript::InBlockThenFinalized { events: failed })
+    });
+    let opts = ShieldOptions {
+        wait: Wait::Finalization,
+        ..Default::default()
+    };
+    let report = client
+        .submit_shielded(call(&client, 1).await, &signer, &opts)
+        .await
+        .unwrap();
+    assert!(!report.success);
+    assert_eq!(report.inclusion, Inclusion::Finalized);
+    assert!(report.error.is_some());
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn earlier_canonical_inner_is_rescanned_after_orphan_disappears() {
+    let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 1).await;
+    let (bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    let reorganized = Arc::new(Mutex::new(false));
+    let reorg_block = reorganized.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", move |state, request| {
+            let mut reply = state.dispatch(request);
+            if let Some(Ok(raw)) = &mut reply.outcome {
+                let number = raw["block"]["header"]["number"]
+                    .as_str()
+                    .and_then(|n| u64::from_str_radix(n.trim_start_matches("0x"), 16).ok());
+                let changed = *reorg_block.lock().unwrap();
+                if (number == Some(102) && !changed) || (number == Some(101) && changed) {
+                    raw["block"]["extrinsics"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!(format!("0x{}", hex::encode(&bytes))));
+                    state
+                        .seed_events(
+                            request.params[0].as_str().unwrap(),
+                            json!([success(0), success(1)]),
+                        )
+                        .unwrap();
+                }
+                if number == Some(101) && !changed {
+                    state.advance(1);
+                }
+            }
+            reply
+        });
+    });
+    let reorg_finality = reorganized.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getFinalizedHead", move |state, request| {
+            if !state.submissions.is_empty() && !*reorg_finality.lock().unwrap() {
+                state.finalized = 100;
+                let parent = state.block_hash(101).unwrap();
+                let canonical = state.fork(&parent).unwrap();
+                state.set_best(&canonical).unwrap();
+                state.set_finalized(102).unwrap();
+                *reorg_finality.lock().unwrap() = true;
+            }
+            state.dispatch(request)
+        })
+    });
+    let opts = ShieldOptions {
+        wait: Wait::Finalization,
+        ..Default::default()
+    };
+    let report = client
+        .submit_shielded(inner_call, &signer, &opts)
+        .await
+        .unwrap();
+    assert_eq!(report.hash, inner_hash);
+    assert_eq!(report.block_number, Some(101));
+    assert_eq!(report.inclusion, Inclusion::Finalized);
+    assert!(*reorganized.lock().unwrap());
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
+async fn author_ack_timeout_keeps_carrier_hash_and_clears_pair() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| {
+        state.set_handler("author_submitExtrinsic", |state, request| {
+            let _ = state.dispatch(request);
+            Reply::silent()
+        })
+    });
+    let opts = ShieldOptions {
+        submit: SubmitOptions {
+            submit_deadline: Some(Duration::from_secs(2)),
+            ..Default::default()
+        },
+        ..pool()
+    };
+    let result = client
+        .submit_shielded(call(&client, 1).await, &signer, &opts)
+        .await;
+    assert_unknown(result, &fake);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn unknown_carrier_fate_reconciles_history_without_retransmission() {
+    let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 1).await;
+    let (bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    install_inner(&fake, bytes, 101, false);
+    // A transport fate loss after successful admission follows the same
+    // reconciliation branch as an acknowledgment deadline, with the complete
+    // operation budget left available for finalized history.
+    fake.mutate_state(|state| {
+        state.set_handler("author_submitExtrinsic", |state, request| {
+            let _ = state.dispatch(request);
+            Reply::silent()
+        })
+    });
+    let opts = ShieldOptions {
+        submit: SubmitOptions {
+            submit_deadline: Some(Duration::from_secs(2)),
+            deadline: Some(Duration::from_secs(5)),
+            reconcile: true,
+            ..Default::default()
+        },
+        ..pool()
+    };
+    let report = client
+        .submit_shielded(inner_call, &signer, &opts)
+        .await
+        .unwrap();
+    assert_eq!(report.hash, inner_hash);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn runtime_upgrade_after_inner_signature_refuses_carrier_broadcast() {
+    let (client, fake, signer) = fixture().await;
+    let signed = signer.signed.clone();
+    let inner_call = call(&client, 1).await;
+    fake.mutate_state(|state| {
+        state.set_handler("state_getRuntimeVersion", move |state, request| {
+            if signed.lock().unwrap().len() == 1 {
+                state.runtime = Arc::new(
+                    rtao_core::runtime::Runtime::parse(
+                        &state.runtime.metadata_bytes,
+                        state.runtime.spec_version,
+                        2,
+                        state.runtime.ss58_format,
+                    )
+                    .unwrap(),
+                );
+            }
+            state.dispatch(request)
+        })
+    });
+    let result = client.submit_shielded(inner_call, &signer, &pool()).await;
+    assert!(result.is_err());
+    assert_eq!(signer.signed.lock().unwrap().len(), 1);
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}

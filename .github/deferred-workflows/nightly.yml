@@ -1,0 +1,185 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: Benchmark-capable source revision to measure on this same runner
+        type: string
+        default: rtao-v0.1.0
+      seconds_per_target:
+        description: Instrumented libFuzzer time per target (seconds)
+        type: string
+        default: '120'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/nightly
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/nightly/build
+  TMPDIR: ${{ github.workspace }}/target/nightly/tmp
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - run: rustup toolchain install nightly --profile minimal --component rust-src --no-self-update
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: |
+            . -> target/nightly/build
+            fuzz -> target/nightly/fuzz/build
+          cache-directories: |
+            ~/.cargo/git
+            target/nightly/tools
+      - run: cargo +nightly install cargo-fuzz --version 0.13.2 --locked --root "$RTAO_TEMP_ROOT/tools"
+      - name: Run instrumented targets
+        env:
+          SECONDS_PER_TARGET: ${{ inputs.seconds_per_target || '120' }}
+        run: |
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          cargo run --locked -p xtask -- fuzz --toolchain nightly --seconds-per-target "$SECONDS_PER_TARGET"
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: always()
+        with:
+          name: instrumented-fuzz-results
+          path: |
+            target/nightly/fuzz/results.json
+            target/nightly/fuzz/artifacts
+            target/nightly/fuzz/corpus
+          if-no-files-found: error
+          retention-days: 3
+
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/nightly/build
+          cache-directories: ~/.cargo/git
+      - name: Check out the benchmark reference on this runner
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.baseline_ref || vars.RTAO_BENCH_REFERENCE || 'rtao-v0.1.0' }}
+          path: target/nightly/reference
+          persist-credentials: false
+      - name: Measure reference source
+        run: cargo run --locked -p xtask -- bench --workspace "$RTAO_TEMP_ROOT/reference" --save-baseline "$RTAO_TEMP_ROOT/bench/reference.json"
+      - name: Measure current source and fail above 30 percent
+        run: cargo run --locked -p xtask -- bench --compare-baseline --baseline "$RTAO_TEMP_ROOT/bench/reference.json" --fail-over-percent 30 --save-baseline "$RTAO_TEMP_ROOT/bench/current.json"
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: always()
+        with:
+          name: same-runner-criterion-results
+          path: target/nightly/bench/*.json
+          if-no-files-found: error
+
+  features-powerset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/nightly/build
+          cache-directories: |
+            ~/.cargo/git
+            target/nightly/tools
+      - run: cargo install cargo-hack --version 0.6.45 --locked --root "$RTAO_TEMP_ROOT/tools"
+      - run: |
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          cargo hack check --locked -p rtao --feature-powerset --depth 2 --exclude-features full
+
+  core-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    permissions:
+      contents: read
+      issues: write
+    env:
+      RTAO_CORE_CANARY_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/nightly/build
+          cache-directories: |
+            ~/.cargo/git
+            target/nightly/tools
+      - run: cargo install cargo-nextest --version 0.9.143 --locked --root "$RTAO_TEMP_ROOT/tools"
+      - name: Resolve monorepo main and remove core patch overrides
+        run: cargo run --locked -p xtask -- pin --core-branch main --no-commit
+      - name: Build, core surface and offline tests against actual upstream main
+        run: |
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          cargo check --workspace --locked
+          cargo run --locked -p xtask -- core-surface
+          cargo nextest run --workspace --locked --profile ci --no-fail-fast
+      - name: Smoke-test the actual upstream main localnet
+        run: |
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          bash ci/core-canary-smoke.sh
+      - name: Retain bounded upstream main smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: core-canary-localnet
+          path: target/nightly/canary
+          if-no-files-found: ignore
+      - name: Record canary failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue_title='core-canary: upstream main validation fails'
+          issue_number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$issue_title in:title" --json number --jq '.[0].number // empty')
+          printf 'Upstream main failed build, core surface, offline tests, or the localnet smoke.\n\nRun: %s/%s/actions/runs/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$RTAO_TEMP_ROOT/canary.md"
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$RTAO_TEMP_ROOT/canary.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$issue_title" --body-file "$RTAO_TEMP_ROOT/canary.md"
+          fi

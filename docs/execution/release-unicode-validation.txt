@@ -1,0 +1,208 @@
+Unicode notice distribution validation
+UTC: 2026-10-14T17:24:46Z
+
+Recorded root: /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC
+TMPDIR: /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp
+Shared test target: /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build
+RUSTC_WORKSPACE_WRAPPER: /Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/rtao.sh
+PYO3_NO_PYTHON=1; CARGO_INCREMENTAL=0; CARGO_PROFILE_DEV_DEBUG=0
+
+webpki-root-certs-LICENSE: 2371 bytes; SHA256 e271993808fec50ab29350b39539cdec611a9103f827e0aa26d61da70e2d33f8
+Unicode-DFS-2016.txt: 2315 bytes; SHA256 68f5b9f5ea36881a0942ba02f558e9e1faf76cc09cb165ad801744c61b738844
+Final lock snapshot Cargo.lock: f911459259190907928b93d549d6f65a2bffc3fd7560aa484e3688dd633867d4; unchanged by distribution work
+Final lock snapshot fuzz/Cargo.lock: 62d33fdf1634dd0b600e8048de173dfe2c410df6dcf6fa35543da26dc1207eea; unchanged by distribution work
+
+Distribution source snapshots:
+fd4e306a39a8ba8d36ac154903102cdfbfb73fa1fa50fafe9ec76427e49dc5c7  xtask/src/release.rs
+de55cf88670d26572bb76652355f82108ab6a897ef67f302989e639bcaf229f0  ci/release/license.sh
+d53914895db62408fe110e385ee61e608aabfa88bf8539309f2045a3a9dc0530  ci/release/pins.env
+0f4f7eb0a1c3685f07a33aa30192beec15d284e3de4850daefe994c263789a1b  ci/release/docs-build.sh
+915c5b64b0ae2a83045caac8efadc2b593abb021179ea77ead0f51a876a77442  ci/release/linux-build.sh
+ce4b49c1c975bec39851d31b6b41d030b59d2f58dbf6e7e2ab7e3d4ced39e2ef  ci/release/macos-build.sh
+915d30ed5bc0889a9f274801b47999e79590ce5f4268f3de84336ac510bfd38a  ci/release/README.md
+3d06c95e36e3f1be198f3bca008ea55d36f8c024ddcf1b8eb1c1fcee64525c30  ci/validator/Dockerfile
+2a69e9cd4dc833392c885c38f70b3ebae5985822e60f9345c0647202bee12e02  .github/workflows/release.yml
+
+Commands:
+cargo test --locked --offline -p xtask release::tests -- --nocapture
+cargo +1.89.0 test --locked --offline -p xtask release::tests -- --nocapture
+CARGO_TARGET_DIR=/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/unicode-distribution/lint-target cargo clippy --locked --offline -p xtask --all-targets -- -D warnings
+rustfmt --edition 2024 --check xtask/src/release.rs
+bash -n ci/release/*.sh
+actionlint 1.7.7 -shellcheck= -pyflakes= .github/workflows/release.yml
+cargo metadata --locked --offline --no-deps --format-version 1
+Native staging probes; Ruby YAML/source/hash/image-stage checks and /bin/sh -n on both validator RUN commands.
+
+Current release suite: 10 passed, 247 filtered. Its compilation overlapped root testkit feature changes and recorded an old-metadata core-policy cfg warning. Rust 1.99 compilation also reported rust-objcopy stripping failures due to its missing libLLVM.dylib; no host/toolchain settings were changed. The Rust 1.89 suite passed all 10 release tests with no compiler warnings. The queued duplicate current-toolchain rerun never started compilation and was interrupted at the coordinator's request; final-source repository xtask tests are owned by the coordinator.
+Signature-failure messages below are expected synthetic tampering cases.
+Workspace integration changed the root lock from a4114f69741b1ab235c4c3ed15882829430aa5e046e1ff80d5359c3063b107ef to f911459259190907928b93d549d6f65a2bffc3fd7560aa484e3688dd633867d4 during validation. The coordinator confirmed this removed only xtask -> subxt-rpcs, with no package identity changes. The distribution source and notice pins stayed unchanged. Clippy below preceded that edge removal; final repository integration Clippy is recorded separately.
+
+test-current: exit 0
+  --> crates/rtao-testkit/src/lib.rs:10:7
+   |
+10 | #[cfg(feature = "core-policy")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `core-oracle`, `docker`, `interop`, `ledger-emu`, `rpc-metrics`, and `rpc-rate-limit`
+   = help: consider adding `core-policy` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: `rtao-testkit` (lib) generated 1 warning
+   Compiling rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+   Compiling rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+warning: stripping debug info with `rust-objcopy` failed: signal: 6 (SIGABRT)
+  |
+  = note: dyld[36319]: Library not loaded: @rpath/libLLVM.dylib
+            Referenced from: <D6B3C499-A2AF-3E42-8F77-C42BD658AAB5> /Users/sam/.rustup/toolchains/1.99.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/rust-objcopy
+            Reason: tried: '/Users/sam/.rustup/toolchains/1.99.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file), '/Users/sam/.rustup/toolchains/1.99.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file)
+          
+
+warning: `xtask` (bin "xtask" test) generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 5m 06s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-ee24ac5d740f5a66)
+
+running 10 tests
+test release::tests::local_provenance_rejects_host_or_source_substitution ... ok
+test release::tests::local_mac_provenance_fails_without_an_approved_key ... ok
+test release::tests::release_requires_both_builders_and_all_four_targets ... ok
+test release::tests::rejects_extra_assets_and_missing_targets ... ok
+test release::tests::rejects_an_unpinned_toolchain ... ok
+test release::tests::license_sources_and_assets_are_regular_exact_bounded_and_in_checksums ... ok
+Good "rtao-release" signature for rtao-mac with ED25519 key SHA256:8l6ObU6fSAb6DCPc1zbPSOwm5g2MKV4YbayJvPuebTM
+Signature verification failed: incorrect signature
+Could not verify signature.
+test release::tests::authenticates_local_record_and_rejects_tampering ... ok
+test release::tests::rejects_asset_tampering_and_archive_traversal ... ok
+test release::tests::docs_archive_requires_facade_and_rejects_links ... ok
+test release::tests::archive_requires_both_licenses_and_rejects_modified_oversized_and_linked_notices ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 247 filtered out; finished in 0.13s
+
+
+test-current warning lines: 6
+
+test-msrv: exit 0
+   Compiling unicode_names2 v1.3.0
+   Compiling tle v0.1.0 (https://github.com/ideal-lab5/timelock?rev=5416406cfd32799e31e1795393d4916894de4468#5416406c)
+   Compiling bittensor-core v0.1.0 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+   Compiling macro_magic_core v0.5.1
+   Compiling rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+   Compiling rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+   Compiling rustpython-ast v0.4.0
+   Compiling rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+   Compiling rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+   Compiling rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+   Compiling rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+   Compiling rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+   Compiling rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+   Compiling rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+   Compiling rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+   Compiling rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+   Compiling rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+   Compiling macro_magic_macros v0.5.1
+   Compiling macro_magic v0.5.1
+   Compiling procedural-fork v1.10.0-rc3 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+   Compiling subtensor-linting v0.1.0 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+   Compiling xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `test` profile [unoptimized] target(s) in 16m 16s
+     Running unittests src/main.rs (target/execute-plan.6Ro0PC/build/debug/deps/xtask-b6bf6dfb842fca19)
+
+running 10 tests
+test release::tests::local_mac_provenance_fails_without_an_approved_key ... ok
+test release::tests::local_provenance_rejects_host_or_source_substitution ... ok
+test release::tests::release_requires_both_builders_and_all_four_targets ... ok
+test release::tests::rejects_an_unpinned_toolchain ... ok
+test release::tests::rejects_extra_assets_and_missing_targets ... ok
+test release::tests::license_sources_and_assets_are_regular_exact_bounded_and_in_checksums ... ok
+Good "rtao-release" signature for rtao-mac with ED25519 key SHA256:eYcUBitYCsi4QlQCtbULVZ0ARPt1Icq6R9wB8Xpu3Ow
+Signature verification failed: incorrect signature
+Could not verify signature.
+test release::tests::authenticates_local_record_and_rejects_tampering ... ok
+test release::tests::rejects_asset_tampering_and_archive_traversal ... ok
+test release::tests::docs_archive_requires_facade_and_rejects_links ... ok
+test release::tests::archive_requires_both_licenses_and_rejects_modified_oversized_and_linked_notices ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 254 filtered out; finished in 0.11s
+
+
+test-msrv warning lines: 0
+
+clippy: exit 0
+    Checking rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+    Checking rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+    Checking rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+    Checking rtao-catalog v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-catalog)
+    Checking rtao-runtime v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-runtime)
+    Checking rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+    Checking rtao-client v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-client)
+    Checking rtao-reads v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-reads)
+    Checking rtao-tx v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-tx)
+    Checking rtao-testkit v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-testkit)
+    Checking rtao-metagraph v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-metagraph)
+    Checking rtao-intents v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-intents)
+    Checking xtask v0.1.0 (/Users/sam/workspace/rtao/xtask)
+    Finished `dev` profile [unoptimized] target(s) in 22.34s
+
+clippy warning lines: 0
+
+staging: exit 0
+Both notices stage exactly and idempotently. Missing source, missing verification input, same-length tamper, oversized, symlink, dangling symlink and directory candidates are refused. Missing destination is recreated exactly. Failed copies preserve candidate bytes and symlink targets.
+
+
+static: exit 0
+Release YAML keeps free ubuntu-latest runners and commit-pinned actions. Docs inventory/workflow comparisons and validator source/runtime regular-file, size, hash and copy checks cover both notices. Both validator RUN commands pass shell syntax checks; no image was built or run.
+
+
+actionlint: exit 0
+
+
+metadata-final: exit 0
+Locked/offline metadata accepted 20 root workspace packages.
+
+
+Fixture and separate lint-target cleanup audit:
+{
+  "targets": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/unicode-distribution/fixtures",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/unicode-distribution/lint-target"
+  ],
+  "dependencies": [],
+  "configuration_files_checked": 18,
+  "scan_roots": [
+    "/Users/sam/workspace/rtao",
+    "/Users/sam/.config",
+    "/Users/sam/.local/bin",
+    "/Users/sam/.virtualenvs",
+    "/Users/sam/.venvs",
+    "/usr/local/bin",
+    "/opt/homebrew/bin"
+  ],
+  "bytes": 562821383,
+  "removed": true,
+  "retained": "Root-owned shared build, transparent rustc wrapper and borrowed actionlint remain live for root integration. Bounded distribution logs and scripts remain until evidence is retained."
+}
+
+This distribution validation made no actual tagged release, GitHub attestation, Docker/image run or device claim. It ran no Python and made no commits, pushes, tags, labels or review requests.
+
+Coordinator integration check (reported):
+actionlint -color .github/workflows/release.yml .github/workflows/validator-image.yml .github/workflows/e2e.yml: exit 0. Both validator-image push/PR filters include docs/licenses/**; the e2e code classification covers nested notice names. Final integration source tests are owned by the coordinator.
+
+Final bounded-log/script directory cleanup:
+{
+  "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/unicode-distribution",
+  "dependencies": [],
+  "configuration_files_checked": 18,
+  "scan_roots": [
+    "/Users/sam/workspace/rtao",
+    "/Users/sam/.config",
+    "/Users/sam/.local/bin",
+    "/Users/sam/.virtualenvs",
+    "/Users/sam/.venvs",
+    "/usr/local/bin",
+    "/opt/homebrew/bin"
+  ],
+  "removed": true,
+  "retained": "Bounded evidence in docs/execution/release-unicode-validation.txt. Root-owned shared build, transparent wrapper and borrowed actionlint remain live for integration."
+}

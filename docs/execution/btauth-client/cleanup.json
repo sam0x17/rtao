@@ -1,0 +1,25 @@
+{
+  "completed_utc": "2026-10-14T10:05:22Z",
+  "removed_paths": 1059,
+  "removed_directories": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/m2-btauth-two-providers",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/.fingerprint/rtao-btauth-two-provider-check-1fde927ed49d0f12",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/.fingerprint/rtao-btauth-two-provider-check-291f3b87c0713397",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/.fingerprint/rtao-btauth-two-provider-check-c5b72634dd3f1078",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental/signed_client_https-3c792y6x7bolr",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental/signed_client_https-2lbyz3y3e7qv6",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental/signed_client_https-14nnbn6iz1gk7"
+  ],
+  "audit": {
+    "fixture_processes": 0,
+    "fixture_open_files": 0,
+    "launchd_references": 0,
+    "configuration_references": 0,
+    "symlinks": 0,
+    "virtualenv_files": 0
+  },
+  "retained_live_dependencies": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build (shared ongoing goal build cache)",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp (other workers ongoing goal scratch)"
+  ]
+}

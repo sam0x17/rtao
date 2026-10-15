@@ -1,0 +1,15 @@
+M0-14 through M0-17 working verification, 2026-10-14:
+- rtao-core-ext no-host tests: PASS, 2 differential tests (raw/wrapped, wrong message/key, encoding).
+- rtao-core-ext no-host Clippy -D warnings: PASS.
+- Rust 1.89 no-host seam/core-ext check: PASS.
+- Rust 1.89 all-feature seam check: PASS.
+- rtao-core all-feature seam behavioral tests: PASS, 3 tests (full-width JSON, error diagnostics, offload thread).
+- rtao-core no-host seam behavioral tests: PASS, 2 tests.
+- cargo-deny 0.20.2 all-feature workspace all checks: PASS; array-bytes deprecated dual-license notation warns.
+- cargo-deny isolated positive fixture: PASS; duplicates/provider negative fixture: expected rejection (aws-lc-rs banned, scale-info duplicate).
+- Single-BLS raw Cargo.lock test: FAIL; lock contains pinned w3f-bls0.1.3 and dormant registry0.1.9 from sp-core optional dependency.
+- cargo tree --workspace --all-features -e normal,build --target all: pinned0.1.3 only.
+- cargo tree --workspace --no-default-features -e normal,build --target all: pinned0.1.3 only.
+- All-targets/all-features Clippy for core+ext, -D warnings: PASS (1m05s).
+- rustfmt check on all authored seam/ext files: PASS.
+- Canonical first-line attribution and compound package licenses are present in both derived crates.

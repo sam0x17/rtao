@@ -1,0 +1,205 @@
+{
+  "packages": [
+    {
+      "name": "ark-bls12-377",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.0"
+    },
+    {
+      "name": "ark-bls12-381",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.0"
+    },
+    {
+      "name": "ark-bls12-381",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-ec",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-ec",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-ed-on-bls12-381-bandersnatch",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-ff",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-ff",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-ff-asm",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-ff-asm",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-ff-macros",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-ff-macros",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-poly",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-poly",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-serialize",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-serialize",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-serialize-derive",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.2"
+    },
+    {
+      "name": "ark-serialize-derive",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-std",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.4.0"
+    },
+    {
+      "name": "ark-std",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    },
+    {
+      "name": "ark-transcript",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.0.3"
+    },
+    {
+      "name": "ark-vrf",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.1.0"
+    },
+    {
+      "name": "bip39",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "2.2.0"
+    },
+    {
+      "name": "blake2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.10.6"
+    },
+    {
+      "name": "chacha20poly1305",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.10.1"
+    },
+    {
+      "name": "ed25519-zebra",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "4.1.0"
+    },
+    {
+      "name": "frame-metadata",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "23.0.0"
+    },
+    {
+      "name": "merkleized-metadata",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.1"
+    },
+    {
+      "name": "ml-kem",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.2.2"
+    },
+    {
+      "name": "parity-scale-codec",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "3.7.5"
+    },
+    {
+      "name": "scale-decode",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.16.0"
+    },
+    {
+      "name": "scale-info",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "2.11.6"
+    },
+    {
+      "name": "schnorrkel",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.11.5"
+    },
+    {
+      "name": "serde_json",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "1.0.145"
+    },
+    {
+      "name": "sha2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.9.9"
+    },
+    {
+      "name": "sha2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.10.9"
+    },
+    {
+      "name": "sha3",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.10.8"
+    },
+    {
+      "name": "tle",
+      "source": "git+https://github.com/ideal-lab5/timelock?rev=5416406cfd32799e31e1795393d4916894de4468#5416406cfd32799e31e1795393d4916894de4468",
+      "version": "0.1.0"
+    },
+    {
+      "name": "twox-hash",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "1.6.3"
+    },
+    {
+      "name": "twox-hash",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "2.1.2"
+    }
+  ],
+  "upstream_commit": "850f2755bb05a3851f948489f0ab27b0645cebce"
+}

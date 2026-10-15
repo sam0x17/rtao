@@ -1,0 +1,18 @@
+rtao doctor verification (2026-10-14, before Q26 correction)
+- cargo test -p rtao-cli --locked --offline: 7 tests passed.
+- cargo clippy -p rtao-cli --locked --offline --all-targets -- -D warnings: passed on final rerun after core-ext modules stabilized.
+- Missing-patch standalone fixture: exit 1 and exact root patch line for v478.
+- Explicit CLI member and implicit CLI-member current directory: resolved root Cargo.toml and correctly failed literal duplicate w3f-bls gate (found 2).
+- Synthetic valid v477 manifest and lock: exit 0 with binary-tag difference warning.
+- Real facade-only standalone consumer, offline generated lock (262 packages): exit 0 via transitive bittensor-core declaration; one BLS in minimal lock.
+- Workspace ownership regressions: package.workspace, explicit member path, default current directory, exclusion and ignored member patch covered.
+- At this historical checkpoint the literal single-BLS lock rule was enforced. Q26 subsequently approved the built-dependency correction below.
+- Fixture cleanup: all Cargo children exited; lsof found no open fixture files; launchctl, .cargo and LaunchAgents had no fixture references; no symlinks/venvs/configs created. Copied binary, metadata dumps, doctor fixtures removed. Shared recorded build root remains in use by other execution agents.
+
+Q26 correction (2026-10-14)
+- The final consumer root still needs the exact core-matching BLS patch, a single bittensor-core lock entry, and its declared Git reference at a full immutable commit.
+- Lock inventory now admits the pinned w3f-bls 0.1.3 and at most the recorded registry 0.1.9 with checksum e6bfb937b3d12077654a9e43e32a4e9c20177dd9fea0f3aba673e7840bb54f32. Missing/changed checksums, unexpected versions/sources, and duplicates fail.
+- Doctor also inspects the consumer workspace with cargo tree --locked --offline --workspace --all-features --target all --edges normal,build --prefix none --format '{p}'. The tree must contain exactly one built BLS identity at the consumer core's resolved source/commit. Activating the dormant registry implementation fails.
+- Metadata and tree commands run from the consumer workspace root so Cargo reads its own configuration. Inspection never generates or updates the consumer lockfile.
+- Added regressions cover exact dormant identity, checksum/source/version/duplicate tampering, dormant activation, wrong built commit, consumer command scope, and actual optional/cross-target build graphs with unchanged lock bytes.
+- Source formatted. Current CLI verification passes all 11 doctor tests, including the real downstream optional/cross-target build fixture, in tmp/root-q26-doctor-current.log. MSRV, strict Clippy, and real-workspace doctor results await the coordinated shared Cargo queue.

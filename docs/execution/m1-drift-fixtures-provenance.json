@@ -1,0 +1,545 @@
+{
+  "acquired_date": "2026-10-14",
+  "verification": {
+    "full_scale_decode": true,
+    "canonical_reencoding": true,
+    "embedded_system_spec_checked": true,
+    "local_python_executed": false
+  },
+  "networks": [
+    {
+      "network": "finney",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "finalized_head": "0x1b7cadae2cfc3d2cc96053c13b8b21cbd05738b3142196b42b508add50543531",
+      "endpoint": "https://archive.chain.opentensor.ai:443",
+      "spec": 477,
+      "runtime": {
+        "apis": [
+          [
+            "0xdf6acb689907609b",
+            5
+          ],
+          [
+            "0x37e397fc7c91f5e4",
+            2
+          ],
+          [
+            "0x40fe3ad401f8959a",
+            6
+          ],
+          [
+            "0xfbc577b9d747efd6",
+            1
+          ],
+          [
+            "0xd2bc9897eed08f15",
+            3
+          ],
+          [
+            "0xf78b278be53f454c",
+            2
+          ],
+          [
+            "0xdd718d5cc53262d4",
+            1
+          ],
+          [
+            "0xab3c0572291feb8b",
+            1
+          ],
+          [
+            "0xed99c5acb25eedf5",
+            3
+          ],
+          [
+            "0xbc9d89904f5b923f",
+            1
+          ],
+          [
+            "0x37c8bb1350a9a2a8",
+            4
+          ],
+          [
+            "0xf3ff14d5ab527059",
+            3
+          ],
+          [
+            "0x582211f65bb14b89",
+            6
+          ],
+          [
+            "0xe65b00e46cedd0aa",
+            2
+          ],
+          [
+            "0x68b66ba122c93fa7",
+            2
+          ],
+          [
+            "0x42e62be4a39e5b60",
+            1
+          ],
+          [
+            "0x806df4ccaa9ed485",
+            1
+          ],
+          [
+            "0x8375104b299b74c5",
+            2
+          ],
+          [
+            "0x5d1fbfbe852f2807",
+            1
+          ],
+          [
+            "0xc6886e2f8e598b0a",
+            1
+          ],
+          [
+            "0x43580abff6baab45",
+            5
+          ],
+          [
+            "0xc0de4984d112f3b4",
+            1
+          ],
+          [
+            "0xcbca25e39f142387",
+            2
+          ],
+          [
+            "0xa8b093e6508d9e9c",
+            1
+          ],
+          [
+            "0x1c4585bd5c707202",
+            1
+          ]
+        ],
+        "authoringVersion": 1,
+        "implName": "node-subtensor",
+        "implVersion": 1,
+        "specName": "node-subtensor",
+        "specVersion": 477,
+        "stateVersion": 1,
+        "systemVersion": 1,
+        "transactionVersion": 1
+      },
+      "code_hash": "0x18b52484d9c5d7523f704c86b17b2ab959fffbc6edb6766a77e9877f0ad19387",
+      "header": {
+        "digest": {
+          "logs": [
+            "0x0661757261201a72e60800000000",
+            "0x0466726f6e8801d6a10ddcf8c965e33354af318e1700ba80299b2b46d77f4b4b92980d74625f2500",
+            "0x056175726101017cf67f8163dc5ba3c544a10689679a2ecb3e39620c01f4ed0f865cc31541d245f44003b19f2425d4aa14c5d2beea5e0ad57664510d03a49ce4a5eb77a049a088"
+          ]
+        },
+        "extrinsicsRoot": "0x039acae0db671a7c468952283fd40376a8e3d00c3c0e87a35156e0b1e8554bc6",
+        "number": "0x8d72f0",
+        "parentHash": "0x8b19af9783847c181be394ed747adc9875d98ab70856218cca8abeb14a9b3b4e",
+        "stateRoot": "0x55a901b3981add7dc8180aabac0f38a310f473f050c6de7e04be5bdd5b2a814c"
+      },
+      "v15": {
+        "path": "477.v15.scale",
+        "bytes": 400688,
+        "sha256": "64d37ffe1ee7e006d74f0a01c8e4bfb82e04a8907ac92c5600a49510862a76fa"
+      },
+      "v16": {
+        "path": "477.v16.scale",
+        "bytes": 404727,
+        "sha256": "af0870c1c32b53d8543859c6e0400551620401351a19bd6d111e4a629402acba"
+      },
+      "number": 9270000
+    },
+    {
+      "network": "testnet",
+      "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
+      "finalized_head": "0x896a929adb8f2ab17b12eb21a5e4e6069e7b6a87316429778e6af14d8913bea0",
+      "endpoint": "https://test.finney.opentensor.ai:443",
+      "spec": 478,
+      "runtime": {
+        "apis": [
+          [
+            "0xdf6acb689907609b",
+            5
+          ],
+          [
+            "0x37e397fc7c91f5e4",
+            2
+          ],
+          [
+            "0x40fe3ad401f8959a",
+            6
+          ],
+          [
+            "0xfbc577b9d747efd6",
+            1
+          ],
+          [
+            "0xd2bc9897eed08f15",
+            3
+          ],
+          [
+            "0xf78b278be53f454c",
+            2
+          ],
+          [
+            "0xdd718d5cc53262d4",
+            1
+          ],
+          [
+            "0xab3c0572291feb8b",
+            1
+          ],
+          [
+            "0xed99c5acb25eedf5",
+            3
+          ],
+          [
+            "0xbc9d89904f5b923f",
+            1
+          ],
+          [
+            "0x37c8bb1350a9a2a8",
+            4
+          ],
+          [
+            "0xf3ff14d5ab527059",
+            3
+          ],
+          [
+            "0x582211f65bb14b89",
+            6
+          ],
+          [
+            "0xe65b00e46cedd0aa",
+            2
+          ],
+          [
+            "0x68b66ba122c93fa7",
+            2
+          ],
+          [
+            "0x42e62be4a39e5b60",
+            1
+          ],
+          [
+            "0x806df4ccaa9ed485",
+            1
+          ],
+          [
+            "0x8375104b299b74c5",
+            2
+          ],
+          [
+            "0x5d1fbfbe852f2807",
+            1
+          ],
+          [
+            "0xc6886e2f8e598b0a",
+            1
+          ],
+          [
+            "0x43580abff6baab45",
+            5
+          ],
+          [
+            "0xc0de4984d112f3b4",
+            1
+          ],
+          [
+            "0xcbca25e39f142387",
+            2
+          ],
+          [
+            "0xa8b093e6508d9e9c",
+            1
+          ],
+          [
+            "0x1c4585bd5c707202",
+            1
+          ]
+        ],
+        "authoringVersion": 1,
+        "implName": "node-subtensor",
+        "implVersion": 1,
+        "specName": "node-subtensor",
+        "specVersion": 478,
+        "stateVersion": 1,
+        "systemVersion": 1,
+        "transactionVersion": 1
+      },
+      "code_hash": "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1",
+      "header": {
+        "digest": {
+          "logs": [
+            "0x066175726120f699e60800000000",
+            "0x0466726f6e8801987840767e9caccc91967bfb0600b05587bae8e40213cc83cd9837a49e80934200",
+            "0x0561757261010132bf825df70ea7b5cb53ab641bca38183b16f197361a06d7e0b691fbe2d8c071f7fa8a71ce5ff2f8b6c8c9dc626dc100641b62997a2dacd4ca5f4d7eed96cb80"
+          ]
+        },
+        "extrinsicsRoot": "0x1ed575f7da68e131c00d4f4ea4504a21a65e88d04a5dd9b8915af7ea18911976",
+        "number": "0x7d67c8",
+        "parentHash": "0xbe4fb7a99362f38a59687570bca8bd5424a4ae300b3f96920d9490451add615a",
+        "stateRoot": "0x7c5aff631a2018f17f5dbada80b6148ebf396d94eeba07ec543877d20913d27b"
+      },
+      "v15": {
+        "path": "478.v15.scale",
+        "bytes": 400688,
+        "sha256": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502"
+      },
+      "v16": {
+        "path": "478.v16.scale",
+        "bytes": 404727,
+        "sha256": "723240b9f3761915eed75a5e158484bfdb39f6eea8ddd06d32e77996e67b14c7"
+      },
+      "number": 8218568
+    },
+    {
+      "network": "devnet",
+      "genesis": "0x077899043eb684c5277b6814a39161f4ce072b45e782e12c81a521c63fb4f3e5",
+      "finalized_head": "0x71f62312287faf956e9555a6465c5a0f988a53461b1f94c8423728b3a85c3433",
+      "endpoint": "https://dev.chain.opentensor.ai:443",
+      "spec": 478,
+      "runtime": {
+        "specName": "node-subtensor",
+        "implName": "node-subtensor",
+        "authoringVersion": 1,
+        "specVersion": 478,
+        "implVersion": 1,
+        "apis": [
+          [
+            "0xdf6acb689907609b",
+            5
+          ],
+          [
+            "0x37e397fc7c91f5e4",
+            2
+          ],
+          [
+            "0x40fe3ad401f8959a",
+            6
+          ],
+          [
+            "0xfbc577b9d747efd6",
+            1
+          ],
+          [
+            "0xd2bc9897eed08f15",
+            3
+          ],
+          [
+            "0xf78b278be53f454c",
+            2
+          ],
+          [
+            "0xdd718d5cc53262d4",
+            1
+          ],
+          [
+            "0xab3c0572291feb8b",
+            1
+          ],
+          [
+            "0xed99c5acb25eedf5",
+            3
+          ],
+          [
+            "0xbc9d89904f5b923f",
+            1
+          ],
+          [
+            "0x37c8bb1350a9a2a8",
+            4
+          ],
+          [
+            "0xf3ff14d5ab527059",
+            3
+          ],
+          [
+            "0x582211f65bb14b89",
+            6
+          ],
+          [
+            "0xe65b00e46cedd0aa",
+            2
+          ],
+          [
+            "0x68b66ba122c93fa7",
+            2
+          ],
+          [
+            "0x42e62be4a39e5b60",
+            1
+          ],
+          [
+            "0x806df4ccaa9ed485",
+            1
+          ],
+          [
+            "0x8375104b299b74c5",
+            2
+          ],
+          [
+            "0x5d1fbfbe852f2807",
+            1
+          ],
+          [
+            "0xc6886e2f8e598b0a",
+            1
+          ],
+          [
+            "0x43580abff6baab45",
+            5
+          ],
+          [
+            "0xc0de4984d112f3b4",
+            1
+          ],
+          [
+            "0xcbca25e39f142387",
+            2
+          ],
+          [
+            "0xa8b093e6508d9e9c",
+            1
+          ],
+          [
+            "0x1c4585bd5c707202",
+            1
+          ]
+        ],
+        "transactionVersion": 1,
+        "systemVersion": 1,
+        "stateVersion": 1
+      },
+      "code_hash": "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1",
+      "header": {
+        "parentHash": "0xab8eaa44137016e6ec6fc6627f957e71a813122a10e6e58c24d1ef5451b03566",
+        "number": "0x192edc",
+        "stateRoot": "0x2bae6c052ee895ec1773a89a78a591c4e78363f2c578a1b3474ec4e6065de57f",
+        "extrinsicsRoot": "0x638d0b15925379a8156f4d69645b50da8300f7c9497c70e7c7016401db155e49",
+        "digest": {
+          "logs": [
+            "0x066175726120f699e60800000000",
+            "0x0466726f6e88011bf51d82e2e39b2ee5960903ab6ddded2b7a8385a602762f0e52be6961a2e36a00",
+            "0x056175726101012a78f47b06a2fc4a9305cfa29963ced6aa8d53e1b4eaaf8a9bfed8fb71e2da36206d60b0c2b84a9197be7e61583cc56a5b4698cfaed23b4d31b57aad69811c8e"
+          ]
+        }
+      },
+      "v15": {
+        "path": "478.v15.scale",
+        "bytes": 400688,
+        "sha256": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502"
+      },
+      "v16": {
+        "path": "478.v16.scale",
+        "bytes": 404727,
+        "sha256": "723240b9f3761915eed75a5e158484bfdb39f6eea8ddd06d32e77996e67b14c7"
+      },
+      "number": 1650396
+    }
+  ],
+  "v477_release": {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v477/pending-release.json",
+        "name": "pending-release.json",
+        "size": 578
+      },
+      {
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v477/proxy_proxy_blob.hex",
+        "name": "proxy_proxy_blob.hex",
+        "size": 5261608
+      },
+      {
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v477/subtensor-digest.json",
+        "name": "subtensor-digest.json",
+        "size": 4969
+      },
+      {
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v477/subtensor.wasm",
+        "name": "subtensor.wasm",
+        "size": 2630752
+      },
+      {
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v477/upgrade-manifest.json",
+        "name": "upgrade-manifest.json",
+        "size": 1979
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag_name": "v477"
+  },
+  "v477_release_verification": {
+    "tag_commit": "5c6e83e2f4936f257234f246957f75684c35227c",
+    "wasm_sha256": "0xe226dd0326b4480a6da7f0534e9854bc399889c934b074c92448cbb7cd0fab63",
+    "wasm_blake2_256": "0x18b52484d9c5d7523f704c86b17b2ab959fffbc6edb6766a77e9877f0ad19387",
+    "manifest": {
+      "kind": "runtime-upgrade-proposal",
+      "network": "finney",
+      "repo": "RaoFoundation/subtensor",
+      "tag": "v477",
+      "spec_version": 477,
+      "commit": "5c6e83e2f4936f257234f246957f75684c35227c",
+      "call_hash": "0xfcc73559efd37fa8a52894ea37a49b924267fa1d4590e38f487f28980660f210",
+      "proposal": {
+        "callHash": "0xfcc73559efd37fa8a52894ea37a49b924267fa1d4590e38f487f28980660f210",
+        "blockHash": "0xbb46e6e04f4467fdcca2e955fa8213de864e4dd778a41ca412330cae7d425f83",
+        "blockHeight": 9241157,
+        "extrinsicIndex": 7,
+        "multisigAddress": "5CzMP6tiNjKx3YiTbuPebLHZCtuomzTPzEGvG711iemY6u2f",
+        "ciAddress": "5EqaWfYWgPWfXRFaM2hXbATkVGKdEJBznoyEUnVi8aGfN1bA",
+        "sudoKey": "5DcSqBNqCmfdJZRGFSwwcRb2dZdJHZuKK8Tb1Gx8gbmF5E8s",
+        "specVersionBefore": 475
+      },
+      "ci_address": "5EqaWfYWgPWfXRFaM2hXbATkVGKdEJBznoyEUnVi8aGfN1bA",
+      "deployment_multisig": "5CzMP6tiNjKx3YiTbuPebLHZCtuomzTPzEGvG711iemY6u2f",
+      "sudo_key": "5DcSqBNqCmfdJZRGFSwwcRb2dZdJHZuKK8Tb1Gx8gbmF5E8s",
+      "sudo": {
+        "signatories": [
+          "5E7RCRrPVS8TckCDjr92B5ciGziwz2kfvxe4URy3L7AgirGJ",
+          "5FevFjov8435t5XC2MUSRpFYxtthE8pZy1toHpgAAia3ZphG",
+          "5GRCukV2rZmSVfJhAXoLjcrU1pMVCf2Ra1ydbiCFZdaQXDXo"
+        ],
+        "threshold": 2
+      },
+      "wasm_sha256": "0xe226dd0326b4480a6da7f0534e9854bc399889c934b074c92448cbb7cd0fab63",
+      "srtool_rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+      "max_weight": {
+        "ref_time": 50000000000,
+        "proof_size": 0
+      },
+      "assets": {
+        "wasm": "https://github.com/RaoFoundation/subtensor/releases/download/v477/subtensor.wasm",
+        "digest": "https://github.com/RaoFoundation/subtensor/releases/download/v477/subtensor-digest.json",
+        "call_data": "https://github.com/RaoFoundation/subtensor/releases/download/v477/proxy_proxy_blob.hex",
+        "pending_release": "https://github.com/RaoFoundation/subtensor/releases/download/v477/pending-release.json",
+        "manifest": "https://github.com/RaoFoundation/subtensor/releases/download/v477/upgrade-manifest.json"
+      }
+    },
+    "srtool_commit": "5c6e83e2f4936f257234f246957f75684c35227c",
+    "srtool_sha256": "0xe226dd0326b4480a6da7f0534e9854bc399889c934b074c92448cbb7cd0fab63"
+  },
+  "finney_finality": {
+    "head": "0x1baa3b39194cb1ed2737efb38060f049504e3779d4af0378c8974961e96c9155",
+    "header": {
+      "digest": {
+        "logs": [
+          "0x066175726120059ae60800000000",
+          "0x0466726f6e8901011c7cbdd22da52921263fcf47d39b941d2e7f914ecb18be9b61a481f8fd036c38080565d71e0efe786308075e0485f092b7b8d7b77ae2edc377346673915d465932441219e1d41a8588890aa036b89b7509f021173e7ee7b3ebdeb7695a74a3cec6",
+          "0x0561757261010178f0f257f4f15dcfd99ce438b79484cb8ed58e7c0199abed9eac90e6c97145094e6713f99bc1215541447ef1aa604c75f2237011c8ebb4afcb44530b791e7880"
+        ]
+      },
+      "extrinsicsRoot": "0x467630ecbd7314d28c48a180c11e6ad1f0dee90922c1275a37176e3cea7e6508",
+      "number": "0x8d9adb",
+      "parentHash": "0xc9cd9e58d40792a155f154eb8ff35e890a569766ba7087a4ff7e6ba89fac9b13",
+      "stateRoot": "0x4a401e910715dfd15a4383c4bfabed4661c8198463c040174b6e54c34b66a6c2"
+    }
+  },
+  "localnet_main": {
+    "status": "not_acquired",
+    "reason": "No local Docker daemon or port9944 listener; needs actual pinned main image acquisition on Ubuntu"
+  }
+}

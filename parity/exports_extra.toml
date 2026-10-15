@@ -1,0 +1,1556 @@
+# Explicit API completeness decisions; pending rows do not claim behavior parity.
+schema = 1
+
+[[export]]
+python = "bittensor.basket_index.EPOCH_BLOCK"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.GENERATED_BLOCK"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.DisplayPricing"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.age_days"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.fund_pricing"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.index_level"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.normalize_position"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.normalize_positions"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.spot_beta_price"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.stake_value"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.staker_yield"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.basket_index.tr_index_level"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/basket_index.py"
+
+[[export]]
+python = "bittensor.error_descriptions.DESCRIPTIONS"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/error_descriptions/__init__.py"
+
+[[export]]
+python = "bittensor.evm.ETH_DERIVATION_PATH"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.EVM_NETWORKS"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.PRECOMPILES"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.STANDARD_PRECOMPILES"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.WEI_PER_TAO"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.ContractArtifact"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.EvmKeyInfo"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.EvmNetwork"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.EvmRpc"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.EvmRpcError"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.EvmTxPreview"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.Precompile"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.association_proof"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.balance_to_wei"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.caller_role"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.create_evm_key"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.decode_result"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.describe_arguments"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.encode_call"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.encode_deploy"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.evm_network"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.export_evm_key"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.function_deprecation"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.get_evm_key_info"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.get_precompile"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.h160_to_ss58"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.import_evm_key"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.is_h160"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.list_evm_keys"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.load_artifact"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.normalize_h160"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.prepare_transaction"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.pubkey_to_ss58"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.send_transaction"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.ss58_to_h160_truncated"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.ss58_to_pubkey"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.unlock_evm_key"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.evm.wei_to_balance"
+home = "rtao_evm"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/evm/__init__.py"
+
+[[export]]
+python = "bittensor.extension.DEFAULT_BRIDGE_HOST"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.DEFAULT_BRIDGE_PORT"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.BridgeClient"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.BridgeError"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.BridgeServer"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.ExtensionAccount"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.ExtensionAccountSelection"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.ExtensionSigner"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.account_crypto_type"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.connect_extension_signer"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.ensure_bridge"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.open_extension_signer"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.run_bridge"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.select_extension_account"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.start_bridge_daemon"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.extension.stop_bridge_daemon"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/extension/__init__.py"
+
+[[export]]
+python = "bittensor.http_auth.DEFAULT_ALLOWED_SKEW"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.DEFAULT_MAX_AGE"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.HEADER_CRYPTO"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.HEADER_HOTKEY"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.HEADER_NONCE"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.HEADER_RECEIVER"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.HEADER_SIGNATURE"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.HEADER_VERSION"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.PROTOCOL"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.VERSION"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.BadSignature"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.MalformedAuth"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.ReplayedRequest"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.StaleRequest"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.http_auth.WrongReceiver"
+home = "rtao_btauth"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/http_auth.py"
+
+[[export]]
+python = "bittensor.intents.ALL"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.OWNER_HYPERPARAMETERS"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.PROXY_TYPES"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.REGISTRY"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UNBOUNDED"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AddCollateral"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AddProxy"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AddStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AddStakeLimit"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AnnounceColdkeySwap"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AssociateEvmKey"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.AssociateHotkey"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Batch"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.BurnedRegister"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ClaimRoot"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ClaimRootWithHotkey"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ClearColdkeySwapAnnouncement"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.CommitWeights"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ContributeCrowdloan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.CreateCrowdloan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.CreatePureProxy"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.DecreaseTake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.DisputeColdkeySwap"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.DissolveCrowdloan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.EvmWithdraw"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ExecuteProxyAnnounced"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.FinalizeCrowdloan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.FundEvmKey"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.IncreaseTake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Intent"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.KillPureProxy"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.LockStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Money"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MoveLock"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MoveStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MoveSwapStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MultisigApprove"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MultisigCancel"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MultisigExecute"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.MultisigThreshold1"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Plan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Policy"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.PowRegister"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RefundCrowdloan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RegisterLeasedNetwork"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RegisterSubnet"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RemoveProxies"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RemoveProxy"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RemoveStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RemoveStakeLimit"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ResetAxon"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RevealWeights"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.RootRegister"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ServeAxon"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ServeAxonTls"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.ServePrometheus"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetAutoStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetChildkeyTake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetChildren"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetCrowdloanMaxContribution"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetHyperparameter"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetIdentity"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetMechanismCount"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetMinCollateral"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetPerpetualLock"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetRejectLockedAlpha"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetRootClaimThreshold"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetSubnetEmissionEnabled"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetSubnetIdentity"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetTake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SetWeights"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Spend"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.StakeBurn"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.StakeIntoBasket"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.StartCall"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SwapBasket"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SwapBasketMany"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SwapColdkeyAnnounced"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SwapHotkey"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.SwapStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.TerminateLease"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.Transfer"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.TransferAll"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.TransferStake"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.TrimNullSubnetBatch"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.TrimSubnet"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UnstakeAll"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UnstakeAllAlpha"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UpdateCrowdloanCap"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UpdateCrowdloanEnd"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UpdateCrowdloanMinContribution"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.UpdateSymbol"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.WithdrawCrowdloan"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.build"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.list_tools"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.normalize"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.intents.register"
+home = "rtao_intents"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/intents/__init__.py"
+
+[[export]]
+python = "bittensor.keyfiles.Keyfile"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/keyfiles.py"
+
+[[export]]
+python = "bittensor.keyfiles.KeyfileError"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/keyfiles.py"
+
+[[export]]
+python = "bittensor.keyfiles.Keypair"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/keyfiles.py"
+
+[[export]]
+python = "bittensor.keyfiles.WrongPasswordError"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/keyfiles.py"
+
+[[export]]
+python = "bittensor.keyfiles.resolve_key_password"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/keyfiles.py"
+
+[[export]]
+python = "bittensor.ledger.LedgerError"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/ledger.py"
+
+[[export]]
+python = "bittensor.ledger.LedgerSigner"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/ledger.py"
+
+[[export]]
+python = "bittensor.masked_input.masked_input"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/masked_input.py"
+
+[[export]]
+python = "bittensor.reads.REGISTRY"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.Commitment"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.DelegateInfo"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.DelegatedStake"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.Grouped"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.Matrix"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.Neuron"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.ReadSpec"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.StakePosition"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.StakeValuation"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.SubnetInfo"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.SwapQuote"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.dispatch"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.list_reads"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.reads.read"
+home = "rtao_reads"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/reads/__init__.py"
+
+[[export]]
+python = "bittensor.timelock.TimelockError"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.TimelockNotReady"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.Timelocked"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.current_round"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.decrypt"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.decrypt_async"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.encrypt"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.format_duration"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.parse_duration"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.reveal_time"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.timelock.round_at"
+home = "rtao facade/public export review"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/timelock.py"
+
+[[export]]
+python = "bittensor.vault.VaultError"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/__init__.py"
+
+[[export]]
+python = "bittensor.vault.VaultPageError"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/__init__.py"
+
+[[export]]
+python = "bittensor.vault.VaultSessionServer"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/__init__.py"
+
+[[export]]
+python = "bittensor.vault.VaultSigner"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/__init__.py"
+
+[[export]]
+python = "bittensor.vault.scan_vault_address"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/__init__.py"
+
+[[export]]
+python = "bittensor.vault.signer.VaultError"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/signer.py"
+
+[[export]]
+python = "bittensor.vault.signer.VaultSigner"
+home = "rtao_signer"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/vault/signer.py"
+
+[[export]]
+python = "bittensor.wallet.DEFAULT_WALLET_PATH"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/wallet.py"
+
+[[export]]
+python = "bittensor.wallet.Wallet"
+home = "rtao_wallet"
+reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
+pending = "M8"
+source = "sdk/python/bittensor/wallet.py"

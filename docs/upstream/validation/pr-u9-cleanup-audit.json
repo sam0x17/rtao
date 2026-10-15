@@ -1,0 +1,38 @@
+{
+  "audited_at": "2026-10-14T12:05:19Z",
+  "owned_root": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-metadata-u9",
+  "errors": [],
+  "process_references": [],
+  "excluded_audit_ancestor_pids": [
+    32714,
+    35079,
+    35077,
+    34618,
+    34617,
+    3835,
+    1
+  ],
+  "open_file_references": [],
+  "lsof_status": 1,
+  "lsof_warnings": [
+    "lsof: WARNING: can't stat() smbfs file system /Volumes/.timemachine/DUROSOFT-BACKUP._smb._tcp.local./B3E0F364-F6C6-4C45-9C28-EA0F474E71B7/Sam Backups",
+    "Output information may be incomplete.",
+    "assuming \"dev=36000004\" from mount table"
+  ],
+  "launchd_references": {
+    "gui/501": 0,
+    "system": 0
+  },
+  "symlinks_inspected": 41,
+  "config_files_inspected": 96,
+  "external_references": [],
+  "virtualenv_dependencies_created": false,
+  "git_alternates": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/pin/upstream.git/.git/objects",
+  "retained_live_dependencies": [
+    "shared task pin cache",
+    "shared task build cache",
+    "shared task tools",
+    "other agents task directories"
+  ],
+  "disposable": true
+}

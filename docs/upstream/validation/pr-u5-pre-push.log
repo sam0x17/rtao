@@ -1,0 +1,113 @@
+    Blocking waiting for file lock on build directory
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-filings/epoch/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 1m 00s
+     Running unittests src/lib.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/bittensor_core-efa1379de8c25a9b)
+
+running 72 tests
+test client::reorg_finalization_tests::canonical_inclusion_finalizes_at_or_above_its_height ... ok
+test client::reorg_finalization_tests::canonical_inclusion_remains_pending_below_finalized_height ... ok
+test client::reorg_finalization_tests::replaced_or_missing_inclusion_hash_is_a_reorg ... ok
+test digest::tests::rejects_garbage_metadata ... ok
+test keyfiles::tests::env_password_roundtrip ... ok
+test codec::corpus_tests::multisig_accounts_match_the_golden_vectors ... ok
+test keyfiles::tests::legacy_keyfile_without_crypto_type_defaults_sr25519 ... ok
+test keyfiles::tests::crypto_type_as_string_is_accepted ... ok
+test keyfiles::tests::ed25519_keyfile_roundtrip ... ok
+test keyfiles::tests::mnemonic_keypair_writes_legacy_secret_fields ... ok
+test keyfiles::tests::mnemonic_with_derivation_password_omits_phrase_keeps_seed ... ok
+test keyfiles::tests::polkadotjs_export_gets_actionable_error ... ok
+test keyfiles::tests::raw_hex_private_key_fallback ... ok
+test keyfiles::tests::missing_crypto_type_recovered_from_stored_ss58 ... ok
+test keyfiles::tests::raw_hex_seed_fallback ... ok
+test keyfiles::tests::raw_mnemonic_fallback ... ok
+test keyfiles::tests::unknown_json_error_names_found_fields ... ok
+test keyfiles::tests::sr25519_keyfile_roundtrip ... ok
+test codec::corpus_tests::map_keys_recover_from_the_golden_query_maps ... ok
+test keys::encrypted_json::tests::accepts_standard_scrypt_cost ... ok
+test codec::corpus_tests::composed_calls_decode_back ... ok
+test codec::corpus_tests::signature_payloads_match_the_golden_vectors ... ok
+test codec::corpus_tests::signed_extrinsics_match_the_golden_vectors ... ok
+test keys::encrypted_json::tests::rejects_excessive_scrypt_cost ... ok
+test keys::encrypted_json::tests::rejects_unsupported_version ... ok
+test codec::corpus_tests::storage_keys_match_the_golden_vectors ... ok
+test keyfiles::tests::stored_ss58_mismatch_is_rejected ... ok
+test keys::encrypted_json::tests::ed25519_passphrase_import_wrong_password ... ok
+test keys::tests::public_only_from_ss58_matches_full_key ... ok
+test mlkem::tests::seal_rejects_bad_public_key ... ok
+test keys::tests::sr25519_verify_bytes_wrapping ... ok
+test codec::corpus_tests::pathological_nesting_errors_instead_of_overflowing ... ok
+test codec::corpus_tests::extrinsics_decode_like_the_golden_block ... ok
+test keys::tests::alice_uri_matches_known_address ... ok
+test mlkem::tests::seal_roundtrip_with_decapsulation ... ok
+test mlkem::tests::twox_128_matches_substrate ... ok
+test pow::tests::cpu_mining_preserves_nonce_and_little_endian_target ... ok
+test pow::tests::gpu_mines_and_revalidates_chain_compatible_work ... ignored, requires physical OpenCL GPUs; run explicitly on the GPU test host
+test pow::tests::invalid_challenges_and_unbounded_batches_are_rejected ... ok
+test mlkem::tests::seal_with_key_hash_prefixes_twox ... ok
+test pow::tests::seal_matches_independent_python_vectors ... ok
+test keys::tests::sr25519_verify_roundtrip ... ok
+test signers::ledger::tests::bip44_path_matches_generic_app_layout ... ok
+test signers::ledger::tests::device_error_formats ... ok
+test timelock::epoch_schedule::integration::commit_epoch_at_extrinsic_block_table ... ok
+test timelock::epoch_schedule::integration::predict_first_reveal_block_table ... ok
+test timelock::epoch_schedule::integration::reveal_uses_exact_equality_not_gte ... ok
+test timelock::epoch_schedule::tests::should_run_epoch_auto_fire ... ok
+test timelock::epoch_schedule::tests::should_run_epoch_tempo_zero ... ok
+test timelock::tests::inner_ciphertext_unwraps_user_data_envelope ... ok
+test keys::tests::ss58_rendering_matches_sp_core ... ok
+test transaction::tests::allowing_raw_does_not_disable_spend_or_subnet_guardrails ... ok
+test transaction::tests::arbitrary_call_fails_closed_for_every_policy_dimension ... ok
+test transaction::tests::compatibility_builders_cannot_downgrade_arbitrary_calls ... ok
+test transaction::tests::compatibility_builders_cannot_lower_trusted_spend_or_scope ... ok
+test transaction::tests::trusted_move_stake_limit_uses_constructor_derived_netuids ... ok
+test transaction::tests::trusted_move_stake_uses_constructor_derived_netuids ... ok
+test transaction::tests::trusted_transfer_uses_constructor_derived_bounded_spend ... ok
+test keys::base58::tests::matches_bs58_reference ... ok
+test keys::encrypted_json::tests::ed25519_passphrase_import_roundtrip ... ok
+test codec::corpus_tests::composed_calls_match_the_golden_vectors ... ok
+test digest::tests::digest_matches_polkadot_js_merkleize_metadata ... ok
+test digest::tests::extrinsic_proof_matches_pinned_vectors ... ok
+test timelock::tests::test_generate_commit_v2_structure ... ok
+test timelock::tests::test_encrypt_commitment_format ... ok
+test digest::tests::digest_is_deterministic_and_spec_version_sensitive ... ok
+test codec::corpus_tests::decoder_reproduces_the_shape_corpus ... ok
+test keyfiles::tests::ansible_vault_roundtrip ... ok
+test timelock::tests::test_encrypt_and_decrypt_static_key ... ok
+test timelock::tests::test_get_round_info_and_signature ... ok
+test keyfiles::tests::nacl_roundtrip ... ok
+test keyfiles::tests::legacy_fernet_roundtrip ... ok
+
+test result: ok. 71 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.10s
+
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-filings/epoch/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 2.10s
+     Running tests/epoch_safety.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/epoch_safety-b508e36eb29afd82)
+
+running 7 tests
+test all_upstream_prediction_vectors ... ok
+test lowered_tempo_fires_next_block_and_counter_is_bounded ... ok
+test inclusion_counter_fire_assigns_post_coinbase_epoch ... ok
+test overflowing_simulation_budget_fails_before_searching ... ok
+test skipped_owner_slot_fires_at_counter_threshold ... ok
+test prediction_refuses_overflow_and_disabled_tempo ... ok
+test skipped_scheduled_slot_fires_next_block ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/explicit_commit_clock.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/explicit_commit_clock-9006c0fcc908f7b5)
+
+running 4 tests
+test clock_and_security_offset_pin_round ... ok
+test invalid_clock_and_timestamp_overflow_fail_before_crypto ... ok
+test payload_uses_upstream_scale_definition ... ok
+test injected_clock_drives_the_real_commit_api ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+    Checking bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-filings/epoch/sdk/bittensor-core)
+    Checking bittensor-core-py v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-filings/epoch/sdk/bittensor-core-py)
+    Finished `dev` profile [unoptimized] target(s) in 2.96s
+    Checking bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-filings/epoch/sdk/bittensor-core)
+    Finished `dev` profile [unoptimized] target(s) in 0.94s
+To github.com:sam0x17/subtensor.git
+   4f1f9cefd..9b4d8c51a  sdk-timelock-epoch-safety -> sdk-timelock-epoch-safety

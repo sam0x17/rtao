@@ -1,0 +1,13 @@
+The first PR-U1 core and binding Clippy command omitted PYO3_NO_PYTHON=1.
+PyO3's build script invoked local Python 3.9, then failed before binding
+compilation because abi3-py310 requires Python 3.10 or later. I tried to stop
+the command when I noticed the omission, but it had already finished.
+
+No Python corpus, test or recorder ran. Interpreter discovery still violated
+the user's instruction to keep Python in CI. This task cannot be described
+as having run no local Python interpreter.
+
+Every subsequent upstream Cargo command and the retained pre-push gate
+explicitly set PYO3_NO_PYTHON=1, including core-only commands. Process and
+configuration checks found no continuing PyO3 process. The retained failure
+diagnostic is pr-u1-python-discovery.log.

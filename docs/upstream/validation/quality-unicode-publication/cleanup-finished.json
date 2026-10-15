@@ -1,0 +1,56 @@
+{
+  "mode": "finished",
+  "paths": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3247",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/unicode-publication"
+  ],
+  "dependencies": [],
+  "errors": [],
+  "removed": true,
+  "launchd_domains": [
+    {
+      "domain": "gui/501",
+      "success": true
+    },
+    {
+      "domain": "system",
+      "success": true
+    }
+  ],
+  "configuration_roots": [
+    "/Users/sam/Library/LaunchAgents",
+    "/Library/LaunchAgents",
+    "/Library/LaunchDaemons",
+    "/Users/sam/.config",
+    "/Users/sam/.gitconfig",
+    "/Users/sam/.ssh/config",
+    "/Users/sam/.zshrc",
+    "/Users/sam/.zprofile",
+    "/Users/sam/workspace/rtao/.cargo",
+    "/Users/sam/workspace/rtao/.config",
+    "/Users/sam/workspace/rtao/Cargo.toml",
+    "/Users/sam/workspace/rtao/Cargo.lock",
+    "/Users/sam/workspace/rtao/.git/config"
+  ],
+  "dependency_entries_checked": 2013,
+  "scan_roots": [
+    "/Users/sam/workspace",
+    "/Users/sam/.config",
+    "/Users/sam/.local",
+    "/usr/local/bin",
+    "/opt/homebrew/bin"
+  ],
+  "bytes": 7054340580,
+  "heads": [
+    {
+      "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246",
+      "head": "77480991b2b3b39ec828d2da9d7c6ecf31113a81"
+    },
+    {
+      "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3247",
+      "head": "849c192e9702fa245a6f16941359290786554d85"
+    }
+  ],
+  "retained": "Shared task build/dependency caches, bare repository, other review worktrees, original wrappers and authenticated Unicode audit sources/proof remain live and preserved."
+}

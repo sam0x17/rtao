@@ -1,0 +1,70 @@
+{
+  "head": "8645ebdc31d188a722e22396d26fb52144246da4",
+  "pr": "https://github.com/Zondax/ledger-polkadot/pull/296",
+  "issue": "https://github.com/Zondax/ledger-polkadot/issues/295",
+  "branch": "refs/heads/fix/tao-balance",
+  "body_sha256": {
+    "pr": "9957b03fc9d5a28e931a6a3575ef2a3a65c57c6c2445975543380d6a9b8357f9",
+    "issue": "4e12b037a9542b4e0fa371f17577b3c10f998b32032b627775a51048fb956652"
+  },
+  "native_tests": 5604,
+  "labels": [],
+  "reviewers": [],
+  "ordinary_push": true,
+  "forced_push": false,
+  "hook_bypass": false,
+  "version_and_snapshots_outstanding": true,
+  "fresh_device_or_emulator": false,
+  "upstream_workflows": [
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592915868",
+      "name": "Verify PRs to main",
+      "status": "completed"
+    },
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592916088",
+      "name": "Lint and format 💅",
+      "status": "completed"
+    },
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592916321",
+      "name": "Reusable build",
+      "status": "completed"
+    },
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592916405",
+      "name": "CodeQL",
+      "status": "completed"
+    },
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592916194",
+      "name": "Build",
+      "status": "completed"
+    },
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592917065",
+      "name": "Ensure compliance with Ledger guidelines",
+      "status": "completed"
+    },
+    {
+      "conclusion": "action_required",
+      "head_sha": "8645ebdc31d188a722e22396d26fb52144246da4",
+      "html_url": "https://github.com/Zondax/ledger-polkadot/actions/runs/38592917422",
+      "name": "Swap functional tests",
+      "status": "completed"
+    }
+  ],
+  "remote_checks_validated": false
+}

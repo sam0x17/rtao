@@ -1,0 +1,14 @@
+# Last-path identities. Structural containers are resolved from the portable registry.
+[mappings]
+NetUid = "rtao_primitives::NetUid"
+MechId = "rtao_primitives::MechId"
+NetUidStorageIndex = "rtao_primitives::NetUidStorageIndex"
+PerU16 = "rtao_primitives::PerU16"
+Percent = "rtao_primitives::Percent"
+Permill = "rtao_primitives::Permill"
+Perbill = "rtao_primitives::Perbill"
+TaoBalance = "rtao_primitives::TaoBalance"
+AlphaBalance = "rtao_primitives::AlphaBalance"
+AccountId32 = "rtao_primitives::AccountId"
+H256 = "rtao_primitives::H256"
+RuntimeCall = "crate::CallBytes"

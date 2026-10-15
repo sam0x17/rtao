@@ -1,0 +1,64 @@
+{
+  "mode": "probes",
+  "paths": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core/tests/quality_fee_audit.rs",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3247/sdk/bittensor-core/tests/quality_client_audit.rs",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3247/sdk/bittensor-core/tests/quality"
+  ],
+  "dependencies": [],
+  "errors": [],
+  "removed": true,
+  "archive": {
+    "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/quality-protocol-probes.tar.gz",
+    "sha256": "7b7c6b446a7496b9243924d66f783ac48865baa53f14959d2348d0b031ebe3f6"
+  },
+  "archived_files": [
+    {
+      "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core/tests/quality_fee_audit.rs",
+      "member": "pr-3246/sdk/bittensor-core/tests/quality_fee_audit.rs",
+      "sha256": "9c8c347616bd06f39a847eb420a7d3fc50508b19645a4e4944597975731cf2e4"
+    },
+    {
+      "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3247/sdk/bittensor-core/tests/quality_client_audit.rs",
+      "member": "pr-3247/sdk/bittensor-core/tests/quality_client_audit.rs",
+      "sha256": "f6eb375dba02b7419f249ac5fc34d96038f2c70f34288cca5a3fd9c5c95ab205"
+    },
+    {
+      "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3247/sdk/bittensor-core/tests/quality/legacy_client.rs",
+      "member": "pr-3247/sdk/bittensor-core/tests/quality/legacy_client.rs",
+      "sha256": "6f424c3b05f74ae53543e556b448b6d316350a0b9c38a970d9f836b07f2152a1"
+    }
+  ],
+  "launchd_domains": [
+    {
+      "domain": "gui/501",
+      "success": true
+    },
+    {
+      "domain": "system",
+      "success": true
+    }
+  ],
+  "configuration_roots": [
+    "/Users/sam/Library/LaunchAgents",
+    "/Library/LaunchAgents",
+    "/Library/LaunchDaemons",
+    "/Users/sam/.config",
+    "/Users/sam/.gitconfig",
+    "/Users/sam/.ssh/config",
+    "/Users/sam/.zshrc",
+    "/Users/sam/.zprofile",
+    "/Users/sam/workspace/rtao/.cargo",
+    "/Users/sam/workspace/rtao/.config"
+  ],
+  "dependency_entries_checked": 1838,
+  "scan_roots": [
+    "/Users/sam/workspace",
+    "/Users/sam/.config",
+    "/Users/sam/.local",
+    "/usr/local/bin",
+    "/opt/homebrew/bin"
+  ],
+  "bytes": 84172,
+  "retained": "Shared task build/dependency caches, bare repository, other review worktrees, original wrappers and authenticated Unicode audit sources/proof remain live and preserved."
+}

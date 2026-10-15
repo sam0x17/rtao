@@ -1,0 +1,7 @@
+
+X sdk-portable-protocol Check Rust RaoFoundation/subtensor#3246 · 38555198785
+Triggered via pull_request about 19 minutes ago
+
+X This run likely failed because of a workflow file issue.
+
+For more information, see: https://github.com/RaoFoundation/subtensor/actions/runs/38555198785

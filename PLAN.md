@@ -1,6 +1,6 @@
 # rtao: plan to build Bittensor subnets in Rust
 
-**Status.** Plan v2.2, 2026-10-14: the user's answers to the open questions are recorded as decisions
+**Status.** Plan v2.3, 2026-10-14. Q30 limits execution to client development and hosted CI (see Current execution scope below). Original planning context: the user's answers to the open questions are recorded as decisions
 ([§14.1](#141-decisions-answered-2026-10-13)), including three given after v2 (Q20, the PR-U17 core patch; Q21, one goal
 loop without PRs; Q22, the Ledger app fix filed with Zondax), plus Q23's free Ubuntu CI and downloadable docs,
 and the plan carries no time estimates. Pins: the plan
@@ -61,6 +61,42 @@ Conventions:
 - "(re-checked)" marks a claim verified against the upstream sources while writing this plan;
   [§18.2](#182-facts-re-checked-for-this-plan) lists them.
 
+## Current execution scope (Q30, 2026-10-14)
+
+The user has limited this work to client development and hosted CI after repeated isolated builds consumed hundreds
+of gigabytes on a shared laptop. This section supersedes earlier execution rules, milestone steps, exit checks and
+architecture requirements wherever they require expensive local work. It also supersedes the local-build and
+release portions of Q17, Q21, Q23 and Q29. Historical results remain recorded; removed checks are never reported as
+passing.
+
+- Develop and review source locally. Use free `ubuntu-latest` GitHub jobs for workspace tests, Clippy, feature and
+  MSRV checks, dependency audits and documentation builds. A full local `cargo xtask gates` run is no longer a
+  prerequisite to commit or push. Record hosted results for the pushed commit before claiming acceptance.
+- Do not run local full nodes, localnets, testnet validators/miners, Docker or Python oracle containers, soaks,
+  hardware or Keychain rehearsals, fuzz campaigns, benchmarks or release builds. Do not use Mac Studio as a second
+  build farm. Client APIs may support those environments without deploying them during development.
+- Do not start concurrent Cargo jobs, duplicate workspace/build snapshots, target trees or extra toolchains on the
+  laptop. Local compilation is exceptional and limited to one narrowly selected command when necessary to diagnose
+  a source issue; prefer hosted CI. Keep temporary work in one recorded task root and remove completed disposable
+  work after checking live dependencies. Preserve authored source, wallets, recovery material and unrelated projects.
+  Do not clear shared global caches to meet this project's budget.
+- CI uses bounded jobs, explicit timeouts and cancellation of superseded runs. Ordinary acceptance relies on Rust
+  units, property tests, goldens, committed oracle vectors, `FakeNode`, `FakeChain` and relevant integration tests.
+  Container-based oracle, interoperability or localnet checks are optional targeted hosted jobs for a concrete
+  client change. Their absence is recorded as a coverage limit. They must fit free runners; a resource limit does
+  not create a requirement to reproduce them locally or find another host.
+- Remove mainnet cloning and full-node operation from this work. Defer release automation, per-milestone tags,
+  binary distribution, cross-platform build rehearsals, device runs, automated upkeep and deployment setup. macOS,
+  ARM and hardware behavior stays in the design; report gaps in executed platform coverage honestly.
+
+The technical behavior and parity inventories remain implementation references. Development milestones complete
+with source, docs, review and applicable hosted checks under C1-C7 below. Optional or deferred infrastructure cannot
+block client development or trigger a new local validation campaign.
+
+The active workflow is `.github/workflows/pr.yml`. The eleven former infrastructure, scheduled, oracle and release
+workflows are retained outside GitHub's active directory in `.github/deferred-workflows/`. Their triggers cannot
+run; any future targeted check needs a reviewed, bounded hosted job.
+
 ## Executing this plan
 
 The plan is written to be executed step by step by an AI coding agent (the user will run it with Codex, as one goal
@@ -78,20 +114,15 @@ comes next.
    pushes, without asking, until M9 exits. A step is done when the output its text names exists, its tests are
    committed, and the checks it touches pass (`pr-gates`, plus any lane the step names); its box (`- [x]`) in this file
    is checked in the commit that completes it. Commit messages start with the step ID (`M2-07: …`; work outside a step
-   names what it does, such as `pin: v477 → v478`) and carry no AI attribution trailers (the user's standing
-   preference). Before every push, run `cargo xtask gates`, the local equivalent of the `pr-gates` job (every `pr-gates`
-   step that runs on the agent's OS, as M0-27 defines it; before M0-27 creates it, the step's own checks), and push only
-   when it passes. Before starting each step, check `main`'s latest CI runs (`gh run list --branch main`): a red
-   blocking lane ([§9.7](#97-ci-lanes-and-what-each-catches): `pr-gates`, `e2e-required`, `core-unpatched`, and
-   `interop` on a pin bump) is fixed first (stop the line). A milestone is done when its numbered exit checks and the
-   common exit checks C1-C7 of [§12.1](#121-overview) pass. Never skip, weaken or reinterpret an exit check; if one
-   cannot pass as written, record why in the [progress log](#19-progress-log) and ask the user.
-3. **Waiting.** A check that needs wall-clock time or an outside event (the M2 testnet soak, the M7 device run, the
-   upstream release M9-05 needs) runs or waits in the background. Meanwhile, continue with the steps that do not depend
-   on it, including the next milestone's. A milestone's tag (C7) is pushed only after all its other exit checks pass,
-   including the soak or the bump being waited on. Only two things follow it: from M7 on, the device run, which runs on
-   that tag and whose recording commit completes the milestone (C3); and at M9, the settings that M9-07 makes after the
-   agent's last push.
+   names what it does, such as `pin: v477 to v478`) and carry no AI attribution trailers (the user's standing
+   preference). Before a push, review the diff and run only cheap relevant source checks. Pushes start the hosted
+   `pr-gates` jobs; do not duplicate that matrix locally (Q30). Check the latest runs before the next step:
+   `gh run list --branch main`. Fix red applicable jobs first. A development milestone completes under the active
+   client checks and C1-C7 of [§12.1](#121-overview). Q30 already removes or defers the costly checks it names;
+   do not ask again to waive them. Record any different unmet active requirement before asking the user.
+3. **Waiting.** While hosted checks run, continue source review or independent client development. Do not start a
+   local build to duplicate a pending CI run. Milestone tags, device runs and release settings are deferred by Q30.
+
 4. **Progress log.** Append a line to [§19](#19-progress-log) for each milestone exit, each deviation from a step's
    text (what and why), each decision taken under rule 5, each upstream filing, each pin bump held back and what blocks
    it (C5), each `core-patch-conflict` resolved, and each wait on a prerequisite or on the user.
@@ -116,10 +147,8 @@ comes next.
    declining PR-U17 is also a stop-and-ask point: keep carrying the core patch, fall back to a test-only transcription,
    or build a uhid bridge ([§5.10](#510-the-pr-u17-core-patch)). While waiting for an answer, continue with the steps
    that do not need it.
-7. **Pre-authorized** (no need to ask): committing and pushing to `main` once `cargo xtask gates` passes (rule 2);
-   tagging each milestone exit (`rtao-v0.<k>.0`; `rtao-v1.0.0` for M9) or a fix within it (a patch tag,
-   [§10.5](#105-compatibility-matrix-and-run-time-guard)) and pushing the tag, which runs `release.yml` (binaries, the
-   GitHub release, rustdoc and the book as downloadable release assets); dispatching CI lanes (`gh workflow run`); creating the fork of the
+7. **Pre-authorized** (no need to ask): committing and pushing client development to `main` under rule 2;
+   dispatching bounded free hosted CI lanes (`gh workflow run`); creating the fork of the
    monorepo and filing each upstream PR and issue of [§15](#15-upstream-contributions) in the RaoFoundation monorepo as
    soon as its evidence exists, with the link recorded in §15's Filed column; maintaining PR-U17's review branch and the
    `rtao-core-patch/*` branches in the fork, never force-pushed ([§5.10](#510-the-pr-u17-core-patch)); following up the
@@ -127,11 +156,11 @@ comes next.
    pushing the changes they ask for to the PR's branch (`fix/tao-balance` in the user's fork
    `sam0x17/ledger-polkadot`), never force-pushed; running the local cold-reader security passes
    ([§12.1](#121-overview)).
-8. **Prerequisites the user provides** (testnet funds and a soak host, GitHub/GHCR access, a Ledger device) and Q23's
+8. **Prerequisites** (GitHub access for development; optional GHCR/device access for deferred checks) and Q23's
    answers are listed in [§12.13](#1213-dependency-order-and-external-prerequisites); M0-01 asks for
    them, and each step that needs one names it. Q23 authorizes `sam0x17` and only free `ubuntu-latest` hosted jobs;
-   docs ship as release assets, with no Pages environment. The goal loop needs no branch protection, merge queue or bot App: the
-   rtao-bot App and, for PR-based upkeep, branch protection with the merge queue belong to the handover (M9-07).
+   docs can be downloaded as CI artifacts, with no Pages environment. Q29 and Q30 remove testnet setup and host
+   prerequisites. Bot installation, branch protection, merge queue and release publishing are deferred by Q30.
 
 ## 1. Summary
 
@@ -182,7 +211,7 @@ picks a role profile: `validator`, `miner`, `owner`, or `full` for the CLI.
 
 ### 1.4 Delivery order
 
-Delivery is operator-first, and every milestone ends with a release ([§12](#12-milestones)). The plan states order,
+Delivery is operator-first; each development milestone ends with reviewed client source and applicable hosted checks ([§12](#12-milestones)). The plan states order,
 dependencies and objective exit checks, not durations ([§14.1](#141-decisions-answered-2026-10-13)):
 
 | Capability | Milestone | Depends on |
@@ -190,11 +219,10 @@ dependencies and objective exit checks, not durations ([§14.1](#141-decisions-a
 | weight-setting validator, no Perl/OpenSSL/libsodium | M2 | M0, M1 |
 | btauth/1 miner, subnet template | M3 | M2 |
 | owner tooling, MEV shield, CLI v0 | M4 | M2 |
-| full v11 parity (M8), `rtao-v1.0.0` (M9) | M8, M9 | M5, M6, M7 |
+| full v11 client parity (M8), client hardening (M9) | M8, M9 | M5, M6, M7 |
 
-Upstream tracking (pin bumps, re-ports of changed files, new ops and reads) runs from M2 to the end of the project:
-during the goal loop the agent performs each pin bump itself, and the `pin-bump` bot takes over at the handover, M9-07
-([§12.1](#121-overview)).
+Track upstream changes relevant to the implemented client from M2 onward. Source/pin updates use applicable hosted
+checks; costly refreshes are optional targeted hosted work. Bot handover and scheduled upkeep are deferred (Q30).
 
 ### 1.5 The five things that matter most
 
@@ -224,8 +252,7 @@ during the goal loop the agent performs each pin bump itself, and the `pin-bump`
 The user's answers to the plan's open questions are final; [§14.1](#141-decisions-answered-2026-10-13) quotes each one
 with its consequences. rtao is dual-licensed `MIT OR Apache-2.0`; Python runs only in CI lanes; the binary is `rtao`,
 with no `btcli` shim; btauth/1 verification accepts plain and `<Bytes>`-wrapped signatures by default; the repository is
-`github.com/sam0x17/rtao`; a manual Ledger device run per release stays the final release check, and an automated Ledger
-emulator lane (Speculos) covers the rest in CI; until PR-U17 ships, rtao's own workspace builds `bittensor-core` through
+`github.com/sam0x17/rtao`; Q30 defers manual device runs and makes the Speculos emulator an optional hosted check; until PR-U17 ships, rtao's own workspace builds `bittensor-core` through
 a Cargo patch that adds it ([§5.10](#510-the-pr-u17-core-patch)); each upstream PR and issue is filed as soon as its
 evidence exists, and the Ledger app fix was filed with Zondax on 2026-10-13, before the plan runs; the per-milestone
 security passes are done by local cold readers; the agent develops M0 to M9 as one goal loop, committing to `main`
@@ -239,15 +266,15 @@ performant" as throughput, resource use and build cost at subnet scale [I: the p
 
 | Goal | Mechanisms | Depth |
 |---|---|---|
-| **100% Rust, no Python** | every crate, binary and build step is Rust; chain bytes come from the Rust core; product behavior is ported to Rust; extraction and regeneration use `ruff_python_parser` and `syn` inside `xtask`; the `rtao` CLI replaces `btcli` and shares its files. Python runs only in CI lanes (oracle, interop, upstream recorders, and the Ledger emulator, whose Speculos runs Python inside its image), never in a build, in regeneration or in `pr-gates`; of these lanes only interop is blocking, and only on pin bumps ([§9.7](#97-ci-lanes-and-what-each-catches)); the user accepted this reading (Q2, [§14.1](#141-decisions-answered-2026-10-13)) | [architecture §0.3 #23](docs/plan/architecture.md#03-twenty-five-decisions-that-define-the-design), [§11.5](docs/plan/architecture.md#115-the-python-oracle-ci-only-outputs-committed), [§17 #13](docs/plan/architecture.md#17-what-we-deliberately-do-not-do-yet) |
+| **100% Rust, no Python** | every crate, binary and build step is Rust; chain bytes come from the Rust core; product behavior is ported to Rust; extraction and regeneration use `rustpython-parser` and `syn` inside `xtask`; the `rtao` CLI replaces `btcli` and shares its files. Python runs only in CI lanes (oracle, interop, upstream recorders, and the Ledger emulator, whose Speculos runs Python inside its image), never in a build, in regeneration or in `pr-gates`; these are optional targeted hosted checks under Q30 ([§9.7](#97-ci-lanes-and-what-each-catches)); the user accepted this reading (Q2, [§14.1](#141-decisions-answered-2026-10-13)) | [architecture §0.3 #23](docs/plan/architecture.md#03-twenty-five-decisions-that-define-the-design), [§11.5](docs/plan/architecture.md#115-the-python-oracle-ci-only-outputs-committed), [§17 #13](docs/plan/architecture.md#17-what-we-deliberately-do-not-do-yet) |
 | **Fast** (hot-path latency) | metagraph decoded by a borrowed, shape-gated `MetagraphView`: 6.5 µs at 256 UIDs against 330 µs for the core `Value` decoder and 1,380 µs for `DecodeAsType`, and 57 µs at 2,500 UIDs; signing inline (about 0.03 ms); `Runtime::parse` about 1 ms once per spec, off the reactor; a weights preflight is one `state_queryStorageAt` instead of about 18 RPCs; O(1) `by_hotkey` | [architecture §8.2](docs/plan/architecture.md#82-the-metagraph-three-decode-paths-one-projection), [§8.6](docs/plan/architecture.md#86-performance-claims-corrected), [§3.6](docs/plan/architecture.md#36-reading-state), [bench-run-3.txt](docs/plan/bench/decode-bench/bench-run-3.txt) |
 | **tokio / async** | own tokio-tungstenite session behind `subxt_rpcs::client::RpcClientT`, with TLS from one explicitly built `ring` rustls config (never the process default); return-position `impl Future + Send` on generic paths and boxed futures only on `dyn` seams; Argon2i unlock, Ledger HID, PoW, metadata parse, any decode above 64 KiB on every path, timelock encryption, the RFC-0078 digest (once per spec) and fsync'd file writes go through `spawn_blocking`; dropping the last `Client` clone cancels its tasks and closes the socket; async `NonceStore`; axum, tower and reqwest adapters; `CancellationToken` supervision; the core's blocking reqwest client is banned from runtime paths by `clippy` | [architecture §3.1](docs/plan/architecture.md#31-async-model), [§3.2](docs/plan/architecture.md#32-transport-rtao-rpcsession), [§1.8](docs/plan/architecture.md#18-deliberately-not-used-on-runtime-paths) |
-| **Highly performant** (scale, resources, build) | coalesced reads and a client token bucket for public endpoints that allow about 1 request per second; an `ArcSwap` metagraph handle with no per-request decode; sparse weight and bond rows (a dense 2,500-UID matrix would be 6.25M cells); selective metagraph presets; no-host neuron builds (the core without `host` locks 241 packages and builds in 12.9 s; with `host` it pulls 330 crates, and its vendored OpenSSL needs Perl and make); a cold build first fetches about 293 MB (subtensor) and 480 MB (polkadot-sdk) of git history, which the template's BuildKit cache mounts pay once; criterion gates fail on regressions above 30% | [architecture §3.2.5](docs/plan/architecture.md#325-rate-limits-rtao-addition-and-request-volume), [§8.3](docs/plan/architecture.md#83-sync-service-c), [§8.4](docs/plan/architecture.md#84-miner-admission), [§2.8](docs/plan/architecture.md#28-build-weight), [§11.7](docs/plan/architecture.md#117-property-tests-fuzzing-benchmarks) |
+| **Highly performant** (scale, resources, build) | coalesced reads and a client token bucket for public endpoints that allow about 1 request per second; an `ArcSwap` metagraph handle with no per-request decode; sparse weight and bond rows (a dense 2,500-UID matrix would be 6.25M cells); selective metagraph presets; no-host neuron builds (the core without `host` locks 241 packages and builds in 12.9 s; with `host` it pulls 330 crates, and its vendored OpenSSL needs Perl and make); a cold build first fetches about 293 MB (subtensor) and 480 MB (polkadot-sdk) of git history, which the template's BuildKit cache mounts pay once; targeted hosted performance comparisons are informational | [architecture §3.2.5](docs/plan/architecture.md#325-rate-limits-rtao-addition-and-request-volume), [§8.3](docs/plan/architecture.md#83-sync-service-c), [§8.4](docs/plan/architecture.md#84-miner-admission), [§2.8](docs/plan/architecture.md#28-build-weight), [§11.7](docs/plan/architecture.md#117-property-tests-fuzzing-benchmarks) |
 | **Correct + tested** | upstream goldens replayed through rtao's wrappers; Python oracle vectors for composed calls, plans, reads and pure functions (u16 weight rows bit for bit, 10,000 `str(Balance)` vectors); a socket-level `FakeNode` that ports `test_rpc.py`; 19 rtao localnet scenarios, with the 112 upstream e2e manifest names and the 3 `PYT/e2e` tests mapped (115 keys); Python interop lanes; proptest and fuzzing; type-level safety (`KeySource<Role>`, `Balance<Tao>` vs `Balance<Alpha>`, `NonceLease`, `ShieldPeriod`, spec-stamped `CallBytes`, `ReadMethod`); fail-closed per-call surface verification | [§9](#9-testing-strategy), [architecture §11](docs/plan/architecture.md#11-testing) |
 | **Well-documented** | `deny(missing_docs)`; every example is a compiled `docify` item; an mdBook that mirrors bittensor.com's taxonomy; generated reference pages per op, read, error and hyperparameter; `#[doc(alias = "bittensor.…")]` on every mirrored item; a v11 → rtao migration table generated from `parity/map.toml`; `llms.txt` | [§11](#11-documentation-plan), [architecture §13](docs/plan/architecture.md#13-documentation) |
 | **Easy to maintain** | rtao owns only I/O, generators, ported behavior and staged upstream code (about 14k generated, 13k I/O, 27k ported, 7k framework, 8k tooling and 2k staged lines [I]); one seam crate absorbs core API changes; ported modules mirror Python file for file; provenance by git blob SHA in `parity/map.toml`; layering enforced by `xtask deps-check`; `clippy` `disallowed-methods` | [architecture §0.4](docs/plan/architecture.md#04-what-rtao-owns-budget), [§2.3](docs/plan/architecture.md#23-dependency-layers-and-enforced-rules) |
 | **Modular** | 19 crates in nine layers with enforced dependency rules; facade features and role profiles; one feature per Python intent group; the btauth/1 core has no I/O; signers, EVM, PoW GPU and the subxt escape hatch sit behind features | [§4.2](#42-layers), [§4.4](#44-facade-features-and-role-profiles) |
-| **Easy to keep up to date** with Python and subtensor | two pins in `upstream.toml`; a pin-bump playbook, run by the agent during the goal loop and by a bot every 30 minutes after it; a metadata-drift diff with four classes (`surface-unchanged` regenerates zero lines; after the loop a 6-hourly job auto-merges it); auto-bless for cosmetic Python edits; a nightly `upstream-next` diff against monorepo `main` and `testnet`; a nightly `core-canary`; a compile probe naming every core symbol rtao uses; forced deletion of upstreamed staged code; a compatibility matrix and run-time guard; a maintenance playbook | [§10](#10-keeping-up-with-upstream), [architecture §12](docs/plan/architecture.md#12-upstream-tracking) |
+| **Easy to keep up to date** with Python and subtensor | two pins; source and metadata diffs; generated-artifact and core API probes; reviewed pin updates with hosted client checks; optional targeted hosted oracle refresh; compatibility records and per-call runtime guards; scheduled automation deferred (Q30) | [§10](#10-keeping-up-with-upstream), [architecture §12](docs/plan/architecture.md#12-upstream-tracking) |
 
 ## 3. Fixed decisions and how the design reads them
 
@@ -255,10 +282,10 @@ The user's decisions are final. The design interprets them as follows.
 
 | User decision (quoted) | How the design reads it | Consequences | Depth |
 |---|---|---|---|
-| "don't worry about crates.io, we just need to build something that works" | Publishability is not a goal. Releases are git tags `rtao-vX.Y.Z` with a generated `compat.json`: during the goal loop the agent tags each milestone exit (C7), and after it release-plz cuts them, its `cargo-semver-checks` run picking the bump (the check is informational in `pr-gates` before 1.0, blocking from 1.0) | git and `[patch]` dependencies are acceptable; `release.yml` attaches rustdoc and the book as downloadable docs assets (Q23) | [architecture §12.8](docs/plan/architecture.md#128-release-process), [§17 #12](docs/plan/architecture.md#17-what-we-deliberately-do-not-do-yet) |
-| "git dependencies are fine" | `bittensor-core` is pinned by git tag; every final workspace repeats `[patch.crates-io] w3f-bls` at the same tag; `xtask`-only git dependencies (`ruff_python_parser`, `subtensor-linting`) are allowed | subnet repositories carry one patch line until PR-U4 lands; the template and `rtao doctor` keep it right | [architecture §1.2](docs/plan/architecture.md#12-pinning-core_tag-and-parity_tag), [§1.3](docs/plan/architecture.md#13-the-w3f-bls-patch-end-to-end) |
+| "don't worry about crates.io, we just need to build something that works" | Publishability is not a goal. Current work delivers client source through git; release tagging, binary distribution and publishing are deferred (Q30) | git and `[patch]` dependencies are acceptable; documentation is downloadable from hosted CI without Pages | [architecture §12.8](docs/plan/architecture.md#128-release-process) |
+| "git dependencies are fine" | `bittensor-core` is pinned by git tag; every final workspace repeats `[patch.crates-io] w3f-bls` at the same tag; `xtask`-only git dependencies such as `subtensor-linting` are allowed | subnet repositories carry one patch line until PR-U4 lands; the template and `rtao doctor` keep it right | [architecture §1.2](docs/plan/architecture.md#12-pinning-core_tag-and-parity_tag), [§1.3](docs/plan/architecture.md#13-the-w3f-bls-patch-end-to-end) |
 | "probably we can build what we need as a veneer over bittensor-core if that now exists" | It exists: `sdk/bittensor-core`, version 0.1.0, `publish = false`, edition 2021, Apache-2.0 (`UP/sdk/bittensor-core/Cargo.toml:1-7`, re-checked). "Veneer" means every chain-defined and compatibility byte comes from the core, while product behavior comes from Python, because the core's product layer (blocking `Client`, `Executor`, `Policy`) diverges from Python on era, anchor, shield era, fee RPC, receipts, error codes and intent coverage | one seam crate; a staging crate for upstream-bound code; the core client used as a test oracle only | [architecture §1](docs/plan/architecture.md#1-boundary-with-bittensor-core), [§5](#5-bittensor-core-taken-wrapped-staged-avoided) |
-| scope = "matching everything that is today in python" | Full parity with the v11 package at `parity_tag`: 83 intents, 102 reads, 18 error codes and 390 classified chain errors, transport semantics, wallets, keyfiles and passwords, signers (Ledger, Vault, browser extension), EVM helpers, timelock, btauth/1, the metagraph, and the CLI (163 hand-written commands plus generated `tx`/`query`). JSON output is value-equal to Python's. Phased but complete; the parity gate turns strict at M8 | parity machinery starts in M0 and is complete in M2; full parity at M8, `rtao-v1.0.0` at M9 ([§12](#12-milestones)) | [§8](#8-python-parity), [architecture §4](docs/plan/architecture.md#4-intents-and-reads-parity) |
+| scope = "matching everything that is today in python" | Full parity with the v11 package at `parity_tag`: 83 intents, 102 reads, 18 error codes and 390 classified chain errors, transport semantics, wallets, keyfiles and passwords, signers (Ledger, Vault, browser extension), EVM helpers, timelock, btauth/1, the metagraph, and the CLI (163 hand-written commands plus generated `tx`/`query`). JSON output is value-equal to Python's. Phased but complete; the parity gate turns strict at M8 | parity machinery starts in M0 and is complete in M2; full client parity at M8, client hardening at M9; distribution deferred by Q30 ([§12](#12-milestones)) | [§8](#8-python-parity), [architecture §4](docs/plan/architecture.md#4-intents-and-reads-parity) |
 
 **The reading of "100% Rust".** What subnet owners build and run is Rust only: rtao's crates, every subnet binary, the
 `rtao` CLI, extraction and regeneration (`xtask`), and the offline PR gates. Python appears in four CI-only lanes: the
@@ -323,7 +350,7 @@ Rules checked by `deps-check`:
 5. The no-host profiles (`validator,prometheus` and `miner,redis`, each with `--no-default-features`) contain, in
    `cargo tree -e normal,build`, none of the crates listed in [§5.7](#57-the-no-host-neuron-profile), no blocking
    `reqwest`, and `sp-core` without `std`.
-6. `Cargo.lock` holds exactly one `w3f-bls`, at `core_tag`.
+6. Exactly one built `w3f-bls` uses `core_tag`; `Cargo.lock` permits only its pinned entry and the recorded dormant registry 0.1.9 entry (Q26).
 7. Exactly one rustls crypto provider, `ring`: `aws-lc-rs`, `aws-lc-sys` and `native-tls` are absent from every
    profile, and `deny.toml` bans them.
 8. Test seams stay out of shipped graphs: `rtao-signer/test-util` and `rtao-client/test-util` are enabled only by
@@ -359,7 +386,7 @@ PR-U17's items, which only the core patch provides, stay out of shipped crates t
 | `rtao-cli` | the `rtao` binary, btcli-equivalent, with no `btcli` shim (Q3); its `[[bin]]` sets `doc = false` ([§11](#11-documentation-plan)) | — | `ledger`, `vault`, `extension`, `evm` | M0 (`doctor` lock check only); M4 CLI v0 |
 | `rtao-testkit` | test infrastructure | `FakeNode`, `FakeChain`, `FakeState`, `Fault`, `RecordingView`, `Localnet`, `Scenario`, `PinProxy`, `fixtures`, `oracle`, `ledger_emu` (the Speculos harness, with the Speculos TCP and replay transports that `LedgerDevice::with_transport` takes from the core patch, [§5.10](#510-the-pr-u17-core-patch)) | `docker`, `interop`, `core-oracle`, `ledger-emu` (each gates its own `[[test]]` target) | M0 (`fixtures`), M1 (fakes), M2 (`Localnet`, `Scenario`), M4 (`PinProxy`), M7 (`ledger_emu`) |
 | `rtao` | the facade subnet code depends on | `prelude` (contents per feature, [§4.4](#44-facade-features-and-role-profiles)), re-exports per feature, `blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` (`SyncClient` has all 14 namespaces, D-027) | [§4.4](#44-facade-features-and-role-profiles) | M0 (`blocking`: M6) |
-| `xtask` | pin, import-upstream, extract, regen, parity, staged, core-surface, deps-check, drift, oracle, record, docs, compat, localnet (bootstrap, run, smoke, up/down), localnet-image, probe, release-notes, pr-u4-proof, fuzz, bench, bench-live, mainnet-clone, template (check), upstream (parity-tag), ci (issue), lint-upstream, ledger-emu (build-app, up, record, speculos-image), gates (the local `pr-gates`, M0-27), core-patch (rebase, strip; M7-09) (the subcommands Appendix E and the executing rules call) | — | — | M0 |
+| `xtask` | pin, import-upstream, extract, regen, parity, staged, core-surface, deps-check, drift, oracle, record, docs, compat, localnet (bootstrap, run, smoke, up/down), localnet-image, probe, release-notes, pr-u4-proof, fuzz, bench (optional hosted), template (check), upstream (parity-tag), ci (issue), lint-upstream, ledger-emu (build-app, up, record, speculos-image), gates (hosted `pr-gates`, M0-27; no full local run, Q30), core-patch (rebase, strip; M7-09) (the subcommands Appendix E and the executing rules call) | — | — | M0 |
 
 Two splits are deliberate: `rtao-runtime` is separate from `rtao-catalog` (a runtime bump and a Python bump recompile
 only their own dependents), and `rtao-rpc` is separate from `rtao-client` (the transport has no chain knowledge and is
@@ -580,10 +607,10 @@ w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v477"
 
 Enforcement:
 
-1. `crates/rtao-core/tests/lock.rs` asserts that rtao's own `Cargo.lock` has exactly one `w3f-bls`, from the same git
+1. `crates/rtao-core/tests/lock.rs` requires one built `w3f-bls` in the workspace's all-feature/all-target normal/build graph, from the same git
    source and tag as `bittensor-core`'s declaration, equal to `rtao_core::BITTENSOR_CORE_TAG` (while the core patch
    exists, the lock takes `bittensor-core` itself from `[core.patch]`, which `xtask pin --check` verifies, and the
-   patch's second table keeps `w3f-bls` at that tag, [§5.10](#510-the-pr-u17-core-patch)).
+   patch's second table keeps `w3f-bls` at that tag, [§5.10](#510-the-pr-u17-core-patch)). The lock inventory permits one pinned 0.1.3 entry and at most the exact recorded registry 0.1.9 entry, checksum included. Activation, unexpected identities and missing pinned provenance fail (Q26).
 2. `rtao doctor` runs the same check on a downstream workspace, taking the expected reference from that workspace's
    own `bittensor-core` entry (the reference kind must match too: a `rev` of the same commit is a different Cargo
    source and locks a second copy). It prints the exact line to add or fix, so the E0277 symptom becomes a one-line
@@ -658,8 +685,8 @@ encryption. None of these is host-gated; only the plaintext keyfile codec is (`C
 
 `bittensor-core` is `publish = false` at version 0.1.0 and never stamped. Three mechanisms catch API changes
 ([architecture §1.9](docs/plan/architecture.md#19-keeping-up-with-an-unversioned-core)): the generated `core_surface`
-compile probe names every core item `rtao-core` and `rtao-core-ext` use, with its exact signature; the nightly
-`core-canary` builds against the monorepo's `main` with the `:main` localnet image; and the golden vectors are
+compile probe names every core item `rtao-core` and `rtao-core-ext` use, with its exact signature; an optional hosted
+`core-canary` compiles client source against a reviewed monorepo `main` commit, without starting a node; and the golden vectors are
 replayed through rtao's wrappers in `pr-gates`.
 
 ### 5.10 The PR-U17 core patch
@@ -724,17 +751,15 @@ emulator run of the core's own `ledger.rs` through `with_transport`.
   therefore compile against the unpatched core: only `rtao-testkit` (feature `ledger-emu`) may name PR-U17's items.
   `clippy.toml` bans `LedgerDevice::with_transport` (`disallowed-methods`) and `ApduTransport` (`disallowed-types`),
   both with `allow-invalid = true`, everywhere but `rtao-testkit::ledger_emu`; the bans flag imports, type positions,
-  bounds and calls, but not a trait `impl` header written by full path. The `core-unpatched` job (nightly, and on
-  pushes that change `upstream.toml` or the root `Cargo.toml`) catches that case too: it deletes both tables in its
+  bounds and calls, but not a trait `impl` header written by full path. The `core-unpatched` job (on relevant source/pin changes that affect `upstream.toml` or the root `Cargo.toml`) catches that case too: it deletes both tables in its
   disposable checkout and runs `cargo check --workspace --exclude rtao-testkit --exclude xtask --all-features` without
   `--locked` (Cargo then re-locks only `bittensor-core`), which proves what subnets build; because `--all-features`
   still builds an excluded crate that a feature reaches, it also fails if a shipped feature pulls in `rtao-testkit`
-  ([§4.2](#42-layers) rule 8). The `template` job (M3-09) stays the end-to-end downstream proof.
+  ([§4.2](#42-layers) rule 8). The hosted template compile/test job (M3-09) checks downstream source; real-chain template evidence is optional.
 - **Coverage.** From its first run the emulator lane drives the core's own `ledger.rs` (APDU building, 250-byte
   chunking, status-word mapping) against the real app, through `LedgerDevice::with_transport` over `rtao-testkit`'s
   Speculos TCP transport, and `ledger_replay` in `pr-gates` uses a replay transport the same way
-  ([§9.5](#95-python-oracle-and-interop)); the prototype did both. The device run covers only what the emulator
-  cannot: the HID transport and OS device access (`hid.rs`, `LedgerDevice::open`), the app binary users install, real
+  ([§9.5](#95-python-oracle-and-interop)); the prototype did both. Deferred hardware coverage includes: the HID transport and OS device access (`hid.rs`, `LedgerDevice::open`), the app binary users install, real
   firmware and the review on a real screen.
 - **Fallbacks.** If the PR changes in review, the patch branch follows it. If upstream declines PR-U17, the agent stops
   and asks the user (rule 6 of [Executing this plan](#executing-this-plan)): keep carrying the patch, fall back to a
@@ -858,7 +883,7 @@ watching, persistence, metrics and shutdown
 ```rust
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let cfg = rtao::neuron::NeuronConfig::load()?;                          // flag > env > ~/.bittensor/btcli.json > default
+    let cfg = rtao::neuron::NeuronConfig::load_for(NetUid(1)).await?;       // env > ~/.bittensor/btcli.json > default
     rtao::neuron::NeuronRuntime::validator(cfg, MyValidator::default()).run().await
 }
 
@@ -913,7 +938,7 @@ async fn generate(VerifiedCaller(caller): VerifiedCaller, Json(req): Json<Prompt
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    NeuronRuntime::miner(NeuronConfig::load()?, MyMiner).run().await       // [I] named by analogy with ::validator
+    NeuronRuntime::miner(NeuronConfig::load_for(NetUid(1)).await?, MyMiner).run().await // [I] named by analogy with ::validator
 }
 ```
 
@@ -961,52 +986,37 @@ trims) and `OwnerMonitor`.
 
 ### 7.5 The `cargo generate` template
 
-`templates/subnet/` in the rtao repository ([architecture §2.1](docs/plan/architecture.md#21-repository-tree),
-[§9.11](docs/plan/architecture.md#911-persistence-shutdown-upgrades-deployment)) ships:
+`templates/subnet/` contains validator/miner members and an owner tool, with the `w3f-bls` patch once in the workspace
+root. Shared config/state formats, hotkey-only neuron profiles and graceful shutdown behavior follow the API design.
+Its ordinary CI compiles relevant profiles and runs client tests against the changed source, with fixtures and fakes.
 
-- a workspace with a validator, a miner and an owner tool, the `w3f-bls` patch line once in the workspace root (never
-  the core patch of [§5.10](#510-the-pr-u17-core-patch)), and
-  `rtao doctor` in CI; each binary installs ring as the process-default rustls provider first thing in `main`, as a
-  backstop for third-party TLS code, and a test asserts it;
-- a multi-stage Dockerfile: neuron images are built with `-p <binary>` and BuildKit cache mounts for the cargo git and
-  registry directories, in `rust:1.89-slim` as shipped (its C compiler links the binary and compiles `ring` and
-  `blake3`); only the owner image adds `perl` and `make`;
-- a non-root runtime image with a read-only hotkey mount and a state volume; a systemd unit (`Restart=on-failure`,
-  `KillSignal=SIGTERM`, `TimeoutStopSec=90`);
-- a docker compose file for the localnet loop and a CI workflow.
+Dockerfile, compose and service-unit recipes may remain as operator examples. Building images, running a localnet,
+registering a subnet, staking accounts or starting neuron processes is optional targeted hosted integration work;
+none is required to develop the template or pass its ordinary CI. Do not run those recipes locally. No deployment
+or service installation is part of this task. The owner member joins in M4, and Ledger feature source in M7.
 
-It lands in M3 with the validator and miner members, their no-host Dockerfile stages, compose and CI; a generated
-project must pass its own CI ([§12.5](#125-m3-miner)). The owner-tool member (features `["owner"]`, plus the owner
-image stage) joins in M4, and `ledger` in M7. Invocation [I]:
-`cargo generate --git https://github.com/sam0x17/rtao templates/subnet`.
+Invocation: `cargo generate --git https://github.com/sam0x17/rtao templates/subnet`.
+
 
 ## 8. Python parity
 
 ### 8.1 Definition of done
 
-Parity is reached at M8 when all of the following hold ([architecture §4.9](docs/plan/architecture.md#49-parity-enforcement-the-machinery),
-[§14](docs/plan/architecture.md#14-milestones)):
+Client implementation completeness at M8 means all 83 intents, 102 reads and the CLI surface have implementations
+or documented deliberate divergences, with no unexplained source/catalog rows or `NotYetPorted` stubs. Hosted tests
+cover plans, encoding, reads, malformed input and implemented behavior through fixtures and fakes. Existing pinned
+oracle vectors replay, JSON integer comparisons remain exact and every divergence has a regression test.
 
-- `parity/pending.toml` is empty: all 83 intents and 102 reads are implemented; `AnyIntent` and `ReadName` have no
-  `NotYetPorted` stubs.
-- The oracle matches 83/83 intents (composed call trees, effects, warnings, blocks, violations, spend, fee; including
-  the root-subnet samples of `vendor/oracle/samples_extra.json`) and 102/102 reads (JSON values with integers compared
-  exactly and non-integers as f64, at head and pinned), plus the pure-function vectors.
-- Interop read JSON is value-equal to Python's at a pinned block for every sample; `rtao tx <op> --dry-run --json` is
-  value-equal to `btcli`'s for every state-independent sample.
-- The `cli_tree` parity row set has zero missing commands and flags, and every hand-written command's `--json` output
-  (`--dry-run --json` for mutating ones) is value-equal to btcli's at a pinned block (interop lane 9), or the
-  difference is a registered divergence.
-- `xtask parity check` runs in strict mode: zero unexplained rows in every layer.
-- Every entry in `parity/divergences.toml` has a pinning test and, where upstream is wrong, an upstream link.
-- Every upstream e2e manifest name and every `PYT/e2e` test (key `pyt:e2e/<file>::<function>`; 115 keys at v477) is
-  mapped in `parity/e2e_map.toml` to a green rtao test or `na`, with no `pending` key left; the retired
-  `intent_set_root_claim_type` is mapped as n/a
-  ([inventory §8](docs/plan/parity-inventory.md#8-inconsistencies-found-and-how-this-inventory-resolves-them) #8,
-  #10).
+Source completeness and executed cross-language/chain coverage are recorded separately. Fresh oracle comparisons,
+read/CLI interoperability and upstream e2e mappings remain useful evidence, but their container-based execution is
+optional targeted hosted work under Q30. The mapping records available tests and their actual status; do not claim
+a green e2e test, hardware compatibility or full externally verified parity from source mapping alone. Do not create
+local nodes, containers or a full campaign to clear a development milestone.
 
-Not claimed: byte-identical human tables (Rich in Python) or byte-identical JSON text; JSON is value-equal, and
-`Balance` strings are byte-equal ([architecture §10.3](docs/plan/architecture.md#103-output-contract)).
+The output contract remains JSON value equality, including valid-chain Balance formatting and registered native-u64
+differences. Human tables and JSON text layout do not require byte identity. Document any unexecuted oracle,
+interop, platform or device coverage when reporting implementation progress.
+
 
 ### 8.2 Scope and counts per milestone
 
@@ -1048,7 +1058,7 @@ hand-written hook besides `summary()`.
 | Mechanism | What it is | What it catches |
 |---|---|---|
 | `parity/map.toml` (file layer) | one row per watched upstream file: monorepo path, Rust paths, kind (`generated`, `extracted`, `vendored`, `ported`, `oracle-only`, `n/a`), git blob SHA when last reconciled, tag. Every row is seeded `pending` in M0 (357 at v477); presence is checked for every row and blob equality only for blessed rows. Watched roots go beyond the package: the Python tests, scripts, completions and `pyproject.toml`, `sdk/bittensor-core-py`, and the runtime and pallet sources whose rules the framework mirrors; reads come from the vendored `vendor/upstream/tree.txt`, so ordinary pushes need no network | a new upstream file without a row; a vanished file; any blob change of a blessed row, shown as a diff. Catches behavior-only Python changes that leave the catalogs alone (v466→v467 rewrote 142 lines of `_root_claim_fee.py` with `intents.json` unchanged) |
-| symbol layer | `ruff_python_parser` diff of old and new blobs (names, classes, dataclass fields and defaults, `ClassVar`s, functions and parameters), joined to Rust items through the `#[doc(alias = "bittensor.…")]` index | "Python `X` changed → Rust `crates/…:line`", or "no Rust counterpart" |
+| symbol layer | `rustpython-parser` diff of old and new blobs (names, classes, dataclass fields and defaults, `ClassVar`s, functions and parameters), joined to Rust items through the `#[doc(alias = "bittensor.…")]` index | "Python `X` changed → Rust `crates/…:line`", or "no Rust counterpart" |
 | catalog layer | generated registries vs vendored `CAT/*.json`: names, classes, signer, origin, verify, wraps, normalized schemas; read params (with the extracted `read_params.json` defaults), docs, categories, hits (the catalog hits must be a subset of each read's hit set, [§9.3](#93-fakes-at-the-right-layers)); error codes and names; extracted defaults vs generated `defaults.rs` | catalog drift, schema mismatch |
 | extraction layer | `xtask extract --check` re-extracts every literal table from the vendored sources (settings, error maps, retry substrings, shield bounds, RPC policy constants, the hyperparameter table, `PROXY_TYPES`, samples). Beyond literals it accepts seven resolved forms: constant folding, module-level names, environment defaults, descriptor chains (`st.<Pallet>.<Item>`), `default_factory` lambdas, builtin type tags and `Path.home()` paths; an M1 test checks that every named table extracts | a hand-copied constant drifting; a table restructured into non-literal code (fails with file and line) |
 | chain-source layer | `syn` over runtime sources: custom transaction-error codes, `call_filter_group!` fee filters (Python mirror must equal it), `SelectiveMetagraphIndex` arms, `freeze_struct` hashes, `ProxyType` vs `PROXY_TYPES`, `MAX_SHIELD_ERA_PERIOD` (into `rtao_catalog::rt`), the `prod_or_fast!` rate limits absent from metadata (into `rt::rate_limits`), and the chain rules the framework mirrors (tempo bounds, freeze window, rate-limit arms) into `chain_rules.json` | runtime changes that Python or the framework mirrors by hand, including code-only changes that produce no metadata drift |
@@ -1057,7 +1067,7 @@ hand-written hook besides `summary()`.
 | completeness | `pending.toml` may only shrink (except when a pin bump, the change that moves `[parity]`, adds new upstream ops); every divergence needs a test and an upstream link; every `__all__` name of `PY/__init__.py` has a module-map row or a `#[doc(alias)]`, and every name of the 14 other public `__all__` lists (`intents`, `reads`, `evm`, `extension`, `vault`, `http_auth.py`, `keyfiles.py`, `ledger.py`, `timelock.py`, `wallet.py`, …) has a `#[doc(alias)]` or a reasoned row in `parity/exports_extra.toml`; strict from M8 | silent scope loss, including library API that the oracle never calls |
 | environment layer | `parity/env.toml` maps every environment variable the Python package reads (28 names plus `BT_PW_*` at v477, extracted with file and line) to its rtao consumer or a divergence | a new, renamed or vanished environment variable |
 | bless and auto-bless | `xtask parity bless <py-path>` records the new blob SHA after a human port; a pin bump auto-blesses only when the symbol diff, the extracted tables and the mapped oracle vectors are all unchanged; catalog blobs are compared normalized (without `line`, `end_line` and `url`), so a source-line shift auto-blesses; a `vendored` blob is auto-blessed only when its consumers' tests pass | keeps 2-4 releases a week manageable |
-| early warning | nightly diff of monorepo `main` and `testnet` against `parity_tag` (catalogs, watched files, symbols) | upstream changes days before a tag ships |
+| early warning | optional source diff of monorepo branches against the pin, when relevant to client work | observed upstream changes; scheduled campaigns deferred |
 
 ### 8.4 Registered divergences
 
@@ -1102,6 +1112,10 @@ Classes: `stricter` (rtao refuses something Python allows), `improved`, `kept` (
 | D-032 | btauth server adapter | authenticate → policy → commit → limit: a replayed request from a denied hotkey gets 403 where the recipe gives 401; `Verifier::verify` keeps Python's order | addition |
 | D-033 | `timelock.encrypt` | adds `Reveal::InBlocks(n)` | addition |
 | D-034 | `multisig_approve` plan | adds a warning when the approval is at the threshold and cannot execute the call | addition |
+| D-035 | `Balance` local arithmetic | all balances use native u64 rao with checked arithmetic; negative and arbitrary-size Python balances are unsupported, while valid-chain formatting remains compatible (Q25) | stricter |
+| D-036 | secret constructor and keyfile errors | fixed diagnostics and error categories; supplied secrets excluded from Display, Debug and source chains, with owned dependency diagnostics wiped | stricter |
+| D-037 | password and keyfile reads | regular opened descriptors and a 16 MiB content cap; regular symlink targets, password precedence and whole-file trimming remain supported (M2-S05) | stricter |
+| D-038 | btauth retention equality | `Verifier::new` requires retention strictly greater than max_age + allowed_skew, closing the inclusive freshness/expiry endpoint | stricter |
 
 ## 9. Testing strategy
 
@@ -1116,13 +1130,13 @@ Classes: `stricter` (rtao refuses something Python allows), `improved`, `kept` (
 | oracle vectors | Python behavior: composed calls, plans, reads, pure functions | every push (committed JSON) | nothing; Python only to regenerate |
 | `FakeNode` | the session supervisor: reconnect, resend, policy refusals, `FateUnknown` | every push | a loopback socket |
 | `FakeChain` | client, executor, reads, scheduler under a paused clock | every push | nothing |
-| localnet e2e | real chain behavior | every push except docs-only, nightly, weekly | docker |
-| `core-oracle` | rtao and `bittensor_core::Client` agree where they should | nightly; pushes that change `upstream.toml` (pin bumps) | docker |
-| Python interop | cross-language wire bytes, wallets, btauth/1, JSON | nightly; pushes that change `upstream.toml` (pin bumps) | docker (Python only inside containers) |
-| Ledger emulator | the Ledger path against the real Polkadot generic app under Speculos: address, clear signing with the core's proof, rejection and tampering, Ledger-signed extrinsics accepted by a localnet | nightly; pushes that change the Ledger paths or `upstream.toml`; re-recordings | docker (Speculos runs Python inside its image) |
-| mainnet clone | the read-only suite against a clone of mainnet state | weekly | free `ubuntu-latest` with Docker; resource feasibility must be measured (Q23) |
-| fuzz, bench | robustness; performance regressions | nightly | nothing |
-| live probes | public endpoints and finney's shape | every 6 hours | network |
+| localnet e2e | real chain behavior | optional targeted hosted job (Q30) | hosted Docker only |
+| `core-oracle` | rtao and `bittensor_core::Client` agree where they should | optional targeted hosted job | hosted containers only |
+| Python interop | cross-language wire bytes, wallets, btauth/1, JSON | optional targeted hosted job | hosted containers only |
+| Ledger emulator | the Ledger path against the real Polkadot generic app under Speculos: address, clear signing with the core's proof, rejection and tampering, Ledger-signed extrinsics accepted by a localnet | optional targeted hosted job | hosted containers only |
+| mainnet clone | removed from current work (Q30) | none | no clone or full node |
+| fuzz, bench | robustness; performance regressions | optional bounded hosted jobs | free CI only |
+| live probes | public endpoints and finney's shape | optional targeted hosted job | read-only network access from CI |
 
 Localnet, interop, core-oracle and Ledger emulator tests live in the `e2e`, `interop`, `core_oracle` and `ledger_emu`
 `[[test]]` targets of `rtao-testkit`, each gated by `required-features`; the nextest `ci` profile filters them out, so
@@ -1170,7 +1184,7 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
 - **`FakeNode`**: a real JSON-RPC WebSocket server on `127.0.0.1:0` with fault injection (handshake 403/429 with
   `X-RateLimit-*` headers, drops after N frames, close 1008, `-32004`/`-32005` errors, silence, state discarded, slow
   responses), over `ws://` and, with a self-signed certificate added through `SessionConfig::extra_roots`, `wss://`.
-  It runs the port of `PYT/unit/test_rpc.py` and the 19-row Python transport checklist
+  In hosted Rust tests it runs the port of `PYT/unit/test_rpc.py` and the 19-row Python transport checklist
   ([architecture §3.15](docs/plan/architecture.md#315-python-transport-parity-checklist)).
 - **`FakeChain`**: implements `RpcClientT` directly over `FakeState`, and a `Client` runs over it through
   `Client::from_rpc`; rtao's runtime cache, key building, decoding and submission state machine run for real;
@@ -1187,6 +1201,9 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
 
 ### 9.4 Localnet e2e
 
+Q30 makes this a reference for optional targeted hosted checks. None of the setup or scenario campaigns below runs
+on the laptop or Mac Studio, and they are no longer common milestone exit requirements.
+
 ([architecture §11.4](docs/plan/architecture.md#114-localnet-e2e-docker))
 
 - Harness (`rtao-testkit::Localnet`, M2): the plain `docker` CLI, as upstream does; readiness by healthcheck or
@@ -1194,12 +1211,10 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
   fetching quicknet pulses over public HTTPS; on timeout `LocalnetError::DrandUnreachable`, and the job retries once
   with a fresh container); the e2e job first checks egress to the drand endpoint; upstream's env contract
   (`E2E_ENDPOINT`, `LOCALNET_IMAGE`, `SKIP_PULL`); images pinned by digest from `upstream.toml`.
-- Lanes: `pinned` (`:v<parity spec>`, fast and slow, on every push except docs-only, behind `e2e-required`, the e2e
-  stop-the-line gate), `mainnet` (pushes, blocking; nightly), `testnet` and `devnet` (nightly, allowed failure; a
-  testnet failure opens or updates a "pre-break" issue), `main` (weekly, allowed failure). `wasm-override` is a manual
-  fallback, not a lane, because upstream publishes `:v<spec>` on every mainnet mirror move. Fast blocks (250 ms,
-  tempo 10) by default, with commit-reveal scenarios at tempo 48 so that one late drand pulse cannot expire a commit;
-  a 12 s lane for timing-sensitive tests.
+- Select one pinned image and the smallest relevant scenario set for an optional hosted dispatch. Use explicit
+  timeouts; run a slow timing case only when that client change needs it. There are no automatic push, nightly,
+  weekly or multi-network campaigns, and `e2e-required` is not a development gate. Do not open automatic issues or
+  seek another host when a free runner cannot complete a check.
 - Isolation: `e2e.yml` starts the containers itself, one per nextest partition plus one `global` container. Per
   container, `cargo xtask localnet bootstrap` sets the global knobs once as Alice (admin freeze window, owner, network
   and transaction rate limits, start-call delay, lock cost and reduction interval, subnet limit) and funds 64 slot
@@ -1239,6 +1254,9 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
 
 ### 9.5 Python oracle and interop
 
+Committed vectors remain ordinary Rust test inputs. Q30 moves regeneration, container and emulator execution to
+optional targeted hosted jobs. The lane design below is a reference, with no local or device execution requirement.
+
 - **Oracle** ([architecture §11.5](docs/plan/architecture.md#115-the-python-oracle-ci-only-outputs-committed)):
   `ci/oracle/Dockerfile` builds the monorepo at `parity.commit` with `uv sync` (which builds `bittensor-core-py` through
   maturin, OpenSSL and Perl), cached per tag in GHCR. There is no PyPI fallback: no PyPI version reliably identifies a
@@ -1262,9 +1280,7 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
   dependencies pinned by `ci/interop/pyproject.toml` and a committed `uv.lock` (FastAPI, uvicorn, httpx, cryptography,
   ansible-vault), and rtao test binaries. Lanes: (1) btauth/1 both directions, sr25519 and ed25519, against the FastAPI
   recipe; (2) a Python miner with an rtao validator and the reverse, with metagraph JSON equality; (3) wallets created
-  by each side and used by the other, including legacy Fernet and Ansible files (Keychain compatibility is a Python-free
-  local Mac Studio test in an isolated temporary keychain with system settings restored, outside `cargo xtask gates`;
-  it lands with the Keychain code in M4 and remains unresolved until equivalent evidence exists, Q23);
+  by each side and used by the other, including legacy Fernet and Ansible files (Keychain argv and failures use injected process tests; real Keychain verification is deferred by Q30);
   (4) wire bytes at the current spec; (5) reads at a pinned block, value-equal; (6) prepared extrinsics across
   languages; (7) shared caches, config, the address, proxy and multisig books and the multisig call cache (a raw 2-of-3
   multisig opened by btcli is approved and executed by rtao, and the reverse); (8) CLI `tools`, `--dry-run --json` plans
@@ -1283,7 +1299,7 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
   APDU transcripts that `ledger_replay` replays in `pr-gates`, and `ledger_request_parity` compares rtao's device
   requests with the oracle's dump of Python's. The lane and `ledger_replay` run the core's own `ledger.rs` through
   `LedgerDevice::with_transport`, which rtao's workspace takes from the core patch until PR-U17 ships (G16,
-  [§5.10](#510-the-pr-u17-core-patch)). The manual device run per release covers what the emulator cannot: the HID
+  [§5.10](#510-the-pr-u17-core-patch)). A future separately requested device check could cover: the HID
   transport and OS device access, the app binary users install, real firmware and the review on a real screen. The
   device side was exercised while planning ([research J](docs/plan/research/J-ledger-ci-shim.md)), and a prototype of
   the core patch drove the app with the core's own `ledger.rs` and replayed the recorded exchanges
@@ -1298,73 +1314,39 @@ Vendored at `parity_tag` with sha256 pins and a NOTICE ([architecture §11.2](do
   trips, `conform` invariants, nonce-lease interleavings (no reuse, no gap), shape-hash soundness under mutations,
   typed == dynamic over a port of upstream's `ByteGen`, btauth freshness boundaries, and "the scheduler never
   double-submits inside a rate limit".
-- `cargo +nightly fuzz` (short nightly runs): btauth header parsing and `verify`, JSON-RPC frame parsing,
+- Optional bounded hosted `cargo +nightly fuzz` runs: btauth header parsing and `verify`, JSON-RPC frame parsing,
   `MetagraphView`, event splitting, `UnsignedExtrinsic` import, keyfile detection and `keyfile_json`, core decoders
   wrapped at the boundary.
 - `criterion` baselines on committed finney payloads (netuids 1, 3, 64) and a synthetic 2,500-UID payload: the three
   metagraph decode paths, V15 parse, key building for 10k keys, map-page decode, sign and assemble, btauth throughput,
-  `conform` at 256 and 2,500 entries. Nightly fails above a 30% regression.
-- The nightly `fuzz` and `bench` jobs start in M1 with the baselines and targets that exist then (btauth/1 header
+  `conform` at 256 and 2,500 entries. Use bounded hosted comparisons for specific regressions; shared-runner timing is informational.
+- Optional hosted jobs use the baselines and targets that exist then (btauth/1 header
   parsing and `verify` from M0; JSON-RPC frame parsing and `MetagraphView` from M1), and each milestone adds its own
   targets as it lands them: M2 keyfile detection, `keyfile_json` and event splitting; M3 the btauth server path; M5
-  `UnsignedExtrinsic` JSON import. M9 reviews the corpora and raises per-target time.
+  `UnsignedExtrinsic` JSON import. Q30 removes default nightly campaigns and M9 time escalation.
 
 ### 9.7 CI lanes and what each catches
 
-Full YAML is in [architecture Appendix E](docs/plan/architecture.md#appendix-e-ci-workflows); triggers and gates are in
-[§12.2](docs/plan/architecture.md#122-jobs). During the goal loop there are no PRs (Q21): the agent pushes to `main`, so
-push triggers do the work, and the `pull_request` and `merge_group` triggers stay in the workflows, inert until
-PR-based upkeep starts after the handover (M9-07). "Blocking" means stop the line: a red run on `main` is fixed before
-the next step (rule 2 of [Executing this plan](#executing-this-plan)).
+All substantial validation runs on free `ubuntu-latest` hosted runners (Q23, Q30). Local development does not repeat
+these matrices. Fix a red required hosted check before claiming the affected change is accepted.
 
-| Lane | Trigger | Catches | Gate |
+| Lane | Trigger | Coverage | Acceptance |
 |---|---|---|---|
-| `pr-gates` | every push to `main` (PRs and the merge queue after the loop); `cargo xtask gates` runs the same steps locally before each push | formatting and lint failures (including `disallowed-methods` and `disallowed-types`, and `subtensor-linting` on `rtao-core-ext`); tampered vendored artifacts; stale generated code; stale extracted tables; any unexplained parity row; staged code that upstream now exports (probe crates); core API changes (compile probe); pins out of step with the root manifest or the lock, and a core patch that drifted or is no longer needed (`xtask pin --check` without `--parity`: the pins, offline apart from git, and the core-patch rules of [§5.10](#510-the-pr-u17-core-patch)); layering violations, a second `w3f-bls`, a second TLS provider, host crates in neuron graphs; unit, golden, oracle, `FakeNode` and `FakeChain` failures, and Ledger requests that changed without a re-recording (`ledger_replay`) (nextest `ci` profile, which skips the localnet, interop, core-oracle and Ledger emulator targets); licenses and advisories; MSRV 1.89 breaks (`cargo +1.89` on the facade's profiles and `rtao-cli`); feature-combination breaks and the three profile examples; SemVer changes against the last `rtao-v*` tag | blocking (C1), offline, no Python; the SemVer check is informational before 1.0 |
-| `e2e` | every push to `main` (a `changes` job skips docs-only pushes; `templates/` counts as code; one run in progress, the newest push pending), nightly, weekly; PRs and the merge queue after the loop | real-chain behavior on the pinned image (pushes); the `template` job: the generated subnet project built against the pushed commit through a path `[patch]` on the rtao git source, then its own CI steps; regressions against `mainnet` (pushes, nightly), `testnet` and `devnet` (nightly) and `main` (weekly) | blocking through the `e2e-required` gate (C1), which fails only when the `changes` job, a localnet job or the template job failed or was cancelled; `testnet`, `devnet` and `main` allowed failures |
-| `core-unpatched` | nightly; pushes to `main` that change `upstream.toml` or the root `Cargo.toml` (`core-unpatched.yml`) | a shipped crate that does not build against the unpatched `core_tag`, which is what subnets build, including through a shipped feature that pulls in `rtao-testkit` ([§5.10](#510-the-pr-u17-core-patch)) | blocking |
-| `interop` | nightly; pushes to `main` that change `upstream.toml` (pin bumps); PRs labelled `pin-bump` after the loop (`interop.yml`) | cross-language wire, wallet, btauth and JSON differences | blocking on pin bumps |
-| `core-oracle` | nightly; pushes to `main` that change `upstream.toml`; PRs labelled `pin-bump` after the loop (`interop.yml`) | rtao disagreeing with the core where both should agree | alert |
-| `ledger-emu` | nightly; pushes to `main` that change the Ledger paths (`ci/ledger/`, `vendor/recorded/ledger/`, `rtao-signer`'s Ledger module, `rtao-testkit::ledger_emu`) or `upstream.toml`; PRs labelled `ledger` or `pin-bump` after the loop; manual dispatch with `record` (`ledger-emu.yml`) | the Polkadot generic app rejecting or mis-signing rtao's Ledger requests; Ledger-signed extrinsics refused by the localnet; fresh transcripts for `ledger_replay` | alert; never required (Speculos runs Python, Q2) |
-| `metadata-drift` | every 6 hours; upkeep, off during the loop (below) | a new runtime on finney, testnet, devnet or `:main`, classified and regenerated; no PR for a `(spec, :code)` already recorded on `main` or in an open pin-bump PR | after the loop: PR review; `surface-unchanged` auto-merges |
-| `pin-bump` | every 30 minutes (one run at a time; exits early when a PR for the tag is open); upkeep, off during the loop (below) | a new finalized release whose `:vS` localnet image is published: re-vendor, fetch finney's metadata, extract, regenerate, refresh oracle and recordings, porting report, conditional core move (with `xtask core-patch rebase` while the core patch exists), after which the Ledger transcripts are re-recorded (`ledger-stale` on failure) | after the loop, merging needs green `pr-gates`, `e2e-required` on `:vS`, `interop` |
-| `oracle-refresh` | inside `pin-bump`; manual dispatch with a tag (`oracle.yml`); its PR is upkeep, off during the loop (below) | regenerates `vendor/oracle/` for a tag | part of `pin-bump` |
-| `upstream-next` | nightly | Python, catalog and core changes on monorepo `main` and `testnet` before they ship | informational issues |
-| `core-canary` | nightly | core API breaks on monorepo `main` (built without the core patch), plus a smoke run on the `:main` localnet image | allowed failure; opens or updates an issue |
-| `fuzz`, `bench`, `features-powerset` | nightly | panics on malformed input; performance regressions; breaks in the depth-2 facade feature powerset (315 runs) | bench fails above 30% |
-| `live-probe` | every 6 hours (`probe.yml`) | finality lag, V15 availability, digest pins, live decodes on all three metagraph paths, endpoint policy behavior, a runtime without the compiled metadata hash that Ledger signing needs (subtensor#3159) | alert; updates an issue |
-| `mainnet-clone` | weekly, free `ubuntu-latest` (`mainnet-clone.yml`) | read-only suite against a clone of mainnet state; resource feasibility remains a prerequisite if the free runner cannot hold the clone (Q23) | allowed failure |
-| `release-plz` | pushes to `main`; upkeep, off during the loop (below), whose versions the plan fixes (C7) | after the loop: opens or updates the release PR (version bump from `cargo-semver-checks` against the last `rtao-v*` tag, changelog) and pushes the tag once it merges | — |
-| `release` | tag `rtao-v*`, which the agent pushes at each milestone exit (C7) | — (Linux CLI builds on free `ubuntu-latest` using a pinned glibc 2.35 build container; Linux ARM cross-built, macOS artifacts built and verified locally; `SHA256SUMS`, provenance, `compat.json`, release notes, downloadable rustdoc and book assets; all targets required before publication, Q23) | — |
+| `pr-gates` | pushes to `main` and relevant PRs | formatting, Clippy, units, doctests, goldens, committed oracle vectors, `FakeNode`, `FakeChain`, source/pin/parity/dependency guards, supply audit, selected features and MSRV | applicable jobs on the pushed commit |
+| targeted oracle / interop / localnet | manual dispatch or a narrow relevant path change | a concrete cross-language or real-chain question | optional hosted evidence; report unexecuted coverage |
+| targeted fuzz / performance / broader features | manual dispatch for a relevant risk | bounded robustness or performance checks and selected feature combinations | optional; timeouts and no default 315-run powerset |
+| docs | relevant changes | rustdoc and book build | required when touched; downloadable artifacts, no Pages |
 
-**Upkeep jobs and tokens.** The jobs that push or open PRs (`metadata-drift`, `pin-bump`, `oracle-refresh`'s PR,
-`release-plz` and `ledger-emu`'s `record` commit) stay off during the goal loop: their scheduled and push runs exit
-early unless the repository variable `RTAO_UPKEEP` is `on`, and each has a `workflow_dispatch` input `dry-run` that does
-everything except pushing and opening the PR, which is how C2 counts them. The agent does their work locally with the
-same `xtask` commands and commits the result: pin bumps ([§10.3](#103-a-pin-bump-step-by-step)) and drift regeneration
-(`xtask drift`) at the latest at each milestone exit, and oracle refreshes and Ledger re-recording
-(`cargo xtask ledger-emu record` on its Docker host) when a bump or a change needs them. Its pushes use the user's
-credentials, so they start workflow runs. After the handover (M9-07), the upkeep jobs push branches, open PRs and enable
-auto-merge with a GitHub App installation token (rtao-bot; `RTAO_BOT_APP_ID`, `RTAO_BOT_PRIVATE_KEY`), because events
-created with the repository `GITHUB_TOKEN` start no workflow runs, so bot PRs would get no CI; if the user wants
-PR-based upkeep, branch protection on `main` then requires `check`, `no-host` and `e2e-required`, with
-the merge queue. `ledger-emu` is never required (Q2). The read-only scheduled jobs (`live-probe`, `upstream-next`,
-`core-canary`, `core-unpatched`, the nightly `fuzz`, `bench`, `features-powerset`, `interop`, `core-oracle` and
-`ledger-emu`, and the weekly `mainnet-clone`) stay on during the loop, and the agent reads their open issues at each
-milestone exit.
+Cancel superseded development runs. Do not copy hosted build caches back to the laptop. Mainnet-clone, full-node,
+scheduled multi-network campaigns, release, device and automatic-upkeep jobs are outside current development.
+Existing workflow files must follow this scope before being enabled. Never add or toggle the `CI` label to run CI.
 
 ### 9.8 Supported platforms
 
-- Supported release targets: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `aarch64-apple-darwin`,
-  `x86_64-apple-darwin`. Hosted `pr-gates` run on free `ubuntu-latest` Linux x64 only (Q23).
-- Linux release builds use a digest-pinned Ubuntu 22.04 build container on that runner for the glibc 2.35 floor
-  (Ubuntu 22.04, Debian 12). ARM requires a cross toolchain and target dependencies; cross/QEMU checks must be
-  recorded as such, never as native ARM coverage. This setup and its resource use require validation in M1-23.
-- Mac Studio supplies local native Apple ARM checks/builds and cross-built Intel macOS binaries. Record the source
-  tag, toolchain, artifact hashes and checks, keeping all disposable work under the recorded task root. macOS
-  Keychain parity and trustworthy provenance for locally built release assets remain required and unresolved until
-  verified; a Linux hosted job is not evidence that these passed. `cargo xtask gates` changes no host settings.
-- Neuron images: linux-gnu, x86_64 and aarch64.
-- Unsupported: Windows (v11 ships no Windows core wheels), musl (untested).
+The API design targets Linux x64/ARM and macOS Apple/Intel. Current hosted acceptance covers free `ubuntu-latest`
+Linux x64. Record cross-compilation and platform coverage only when executed; a Linux run does not establish native
+macOS, Keychain, ARM or hardware behavior. Local Mac Studio builds, cross-toolchain setup and release artifacts are
+deferred by Q30. Windows and musl remain unsupported. Neuron image deployment is outside current development.
 
 ## 10. Keeping up with upstream
 
@@ -1389,27 +1371,23 @@ so `core_tag` rarely moves; and "spec bumped, surface unchanged" is the common r
 
 ### 10.2 Jobs
 
-`metadata-drift` (every 6 h), `pin-bump` (every 30 min), `upstream-next` (nightly), `core-canary` (nightly),
-`core-unpatched` (nightly, and on pushes that change `upstream.toml` or the root `Cargo.toml`), `oracle-refresh` (inside
-pin bumps), `live-probe` (every 6 h), `mainnet-clone` (weekly), `features-powerset` (nightly), `release-plz` (pushes to
-`main`) and `release`; see [§9.7](#97-ci-lanes-and-what-each-catches). The jobs that push or open PRs are upkeep: off
-during the goal loop (`RTAO_UPKEEP`), while the agent does their work locally, and on the rtao-bot App token after the
-handover (M9-07). Renovate (post-loop upkeep, if the user installs it) proposes weekly third-party updates and never
-touches `bittensor-core` or `w3f-bls`, which only `xtask pin` (and, for the core patch, `xtask core-patch`) moves
-([architecture §12.4](docs/plan/architecture.md#124-dependency-hygiene)).
-`deny.toml` bans duplicate versions of the shared SCALE stack (`parity-scale-codec`, `scale-info`, `scale-decode`,
-`scale-encode`, `scale-type-resolver`, `frame-metadata`, `sp-core`) and of `tokio` and `tungstenite`, so a core bump
-that splits the stack fails in `pr-gates`, and it bans `aws-lc-rs`, `aws-lc-sys` and `native-tls` outright (one rustls
-provider).
+Current hosted jobs are the bounded client lanes of [§9.7](#97-ci-lanes-and-what-each-catches). Automatic upstream
+campaigns, upkeep and release publishing are deferred (Q30). Refresh source/pins when client development needs it;
+run costly regeneration or interoperability work through targeted free hosted jobs. Mainnet cloning is removed.
+Do not reproduce a hosted pipeline locally while waiting for CI.
+
+Dependency guards retain the approved Q26-Q28 rules: exactly one built core-pinned BLS implementation, the recorded
+dormant BLS lock entry, and exact inactive lru/ruzstd advisory exceptions with raw audit output and activation guards.
+All other source, license, advisory and layering checks remain applicable in hosted CI. Do not clear global caches
+or add local toolchains to reproduce the supply/feature matrix.
 
 ### 10.3 A pin bump, step by step
 
 The command is `cargo xtask pin --parity vN`
-([architecture §12.3](docs/plan/architecture.md#123-what-a-pin-bump-does-xtask-pin---parity-vn)). During the goal loop
-the agent runs each bump itself, at the latest at each milestone exit (C5), and commits it to `main` once
-`cargo xtask gates` passes; a bump that cannot complete is held, and the progress log names what blocks it
-(`oracle-stale`, `recordings-stale`, `ledger-stale`, `core-patch-conflict`). After the loop the `pin-bump` job runs it
-and opens a PR, labelled with the same names:
+([architecture §12.3](docs/plan/architecture.md#123-what-a-pin-bump-does-xtask-pin---parity-vn)).
+Q30 makes this a reference for source/pin maintenance, with costly oracle, recorder and emulator stages restricted
+to optional targeted hosted jobs. Commit a reviewed source update and inspect applicable hosted checks. Record a
+blocked refresh explicitly; no local full gate or milestone-driven campaign is required. Automatic upkeep is deferred:
 
 1. Refuse unless release `vN` is final (not a pre-release), finney's finalized runtime reports spec `N` with the
    expected `:code` hash, and the `:vN` localnet image is published (checked with GHCR's anonymous pull token; the
@@ -1420,21 +1398,20 @@ and opens a PR, labelled with the same names:
 3. `xtask extract` refreshes the extracted tables; `xtask regen` refreshes catalogs, interfaces, dispatch, descriptors,
    docs and reference pages. The descriptors come from finney's V15 metadata at spec `N`, which `xtask pin` fetches
    itself and commits with its `index.toml` row; the drift job then opens no PR for that `(spec, :code)`.
-4. `xtask oracle` builds the oracle image for `vN` and regenerates `vendor/oracle/`; `xtask record` runs upstream's
-   recorders through the `ci/oracle/record.py` wrapper against `:vN` into `vendor/recorded/N/`. They are separate
-   steps: an oracle failure marks the bump `oracle-stale`, a recorder failure `recordings-stale`.
+4. Optional targeted hosted refresh: if changed behavior needs new vectors, run `xtask oracle` or upstream
+   recorders within one bounded free job, preserve input identities and review the resulting diff. A stale or
+   unavailable result is recorded; no local image/node fallback is permitted.
 5. Compute the core-input fingerprint. If it changed, move `core_tag`. While the core patch exists, run
    `cargo xtask core-patch rebase vN` (a conflict is `core-patch-conflict`), or, when `vN` contains PR-U17, delete the
    two core-patch tables and `[core.patch]` and adapt `rtao-testkit` to the API as merged
    ([§5.10](#510-the-pr-u17-core-patch)). Rewrite every reference generated from `[core]` (the root manifest, the
    template, the README and book snippets; a repository test checks them), run
    `cargo update -p bittensor-core -p w3f-bls -p subtensor-macros -p subtensor-linting` and `xtask core-surface`,
-   re-record the Ledger transcripts from M7 on (`ledger-stale` on failure), and mark the bump `core-bump` and
+   optionally refresh changed Ledger transcripts in bounded hosted CI (`ledger-stale` if absent), and mark the bump `core-bump` and
    `downstream-patch-change`.
 6. `xtask parity report` writes the porting report: changed blobs per `map.toml` row with diffs, the symbol diff joined
    to Rust items, new ops and reads (added to `pending.toml`), oracle-vector diffs, auto-bless candidates.
-7. Commit the bump with the report's summary as the commit body (during the goal loop), or open the PR with the report
-   as its body (after it). Tests that fail because Python behavior changed point at the exact op through the oracle
+7. Commit a reviewed source update with its report and inspect applicable hosted checks. Automatic PR setup is deferred. Tests that fail because Python behavior changed point at the exact op through the oracle
    diff.
 
 ### 10.4 Drift classification
@@ -1445,56 +1422,48 @@ and `System.Version` ([architecture §12.5](docs/plan/architecture.md#125-drift-
 
 | Class | Examples | Effect |
 |---|---|---|
-| `surface-unchanged` | only `System.Version` (spec 478) | index row and spec range updated; after the goal loop the drift PR auto-merges after CI |
+| `surface-unchanged` | only `System.Version` (spec 478) | reviewed index/spec-range update; automatic merging remains deferred |
 | `additive` | new calls, events, errors, storage, runtime APIs; a new call in any pallet stays additive, because wrapper-call shape hashes treat the outer `RuntimeCall` as opaque | regenerated descriptors; the coverage gate forces wrap-or-raw-only decisions |
 | `behavioural` | moved event index, storage type or default change, runtime-API version bump, changed projection hash | model review; typed paths on live networks fall back automatically meanwhile |
 | `breaking` | moved pallet, call or error index; changed arguments of a wrapped call; removed wrapped call or used storage; a new extension with payload; `transaction_version` change; V15 no longer offered; `spec_name` change; any move toward extrinsic v5 | the extension guard and per-call `verify_surface` refuse affected signing on live networks until the regenerated descriptors ship |
 
 ### 10.5 Compatibility matrix and run-time guard
 
-`xtask compat` writes `compat.json` and `COMPAT.md` for every release: rtao version, core tag and commit, parity tag
+`xtask compat` derives `compat.json` and `COMPAT.md` from recorded source/test evidence: rtao version, core tag and commit, parity tag
 and Python source version (a PyPI release only if one was published from that commit), validated spec range, metadata
 pins, localnet digests, btauth version, interop target. "Validated" means the drift diffs across the range contain no
 `breaking` class and e2e plus interop passed on the listed digests.
 At run time `Client` compares the connected `(spec, metadata hash)` with the compiled-in range and only warns outside
 it; per-call `verify_surface` decides what still works
-([architecture §12.7](docs/plan/architecture.md#127-compatibility-matrix-and-runtime-guard)). Releases are git tags
-`rtao-vX.Y.Z`. During the goal loop the plan fixes the versions: at each milestone exit the agent sets
-`[workspace.package] version` and the changelog, tags `rtao-v0.<k>.0` (`rtao-v1.0.0` for M9) and pushes the tag, which
-runs `release.yml` (C7); a fix within a milestone takes a patch tag. After the loop release-plz cuts them (upkeep):
-its `cargo-semver-checks` run on the release PR picks the bump, and the drift class is a floor on top (a `breaking`
-drift merge bumps the major version; additive drift is a patch). A patch release never moves `core_tag`. The changelog
-and `compat.json` name the milestone a release completes
-([architecture §12.8](docs/plan/architecture.md#128-release-process)). From M7 on, each milestone's release also needs
-a passing manual Ledger device run (Q17, M7-11) on its tag or a later patch tag of the same milestone, recorded in
-`docs/ledger-device-run.md`; it covers what the Speculos lane cannot ([§9.5](#95-python-oracle-and-interop)).
+([architecture §12.7](docs/plan/architecture.md#127-compatibility-matrix-and-runtime-guard)).
+Release tags, cross-platform binaries, publishing and device runs are deferred by Q30. Development milestones
+record client test coverage without claiming release acceptance.
 
 ### 10.6 Maintenance playbook
 
-([architecture §12.9](docs/plan/architecture.md#129-maintenance-playbook)). During the goal loop the PR-opening jobs
-are off ([§9.7](#97-ci-lanes-and-what-each-catches)): the agent runs their `xtask` commands itself and commits the
-result, so each "drift PR" and "pin-bump PR" below is the agent's commit until the handover (M9-07).
+([architecture §12.9](docs/plan/architecture.md#129-maintenance-playbook)). The table below describes how
+source changes are handled. Q30 defers its scheduled automation and keeps costly refreshes in optional hosted jobs;
+it does not authorize local containers, nodes, oracle builds or recording campaigns.
 
-| Upstream event | Automated | Human work |
+| Upstream event | Source/test signal | Client work |
 |---|---|---|
-| runtime bump, surface unchanged | drift PR auto-merges; pin-bump PR with zero generated diff | none, or review the porting report |
-| additive surface | regenerated descriptors; coverage gate lists new calls | per new call: wrap it in an intent, type a read, or list it as raw-only |
-| behavioural surface | drift PR; model checks pinpoint models; live typed paths fall back | review and fix the flagged models |
-| breaking surface | drift PR on devnet days before finney; live guards refuse affected calls | fix the affected calls and descriptors, usually together with a core bump |
-| Python adds an intent or read | `upstream-next` issue; `pending.toml` entry and generated interface; oracle shows expected behavior | port each new intent or read until its `pending.toml` entry can go |
+| runtime bump, surface unchanged | reviewed metadata/source diff; no generated-interface change | none, or review the porting report |
+| additive surface | regenerated descriptors and coverage report list new calls | per new call: wrap it in an intent, type a read, or list it as raw-only |
+| behavioural surface | metadata/model diff; live typed paths fall back | review and fix the flagged models |
+| breaking surface | reviewed metadata change; runtime guards refuse affected calls | fix the affected calls and descriptors, usually together with a core bump |
+| Python adds an intent or read | source/pending/interface diff and available oracle vectors | port each new intent or read until its `pending.toml` entry can go |
 | Python changes behavior only | blob change, symbol diff and oracle diff name the ops | port the diff; cosmetic edits auto-bless |
-| core API change | `core-canary` saw it nightly; `core-surface` names the symbol | adapt `rtao-core`; no other crate changes |
+| core API change | an optional hosted core-source check can detect it; `core-surface` names the symbol | adapt `rtao-core`; no other crate changes |
 | a staged PR ships in `core_tag` | `staged --check` fails because the module's probe (a symbol at the ungated target, or its vector suite) now passes | flip the `pub use`, delete the staged module |
 | a chain rule mirrored by the framework changes (serving, rate limits, freeze window, tempo control, weights checks) | blob change on a chain-rule row of `map.toml`, or a diff of the extracted `chain_rules.json` | update `AxonPublisher`, `HyperparamPlanner` or `WeightScheduler` and their tests |
 | btauth/1 → btauth/2 | blob change on `http_auth.py` or `signed-requests.mdx`; vectors fail | verify both versions, sign the configured one |
-| third-party breaking release | Renovate PR (after the loop), or a failing build | adapt the one affected crate |
+| third-party breaking release | reviewed dependency update or a failing hosted build | adapt the one affected crate |
 | a pin bump moves `core_tag` while the core patch exists | `xtask core-patch rebase` cherry-picks PR-U17 onto the new tag ([§5.10](#510-the-pr-u17-core-patch)) | on `core-patch-conflict`, resolve the conflict like any upstream change and log it |
 | PR-U17 ships in `core_tag` | `xtask pin --check` fails with "PR-U17 shipped: drop the core patch" ([§5.10](#510-the-pr-u17-core-patch)) | delete the two core-patch tables and `[core.patch]`; adapt `rtao-testkit::ledger_emu` to the API as merged |
-| Ledger Live ships a new Polkadot app, or Speculos a new release | the device run records the device's app version; `ledger-emu` runs nightly against the pin | bump `ci/ledger/pins.toml` in a commit that re-records the transcripts |
+| Ledger Live ships a new Polkadot app, or Speculos a new release | review app/core source changes; optionally dispatch one bounded hosted emulator check | bump `ci/ledger/pins.toml` in a commit that re-records the transcripts |
 
-Upstream tracking is standing work from M2 to the end of the project; each pin bump is one unit of it, and from M2 on
-a milestone exits only when `upstream.toml` pins the newest finalized release whose `:vS` image is published, or the
-progress log names what blocks that bump (common exit check C5, [§12.1](#121-overview)).
+Track upstream changes relevant to implemented client behavior. Record pin drift and blocked refreshes under C5;
+a new upstream release does not force a local infrastructure campaign (Q30).
 
 ## 11. Documentation plan
 
@@ -1502,14 +1471,14 @@ progress log names what blocks that bump (common exit check C5, [§12.1](#121-ov
 
 - **rustdoc**: `#![deny(missing_docs)]` on every library crate; crate READMEs as crate docs; `doc(cfg)` on
   feature-gated items; `#[doc(alias = "bittensor.<dotted.path>")]` on every mirrored item, so searching for
-  `SetWeights` or `bittensor.reads.neurons.neurons` lands on the Rust item; `release.yml` attaches it with the book as
-  downloadable docs archives on every `rtao-v*` tag (Q23). `rtao-cli`'s
+  `SetWeights` or `bittensor.reads.neurons.neurons` lands on the Rust item; hosted CI retains it with the book as
+  downloadable docs artifacts from relevant hosted checks (Q23/Q30). `rtao-cli`'s
   `[[bin]]` sets `doc = false`: the binary `rtao` and the facade library `rtao` both document to `target/doc/rtao/`, and
   `cargo doc --workspace` warns "output filename collision" and lets one overwrite the other (reproduced with cargo 1.99
   on a two-crate workspace; `doc = false` removes it).
 - **docify**: every example is a real `#[docify::export]` item in `examples/` or `tests/`. Offline examples (units,
   `pyfmt`, btauth vectors, `FakeChain` reads, intent plans) use `embed_run!`; node-dependent ones are items in
-  `crates/rtao-testkit/tests/` (the `e2e` target), so the e2e lane runs them. READMEs compile from `README.docify.md`,
+  `crates/rtao-testkit/tests/` (the `e2e` target), so an optional targeted hosted check can run the selected example. READMEs compile from `README.docify.md`,
   so examples cannot rot.
 - **mdBook** (`book/`) mirrors the bittensor.com taxonomy so an agent that knows upstream's `llms.txt` navigates rtao's
   by analogy: `index`, `quickstart` (template, patch line, connect, typed read, plan and execute on localnet), `sdk`,
@@ -1529,32 +1498,29 @@ progress log names what blocks that bump (common exit check C5, [§12.1](#121-ov
   `query/<read>` page to its upstream raw page, and a short agent card generated from the CLI tree.
 - **Upstream log**: every pin bump appends its porting-report summary and oracle diff to `book/src/upstream-log.md`.
 - **Per milestone**: each milestone ships the docs for what it ships; M9 completes the book and `llms.txt`. Until 1.0
-  the README and release notes state that releases have had per-milestone cold-reader security passes, not the full review
-  ([§12.11](#1211-m9-hardening-and-10)).
+  the README records completed source reviews and unexecuted platform/interop/hardware coverage without a release-readiness claim.
 
 ## 12. Milestones
 
 ### 12.1 Overview
 
-The parity machinery exists from M0, so nothing ported early is redone. Each milestone ends with green CI on every lane
-it introduces, a release with the next minor version (`rtao-v0.<k>.0`, numbered in completion order; M0's is
-`rtao-v0.0.0`, and the changelog and `compat.json` name the milestone a release completes,
-[§10.5](#105-compatibility-matrix-and-run-time-guard)), and docs for what it ships. Item assignments (which intent, read
+The parity machinery exists from M0, so nothing ported early is redone. Development milestones end with reviewed
+client source, docs and green applicable hosted checks. Releases and infrastructure campaigns are deferred by Q30. Item assignments (which intent, read
 and CLI command lands where) follow [parity-inventory.md](docs/plan/parity-inventory.md), which resolves the ambiguities
 of the architecture's milestone text ([architecture §14](docs/plan/architecture.md#14-milestones)).
 
 | # | Milestone | Depends on | Headline exit check |
 |---|---|---|---|
 | M0 | Foundations and pins | — | goldens reproduced through rtao conversions; btauth/1 vectors green; no-host seam builds |
-| M1 | Read path and the first typed read | M0 | finney metagraph equal through three decode paths; transport checklist green |
-| M2 | Validator | M1 | 20 fast + 3 slow localnet epochs with every reveal observed; no-host image on stock `rust:1.89-slim`; 24 h testnet soak |
-| M3 | Miner | M2 | Python ↔ rtao neurons interoperate in CI; a generated template project passes its own CI |
-| M4 | Owner tooling, shield, CLI v0 | M2 | scenario 10 (immediate and queued creation) and shielded `burned_register` green; dry-run JSON equal to btcli |
-| M5 | Intent parity | M4 | oracle 83/83; no intent pending; scenario 18 green |
-| M6 | Read parity | M2 (reads, namespaces, `blocking`); M4 and M5 for its CLI [I] | read oracle 102/102; `pending.toml` holds no reads |
-| M7 | Signers, EVM, PoW GPU, timelock UX | M5 [I] | Ledger vector, replayed transcripts and the Speculos emulator lane, plus a device run; Vault UOS vectors and round trip; extension bridge interop; EVM and timelock cross-checks; PoW e2e |
-| M8 | CLI parity | M5, M6, M7 | `cli_tree` parity; strict parity gate |
-| M9 | Hardening and 1.0 | M8 | `rtao-v1.0.0`; one full upstream bump through the playbook |
+| M1 | Read path and the first typed read | M0 | metagraph fixture comparison through three decode paths; transport checklist passes in hosted CI |
+| M2 | Validator | M1 | scheduler, nonce, reveal and conform tests against fixtures/FakeChain; no-host profile compiles in hosted CI |
+| M3 | Miner | M2 | miner, admission and publisher tests; template profile compilation in hosted CI |
+| M4 | Owner tooling, shield, CLI v0 | M2 | owner, shield, multisig and CLI tests; injected Keychain tests in hosted CI |
+| M5 | Intent parity | M4 | intent plan, encoding, policy and offline signing tests; accurate parity inventory |
+| M6 | Read parity | M2 (reads, namespaces, `blocking`); M4 and M5 for its CLI [I] | read, exact-hits and single-block tests; existing vector replay |
+| M7 | Signers, EVM, PoW GPU, timelock UX | M5 [I] | signer, proof, APDU, framing, bridge, EVM and timelock fixture tests; hardware deferred |
+| M8 | CLI parity | M5, M6, M7 | CLI tree and strict source/parity checks; unexecuted interoperability coverage recorded |
+| M9 | Client hardening | M8 | applicable hosted tests, security review and accurate coverage; distribution deferred |
 | M10 | Post-parity compatibility crates and `RemoteSigner` (optional) | M9 | interop with a `bittensor==10.5.0` Synapse peer and btlightning; `RemoteSigner` through a reference server |
 
 Two scope splits follow dependencies and size:
@@ -1570,16 +1536,16 @@ Two scope splits follow dependencies and size:
   intents, the shield pipeline, `PowSolver`, `OwnerOps`, `OwnerMonitor` and 22 reads. M8 carries 45 commands (2,851
   lines in M8-only files, plus the M8 parts of `wallet.py`, `stake.py` and `proxy.py`) and the strict gate.
 
-**Upstream tracking** is standing work from M2 (M2-22 builds the pipeline; during the goal loop the agent runs each bump
-itself, and the bot takes over at the handover, M9-07) to the end of the project: pin bumps, re-ports of changed,
-already-ported files, and new ops and reads. Its share grows as the ported surface grows
-from nothing to everything. Re-checked churn: `sdk/python/bittensor` grew from 48,735 `.py` lines at v445 (2026-08-12)
-to 58,269 at v459 and 59,723 at v477 (2026-10-08); `git diff --shortstat v459 v477 -- sdk/python/bittensor` is 42
-files, +2,636/−942; 20 release tags in 57 days, 3 of them abandoned.
+**Upstream tracking** follows client source needs from M2 onward. Review changes to implemented behavior and
+record pin drift. Use applicable hosted source/pin tests; costly oracle or recording refreshes are optional targeted
+hosted jobs. A milestone does not force a new upstream pin or the installation of scheduled upkeep (Q30).
 
-**Steps and exit checks.** Each milestone lists its steps with stable IDs (`M2-07`), in an order in which every step
-depends only on earlier steps and earlier milestones; a **Parallel work** note names the steps that may also run side
-by side. Exit checks are numbered, and each is a command, a named test or a CI lane that passes or fails. They use these
+**Steps and exit checks.** Q30 removes costly local execution requirements and defers release/device/upkeep work.
+Named localnet, oracle, container, emulator and interop checks below are optional targeted hosted evidence; they
+cannot block a development milestone or require a replacement local run. Keep their unexecuted coverage explicit.
+Each milestone lists its steps with stable IDs (`M2-07`), in an order in which every step
+depends only on earlier steps and earlier milestones. **Parallel work** notes describe logical independence;
+Q30 prohibits simultaneous local Cargo jobs and duplicate build snapshots. Exit checks are numbered, and each is a command, a named test or a CI lane that passes or fails. They use these
 conventions:
 
 - unit, golden, oracle, `FakeNode` and `FakeChain` tests run in `cargo nextest run --workspace --all-features --locked
@@ -1592,32 +1558,24 @@ conventions:
 
 **Common exit checks**, which every milestone adds to its own list:
 
-- **C1.** `pr-gates` and, once `e2e.yml` exists (M2-20), `e2e-required` are green on `main` at the milestone's final
-  commit, in the runs its push started (there are no PRs), with every job that exists by then. A newer push replaces a
-  pending run, so the agent pushes nothing else until both finish.
-- **C2.** Every lane the milestone introduces has a green run on `main` (a scheduled lane counts once a manual
-  `workflow_dispatch` run passes; a job that pushes or opens PRs counts once its `dry-run` dispatch passes,
-  [§9.7](#97-ci-lanes-and-what-each-catches)).
-- **C3.** Every step box of the milestone is checked, and the [progress log](#19-progress-log) records the exit.
-- **C4.** Every row of [§15](#15-upstream-contributions) whose evidence step belongs to the milestone has a link in its
-  Filed column; the Ledger app item outside the monorepo counts as filed (2026-10-13, Q22).
-- **C5.** From M2 on, `upstream.toml` pins the newest finalized monorepo release whose `:vS` localnet image is
-  published, or the progress log names what blocks that bump (`oracle-stale`, `recordings-stale`, and from M7
-  `ledger-stale` and `core-patch-conflict`). During the goal loop the agent performs pin bumps itself with the playbook
-  of [§10.3](#103-a-pin-bump-step-by-step), at the latest at each milestone exit.
-- **C6.** The docs for what the milestone ships exist: the README and CONTRIBUTING from M0, and from M1 on
-  `mdbook build book` succeeds with the chapters the milestone's steps name.
-- **C7.** The milestone's release exists: at the milestone's final commit the agent sets `[workspace.package] version`
-  and the changelog, tags `rtao-v0.<k>.0` (`rtao-v0.0.0` for M0, `rtao-v1.0.0` for M9) and pushes the tag, without
-  asking ([Executing this plan](#executing-this-plan), rule 7); `release.yml` succeeds from M1 on; and from M7 on, the
-  manual Ledger device run for that tag (or a later patch tag of the same milestone) passes and is recorded in
-  `docs/ledger-device-run.md`, waiting on the user under rule 3
-  ([§10.5](#105-compatibility-matrix-and-run-time-guard)).
+- **C1.** Applicable `pr-gates` jobs pass on the final pushed commit. Workspace, feature, MSRV, supply and doc
+  matrices run in hosted CI. Local matrix completion is not required.
+- **C2.** Record every optional hosted check actually run and its result. Missing oracle, interop, localnet, hardware
+  or platform coverage is stated explicitly and is not described as passing.
+- **C3.** Active client steps are checked when complete and the progress log records the exit. Q30-deferred
+  infrastructure steps are marked deferred, without a false completion checkbox.
+- **C4.** Existing upstream filings retain accurate links and reviewed evidence. Filing every planned proposal is
+  not a prerequisite to client development; new filings need a reproduced defect and a reviewed fix or report.
+- **C5.** Source, lock, metadata and generated identities agree. Record pin drift and blocked refreshes; use hosted
+  jobs for costly oracle or recording refreshes. Do not run a local campaign to force a milestone exit.
+- **C6.** Docs describe implemented behavior and actual coverage; applicable hosted docs checks pass.
+- **C7.** Release tags, binary artifacts, provenance setup, device runs and automated-upkeep handover are deferred
+  by Q30. Development completion does not assert a release or 1.0 readiness.
 
 **Security passes by cold readers** (Q19). M2, M3, M4 and M7 each end with a security pass, and M9 with the full review.
 A local cold reader does each one: a fresh-context reviewer (a new agent session, or a person, that took no part in the
 implementation) that receives only the repository at the milestone's final commit, the milestone diff
-(`git diff <previous release tag>..HEAD`; the whole repository for M9) and this checklist:
+(`git diff <previous milestone commit>..HEAD`; the whole repository for M9) and this checklist:
 
 1. keys and secrets: where secret material is read, held, written and logged; keyfile permissions;
 2. zeroization: `Zeroizing`/`secrecy` on every secret, offloaded KDF buffers included;
@@ -1644,10 +1602,10 @@ on 2026-10-13, Q22), and its link goes into §15's Filed column (C4).
 
 **Goal.** A workspace that builds against the pinned core, with every guard later work relies on. **Depends on**
 nothing.
-**Deliverables.** Tag `rtao-v0.0.0`; the dual license; `upstream.toml`, `clippy.toml`, `deny.toml`; `rtao-core`,
+**Deliverables.** Reviewed client source and hosted checks; the dual license; `upstream.toml`, `clippy.toml`, `deny.toml`; `rtao-core`,
 `rtao-core-ext`, `rtao-primitives`, the `rtao-btauth` core, a minimal `rtao-signer` and `rtao doctor`; `xtask` pin,
 import-upstream, extract v0, deps-check, core-surface, staged, lint-upstream and the parity file layer over all 357
-`map.toml` rows; `rtao-testkit::fixtures`; the first `pr-gates` jobs and `xtask gates`, their local equivalent; the
+`map.toml` rows; `rtao-testkit::fixtures`; the first `pr-gates` jobs and `xtask gates` as hosted orchestration; the
 filing of PR-U17 from the user's fork of the monorepo, whose evidence predates M0 ([§15](#15-upstream-contributions)).
 
 **Steps.** M0-01…M0-29 are listed in order, with their details, in [§12.14](#1214-first-steps):
@@ -1659,7 +1617,7 @@ filing of PR-U17 from the user's fork of the monorepo, whose evidence predates M
 | the seam and its guards | M0-14…M0-20 |
 | primitives, JSON and goldens | M0-21…M0-23 |
 | btauth/1, `rtao doctor`, CI and docs | M0-24…M0-28 |
-| exit and tag | M0-29 |
+| record hosted development acceptance | M0-29 |
 
 **Exit checks** ([architecture §14](docs/plan/architecture.md#14-milestones)):
 
@@ -1669,27 +1627,29 @@ filing of PR-U17 from the user's fork of the monorepo, whose evidence predates M
 3. `cargo nextest run -p rtao-btauth --profile ci` passes with every btauth/1 vector and negative case (M0-25).
 4. `cargo xtask deps-check --profile no-host` passes over a no-host build of `rtao-core` and `rtao-primitives`
    (M0-11).
-5. `cargo test -p rtao-core --test lock` passes: exactly one `w3f-bls`, at `core_tag` (M0-14).
+5. `cargo test -p rtao-core --test lock` passes: exactly one built `w3f-bls`, at `core_tag`, with only the guarded recorded dormant lock entry allowed (M0-14, Q26).
 6. `cargo xtask import-upstream --verify-only`, `cargo xtask extract --check`, `cargo xtask parity check` (the file
    layer over 357 rows), `cargo xtask core-surface`, `cargo xtask staged --check` and `cargo xtask lint-upstream` pass
    (M0-09…M0-20).
 7. The `serde_json/arbitrary_precision` tests of M0-22 pass.
 8. `rtao doctor` passes on this repository, and on a fixture workspace without the patch line it fails and prints the
    exact line (M0-26).
-9. `LICENSE-MIT`, `LICENSE-APACHE` and `NOTICE` exist; `cargo metadata --no-deps` shows `MIT OR Apache-2.0` or
-   `(MIT OR Apache-2.0) AND Apache-2.0` for every package; the `supply` job's license check passes (M0-02).
-10. `pr.yml` runs the jobs `check`, `no-host`, `msrv`, `features` and `supply`, `cargo xtask gates` passes locally
-    (M0-27), and C1-C7 hold.
+9. `LICENSE-MIT`, `LICENSE-APACHE` and `NOTICE` exist. Package metadata declares `MIT OR Apache-2.0` for original
+   crates and `(MIT OR Apache-2.0) AND Apache-2.0` for crates with upstream-derived files. The authenticated CPython
+   datetime port in `rtao-primitives` additionally requires `AND PSF-2.0`; the pinned Unicode 15 printable table in
+   `rtao-core-ext` additionally requires `AND Unicode-DFS-2016`. `xtask parity check` verifies those exact expressions
+   and retained attribution; the hosted `supply` license check passes (M0-02). This clarifies Q1's existing third-party
+   obligations without changing the original-code license.
+10. Applicable `pr.yml` jobs `check`, `no-host`, `msrv`, selected `features` and `supply` pass in hosted CI
+    (M0-27), and C1-C7 hold. No full local gate run is required.
 
 ### 12.3 M1: Read path and the first typed read
 
 **Goal.** An async client that reads finney correctly and survives the public endpoints. **Depends on** M0.
-**Deliverables.** A minor release ([§12.1](#121-overview)); `rtao-rpc` with ring TLS, `rtao-client` (read side,
-`rtao_client::config`), `rtao-runtime` with `xtask regen` v1, `rtao-metagraph` (model, view and `SubnetsMetagraphExt`),
-`rtao_reads::commitments`, the first two reads, `rtao-testkit` fakes; the `metadata-drift` job; the nightly `fuzz`,
-`bench` (criterion baselines), `features-powerset` and `core-canary` jobs; `live-probe`; the run-time compatibility
-guard; `release.yml`, which builds the M1 release from the agent's tag, and `release-plz.yml`, upkeep that stays off
-during the goal loop.
+**Deliverables.** Reviewed client source, docs and applicable hosted checks: the RPC session with ring TLS,
+read client/config/runtime/cache, code generation, metagraph models/view, commitments, the first reads,
+source/metadata diff tooling and FakeNode/FakeChain. Performance campaigns, scheduled monitoring, release
+workflows and bot setup are deferred.
 **Parallel work.** M1-01 and M1-02 are independent of each other; M1-10 and M1-11 need only M1-01; M1-15 needs nothing
 from M1; M1-20…M1-24 are independent of each other.
 
@@ -1754,66 +1714,45 @@ from M1; M1-20…M1-24 are independent of each other.
       exported from `rtao::prelude`, with commitments included by default as in Python.
 - [ ] **M1-19** The commitments half of the port of `PYT/unit/test_v446_accounting_and_commitments.py` (the locks half
       lands with its reads in M6-01).
-- [ ] **M1-20** Criterion baselines; the neuron-profile crate count recorded (architecture §2.8); `nightly.yml` jobs
-      `fuzz` (`cargo +nightly`) and `bench` (fails above 30%) over the targets that exist by then (btauth/1 header
-      parsing and `verify`, JSON-RPC frame parsing, `MetagraphView`).
-- [ ] **M1-21** `xtask drift` and the `metadata-drift` job, an upkeep job ([§9.7](#97-ci-lanes-and-what-each-catches)):
-      its scheduled runs exit early until `RTAO_UPKEEP` is `on`, its `dry-run` dispatch does everything but push and
-      open the PR, and the rtao-bot App token it uses after the loop arrives at the handover (M9-07);
-      `vendor/metadata/<net>/` for testnet, devnet and `localnet-main` (finney's lands in M1-03); `xtask drift diff`
-      unit tests over committed fixtures.
-- [ ] **M1-22** `nightly.yml` jobs `features-powerset` and `core-canary` (build, `core-surface` and offline tests
-      against monorepo `main`; its `:main` localnet smoke joins in M2-22 with `Localnet`); `probe.yml` (`live-probe`,
-      architecture §12.6: finality lag, V15, digest pins, the three metagraph decode paths).
-- [ ] **M1-23** Release automation: `release.yml`, run by the milestone tags the agent pushes (`xtask compat`, `xtask
-      release-notes`, downloadable rustdoc and book archives from a first `book/` skeleton; per-target binaries,
-      which carry `rtao doctor` until CLI v0 in M4). All hosted jobs use free `ubuntu-latest`; Linux builds retain
-      glibc 2.35 through a pinned Ubuntu 22.04 container and ARM cross tooling, while macOS builds and verification
-      run locally on Mac Studio (§9.8). A draft release is published only after every target, checksum and required
-      provenance is present; trustworthy provenance for local Mac artifacts must be resolved, not attributed to the
-      Ubuntu build. Also wire `release-plz.yml`, upkeep that is not used during the goal loop
-      (off until `RTAO_UPKEEP` is `on`, with a `dry-run` dispatch).
-- [ ] **M1-24** Public-endpoint quota measurement to tune the default bucket (Q6) [I: milestone not fixed in the
-      architecture]; the measured quotas and the resulting `RateLimit` defaults go into the progress log.
+- [ ] **M1-20** Maintain benchmark and fuzz target source for implemented parsers/decoders. Existing regressions
+      run as ordinary hosted tests. Benchmark measurement and fuzz campaigns are optional bounded hosted checks
+      for a concrete client change; do not add scheduled campaigns or local targets/toolchains.
+- [ ] **M1-21** Maintain `xtask drift diff` and its committed fixture tests. Metadata update tooling preserves
+      source and hash identities. Automatic monitoring, bot tokens and PR generation are deferred; a targeted
+      read-only hosted probe may supply evidence when needed.
+- **M1-22 optional hosted.** Select a relevant feature check, core-source canary or read-only endpoint probe
+  for a concrete client concern. No mandatory powerset, nightly campaign, node smoke or scheduled probe setup.
+- **M1-23 deferred by Q30.** Release automation, binary builds, cross-platform rehearsals and local provenance
+  setup are outside current development. Keep useful source and docs; do not build release artifacts locally.
 
-**Exit checks:**
+- **M1-24 optional hosted.** If a client rate-limit defect needs evidence, make a bounded read-only endpoint
+  measurement in CI and record it. Do not run a local quota/throughput campaign.
+**Exit checks (hosted CI):**
 
-1. `cargo xtask probe` (the `live-probe` checks, M1-22) passes against finney, including
-   `client.subnets().metagraph(NetUid(1))` decoding through the view, typed and dynamic paths with equal `to_json()`
-   (M1-16…M1-18).
-2. `cargo nextest run -p rtao-rpc -p rtao-testkit --profile ci` passes: the `test_rpc.py` port and every transport row
-   of the §3.15 checklist, `wss://` through the ring config included (M1-05…M1-09).
-3. The `xtask drift diff` unit tests pass over committed fixtures and classify finney 477 against devnet 478 as
-   `surface-unchanged`, 477 plus an added call as `additive`, 477 with a changed storage default as `behavioural`, and
-   477 with a moved call index or a new extension with a payload as `breaking` (M1-21). (finney, testnet and devnet
-   all run 478 since 2026-10-13, so a drift job bootstrapped in M1 never sees a 477→478 change, and other real changes
-   depend on upstream timing.)
-4. A `metadata-drift` run dispatched with `dry-run` exits 0 against an up-to-date index (M1-21).
-5. `cargo xtask regen --check` and `cargo xtask extract --check` pass, `extract_check_covers_named_tables` included
-   (M1-01…M1-04).
-6. C1-C7; the lanes of C2 are `metadata-drift`, `fuzz`, `bench`, `features-powerset`, `core-canary`, `live-probe`,
-   `release-plz` and `release`.
+1. Transport/TLS tests, the port of `test_rpc.py`, runtime/cache tests and metagraph three-path tests pass against
+   committed fixtures and FakeNode/FakeChain.
+2. `xtask drift diff` classifies committed unchanged/additive/behavioural/breaking fixtures correctly.
+3. Regeneration, extraction and applicable source/pin guards pass. Current/MSRV and relevant feature checks pass.
+4. A live endpoint/canary/performance check, if run, is recorded as optional evidence. Missing platform or live
+   network evidence is documented. C1-C7 apply; releases and scheduled campaigns are deferred.
+
 
 ### 12.4 M2: Validator
 
-**Goal.** A production weight-setting validator built only from rtao's public API. **Depends on** M1.
-**Deliverables.** A minor release ([§12.1](#121-overview)); `rtao-signer` roles, `rtao-wallet`, the submission
-pipeline, `rtao-catalog`, `rtao-tx`, the pass-through generator, 9 intents and 13 reads, `MetagraphSync` (validator
-preset) and the btauth client adapter, `NeuronRuntime::validator` and the validator example; every `xtask parity
-check` layer; the oracle image and vectors; `Localnet`, `Scenario`, the `e2e` workflow and the `core-oracle` job;
-upstream tracking (the pin-bump pipeline, which the agent runs from here on, and the `pin-bump`, `oracle-refresh` and
-`upstream-next` jobs); a no-host validator image; validator guide in
-the book; the M2 security pass.
+**Goal.** Validator APIs and a weight-setting example built only from rtao's public API. **Depends on** M1.
+**Deliverables.** Reviewed client source, docs and applicable hosted checks: signing roles/wallets,
+submission/receipts/nonces, catalog/tx, intents and reads, validator scheduler/runtime APIs and example,
+MetagraphSync, btauth client, fixture replay and security review. Oracle refresh, image and localnet
+integration are optional targeted hosted evidence; deployment and upkeep are outside this milestone.
 **Parallel work.** M2-01…M2-02 (keys and wallets) and M2-03…M2-05 (extraction, catalog, oracle) are independent of each
-other; M2-16 needs only M1; M2-24, the soak, runs in the background ([Executing this plan](#executing-this-plan),
-rule 3).
+other; M2-16 needs only M1. Q29 waives M2-24's testnet soak.
 
 - [ ] **M2-01** `rtao-signer`: `SigningRequest`, `SignerCaps`, roles (`Role`, `Coldkey`, `Hotkey`, `KeyView`,
       `KeySource<R>`, `DynKeySource`).
 - [ ] **M2-02** `rtao-wallet`: btcli layout, `HotkeyFile` through the staged `keyfile_json` (no `host`), `Wallet` and
       encrypted coldkeys behind `encrypted`, the password chain of `PY/wallets.py:62-118` (steps 1-4 and 7 here; steps
       5-6, the macOS Keychain and the macOS dialog, in M4), create and regen; the keyfile differential test; staged
-      `keyfile_env`; the keyfile-detection and `keyfile_json` fuzz targets join the nightly `fuzz` job
+      `keyfile_env`; maintain keyfile-detection and `keyfile_json` fuzz target source for optional targeted hosted checks
       ([§9.6](#96-property-tests-fuzzing-benchmarks)).
 - [ ] **M2-03** Extraction: `PY/error_map.py`, `PY/result.py`, `PY/executor.py` constants, the remaining
       `PY/settings.py`, `PY/fee_filters.py` (equal to the runtime's `fee_filters.rs`, parsed with `syn`), custom
@@ -1821,10 +1760,9 @@ rule 3).
       defaults and requiredness (`read_params.json`), and the environment variables the Python package reads
       (`env_vars.json`).
 - [ ] **M2-04** `rtao-catalog`: `INTENTS`, `READS`, `ErrorCode` (18), `CHAIN_ERRORS` (390), `py::*`, `rt::*`.
-- [ ] **M2-05** Oracle image (`ci/oracle/Dockerfile`) and dumps for the M2 ops and reads and the pure functions
-      (`conform`, 10,000 `str(Balance)` values, classification), with the per-sample seeds (`vendor/oracle/seeds/`) and
-      the reads' `touched` record; `vendor/oracle/`. The image is cached in a GHCR namespace (an external prerequisite)
-      and also builds locally.
+- **M2-05 optional hosted refresh.** Preserve committed oracle vectors/seeds for implemented ops, reads and
+  pure functions. If refreshed vectors are needed, build the pinned oracle only in a bounded free hosted job and
+  review the resulting diff. No local image build or GHCR setup is a client milestone prerequisite.
 - [ ] **M2-06** Staged `ops::{receipt, fee, extrinsic_lookup, dispatch_error}`, with a `FakeChain` receipt test in which
       a `Sudo.sudo` fails inside `Sudid` (PR-U1 and PR-U2 evidence,
       [§5.8](#58-known-core-defects-and-how-rtao-handles-them) #4).
@@ -1833,7 +1771,7 @@ rule 3).
       RFC-0078 digest cached per spec; sign, assemble, submit, watch; `SubmitFailure`; `CallBytes` spec stamping; typed
       `PoolRejection`; `FateUnknown`; reconciliation; the watch statuses of D-024 (`retracted` keeps watching,
       `finalityTimeout(h)` resolves from block h, `dropped` reconciles when `reconcile` is on); the event-splitting
-      fuzz target joins the nightly `fuzz` job.
+      fuzz target source is available for optional targeted hosted checks.
 - [ ] **M2-08** `rtao-tx`: intent traits, `Executor` (`plan`, `preflight`, `execute`, `dyn` twins), `Plan`, `Policy`
       with the harness of a table-driven equivalence test against the core's constructors
       ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #9), whose pairs land with their intents: 3 in M2-12,
@@ -1878,70 +1816,45 @@ rule 3).
       restart resumes from persisted state); telemetry (`/metrics`, `/healthz`, `/readyz`); two-stage shutdown.
 - [ ] **M2-18** `crates/rtao/examples/validator.rs` (the example of [§7.2](#72-a-validator)) and its line in the
       `features` job.
-- [ ] **M2-19** `Localnet` (`xtask localnet bootstrap`, drand readiness, 64 slot accounts, the `Localnet::sudo()` lock)
-      and `Scenario`. `Scenario` builds its setup calls with the generated typed builders
-      (`rtao_runtime::calls::{subtensor_module, admin_utils}`), wraps root-origin calls with `rtao_client::compose::sudo`
-      signed by Alice, and submits through `Client::submit`; it never goes through intents, because `rtao-testkit`
-      does not depend on `rtao-intents` and most setup intents land in M4 and M5. Calls:
-      `SubtensorModule.register_network`, `start_call`, unshielded `burned_register` and `add_stake`, and the per-subnet
-      `AdminUtils` knobs (`sudo_set_weights_set_rate_limit`, `sudo_set_serving_rate_limit`,
-      `sudo_set_min_allowed_weights`, `sudo_set_commit_reveal_weights_enabled` for scenario 2,
-      `sudo_set_mechanism_count` for 3, `sudo_set_weights_version_key` for 5, `sudo_set_commit_reveal_version` for 6);
-      the global knobs come from the bootstrap.
-- [ ] **M2-20** `e2e.yml` with the `changes` job and the `e2e-required` gate, lanes `pinned` (every push), `mainnet`
-      (pushes, nightly), `testnet` and `devnet` (nightly), `main` (weekly); `interop.yml`'s `core-oracle` job with
-      `core-oracle` v0;
-      scenarios 1, 2, 3, 5, 6, 7, 8 (the runtime upgrade, without its offline-payload assertion), 15 (the D-001 sanity
-      check), 16 (`ci/pr-u4-probe/`) and 17 [I: assigned by content].
+- **M2-19 optional hosted infrastructure.** Retain `Localnet`/`Scenario` as a test-harness design reference
+  (§9.4). Implement only the setup needed by a specific targeted hosted integration test; no local node setup,
+  full-node operation or campaign is required for the client milestone.
+- **M2-20 optional hosted integration.** An explicitly dispatched job may select scenarios relevant to the
+  changed client code from §9.4 (1, 2, 3, 5, 6, 7, 8, 15, 16 or 17) or a `core-oracle` comparison. Use one pinned
+  image, a small selection and a timeout. No automatic push/nightly/multi-network campaign or blocking
+  `e2e-required` gate is required.
 - [ ] **M2-21** `parity/e2e_map.toml` (115 keys, each `rtao`, `na` or `pending = "M<k>"`, [§9.4](#94-localnet-e2e)),
       with the six `test_*` keys of [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names) that M2 can run
       mapped to rtao tests.
-- [ ] **M2-22** Upstream tracking starts ([§12.1](#121-overview)): the pin-bump pipeline end to end
-      ([§10.3](#103-a-pin-bump-step-by-step): `xtask pin --parity`, re-vendor, extract, regen, `xtask oracle`,
-      `xtask record`, the core-input fingerprint move, `xtask parity report` with auto-bless), which the agent runs
-      itself from here on (C5); `pin-bump.yml` and `oracle.yml` around it, upkeep jobs whose `dry-run` dispatches C2
-      counts; the `upstream-next` nightly job, and `core-canary`'s `:main` localnet smoke; `xtask pin --force` re-runs
-      the pipeline at the pinned tag (exit check 8).
-- [ ] **M2-23** The no-host validator Docker image (`FROM rust:1.89-slim-bookworm`, `-p <binary>`, BuildKit cache
-      mounts).
-- [ ] **M2-24** The 24-hour testnet soak runs that image on a long-lived host (a small VM or a self-hosted runner;
-      GitHub-hosted jobs stop after 6 hours) with the soak hotkey, both external prerequisites; its evidence is the
-      `/metrics` scrape over the run (commits, reveals, `rtao_weights_reveal_missed_total` by `reason`,
-      `rtao_weights_commit_epoch_slip_total`), committed with a short summary to `docs/soak/m2.md`.
+- [ ] **M2-22** Maintain reviewed source/pin/extraction/regeneration/parity update tooling and hosted guards.
+      Record relevant upstream changes and blocked refreshes. Oracle/recording stages are optional targeted hosted
+      work; forced full-pipeline replays, bot deployment and scheduled upkeep are deferred.
+- **M2-23 optional hosted image check.** Keep the no-host validator image recipe as source. If the recipe
+  changes, a targeted free hosted job may build it and check TLS through FakeNode; do not build it locally.
+- **M2-24 waived by Q29.** No testnet soak, funding, subnet setup or host is required. Preserve prepared wallet
+  and recovery material. Client tests run in hosted CI; costly infrastructure checks are optional under Q30.
 - [ ] **M2-25** The validator guide in the book ([§11](#11-documentation-plan)).
 - [ ] **M2-26** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m2.md`; focus: keyfile
-      loading and `keyfile_json` (fuzz target green), the password chain, `Zeroizing`/`secrecy` with a test that
+      loading and `keyfile_json` (ordinary malformed-input regressions passing in hosted CI), the password chain, `Zeroizing`/`secrecy` with a test that
       `Debug` output redacts secrets, and the signing path.
 
-**Exit checks:**
+**Exit checks (hosted CI):**
 
-1. Scenario 1 passes on the `pinned` lane: a localnet validator runs 20 fast and 3 slow epochs with every reveal
-   observed (M2-20).
-2. Scenario 6, the commit-reveal version gate, passes (M2-20).
-3. Scenario 8 passes, or is skipped with its printed reason when the `:main` runtime's spec is not above the pinned
-   one (M2-20).
-4. `validator_restart_resumes_state` passes: kill and restart resumes from persisted state (M2-17).
-5. The `conform` oracle vectors pass bit-exact, `.5` ties included (M2-05, M2-11).
-6. `docker build` of the no-host validator image `FROM rust:1.89-slim-bookworm` succeeds without installing Perl, make,
-   CMake, pkg-config, libssl-dev or libsodium-dev (its native code is `ring` and `blake3` SIMD, built by the C compiler
-   rustc already uses as its linker), and the built validator connects over `wss://` to a TLS `FakeNode` (M2-23).
-7. The `no-host` job passes: `cargo tree -e normal,build` of both no-host profiles contains none of the crates banned in
-   [§5.7](#57-the-no-host-neuron-profile).
-8. `cargo xtask pin --parity <parity_tag> --force` (re-vendor, extract, regen, oracle, record, parity report) leaves the
-   tree unchanged (`git diff --exit-code`) with an empty porting report (M2-22).
-9. `docs/soak/m2.md` shows no rtao-attributable reveal miss over the 24-hour testnet soak: every increment of
-   `rtao_weights_reveal_missed_total` carries a `reason` that names a failing chain check or `drand_round`
-   ([architecture §9.3](docs/plan/architecture.md#93-weightscheduler-the-validators-critical-path) step 12) (M2-24).
-10. `docs/security/m2.md` records the pass, and every finding is fixed or explicitly accepted (M2-26).
-11. C1-C7; the lanes of C2 are the `e2e` lanes (`pinned`, `mainnet`, `testnet`, `devnet`, `main`), `core-oracle`,
-    `pin-bump`, `oracle-refresh` and `upstream-next`.
+1. Signing, wallet, nonce/submission, receipt, reconciliation and validator scheduling/restart tests pass against
+   fixtures and FakeNode/FakeChain, including commit-reveal refusal and unsafe-era cases.
+2. Existing conform and native-balance vectors pass; source/pin/parity/generated guards pass.
+3. No-host dependency/profile checks pass in hosted CI and the validator example compiles there.
+4. `docs/security/m2.md` records findings and their resolution or explicit acceptance.
+5. Any targeted oracle, localnet, image or interoperability result is optional recorded evidence. No soak,
+   deployment, forced pipeline replay or infrastructure lane is required. C1-C7 apply.
+
 
 ### 12.5 M3: Miner
 
 **Goal.** A miner behind btauth/1 with metagraph-based admission, and the subnet template. **Depends on** M2.
-**Deliverables.** A minor release ([§12.1](#121-overview)); the `rtao-btauth` server adapter, `AxonPublisher`,
-`MetagraphSync`'s miner preset and event-triggered refresh, `NeuronRuntime` for miners and the miner example; interop
-lanes 1-4; `templates/subnet` with validator and miner members; miner guide; the M3 security pass.
+**Deliverables.** Reviewed client source, docs and applicable hosted checks: btauth server/admission/limits,
+miner runtime APIs, AxonPublisher, metagraph persistence, immunity read and template source. Compile and test
+template profiles in hosted CI; cross-language and real-chain checks are optional hosted evidence.
 **Parallel work.** M3-03 and M3-04 are independent of M3-01…M3-02.
 
 - [ ] **M3-01** `rtao-btauth` server (`BtAuthLayer`, `VerifiedCaller`, `CallerPolicy`, `MetagraphPolicy`,
@@ -1951,7 +1864,8 @@ lanes 1-4; `templates/subnet` with validator and miner members; miner guide; the
       signed body reaches a `Json<T>` handler); `Json<T>` parses through `serde_json::Value` first
       ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #10); feature `legacy-v10`. (The client adapter landed in
       M2-16.)
-- [ ] **M3-02** The btauth server path joins the nightly fuzz targets.
+- [ ] **M3-02** Maintain btauth parser/server fuzz target source and ordinary regression tests. A targeted
+      fuzz run is optional hosted work with a time limit; no local or scheduled campaign.
 - [ ] **M3-03** `AxonPublisher` (IP resolution and rejection of non-global addresses, idempotence over the axon and the
       stored `NeuronCertificate`, so a certificate rotation alone republishes through `serve_axon_tls`
       (`cert_rotation_republishes`), `ServingRateLimit` scheduling, pool-rejection mapping, TLS certificate length check
@@ -1963,41 +1877,34 @@ lanes 1-4; `templates/subnet` with validator and miner members; miner guide; the
 - [ ] **M3-05** `Miner` trait and runtime (`router(cx, state)`, called after `on_start`, with the `StateCell` the
       handlers share); `PruneRisk` monitor; read `immunity_period`.
 - [ ] **M3-06** `crates/rtao/examples/miner.rs` (the example of [§7.3](#73-a-miner)) and its line in the `features` job.
-- [ ] **M3-07** Localnet scenario 9: a miner with idempotent `serve_axon` and the 401/403/413/429 refusals.
-- [ ] **M3-08** Interop lanes 1-4 (btauth/1 both directions; Python and rtao neurons; wallets without Keychain, which
-      needs the separate local macOS validation of M4-14; wire bytes at the current spec); btcli-created keyfile cross vectors committed to
-      `vendor/recorded/keyfiles/` (PR-U13 evidence).
-- [ ] **M3-09** `templates/subnet` with validator and miner members ([§7.5](#75-the-cargo-generate-template)) and its own
-      CI. The CI builds both neuron images, starts the compose localnet, and creates a subnet with a registered, staked
-      validator and a miner through `rtao-testkit`'s `Scenario` (a git dev-dependency of the template's e2e test, until
-      `rtao localnet subnet` ships in M4). It then runs both binaries. In rtao's own CI the `template` job of `e2e.yml`
-      (`cargo xtask template check`) generates the project, appends `[patch."https://github.com/sam0x17/rtao"]` path
-      entries for `rtao` and `rtao-testkit` so it builds against the pushed commit rather than the last tag, builds
-      both images with the checkout as a BuildKit named context, and runs the generated CI steps; it is part of
-      `e2e-required`, and template-only pushes run it.
+- **M3-07 optional hosted integration.** Scenario 9 can check idempotent serving and 401/403/413/429 behavior
+  against a pinned localnet when a specific client change needs it; ordinary publisher/admission tests use fakes.
+- **M3-08 optional hosted interop.** Target the relevant btauth, neuron, wallet or wire-byte case from lanes
+  1-4 and retain reviewed keyfile vectors. Real Keychain acceptance is deferred; M4-14 tests injected process
+  behavior. No cross-language container campaign is a milestone prerequisite.
+- [ ] **M3-09** Maintain validator/miner template members and compile/test them against the changed client
+      source in hosted CI. Test setup and generated files with fixtures. Image builds and compose integration
+      are optional targeted hosted checks; the generated project does not require deployment to pass ordinary CI.
 - [ ] **M3-10** The miner guide in the book ([§11](#11-documentation-plan)).
 - [ ] **M3-11** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m3.md`; focus: the
       btauth/1 verifier (freshness window, nonce-store bounds, body limit enforced before buffering, header-parsing fuzz
       target) and `PerHotkeyLimiter`.
 
-**Exit checks:**
+**Exit checks (hosted CI):**
 
-1. Interop lane 2 passes in CI: a Python v11 miner with an rtao validator, and a Python validator with an rtao miner
-   (M3-08).
-2. Interop lanes 1, 3 and 4 pass (M3-08).
-3. `cert_rotation_republishes` and the `AxonPublisher` idempotence tests pass, and so does scenario 9: `serve_axon` is
-   never resubmitted when unchanged and is resubmitted when only the certificate rotates (M3-03, M3-07).
-4. `cargo xtask template check` passes: a project generated with `cargo generate` passes its own CI, both neuron images
-   build, and on the compose localnet the miner answers a btauth/1-signed request from the validator and the
-   validator's commit is revealed (`TimelockedWeightsRevealed`) (M3-09).
-5. `docs/security/m3.md` records the pass, and every finding is fixed or explicitly accepted (M3-11).
-6. C1-C7; the lanes of C2 are `interop` (lanes 1-4) and the `template` job.
+1. Hosted btauth canonicalization, authentication/admission/limits/replay and miner runtime/persistence tests pass.
+2. `cert_rotation_republishes`, publisher idempotence and serving refusal tests pass against fakes/fixtures.
+3. Generated template source and relevant profiles compile and ordinary tests pass against the changed client.
+4. `docs/security/m3.md` records findings and their resolution or explicit acceptance.
+5. Any cross-language, image or real-chain check is optional hosted evidence; no node or compose deployment is
+   required. C1-C7 apply.
+
 
 ### 12.6 M4: Owner tooling, shield, CLI v0
 
 **Goal.** Subnet owners can create, start and configure a subnet, and the CLI covers the operator loop. **Depends on**
 M2.
-**Deliverables.** A minor release ([§12.1](#121-overview)); 11 owner and registration intents, the MEV-shield pipeline,
+**Deliverables.** Reviewed client source, docs and applicable hosted checks ([§12.1](#121-overview)); 11 owner and registration intents, the MEV-shield pipeline,
 the raw-call path and the `Multisig` account object, `PowSolver`, `OwnerOps`, `OwnerMonitor`, 22 reads; the `rtao` CLI
 v0 (its machinery and 40 commands); the template's owner member; owner and MEV-shield guides; the M4 security pass.
 **Parallel work.** M4-01…M4-02, M4-03…M4-04 and M4-05 are independent of each other; M4-09 needs only M2 and M4-04.
@@ -2056,26 +1963,15 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
 - [ ] **M4-13** Ports of `PYT/unit/test_pow_registration.py` (the solver and the intent keep the runtime challenge),
       `test_cli_null_pruning.py` (owner pruning must advance on chain, not only return successful receipts) and
       `test_natural_name_key.py` (CLI listings order `coldkey2` before `coldkey10`).
-- [ ] **M4-14** Keychain compatibility test locally on Mac Studio (Q23), without Docker or Python, in a temporary
-      default keychain (`security create-keychain`, `security default-keychain -s`, `security unlock-keychain`): an
-      entry written with Python's exact argv (`security add-generic-password -s bittensor.coldkey -a <wallet> -U -w`)
-      unlocks the coldkey through rtao's `--keychain-password`, and an entry saved by rtao reads back with
-      `security find-generic-password -s bittensor.coldkey -a <wallet> -w`. The extraction layer pins the service name
-      and argv from `PY/macos_password.py`. Before the run record the default keychain and search list; use only
-      task-created keychains, restore those settings on success or failure, then remove the disposable keychain after
-      dependency checks. The login keychain and user secrets are preserved. The separate harness runs only when this
-      isolation is available (`cargo xtask gates` skips it, M0-27); otherwise this parity requirement stays unresolved.
-- [ ] **M4-15** Localnet scenarios 4 (trim-null batches), 10 (owner: immediate creation, and the queued path in the
-      `global` container: root `sudo_set_network_immunity_period(0)`, then `sudo_set_subnet_limit(<current non-root
-      subnet count>)`, then `register_network`, which prunes the lowest-priced subnet and emits
-      `NetworkRegistrationQueued`; the follower waits for that registration's `NetworkAdded`; the planner waits for the
-      freeze window and the mechanism-count rate limit), 11 (`burned_register` only; `add_collateral` joins in M5);
-      interop lane 8 for implemented ops, and lane 5 (reads at a pinned block) for the 38 reads implemented so far;
-      `rtao-testkit::PinProxy` and interop lane 9 (CLI JSON at a pinned block) for the 40 CLI v0 commands, which each
-      later milestone extends to the commands it ships [I: the proxy and harness are the check that the M4 "JSON
-      value-equal" `output.py` work needs].
-- [ ] **M4-16** Template: the owner-tool member and the owner image stage (Perl and make); its CI runs `OwnerOps`
-      (create, start, one hyperparameter) against the compose localnet.
+- [ ] **M4-14** Verify Keychain service names, argv, deferred password behavior and errors through injected process
+      tests in hosted CI. Real Keychain and temporary-default-keychain rehearsals are deferred by Q30; do not change
+      host settings or invoke the user's Keychain during development.
+
+- **M4-15 optional hosted integration.** Select an owner/shield scenario (4, 10 or 11), a relevant implemented
+  read/plan case (interop 5/8), or CLI JSON case (interop 9 through PinProxy) only when the changed client needs
+  evidence beyond ordinary fixtures. Record what ran; no local nodes, compose stack or full command campaign.
+- [ ] **M4-16** Maintain the template owner-tool source and compile its public `OwnerOps` example in hosted
+      CI. A targeted hosted image or owner-flow integration check is optional; no compose deployment is required.
 - [ ] **M4-17** `crates/rtao/examples/owner.rs` (the example of [§7.4](#74-an-owner-operation)) and its line in the
       `features` job; the four `test_*` keys of [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names)
       assigned to M4.
@@ -2083,28 +1979,27 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
 - [ ] **M4-19** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m4.md`; focus: coldkey
       unlock, CLI prompts and warnings about secrets passed in argv, the MEV-shield envelope, and the raw `call` path.
 
-**Exit checks:**
+**Exit checks (hosted CI):**
 
-1. Scenario 10 passes: immediate creation, and the queued path in the `global` container (M4-15).
-2. Scenario 11 passes for `burned_register` (`add_collateral` joins in M5) (M4-15).
-3. Interop lane 8 passes: `rtao tx <op> --dry-run --json` is value-equal to `btcli`'s for every implemented op (M4-15).
-4. Interop lane 9 passes for the 40 CLI v0 commands (M4-15).
-5. The Keychain compatibility test passes on Mac Studio, with isolated setup, restored host settings and recorded
-   evidence (M4-14); absence of equivalent verification leaves this exit check unresolved.
-6. `cargo xtask template check` passes with the owner-tool member (M4-16).
-7. `docs/security/m4.md` records the pass, and every finding is fixed or explicitly accepted (M4-19).
-8. C1-C7; the lanes of C2 are interop lanes 5, 8 and 9 and the template's owner image stage.
+1. Hosted owner/planner/shield/raw/multisig tests pass with committed metadata, fixtures and FakeChain.
+2. CLI parsing, prompt/error/JSON/book/config tests pass for implemented commands; injected Keychain tests pass.
+   Real Keychain and hardware compatibility are documented as unverified.
+3. The owner example and template member compile in relevant hosted profile checks.
+4. `docs/security/m4.md` records findings and their resolution or explicit acceptance.
+5. Targeted owner, shield and cross-language JSON integration checks are optional hosted evidence. No local
+   rehearsal or deployment is required. C1-C7 apply.
+
 
 ### 12.7 M5: Intent parity
 
 **Goal.** All 83 intents. **Depends on** M4.
-**Deliverables.** A minor release ([§12.1](#121-overview)); the remaining 63 intents, the offline-signing path, reads
+**Deliverables.** Reviewed client source, docs and applicable hosted checks ([§12.1](#121-overview)); the remaining 63 intents, the offline-signing path, reads
 `proxies` and `root_claim_threshold`, 20 CLI commands, generated `tx` reference pages complete.
 
 - [ ] **M5-01** `prepare_call`/`submit_signature` with Python-compatible `UnsignedExtrinsic` JSON (the raw path landed in
-      M4-04), with interop lane 6 (prepared extrinsics, both directions); reads `proxies` and `root_claim_threshold`
+      M4-04), with ordinary payload fixture tests and optional targeted hosted interop lane 6; reads `proxies` and `root_claim_threshold`
       (`set_root_claim_threshold`'s verify read); the multisig book and call-cache writers; the `UnsignedExtrinsic` JSON
-      import joins the nightly fuzz targets.
+      import has fuzz target source for optional targeted hosted checks.
 - [ ] **M5-02** The 63 remaining intents, per Python group (each a feature): `staking` 14 (`add_stake`,
       `add_stake_limit`, `remove_stake`, `remove_stake_limit`, `move_stake`, `move_swap_stake`, `swap_stake`,
       `transfer_stake`, `unstake_all`, `unstake_all_alpha`, `set_auto_stake`, `stake_into_basket`, `swap_basket`,
@@ -2126,21 +2021,19 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
 - [ ] **M5-05** CLI (20): `stake` aliases add, remove, move, move-swap, transfer, swap, burn; `hparams` set-take,
       stake-burn; `proxy` create, add, remove, kill, list, execute; `multisig` add, list, show, remove, pending; `tx`
       complete; hidden v9 aliases of the groups this milestone first ships (inventory §7.3).
-- [ ] **M5-06** Localnet scenarios 11 (with `add_collateral`), 12, 13 and 18 (the eight ops without an upstream e2e
-      test, two of them Sudo-wrapped), and scenario 8's offline-payload assertion (a payload prepared before the upgrade
-      is refused, D-008); `intent_set_root_claim_type` mapped as n/a; interop lane 7 (shared caches, `btcli.json`, the
-      multisig book and call cache, and a raw 2-of-3 multisig opened by one side and approved and executed by the
-      other; the address and proxy books join in M8-01).
+- **M5-06 optional hosted integration.** Scenarios 11-13/18 and interop 6-8 can supply targeted evidence for
+  changed intent, offline signing or multisig code. Ordinary plan/encoding/import/receipt tests run against
+  committed fixtures and FakeChain; no campaign or node deployment is required.
+**Exit checks (hosted CI):**
 
-**Exit checks:**
+1. Hosted plan/encoding/policy tests cover implemented intents, including the 83-op table-driven test and the
+   21 supported core-constructor pairs. Existing oracle vectors replay successfully.
+2. Offline payload import/authentication, signing attachment, proxy/multisig and receipt tests pass with fixtures
+   and FakeChain, including malformed/stale payload refusal.
+3. No implemented intent remains incorrectly listed as pending; parity/source/generated guards pass. Missing
+   fresh oracle or chain evidence is recorded without a full parity claim beyond executed coverage.
+4. Targeted interop/localnet checks are optional hosted evidence. C1-C7 apply.
 
-1. The intent oracle vectors pass for 83 of 83 ops, the root-subnet samples of `samples_extra.json` included (M5-02).
-2. `cargo xtask parity check` passes with no intent left in `parity/pending.toml` and the coverage gate green (M5-02).
-3. The `Policy` equivalence test passes on 21 of the core's 22 constructors (M5-03).
-4. Every upstream `intent_*` e2e name is mapped in `e2e_map.toml` and green: the 72 live names through the 83-op plan
-   test, and the retired `intent_set_root_claim_type` as n/a (M5-04, M5-06).
-5. Scenario 18 passes (M5-06).
-6. C1-C7; the lanes of C2 are interop lanes 6 and 7.
 
 ### 12.8 M6: Read parity
 
@@ -2150,7 +2043,7 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
 `collateral set-min` construct M5 intents (`ClaimRootWithHotkey`, `StakeIntoBasket`, `MoveStake`, `SwapBasket`,
 `LockStake`, `SetPerpetualLock`, `SetRejectLockedAlpha`, `MoveLock`, `AddCollateral`, `SetMinCollateral`), and
 `root register` the M4 `RootRegister`. The reads are off the critical path.
-**Deliverables.** A minor release ([§12.1](#121-overview)); the remaining 62 reads, the remaining namespace accessors and
+**Deliverables.** Reviewed client source, docs and applicable hosted checks ([§12.1](#121-overview)); the remaining 62 reads, the remaining namespace accessors and
 methods, `rtao::blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}`, 24 CLI commands,
 generated `query` reference pages complete.
 **Parallel work.** M6-04 is independent of the other steps.
@@ -2162,13 +2055,13 @@ generated `query` reference pages complete.
       remaining models, and the locks half of the port of `PYT/unit/test_v446_accounting_and_commitments.py` (the
       commitments half landed in M1-19). With the last read, the generated `query` reference pages are complete.
 - [ ] **M6-02** The exact-hits test ([§9.3](#93-fakes-at-the-right-layers), from M2-09) over every read as it is ported,
-      with its `parity/read_hits_extra.toml` rows reviewed; the read oracle at head and pinned; interop lane 5 over every
-      read sample.
+      with its `parity/read_hits_extra.toml` rows reviewed; existing read oracle fixtures at head and pinned; fresh interop samples are optional targeted hosted evidence.
 - [ ] **M6-03** `rtao::blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` over
       `rtao_client::blocking::BlockingRuntime` (facade feature `blocking`; `SyncClient` has all 14 namespaces, where
       Python's has 13, D-027); the frozen legacy runtime-API table for archive reads; the port of
       `PYT/unit/test_facades.py` (namespace parity of the sync facade).
-- [ ] **M6-04** The `DecodeAsType` hand-visitor experiment for `[u8; 32]` keys (architecture §8.6) [I].
+- **M6-04 optional source experiment.** Investigate a `[u8; 32]` decode visitor only for an observed client
+  issue. Any comparison is bounded hosted work; no benchmark campaign is required.
 - [ ] **M6-05** CLI (24): `root` list, claim, allocate, move, swap, register; `subnets` list, show, hyperparameters,
       burn-cost, create-cost, price, conviction; `conviction` list, targeting, show, add, mode, accept, move;
       `collateral` show, list, add, set-min; `query` complete; hidden v9 aliases of the groups this milestone first
@@ -2179,23 +2072,23 @@ generated `query` reference pages complete.
       to M6 (`test_subnets_all_batched`, `test_quote_stake_slippage_and_fee`, `test_metagraph_fast_path_matches_runtime`,
       `test_leases_read`) mapped to rtao e2e tests.
 
-**Exit checks:**
+**Exit checks (hosted CI):**
 
-1. The read oracle passes for 102 of 102 reads, at head and pinned (M6-02).
-2. Interop lane 5 passes: read JSON is value-equal to Python's at a pinned block for every sample (M6-02).
-3. `cargo xtask parity check` passes with no read left in `parity/pending.toml`, which is empty once M5 is also done
-   (M6-01).
-4. C1-C7.
+1. Hosted read/model/namespace/blocking tests pass against committed fixtures; exact-hits/single-block tests cover
+   implemented reads. Existing read oracle vectors replay successfully.
+2. Parity/source/generated guards pass and no implemented read remains incorrectly listed as pending.
+3. Missing fresh cross-language, live-chain or platform evidence is recorded. Those checks are optional targeted
+   hosted work; no decoder benchmark campaign is required. C1-C7 apply.
+
 
 ### 12.9 M7: Signers, EVM, PoW GPU, timelock UX
 
 **Goal.** Every signer and auxiliary surface of v11. **Depends on** M5 [I: EVM intents and CLI groups need it; signers
 need only M2].
-**Deliverables.** A minor release ([§12.1](#121-overview)); Ledger, Vault and extension signers (the extension bridge's
-server and client in `rtao-signer`), the Keychain CLI commands, `rtao-evm`, timelock UX, GPU PoW, 34 CLI commands; the
-Ledger emulator lane (Speculos) with recorded transcripts that `pr-gates` replay, on the PR-U17 core patch
-([§5.10](#510-the-pr-u17-core-patch)) and its `core-unpatched` job; the manual Ledger device run (Q17); signer and
-Ledger guides; the M7 security pass.
+**Deliverables.** Reviewed client source, docs and applicable hosted checks: Ledger/Vault/extension signers,
+injected Keychain tests, EVM and timelock helpers, GPU feature source and CLI commands. Replay existing
+fixtures in Rust. Emulator/interop execution is optional hosted evidence; devices, app builds and
+hardware/platform rehearsals are deferred.
 **Parallel work.** M7-02, M7-05 and M7-06 are independent of each other and of M7-03…M7-04; M7-09…M7-10 need only
 M7-02 and may run beside M7-03…M7-08.
 
@@ -2231,81 +2124,44 @@ M7-02 and may run beside M7-03…M7-08.
 - [ ] **M7-07** CLI (34, counting the three `extension` commands of M7-04): `wallet keychain` save, show, delete, over the
       M4 Keychain code, with optional Linux `keyring`; `timelock` encrypt, decrypt, show; `evm` (25 commands);
       `--signer ledger|vault|extension`; hidden v9 aliases of the groups this milestone first ships.
-- [ ] **M7-08** Localnet scenarios 14 (PoW on the 12 s lane) and 19 (timelocked commitment), to which the upstream
-      `test_timelocked_commitment_reveals_plaintext` key maps.
-- [ ] **M7-09** Ledger emulator harness
-      ([architecture §11.9](docs/plan/architecture.md#119-ledger-emulator-lane-speculos)). First the PR-U17 core patch
-      ([§5.10](#510-the-pr-u17-core-patch), prototyped in
-      [research J §8](docs/plan/research/J-ledger-ci-shim.md#8-core-patch-prototype)), unless `core_tag` already
-      contains PR-U17: `xtask core-patch` (`rebase`, `strip`), whose first `rebase <core_tag>` pushes
-      `rtao-core-patch/<core_tag>` to the fork and writes the two root `[patch]` tables and `[core.patch]` in
-      `upstream.toml`; the core-patch rules of `xtask pin` (`--check` with its probe crate, and `--core-branch`, which
-      drops the patch for `core-canary`); the `clippy.toml` entries that keep
-      `LedgerDevice::with_transport` and `ApduTransport` inside `rtao-testkit::ledger_emu`; the `core-patch rebase` step
-      of `pin-bump.yml`; and `.github/workflows/core-unpatched.yml`. Then `ci/ledger/pins.toml` with the app source
-      (`LedgerHQ/app-polkadot` at its newest release tag, `v100.0.30` at `e36ced75` when this plan was written; if that
-      tag does not build with the recipe, `Zondax/ledger-polkadot` `v100.0.29` at `644ec638`, the build verified while
-      planning), the builder image and Speculos `v0.27.1` by digest, and the ELF sha256 per model and runner
-      architecture; `cargo xtask ledger-emu {build-app, up, record, speculos-image}`; `rtao-testkit::ledger_emu`
-      (feature `ledger-emu`) with one Speculos container per test, seeded with Zondax's public test mnemonic, a REST
-      approver for `nanosp` (buttons) and `flex` (touch), and two transports that `LedgerDevice::with_transport` takes:
-      a Speculos TCP transport (Speculos's length framing) and a replay transport; the `ledger_emu` `[[test]]` target
-      with cases 1-9 of architecture §11.9; the first recordings in `vendor/recorded/ledger/` and the `ledger_replay`
-      test that `pr-gates` runs.
-- [ ] **M7-10** The Ledger lane on chain and in CI: cases 10 and 11 of architecture §11.9 (a funded emulator account
-      signs a transfer on the fast localnet; a shielded transfer completes with both approvals on the 12 s localnet);
-      `.github/workflows/ledger-emu.yml` (nightly on `nanosp` and `flex`, pushes to `main` that change the Ledger paths
-      or `upstream.toml`, PRs labelled `ledger` or `pin-bump` after the loop, manual dispatch with `record` and
-      `dry-run`); the `pin-bump.yml` step that re-records when the core moved (`ledger-stale` on failure); and
-      the `live-probe` check that finney's runtime carries the compiled metadata hash
-      ([architecture §12.6](docs/plan/architecture.md#126-live-probes)).
-- [ ] **M7-11** The manual Ledger device run (Q17): write `docs/ledger-device-run.md`, a checklist limited to what the
-      emulator lane cannot cover (the core's HID transport and OS device access, the app binary Ledger Live installs,
-      real firmware, the review on a real screen): build `rtao` with `ledger`, record the device's app version next to
-      the lane's pin, read the device's address and confirm it on its screen, sign a localnet transfer on the device and
-      reject one request. Once the milestone's tag is pushed (C7), ask the user to run it on that tag (a stop-and-ask
-      point: it needs the user's device) and record the result in the file's log. Every later milestone release repeats
-      it ([§10.5](#105-compatibility-matrix-and-run-time-guard)).
+- **M7-08 optional hosted integration.** Target scenario 14 (PoW registration) or 19 (timelocked commitment)
+  only for a concrete client change, with a timeout. Local PoW mining, node deployment and long timing runs
+  are outside development work.
+- [ ] **M7-09** Maintain the core-patch source rules and injected/replay Ledger transport tests. Keep
+      `with_transport` and `ApduTransport` confined to testkit; verify shipped crates against the unpatched core
+      in relevant hosted checks. Building Ledger apps, starting Speculos and recording new transcripts are
+      optional targeted hosted work, with pinned inputs and explicit limits.
+- **M7-10 optional hosted integration.** A bounded manual emulator check may cover one changed Ledger
+  request or signing/receipt path. No nightly device-model matrix, automatic re-recording, localnet transfers,
+  scheduled live probe or bot setup is required. Report absent hardware and emulator evidence honestly.
+- **M7-11 deferred by Q30.** Device operation, firmware/app verification and hardware rehearsals are future
+  hardware acceptance work. Document the untested HID/device coverage; no local transfer or device run is required.
+
 - [ ] **M7-12** The signer and Ledger guides in the book ([§11](#11-documentation-plan)), including a note that the app
       shows stake amounts typed `TaoBalance` as raw integers
       ([research J §4.6](docs/plan/research/J-ledger-ci-shim.md#46-upstream)), kept until a released app version
       formats them (the fix was filed with Zondax on 2026-10-13, Q22; once it ships, the note says instead that
       `swap_stake_limit` and `move_stake_limit` show their `limit_price`, a price ratio scaled by 1e9, with the TAO
       unit, unless the app's maintainers handle those two calls), and CONTRIBUTING's section on running the Ledger
-      emulator lane locally (`cargo xtask ledger-emu up`, with Docker).
+      emulator lane through an optional bounded hosted dispatch (Q30).
 - [ ] **M7-13** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m7.md`; focus: Ledger,
       Vault and the extension bridge's token handling.
 
-**Exit checks:**
+**Exit checks (hosted CI):**
 
-1. The Ledger proof vector, the ports of `PYT/unit/test_ledger_signer.py` (its no-context case mapped n/a, because
-   `SigningRequest` always carries its context) and `ledger_request_parity` pass (M7-01, M7-02).
-2. `ledger_replay` passes in `pr-gates` over the transcripts in `vendor/recorded/ledger/` (M7-09).
-3. The `ledger-emu` workflow is green on `nanosp` and `flex`: the `ledger_emu` target passes every case of
-   architecture §11.9, including the localnet transfer and the shielded transfer on the 12 s localnet (M7-09, M7-10).
-4. A `live-probe` run passes with the compiled-metadata-hash check against finney (M7-10).
-5. `docs/ledger-device-run.md` records a passing manual device run (Q17) (M7-11).
-6. `VaultSigner` UOS framing (`sign_tx_payload`, `sign_frame`, `multipart_frames`, `transaction_frames`,
-   `transaction_frames_with_proof`; `PY/vault/uos.py:54-123`) is byte-equal to the oracle vectors, and a localnet round
-   trip passes: `prepare_call`, then a scripted QR responder that decodes the frames and signs with a dev key, then
-   `submit_signature` (M7-01, M7-03).
-7. The ports of `PYT/unit/test_extension_bridge.py` and `test_extension_signer.py` pass (M7-04).
-8. An interop test signs a localnet transfer through rtao's bridge driven by Python's `extension/client.py`, and through
-   Python's bridge driven by rtao, with a scripted browser-side WebSocket peer signing with a dev key in place of the
-   extension (M7-04).
-9. The ports of `PYT/unit/test_evm.py` pass, and EVM keystore-V3 files cross-decrypt with Python (M7-05).
-10. `rtao timelock encrypt` output decrypts with Python's `timelock`, and the reverse, for a past drand round (M7-06,
-    M7-07).
-11. Scenario 14 passes: `pow_register` e2e on the 12 s lane (M7-08).
-12. Scenario 19 passes (M7-08).
-13. `docs/security/m7.md` records the pass, and every finding is fixed or explicitly accepted (M7-13).
-14. `cargo xtask pin --check` passes with `[core.patch]` (while it exists), and `core-unpatched` is green (M7-09).
-15. C1-C7.
+1. Hosted signer tests pass using FakeLedger/injected transports and existing proof/request/APDU fixtures.
+2. Vault framing/QR, extension bridge protocol, EVM and timelock tests pass against committed vectors and scripted
+   loopback peers. GPU-feature source is checked only in relevant hosted profiles; no local mining runs.
+3. Core-patch identity guards and relevant unpatched-core build checks pass in hosted CI.
+4. `docs/security/m7.md` records findings and their resolution or explicit acceptance.
+5. Hardware/HID, app/firmware, native platform and real Keychain evidence is deferred and documented. Emulator,
+   live probes and cross-language/localnet checks are optional targeted hosted evidence. C1-C7 apply.
+
 
 ### 12.10 M8: CLI parity
 
 **Goal.** Every command of the dumped Python command tree. **Depends on** M5, M6, M7.
-**Deliverables.** A minor release ([§12.1](#121-overview)); the remaining 45 commands, `PyJsonFormatter`, completions,
+**Deliverables.** Reviewed client source, docs and applicable hosted checks ([§12.1](#121-overview)); the remaining 45 commands, `PyJsonFormatter`, completions,
 the strict parity gate; the CLI book chapter.
 
 - [ ] **M8-01** The remaining 45 commands: `wallet` (16: sign, verify, encrypt, decrypt, unlock, overview, registrations,
@@ -2320,60 +2176,47 @@ the strict parity gate; the CLI book chapter.
 - [ ] **M8-03** The CLI chapter of the book ([§11](#11-documentation-plan)).
 - [ ] **M8-04** Switch the parity gate to strict mode.
 
-**Exit checks:**
+**Exit checks (hosted CI):**
 
-1. `cargo xtask parity check` reports `cli_tree` parity with zero missing rows (M8-01, M8-02).
-2. Interop lane 9 passes for all 163 hand-written commands, each failure being a registered divergence (M8-01).
-3. `cargo xtask parity check` passes in strict mode: zero pending, zero unexplained, no `pending` key in
-   `e2e_map.toml` (M8-04).
-4. C1-C7.
+1. Hosted CLI tree/alias/argument/JSON tests cover implemented commands and replay existing fixtures.
+2. Strict source/catalog/parity checks pass for implemented client behavior. Record unexecuted fresh oracle,
+   interoperability, native platform and device coverage; strict source completeness does not prove those runs.
+3. CLI documentation and relevant hosted checks pass. No release, deployment or infrastructure campaign is
+   required. C1-C7 apply.
 
-### 12.11 M9: Hardening and 1.0
 
-**Goal.** A 1.0 that can be maintained. **Depends on** M8.
-**Deliverables.** Tag `rtao-v1.0.0` with `compat.json`; the complete book and `llms.txt`; every upstream PR and issue
-filed (the Ledger app item outside the monorepo since 2026-10-13, Q22); a security review report; upkeep handed over
-to the bots (M9-07).
+### 12.11 M9: Client hardening
 
-- [ ] **M9-01** Review the fuzz corpora and raise per-target time; the weekly `mainnet-clone` read-only lane
-      (`mainnet-clone.yml`, on free `ubuntu-latest`, Q23). Measure the clone's disk, memory and job-duration needs;
-      if they exceed free runner resources, retain this prerequisite as unresolved and seek an existing suitable
-      host without adding paid or large-runner requirements. The full read-only suite remains required.
+**Goal.** Review and test the implemented client. **Depends on** M8.
+**Deliverables.** Reviewed source, current docs, an accurate filing inventory and a security review report.
+Q30 defers release, deployment and automatic upkeep; this milestone does not claim 1.0 release readiness.
+
+- [ ] **M9-01** Review existing fuzz targets and failure regressions as client source. Mainnet cloning, full-node
+      operation and increased fuzz/benchmark campaigns are removed by Q30. Targeted robustness checks use bounded
+      free hosted jobs.
+
 - [ ] **M9-02** Book and `llms.txt` complete; generated reference and migration tables.
-- [ ] **M9-03** `rtao-neuron` feature `auto-update` (off by default) with mandatory verification of the build-provenance
-      attestation that `release.yml` produces (architecture §9.11), reviewed in the security review of M9-06.
-- [ ] **M9-04** Upstream filing audit: PR-U1…U17 and every issue of [§15](#15-upstream-contributions) have their Filed
-      links (each was filed when its evidence existed, Q18; the Ledger app item outside the monorepo was filed on
-      2026-10-13, Q22), and §15 records each one's state (open, merged, declined).
-- [ ] **M9-05** One complete upstream bump executed end to end through the maintenance playbook
-      ([§10.6](#106-maintenance-playbook)), by the agent like every bump of the goal loop; it waits for a finalized
-      release newer than `parity_tag` ([Executing this plan](#executing-this-plan), rule 3).
+- **M9-03 deferred by Q30.** Automatic updates and release-provenance deployment depend on a future distribution
+  task. Keep the feature disabled; do not prepare local release or updater rehearsals.
+
+- [ ] **M9-04** Audit existing upstream PR/issue links, states and source evidence. Keep unfinished proposals local;
+      opening every planned filing is no longer an exit requirement (Q30, C4).
+- [ ] **M9-05** Review source/pin update guards in hosted CI and record a real pin update if one is needed. Waiting
+      for an upstream release or rehearsing the oracle/localnet/recording pipeline is no longer required (Q30).
+
 - [ ] **M9-06** The full security review: a cold-reader pass ([§12.1](#121-overview)) over the whole repository, covering
       signers, keyfiles, secrets handling, the nonce store, `auto-update` and every area of the per-milestone passes, in
       `docs/security/m9.md`; an external review in addition only if the user arranges one.
-- [ ] **M9-07** Handover of upkeep, with the user (a stop-and-ask point: an App and repository settings). The user
-      installs the rtao-bot GitHub App (`RTAO_BOT_APP_ID`, `RTAO_BOT_PRIVATE_KEY`; contents and pull-requests write; on
-      the fork too while the core patch exists, so `pin-bump` can push patch branches); the agent dispatches one live
-      run each of `pin-bump` and `metadata-drift` ([§9.7](#97-ci-lanes-and-what-each-catches)) and records the handover
-      and the user's choice on PR-based upkeep in the progress log. The agent's last pushes of the loop come next: the
-      M9 final commit, `rtao-v1.0.0`, and the commit that records the device run on that tag (C7) and checks this step's
-      box; only after them is the repository variable `RTAO_UPKEEP` set to `on` (earlier, `release-plz` would run on
-      those pushes) and, if the user wants PR-based upkeep, branch protection turned on for `main`, requiring
-      `check`, `no-host` and `e2e-required`, with the merge queue. If the user declines it, the agent
-      first removes `drift.yml`'s `gh pr merge --auto` step (with no required checks it would fail or merge before CI
-      runs), so every bot PR, `release-plz`'s included, waits for a person.
+- **M9-07 deferred by Q30.** Bot installation, automatic upkeep, release publishing, branch-protection and merge
+  queue setup are outside current client development. Existing upkeep remains disabled.
 
 **Exit checks:**
 
-1. `rtao-v1.0.0` exists with its compatibility row in `compat.json` and `COMPAT.md` (C7).
-2. The pin bump of M9-05 is on `main`, with green `pr-gates`, `e2e-required` on `:vS` and `interop` on its push
-   (M9-05).
-3. Every row of [§15](#15-upstream-contributions) has a Filed link (M9-04).
-4. `docs/security/m9.md` records the review, and every finding is fixed or explicitly accepted (M9-06).
-5. rtao-bot is installed, one live run each of `pin-bump` and `metadata-drift` succeeded, and the progress log records
-   the handover and the user's choice on PR-based upkeep; right after the agent's last push (the commit that records the
-   device run, C7), `RTAO_UPKEEP` is `on` (M9-07).
-6. C1-C7; the lane of C2 is `mainnet-clone`.
+1. Applicable hosted client tests, Clippy, supply, feature/MSRV and documentation checks pass.
+2. Source/pin guards pass, with unexecuted interoperability coverage recorded (M9-05).
+3. Existing filing links and states are accurate; unfinished proposals remain local (M9-04).
+4. `docs/security/m9.md` records the review and disposition of each finding (M9-06).
+5. Deferred release/upkeep/hardware work is identified without claiming it passed; C1-C7 apply.
 
 ### 12.12 M10 (optional): post-parity compatibility crates
 
@@ -2399,38 +2242,15 @@ extension, ledger and vault), and it needs a wire schema, a reference server and
 
 ### 12.13 Dependency order and external prerequisites
 
-**Critical path**: M0 → M1 → M2 → M4 → M5 → M8 → M9. M3, M6 and M7 are off it and can run beside it, except that M6's
-CLI part follows M5 ([architecture §14](docs/plan/architecture.md#14-milestones)). Executed by one agent, the numeric
-order M0…M9 satisfies every dependency ([Executing this plan](#executing-this-plan), rule 1).
+Client source dependencies remain M0 -> M1 -> M2 -> M4 -> M5 -> M8 -> M9, with M3, M6 and M7 following their API
+prerequisites. Logical independence does not authorize concurrent local builds (Q30).
 
-**External prerequisites and current answers.** M0-01 requested them; the user's 2026-10-14 response is Q23
-([§14.1](#141-decisions-answered-2026-10-13)). Each line names the first step that needs it:
-
-- **Testnet funds offered, setup pending.** The user will provide testnet TAO to an address prepared by the agent.
-  A testnet subnet with commit-reveal on and a soak hotkey registered and staked to a validator permit still need
-  setup (with btcli, or with `Scenario`'s non-sudo calls). The long-lived soak host is not yet identified; the
-  24-hour run cannot fit in a GitHub-hosted job's 6-hour limit (M2-24). No funds or completed setup are assumed.
-- **GitHub/GHCR authorized.** Use the user's `sam0x17` account and `ghcr.io/sam0x17/rtao-oracle` namespace (M2-05);
-  verify package-write access when wiring it rather than asking again for the namespace.
-- **Only free `ubuntu-latest` hosted runners.** Linux x64 CI with Docker (M0-27), a fixed glibc 2.35 Linux build
-  container and ARM cross tooling (M1-23), and the mainnet-clone attempt (M9-01). No paid, large, native ARM or
-  macOS hosted runners are required. Local Mac Studio checks/builds preserve macOS support (§9.8); equivalent
-  isolated Keychain verification, local-build provenance and mainnet-clone resource feasibility remain to prove.
-- **Downloadable docs assets.** The user declines Pages; `release.yml` attaches rustdoc and the book to releases,
-  and no Pages environment or deployment rule is required (M1-23).
-- **Ledger available.** The user has a device for manual runs (M7-11); actual model/app compatibility and each run's
-  results remain to verify. Device operation still needs the user when the checklist is ready.
-
-The goal loop needs no branch protection, merge queue or bot App: the agent's pushes use the user's credentials, so
-they start workflow runs. At the handover (M9-07) the user adds the rtao-bot GitHub App (`RTAO_BOT_APP_ID`,
-`RTAO_BOT_PRIVATE_KEY`; contents and pull-requests write), which the upkeep jobs need to push and open PRs, and, for
-PR-based upkeep, branch protection on `main` requiring `check`, `no-host` and `e2e-required`, with the
-merge queue ([§9.7](#97-ci-lanes-and-what-each-catches)).
-
-Q23 supplies authorization for the listed GitHub/GHCR and free-runner choices. Do not repeat those permission
-questions. Prepare a concrete testnet address and device checklist before requesting the user's corresponding
-actions; request any still-missing host or credentials only when needed ([Executing this plan](#executing-this-plan),
-rule 6). Product parity, the testnet soak, Keychain behavior and release verification requirements remain intact.
+The user's `sam0x17` GitHub access and free `ubuntu-latest` runners cover current development. GHCR namespace
+`ghcr.io/sam0x17/rtao-oracle` is authorized if a targeted hosted check needs it. No testnet funds, subnet, soak host,
+local node, Studio build host, device run, Pages environment, paid runner or bot App is required. Preserve the prepared
+wallet and recovery material. Docs can be downloaded as CI artifacts; release assets and hardware/platform
+acceptance are deferred. State missing native macOS, Keychain, ARM and hardware coverage. Do not ask again for
+already waived infrastructure prerequisites.
 
 ### 12.14 First steps
 
@@ -2440,15 +2260,9 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
 
 **Prerequisites and PR-U17, relicensing, workspace and pins**
 
-- [x] **M0-01** Ask the user for the external prerequisites of
-      [§12.13](#1213-dependency-order-and-external-prerequisites) (a stop-and-ask point: they cost money or need the
-      user's accounts), and continue with the steps that do not need them. Create the fork of the monorepo (default
-      `github.com/sam0x17/subtensor`) and file PR-U17 from it ([§15](#15-upstream-contributions),
-      [§5.10](#510-the-pr-u17-core-patch)), whose evidence predates M0 (rule 7 of
-      [Executing this plan](#executing-this-plan)). Start from the prototype in
-      [research J §8](docs/plan/research/J-ledger-ci-shim.md#8-core-patch-prototype): its diff against `v477`, the
-      checks it passed in the monorepo workspace and its emulator run; the review branch carries the same change on
-      monorepo `main`.
+- [x] **M0-01** Recorded the user's GitHub/free-runner decisions and filed PR-U17 from the user's monorepo fork
+      after source/prototype evidence existed (§15, §5.10). Q29/Q30 remove infrastructure, funding, deployment,
+      device and build-host prerequisites. Do not repeat those setup questions or start a new local rehearsal.
 - [x] **M0-02** Relicense the skeleton to `MIT OR Apache-2.0` (Q1, [§14.1](#141-decisions-answered-2026-10-13)): set
       `license = "MIT OR Apache-2.0"` in `Cargo.toml`; add `LICENSE-MIT`, `LICENSE-APACHE` (the Apache-2.0 text, which
       also meets Apache-2.0 §4(a) for derived material) and `NOTICE` (attribution for the vendored and derived
@@ -2531,9 +2345,10 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
 - [ ] **M0-21** `rtao-primitives`: ids with checked `NetUidStorageIndex`, `AccountId` (ss58 through the core),
       `DefaultAccount`, wire amounts, `Balance<U>` (no `Add`/`Sub`, `try_sum`), `Money`, `Amount`, `ResolvedAmount`,
       `Spend`, `DynBalance`, `IntoCoreValue`, scale-decode visitors, `pyfmt`, `json::{from_slice, from_str}`;
-      proptests, including the properties of the hypothesis suite `test_balance_properties.py` ported with its strategy
-      bounds (`RAO` 0..=2^80, `SIGNED_RAO`, `NETUID` 0..=4095) and `// pyt:` provenance (the suite has no literal cases
-      to extract; the `str(Balance)` oracle vectors arrive in M2).
+      proptests, including the properties of the hypothesis suite `test_balance_properties.py` adapted to the
+      chain-native domain (`RAO` 0..=u64::MAX, `NETUID` 0..=4095), with checked underflow/overflow and rejection of
+      negative/oversized inputs, and `// pyt:` provenance (Q25 supersedes the full signed strategy bounds; D-035).
+      The suite has no literal cases to extract; the `str(Balance)` oracle vectors arrive in M2.
 - [ ] **M0-22** The `serde_json/arbitrary_precision` decision of [§5.8](#58-known-core-defects-and-how-rtao-handles-them)
       #10 with its M0 tests: direct versus `Value`-first parsing of untagged and flatten floats, a u128/U256
       `to_corpus_json` round trip, and the oracle comparator's integer and float vectors.
@@ -2550,17 +2365,15 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
 - [ ] **M0-25** `rtao-btauth` core with every vector and negative case.
 - [ ] **M0-26** `rtao-cli` with `rtao doctor` (lock check that prints the exact patch line); its `[[bin]] name = "rtao"`
       sets `doc = false` ([§11](#11-documentation-plan)).
-- [ ] **M0-27** `.github/workflows/pr.yml` with `check`, `no-host`, `msrv` (`cargo +1.89`), `features`, `supply`
-      ([Appendix E](docs/plan/architecture.md#appendix-e-ci-workflows)); actions pinned by SHA. `check` runs
-      `xtask pin --check`, `extract --check`, the parity file layer and `xtask lint-upstream`, but not yet
-      `regen --check` (M1-04); the `semver` job starts after the first tag. `cargo xtask gates` runs the same steps
-      locally (every `pr-gates` step that runs on the host's OS, but no step that changes the host's own
-      settings, such as M4-14's separate local temporary-keychain harness); from here on the agent runs it before
-      every push (rule 2 of [Executing this plan](#executing-this-plan)).
+- [ ] **M0-27** `.github/workflows/pr.yml` with bounded free `ubuntu-latest` jobs for `check`, `no-host`, `msrv`,
+      relevant `features` and `supply`, with actions pinned by SHA. Keep source/pin/extraction/parity/dependency
+      checks, units, goldens, doctests and supply guards in hosted CI. `cargo xtask gates` is a hosted command;
+      Q30 removes the full local run before every push. Cancel superseded runs and avoid unnecessary matrices.
+
 - [ ] **M0-28** README (approach, patch line, `rtao doctor`), CONTRIBUTING (xtask commands, bless workflow, the
       attribution rule of M0-02).
-- [ ] **M0-29** Run the M0 exit checks ([§12.2](#122-m0-foundations-and-pins)), then set the workspace version to
-      `0.0.0` and the changelog, tag `rtao-v0.0.0` and push the tag (C7; rule 7).
+- [ ] **M0-29** Record M0 client checks and hosted results. Version changes, release tagging and binary publication
+      are deferred by Q30.
 
 ## 13. Risks
 
@@ -2569,7 +2382,7 @@ writing and reviewing this plan.
 
 | # | Risk | L / I | Mitigation |
 |---|---|---|---|
-| R1 | `bittensor-core` is internal and unversioned; its API follows the Python binding | high / medium | one seam crate; `core_surface` probe names the broken symbol; nightly `core-canary`; `core_tag` moves rarely; upstream PRs |
+| R1 | `bittensor-core` is internal and unversioned; its API follows the Python binding | high / medium | one seam crate; `core_surface` probe names the broken symbol; optional hosted `core-canary`; `core_tag` moves rarely; upstream PRs |
 | R3 | downstream `w3f-bls` patch friction | certain until PR-U4 / low | template, `rtao doctor`, patch changes only on core bumps, PR-U4 with localnet evidence |
 | R4 | C toolchain for owner and CLI builds (libsodium, vendored OpenSSL needing Perl and make, `secp256k1-sys`) | certain for those profiles / low | no-host neuron profiles, which build on the stock `rust:1.89-slim` image; an owner/CLI builder image; PR-U6 |
 | R5 | the Python oracle toolchain (maturin, uv, OpenSSL, Perl) is slow or flaky | medium / medium | CI-only, cached per tag, `oracle-stale` with committed vectors authoritative (no PyPI fallback: no PyPI version reliably identifies a tag) |
@@ -2580,12 +2393,12 @@ writing and reviewing this plan.
 | R12 | public endpoint quotas and per-endpoint differences | high / medium | coalesced reads, token bucket, legacy namespace only, live probes, own-node guidance |
 | R13 | btauth/1 adoption is still zero among surveyed subnets | high / medium | `legacy-v10` bridge now; compatibility crates in M10 |
 | R16 | upstream declines the staged PRs | medium / low | staged code is isolated (about 2k lines) and keeps working |
-| R17 | localnet differs from mainnet | certain / medium | metadata pins only from live networks; the 12 s lane; a weekly mainnet-clone read-only lane |
+| R17 | fixtures and localnet differ from mainnet | certain / medium | pinned metadata and source review; optional targeted hosted checks; no mainnet clone (Q30) |
 | R18 | secrets: KDF threads, Keychain, nonce-store memory | low / high | `Zeroizing`/`secrecy`, no `Debug` on secrets, bounded in-memory store; per-milestone security passes by local cold readers (M2, M3, M4, M7) and the full review in M9 |
 | R19 (new) | `serde_json/arbitrary_precision`, forced on by the core, breaks `#[serde(untagged)]`/`#[serde(flatten)]` parsing of non-integer numbers and makes `serde_json::Value` equality spelling-sensitive, in rtao and in subnet authors' own code | certain / medium [I] | decided in [§5.8](#58-known-core-defects-and-how-rtao-handles-them) #10: rtao enables the feature itself; `Value`-first parsing at every text entry point and in rtao's number-or-string types; `rtao::btauth::server::Json<T>` for subnet authors; oracle JSON compared with integers exact and non-integers as f64; an M0 test pins all of it |
 | R20 (new) | upstream churn moves the parity target during development | certain / medium | upstream tracking as standing work from M2 ([§12.1](#121-overview)); pin bumps from M2, by the agent during the goal loop and by the bot after it ([§12.4](#124-m2-validator)); the porting report sizes each bump; auto-bless covers cosmetic edits; the M8 strict gate is evaluated at the `parity_tag` current at M8 |
-| R21 (new) | the Ledger emulator lane is not the production path: Speculos never runs the core's HID transport or the binary Ledger Live installs; until PR-U17 ships, the rtao workspace, and with it the device-run build and the release binaries, uses the patched core, whose `open()` path differs from upstream only by the seam; and the lane's tooling moves (API levels, image tags, removed flags) | certain until PR-U17 / medium | PR-U17 filed in M0; `[core.patch] paths` bounds the difference, and `xtask pin --check` fails once the patch is obsolete ([§5.10](#510-the-pr-u17-core-patch)); `core-unpatched` proves that shipped crates build without it; the manual device run per release covers the HID path, the shipped app and the real screen; pins by digest and a source-built ELF checked by sha256 ([§9.5](#95-python-oracle-and-interop)) |
-| R22 (new) | a runtime or Ledger app change breaks clear signing for every SDK: finney runtimes 456 and 457 shipped without the compiled metadata hash, and every Ledger transaction failed with `CannotLookup` ([subtensor#3159](https://github.com/RaoFoundation/subtensor/issues/3159)) | low / high for Ledger users | the nightly emulator lane submits Ledger-signed extrinsics to the pinned localnet; `live-probe` checks finney's compiled metadata hash every 6 hours ([§9.7](#97-ci-lanes-and-what-each-catches)); upstream issues filed on evidence |
+| R21 (new) | the Ledger emulator lane is not the production path: Speculos never runs the core's HID transport or the binary Ledger Live installs; until PR-U17 ships, the rtao workspace, and with it the device-run build and the release binaries, uses the patched core, whose `open()` path differs from upstream only by the seam; and the lane's tooling moves (API levels, image tags, removed flags) | certain until PR-U17 / medium | PR-U17 filed in M0; `[core.patch] paths` bounds the difference, and `xtask pin --check` fails once the patch is obsolete ([§5.10](#510-the-pr-u17-core-patch)); `core-unpatched` proves that shipped crates build without it; hardware/HID coverage remains deferred and unverified under Q30; pins by digest and a source-built ELF checked by sha256 ([§9.5](#95-python-oracle-and-interop)) |
+| R22 (new) | a runtime or Ledger app change breaks clear signing for every SDK: finney runtimes 456 and 457 shipped without the compiled metadata hash, and every Ledger transaction failed with `CannotLookup` ([subtensor#3159](https://github.com/RaoFoundation/subtensor/issues/3159)) | low / high for Ledger users | optional targeted hosted emulator/probe checks can supply evidence; no scheduled campaign or hardware acceptance is claimed ([§9.7](#97-ci-lanes-and-what-each-catches)); upstream issues filed on evidence |
 
 R2 (release cadence), R6 (extraction breakage), R10 (typed-model misreads), R14 (licensing, settled by Q1) and R15
 (git-only Python parser) are rated low likelihood or low impact in architecture §15.1 and are not repeated here.
@@ -2606,14 +2419,21 @@ The answers are final, like the decisions of
 | Q3 | Binary name: keep `rtao` only, or also ship an opt-in `btcli` shim? With shared config files a shim could surprise users who have both | "rtao only" | the binary is `rtao`; no `btcli` shim | [§4.3](#43-crates); a non-goal in [§16](#16-non-goals) |
 | Q4 | btauth/1 `<Bytes>`-wrapped signatures: accept by default (Python parity) or reject by default? rtao never produces them | "yes accept both" | verification accepts plain and `<Bytes>`-wrapped signatures by default (`WrappedPolicy::AcceptLikePython`); `WrappedPolicy::Strict` stays available; rtao never produces the wrapped form | an rtao miner accepts every request a Python miner accepts ([architecture §7.1](docs/plan/architecture.md#71-core-no-io-no-tokio)) |
 | Q5 | Repository location: `github.com/sam0x17/rtao`? | "yes" | `github.com/sam0x17/rtao` | the manifests of [§7.1](#71-manifests-for-the-three-profiles), the template's invocation and the template job's `[patch."https://github.com/sam0x17/rtao"]` (M3-09) |
-| Q17 | Ledger in CI: a self-hosted hardware runner, or a manual release checklist? | "sure, though maybe there is some shim we can use, worth researching" | a manual device run per release stays the final release check, and the researched shim is adopted: Speculos, Ledger's device emulator, runs the real Polkadot generic app in a CI-only lane, and `pr-gates` replay its recorded transcripts in Rust ([research J](docs/plan/research/J-ledger-ci-shim.md)) | M7-09 and M7-10 build the emulator lane ([§9.5](#95-python-oracle-and-interop); [architecture §11.9](docs/plan/architecture.md#119-ledger-emulator-lane-speculos)); the core's Ledger transport cannot be swapped (G16), so PR-U17 is filed in M0 and, until it ships, rtao's workspace carries it as a core patch (Q20, [§5.10](#510-the-pr-u17-core-patch)); M7-11 writes the device-run checklist, limited to what the emulator cannot cover (the HID transport, the app binary users install, real firmware, the review on a real screen), and the user runs it; every release from M7 on repeats it ([§10.5](#105-compatibility-matrix-and-run-time-guard)) |
+| Q17 | Ledger in CI: a self-hosted hardware runner, or a manual release checklist? | "sure, though maybe there is some shim we can use, worth researching" | Original decision: manual device checklist plus CI-only emulator research. Q30 now defers device acceptance and makes emulator execution optional hosted evidence | Q30 defers manual hardware acceptance and makes costly emulator checks optional hosted evidence; no local device rehearsal or release gate |
 | Q18 | Upstream engagement: file each upstream PR when its evidence exists, or all of them in M9? | "go ahead and file them once evidence exists, I assume you are talking about upstream fixes we found?" | yes, these are the upstream fixes and improvements found while planning: the confirmed core defects (PR-U2's `Sudo.Sudid` receipt, PR-U5's epoch predicate, PR-U7's shield era), the staged-code moves (PR-U1, U6, U9, U10, U15), the public `Policy` inputs (PR-U8), the `w3f-bls` manifest change (PR-U4), the catalog and metadata publishing improvements (PR-U3, U11, U12, U16), the encrypted keyfile vectors (PR-U13), the `SelectiveMetagraphIndex` request (PR-U14), the Ledger transport seam found while researching Q17 (PR-U17) and the Python-side issues. Each is filed as soon as its evidence exists | filing in the monorepo is pre-authorized ([Executing this plan](#executing-this-plan), rule 7); the one item found later outside it, for the Ledger app, was filed with Zondax on 2026-10-13 at the user's request (Q22); [§15](#15-upstream-contributions) names each one's evidence step and records its link (common exit check C4); M9-04 audits them |
 | Q19 | Security passes: M2, M3, M4 and M7 each end with a security pass by a reviewer other than the author. Who performs them? | "we will use local cold readers" | local cold readers: fresh-context reviewers given only the repository, the milestone diff and a security checklist | the procedure is in [§12.1](#121-overview); M2-26, M3-11, M4-19 and M7-13; M9-06 applies it to the whole repository |
 | — | Time estimates (an instruction, not a numbered question) | "don't bake time into the plan, I'm going to have codex execute it as a goal step by step, but I wouldn't commit to specific days being specific things, AI is notoriously bad at estimating its own completion times either way" | no time estimates: no durations, effort figures, milestone dates or staffing calendars; CI cadences and upstream release-cadence facts stay | [Executing this plan](#executing-this-plan); [§1.4](#14-delivery-order); step IDs and numbered exit checks in [§12](#12-milestones); [§12.13](#1213-dependency-order-and-external-prerequisites); [§12.14](#1214-first-steps) |
-| Q20 | Ledger emulator lane until PR-U17 ships: plan v2 had "a test-only copy of the core's Ledger message code" in `rtao-testkit` | "ok let's just add to the plan that we will cargo patch bittensor-core with that support until it merges" | until a `core_tag` contains PR-U17, the rtao workspace builds `bittensor-core` through a Cargo `[patch]` that adds exactly PR-U17 on top of `core_tag`; the test-only transcription survives only as a fallback if upstream declines PR-U17 | [§5.10](#510-the-pr-u17-core-patch): M0-01 files PR-U17 from the user's fork; M7-09 adds the patch branch `rtao-core-patch/<core_tag>`, the two root `[patch]` tables, `[core.patch]`, `xtask core-patch`, the core-patch rules of `xtask pin --check`, the clippy entries that keep PR-U17's items in `rtao-testkit::ledger_emu` and the `core-unpatched` job (M7 exit 14); the emulator lane and `ledger_replay` run the core's own `ledger.rs` from their first run; subnet builds never see the patch (Cargo ignores `[patch]` in dependencies); a pin bump rebases the patch, or drops it once a tag contains PR-U17; upstream declining PR-U17 is a stop-and-ask point (rule 6) |
-| Q21 | Merging: the v2 summary said "Codex may merge its own PRs once the required checks pass" and asked whether every merge should need the user's approval | "we are just going to develop all of this in one goal loop, no PRs, just let codex commit until it is done" | M0 to M9 run as one continuous goal loop: no PRs in the rtao repository; the agent commits directly to `main` and pushes, without asking, until M9 exits | [Executing this plan](#executing-this-plan) rules 1, 2, 6, 7 and 8: `cargo xtask gates` (M0-27) before every push, and a red blocking lane on `main` stops the line; milestone tags pushed without approval (C7); C1 and C5 read pushes and the agent's own pin bumps; `pr-gates` and `e2e` run on pushes, the label-driven lanes on path filters ([§9.7](#97-ci-lanes-and-what-each-catches)); the jobs that push or open PRs stay off (`RTAO_UPKEEP`) with `dry-run` dispatches, and release-plz is not used; no branch protection, merge queue or bot App during the loop; M9-07 hands upkeep over (rtao-bot, `RTAO_UPKEEP=on`, branch protection if the user wants PR-based upkeep) |
+| Q20 | Ledger emulator lane until PR-U17 ships: plan v2 had "a test-only copy of the core's Ledger message code" in `rtao-testkit` | "ok let's just add to the plan that we will cargo patch bittensor-core with that support until it merges" | until a `core_tag` contains PR-U17, the rtao workspace builds `bittensor-core` through a Cargo `[patch]` that adds exactly PR-U17 on top of `core_tag`; the test-only transcription survives only as a fallback if upstream declines PR-U17 | [§5.10](#510-the-pr-u17-core-patch): M0-01 files PR-U17 from the user's fork; M7-09 adds the patch branch `rtao-core-patch/<core_tag>`, the two root `[patch]` tables, `[core.patch]`, `xtask core-patch`, the core-patch rules of `xtask pin --check`, the clippy entries that keep PR-U17's items in `rtao-testkit::ledger_emu` and the `core-unpatched` job (the hosted M7 core-patch check); the emulator lane and `ledger_replay` run the core's own `ledger.rs` from their first run; subnet builds never see the patch (Cargo ignores `[patch]` in dependencies); a pin bump rebases the patch, or drops it once a tag contains PR-U17; upstream declining PR-U17 is a stop-and-ask point (rule 6) |
+| Q21 | Merging: the v2 summary said "Codex may merge its own PRs once the required checks pass" and asked whether every merge should need the user's approval | "we are just going to develop all of this in one goal loop, no PRs, just let codex commit until it is done" | M0 to M9 run as one continuous goal loop: no PRs in the rtao repository; the agent commits directly to `main` and pushes, without asking, until M9 exits | Q30 replaces local full prepush gates with hosted acceptance and defers milestone tags and automatic-upkeep handover. Direct client-development commits remain authorized |
 | Q22 | Ledger app display: the core patch cannot change how the Ledger app shows amounts, and the app shows stake amounts typed `TaoBalance` as raw integers ([research J §4.6](docs/plan/research/J-ledger-ci-shim.md#46-upstream)); plan v2 left filing with `Zondax/ledger-polkadot` to the user's approval | "for zondax we should just submit a PR or issue"; later the same day: "yeah go ahead and open it now, ideally with a PR fixing it if it is an easy fix" | filed on 2026-10-13, before the plan runs: issue [Zondax/ledger-polkadot#295](https://github.com/Zondax/ledger-polkadot/issues/295), PR [#296](https://github.com/Zondax/ledger-polkadot/pull/296), which adds `TaoBalance` to the app's balance type names; `AlphaBalance` stays unformatted (a per-subnet token, never TAO) | [Executing this plan](#executing-this-plan): rule 6 no longer names the item (any other filing outside the monorepo stays stop-and-ask), and rule 7 pre-authorizes its follow-up (answering maintainer questions, pushing the changes they ask for to the PR branch); C4 counts it as filed; the [§15](#15-upstream-contributions) row; M7-12's guide note stays until a released app version formats the amounts; M9-04 audits it |
-| Q23 | External prerequisites and CI/docs choices, 2026-10-14 | "I can provide testnet tao to whatever wallet address you need; just use my github; we will skip sophisticated github runners, I want to just use ubuntu-latest free ones; I don't see why we need github pages, that seems overkill; I have a ledger we can use" | use `sam0x17` for GitHub/GHCR; hosted CI is free `ubuntu-latest` Linux x64 only; downloadable rustdoc/book release assets replace Pages; testnet funding is offered and a Ledger is available | §12.13 records what is still pending; §9.8 and architecture Appendix E preserve platform support through fixed glibc 2.35 build containers, Linux ARM cross tooling and local Mac Studio builds/checks; Keychain parity, trustworthy local-build provenance, clone resources, soak host/setup and manual device results require evidence, not assumed completion |
+| Q23 | External prerequisites and CI/docs choices, 2026-10-14 | "I can provide testnet tao to whatever wallet address you need; just use my github; we will skip sophisticated github runners, I want to just use ubuntu-latest free ones; I don't see why we need github pages, that seems overkill; I have a ledger we can use" | use `sam0x17` for GitHub/GHCR; hosted CI is free `ubuntu-latest` Linux x64 only; downloadable rustdoc/book release assets replace Pages; testnet funding is offered and a Ledger is available | Q30 removes local Mac builds, hardware/Keychain rehearsals and clone/soak infrastructure prerequisites. Native macOS/ARM/hardware coverage is reported as unverified; release publishing is deferred |
+| Q24 | Preserve u64 chain balances and Python's arbitrary signed balances? | "Preserve both with signed DynBalance (Recommended)" | `DynBalance` stores an arbitrary signed integer; typed and wire balances use checked u64 | M0-21 retains the full Python strategy bounds through ±2^80 rao and checks range before chain encoding; architecture §5.2 |
+| Q25 | Adopt the chain's native balance behavior instead? | "actually imo it is cleaner if we just adopt the chain's native balance behavior, what do you think?"; "let's do it"; "yes" | Supersedes Q24: all balances use u64 rao, with distinct TAO/alpha units and checked arithmetic | Valid-chain display/JSON parity remains; negative and arbitrary-size Python local balance arithmetic is excluded as D-035. M0-21 properties use native bounds and explicit rejection/overflow/underflow tests; M2 formatting vectors retain 10,000 cases over the native domain |
+| Q26 | BLS exit criterion, 2026-10-14 | "Approve the built-dependency check" (both explicit BLS questions) | Require exactly one built BLS implementation at the core pin; allow only the recorded dormant registry 0.1.9 lock entry and fail on its activation | Supersedes the literal raw-lock count in M0 exit 5, M0-09/M0-11/M0-14, §5.6 and architecture §1.3; source, commit, version, unexpected-entry and all-profile/all-target checks remain mandatory |
+| Q27 | Dormant supply advisory, 2026-10-14 | "Allow guarded dormant exception (Recommended)" | Permit only RUSTSEC-2026-0253 for the exact inactive lru 0.16.4 registry package; retain the unfiltered audit and reject activation or unexpected affected entries | Guard the all-feature/all-target workspace, fuzz and shipped profiles before applying the exception; all other advisories, tool failures, licenses, sources and bans remain blocking |
+| Q28 | Dormant ruzstd advisory, 2026-10-14 | "Allow guarded dormant exception" (explicit asynchronous reply) | Permit only RUSTSEC-2026-0344 for ruzstd 0.8.3 from crates.io with checksum a7c1c839d570d835527c9a5e4db7cb2198683a988cb9d7293fc8674e6bd58fc8, while absent from all checked graphs; retain the original nonzero raw audits and require patched range >=0.9.1 | Exact Q27/Q28 audit and activation guards remain applicable in hosted CI. Q30 removes the full local matrix before commit or push |
+| Q29 | M2 testnet soak, 2026-10-14 | "we can probably skip a testnet soak, let's just make sure all tests are passing"; "even OTF/RaoFoundation themselves don't do such things" | Waive the 24-hour testnet soak, M2-24 and its dedicated funding/subnet/host prerequisites | M2-24 records the waiver without a passing soak. Q30 makes costly container/interop checks optional hosted evidence and defers releases. Preserve prepared wallet/recovery state |
+| Q30 | Local resource use and scope, 2026-10-14 | "stick to development tasks"; "running a bunch of tests in github CI should be sufficient"; "remove anything from the plan that would be costly locally" | Substantial validation belongs on free hosted CI; prohibit local nodes, localnets, containers, soaks, duplicate builds/toolchains, hardware/Keychain rehearsals, fuzz/benchmark and release campaigns | Current execution scope and C1-C7 supersede conflicting rules. Remove mainnet cloning; defer release/platform/device acceptance and automatic upkeep. Preserve source and durable state, clean disposable data, and report actual coverage |
 
 ### 14.2 Resolved by measurement or with upstream
 
@@ -2634,6 +2454,9 @@ From [architecture §15.2](docs/plan/architecture.md#152-decisions-and-open-ques
 | Q16 | is tokio-tungstenite 0.30's handshake error API identical to 0.28's? | `FakeNode` test | M1 |
 
 ### 14.3 Gaps found while planning
+
+Historical planning discussion. Infrastructure solutions recorded below were subsequently removed or made optional
+by Q30; current milestone steps state the active client requirements.
 
 The drafting step recorded fourteen gaps in the architecture. The review step decided all of them, so none remains
 open: each decision lives in the section that owns it, and the items that still need upstream action are tracked as
@@ -2659,6 +2482,9 @@ For references to the drafting numbers (python-module-map.md cites some):
 
 ### 14.4 Gaps found in the final review
 
+Historical review notes, retained as evidence. The retired workflow specimen and infrastructure schedules below
+are not instructions to restore them; Q30 and the revised milestone steps describe current work.
+
 The completeness review that followed the six-lens review found these and decided each; the decision lives in the
 section named, and architecture.md carries the same decision.
 
@@ -2666,14 +2492,14 @@ section named, and architecture.md carries the same decision.
 |---|---|---|
 | 15 | `NeuronCx` and the `Validator` trait (M2) hold a `MetagraphHandle` and a `SignedClient` and take a `MetagraphDiff`, which were scheduled in M3 | M2 ([§12.4](#124-m2-validator), [§12.1](#121-overview)) |
 | 16 | localnet scenario 8 (runtime upgrade mid-session) had no milestone | M2, its offline-payload assertion in M5 ([§9.4](#94-localnet-e2e)) |
-| 17 | the `pin-bump`, `oracle-refresh`, `upstream-next`, `core-canary`, `live-probe`, `features-powerset`, `release-plz` and `release` workflows, `xtask compat` and the run-time compatibility guard had no milestone, although upstream tracking starts in M2 | M1 and M2 ([§12.3](#123-m1-read-path-and-the-first-typed-read), [§12.4](#124-m2-validator)); M2 exits with a reproducible re-pin at the pinned tag |
+| 17 | Historical: the `pin-bump`, `oracle-refresh`, `upstream-next`, `core-canary`, `live-probe`, `features-powerset`, `release-plz` and `release` workflows, `xtask compat` and the run-time compatibility guard had no milestone, although upstream tracking starts in M2 | M1 and M2 ([§12.3](#123-m1-read-path-and-the-first-typed-read), [§12.4](#124-m2-validator)); M2 exits with a reproducible re-pin at the pinned tag |
 | 18 | `e2e_map.toml` had no state for a key whose rtao test does not exist yet, and 15 of the 39 upstream `test_*` names had no milestone | `rtao`/`na`/`pending` states ([§9.4](#94-localnet-e2e)); [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names) |
 | 19 | the Vault signer's loopback WebSocket page server fell outside dependency rule 2, and no crate rendered its QR frames | [§4.2](#42-layers) rule 2; M7 ([§12.9](#129-m7-signers-evm-pow-gpu-timelock-ux)) |
 | 20 | `cargo doc --workspace` lets the `rtao` binary's docs overwrite the facade's in the docs archive | `doc = false` ([§11](#11-documentation-plan)) |
 | 21 | `rtao wallet save-password-env`, the three profile examples, `rtao_metagraph::persist`, `auto-update` and `lint-upstream` had no milestone | M4; M2, M3 and M4; M3; M9; M0 ([§12](#12-milestones)) |
-| 22 | no rtao CI job generated the template and tested it against the PR's commit (the template's own CI would build the last tag), and template-only PRs skipped the localnet | the `template` job in `e2e.yml`, part of `e2e-required` (M3, [§12.5](#125-m3-miner); [§9.7](#97-ci-lanes-and-what-each-catches)) |
+| 22 | no rtao CI job generated the template and tested it against the PR's commit (the template's own CI would build the last tag), and template-only PRs skipped the localnet | ordinary hosted template source checks; optional integration is no longer part of required development acceptance (M3, [§12.5](#125-m3-miner); [§9.7](#97-ci-lanes-and-what-each-catches)) |
 | 23 | the completeness layer checked only the root `__all__`, not the 14 other public `__all__` lists (`evm` alone exports 38 names) | [§8.3](#83-how-parity-is-enforced) completeness row and `parity/exports_extra.toml` (M2) |
-| 24 | the 24-hour testnet soak had no host, although GitHub-hosted jobs stop after 6 hours | a long-lived host, an external prerequisite ([§12.4](#124-m2-validator), [§12.13](#1213-dependency-order-and-external-prerequisites)) |
+| 24 | the 24-hour testnet soak had no host, although GitHub-hosted jobs stop after 6 hours | originally a long-lived host prerequisite; superseded by Q29's explicit soak waiver ([§12.4](#124-m2-validator), [§12.13](#1213-dependency-order-and-external-prerequisites)) |
 | 25 | nothing compared the `--json` output of the 163 hand-written commands with btcli's, although JSON is the CLI's parity contract (`--json` is global); lanes 5 and 8 cover only reads, `tools` and `tx` plans | interop lane 9 through `PinProxy` (M4, extended per milestone; [§9.5](#95-python-oracle-and-interop)); M8 exit |
 | 26 | python-module-map.md marked only 11 Python unit-test files `ported`, while architecture §11.2 ports `test_lock_ownership_gate` and the M7 exit requires ports of `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm`; five behavior tests the oracle cannot reach (PoW challenge, owner pruning, name ordering, facades, commitments accounting) were `oracle-only` | 21 files `ported`, each in the milestone of its code ([§9.2](#92-upstream-fixtures-reused)) |
 | 27 | architecture Appendix E's `nightly.yml` did not parse as YAML (a `: ` inside the plain `run:` scalar of the `core-canary` issue step), so GitHub would reject the whole nightly workflow: `upstream-next`, `core-canary`, `fuzz`, `bench` and `features-powerset` | a block scalar; every workflow block of Appendix E now parses ([architecture Appendix E](docs/plan/architecture.md#appendix-e-ci-workflows)) |
@@ -2689,21 +2515,21 @@ at step" names the step whose output completes the evidence; filing is pre-autho
 
 | PR | What | Why | Evidence | Evidence at step | Filed |
 |---|---|---|---|---|---|
-| PR-U1 | public sans-IO protocol functions in a new ungated module `sdk/bittensor-core/src/protocol/{metadata,storage,runtime_api,extrinsic_lookup,dispatch_error,fee}.rs`, which the blocking client also calls (metadata fetch, storage decode, runtime-API encoding, extrinsic lookup, outcome and dispatch-error decode), plus the `TransactionPaymentApi_query_info` probe | private today; fee estimation uses deprecated `payment_queryInfo` | `CORE/client.rs:469-499, 551-576, 942-1048, 1234-1365` | M2-06 (with `metadata`, `storage` and `runtime_api` from M1-02) | — |
-| PR-U2 | Python-parity receipts in an ungated `protocol/receipt.rs` (`Sudo.SudoAsDone`, `Utility.BatchInterrupted`/`ItemFailed`, MevShield failures, fee fallback, and `Sudo.Sudid`'s `sudo_result` field) | the core misses nested failures, and reports a failed `Sudo.sudo` as success | `CORE/client.rs:1024-1044` vs `PY/_transport/utils/receipt.py:8-16`; the `Sudid` defect ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #4); a `FakeChain` receipt test with a failed `Sudid` (M2) and scenario 18's Sudo-wrapped ops (M5) | M2-06; scenario 18 (M5-06) adds live evidence to the open PR | — |
+| PR-U1 | public sans-IO protocol functions in a new ungated module `sdk/bittensor-core/src/protocol/{metadata,storage,runtime_api,extrinsic_lookup,dispatch_error,fee}.rs`, which the blocking client also calls (metadata fetch, storage decode, runtime-API encoding, extrinsic lookup, outcome and dispatch-error decode), plus the `TransactionPaymentApi_query_info` probe | private today; fee estimation uses deprecated `payment_queryInfo` | `CORE/client.rs:469-499, 551-576, 942-1048, 1234-1365` | M2-06 (with `metadata`, `storage` and `runtime_api` from M1-02) | [subtensor#3246](https://github.com/RaoFoundation/subtensor/pull/3246), open; filed 2026-10-14 |
+| PR-U2 | Python-parity receipts in an ungated `protocol/receipt.rs` (`Sudo.SudoAsDone`, `Utility.BatchInterrupted`/`ItemFailed`, MevShield failures, fee fallback, and `Sudo.Sudid`'s `sudo_result` field) | the core misses nested failures, and reports a failed `Sudo.sudo` as success | `CORE/client.rs:1024-1044` vs `PY/_transport/utils/receipt.py:8-16`; the `Sudid` defect ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #4); a `FakeChain` receipt test with a failed `Sudid` (M2) and scenario 18's Sudo-wrapped ops (M5) | M2-06; scenario 18 (M5-06) adds live evidence to the open PR | [subtensor#3247](https://github.com/RaoFoundation/subtensor/pull/3247), open; filed 2026-10-14 |
 | PR-U3 | export custom transaction codes, invalid-transaction needles, dispatch errors, explanations and help overrides in `errors.json` | removes extraction from `error_map.py`/`result.py` | `PY/error_map.py:488, 524, 555`; `PY/result.py:116-287` | M2-03 | — |
 | PR-U4 | `w3f-bls = { version = "=0.1.3", features = ["std"] }` in the core manifest | removes every downstream patch line | `UP/sdk/bittensor-core/Cargo.toml:62`; E0277 without the patch; `ci/pr-u4-probe/` (scenario 16): offline cross-decryption and a localnet reveal; the four-file diff between crates.io `w3f-bls` 0.1.3 and `vendor/w3f-bls` | M2-20 (scenario 16) | — |
-| **PR-U5** | `should_run_epoch` uses `> tempo` and the simulator caps the counter at `tempo + 1`; `generate_commit_v2_at(now, …)` | **confirmed bug**: commits can be lost silently after an `EpochSkipped` slot or a tempo lowered below the step counter, for the core's and Python's users | [§5.8](#58-known-core-defects-and-how-rtao-handles-them) #2, #3 | M2-11 | — |
+| **PR-U5** | `should_run_epoch` uses `> tempo` and the simulator caps the counter at `tempo + 1`; `generate_commit_v2_at(now, …)` | **confirmed bug**: commits can be lost silently after an `EpochSkipped` slot or a tempo lowered below the step counter, for the core's and Python's users | [§5.8](#58-known-core-defects-and-how-rtao-handles-them) #2, #3 | M2-11 | [subtensor#3248](https://github.com/RaoFoundation/subtensor/pull/3248), open; filed 2026-10-14 |
 | PR-U6 | split `host` into `keyfiles-json`, `keyfiles-crypto`, `drand-http`, `rpc-client`, `parallel`, `pow` | neurons need only the pure JSON codec | `CORE/lib.rs:10-31`; `CORE/keyfiles/mod.rs:179-370` | M2-02 | — |
 | **PR-U7** | `submit_shielded` signs carrier and inner with era ≤ 8 and resolves the inner receipt | **confirmed bug**: the runtime rejects the core's era-64 carrier as `Stale`; fixes the core's own users and retires nothing in rtao, which never calls it | [§5.8](#58-known-core-defects-and-how-rtao-handles-them) #1 | M4-15 (scenario 11) | — |
 | PR-U8 | public `PolicySubject`/`PolicyInput` | any intent layer can reuse `Policy::check`; retires nothing in rtao, whose equivalence test already builds the core with `host` | `CORE/transaction.rs:55-90, 929-976` | M2-08 | — |
-| PR-U9 | `Runtime::metadata_ir()` shared by the Python binding and rtao, with storage hashers, key idents, event fields and runtime-API signatures | the IR exists only in the PyO3 binding | `UP/sdk/bittensor-core-py/src/runtime.rs:554, 579` | M1-02 | — |
-| PR-U10 | pure `encode_password_for_environment`; public `keys::verify_strict` | `set_var` is unsound with threads; strict verification is private | `CORE/keyfiles/mod.rs:126-138`; `CORE/keys/mod.rs:78-100` | M2-02 (`keyfile_env`; `verify_strict` exists from M0-17) | — |
+| PR-U9 | `Runtime::metadata_ir()` shared by the Python binding and rtao, with storage hashers, key idents, event fields and runtime-API signatures | the IR exists only in the PyO3 binding | `UP/sdk/bittensor-core-py/src/runtime.rs:554, 579` | M1-02 | [subtensor#3249](https://github.com/RaoFoundation/subtensor/pull/3249), open; filed 2026-10-14 |
+| PR-U10 | pure `encode_password_for_environment`; public `keys::verify_strict` | `set_var` is unsound with threads; strict verification is private | `CORE/keyfiles/mod.rs:126-138`; `CORE/keys/mod.rs:78-100` | M2-02 (`keyfile_env`; `verify_strict` exists from M0-17) | [subtensor#3250](https://github.com/RaoFoundation/subtensor/pull/3250), open; filed 2026-10-14 |
 | PR-U11 | `default` values and `mev_shield_*`/`all_amount_fields` class variables in `intents.json` | the catalog carries no defaults today | 0 catalog properties carry `default` | M2-03 | — |
-| PR-U12 | publish V15 and V16 metadata as release assets | the drift job can skip live fetches | — | M1-21 | — |
+| PR-U12 | publish V15 and V16 metadata as release assets | the drift job can skip live fetches | — | M1-21 | [subtensor#3245](https://github.com/RaoFoundation/subtensor/issues/3245), asset-contract request |
 | PR-U13 | committed encrypted keyfile vectors (NaCl, Fernet, Ansible) | upstream has none | interop-recorded cross vectors | M3-08 | — |
-| PR-U14 | expose `SelectiveMetagraphIndex` through metadata or a runtime API (issue) | removes `syn` extraction from pallet source | `pallets/subtensor/src/rpc_info/metagraph.rs` | M1-03 | — |
-| PR-U15 | move `Value` navigation helpers out of host-gated `client.rs` | no-host consumers need them | `CORE/client.rs:1515-1570` | M1-02 | — |
+| PR-U14 | expose `SelectiveMetagraphIndex` through metadata or a runtime API (issue) | removes `syn` extraction from pallet source | `pallets/subtensor/src/rpc_info/metagraph.rs` | M1-03 | [subtensor#3244](https://github.com/RaoFoundation/subtensor/issues/3244) |
+| PR-U15 | move `Value` navigation helpers out of host-gated `client.rs` | no-host consumers need them | `CORE/client.rs:1515-1570` | M1-02 | [RaoFoundation/subtensor#3243](https://github.com/RaoFoundation/subtensor/pull/3243), filed 2026-10-14 |
 | PR-U16 | `generate.py` `read_targets` (`:405-480`) scans each read's module-local helpers and module-level `Item(...)`/`Method(...)` descriptors | the catalog `hits` under-report 12 reads; `parity/read_hits_extra.toml` would shrink to the out-of-module items | [inventory §5.15](docs/plan/parity-inventory.md#515-hits-the-catalog-omits) | M2-09 | — |
 | PR-U17 | an `ApduTransport: Send + Sync` trait in `sdk/bittensor-core/src/signers/mod.rs`, outside the `ledger` gate, implemented by the HID transport, and `LedgerDevice::with_transport(transport: impl ApduTransport + 'static) -> Self`; `open()` unchanged and `LedgerDevice` still `Send + Sync`; optionally a std-only TCP transport for Speculos; prototyped while planning, 108 added lines including three unit tests ([research J §8](docs/plan/research/J-ledger-ci-shim.md#8-core-patch-prototype)); filed from the user's fork, whose `rtao-core-patch/<core_tag>` branches carry it into rtao's workspace until it ships ([§5.10](#510-the-pr-u17-core-patch)) | the core's Ledger transport is a private concrete HID type, so neither rtao nor upstream can run the Ledger path against Speculos, Ledger's emulator (G16) | `CORE/signers/mod.rs:6-9`, `CORE/signers/ledger.rs:51-65, 158-219`; the emulator runs of [research J](docs/plan/research/J-ledger-ci-shim.md), the last through the prototype | M0 (the evidence predates the plan); M7-09's transcripts add to the open PR | [RaoFoundation/subtensor#3242](https://github.com/RaoFoundation/subtensor/pull/3242), filed 2026-10-14 |
 
@@ -2731,6 +2557,8 @@ Issues to file (Python package, docs, scripts and runtime), each when the pinnin
 | nested module errors resolved through the generated table (D-028) | M2-08 | — |
 | `scripts/record_golden.py` hard-coding `SubtensorModule.Alpha`, which should become `AlphaV2` | M2-22 (`xtask record` lists it in `dropped.json`) | — |
 | the deferral question (Q9) | M2-17 (the reveal watcher attributes misses) | — |
+| Ed25519 signing-object erasure, including expanded scalar and nonce prefix | M2-26 | [subtensor#3251](https://github.com/RaoFoundation/subtensor/issues/3251); exact v478 Zebra 4.1.0 provenance and current/MSRV proof corrected 2026-10-14 |
+| malformed secret URI diagnostics disclose recovery phrase and password (D-036) | M2-26 | [subtensor#3252](https://github.com/RaoFoundation/subtensor/issues/3252); actual-constructor reproduction and tested-boundary mitigation scope corrected 2026-10-14 |
 | outside the monorepo, for `Zondax/ledger-polkadot`: stake amounts typed `TaoBalance` appear on the device as raw integers (`DOTAPP/app/src/metadata_parser.c:74-75`); the PR adds `TaoBalance` to the app's balance type names, and `AlphaBalance`, a per-subnet token, stays unformatted (Q22) | — (the emulator runs of [research J](docs/plan/research/J-ledger-ci-shim.md), before the plan runs) | filed 2026-10-13: issue [Zondax/ledger-polkadot#295](https://github.com/Zondax/ledger-polkadot/issues/295), PR [#296](https://github.com/Zondax/ledger-polkadot/pull/296) |
 
 ## 16. Non-goals
@@ -2753,7 +2581,7 @@ Deliberately not done, or not yet ([architecture §17](docs/plan/architecture.md
 | light client (smoldot) | finney's chain spec lacks a `lightSyncState` | upstream ships a light-client-ready spec |
 | crates.io publication | user decision | the user changes the constraint |
 | a `btcli` shim next to the `rtao` binary | the user chose `rtao` only (Q3); with shared configuration files a shim could surprise users who have both | the user asks for one |
-| a uhid virtual-HID bridge that runs the core's unmodified HID path against the Ledger emulator | unverified on GitHub-hosted runners (it needs the `uhid` module and root), impossible on Docker Desktop, Linux-only; it adds only the HID framing that the device run covers on real hardware | upstream declines PR-U17 and the user chooses it over carrying the core patch or a test-only transcription (rule 6, [§5.10](#510-the-pr-u17-core-patch)) |
+| a uhid virtual-HID bridge that runs the core's unmodified HID path against the Ledger emulator | unverified on GitHub-hosted runners (it needs the `uhid` module and root), impossible on Docker Desktop, Linux-only; it adds only the HID framing that the device run covers on real hardware | deferred; any future transport redesign needs separate scope (rule 6, [§5.10](#510-the-pr-u17-core-patch)) |
 | Python at build or run time, or in PR gates | the 100%-Rust goal | never |
 | `jsonschema` validation | Python validates through dataclasses | never |
 | re-exporting the core's blocking `Client` as `rtao::blocking` | diverges from Python's product behavior | never (it stays a test oracle) |
@@ -2807,16 +2635,16 @@ Deliberately not done, or not yet ([architecture §17](docs/plan/architecture.md
 | `RuntimeHandle` | `rtao_runtime::RuntimeHandle(Arc<RuntimeEntry>)`: a parsed V15 runtime with its surface report, shape cache and RFC-0078 digest, cached per `(genesis, spec)` by `rtao_client::RuntimeCache` |
 | `Money` / `Amount` | intent money input: `Money` is an untagged or netuid-tagged amount and `Amount` adds Python's `"all"`; each field resolves to a `DynBalance` by the call argument's unit and a sibling netuid field |
 | `SubnetsMetagraphExt` | the extension trait in `rtao::prelude` that provides `client.subnets().metagraph(netuid)` |
-| `e2e-required` | the e2e workflow's gate job: during the goal loop a stop-the-line signal and part of C1, after it a required check if the user turns on branch protection; it fails only when the `changes` job, a localnet job or the template job failed or was cancelled |
-| goal loop | the continuous execution of M0 to M9 in which the agent commits to `main` and pushes without PRs, after `cargo xtask gates`, the local equivalent of `pr-gates` ([Executing this plan](#executing-this-plan), Q21) |
-| `RTAO_UPKEEP` | the repository variable that turns on the jobs that push or open PRs (`metadata-drift`, `pin-bump`, `oracle-refresh`'s PR, `release-plz`, `ledger-emu`'s `record` commit); off during the goal loop, `on` from the handover (M9-07) |
+| `e2e-required` | legacy optional e2e workflow summary; not a required development check under Q30 |
+| goal loop | client development from M0 onward with direct commits and applicable hosted checks; full local matrices and milestone release campaigns are removed (Q21/Q30) |
+| `RTAO_UPKEEP` | repository variable for deferred automatic-upkeep jobs; remains off during current client development (Q30) |
 | btauth/1 | v11's signed-HTTP protocol between neurons (eight-line payload, `X-Bittensor-*` headers) |
 | Speculos | Ledger's device emulator (LGPL-3.0; a Python program with QEMU, in a Docker image), which runs the Polkadot generic app headless, takes APDUs over TCP, and exposes buttons, touch and screen events through a REST API |
-| `ledger-emu` lane | the CI-only lane that runs rtao's `LedgerSigner` against Speculos, records APDU transcripts that `ledger_replay` replays in `pr-gates`, and submits Ledger-signed extrinsics to a localnet ([architecture §11.9](docs/plan/architecture.md#119-ledger-emulator-lane-speculos)) |
+| `ledger-emu` lane | optional targeted hosted Speculos check; existing transcripts replay in ordinary Rust CI; no scheduled or local emulator campaign |
 | `LedgerBackend` | `rtao-signer`'s device seam under `LedgerSigner`: the core's `LedgerDevice` in production, fakes and emulator backends in tests |
 | step ID | the stable ID of a milestone step, `M<k>-<nn>` (e.g. `M2-07`); steps run in ID order ([Executing this plan](#executing-this-plan)) |
-| exit check | a numbered, objective check (a command, a named test or a CI lane) that must pass before a milestone exits; C1-C7 apply to every milestone ([§12.1](#121-overview)) |
-| cold reader | a fresh-context security reviewer, run locally, that took no part in the implementation and receives only the repository, the milestone diff and the security checklist ([§12.1](#121-overview)) |
+| exit check | active numbered client/source/hosted check that passes before a development milestone exits; optional infrastructure evidence and deferred distribution/device work are recorded separately under C1-C7 |
+| cold reader | a fresh-context source reviewer, with no independent local build/test campaign, that took no part in the implementation and receives only the repository, the milestone diff and the security checklist ([§12.1](#121-overview)) |
 | stop-and-ask point | an action the executing agent takes only after the user approves it ([Executing this plan](#executing-this-plan), rule 6) |
 
 ## 18. References
@@ -2894,12 +2722,18 @@ verification log is [Appendix F](docs/plan/architecture.md#appendix-f-verificati
 
 ## 19. Progress log
 
+Historical execution record. Earlier local-build, infrastructure and release instructions in dated entries are
+superseded by Q30; they are not current work requirements.
+
 Append-only, newest last ([Executing this plan](#executing-this-plan), rule 4). One line per event: a milestone exit
-with its release tag, a deviation from a step's text (what and why), a decision taken under rule 5, an upstream filing
+with its hosted acceptance record, a deviation from a step's text (what and why), a decision taken under rule 5, an upstream filing
 with its link, a wait on a prerequisite or on the user.
 
 | Date | Step or milestone | Event |
 |---|---|---|
+| 2026-10-14 | M0-21 | Resolved §5.2's u64 `DynBalance` contradiction with the full signed Python property suite under execution rule 5: `DynBalance` retains arbitrary signed integers, while typed and chain wire balances remain checked u64. Full `RAO`/`SIGNED_RAO` strategy bounds are preserved; conversion enforces chain limits. This extends the Python-shaped API to satisfy the user's full-parity decision without changing chain bytes. |
+| 2026-10-14 | M0-09 / M0-11 / M0-14 | The literal single-`w3f-bls` lockfile requirement fails: `Cargo.lock` holds pinned `0.1.3` and dormant registry `0.1.9` from `sp-core`'s optional `bls-experimental`. Rooted `cargo tree --workspace --all-features --target all -e normal,build -i w3f-bls@0.1.9` has no dependents; every built profile uses pinned `0.1.3`. Requested the user's decision under execution rule 2; existing raw-lock checks remain failing until answered. Continuing independent work. |
+| 2026-10-14 | M0-12 | Selected the plan's RustPython parser fallback (`rustpython-parser` 0.4.0, Rust-only). Ruff at `1ae6552a9432d759218db172c22a007eddfcb40b` requires `unicode-normalization ^0.1.23`, while `sp-core`'s `parity-bip39 2.0.1` requires exactly `0.1.22`; Cargo cannot resolve both semver-compatible requirements. No core pin or upstream crypto dependency was changed to accommodate tooling. |
 | 2026-10-14 | M0-01 | Filed PR-U17 [subtensor#3242](https://github.com/RaoFoundation/subtensor/pull/3242) from `sam0x17/subtensor`, branch `ledger-apdu-transport` at `eafe84e8a97376e7902118ebb204b9c53e3df55e`. Current Rust 1.89 checks passed (74 library tests, portable/wasm, binding and clippy); retained patch and results in `docs/upstream/pr-u17.md`. Upstream workflows ended in startup failures with no Rust check jobs; external deployment awaits authorization. User instructions for the fork identity and CI-only Python superseded conflicting upstream preflight instructions; compatible Rust checks ran against the pushed commit. Exact PR rehearsal directory removed after dependency checks. |
 | 2026-10-14 | M0-01 | Requested §12.13's external prerequisites; continuing independent steps while the response and PR-U17 validation are pending (execution rules 3 and 6). Task-scoped temporary root recorded in `docs/execution/state.md`. |
 | 2026-10-14 | M0-01 / Q23 | User offered testnet TAO to a prepared address, authorized `sam0x17` GitHub/GHCR, selected only free `ubuntu-latest` hosted jobs, declined Pages and confirmed a Ledger is available. Updated CI/release/docs commitments and §12.13; retained full parity, soak, macOS Keychain and release-provenance requirements. Testnet setup/host, local platform verification and mainnet-clone resource feasibility remain pending; no new step is checked by this decision. |
@@ -2913,3 +2747,67 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-13 | — | Q22 decided by the user: the Ledger app fix was filed with `Zondax/ledger-polkadot` before the plan runs (issue [Zondax/ledger-polkadot#295](https://github.com/Zondax/ledger-polkadot/issues/295), PR [#296](https://github.com/Zondax/ledger-polkadot/pull/296)); rule 6 no longer names it, rule 7 pre-authorizes its follow-up, and C4 counts it as filed (§15, M7-12, M9-04, M9 exit 3) |
 | 2026-10-13 | — | Plan v2.1 cold read: a milestone's tag waits for its other exit checks, and only the device run (from M7) and M9-07's last settings follow it (rule 3; M9-07 and M9 exit 5 put the device-run record of `rtao-v1.0.0` in the agent's last push); patch tags are pre-authorized (rule 7); `cargo xtask gates` changes nothing on the host, so the Keychain test runs only in CI (M0-27, M4-14); the obsolescence probe built against the fork carries the second core-patch table, and the first `core-patch rebase` takes PR-U17's commits from its review branch (§5.10). The Q21 and Q22 rows supersede the v2 cold read's items on release-plz's release PR, branch protection and the Zondax approval |
 | 2026-10-13 | — | After the v2.1 cold read: the Zondax issue [Zondax/ledger-polkadot#295](https://github.com/Zondax/ledger-polkadot/issues/295) and PR [#296](https://github.com/Zondax/ledger-polkadot/pull/296) replace the placeholders, and rule 7's follow-up includes pushing the changes maintainers ask for to the PR branch; `850f2755` was released as `v478` and finney and testnet moved to spec 478 the same day, so M0-06 pins the newest release finney runs (`v478` today) and the `v477` of the examples stands for it (§10.3 step 1 would refuse `v477` now); every monorepo git dependency is declared in the root `[workspace.dependencies]`, so a core bump rewrites all of them (M0-07, M0-20, §5.6, §10.3; architecture §1.2); `e2e-required` also fails when its `changes` job fails; M0-06's digests come from `xtask pin --parity <tag> --check`; M7-12's note covers the `limit_price` unit; M9-07 removes the drift auto-merge if the user declines branch protection |
+| 2026-10-14 | M0-21 / Q24 | User explicitly approved "Preserve both with signed DynBalance (Recommended)": signed arbitrary-size Python arithmetic and checked u64 typed/wire balances. The M0 property suite retains its original full bounds. |
+| 2026-10-14 | M0-16 | `cargo deny` identified absent license fields in pinned `procedural-fork` and `subtensor-linting`. Added version-scoped Apache-2.0 clarifications against their actual monorepo `../../LICENSE` (cargo-deny hash `0x1ff0b2a9`, SHA256 `ce46a3c2599448e6989685edf7a58cdc5c22aa6dffbb24d4d2386dd0469a84e6`); procedural-fork's inherited Parity source headers also identify Apache-2.0. The license gate passes without exclusions. |
+| 2026-10-14 | M0-27 | `cargo-hack --no-dev-deps` removes dev dependencies and requires pruning dev-only lock entries, conflicting with the prescribed `--locked` invocation. Under execution rule 5, run cargo-hack only in a task-scoped workspace snapshot, prune its lock offline, then reject any retained package with a changed name/version/source/checksum or any new package. The original manifests/lock remain intact and the exact locked feature checks are preserved. |
+| 2026-10-14 | M0-22 | Regression tests show plain Value-first deserialization still fails untagged `1e-05` under `serde_json/arbitrary_precision`. The Rust JSON adapter preserves exact ordinary number tokens and adapts Serde's content-buffering hook for nested untagged/flattened floats, requiring serde >=1.0.228. Serde's buffered content represents decimal scalars as f64, so exact money/ratio inputs remain ordinary custom fields; wide integers and chain corpus JSON stay exact. The original required float and integer regressions remain enforced. |
+| 2026-10-14 | M1-01 / M1-02 | Preparing independent extraction and portable core-extension work while the M0 literal BLS exit decision is pending, as execution rules 3 and 6 allow. M0 remains incomplete; no later milestone tag or checkbox is inferred from this preparation. |
+| 2026-10-14 | M1-01 | The prescribed `extract_check_covers_named_tables` test names tables scheduled for later extraction as well as settings/RPC. Following execution rule 5's minimum-unblocking rule, implement the extraction those named tables require now, preserving later catalog and behavior steps and refusing skipped/pending tables as passing coverage. |
+| 2026-10-14 | M0-21 / Q25 | User reconsidered signed balances and explicitly approved the native representation: "let's do it" and "yes" after recommending u64 rao, distinct TAO/alpha units and checked arithmetic. Q25 supersedes Q24. `DynBalance` follows the chain range; signed/arbitrary-size Python local arithmetic is excluded as D-035, and the property suite adapts to native bounds with negative/oversized rejection and underflow/overflow tests. Valid-chain formatting retains the required 10,000 native-domain oracle cases. No upstream defect is alleged by this API choice. |
+| 2026-10-14 | M0-25 | Python authentication accepts signed/arbitrary decimal nonce text and checks receiver/freshness before cryptography. The planned u64 Caller/store could not represent genuinely fresh `-1` at Unix zero or `u64::MAX+1` near that boundary. Under rule 5, widen authenticated nonce/replay keys, preserve checked u64 signing clocks, and normalize Unicode decimal nonce text using maintained Unicode data. This HTTP protocol type is separate from Q25's native chain balances; no unapproved auth-parity divergence is introduced. |
+| 2026-10-14 | M1-01 | `SetHyperparameter.wraps` is a derived comprehension over extracted `OWNER_HYPERPARAMETERS`, while architecture §4.9 excludes derived tables from extraction. Use a bounded Rust derivation with exact source-AST validation, Python insertion-order deduplication, source/table provenance and mutation tests. This preserves full named class-variable coverage without adding arbitrary comprehension evaluation. |
+| 2026-10-14 | M1-05…M1-09 | Preparing the socket transport and fakes against extracted RPC constants while M0's BLS decision remains pending. Work remains subject to all M1 transport, TLS and source-test requirements; no milestone completion or tag is inferred. |
+| 2026-10-14 | M1-06…M1-09 | `subxt-rpcs` 0.51.1 requires `native` or `web` even with defaults disabled; enable only `native`, keeping optional jsonrpsee disabled. RPC hash/status types use third-party `primitive-types::H256` and `TransactionStatus`, with explicit client conversions to rtao's H256, preserving RPC's third-party-only layer. Six `test_rpc.py` cases exercise higher client/transaction nonce wrappers; their owning implementation must land before claiming all 40 tests covered. |
+| 2026-10-14 | M1-03 / M1-04 | Pinned metadata contains unsigned `FixedU128<Frac32>` (`U96F32`) for RootProp and MinerBurned, absent from the plan's primitive type list. Add its exact u128/32-bit-fraction wrapper and mapping while retaining fail-closed unknown fractions. Shape hashes also include validated Lsb0/Msb0 bit-order tags: identical empty marker structures have different wire meaning. No upstream defect is inferred from these omissions. |
+| 2026-10-14 | M0-21 / M0-23 | Q25 native balance implementation passes 50 all-feature tests with 10,000 property cases, no-default tests, strict Clippy and Rust 1.89 in both configurations. Post-change golden replay passes all 11 tests and all 2,899 codec samples. D-035 is recorded with input, arithmetic, precision and valid-chain JSON pinning tests. Completion commits still wait for the full required gates. |
+| 2026-10-14 | M1-10…M1-14 / M1-09 | Client read-path preparation includes the minimum public error/nonce-cache wrappers required by six higher-level `test_rpc.py` cases. These source tests exercise the client/transaction boundary, so transport-only ports cannot complete M1-09. Implement the needed earlier wrappers under rule 5 while retaining full submission/nonce-lease work in M2. |
+| 2026-10-14 | M1-10 | Public network identities are now generated by pin --networks, using two genesis reads per extracted endpoint and rejecting immutable identity changes. Five network tests, four generator tests and final offline input verification pass; full ClientConfig/connect verification remains in M1 integration. |
+| 2026-10-14 | M1-13 / M1-23 | xtask compat v0 generates compatibility records from verified pins and metadata, with explicit raw BLAKE2b-256 versus SHA-256 identities. No validated range is emitted without immutable no-breaking drift, E2E and interop reports. Ten tests pass on current Rust and 1.89; offline output checking joins the generated-artifact gate. |
+| 2026-10-14 | M1-17 / M1-18 | Client cannot depend on namespace types in rtao-reads without a layer cycle. Under rule 5, expose command-generated namespace accessors through a blanket Namespaces trait over View, exported from rtao::prelude, preserving Client/Snapshot fluent syntax and the separate curated metagraph trait. |
+| 2026-10-14 | M1-15 | The ISO datetime parser retains CPython 3.12.12 parsing semantics, with credited source and the complete PSF license. The primitives package declares PSF-2.0 and the supply allowlist includes it. Python was not executed locally; the fetched source scratch was audited and removed. |
+| 2026-10-14 | M1-02 / PR-U15 | Filed RaoFoundation/subtensor#3243 from sam0x17/subtensor, sdk-value-navigation at 1ac10f67ff3dcf8306d18183471158b8a648cdb4. Nine portable navigation tests, 71 library tests, strict core/binding Clippy and wasm checks pass. Upstream workflows failed at startup with zero Rust jobs; no forbidden label or review request was applied. Exact clone/hook/configuration directory removed after dependency audits; retained patch/evidence in docs/upstream/pr-u15.md. |
+| 2026-10-14 | M1-17 | Category-generated namespace accessors now cover all fourteen pinned Python namespaces with SHA-verified inputs, exact catalog coverage and Python prefix checks; three mutation/regeneration tests pass. The facade prelude exposes current client/view and primitive vocabulary. Scoped checks and earlier reads/metagraph tests pass; full regeneration remains pending the 31-model and fixed-point shape integration. Evidence: `docs/execution/m1-namespaces.md`. |
+| 2026-10-14 | M1-20…M1-24 | Resumed parallel preparation of Criterion/fuzz/nightly checks, metadata drift and immutable baselines, read-only live probes, four-target release assembly and bounded endpoint quota measurement. Literal BLS lock checks remain failing; no milestone exit, hosted green run or tag is inferred. |
+| 2026-10-14 | M1-03 / PR-U14 | Filed RaoFoundation/subtensor#3244 requesting metadata/runtime-API discovery of selective metagraph field selectors. The pinned v478 enum has 77 indices and numeric Vec<u16> API arguments; regenerated descriptors and source/mapping mutation checks pass. Prior closed issues #1457/#1810 were checked. No runtime change, forbidden label or review request was made. Evidence and submitted body: `docs/upstream/pr-u14.md`. |
+| 2026-10-14 | M0-09 / M1 integration | RPC dependencies enabled serde_json/preserve_order transitively, changing object-key bytes in extraction and the core fingerprint. Canonical v1 object serialization restores the unchanged production fingerprint; Python dictionary insertion order remains in entry arrays. Integrated xtask tests and generated golden calls pass. The restored pin check again fails solely on the unchanged literal BLS lock criterion; no pin rebaseline or exit waiver was applied. |
+| 2026-10-14 | M1-24 | All seven extracted public pool endpoints accepted 252/252 paced lightweight reads at about one request per second without bursts, quota headers or policy refusals. PUBLIC retains 1/s and uses burst 1. Provider quota ceilings remain unknown; this is an observed operating rate for the sampled workload/source IP. All 39 RPC socket tests and strict Clippy pass. Isolated fixtures/artifacts audited and removed; evidence: `docs/execution/m1-endpoint-quotas.md`. |
+| 2026-10-14 | M1-16…M1-18 / M1-22 | All 31 structs, four exact enums, eleven semantic field contracts and fourteen namespace accessors pass regeneration. Updated Rust 1.89 metagraph/runtime tests and strict product Clippy pass. Full Finney/testnet read-only probes pass: finality, V15/spec/code/digest pins, netuid1/largest three-path JSON equality, last ten event blocks and Enabled ephemeral signed transaction validation, returning Invalid(Payment) without submission. No validated compatibility range is inferred without drift/E2E/interop reports. |
+| 2026-10-14 | M1-22 | Disposable core-canary preparation preserves release pins, resolves all monorepo dependencies/BLS patch to one immutable main revision and rejects active alternate/fork sources. Current main resolves to v478's commit. Full canary semantic tests pass after serial RPC reruns, except the preserved literal BLS count and a parent compatibility test-fixture integration issue now corrected in source; focused compatibility tests pass. Actual canary build provenance is separate from the retained release pin. Exact rehearsal removed after audit; no production pin changed. |
+| 2026-10-14 | M1-23 | Release/docs automation and both Mac CLI/facade build rehearsals are implemented and verified; verifier tests, strict Clippy, rustdoc, mdBook, actionlint and ShellCheck pass. Complete publication still waits for hosted Linux/ARM/resource evidence, approved local trust anchor and authenticated builds from a clean release tag. Rehearsal suite failures remain recorded, never attributed as passing tagged provenance. Disposable release fixtures and isolated Intel stdlib were audited and removed. |
+| 2026-10-14 | M1-20 / M1-22 | Local checks pass for 34 Criterion measurements and the actual 30% comparison, all 306 facade feature configurations, four instrumented ASan fuzz targets, strict Clippy and Rust 1.89. Evidence: `docs/execution/m1-performance.md`; measured no-host core 225, validator/miner 318, owner 394 on the recorded Mac target. Hosted lane runs and later conform/localnet additions remain required. Disposable copies/corpora audited and removed; shared caches retained for ongoing execution. |
+| 2026-10-14 | M2 preparation | Preparing signer/wallet, catalog/oracle, portable submission helpers, MetagraphSync and the independent btauth client while the literal M0 BLS decision remains pending (execution rules 3 and 6). M1 exits, hosted checks and milestone tags remain required. No step checkbox is inferred from local preparation. |
+| 2026-10-14 | M2-01 | Architecture's attached-key accessors lacked the intent-role context needed for Python's bare-signer fallback. Under rule 5, expose bare signer identity separately and resolve intent defaults through a role-aware public helper. A bare coldkey signer supplies no default hotkey; explicit overrides win and wallet public views never unlock. Fourteen current/MSRV role/signing tests and strict Clippy pass; evidence: `docs/execution/m2-signer.md`. |
+| 2026-10-14 | M1-21 / PR-U12 | Filed [subtensor#3245](https://github.com/RaoFoundation/subtensor/issues/3245) requesting V15/V16 metadata assets tied to the exact release WASM. v478 has five assets and no versioned metadata; finalized Finney bytes/checksums demonstrate availability. Started with an asset-contract issue so release maintainers can choose the export's place in their train, rather than presenting an unvalidated release patch. This filing does not complete metadata publication or the pending localnet/hosted drift exits. Submitted body/evidence: `docs/upstream/pr-u12.md`. |
+| 2026-10-14 | M2-11 / D-006 | Pure weight math passes six current/MSRV tests; staged schedule/payload helpers pass nine and strict library Clippy. The counter-threshold inclusion case also requires deriving the commit epoch after coinbase, while reveals use pre-coinbase state. Under rule 5, clarified this phase boundary within the existing D-006 correction and pinned reveal 126 versus the core's 110. Both no-host upstream safety probes fail as expected; existing upstream vectors still pass locally. Oracle vectors, receipt integration and PR-U5 filing remain required; evidence: `docs/execution/m2-weights.md`. |
+| 2026-10-14 | M2-06 / M2-11 / PR-U1, U2, U5 | Filed [subtensor#3246](https://github.com/RaoFoundation/subtensor/pull/3246), [#3247](https://github.com/RaoFoundation/subtensor/pull/3247) and [#3248](https://github.com/RaoFoundation/subtensor/pull/3248), with retained patches and committed-HEAD Rust 1.89 tests, strict Clippy and wasm validation. U5 review head is `9b4d8c51aa7d9fb11be6f0e4cef500e02e0fad36`; its checked simulation-budget guard is also carried in rtao. Remote workflows failed at startup with zero Rust jobs; this remains unvalidated hosted evidence. The first U1 binding check invoked local Python through PyO3 discovery, violating the CI-only instruction; the incident is retained in `docs/upstream/validation/pr-u1-python-discovery-incident.txt`. Later checks disable discovery with `PYO3_NO_PYTHON=1`, now the workspace default. No corpus, recorder or oracle was run locally. Disposable filing worktree was audited and removed. |
+| 2026-10-14 | M1-02 / PR-U9 | Filed [subtensor#3249](https://github.com/RaoFoundation/subtensor/pull/3249) at `0c4ed7585ae9d232577e53d45813f383e0ec2eec`, exposing a portable shared metadata IR and delegating the Python binding to it. Committed-HEAD Rust 1.89 validation passes eight portable regressions, 71 library tests (one pre-existing physical-GPU ignore), strict core/binding Clippy, wasm and formatting. The Python materialization regression is reserved for hosted CI. No local Python, forbidden labels or review requests were used; retained patch/body/gate evidence is in `docs/upstream/`. Hosted status and exact cleanup are being recorded. |
+| 2026-10-14 | PR-U9 cleanup | U9 hosted Rust run 38561149347 and the nine other workflows ended at startup with zero Rust jobs/check-runs. No retry or forbidden notification action was taken. Audited and removed the exact 207 MB `tmp/upstream-metadata-u9` tree: no process, open-file, launchd, configuration, symlink, virtualenv or Git dependency remained. Evidence: `docs/upstream/validation/pr-u9-cleanup.json`; shared build/pin/tools and unrelated work remain live. |
+| 2026-10-14 | M2-02 / PR-U10 | Filed [subtensor#3250](https://github.com/RaoFoundation/subtensor/pull/3250) at `c0208a82ab2a17a91c87654f3d6ebc0dc887cd20`. Portable `keyfile_env` exports pure password encode/decode and `keys::verify_strict` exposes existing Substrate verification without wrapped-message retry; host keyfiles delegate and retain compatibility. Both committed-HEAD pushes ran six no-host regressions, 71 library tests (one existing physical-GPU ignore), strict core/binding Clippy, wasm and formatting. The first SSH connection closed during the hook; an ordinary retry with SSH keepalives passed the same hook and published without bypass. No local Python or dependency/lock change. Hosted status and exact cleanup are pending their final records. |
+| 2026-10-14 | PR-U10 cleanup | U10 Check Rust run 38564404907 and nine other workflows ended at startup with zero Rust jobs/check-runs. No labels, review requests or workflow retries were used. The exact 207 MB `tmp/upstream-key-helpers-u10` tree was removed after process/open-file, launchd, configuration, symlink, virtualenv and Git audits found no live dependency. Bounded evidence is `docs/upstream/validation/pr-u10-cleanup.json`. Shared caches and unrelated work remain live. |
+| 2026-10-14 | M2 integration / M3 preparation | SS58 input spelling and descriptor-validated offline runtime loading pass current Rust and Rust 1.89 checks, including all 31 cache tests. The staged retirement probes retain all 15 portable modules against v478; the U10 password marker now targets the filed ungated export. Audited and removed the exact empty metagraph persistence and metadata-pin fixture parents. M3 server admission and miner publication are being prepared while the literal BLS criterion awaits an answer; all milestone exits remain required. |
+| 2026-10-14 | M2-26 / D-037 | Independent security review found malformed secret-URI error disclosure, unwiped core Ed25519 objects and codec copies, lost transaction identity after a postbroadcast deadline, and unbounded password-file reads. Remediation is in progress. D-037 bounds password/keyfile reads to 16 MiB and validates opened regular descriptors before buffering; Unix nonblocking opens reject FIFOs without retaining a worker, while regular symlinks remain compatible. All nine wallet library tests pass on current Rust and Rust 1.89. Filed [subtensor#3251](https://github.com/RaoFoundation/subtensor/issues/3251) for actual Ed25519 object erasure; that upstream risk remains open and unaccepted. The security exit remains pending until findings are verified fixed or explicitly accepted. |
+| 2026-10-14 | Q26 / Q27 | The user explicitly approved the built-dependency BLS check in both named questions and the guarded dormant lru advisory exception. These are specific criterion corrections; the later statement-only "yes" is not needed as approval evidence. Implementation and activation/unknown-entry regressions are in progress. Full gates must pass before any commit or push. Initial oracle staging remains pending/M2-05 until real authenticated hosted artifacts exist, with strict/history/removal checks retained; no milestone exit is inferred. |
+| 2026-10-14 | Upstream quality audit / D-036 / D-038 | User requested the complete filing inventory and independent accuracy/fix proofs for all eight PRs and five issues. Source, exact submitted HEADs and live bodies were reviewed. The four Subtensor issues pass artifact-isolated current/MSRV actual-core tests and fresh historical metadata RPC comparison; #3251's Zebra citation is corrected to upstream 4.1.0, and #3252 now includes a reproduction and limits mitigation to tested signer/wallet/codec boundaries. Direct raw core APIs retain upstream diagnostics. Independent review found and locally corrected U10's late base64 wipe guard and Zondax's price-ratio unit label; follow-up publication awaits final corrected-HEAD checks. A foreign shared-target test-binary rerun is excluded; final proof uses distinct no-op workspace wrappers. Ledger Hunter setup indirectly executed a local Python helper contrary to the CI-only rule; the incident is recorded, further configure is paused, and the exact accidental home cache was audited/removed. D-036 and the strict btauth retention-margin D-038 are registered. Evidence: docs/upstream/validation/quality-*.md. This audit claims no milestone, hosted Python, physical-device or full-preflight completion. |
+| 2026-10-14 | Q28 | The user explicitly approved the reviewed dormant ruzstd exception through the asynchronous "Allow guarded dormant exception" reply. Applied supply-ruzstd.patch exactly: only RUSTSEC-2026-0344 on registry ruzstd 0.8.3 with the pinned checksum and patched range >=0.9.1 may pass while absent from every workspace/fuzz/shipped all-target normal/build/dev graph. The 12 candidate regressions, separate-target Clippy and native 53-graph trial passed before approval. Final active supply verification passes against the canonical locks, including Unicode 0.6.0: unchanged cargo-deny passes all checks, both raw audits retain exit 1, all 53 graph checks pass, and the supply job exits 0. Current/MSRV guard and gate regressions, owned formatting and fresh isolated all-target Clippy pass; final raw evidence is ci/supply-24734 under the recorded task root. Both raw audits remain unfiltered/nonzero, cargo-deny stays unchanged, and all other findings/tool failures remain blocking. Full gates remain required before a commit, push or milestone exit; no repeated Q26/Q27/Q28 permission is required. Evidence: docs/execution/supply-ruzstd.md. |
+| 2026-10-14 | Integration / upstream audit | Published Zondax #296's committed-head native price-unit correction (8645ebd; 5,604 tests pass) and narrowed receipt/Ledger claims against exact evidence. Independent native Unicode review found 80 decimal and 5,812 printability differences between the prior Unicode 16 data and pinned CPython 3.12.11/Unicode 15; root pins category 0.6.0, stages authenticated printable data, adds input/diagnostic regressions and retains full required Unicode notices. Canonical importer now curates registration/uids pruning provenance as extra authenticated inputs without growing the parity file map; its nine regressions and import/verification pass. Test-only RPC imports move through the testkit instead of relaxing layer rules. Full corrected-source gates, remaining follow-up publication and binary notice distribution still precede any milestone exit or main push. |
+| 2026-10-14 | Integration | Final canonical dependency declarations/graphs pass after routing test-only core policy and test/tool RPC imports through rtao-testkit and offload through rtao-client; no third-party package identity changes or layer-gate relaxation. Fresh extraction, regeneration and strengthened Unicode attribution/parity checks pass (1,532 matrix rows; first oracle remains explicitly pending). Eight current-source ASan/coverage fuzz targets pass 1,379,172 executions with bounded evidence and audited corpus cleanup. The complete generated-template native preflight passes Rust 1.89 Clippy, both binaries, integration linking, consumer doctor and cleanup, while explicitly withholding milestone acceptance. Full book rendering passes pinned mdbook 0.5.4; its disposable root was audited/removed and the binary retained as a shared task tool. Both required data notices are included in prepared release/image distribution guards and license-only changes trigger relevant image/e2e checks. Full gates, hosted/live acceptance and the remaining Unicode follow-up publication still precede main pushes or milestone exits. |
+| 2026-10-14 | M0 exit 9 / pending decision | The literal package-license exit criterion lists only the original/Apache base expressions, excluding the retained PSF clause for the existing CPython datetime port and Unicode clause for the authenticated printable data. The concrete correction in docs/execution/third-party-license-gate.md preserves Q1 and derives each exact required expression from its identified source; the strengthened gate passes actual canonical parity. Requested the user's decision under execution rule 2 before changing that exit wording or claiming exit/publishing main. Current/MSRV regression and full integration checks continue independently; no repeat of the already approved BLS or dormant advisory decisions is needed. |
+| 2026-10-14 | Upstream audit | Published and verified the reviewed Unicode corrections to the existing stacked PRs: subtensor #3246 at 77480991b2b3b39ec828d2da9d7c6ecf31113a81 and #3247 at 849c192e9702fa245a6f16941359290786554d85. Exact committed-head outgoing gates pass current/MSRV portable/library tests, binding compilation, both portable wasm checks and upstream-pinned strict Clippy, using genuine separate functional/wasm/lint targets. Both remote/PR SHAs and revised bodies match; labels/review requests remain empty. The failed idle SSH attempt and corrected evidence-count guard are preserved, with no test/source relaxation. Owned finished worktrees/hooks/targets were audited and removed (7,054,340,580 bytes); common source/build caches and other owners' live inputs remain intact. Inventory stays eight PRs and five issues; no hosted Python, live Sudo or device acceptance is inferred. |
+| 2026-10-14 | M1 release / attribution | Independent review of the actual archive/image inventory confirmed that LICENSE-MIT, LICENSE-APACHE, NOTICE and the retained CPython LICENSE-PSF were absent from binary/image packaging despite being retained in source. Apache source/object redistribution and the PSF source/binary clauses require the retained license/copyright and relevant notices; shipping both base licenses preserves the advertised OR choice. Root NOTICE now includes the existing parser modification summary. Preparing the bounded four-file addition alongside the already verified certificate/Unicode notices, with source/tag-bound NOTICE, immutable text checks, exact inventory/checksums/provenance and both image-stage guards. This enforces existing Q1/source obligations without adding a license choice; the pending literal M0 exit 9 wording question is unchanged. Expanded-bundle tests and final full gates remain required; no release/image run or milestone exit is claimed. |
+| 2026-10-14 | Upstream packaging audit | The user surfaced #3250's eager Python exports versus the unchanged native dependency floor. Verified published source assigns _backend.verify_strict and _backend.encode_password_for_environment during module import. Live PyPI has stable bittensor-core 0.1.5, no stable 0.1.6, and 0.1.6rc68/rc69; source >=0.1.6 excludes those older versions. Actual bittensor 11.3.1rc69 pins native ==0.1.6rc69, matching the RC release train. Stable preparation retains the committed version range while building native and Python from the immutable release commit. The generic mismatched-wheel failure mechanism is valid, but no presently installable broken stable combination or correct future floor is claimed. Reopened read-only release-coordination review before choosing a follow-up; no Python ran or native package was published locally. |
+| 2026-10-14 | Canonical integration | Full gates caught three concrete defects after the notice repair: authored Unicode attribution after the importer-generated block, a private btauth response triggering current Clippy's large-error lint, and two staged method calls rejected by pinned upstream linting. Root preserved and moved the complete authored notice before the unchanged generated block, boxed the private error response, and called the existing checked integer helper directly. Import verification and pinned upstream lint now pass; workspace Clippy passed after the response repair, and all 14 current server tests pass. Initial failures remain recorded; final current/MSRV regressions and complete gates still precede publication. No gate was relaxed. |
+| 2026-10-14 | M4-01 preparation | Adopted the independently reviewed 14-path hyperparameter implementation, two-path checked-scale repair and four-path hosted oracle recipe with exact patch/before/after hash checks. The generated table has 48 descriptions/42 storage rows and all ten methods; native u128 hyperparameters remain separate from Q25 balances. Both repair regressions reproduced the original accepted-scale overflow on current/MSRV; final isolated affected-package suites pass 151 tests each, and oracle suites pass 21 each with strict Clippy. The oracle recipe covers 7,224 inputs without local Python outputs. Canonical integration/full gates and actual hosted differential acceptance are pending; M4-01 and milestone boxes remain unchecked. Evidence: docs/execution/m4-hyperparams.md. Independent M4 preparation continues while checks and prerequisites wait, under rules 3 and 6. |
+| 2026-10-14 | M2-24 prerequisites | The user selected a new dedicated testnet subnet and `sam@matthews-mac-studio` for the soak, with an explicit low-compute constraint because the host has other uses. Read-only SSH inspection with existing host-key validation passed (Darwin 27/arm64, 32 logical processors, 256 GiB RAM); no host files/settings/services changed. Build locally, use burned registration, run no PoW or compiler on the soak host, and plan two Tokio worker threads, lower scheduling priority, measured CPU/RSS and bounded logs. Wallet funding/address, actual registration/staked permit/CR state, deployment and observed 24-hour results remain pending. Evidence: docs/execution/testnet-prerequisites.md. |
+| 2026-10-14 | M4-01 canonical validation | Canonical current/MSRV affected-package suites each pass 151 tests; final boxed-response server and staged receipt/Unicode regressions pass. Extraction, regeneration, parity and dependency checks pass. Full gates correctly rejected a stale build-weight report, so root ran actual target/profile remeasurement and regenerated compatibility outputs (225 core-no-host, 361 validator, 365 miner, 416 owner; host only for owner). The repeated full gates pass those checks and are live at nextest test enumeration; newly launched executable samples show macOS dyld startup delay before Rust main. No complete gate success, push or milestone exit is claimed. Evidence: docs/execution/m4-hyperparams-validation.json. |
+| 2026-10-14 | M2-24 wallet preparation | Root audited the native helper, its seven fixture tests/24 complete-state mutations and exact executable/artifact hashes, then created the new durable local testnet wallet and verified identical public-only reinspection. Funding coldkey: 5G3pwJ3ptR4x83zuKzFvTC2TA8WeivVtP1NhgxDxPmi2RAvX. Wallet, password/recovery and lifecycle journal remain private under /Users/sam/.local/share/rtao/testnet-soak and are retained live dependencies; the public manifest excludes secrets. No transaction, remote wallet copy or service has run; live quote/funding/setup/soak remain pending. The user reiterated cleanup of task-created Studio directories: remove finished scratch after dependency checks, preserve wallet/state, and report retained live paths. Local builds are on Sams-MacBook-Pro.local; remote Matthews-Mac-Studio.local use remains read-only inspection. |
+| 2026-10-14 | Q29 / M2-24 waiver | The user instructed "we can probably skip a testnet soak, let's just make sure all tests are passing" and waived the 24-hour testnet soak. Updated the owning plan, architecture, validator guide and execution records; M2-24 and exit 9 record the waiver without claiming a soak result. All automated gates, localnet epochs/reveals/restart tests, image/TLS, oracle, interoperability and release checks remain required. Dedicated subnet/funding/host setup and quote preparation are stopped. Preserve the prepared wallet/recovery root; no transaction, remote wallet copy, service or remote task directory was created. Dependency-audited cleanup of finished local scratch remains part of completion. |
+| 2026-10-14 | Upstream tracking / testnet 479 | Read-only finalized RPC, release/ref and anonymous GHCR checks confirm Finney spec 478 at the pinned code hash and final v478 release/image. Testnet now reports spec 479; authenticated V15/V16 production drift plus independent subxt diff classify seven additions (one call, two errors, two events, two storage entries). No final v479 tag/release/image or source association was verified. Keep core/parity v478; record testnet metadata through xtask drift at a source-stable point with prescribed checks. No runtime behavior/E2E compatibility, transaction, publication or new filing is claimed. Bounded evidence: target/execute-plan.6Ro0PC/runtime-479-drift/. |
+| 2026-10-14 | Automated gate repairs | Full canonical nextest completed 1,184 tests: 1,179 passed, five failed, with four separate skipped tests. Failures exposed native certificate enumeration before plaintext RPC deadlines and intermittent native-root availability in the miner HTTP fixture. Adopted two independently tested scoped patches: RPC skips native enumeration only for all-ws primary/fallback/archive pools (WSS and public tls_config trust behavior retained); miner fixture supplies owned explicit ring TLS after actual registration/hotkey checks, with production SignedClient::new unchanged. Current/MSRV affected RPC 80 tests and miner regression pass, strict Clippy passes both; original deadlines/assertions retained. Full gates rerun remains active, no complete success/publication or soak result is claimed. Evidence: docs/execution/tls-roots-repair.md. |
+| 2026-10-14 | Publisher startup repair | The complete TLS-repaired rerun passed 1,190/1,191 workspace tests; all four RPC failures were resolved, but the miner routing deadline exposed a second eager native-root lookup in AxonPublisher even with an explicit IP. Adopted the independently reviewed two-path lazy publisher patch `1099b99dce3f009992d70a6e18b9ff24ea90914766b692f0fcdeb6b6981058b3` with exact before/after hashes. Counterfactual counted-loader tests fail under eager behavior on current/MSRV; all ten publisher tests and the unchanged miner regression pass on each compiler, with the miner test completing in 0.66 seconds, with strict Clippy on both. Native roots/ring/ALPN/redirect/5s discovery policy remain; client construction errors now surface at first automatic lookup. No-host passed before adoption; final all-job gates rerun is active and remains required. No test deadline/assertion was weakened and no host setting changed. Evidence: docs/execution/tls-roots-repair.md. |
+| 2026-10-14 | Canonical native validation | All 1,192 workspace tests pass in 43.321 seconds after the scoped TLS/publisher repairs; doctests, no-host and MSRV pass in the same full gate run. Features correctly fails when the disposable no-dev copy retains rtao-rpc feature forwarding after removing its dev declaration; preparing an exact harness-only repair without changing original manifests, feature names, build edges, command/profile coverage or retained-lock provenance. Separate supply passes with the approved exact dormant findings, raw reports retained and all activation guards; semver exits without comparison before the first tag. Full all-job gates and hosted oracle/localnet/interop acceptance remain required; no push, formal milestone exit or release is claimed. New upstream findings remain local drafts and the filed inventory remains eight PRs and five issues. |
+| 2026-10-14 | M4-02…M4-07 integration | Root rehearsed eight exact reviewed patches against current source and adopted 66 paths with baseline/adoption hashes and reversible backups. The composition retains both multisig decoder leaves and adds three owner-read leaves once; preserves D-039/Q29/license notices; adds the final runtime-cap supplement, D-040's mutable start delay and saturating u64 addition, and nested empty-composite decoding. Canonical regeneration succeeds and reports 20 implemented intents/38 reads, with 63/64 pending; these are source counts, not oracle acceptance. Combined extraction/regeneration/parity/dependency measurement and current/MSRV tests run next, followed by complete gates after feature-harness repair. M4-08 owner orchestration and M4-09 CLI machinery proceed in isolated snapshots while checks wait (rules 3/6); no milestone exit, completing commit or release is inferred. Evidence: docs/execution/m4-integration.md and root-m4-integration/ under the recorded execution root. |
+| 2026-10-14 | M4 combined checks / feature harness | Actual canonical matrix generation (1,533 rows), extraction/regeneration, dependency measurement, dependency/parity and formatting checks pass; current-Rust affected tests pass 810 native and three doctests, with one hosted oracle replay ignored. Rust 1.89 remains live. Independently reviewed feature harness preparation now validates the original locked graph before removing only dev-only forwarding, preserving real invalid-feature errors, aliases/normal/build/target features, feature-name collisions, weak behavior and exact retained-lock provenance. Final isolated 14-test/current/MSRV regressions, strict Clippy and full real feature matrix pass for patch 7762d151298a6a922066a5db6225e914d6802df7e3147c8e21e220afe4fd735e. Root's dependent driver requires successful terminal M4 validation and unchanged 393 input hashes before exact adoption and complete canonical gates. Removed the finished 3.7 MiB composition rehearsal after process/open-file/launchd/configuration/symlink/venv/Git audits; source backup/build cache remain live. No full canonical gate, formal milestone exit, push or release is claimed. Evidence: docs/execution/m4-integration.md. |
+| 2026-10-15 | M4 canonical validation / harness adoption | Combined source checks now complete: 810 native tests and three doctests pass on both current Rust and Rust 1.89, with the same existing hosted replay ignored; actual matrix/extraction/regeneration/dependency measurement/dependency/parity/formatting checks all exit 0. Root verified 393 source hashes and the final isolated feature repair's 14-test/current/MSRV, strict Clippy and full 95-check matrix proofs, then adopted only xtask/src/gates.rs from patch 7762d151298a6a922066a5db6225e914d6802df7e3147c8e21e220afe4fd735e. Exact before/after hashes, reversible backup and actual apply checks are retained in root-feature-harness-adoption/. Complete canonical gates now run in root-m4-feature-repaired-gates.log; no complete gate success, push, milestone exit or release is claimed. M4 owner proxy routing and CLI source/header/attribution checks and M5-01 offline SDK preparation proceed in isolated snapshots under rule 3. Pending license-criterion decision remains unchanged. |
+| 2026-10-15 | M4 source review / D-041 preparation | Independent owner proxy review found no remaining source defect; final native validation remains pending after a provisional fixture subscribed to the wrong head stream. CLI review established an unsafe automatic multisig reopening schedule from authenticated Python and runtime sources: call bytes alone do not preserve the original opening. Under rule 5, reserve D-041 for exact opening-timepoint continuation, with same-view composition and absent/replaced-state refusal; isolated source is ready, but final native pinning tests, canonical registration and any filing remain pending. A source/pin guard for the System timepoint assumption is being prepared. Config/tools/explain source and 16 fixtures are ready for compilation; M5 offline import review caught and is repairing the core decoded-call/encoder representation mismatch. The Keychain harness remains injected-only. Preserve confirmed-live canonical/worker handles through macOS startup delays and continue independent source work under rule 3. No new public filing, completed check or milestone is inferred. Evidence: docs/execution/m4-cli-preparation.md. |
+| 2026-10-14 | Q30 resource/scope correction | User rejects the local build campaign after hundreds of gigabytes of disk use. Substantial checks move to bounded free hosted CI; full local gates, node/testnet/container operation, parallel/duplicate builds, extra toolchains, Keychain/device/release rehearsals and local fuzz/bench campaigns are removed. Mainnet cloning is removed; release/upkeep and platform/hardware acceptance are deferred. C1-C7 now describe development acceptance without claims for removed checks. Cleanup results are tracked separately in execution state. |
+| 2026-10-15 | Q30 client checkpoint / license wording | Resume source development with hosted validation. The first checkpoint preserves the current M0-M4 implementation (20 intents, 38 reads) without claiming milestone acceptance. Correct M0 exit 9 under rule 5 to enumerate Q1's already required PSF/Unicode obligations, preserving the original dual license and unchanged license gate. Private recovery is excluded from Git and Docker contexts. All substantial tests remain hosted. |

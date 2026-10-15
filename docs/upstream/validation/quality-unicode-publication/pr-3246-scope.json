@@ -1,0 +1,43 @@
+{
+  "pr": 3246,
+  "original": "9e926d1f2f4943f11a23ef13ff517e7857e9cc27",
+  "head": "77480991b2b3b39ec828d2da9d7c6ecf31113a81",
+  "base": "850f2755bb05a3851f948489f0ab27b0645cebce",
+  "correction_paths": [
+    "Cargo.lock",
+    "sdk/bittensor-core/Cargo.toml",
+    "sdk/bittensor-core/src/protocol/dispatch_error.rs",
+    "sdk/bittensor-core/src/protocol/python_printable.rs",
+    "sdk/bittensor-core/tests/portable_fee_dispatch.rs"
+  ],
+  "full_stacked_paths": [
+    "sdk/bittensor-core/Cargo.toml",
+    "sdk/bittensor-core/src/client.rs",
+    "sdk/bittensor-core/src/codec/value.rs",
+    "sdk/bittensor-core/src/codec/value_navigation.rs",
+    "sdk/bittensor-core/src/lib.rs",
+    "sdk/bittensor-core/src/protocol/dispatch_error.rs",
+    "sdk/bittensor-core/src/protocol/dispatch_error_tables.rs",
+    "sdk/bittensor-core/src/protocol/extrinsic_lookup.rs",
+    "sdk/bittensor-core/src/protocol/fee.rs",
+    "sdk/bittensor-core/src/protocol/metadata.rs",
+    "sdk/bittensor-core/src/protocol/mod.rs",
+    "sdk/bittensor-core/src/protocol/python_printable.rs",
+    "sdk/bittensor-core/src/protocol/runtime_api.rs",
+    "sdk/bittensor-core/src/protocol/storage.rs",
+    "sdk/bittensor-core/tests/fixtures/finney-v478.v15.scale",
+    "sdk/bittensor-core/tests/portable_fee_dispatch.rs",
+    "sdk/bittensor-core/tests/protocol_ops.rs",
+    "sdk/bittensor-core/tests/value_navigation.rs"
+  ],
+  "lock_delta": "Exactly the Unicode dependency edge and 1.1.0 package removed (7 lines); final lock byte-identical to v478 base.",
+  "unicode_cases": 21,
+  "license": "Apache-2.0 AND Unicode-DFS-2016",
+  "hashes": {
+    "Cargo.lock": "c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a",
+    "sdk/bittensor-core/Cargo.toml": "93f543dbbec1cb7837ccbc14db3dff725d1e39cb989f4b469295bf8ca673e92f",
+    "sdk/bittensor-core/src/protocol/dispatch_error.rs": "8715d833de363ee60bd0259b8f393b14762c0000f668f3950dc6c08412e49acf",
+    "sdk/bittensor-core/src/protocol/python_printable.rs": "08217cfdb20bd504427b71b2e6ed6006b0bc382633c4d6d66fcdbb33054dfdde",
+    "sdk/bittensor-core/tests/portable_fee_dispatch.rs": "a6466a0868903a2bf6620963a53a2cd7aef676a9af4bdab1017ae4994d870eff"
+  }
+}

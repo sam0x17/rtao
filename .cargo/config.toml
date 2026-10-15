@@ -1,2 +1,19 @@
 [alias]
 xtask = "run -p xtask --"
+
+# Keep incidental development builds small on shared machines. Substantial
+# checks belong on disposable GitHub runners (PLAN.md Q30).
+[build]
+jobs = 2
+incremental = false
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0
+
+[env]
+# Local Rust binding checks must not discover or invoke an interpreter.
+# Designated Python lanes use their own isolated upstream build context.
+PYO3_NO_PYTHON = "1"

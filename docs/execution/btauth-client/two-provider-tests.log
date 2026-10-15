@@ -1,0 +1,45 @@
+    Blocking waiting for file lock on build directory
+   Compiling sp-runtime-interface v30.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+   Compiling sp-core v37.0.0 (https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310)
+   Compiling bittensor-core v0.1.0 (https://github.com/RaoFoundation/subtensor.git?tag=v478#850f2755)
+   Compiling rtao-core-ext v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core-ext)
+   Compiling rtao-core v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-core)
+   Compiling rtao-primitives v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-primitives)
+   Compiling rtao-signer v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-signer)
+   Compiling rtao-btauth v0.1.0 (/Users/sam/workspace/rtao/crates/rtao-btauth)
+   Compiling rtao-btauth-two-provider-check v0.0.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/m2-btauth-two-providers)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 14.30s
+     Running /Users/sam/workspace/rtao/crates/rtao-btauth/tests/client.rs (target/execute-plan.6Ro0PC/build/debug/deps/signed_client_https-291f3b87c0713397)
+
+running 28 tests
+test fanout_defaults_match_validator_timing_budget ... ok
+test application_headers_cannot_override_or_inject_authentication ... ok
+test direct_transport_failure_is_not_automatically_replayed ... ok
+test connect_is_rejected_before_signing_or_transmitting_an_authority_form_target ... ok
+test connection_failures_retry_above_signing_and_preserve_the_transport_source ... ok
+test redirects_never_replay_auth_to_the_same_or_another_origin ... ok
+test retry_limit_retains_the_final_http_status_and_all_attempts_verify ... ok
+test actual_wire_bytes_bind_encoded_targets_empty_query_and_materialized_bodies ... ok
+test invalid_fanout_configuration_returns_an_error_for_every_uid ... ok
+test fanout_connect_timeout_bounds_a_stalled_tls_handshake ... ok
+test serialization_error_stays_sticky_and_is_not_retried_or_transmitted ... ok
+test status_decode_and_signing_failures_keep_uid_and_error_identity ... ok
+test fanout_timeout_covers_body_consumption_after_successful_headers ... ok
+test attempt_timeout_covers_signing_and_retries_are_fresh_attempts ... ok
+test retries_resign_fresh_nonces_and_reuse_once_serialized_json ... ok
+test value_first_response_json_handles_untagged_floats ... ok
+test stream_deadline_starts_at_creation_even_when_unpolled ... ok
+test call_deadline_bounds_active_retries_and_queued_targets ... ok
+test direct_timeout_retains_the_remaining_budget_while_consuming_response_body ... ok
+test dropping_the_stream_cancels_pending_work_and_leaves_queued_targets_unsent ... ok
+test deadline_crossed_by_factory_or_serializer_prevents_signing_and_transmission ... ok
+test synchronous_signing_that_crosses_the_call_deadline_never_transmits ... ok
+test fan_out_respects_concurrency_and_retains_each_uid ... ok
+test unsafe_urls_and_authority_changing_fanout_paths_are_rejected ... ok
+test stream_yields_early_replies_in_completion_order ... ok
+test synchronous_response_decoding_cannot_return_success_after_attempt_or_call_deadline ... ok
+test clock_failure_preserves_authentication_error_without_invoking_signer ... ok
+test https_uses_explicit_ring_and_requires_the_fixture_root ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+

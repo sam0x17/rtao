@@ -1,0 +1,129 @@
+name: release-plz
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Run the complete local update and checks without pushing or creating a PR
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-plz
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/release-plz
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/release-plz/build
+  TMPDIR: ${{ github.workspace }}/target/release-plz/tmp
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  upkeep:
+    # During the goal loop only explicit read-only dry-run dispatches run.
+    if: vars.RTAO_UPKEEP == 'on' || (github.event_name == 'workflow_dispatch' && inputs.dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Create task scratch directory
+        run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: clippy,rustfmt
+          cache: false
+          build-warnings: ""
+      - name: Install the gate's MSRV on the disposable hosted runner
+        run: rustup toolchain install 1.89 --profile minimal --no-self-update
+      - name: Install the pinned release updater under the task root
+        run: |
+          source ci/release/pins.env
+          cargo install release-plz --version "$RTAO_RELEASE_PLZ_VERSION" --locked --root "$RTAO_TEMP_ROOT/tools"
+          semver_version=$(sed -n 's/^cargo-semver-checks = "\([^"]*\)"/\1/p' ci/tool-versions.toml)
+          test -n "$semver_version"
+          cargo install cargo-semver-checks --version "$semver_version" --locked --root "$RTAO_TEMP_ROOT/tools"
+          echo "$RTAO_TEMP_ROOT/tools/bin" >> "$GITHUB_PATH"
+          "$RTAO_TEMP_ROOT/tools/bin/cargo-semver-checks" --version
+      - name: Local version and changelog rehearsal
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Rehearse on an isolated clone so upkeep's actual input remains the
+          # committed main checkout, including when update creates new files.
+          git clone --no-hardlinks . "$RTAO_TEMP_ROOT/rehearsal"
+          cd "$RTAO_TEMP_ROOT/rehearsal"
+          git remote set-url origin https://github.com/sam0x17/rtao.git
+          "$RTAO_TEMP_ROOT/tools/bin/release-plz" update
+          milestone=$(jq -r '.milestone // empty' compat.json)
+          if test -n "$milestone"; then
+            cargo run --locked -p xtask -- compat --milestone "$milestone"
+          else
+            cargo run --locked -p xtask -- compat
+          fi
+          git diff --check
+          git diff --stat
+          cargo run --locked -p xtask -- gates
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        if: vars.RTAO_UPKEEP == 'on' && !(github.event_name == 'workflow_dispatch' && inputs.dry-run)
+        id: app
+        with:
+          app-id: ${{ vars.RTAO_BOT_APP_ID }}
+          private-key: ${{ secrets.RTAO_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: rtao
+      - name: Tag a merged release PR
+        uses: release-plz/action@8921286633dfa0c4020f7f30bd1c14fe19cbb10e # v0.5.142
+        if: vars.RTAO_UPKEEP == 'on' && !(github.event_name == 'workflow_dispatch' && inputs.dry-run)
+        with:
+          version: "0.3.172"
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+      - name: Create or update the release PR
+        uses: release-plz/action@8921286633dfa0c4020f7f30bd1c14fe19cbb10e # v0.5.142
+        if: vars.RTAO_UPKEEP == 'on' && !(github.event_name == 'workflow_dispatch' && inputs.dry-run)
+        id: release-pr
+        with:
+          version: "0.3.172"
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+      - name: Regenerate and validate compatibility in the actual release PR
+        if: vars.RTAO_UPKEEP == 'on' && !(github.event_name == 'workflow_dispatch' && inputs.dry-run) && steps.release-pr.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          RTAO_RELEASE_PR_JSON: ${{ steps.release-pr.outputs.pr }}
+        run: |
+          number=$(printf '%s' "$RTAO_RELEASE_PR_JSON" | jq -er '.number | select(type == "number")')
+          pr=$(gh pr view "$number" --repo sam0x17/rtao --json headRefName,headRepository,headRepositoryOwner,baseRefName)
+          test "$(printf '%s' "$pr" | jq -r .baseRefName)" = main
+          test "$(printf '%s' "$pr" | jq -r .headRepository.name)" = rtao
+          test "$(printf '%s' "$pr" | jq -r .headRepositoryOwner.login)" = sam0x17
+          branch=$(printf '%s' "$pr" | jq -r .headRefName)
+          case "$branch" in release-plz-*) ;; *) echo 'unexpected release branch' >&2; exit 1 ;; esac
+          actual="$RTAO_TEMP_ROOT/actual-release-pr"
+          git -c 'credential.helper=!gh auth git-credential' clone --branch "$branch" https://github.com/sam0x17/rtao.git "$actual"
+          cd "$actual"
+          milestone=$(jq -r '.milestone // empty' compat.json)
+          if test -n "$milestone"; then
+            cargo run --locked -p xtask -- compat --milestone "$milestone"
+          else
+            cargo run --locked -p xtask -- compat
+          fi
+          git diff --check
+          cargo run --locked -p xtask -- gates
+          if ! git diff --quiet -- COMPAT.md compat.json; then
+            git config user.name rtao-bot
+            git config user.email rtao-bot@users.noreply.github.com
+            git add COMPAT.md compat.json
+            git commit -m 'chore: regenerate release compatibility'
+            git -c 'credential.helper=!gh auth git-credential' push origin "HEAD:$branch"
+          fi

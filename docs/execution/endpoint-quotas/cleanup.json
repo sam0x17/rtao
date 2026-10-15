@@ -1,0 +1,23 @@
+{
+  "completed_utc": "2026-10-14T08:19:36Z",
+  "removed_paths": 91,
+  "removed_directories": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/endpoint-quotas",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/.fingerprint/rtao-endpoint-quota-observation-dbbf5dee9a35d0dc",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/.fingerprint/rtao-endpoint-quota-observation-19e5ab477bb52bef",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental/rtao_endpoint_quota_observation-0hhvrglm40hg2",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental/rtao_endpoint_quota_observation-0y88vefmvr1d4"
+  ],
+  "audit": {
+    "fixture_processes": 0,
+    "fixture_open_files": 0,
+    "launchd_references": 0,
+    "configuration_references": 0,
+    "symlinks": 0,
+    "virtualenv_files": 0
+  },
+  "retained_live_dependencies": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build (shared ongoing plan build cache)",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp (other agents ongoing plan scratch)"
+  ]
+}

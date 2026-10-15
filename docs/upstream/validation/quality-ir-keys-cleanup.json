@@ -1,0 +1,138 @@
+{
+  "owned_paths": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10"
+  ],
+  "heads": {
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249": "0c4ed7585ae9d232577e53d45813f383e0ec2eec",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250": "64f152725dda64c040e8f3c6435c08f450093a59"
+  },
+  "lock_sha256": "c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a",
+  "counts": {
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249": {
+      "files": 3083,
+      "bytes": 148821935,
+      "directories": 526,
+      "symlinks": [
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249/.claude/skills",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3249/.agents/skills"
+        }
+      ]
+    },
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250": {
+      "files": 3082,
+      "bytes": 148782355,
+      "directories": 526,
+      "symlinks": [
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250/.claude/skills",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3250/.agents/skills"
+        }
+      ]
+    },
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9": {
+      "files": 4994,
+      "bytes": 572879881,
+      "directories": 882,
+      "symlinks": [
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libaesni.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libaesni.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libavx2.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libavx2.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libavx512f.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libavx512f.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/librdrand.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/librdrand.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libsodium.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libsodium.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libsse2.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libsse2.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libsse41.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libsse41.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libssse3.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u9/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libssse3.la"
+        }
+      ]
+    },
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10": {
+      "files": 5004,
+      "bytes": 566582087,
+      "directories": 885,
+      "symlinks": [
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libaesni.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libaesni.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libavx2.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libavx2.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libavx512f.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libavx512f.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/librdrand.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/librdrand.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libsodium.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libsodium.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libsse2.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libsse2.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libsse41.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libsse41.la"
+        },
+        {
+          "path": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/.libs/libssse3.la",
+          "target": "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/lint/ir-keys-u10/debug/build/libsodium-sys-18f5c74ac2ab3283/out/source/libsodium/src/libsodium/libssse3.la"
+        }
+      ]
+    }
+  },
+  "process_matches": 0,
+  "open_files": 0,
+  "launchd_matches": {
+    "gui/501": 0,
+    "system": 0
+  },
+  "symlinks_inspected": 30,
+  "configuration_environment_Git_files_inspected": 51,
+  "dependency_references": [],
+  "scan_errors": [],
+  "lsof_limitations": [
+    "lsof: WARNING: can't stat() smbfs file system /Volumes/.timemachine/DUROSOFT-BACKUP._smb._tcp.local./B3E0F364-F6C6-4C45-9C28-EA0F474E71B7/Sam Backups\n      Output information may be incomplete.\n      assuming \"dev=36000004\" from mount table\n"
+  ],
+  "retained_live_dependencies": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/subtensor.git",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ir-keys-proof/rustc-u9.sh",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ir-keys-proof/rustc-u10.sh",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/u10-outgoing-64f152725dda64c040e8f3c6435c08f450093a59",
+    "Other owners task directories and shared caches"
+  ],
+  "note": "Compiler wrappers and the shared build/bare/source caches are retained by root request. Dep-info and retained logs are provenance rather than live runtime or virtual-environment dependencies.",
+  "removed": true
+}

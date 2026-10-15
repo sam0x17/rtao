@@ -1,0 +1,8 @@
+{
+  "tag": "v478",
+  "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+  "input_sha256": "57207f85a4a6893550b1210e537ac7445b3d691cb8b61d33429f9992d0c2eda1",
+  "image_tag": "ghcr.io/sam0x17/rtao-oracle:v478-57207f85a4a6",
+  "python": "3.12.11",
+  "scripts_parsed_by": "rustpython-parser (no Python execution)"
+}

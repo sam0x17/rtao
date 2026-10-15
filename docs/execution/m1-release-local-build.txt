@@ -1,0 +1,21 @@
+Rehearsal source: 7efef6f68eedc7cfb85e6e9d0a5ae3da7c8d442a
+Worktree dirty: yes; this is not tagged release provenance.
+rustc 1.99.0 (b940084d7 2026-09-28)
+binary: rustc
+commit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4
+commit-date: 2026-09-28
+host: aarch64-apple-darwin
+release: 1.99.0
+LLVM version: 23.1.1
+cargo 1.99.0 (5f94df478 2026-08-27)
+ProductName:		macOS
+ProductVersion:		26.6.2
+BuildVersion:		25G83
+27.0
+target/execute-plan.6Ro0PC/build/aarch64-apple-darwin/release/rtao: Mach-O 64-bit executable arm64
+target/execute-plan.6Ro0PC/build/x86_64-apple-darwin/release/rtao:  Mach-O 64-bit executable x86_64
+ac8b4ed0350154b97af3d3028c8ab28e08f145f943e1405cb7d81d5dc23a88bf  target/execute-plan.6Ro0PC/build/aarch64-apple-darwin/release/rtao
+f84c83a20d28f131864b62a48b676049cb251b020aea6775efcd2f2f66434caf  target/execute-plan.6Ro0PC/build/x86_64-apple-darwin/release/rtao
+rtao 0.1.0 (bittensor-core v478)
+rtao 0.1.0 (bittensor-core v478)
+Both doctor checks currently fail the unapproved literal two-entry BLS lock rule.

@@ -1,0 +1,7 @@
+
+X sdk-receipt-nested-failures Check Rust RaoFoundation/subtensor#3247 · 38556290243
+Triggered via pull_request about 9 minutes ago
+
+X This run likely failed because of a workflow file issue.
+
+For more information, see: https://github.com/RaoFoundation/subtensor/actions/runs/38556290243

@@ -1,0 +1,620 @@
+{
+  "schema": 1,
+  "real_fixture_comparison": {
+    "old": "vendor/metadata/finney/477.v15.scale",
+    "new": "vendor/metadata/devnet/478.v15.scale",
+    "report": {
+      "schema": 1,
+      "classification": "surface-unchanged",
+      "changes": [
+        {
+          "class": "surface-unchanged",
+          "surface": "System.Version",
+          "reason": "runtime version changed",
+          "before": {
+            "spec_name": "node-subtensor",
+            "impl_name": "node-subtensor",
+            "authoring_version": 1,
+            "spec_version": 477,
+            "impl_version": 1,
+            "apis": [
+              [
+                "0xdf6acb689907609b",
+                5
+              ],
+              [
+                "0x37e397fc7c91f5e4",
+                2
+              ],
+              [
+                "0x40fe3ad401f8959a",
+                6
+              ],
+              [
+                "0xfbc577b9d747efd6",
+                1
+              ],
+              [
+                "0xd2bc9897eed08f15",
+                3
+              ],
+              [
+                "0xf78b278be53f454c",
+                2
+              ],
+              [
+                "0xdd718d5cc53262d4",
+                1
+              ],
+              [
+                "0xab3c0572291feb8b",
+                1
+              ],
+              [
+                "0xed99c5acb25eedf5",
+                3
+              ],
+              [
+                "0xbc9d89904f5b923f",
+                1
+              ],
+              [
+                "0x37c8bb1350a9a2a8",
+                4
+              ],
+              [
+                "0xf3ff14d5ab527059",
+                3
+              ],
+              [
+                "0x582211f65bb14b89",
+                6
+              ],
+              [
+                "0xe65b00e46cedd0aa",
+                2
+              ],
+              [
+                "0x68b66ba122c93fa7",
+                2
+              ],
+              [
+                "0x42e62be4a39e5b60",
+                1
+              ],
+              [
+                "0x806df4ccaa9ed485",
+                1
+              ],
+              [
+                "0x8375104b299b74c5",
+                2
+              ],
+              [
+                "0x5d1fbfbe852f2807",
+                1
+              ],
+              [
+                "0xc6886e2f8e598b0a",
+                1
+              ],
+              [
+                "0x43580abff6baab45",
+                5
+              ],
+              [
+                "0xc0de4984d112f3b4",
+                1
+              ],
+              [
+                "0xcbca25e39f142387",
+                2
+              ],
+              [
+                "0xa8b093e6508d9e9c",
+                1
+              ],
+              [
+                "0x1c4585bd5c707202",
+                1
+              ]
+            ],
+            "transaction_version": 1,
+            "system_version": 1
+          },
+          "after": {
+            "spec_name": "node-subtensor",
+            "impl_name": "node-subtensor",
+            "authoring_version": 1,
+            "spec_version": 478,
+            "impl_version": 1,
+            "apis": [
+              [
+                "0xdf6acb689907609b",
+                5
+              ],
+              [
+                "0x37e397fc7c91f5e4",
+                2
+              ],
+              [
+                "0x40fe3ad401f8959a",
+                6
+              ],
+              [
+                "0xfbc577b9d747efd6",
+                1
+              ],
+              [
+                "0xd2bc9897eed08f15",
+                3
+              ],
+              [
+                "0xf78b278be53f454c",
+                2
+              ],
+              [
+                "0xdd718d5cc53262d4",
+                1
+              ],
+              [
+                "0xab3c0572291feb8b",
+                1
+              ],
+              [
+                "0xed99c5acb25eedf5",
+                3
+              ],
+              [
+                "0xbc9d89904f5b923f",
+                1
+              ],
+              [
+                "0x37c8bb1350a9a2a8",
+                4
+              ],
+              [
+                "0xf3ff14d5ab527059",
+                3
+              ],
+              [
+                "0x582211f65bb14b89",
+                6
+              ],
+              [
+                "0xe65b00e46cedd0aa",
+                2
+              ],
+              [
+                "0x68b66ba122c93fa7",
+                2
+              ],
+              [
+                "0x42e62be4a39e5b60",
+                1
+              ],
+              [
+                "0x806df4ccaa9ed485",
+                1
+              ],
+              [
+                "0x8375104b299b74c5",
+                2
+              ],
+              [
+                "0x5d1fbfbe852f2807",
+                1
+              ],
+              [
+                "0xc6886e2f8e598b0a",
+                1
+              ],
+              [
+                "0x43580abff6baab45",
+                5
+              ],
+              [
+                "0xc0de4984d112f3b4",
+                1
+              ],
+              [
+                "0xcbca25e39f142387",
+                2
+              ],
+              [
+                "0xa8b093e6508d9e9c",
+                1
+              ],
+              [
+                "0x1c4585bd5c707202",
+                1
+              ]
+            ],
+            "transaction_version": 1,
+            "system_version": 1
+          }
+        }
+      ]
+    },
+    "subxt_cli": "0.51.1",
+    "subxt_diff": "No difference in metadata found.\n"
+  },
+  "live_index_checks": [
+    {
+      "network": "finney",
+      "spec": 478,
+      "code_hash": "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "finalized_head": "0x09fc8ea102d529c2f6d9f49dd7c5a02aa360465dc667cfabf4d9d0c2db75f345",
+      "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+      "runtime_version": {
+        "apis": [
+          [
+            "0xdf6acb689907609b",
+            5
+          ],
+          [
+            "0x37e397fc7c91f5e4",
+            2
+          ],
+          [
+            "0x40fe3ad401f8959a",
+            6
+          ],
+          [
+            "0xfbc577b9d747efd6",
+            1
+          ],
+          [
+            "0xd2bc9897eed08f15",
+            3
+          ],
+          [
+            "0xf78b278be53f454c",
+            2
+          ],
+          [
+            "0xdd718d5cc53262d4",
+            1
+          ],
+          [
+            "0xab3c0572291feb8b",
+            1
+          ],
+          [
+            "0xed99c5acb25eedf5",
+            3
+          ],
+          [
+            "0xbc9d89904f5b923f",
+            1
+          ],
+          [
+            "0x37c8bb1350a9a2a8",
+            4
+          ],
+          [
+            "0xf3ff14d5ab527059",
+            3
+          ],
+          [
+            "0x582211f65bb14b89",
+            6
+          ],
+          [
+            "0xe65b00e46cedd0aa",
+            2
+          ],
+          [
+            "0x68b66ba122c93fa7",
+            2
+          ],
+          [
+            "0x42e62be4a39e5b60",
+            1
+          ],
+          [
+            "0x806df4ccaa9ed485",
+            1
+          ],
+          [
+            "0x8375104b299b74c5",
+            2
+          ],
+          [
+            "0x5d1fbfbe852f2807",
+            1
+          ],
+          [
+            "0xc6886e2f8e598b0a",
+            1
+          ],
+          [
+            "0x43580abff6baab45",
+            5
+          ],
+          [
+            "0xc0de4984d112f3b4",
+            1
+          ],
+          [
+            "0xcbca25e39f142387",
+            2
+          ],
+          [
+            "0xa8b093e6508d9e9c",
+            1
+          ],
+          [
+            "0x1c4585bd5c707202",
+            1
+          ]
+        ],
+        "authoringVersion": 1,
+        "implName": "node-subtensor",
+        "implVersion": 1,
+        "specName": "node-subtensor",
+        "specVersion": 478,
+        "stateVersion": 1,
+        "systemVersion": 1,
+        "transactionVersion": 1
+      },
+      "source_image": null,
+      "classification": "surface-unchanged"
+    },
+    {
+      "network": "testnet",
+      "spec": 478,
+      "code_hash": "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1",
+      "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
+      "finalized_head": "0x63bcaf81d4a8b21920986d3659a2ed5b43de0c66ee22c0752337439861a34971",
+      "endpoint": "https://test.finney.opentensor.ai:443",
+      "runtime_version": {
+        "apis": [
+          [
+            "0xdf6acb689907609b",
+            5
+          ],
+          [
+            "0x37e397fc7c91f5e4",
+            2
+          ],
+          [
+            "0x40fe3ad401f8959a",
+            6
+          ],
+          [
+            "0xfbc577b9d747efd6",
+            1
+          ],
+          [
+            "0xd2bc9897eed08f15",
+            3
+          ],
+          [
+            "0xf78b278be53f454c",
+            2
+          ],
+          [
+            "0xdd718d5cc53262d4",
+            1
+          ],
+          [
+            "0xab3c0572291feb8b",
+            1
+          ],
+          [
+            "0xed99c5acb25eedf5",
+            3
+          ],
+          [
+            "0xbc9d89904f5b923f",
+            1
+          ],
+          [
+            "0x37c8bb1350a9a2a8",
+            4
+          ],
+          [
+            "0xf3ff14d5ab527059",
+            3
+          ],
+          [
+            "0x582211f65bb14b89",
+            6
+          ],
+          [
+            "0xe65b00e46cedd0aa",
+            2
+          ],
+          [
+            "0x68b66ba122c93fa7",
+            2
+          ],
+          [
+            "0x42e62be4a39e5b60",
+            1
+          ],
+          [
+            "0x806df4ccaa9ed485",
+            1
+          ],
+          [
+            "0x8375104b299b74c5",
+            2
+          ],
+          [
+            "0x5d1fbfbe852f2807",
+            1
+          ],
+          [
+            "0xc6886e2f8e598b0a",
+            1
+          ],
+          [
+            "0x43580abff6baab45",
+            5
+          ],
+          [
+            "0xc0de4984d112f3b4",
+            1
+          ],
+          [
+            "0xcbca25e39f142387",
+            2
+          ],
+          [
+            "0xa8b093e6508d9e9c",
+            1
+          ],
+          [
+            "0x1c4585bd5c707202",
+            1
+          ]
+        ],
+        "authoringVersion": 1,
+        "implName": "node-subtensor",
+        "implVersion": 1,
+        "specName": "node-subtensor",
+        "specVersion": 478,
+        "stateVersion": 1,
+        "systemVersion": 1,
+        "transactionVersion": 1
+      },
+      "source_image": null,
+      "classification": "surface-unchanged"
+    },
+    {
+      "network": "devnet",
+      "spec": 478,
+      "code_hash": "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1",
+      "genesis": "0x077899043eb684c5277b6814a39161f4ce072b45e782e12c81a521c63fb4f3e5",
+      "finalized_head": "0x240094e3b9c047c6a7bf9cd4306aff13d0ca4ddaf1b7fa063f9a0bff170a851a",
+      "endpoint": "https://dev.chain.opentensor.ai:443",
+      "runtime_version": {
+        "specName": "node-subtensor",
+        "implName": "node-subtensor",
+        "authoringVersion": 1,
+        "specVersion": 478,
+        "implVersion": 1,
+        "apis": [
+          [
+            "0xdf6acb689907609b",
+            5
+          ],
+          [
+            "0x37e397fc7c91f5e4",
+            2
+          ],
+          [
+            "0x40fe3ad401f8959a",
+            6
+          ],
+          [
+            "0xfbc577b9d747efd6",
+            1
+          ],
+          [
+            "0xd2bc9897eed08f15",
+            3
+          ],
+          [
+            "0xf78b278be53f454c",
+            2
+          ],
+          [
+            "0xdd718d5cc53262d4",
+            1
+          ],
+          [
+            "0xab3c0572291feb8b",
+            1
+          ],
+          [
+            "0xed99c5acb25eedf5",
+            3
+          ],
+          [
+            "0xbc9d89904f5b923f",
+            1
+          ],
+          [
+            "0x37c8bb1350a9a2a8",
+            4
+          ],
+          [
+            "0xf3ff14d5ab527059",
+            3
+          ],
+          [
+            "0x582211f65bb14b89",
+            6
+          ],
+          [
+            "0xe65b00e46cedd0aa",
+            2
+          ],
+          [
+            "0x68b66ba122c93fa7",
+            2
+          ],
+          [
+            "0x42e62be4a39e5b60",
+            1
+          ],
+          [
+            "0x806df4ccaa9ed485",
+            1
+          ],
+          [
+            "0x8375104b299b74c5",
+            2
+          ],
+          [
+            "0x5d1fbfbe852f2807",
+            1
+          ],
+          [
+            "0xc6886e2f8e598b0a",
+            1
+          ],
+          [
+            "0x43580abff6baab45",
+            5
+          ],
+          [
+            "0xc0de4984d112f3b4",
+            1
+          ],
+          [
+            "0xcbca25e39f142387",
+            2
+          ],
+          [
+            "0xa8b093e6508d9e9c",
+            1
+          ],
+          [
+            "0x1c4585bd5c707202",
+            1
+          ]
+        ],
+        "transactionVersion": 1,
+        "systemVersion": 1,
+        "stateVersion": 1
+      },
+      "source_image": null,
+      "classification": "surface-unchanged"
+    }
+  ],
+  "localnet_main": {
+    "status": "pending actual pinned image acquisition"
+  },
+  "hosted_dry_run": {
+    "status": "pending workflow dispatch"
+  },
+  "actionlint": {
+    "version": "1.7.7",
+    "archive_sha256": "2693315b9093aeacb4ebd91a993fea54fc215057bf0da2659056b4bc033873db"
+  }
+}

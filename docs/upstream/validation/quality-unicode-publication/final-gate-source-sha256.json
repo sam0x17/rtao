@@ -1,0 +1,8 @@
+{
+  "docs/upstream/validation/quality-unicode-pre-push-hook.sh": "dcc9001069cbbed640e9d3c4f5287aef8733664246d8dd0d5967c310026cfe49",
+  "docs/upstream/validation/quality-unicode-outgoing-gate.sh": "f56213df9d71f2433e73c0baa4f63fcc62753ac5d317fc82ddba2a449beda38b",
+  "docs/upstream/validation/quality-unicode-publication/source-guard.rb": "4a870ec066225984867be5266b6eb339e07560a21e9a42e163392551a683a378",
+  "docs/upstream/validation/quality-unicode-publication/result-guard.rb": "360d43d2e1a6d6858de8954fbecae47f763cd0a75cade908d6ee7f1100000d98",
+  "docs/upstream/validation/quality-unicode-publication/artifact-proof.rb": "55160767ca993e3590470adad2467a49410369a17e08d34d176c963b0e1757e0",
+  "docs/upstream/validation/quality-unicode-publication/verify-publication.rb": "c822dccea9a65dfc822b6daa8427d789c7a136343c774c093fa3ae8b4a341e75"
+}

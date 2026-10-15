@@ -1,0 +1,17 @@
+{
+  "paths": [
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/zondax",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/cpp-pr",
+    "/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/ledger-audit/hunter"
+  ],
+  "removed": true,
+  "external_symlink_or_venv_dependencies": 0,
+  "open_files": 0,
+  "launchd_or_configuration_references": 0,
+  "git_worktrees": 1,
+  "retained": [
+    "bounded results under ledger-audit",
+    "root-owned pr-3242 checkout",
+    "shared task Cargo target"
+  ]
+}

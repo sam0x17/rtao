@@ -1,0 +1,114 @@
+Committed review HEAD: c0208a82ab2a17a91c87654f3d6ebc0dc887cd20
+    Blocking waiting for file lock on build directory
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10/repo/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 1m 01s
+     Running tests/verify_strict.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/verify_strict-10af0b8a9eea638e)
+
+running 2 tests
+test malformed_encoding_matches_the_core_error_boundary ... ok
+test raw_signatures_verify_and_wrapped_signatures_are_rejected ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Blocking waiting for file lock on build directory
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10/repo/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 10.68s
+     Running tests/password_environment.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/password_environment-60e9256f3cd06850)
+
+running 4 tests
+test encoding_matches_legacy_ascii_unicode_and_empty_vectors ... ok
+test empty_encoding_key_retains_the_legacy_error ... ok
+test encoding_does_not_create_or_replace_a_process_variable ... ok
+test decoder_retains_whitespace_and_error_boundaries ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Blocking waiting for file lock on build directory
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10/repo/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 14.86s
+     Running unittests src/lib.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/bittensor_core-efa1379de8c25a9b)
+
+running 72 tests
+test client::reorg_finalization_tests::canonical_inclusion_finalizes_at_or_above_its_height ... ok
+test client::reorg_finalization_tests::canonical_inclusion_remains_pending_below_finalized_height ... ok
+test client::reorg_finalization_tests::replaced_or_missing_inclusion_hash_is_a_reorg ... ok
+test keyfiles::tests::env_password_roundtrip ... ok
+test digest::tests::rejects_garbage_metadata ... ok
+test codec::corpus_tests::multisig_accounts_match_the_golden_vectors ... ok
+test keyfiles::tests::legacy_keyfile_without_crypto_type_defaults_sr25519 ... ok
+test keyfiles::tests::crypto_type_as_string_is_accepted ... ok
+test keyfiles::tests::ed25519_keyfile_roundtrip ... ok
+test keyfiles::tests::mnemonic_with_derivation_password_omits_phrase_keeps_seed ... ok
+test keyfiles::tests::mnemonic_keypair_writes_legacy_secret_fields ... ok
+test keyfiles::tests::missing_crypto_type_recovered_from_stored_ss58 ... ok
+test keyfiles::tests::polkadotjs_export_gets_actionable_error ... ok
+test codec::corpus_tests::signature_payloads_match_the_golden_vectors ... ok
+test codec::corpus_tests::map_keys_recover_from_the_golden_query_maps ... ok
+test codec::corpus_tests::extrinsics_decode_like_the_golden_block ... ok
+test keyfiles::tests::raw_hex_seed_fallback ... ok
+test codec::corpus_tests::pathological_nesting_errors_instead_of_overflowing ... ok
+test keyfiles::tests::unknown_json_error_names_found_fields ... ok
+test keyfiles::tests::raw_hex_private_key_fallback ... ok
+test codec::corpus_tests::storage_keys_match_the_golden_vectors ... ok
+test keys::encrypted_json::tests::accepts_standard_scrypt_cost ... ok
+test codec::corpus_tests::composed_calls_decode_back ... ok
+test keys::encrypted_json::tests::rejects_excessive_scrypt_cost ... ok
+test keys::encrypted_json::tests::rejects_unsupported_version ... ok
+test codec::corpus_tests::signed_extrinsics_match_the_golden_vectors ... ok
+test codec::corpus_tests::composed_calls_match_the_golden_vectors ... ok
+test keys::encrypted_json::tests::ed25519_passphrase_import_wrong_password ... ok
+test keys::tests::alice_uri_matches_known_address ... ok
+test keyfiles::tests::stored_ss58_mismatch_is_rejected ... ok
+test keys::base58::tests::matches_bs58_reference ... ok
+test mlkem::tests::seal_rejects_bad_public_key ... ok
+test keyfiles::tests::raw_mnemonic_fallback ... ok
+test digest::tests::digest_matches_polkadot_js_merkleize_metadata ... ok
+test pow::tests::gpu_mines_and_revalidates_chain_compatible_work ... ignored, requires physical OpenCL GPUs; run explicitly on the GPU test host
+test keyfiles::tests::sr25519_keyfile_roundtrip ... ok
+test signers::ledger::tests::bip44_path_matches_generic_app_layout ... ok
+test keys::tests::public_only_from_ss58_matches_full_key ... ok
+test mlkem::tests::twox_128_matches_substrate ... ok
+test pow::tests::cpu_mining_preserves_nonce_and_little_endian_target ... ok
+test pow::tests::invalid_challenges_and_unbounded_batches_are_rejected ... ok
+test pow::tests::seal_matches_independent_python_vectors ... ok
+test mlkem::tests::seal_with_key_hash_prefixes_twox ... ok
+test signers::ledger::tests::device_error_formats ... ok
+test timelock::epoch_schedule::integration::commit_epoch_at_extrinsic_block_table ... ok
+test timelock::epoch_schedule::integration::predict_first_reveal_block_table ... ok
+test timelock::epoch_schedule::integration::reveal_uses_exact_equality_not_gte ... ok
+test mlkem::tests::seal_roundtrip_with_decapsulation ... ok
+test timelock::epoch_schedule::tests::should_run_epoch_tempo_zero ... ok
+test timelock::epoch_schedule::tests::should_run_epoch_auto_fire ... ok
+test timelock::tests::inner_ciphertext_unwraps_user_data_envelope ... ok
+test transaction::tests::allowing_raw_does_not_disable_spend_or_subnet_guardrails ... ok
+test keys::encrypted_json::tests::ed25519_passphrase_import_roundtrip ... ok
+test transaction::tests::arbitrary_call_fails_closed_for_every_policy_dimension ... ok
+test transaction::tests::compatibility_builders_cannot_downgrade_arbitrary_calls ... ok
+test transaction::tests::compatibility_builders_cannot_lower_trusted_spend_or_scope ... ok
+test keys::tests::ss58_rendering_matches_sp_core ... ok
+test transaction::tests::trusted_move_stake_limit_uses_constructor_derived_netuids ... ok
+test transaction::tests::trusted_move_stake_uses_constructor_derived_netuids ... ok
+test keys::tests::sr25519_verify_bytes_wrapping ... ok
+test keys::tests::sr25519_verify_roundtrip ... ok
+test transaction::tests::trusted_transfer_uses_constructor_derived_bounded_spend ... ok
+test digest::tests::extrinsic_proof_matches_pinned_vectors ... ok
+test timelock::tests::test_encrypt_commitment_format ... ok
+test timelock::tests::test_generate_commit_v2_structure ... ok
+test codec::corpus_tests::decoder_reproduces_the_shape_corpus ... ok
+test keyfiles::tests::ansible_vault_roundtrip ... ok
+test digest::tests::digest_is_deterministic_and_spec_version_sensitive ... ok
+test keyfiles::tests::nacl_roundtrip ... ok
+test keyfiles::tests::legacy_fernet_roundtrip ... ok
+test timelock::tests::test_encrypt_and_decrypt_static_key ... ok
+test timelock::tests::test_get_round_info_and_signature ... ok
+
+test result: ok. 71 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 12.19s
+
+    Blocking waiting for file lock on build directory
+    Checking bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10/repo/sdk/bittensor-core)
+    Checking bittensor-core-py v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10/repo/sdk/bittensor-core-py)
+    Finished `dev` profile [unoptimized] target(s) in 2m 49s
+    Blocking waiting for file lock on build directory
+Connection to github.com closed by remote host.
+    Checking bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/tmp/upstream-key-helpers-u10/repo/sdk/bittensor-core)
+    Finished `dev` profile [unoptimized] target(s) in 1m 14s

@@ -1,0 +1,72 @@
+{"pr":3246,"original":"9e926d1f2f4943f11a23ef13ff517e7857e9cc27","head":"77480991b2b3b39ec828d2da9d7c6ecf31113a81","base":"850f2755bb05a3851f948489f0ab27b0645cebce","correction_paths":["Cargo.lock","sdk/bittensor-core/Cargo.toml","sdk/bittensor-core/src/protocol/dispatch_error.rs","sdk/bittensor-core/src/protocol/python_printable.rs","sdk/bittensor-core/tests/portable_fee_dispatch.rs"],"full_stacked_paths":["sdk/bittensor-core/Cargo.toml","sdk/bittensor-core/src/client.rs","sdk/bittensor-core/src/codec/value.rs","sdk/bittensor-core/src/codec/value_navigation.rs","sdk/bittensor-core/src/lib.rs","sdk/bittensor-core/src/protocol/dispatch_error.rs","sdk/bittensor-core/src/protocol/dispatch_error_tables.rs","sdk/bittensor-core/src/protocol/extrinsic_lookup.rs","sdk/bittensor-core/src/protocol/fee.rs","sdk/bittensor-core/src/protocol/metadata.rs","sdk/bittensor-core/src/protocol/mod.rs","sdk/bittensor-core/src/protocol/python_printable.rs","sdk/bittensor-core/src/protocol/runtime_api.rs","sdk/bittensor-core/src/protocol/storage.rs","sdk/bittensor-core/tests/fixtures/finney-v478.v15.scale","sdk/bittensor-core/tests/portable_fee_dispatch.rs","sdk/bittensor-core/tests/protocol_ops.rs","sdk/bittensor-core/tests/value_navigation.rs"],"lock_delta":"Exactly the Unicode dependency edge and 1.1.0 package removed (7 lines); final lock byte-identical to v478 base.","unicode_cases":21,"license":"Apache-2.0 AND Unicode-DFS-2016","hashes":{"Cargo.lock":"c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a","sdk/bittensor-core/Cargo.toml":"93f543dbbec1cb7837ccbc14db3dff725d1e39cb989f4b469295bf8ca673e92f","sdk/bittensor-core/src/protocol/dispatch_error.rs":"8715d833de363ee60bd0259b8f393b14762c0000f668f3950dc6c08412e49acf","sdk/bittensor-core/src/protocol/python_printable.rs":"08217cfdb20bd504427b71b2e6ed6006b0bc382633c4d6d66fcdbb33054dfdde","sdk/bittensor-core/tests/portable_fee_dispatch.rs":"a6466a0868903a2bf6620963a53a2cd7aef676a9af4bdab1017ae4994d870eff"}}
+77480991b2b3b39ec828d2da9d7c6ecf31113a81
+Sam Johnson <sam@durosoft.com> 1791997547 -0400
+c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a  Cargo.lock
+8715d833de363ee60bd0259b8f393b14762c0000f668f3950dc6c08412e49acf  sdk/bittensor-core/src/protocol/dispatch_error.rs
+08217cfdb20bd504427b71b2e6ed6006b0bc382633c4d6d66fcdbb33054dfdde  sdk/bittensor-core/src/protocol/python_printable.rs
+a6466a0868903a2bf6620963a53a2cd7aef676a9af4bdab1017ae4994d870eff  sdk/bittensor-core/tests/portable_fee_dispatch.rs
+93f543dbbec1cb7837ccbc14db3dff725d1e39cb989f4b469295bf8ca673e92f  sdk/bittensor-core/Cargo.toml
+rustc 1.89.0 (29483883e 2025-08-04)
+rustc 1.99.0 (b940084d7 2026-09-28)
+STAGE fmt
+COMMAND cargo +1.89.0 fmt -p bittensor-core -p bittensor-core-py --check
+STAGE 1.89.0-portable
+COMMAND cargo +1.89.0 test --locked --offline -p bittensor-core --no-default-features --test protocol_ops --test portable_fee_dispatch --test value_navigation
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+Connection to github.com closed by remote host.
+   Compiling bittensor-core v0.1.0 (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3246/sdk/bittensor-core)
+    Finished `test` profile [optimized] target(s) in 18m 20s
+     Running tests/portable_fee_dispatch.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/portable_fee_dispatch-6e10068b4f7604af)
+
+running 5 tests
+test result_message_preserves_python_truthiness_and_shield_reasons ... ok
+test result_message_uses_cpython312_unicode15 ... ok
+test system_error_wrappers_use_exact_extracted_docs_and_python_repr ... ok
+test lookup_hashes_bytes_and_never_invents_index_for_absent_hash ... ok
+test immortal_fee_probe_and_runtime_native_fee_width ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/protocol_ops.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/protocol_ops-08662d2006547900)
+
+running 13 tests
+test metadata_rejects_wrong_json_and_invalid_hex ... ok
+test metadata_requests_preserve_version_and_optional_block_hash ... ok
+test metadata_wrapper_rejects_malformed_and_trailing_scale ... ok
+test metadata_absence_is_distinct_from_present_empty_metadata ... ok
+test storage_default_optional_and_present_values_follow_metadata ... ok
+test runtime_api_lookup_borrows_the_named_api_method ... ok
+test storage_decoding_rejects_malformed_present_and_default_bytes ... ok
+test storage_lookup_borrows_live_entry_and_reports_missing_names ... ok
+test metadata_wrapper_round_trips_parseable_v15_bytes ... ok
+test runtime_api_argument_errors_do_not_produce_requests ... ok
+test runtime_api_encodes_ordered_params_and_block_hash ... ok
+test runtime_api_results_require_the_entire_output_type ... ok
+test storage_keys_use_live_prefix_types_and_hashers ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/value_navigation.rs (/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/value_navigation-5eb36f3637b9ece4)
+
+running 9 tests
+test fields_and_variants_preserve_string_keys_and_first_match ... ok
+test bytes_and_integer_sequences_include_empty_and_boundary_values ... ok
+test scalar_accessors_do_not_coerce_shapes_or_truncate_integers ... ok
+test tuple_navigation_accepts_lists_and_never_panics_on_indexes ... ok
+test strings_keep_the_client_hex_prefix_and_utf8_rules ... ok
+test variant_names_accept_only_unit_strings_and_one_string_key ... ok
+test singleton_sequences_and_dictionaries_wrap_supported_bytes ... ok
+test wrapper_bound_accepts_the_limit_and_rejects_the_next_level ... ok
+test deep_malformed_nesting_is_bounded_without_stack_recursion ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+STAGE 1.89.0-lib
+COMMAND cargo +1.89.0 test --locked --offline -p bittensor-core --all-features --lib
+    Blocking waiting for file lock on build directory
+/Users/sam/workspace/rtao/docs/upstream/validation/quality-unicode-outgoing-gate.sh: line 21: 76343 Terminated: 15          "$@" 2>&1
+     76344 Done                    | tee "$unicode_evidence/pr-$unicode_pr-$stage.log"
+error: failed to push some refs to 'github.com:sam0x17/subtensor.git'

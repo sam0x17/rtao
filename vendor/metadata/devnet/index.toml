@@ -1,0 +1,14 @@
+# Immutable finalized runtime fixtures for metadata drift.
+schema = 1
+network = "devnet"
+
+[[runtimes]]
+spec = 478
+code_hash = "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1"
+genesis = "0x077899043eb684c5277b6814a39161f4ce072b45e782e12c81a521c63fb4f3e5"
+tag = "v478"
+commit = "850f2755bb05a3851f948489f0ab27b0645cebce"
+finalized_head = "0x71f62312287faf956e9555a6465c5a0f988a53461b1f94c8423728b3a85c3433"
+endpoint = "https://dev.chain.opentensor.ai:443"
+v15 = { path = "478.v15.scale", sha256 = "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502", bytes = 400688 }
+v16 = { path = "478.v16.scale", sha256 = "723240b9f3761915eed75a5e158484bfdb39f6eea8ddd06d32e77996e67b14c7", bytes = 404727 }

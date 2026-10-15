@@ -1,0 +1,3 @@
+f56213df9d71f2433e73c0baa4f63fcc62753ac5d317fc82ddba2a449beda38b  /Users/sam/workspace/rtao/docs/upstream/validation/quality-unicode-outgoing-gate.sh
+4a870ec066225984867be5266b6eb339e07560a21e9a42e163392551a683a378  /Users/sam/workspace/rtao/docs/upstream/validation/quality-unicode-publication/source-guard.rb
+9c2127286c5fffd01dbcef962518b921a9de25c2ca73fac6878130b92eeacfb5  /Users/sam/workspace/rtao/docs/upstream/validation/quality-unicode-publication/result-guard.rb

@@ -1,0 +1,151 @@
+name: pin-bump
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Final upstream release tag, or auto for finney's current release
+        type: string
+        default: auto
+      force:
+        description: Replay the committed parity tag and require byte-identical output
+        type: boolean
+        default: false
+      dry-run:
+        description: Run the entire candidate pipeline without adopting or publishing changes
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pin-bump
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/pin-bump
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/pin-bump/build
+  TMPDIR: ${{ github.workspace }}/target/pin-bump/tmp
+  RTAO_PYTHON_LANE: oracle
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+
+jobs:
+  candidate:
+    if: github.event_name == 'workflow_dispatch' || vars.RTAO_UPKEEP == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: clippy,rustfmt
+          cache: false
+          build-warnings: ''
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        with:
+          driver-opts: image=moby/buildkit@sha256:8c2ce26a3722e0cf4514fad4cfcd0e0f0f16214219ca7b73f3e1fcef74640ac4
+      - name: Resolve release provenance without changing pins
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag || 'auto' }}
+          FORCE_REPLAY: ${{ inputs.force || false }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test "$FORCE_REPLAY" = true; then
+            tag=$(sed -n '/^\[parity\]/,/^\[/s/^tag = "\([^"]*\)"/\1/p' upstream.toml)
+            [[ "$tag" =~ ^v[1-9][0-9]*$ ]]
+            test "$REQUESTED_TAG" = auto || test "$REQUESTED_TAG" = "$tag"
+            printf 'tag=%s\nnew=true\n' "$tag" >> "$GITHUB_OUTPUT"
+          else
+            cargo run --locked -p xtask -- pin --parity "$REQUESTED_TAG" --check --resolve-only --github-output "$GITHUB_OUTPUT"
+          fi
+      - name: Skip a tag already under review
+        id: existing
+        if: steps.resolve.outputs.new == 'true' && !inputs.force
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESOLVED_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          count=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "pin-bump/$RESOLVED_TAG" --json number --jq length)
+          printf 'open=%s\n' "$count" >> "$GITHUB_OUTPUT"
+      - name: Install the gate toolchains
+        if: steps.resolve.outputs.new == 'true' && (inputs.force || steps.existing.outputs.open == '0')
+        run: rustup toolchain install 1.89 --profile minimal --no-self-update
+      - name: Validate isolated candidate and all pipeline outputs
+        id: pipeline
+        if: steps.resolve.outputs.new == 'true' && (inputs.force || steps.existing.outputs.open == '0')
+        env:
+          RESOLVED_TAG: ${{ steps.resolve.outputs.tag }}
+          FORCE_REPLAY: ${{ inputs.force || false }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || vars.RTAO_UPKEEP != 'on' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(pin --parity "$RESOLVED_TAG" --github-output "$GITHUB_OUTPUT")
+          if test "$FORCE_REPLAY" = true; then args+=(--force); fi
+          if test "$DRY_RUN" = true; then args+=(--dry-run); fi
+          cargo run --locked -p xtask -- "${args[@]}"
+          if test "$FORCE_REPLAY" = true || test "$DRY_RUN" = true; then
+            git diff --exit-code
+            test -z "$(git ls-files --others --exclude-standard)"
+          fi
+      - name: Create upkeep token after validation
+        id: app
+        if: steps.pipeline.outputs.validated == 'true' && vars.RTAO_UPKEEP == 'on' && !inputs.force && (github.event_name != 'workflow_dispatch' || !inputs.dry-run)
+        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        with:
+          app-id: ${{ vars.RTAO_BOT_APP_ID }}
+          private-key: ${{ secrets.RTAO_BOT_PRIVATE_KEY }}
+      - name: Publish the validated upkeep PR
+        if: steps.app.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          RESOLVED_TAG: ${{ steps.pipeline.outputs.tag }}
+          CORE_BUMP: ${{ steps.pipeline.outputs.core_bump }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet && exit 0
+          gh auth setup-git
+          git config user.name rtao-bot
+          git config user.email rtao-bot@users.noreply.github.com
+          git switch -c "pin-bump/$RESOLVED_TAG"
+          git add --all
+          printf 'pin: %s\n\n' "$RESOLVED_TAG" > "$RTAO_TEMP_ROOT/pin/commit-body.md"
+          cat "$RTAO_TEMP_ROOT/pin/porting-report.md" >> "$RTAO_TEMP_ROOT/pin/commit-body.md"
+          git commit -F "$RTAO_TEMP_ROOT/pin/commit-body.md"
+          git push origin "HEAD:refs/heads/pin-bump/$RESOLVED_TAG"
+          labels=pin-bump
+          if test "$CORE_BUMP" = true; then labels=pin-bump,core-bump,downstream-patch-change; fi
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "pin-bump/$RESOLVED_TAG" --title "pin: $RESOLVED_TAG" --body-file "$RTAO_TEMP_ROOT/pin/porting-report.md" --label "$labels"
+      - name: Retain pipeline status and porting report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pin-bump-report
+          path: |
+            target/pin-bump/pin/pipeline-status.json
+            target/pin-bump/pin/porting-report.json
+            target/pin-bump/pin/porting-report.md
+            target/pin-bump/pin/validated-fixtures.tar.gz
+            target/pin-bump/pin/replay-evidence.tar.gz
+            target/pin-bump/pin/oracle-evidence.tar.gz
+            target/pin-bump/pin/recorded-evidence.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Report held candidate
+        if: failure()
+        run: |
+          if test -f "$RTAO_TEMP_ROOT/pin/pipeline-status.json"; then
+            jq -r '"Candidate held at \(.stage // .status). Committed pins and fixtures remain authoritative."' "$RTAO_TEMP_ROOT/pin/pipeline-status.json" >> "$GITHUB_STEP_SUMMARY"
+          fi

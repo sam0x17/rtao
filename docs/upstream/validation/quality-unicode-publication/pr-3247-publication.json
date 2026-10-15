@@ -1,0 +1,36 @@
+{
+  "pr": 3247,
+  "url": "https://github.com/RaoFoundation/subtensor/pull/3247",
+  "head": "849c192e9702fa245a6f16941359290786554d85",
+  "fork": "sam0x17/subtensor",
+  "branch": "sdk-receipt-nested-failures",
+  "github_actor": "sam0x17",
+  "ssh_actor": "sam0x17",
+  "commit_identity": [
+    "849c192e9702fa245a6f16941359290786554d85",
+    "Sam Johnson <sam@durosoft.com>",
+    "Sam Johnson <sam@durosoft.com>",
+    "2026-10-14T13:04:53-04:00",
+    "2026-10-14T13:04:53-04:00"
+  ],
+  "original_head": "aadeb06bb517b24428f4d7f64a351ccc8765e502",
+  "publication": "ordinary protected-hook push; no force, rebase, hook bypass or persistent Git configuration change",
+  "body_byte_verified": true,
+  "body_sha256": "54f99c9ace034eb7cc1657822bbeaf28edd1510d5ed4846b5c1277c18587fbed",
+  "labels": [],
+  "review_requests": [],
+  "final_log_hashes": {
+    "pre-push": "6a89109a55938276b95232a338fcd9888480008572794888e7f1967cbd184878",
+    "push": "5cb7ceacc3153e3726834c621c3f2904d4744d8e2284f1b8ba4e0840653664e6"
+  },
+  "local_python": "No interpreter used for this correction; every Cargo command sets PYO3_NO_PYTHON=1.",
+  "final_gate_source_hashes": {
+    "docs/upstream/validation/quality-unicode-pre-push-hook.sh": "dcc9001069cbbed640e9d3c4f5287aef8733664246d8dd0d5967c310026cfe49",
+    "docs/upstream/validation/quality-unicode-outgoing-gate.sh": "f56213df9d71f2433e73c0baa4f63fcc62753ac5d317fc82ddba2a449beda38b",
+    "docs/upstream/validation/quality-unicode-publication/source-guard.rb": "4a870ec066225984867be5266b6eb339e07560a21e9a42e163392551a683a378",
+    "docs/upstream/validation/quality-unicode-publication/result-guard.rb": "360d43d2e1a6d6858de8954fbecae47f763cd0a75cade908d6ee7f1100000d98",
+    "docs/upstream/validation/quality-unicode-publication/artifact-proof.rb": "55160767ca993e3590470adad2467a49410369a17e08d34d176c963b0e1757e0",
+    "docs/upstream/validation/quality-unicode-publication/verify-publication.rb": "c822dccea9a65dfc822b6daa8427d789c7a136343c774c093fa3ae8b4a341e75"
+  },
+  "cleanup": "cleanup-finished.json: removed exact owned worktrees/hooks/functional/wasm/lint targets; zero live dependencies/errors; shared dependencies retained"
+}

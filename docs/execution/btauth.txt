@@ -1,0 +1,16 @@
+Resolution implemented under root steering btauth-domain-resolution.txt:
+- Caller.nonce_ns is num_bigint::BigInt. Caller remains Clone/Eq, no longer Copy.
+- NonceStore::check_and_store borrows &'a BigInt. InMemoryNonceStore retains exact keys in HashSet<Arc<BigInt>>, sharing one numeric allocation with its expiry queue, and clones the borrowed value only on a new accepted pair. Lookup uses the borrowed numeric value and remains hashed O(1).
+- Clock, sign(), and public build_payload() retain checked u64-generated nanoseconds. Incoming signed/arbitrary decimal integers never narrow after authentication; canonical BigInt base10 feeds the payload.
+- Header text decodes std::str::from_utf8(HeaderValue::as_bytes()). Invalid UTF8 is malformed. Nd normalization uses unicode-general-category1.1 (Unicode16 data), including adjacent mathematical decimal groups. Unicode Nd numeric crypto aliases canonicalize to 0/1 only. Underscore/whitespace rules preserve Python int syntax; non-Nd numeric characters fail.
+- Real signatures over nonce -1 at now0, and nonce u64MAX+1 at nowMAX, authenticate and commit under defaults, then reject replay. Tampered signature and wrong receiver retain precedence over replay. Negative/oversized ordinary-clock requests reach receiver/freshness checks.
+- Exact signed and oversized replay keys retain identity through capacity and expiry. Unicode spellings normalize to the same canonical payload and replay identity. Every Unicode scalar is checked against Nd category runs in the group validation test.
+Validation on final owned source:
+- cargo test -p rtao-btauth --no-default-features:19 unit +44 integration +0 docs, all passed.
+- cargo nextest run --locked -p rtao-btauth --profile ci:63 passed,0 skipped (run ffff926c-b788-4e90-8ffa-59b31cc668a7).
+- cargo +1.89 check --locked -p rtao-btauth --no-default-features --all-targets:passed.
+- cargo clippy --locked -p rtao-btauth --all-targets --no-default-features --no-deps -- -D warnings:passed.
+- cargo fmt --check -p rtao-btauth:passed.
+- Normal no-feature dependency graph595 lines; no tokio/axum/hyper/reqwest.
+- Exact upstream test-name comparison:all20 names match.
+Builds used only shared recorded build root; no new disposable build directory. Bounded assessment, dependency tree, test-name comparison, and this result retained for root evidence. No Python/PLAN edits/commits/pushes.
