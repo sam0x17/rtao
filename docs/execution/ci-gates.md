@@ -181,3 +181,11 @@ package sets/counts and empty runtime-validation claims before byte-for-byte
 adoption in `71f28d2`. Later CLI dependency changes need another hosted refresh.
 The parity inventory was added to the refresh after this run; it declares
 source status and does not certify test or oracle success.
+
+The CLI refresh [38683267312](https://github.com/sam0x17/rtao/actions/runs/38683267312)
+succeeded on `642623b`. Four-file artifact `11949225713` (39,662 bytes)
+matched SHA-256 `6ceb152f7febcc4ce40bf56eec777a4e2fc8a8351d5dc849fbe03cc0b37d7e22`.
+All 23 current input hashes and the unchanged package inventories were checked.
+The parity matrix changes only by adding D-041/D-042 with unverified oracle
+status; compatibility validation remains null/empty. The four outputs were
+adopted byte for byte. Normal check acceptance remains separate.
