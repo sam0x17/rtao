@@ -165,6 +165,40 @@ pub(crate) fn weights_json(
     result
 }
 
+#[cfg(any(feature = "crowdloan", feature = "staking"))]
+/// Resolve exact or all-free TAO using the effective coldkey at this view.
+pub(crate) async fn stakeable_amount<V: rtao_client::View + ?Sized>(
+    amount: &rtao_primitives::Amount,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_primitives::TaoBalance, rtao_tx::IntentError> {
+    use rtao_client::ViewExt;
+    use rtao_primitives::{DynBalance, NetUid, ResolvedAmount, TaoBalance};
+    use rtao_tx::IntentError;
+    const ALL_FEE_HEADROOM_RAO: u64 = 500_000;
+    match amount.resolve(NetUid::ROOT, true)? {
+        ResolvedAmount::Exact(amount) => Ok(amount.tao()?.to_wire()),
+        ResolvedAmount::All => {
+            let free = rtao_tx::multisig::free_balance(cx.view, cx.coldkey_address()?).await?;
+            let deposit = cx
+                .view
+                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
+                .await?;
+            let amount = free
+                .rao()
+                .checked_sub(deposit.0)
+                .and_then(|amount| amount.checked_sub(ALL_FEE_HEADROOM_RAO))
+                .filter(|amount| *amount > 0)
+                .ok_or_else(|| {
+                    IntentError::validation(format!(
+                        "nothing to stake: free balance {} does not cover the existential deposit plus the transaction fee",
+                        DynBalance::from(free)
+                    ))
+                })?;
+            Ok(TaoBalance(amount))
+        }
+    }
+}
+
 #[cfg(all(
     test,
     any(feature = "crowdloan", feature = "root", feature = "staking")
@@ -256,39 +290,5 @@ mod alpha_amount_tests {
                 limit: 4096,
             }))
         ));
-    }
-}
-
-#[cfg(any(feature = "crowdloan", feature = "staking"))]
-/// Resolve exact or all-free TAO using the effective coldkey at this view.
-pub(crate) async fn stakeable_amount<V: rtao_client::View + ?Sized>(
-    amount: &rtao_primitives::Amount,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_primitives::TaoBalance, rtao_tx::IntentError> {
-    use rtao_client::ViewExt;
-    use rtao_primitives::{DynBalance, NetUid, ResolvedAmount, TaoBalance};
-    use rtao_tx::IntentError;
-    const ALL_FEE_HEADROOM_RAO: u64 = 500_000;
-    match amount.resolve(NetUid::ROOT, true)? {
-        ResolvedAmount::Exact(amount) => Ok(amount.tao()?.to_wire()),
-        ResolvedAmount::All => {
-            let free = rtao_tx::multisig::free_balance(cx.view, cx.coldkey_address()?).await?;
-            let deposit = cx
-                .view
-                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
-                .await?;
-            let amount = free
-                .rao()
-                .checked_sub(deposit.0)
-                .and_then(|amount| amount.checked_sub(ALL_FEE_HEADROOM_RAO))
-                .filter(|amount| *amount > 0)
-                .ok_or_else(|| {
-                    IntentError::validation(format!(
-                        "nothing to stake: free balance {} does not cover the existential deposit plus the transaction fee",
-                        DynBalance::from(free)
-                    ))
-                })?;
-            Ok(TaoBalance(amount))
-        }
     }
 }
