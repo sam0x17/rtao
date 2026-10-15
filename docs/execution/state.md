@@ -16,6 +16,14 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Root follow-up aligns decimal ABI integer strings with Python's default
+4,300-digit limit, including leading zeroes; hexadecimal remains exempt.
+Public coercion fixture source covers both sides, signs, Unicode digits and
+separators while retaining native u64 and ABI-width checks. Formatting and
+whitespace pass; execution remains pending. Hosted generation38776671979
+runs at d7b4a27; this later source-only fix changes none of its dependency,
+extraction or report inputs.
+
 Generation run38776446102 at8112797 fails before producing reports: the new
 cancellation-aware hash request needs an explicit JSON Value type before its
 null check. Add that annotation, preserving the same request and cancellation

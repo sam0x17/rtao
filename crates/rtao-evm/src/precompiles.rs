@@ -668,6 +668,7 @@ fn python_integer_text(text: &str) -> Result<String> {
     let mut unicode_digits = BTreeMap::new();
     let mut previous_digit = false;
     let mut any_digit = false;
+    let mut decimal_digits = 0;
     for (index, character) in body.chars().enumerate() {
         if character == '_' {
             // int(text,16) permits one separator immediately after 0x too.
@@ -695,6 +696,12 @@ fn python_integer_text(text: &str) -> Result<String> {
             digit
         }
         .ok_or_else(|| invalid("ABI integers require exact decimal or 0x hexadecimal input"))?;
+        if !hexadecimal {
+            decimal_digits += 1;
+            if decimal_digits > 4_300 {
+                return Err(invalid("ABI decimal integer exceeds Python's digit limit"));
+            }
+        }
         previous_digit = true;
         any_digit = true;
         if digit != 0 || !digits.is_empty() {
@@ -1497,6 +1504,23 @@ mod tests {
         assert_eq!(
             encode_call(&function, &[json!(format!("{}1", "0_".repeat(1000)))]).unwrap(),
             encode_call(&function, &[json!(1)]).unwrap()
+        );
+        for count in [4_300, 4_301] {
+            for decimal in [
+                "0".repeat(count),
+                format!(" +{} ", "٠_".repeat(count - 1) + "٠"),
+            ] {
+                assert_eq!(
+                    coerce_argument("uint256", &json!(decimal)).is_ok(),
+                    count == 4_300,
+                    "decimal digit count {count}"
+                );
+            }
+        }
+        // Power-of-two bases are exempt from CPython's decimal limit.
+        assert_eq!(
+            coerce_argument("uint8", &json!(format!("0x{}1", "0_".repeat(4_301)))).unwrap(),
+            DynSolValue::Uint(U256::from(1), 8)
         );
         assert!(encode_call(&function, &[json!("9".repeat(79))]).is_err());
         assert!(encode_call(&function, &[json!(format!("0x1{}", "0".repeat(64)))]).is_err());
