@@ -3,6 +3,42 @@
 schema = 1
 
 [[divergences]]
+id = "D-063"
+upstream_symbol = "bittensor.http_auth.InMemoryNonceStore replay identity"
+python_behavior = "Replay entries use the literal sender SS58 string and parsed nonce as the key. Separately signed requests for the same account and nonce can occupy different prefix entries."
+rtao_behavior = "Signature verification preserves the exact signed sender text; after authentication, replay storage uses decoded AccountId plus the full signed integer nonce. The same account and nonce are rejected across accepted SS58 prefixes."
+rationale = "The typed native store uses account identity consistently with Caller. Prefix spelling is retained for signature authentication but does not create a second replay identity. This is an explicit local identity policy, without an upstream exploit claim."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; complete pinned HTTP-auth source and existing cross-prefix fixture reviewed on 2026-10-15"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_btauth::conformance::alternate_sender_ss58_prefix_preserves_exact_signed_text_and_normalizes_replay_identity",
+]
+upstream_report = "Existing implementation and both-algorithm fixture source reviewed; current combined hosted execution remains pending. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/http_auth.py#L143-L150"
+
+[[divergences]]
+id = "D-062"
+upstream_symbol = "bittensor.intents.hyperparameters.SetHyperparameter.blocks and governance TrimSubnet/TrimNullSubnetBatch/SetMechanismCount.blocks"
+python_behavior = "These intents inherit the empty base blocks hook; their builds compose calls without native owner/window admission."
+rtao_behavior = "Ordinary preflight uses the existing pinned HyperparamPlanner for the effective dispatch owner, admin freeze and setter cooldown. Nonowners or failed admission reads return an error; a closed window returns blocking reasons before key acquisition. A matching Null-pruning continuation skips only its cooldown, retaining the freeze check. Inner build bytes and raw-call admission remain unchanged."
+rationale = "PLAN.md M4-02 requires the native owner planner. Its existing intent-level admission avoids signing known owner/window failures, and must be disclosed separately from Python parity. Pinned predictions do not guarantee later runtime acceptance."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; independent source audit of existing owner preflight on 2026-10-15"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_intents::governance::tests::owner_windows_use_dispatch_owner_and_keep_freeze_and_cooldown",
+  "rtao_intents::governance::tests::matching_null_continuation_skips_only_cooldown",
+  "rtao_intents::governance::tests::open_owner_windows_keep_python_summary_as_the_only_effect",
+  "rtao_tx::owner_execution::registration_policy_and_owner_preflight_refuse_before_unlock",
+  "rtao_tx::owner_execution::owner_replan_rechecks_the_window_before_a_second_submission",
+]
+upstream_report = "Existing native admission and fixture bodies independently reviewed; current combined hosted execution remains pending. This records a local client policy, with no upstream defect alleged or new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/base.py#L200-L226"
+
+[[divergences]]
 id = "D-061"
 upstream_symbol = "bittensor.cli.hyperparams_view._example_value(epoch_consensus)"
 python_behavior = "The view suggests numeric 0/1 setter values, although the interactive parser and SetHyperparameter accept only Yuma/Null."

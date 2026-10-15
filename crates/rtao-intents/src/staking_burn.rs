@@ -1,4 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/{governance,staking}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/governance.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! TAO-funded subnet alpha buybacks with an explicit or spot-derived limit.
 
 use rtao_client::{View, ViewExt};
