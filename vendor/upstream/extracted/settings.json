@@ -1,0 +1,236 @@
+{
+  "format": 1,
+  "provenance": {
+    "blob": "418de02b74d6f6aaeba2ebef7679dbb2b40b992f",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "sdk/python/bittensor/settings.py",
+    "tag": "v478"
+  },
+  "values": {
+    "ALPHA_SYMBOL": {
+      "end_line": 13,
+      "line": 13,
+      "value": "α"
+    },
+    "ARCHIVE_ENDPOINTS": {
+      "end_line": 77,
+      "line": 69,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            [
+              "wss://archive.chain.opentensor.ai:443",
+              "wss://archive.sub.latent.to:443"
+            ]
+          ],
+          [
+            "archive",
+            [
+              "wss://archive.sub.latent.to:443"
+            ]
+          ]
+        ]
+      }
+    },
+    "BLOCKTIME": {
+      "end_line": 20,
+      "line": 20,
+      "value": 12.0
+    },
+    "DEFAULT_ERA_PERIOD": {
+      "end_line": 22,
+      "line": 22,
+      "value": 128
+    },
+    "DEFAULT_NETWORK": {
+      "end_line": 41,
+      "line": 41,
+      "value": "finney"
+    },
+    "DOCS_URL": {
+      "end_line": 114,
+      "line": 114,
+      "value": "https://www.bittensor.com/docs"
+    },
+    "EXPLORER_ACCOUNT_URLS": {
+      "end_line": 180,
+      "line": 174,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            {
+              "dict": [
+                [
+                  "hotkey",
+                  "https://taomarketcap.com/validators/{ss58}"
+                ],
+                [
+                  "coldkey",
+                  "https://taomarketcap.com/coldkey/{ss58}"
+                ]
+              ]
+            }
+          ],
+          [
+            "archive",
+            {
+              "dict": [
+                [
+                  "hotkey",
+                  "https://taomarketcap.com/validators/{ss58}"
+                ],
+                [
+                  "coldkey",
+                  "https://taomarketcap.com/coldkey/{ss58}"
+                ]
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    "EXPLORER_BLOCK_URLS": {
+      "end_line": 198,
+      "line": 195,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            "https://www.tao.app/block/{number}"
+          ],
+          [
+            "archive",
+            "https://www.tao.app/block/{number}"
+          ]
+        ]
+      }
+    },
+    "EXPLORER_EXTRINSIC_URLS": {
+      "end_line": 156,
+      "line": 153,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            "https://taomarketcap.com/extrinsics/{id}"
+          ],
+          [
+            "archive",
+            "https://taomarketcap.com/extrinsics/{id}"
+          ]
+        ]
+      }
+    },
+    "EXPLORER_SUBNET_URLS": {
+      "end_line": 213,
+      "line": 210,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            "https://taomarketcap.com/subnets/{netuid}"
+          ],
+          [
+            "archive",
+            "https://taomarketcap.com/subnets/{netuid}"
+          ]
+        ]
+      }
+    },
+    "FALLBACK_ENDPOINTS": {
+      "end_line": 64,
+      "line": 56,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            [
+              "wss://lite.chain.opentensor.ai:443",
+              "wss://lite.sub.latent.to:443"
+            ]
+          ],
+          [
+            "archive",
+            [
+              "wss://archive.sub.latent.to:443"
+            ]
+          ]
+        ]
+      }
+    },
+    "FINNEY_GENESIS_HASH": {
+      "end_line": 45,
+      "line": 45,
+      "value": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
+    },
+    "GLOBAL_MAX_SUBNET_COUNT": {
+      "end_line": 31,
+      "line": 31,
+      "value": 4096
+    },
+    "MEV_SHIELD_ERA_PERIOD": {
+      "end_line": 29,
+      "line": 29,
+      "value": 8
+    },
+    "NETWORKS": {
+      "end_line": 39,
+      "line": 33,
+      "value": {
+        "dict": [
+          [
+            "finney",
+            "wss://entrypoint-finney.opentensor.ai:443"
+          ],
+          [
+            "test",
+            "wss://test.finney.opentensor.ai:443"
+          ],
+          [
+            "archive",
+            "wss://archive.chain.opentensor.ai:443"
+          ],
+          [
+            "devnet",
+            "wss://dev.chain.opentensor.ai:443"
+          ],
+          [
+            "local",
+            {
+              "default": "ws://127.0.0.1:9944",
+              "empty_is_unset": true,
+              "env": "BT_CHAIN_ENDPOINT"
+            }
+          ]
+        ]
+      }
+    },
+    "RAO_PER_TAO": {
+      "end_line": 15,
+      "line": 15,
+      "value": 1000000000
+    },
+    "SS58_FORMAT": {
+      "end_line": 10,
+      "line": 10,
+      "value": 42
+    },
+    "TAO_SYMBOL": {
+      "end_line": 12,
+      "line": 12,
+      "value": "τ"
+    },
+    "U16_MAX": {
+      "end_line": 18,
+      "line": 18,
+      "value": 65535
+    },
+    "VAULT_GUIDE_URL": {
+      "end_line": 50,
+      "line": 50,
+      "value": "https://www.bittensor.com/docs/guides/vault"
+    }
+  }
+}

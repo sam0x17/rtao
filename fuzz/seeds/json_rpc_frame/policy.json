@@ -1,0 +1,1 @@
+[{"id":1,"error":{"code":-32005,"message":"rate limit exceeded","data":{"policy":"quota","retry_after":"1"}}},{"id":3,"result":"stop"}]

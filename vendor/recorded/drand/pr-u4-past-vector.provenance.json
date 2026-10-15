@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "core_commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+  "registry_package": {
+    "name": "w3f-bls",
+    "version": "0.1.3",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  "isolated_lock_sha256": "222c96c5dd75d5de797be4d5eefde24f76d4ae7ed75def7ea545c0befc7c7e38",
+  "vector_sha256": "960360ae7d6f05be27f5c5ea67dc7b413dcb170e76d6c39422a3b639ed72050b",
+  "validation": {
+    "compiler": "Rust 1.89",
+    "registry_decrypted": true,
+    "workspace_ciphertext_identical": true,
+    "workspace_decrypted": true,
+    "wrong_signature_rejected": true
+  },
+  "logs": [
+    "m2-pr-u4-isolated-build.log",
+    "m2-pr-u4-two-way-cross-decrypt-test.log"
+  ]
+}

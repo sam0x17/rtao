@@ -1,0 +1,80 @@
+{
+  "format": 1,
+  "projection": {
+    "RejectedFutureTransaction": "FutureTx"
+  },
+  "provenance": {
+    "author": {
+      "blob": "0ccd82fc0b64c2350e76e9cb7936944af717bff3",
+      "commit": "cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a",
+      "path": "substrate/client/rpc-api/src/author/error.rs",
+      "repository": "https://github.com/RaoFoundation/polkadot-sdk.git"
+    },
+    "base": {
+      "blob": "58b75b8fb1691f4dbbb93b9adc457bf5719c596b",
+      "commit": "cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a",
+      "path": "substrate/client/rpc-api/src/error.rs",
+      "repository": "https://github.com/RaoFoundation/polkadot-sdk.git"
+    }
+  },
+  "rules": {
+    "base": 1000,
+    "variants": {
+      "AlreadyImported": {
+        "code": 1013,
+        "constant": "POOL_ALREADY_IMPORTED",
+        "rust_variant": "AlreadyImported"
+      },
+      "CycleDetected": {
+        "code": 1015,
+        "constant": "POOL_CYCLE_DETECTED",
+        "rust_variant": "CycleDetected"
+      },
+      "ImmediatelyDropped": {
+        "code": 1016,
+        "constant": "POOL_IMMEDIATELY_DROPPED",
+        "rust_variant": "ImmediatelyDropped"
+      },
+      "InvalidBlockId": {
+        "code": 1020,
+        "constant": "POOL_INVALID_BLOCK_ID",
+        "rust_variant": "InvalidBlockId"
+      },
+      "InvalidTransaction": {
+        "code": 1010,
+        "constant": "POOL_INVALID_TX",
+        "rust_variant": "InvalidTransaction"
+      },
+      "NoTagsProvided": {
+        "code": 1019,
+        "constant": "POOL_NO_TAGS",
+        "rust_variant": "NoTagsProvided"
+      },
+      "RejectedFutureTransaction": {
+        "code": 1021,
+        "constant": "POOL_FUTURE_TX",
+        "rust_variant": "RejectedFutureTransaction"
+      },
+      "TemporarilyBanned": {
+        "code": 1012,
+        "constant": "POOL_TEMPORARILY_BANNED",
+        "rust_variant": "TemporarilyBanned"
+      },
+      "TooLowPriority": {
+        "code": 1014,
+        "constant": "POOL_TOO_LOW_PRIORITY",
+        "rust_variant": "TooLowPriority"
+      },
+      "Unactionable": {
+        "code": 1018,
+        "constant": "POOL_UNACTIONABLE",
+        "rust_variant": "Unactionable"
+      },
+      "UnknownTransaction": {
+        "code": 1011,
+        "constant": "POOL_UNKNOWN_VALIDITY",
+        "rust_variant": "UnknownTransaction"
+      }
+    }
+  }
+}

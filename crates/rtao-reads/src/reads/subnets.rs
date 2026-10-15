@@ -1,0 +1,174 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/base.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+//! Subnet catalog reads over pinned client views.
+
+use std::collections::BTreeMap;
+
+use futures::TryStreamExt;
+use rtao_client::{View, ViewExt};
+use rtao_core::{DynValue, codec::Value};
+use rtao_primitives::NetUid;
+use serde_json::Value as JsonValue;
+
+use crate::ReadError;
+
+/// Python's raw `get_metagraph` record with name and symbol decoded to text.
+///
+/// Other fields retain the core corpus shapes. A missing subnet yields JSON
+/// `null`; the curated typed graph lives in `rtao-metagraph`.
+// py: sdk/python/bittensor/reads/subnets.py:170-190
+pub async fn metagraph<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<JsonValue, ReadError> {
+    let graph = view
+        .call_dyn(
+            "SubnetInfoRuntimeApi",
+            "get_metagraph",
+            &[Value::Uint(u128::from(netuid.0))],
+        )
+        .await?;
+    normalize_metagraph(graph.to_json())
+}
+
+fn normalize_metagraph(mut graph: JsonValue) -> Result<JsonValue, ReadError> {
+    if let Some(graph) = graph.as_object_mut() {
+        for key in ["name", "symbol"] {
+            if let Some(value) = graph.get_mut(key) {
+                *value = utf8_text(value.take())?;
+            }
+        }
+    }
+    Ok(graph)
+}
+
+/// Every chain-registered token symbol, keyed by native subnet identity.
+// py: sdk/python/bittensor/reads/subnets.py:217-226
+pub async fn token_symbols<V: View + ?Sized>(
+    view: &V,
+) -> Result<BTreeMap<NetUid, String>, ReadError> {
+    let snapshot = view.pin().await?;
+    let rows: Vec<_> = snapshot
+        .storage_iter_dyn("SubtensorModule", "TokenSymbol", Vec::new())
+        .try_collect()
+        .await?;
+    let offload =
+        rows.len() > 64 || rows.iter().map(|(_, raw, _, _)| raw.len()).sum::<usize>() > 64 * 1024;
+    let decode = move || {
+        rows.into_iter()
+            .map(|(keys, raw, runtime, info)| {
+                let netuid = keys
+                    .last()
+                    .and_then(rtao_core::value_ext::as_u128)
+                    .and_then(|value| u16::try_from(value).ok())
+                    .ok_or_else(|| {
+                        rtao_client::ClientError::Protocol(
+                            "TokenSymbol key is not a native NetUid".into(),
+                        )
+                    })?;
+                let value = rtao_core::ops::storage::decode_storage_bytes(
+                    runtime.core(),
+                    &info,
+                    Some(&raw),
+                )
+                .map_err(rtao_core::CoreError::from)
+                .map_err(rtao_client::ClientError::from)?;
+                let value = utf8_text(DynValue::new(value).to_json())?;
+                let value = value.as_str().ok_or_else(|| ReadError::SurfaceChanged {
+                    descriptor: "SubtensorModule.TokenSymbol",
+                    detail: "token symbol is not a byte string".into(),
+                })?;
+                Ok((NetUid(netuid), value.to_owned()))
+            })
+            .collect()
+    };
+    if offload {
+        rtao_client::offload(decode).await.map_err(|error| {
+            rtao_client::ClientError::Protocol(format!("token symbol decoder task failed: {error}"))
+        })?
+    } else {
+        decode()
+    }
+}
+
+// py: sdk/python/bittensor/reads/base.py:169-184
+pub(crate) fn utf8_text(value: JsonValue) -> Result<JsonValue, ReadError> {
+    let bytes = match &value {
+        JsonValue::String(text) if text.starts_with("0x") => {
+            Some(crate::commitments::python_fromhex(&text[2..], "text")?)
+        }
+        JsonValue::Array(values) => values
+            .iter()
+            .map(|value| match value {
+                JsonValue::Number(number) => {
+                    number.as_u64().and_then(|value| u8::try_from(value).ok())
+                }
+                JsonValue::Bool(value) => Some(u8::from(*value)),
+                JsonValue::String(value) => value.trim().parse().ok(),
+                _ => None,
+            })
+            .collect::<Option<Vec<_>>>(),
+        _ => None,
+    };
+    let Some(bytes) = bytes else { return Ok(value) };
+    Ok(JsonValue::String(String::from_utf8(bytes).unwrap_or_else(
+        |error| format!("0x{}", hex::encode(error.into_bytes())),
+    )))
+}
+
+/// Whether the subnet requires commit-reveal weights.
+pub async fn commit_reveal_enabled<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+) -> Result<bool, ReadError> {
+    Ok(view
+        .storage(
+            &rtao_runtime::storage::subtensor_module::COMMIT_REVEAL_WEIGHTS_ENABLED,
+            (netuid,),
+        )
+        .await?)
+}
+/// Current mechanism count; unlike a mechanism index, the count may be sixteen.
+pub async fn mechanism_count<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<u8, ReadError> {
+    Ok(view
+        .storage(
+            &rtao_runtime::storage::subtensor_module::MECHANISM_COUNT_CURRENT,
+            (netuid,),
+        )
+        .await?
+        .0)
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::panic)] // Test failures identify unexpected fixture values.
+mod tests {
+    use super::*;
+    use crate::commitments::CommitmentError;
+    use serde_json::json;
+
+    #[test]
+    fn metagraph_only_normalizes_present_name_and_symbol() {
+        let graph =
+            normalize_metagraph(json!({"name": [207, 132], "symbol": "0xff", "other": [1, 2]}))
+                .unwrap();
+        assert_eq!(
+            graph,
+            json!({"name": "τ", "symbol": "0xff", "other": [1, 2]})
+        );
+        assert_eq!(
+            normalize_metagraph(JsonValue::Null).unwrap(),
+            JsonValue::Null
+        );
+        assert_eq!(normalize_metagraph(json!({})).unwrap(), json!({}));
+    }
+
+    #[test]
+    fn utf8_text_retains_invalid_nonbyte_sequences_and_reports_invalid_hex() {
+        assert_eq!(utf8_text(json!(["256"])).unwrap(), json!(["256"]));
+        assert_eq!(utf8_text(json!([true, "65"])).unwrap(), json!("\u{1}A"));
+        assert_eq!(utf8_text(json!("raw")).unwrap(), json!("raw"));
+        let ReadError::Commitment(CommitmentError { message, .. }) =
+            utf8_text(json!("0xz")).unwrap_err()
+        else {
+            panic!("wrong error")
+        };
+        assert!(message.contains("position 0"));
+    }
+}

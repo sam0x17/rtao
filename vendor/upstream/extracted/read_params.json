@@ -1,0 +1,4638 @@
+{
+  "catalog": {
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "count": 102,
+    "path": "website/apps/bittensor-website/public/catalog/reads.json",
+    "sha256": "1b55578ad877b80460db56f81d8c93365f660d98593c3787943cb6df14011a2b",
+    "tag": "v478"
+  },
+  "format": 1,
+  "modules": {
+    "imports": [
+      {
+        "blob": "ad6e1af3fa9b15d16683de5addd7d423bb739203",
+        "end_byte": 1081,
+        "end_line": 32,
+        "line": 16,
+        "path": "sdk/python/bittensor/reads/__init__.py",
+        "start_byte": 806
+      }
+    ]
+  },
+  "parity": {
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "tag": "v478"
+  },
+  "reads": [
+    {
+      "category": "Locks & conviction",
+      "name": "accepts_locked_alpha",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 4704,
+            "end_line": 124,
+            "line": 124,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 4687
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 4649,
+          "end_line": 123,
+          "line": 118,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 4459
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 5085,
+          "end_line": 132,
+          "line": 124,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 4650
+        }
+      }
+    },
+    {
+      "category": "Prices & swaps",
+      "name": "alpha_price",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+            "end_byte": 2888,
+            "end_line": 88,
+            "line": 88,
+            "path": "sdk/python/bittensor/reads/prices.py",
+            "start_byte": 2877
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 2848,
+          "end_line": 87,
+          "line": 82,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 2700
+        },
+        "fetch": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 3187,
+          "end_line": 95,
+          "line": 88,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 2849
+        }
+      }
+    },
+    {
+      "category": "Prices & swaps",
+      "name": "alpha_prices",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 2402,
+          "end_line": 75,
+          "line": 75,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 2351
+        },
+        "fetch": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 2696,
+          "end_line": 79,
+          "line": 76,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 2403
+        }
+      }
+    },
+    {
+      "category": "Neurons & registration",
+      "name": "associated_evm_key",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 4210,
+            "end_line": 129,
+            "line": 129,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 4199
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "uid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 4220,
+            "end_line": 129,
+            "line": 129,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 4212
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 4163,
+          "end_line": 128,
+          "line": 120,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 3913
+        },
+        "fetch": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 4555,
+          "end_line": 135,
+          "line": 129,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 4164
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "auto_stake",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 10887,
+            "end_line": 300,
+            "line": 300,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 10870
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 10900,
+            "end_line": 300,
+            "line": 300,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 10889
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 10842,
+          "end_line": 299,
+          "line": 291,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 10605
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 11143,
+          "end_line": 303,
+          "line": 300,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 10843
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "auto_stake_all",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 11364,
+            "end_line": 312,
+            "line": 312,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 11347
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 11315,
+          "end_line": 311,
+          "line": 306,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 11147
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 11878,
+          "end_line": 323,
+          "line": 312,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 11316
+        }
+      }
+    },
+    {
+      "category": "Accounts & keys",
+      "name": "balance",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "end_byte": 487,
+            "end_line": 20,
+            "line": 20,
+            "path": "sdk/python/bittensor/reads/accounts.py",
+            "start_byte": 470
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 445,
+          "end_line": 19,
+          "line": 14,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 287
+        },
+        "fetch": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 673,
+          "end_line": 23,
+          "line": 20,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 446
+        }
+      }
+    },
+    {
+      "category": "Accounts & keys",
+      "name": "balances",
+      "params": [
+        {
+          "annotation": "list[str]",
+          "default": {
+            "present": false
+          },
+          "json_type": "array",
+          "name": "coldkey_ss58s",
+          "own_key": false,
+          "provenance": {
+            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "end_byte": 889,
+            "end_line": 32,
+            "line": 32,
+            "path": "sdk/python/bittensor/reads/accounts.py",
+            "start_byte": 865
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 839,
+          "end_line": 31,
+          "line": 26,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 677
+        },
+        "fetch": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 1243,
+          "end_line": 38,
+          "line": 32,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 840
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "basket_position",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 10771,
+            "end_line": 246,
+            "line": 246,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 10755
+          },
+          "required": false
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 10790,
+            "end_line": 246,
+            "line": 246,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 10773
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 10722,
+          "end_line": 245,
+          "line": 237,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 10460
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 11724,
+          "end_line": 264,
+          "line": 246,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 10723
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "basket_trading_status",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 16961,
+            "end_line": 395,
+            "line": 395,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 16945
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 16906,
+          "end_line": 394,
+          "line": 389,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 16726
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 18437,
+          "end_line": 420,
+          "line": 395,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 16907
+        }
+      }
+    },
+    {
+      "category": "Chain",
+      "name": "block_info",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "block",
+          "own_key": false,
+          "provenance": {
+            "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+            "end_byte": 1099,
+            "end_line": 37,
+            "line": 37,
+            "path": "sdk/python/bittensor/reads/chain.py",
+            "start_byte": 1089
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 1061,
+          "end_line": 36,
+          "line": 31,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 933
+        },
+        "fetch": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 1914,
+          "end_line": 59,
+          "line": 37,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 1062
+        }
+      }
+    },
+    {
+      "category": "Chain",
+      "name": "block_time",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 559,
+          "end_line": 19,
+          "line": 19,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 519
+        },
+        "fetch": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 718,
+          "end_line": 22,
+          "line": 20,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 560
+        }
+      }
+    },
+    {
+      "category": "Epochs & timing",
+      "name": "blocks_since_last_step",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 1930,
+          "end_line": 56,
+          "line": 50,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 1731
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Epochs & timing",
+      "name": "blocks_since_last_update",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+            "end_byte": 2217,
+            "end_line": 68,
+            "line": 68,
+            "path": "sdk/python/bittensor/reads/epochs.py",
+            "start_byte": 2206
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "uid",
+          "own_key": false,
+          "provenance": {
+            "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+            "end_byte": 2227,
+            "end_line": 68,
+            "line": 68,
+            "path": "sdk/python/bittensor/reads/epochs.py",
+            "start_byte": 2219
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 2164,
+          "end_line": 67,
+          "line": 59,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 1934
+        },
+        "fetch": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 2814,
+          "end_line": 81,
+          "line": 68,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 2165
+        }
+      }
+    },
+    {
+      "category": "Epochs & timing",
+      "name": "blocks_until_next_epoch",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+            "end_byte": 1181,
+            "end_line": 37,
+            "line": 37,
+            "path": "sdk/python/bittensor/reads/epochs.py",
+            "start_byte": 1170
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 1129,
+          "end_line": 36,
+          "line": 31,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 985
+        },
+        "fetch": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 1728,
+          "end_line": 47,
+          "line": 37,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 1130
+        }
+      }
+    },
+    {
+      "category": "Weights & bonds",
+      "name": "bonds",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+            "end_byte": 2147,
+            "end_line": 59,
+            "line": 59,
+            "path": "sdk/python/bittensor/reads/weights.py",
+            "start_byte": 2136
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "mechid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+            "end_byte": 2164,
+            "end_line": 59,
+            "line": 59,
+            "path": "sdk/python/bittensor/reads/weights.py",
+            "start_byte": 2149
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+          "end_byte": 2113,
+          "end_line": 58,
+          "line": 49,
+          "path": "sdk/python/bittensor/reads/weights.py",
+          "start_byte": 1853
+        },
+        "fetch": {
+          "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+          "end_byte": 3038,
+          "end_line": 76,
+          "line": 59,
+          "path": "sdk/python/bittensor/reads/weights.py",
+          "start_byte": 2114
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "burn",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 2341,
+            "end_line": 79,
+            "line": 79,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 2330
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 2308,
+          "end_line": 78,
+          "line": 73,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 2191
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 2521,
+          "end_line": 82,
+          "line": 79,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 2309
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "childkey_threshold_suspended",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 8005,
+            "end_line": 224,
+            "line": 224,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 7989
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 7943,
+          "end_line": 223,
+          "line": 218,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 7783
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 8637,
+          "end_line": 235,
+          "line": 224,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 7944
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "children",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 5172,
+            "end_line": 156,
+            "line": 156,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 5156
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 5185,
+            "end_line": 156,
+            "line": 156,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 5174
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 5130,
+          "end_line": 155,
+          "line": 147,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 4902
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 5771,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 5131
+        }
+      }
+    },
+    {
+      "category": "Locks & conviction",
+      "name": "coldkey_lock",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 2137,
+            "end_line": 61,
+            "line": 61,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 2120
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 2150,
+            "end_line": 61,
+            "line": 61,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 2139
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 2090,
+          "end_line": 60,
+          "line": 52,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 1858
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 2661,
+          "end_line": 71,
+          "line": 61,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 2091
+        }
+      }
+    },
+    {
+      "category": "Accounts & keys",
+      "name": "coldkey_swap_announcement",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "end_byte": 2509,
+            "end_line": 77,
+            "line": 77,
+            "path": "sdk/python/bittensor/reads/accounts.py",
+            "start_byte": 2492
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 2449,
+          "end_line": 76,
+          "line": 71,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 2259
+        },
+        "fetch": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 3300,
+          "end_line": 95,
+          "line": 77,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 2450
+        }
+      }
+    },
+    {
+      "category": "Mining & collateral",
+      "name": "collateral_policy",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+            "end_byte": 5553,
+            "end_line": 138,
+            "line": 138,
+            "path": "sdk/python/bittensor/reads/collateral.py",
+            "start_byte": 5542
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+          "end_byte": 5507,
+          "end_line": 137,
+          "line": 132,
+          "path": "sdk/python/bittensor/reads/collateral.py",
+          "start_byte": 5365
+        },
+        "fetch": {
+          "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+          "end_byte": 6261,
+          "end_line": 156,
+          "line": 138,
+          "path": "sdk/python/bittensor/reads/collateral.py",
+          "start_byte": 5508
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "commit_reveal_enabled",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 3986,
+            "end_line": 120,
+            "line": 120,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 3975
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 3936,
+          "end_line": 119,
+          "line": 114,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 3802
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 4170,
+          "end_line": 123,
+          "line": 120,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 3937
+        }
+      }
+    },
+    {
+      "category": "Identity & commitments",
+      "name": "commitment",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 2944,
+            "end_line": 90,
+            "line": 90,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 2933
+          },
+          "required": true
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 2962,
+            "end_line": 90,
+            "line": 90,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 2946
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 2905,
+          "end_line": 89,
+          "line": 81,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 2640
+        },
+        "fetch": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 3455,
+          "end_line": 101,
+          "line": 90,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 2906
+        }
+      }
+    },
+    {
+      "category": "Identity & commitments",
+      "name": "commitments",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 4625,
+            "end_line": 139,
+            "line": 139,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 4614
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 4585,
+          "end_line": 138,
+          "line": 133,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 4429
+        },
+        "fetch": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 5684,
+          "end_line": 162,
+          "line": 139,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 4586
+        }
+      }
+    },
+    {
+      "category": "Leases & crowdloans",
+      "name": "crowdloan",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "crowdloan_id",
+          "own_key": false,
+          "provenance": {
+            "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+            "end_byte": 1672,
+            "end_line": 55,
+            "line": 55,
+            "path": "sdk/python/bittensor/reads/leasing.py",
+            "start_byte": 1655
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 1628,
+          "end_line": 54,
+          "line": 49,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 1467
+        },
+        "fetch": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 2614,
+          "end_line": 74,
+          "line": 55,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 1629
+        }
+      }
+    },
+    {
+      "category": "Leases & crowdloans",
+      "name": "crowdloan_contributors",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "crowdloan_id",
+          "own_key": false,
+          "provenance": {
+            "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+            "end_byte": 3608,
+            "end_line": 103,
+            "line": 103,
+            "path": "sdk/python/bittensor/reads/leasing.py",
+            "start_byte": 3591
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 3551,
+          "end_line": 102,
+          "line": 97,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 3361
+        },
+        "fetch": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 3963,
+          "end_line": 112,
+          "line": 103,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 3552
+        }
+      }
+    },
+    {
+      "category": "Leases & crowdloans",
+      "name": "crowdloans",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 2672,
+          "end_line": 77,
+          "line": 77,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 2618
+        },
+        "fetch": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 3357,
+          "end_line": 94,
+          "line": 78,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 2673
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "delegate",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 2571,
+            "end_line": 80,
+            "line": 80,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 2555
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 2529,
+          "end_line": 79,
+          "line": 74,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 2385
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 2814,
+          "end_line": 83,
+          "line": 80,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 2530
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "delegate_take",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 3397,
+            "end_line": 104,
+            "line": 104,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 3381
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 3350,
+          "end_line": 103,
+          "line": 98,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 3193
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 4148,
+          "end_line": 121,
+          "line": 104,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 3351
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "delegated",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 4350,
+            "end_line": 130,
+            "line": 130,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 4333
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 4306,
+          "end_line": 129,
+          "line": 124,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 4152
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 4898,
+          "end_line": 144,
+          "line": 130,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 4307
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "delegates",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 2122,
+          "end_line": 67,
+          "line": 67,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 2078
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 2381,
+          "end_line": 71,
+          "line": 68,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 2123
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "difficulty",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 592,
+          "end_line": 22,
+          "line": 18,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 468
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Epochs & timing",
+      "name": "epoch_status",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+            "end_byte": 2992,
+            "end_line": 90,
+            "line": 90,
+            "path": "sdk/python/bittensor/reads/epochs.py",
+            "start_byte": 2981
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 2951,
+          "end_line": 89,
+          "line": 84,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 2818
+        },
+        "fetch": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 4674,
+          "end_line": 128,
+          "line": 90,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 2952
+        }
+      }
+    },
+    {
+      "category": "Accounts & keys",
+      "name": "existential_deposit",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 1306,
+          "end_line": 41,
+          "line": 41,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 1247
+        },
+        "fetch": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 1527,
+          "end_line": 45,
+          "line": 42,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 1307
+        }
+      }
+    },
+    {
+      "category": "Locks & conviction",
+      "name": "hotkey_conviction",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 5380,
+            "end_line": 144,
+            "line": 144,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 5364
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 5393,
+            "end_line": 144,
+            "line": 144,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 5382
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 5329,
+          "end_line": 143,
+          "line": 135,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 5089
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 5953,
+          "end_line": 154,
+          "line": 144,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 5330
+        }
+      }
+    },
+    {
+      "category": "Identity & commitments",
+      "name": "hotkey_identities",
+      "params": [
+        {
+          "annotation": "list[str]",
+          "default": {
+            "present": false
+          },
+          "json_type": "array",
+          "name": "hotkey_ss58s",
+          "own_key": false,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 1272,
+            "end_line": 43,
+            "line": 43,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 1249
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 1214,
+          "end_line": 42,
+          "line": 37,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 1041
+        },
+        "fetch": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 2160,
+          "end_line": 65,
+          "line": 43,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 1215
+        }
+      }
+    },
+    {
+      "category": "Neurons & registration",
+      "name": "hotkey_owner",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 2295,
+            "end_line": 75,
+            "line": 75,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 2279
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 2249,
+          "end_line": 74,
+          "line": 69,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 2077
+        },
+        "fetch": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 2487,
+          "end_line": 78,
+          "line": 75,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 2250
+        }
+      }
+    },
+    {
+      "category": "Identity & commitments",
+      "name": "identity",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 783,
+            "end_line": 31,
+            "line": 31,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 766
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 740,
+          "end_line": 30,
+          "line": 25,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 578
+        },
+        "fetch": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 1037,
+          "end_line": 34,
+          "line": 31,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 741
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "immunity_period",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 1337,
+          "end_line": 41,
+          "line": 37,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 1190
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "is_delegate",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 3019,
+            "end_line": 92,
+            "line": 92,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 3003
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 2974,
+          "end_line": 91,
+          "line": 86,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 2818
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 3189,
+          "end_line": 95,
+          "line": 92,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 2975
+        }
+      }
+    },
+    {
+      "category": "Chain",
+      "name": "is_fast_blocks",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 766,
+          "end_line": 25,
+          "line": 25,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 722
+        },
+        "fetch": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 929,
+          "end_line": 28,
+          "line": 26,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 767
+        }
+      }
+    },
+    {
+      "category": "Leases & crowdloans",
+      "name": "lease",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "lease_id",
+          "own_key": false,
+          "provenance": {
+            "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+            "end_byte": 861,
+            "end_line": 32,
+            "line": 32,
+            "path": "sdk/python/bittensor/reads/leasing.py",
+            "start_byte": 848
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 825,
+          "end_line": 31,
+          "line": 26,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 673
+        },
+        "fetch": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 1212,
+          "end_line": 39,
+          "line": 32,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 826
+        }
+      }
+    },
+    {
+      "category": "Leases & crowdloans",
+      "name": "leases",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 1266,
+          "end_line": 42,
+          "line": 42,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 1216
+        },
+        "fetch": {
+          "blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7",
+          "end_byte": 1463,
+          "end_line": 46,
+          "line": 43,
+          "path": "sdk/python/bittensor/reads/leasing.py",
+          "start_byte": 1267
+        }
+      }
+    },
+    {
+      "category": "Locks & conviction",
+      "name": "locks_for_coldkey",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 2881,
+            "end_line": 80,
+            "line": 80,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 2864
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 2829,
+          "end_line": 79,
+          "line": 74,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 2665
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 3266,
+          "end_line": 87,
+          "line": 80,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 2830
+        }
+      }
+    },
+    {
+      "category": "Locks & conviction",
+      "name": "locks_for_hotkey",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 3551,
+            "end_line": 99,
+            "line": 99,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 3535
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 3564,
+            "end_line": 99,
+            "line": 99,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 3553
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 3501,
+          "end_line": 98,
+          "line": 90,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 3270
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 4455,
+          "end_line": 115,
+          "line": 99,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 3502
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "max_weight_limit",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 1189,
+          "end_line": 36,
+          "line": 30,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 903
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "mechanism_count",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 9220,
+            "end_line": 260,
+            "line": 260,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 9209
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 9176,
+          "end_line": 259,
+          "line": 254,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 9048
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 9396,
+          "end_line": 263,
+          "line": 260,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 9177
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "mechanism_emission_split",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 9590,
+            "end_line": 272,
+            "line": 272,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 9579
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 9537,
+          "end_line": 271,
+          "line": 266,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 9400
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 9920,
+          "end_line": 279,
+          "line": 272,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 9538
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "metagraph",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 6079,
+            "end_line": 176,
+            "line": 176,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 6068
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 6041,
+          "end_line": 175,
+          "line": 170,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 5903
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 6772,
+          "end_line": 190,
+          "line": 176,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 6042
+        }
+      }
+    },
+    {
+      "category": "Chain",
+      "name": "mev_shield_next_key",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 1967,
+          "end_line": 62,
+          "line": 62,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 1918
+        },
+        "fetch": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 2279,
+          "end_line": 68,
+          "line": 63,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 1968
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "min_allowed_weights",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 902,
+          "end_line": 29,
+          "line": 23,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 593
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Mining & collateral",
+      "name": "miner_collateral",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+            "end_byte": 2565,
+            "end_line": 68,
+            "line": 68,
+            "path": "sdk/python/bittensor/reads/collateral.py",
+            "start_byte": 2554
+          },
+          "required": true
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+            "end_byte": 2583,
+            "end_line": 68,
+            "line": 68,
+            "path": "sdk/python/bittensor/reads/collateral.py",
+            "start_byte": 2567
+          },
+          "required": false
+        },
+        {
+          "annotation": "str | None",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+            "end_byte": 2616,
+            "end_line": 68,
+            "line": 68,
+            "path": "sdk/python/bittensor/reads/collateral.py",
+            "start_byte": 2585
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+          "end_byte": 2515,
+          "end_line": 66,
+          "line": 57,
+          "path": "sdk/python/bittensor/reads/collateral.py",
+          "start_byte": 2144
+        },
+        "fetch": {
+          "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+          "end_byte": 3924,
+          "end_line": 93,
+          "line": 67,
+          "path": "sdk/python/bittensor/reads/collateral.py",
+          "start_byte": 2516
+        }
+      }
+    },
+    {
+      "category": "Locks & conviction",
+      "name": "most_convicted_hotkey",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 6152,
+            "end_line": 163,
+            "line": 163,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 6141
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 6102,
+          "end_line": 162,
+          "line": 157,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 5957
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 6394,
+          "end_line": 168,
+          "line": 163,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 6103
+        }
+      }
+    },
+    {
+      "category": "Accounts & keys",
+      "name": "multisig",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "account_ss58",
+          "own_key": false,
+          "provenance": {
+            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "end_byte": 3638,
+            "end_line": 107,
+            "line": 107,
+            "path": "sdk/python/bittensor/reads/accounts.py",
+            "start_byte": 3621
+          },
+          "required": true
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "call_hash",
+          "own_key": false,
+          "provenance": {
+            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "end_byte": 3654,
+            "end_line": 107,
+            "line": 107,
+            "path": "sdk/python/bittensor/reads/accounts.py",
+            "start_byte": 3640
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 3595,
+          "end_line": 106,
+          "line": 98,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 3304
+        },
+        "fetch": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 4285,
+          "end_line": 119,
+          "line": 107,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 3596
+        }
+      }
+    },
+    {
+      "category": "Neurons & registration",
+      "name": "netuids_for_hotkey",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 3161,
+            "end_line": 99,
+            "line": 99,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 3145
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 3109,
+          "end_line": 98,
+          "line": 93,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 2928
+        },
+        "fetch": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 3412,
+          "end_line": 102,
+          "line": 99,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 3110
+        }
+      }
+    },
+    {
+      "category": "Neurons & registration",
+      "name": "neurons",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 1022,
+            "end_line": 41,
+            "line": 41,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 1011
+          },
+          "required": true
+        },
+        {
+          "annotation": "bool",
+          "default": {
+            "present": true,
+            "value": true
+          },
+          "json_type": "boolean",
+          "name": "lite",
+          "own_key": false,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 1041,
+            "end_line": 41,
+            "line": 41,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 1024
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 986,
+          "end_line": 40,
+          "line": 32,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 715
+        },
+        "fetch": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 2073,
+          "end_line": 66,
+          "line": 41,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 987
+        }
+      }
+    },
+    {
+      "category": "Epochs & timing",
+      "name": "next_epoch_start_block",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+            "end_byte": 428,
+            "end_line": 19,
+            "line": 19,
+            "path": "sdk/python/bittensor/reads/epochs.py",
+            "start_byte": 417
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 377,
+          "end_line": 18,
+          "line": 13,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 234
+        },
+        "fetch": {
+          "blob": "125105e8d176ccee4aabbd6c74adfda43586868e",
+          "end_byte": 981,
+          "end_line": 28,
+          "line": 19,
+          "path": "sdk/python/bittensor/reads/epochs.py",
+          "start_byte": 378
+        }
+      }
+    },
+    {
+      "category": "Neurons & registration",
+      "name": "owned_hotkeys",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 2705,
+            "end_line": 87,
+            "line": 87,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 2688
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 2657,
+          "end_line": 86,
+          "line": 81,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 2491
+        },
+        "fetch": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 2924,
+          "end_line": 90,
+          "line": 87,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 2658
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "parents",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 6041,
+            "end_line": 178,
+            "line": 178,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 6025
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 6054,
+            "end_line": 178,
+            "line": 178,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 6043
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 6000,
+          "end_line": 177,
+          "line": 169,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 5775
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 6648,
+          "end_line": 188,
+          "line": 178,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 6001
+        }
+      }
+    },
+    {
+      "category": "Delegation",
+      "name": "pending_children",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 6946,
+            "end_line": 200,
+            "line": 200,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 6930
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+            "end_byte": 6959,
+            "end_line": 200,
+            "line": 200,
+            "path": "sdk/python/bittensor/reads/delegation.py",
+            "start_byte": 6948
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 6896,
+          "end_line": 199,
+          "line": 191,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 6652
+        },
+        "fetch": {
+          "blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56",
+          "end_byte": 7779,
+          "end_line": 215,
+          "line": 200,
+          "path": "sdk/python/bittensor/reads/delegation.py",
+          "start_byte": 6897
+        }
+      }
+    },
+    {
+      "category": "Accounts & keys",
+      "name": "proxies",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "end_byte": 1736,
+            "end_line": 54,
+            "line": 54,
+            "path": "sdk/python/bittensor/reads/accounts.py",
+            "start_byte": 1719
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 1694,
+          "end_line": 53,
+          "line": 48,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 1531
+        },
+        "fetch": {
+          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "end_byte": 2255,
+          "end_line": 68,
+          "line": 54,
+          "path": "sdk/python/bittensor/reads/accounts.py",
+          "start_byte": 1695
+        }
+      }
+    },
+    {
+      "category": "Prices & swaps",
+      "name": "quote_stake",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+            "end_byte": 1284,
+            "end_line": 45,
+            "line": 45,
+            "path": "sdk/python/bittensor/reads/prices.py",
+            "start_byte": 1273
+          },
+          "required": true
+        },
+        {
+          "annotation": "float",
+          "default": {
+            "present": false
+          },
+          "json_type": "number",
+          "name": "amount_tao",
+          "own_key": false,
+          "provenance": {
+            "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+            "end_byte": 1303,
+            "end_line": 45,
+            "line": 45,
+            "path": "sdk/python/bittensor/reads/prices.py",
+            "start_byte": 1286
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 1244,
+          "end_line": 44,
+          "line": 36,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 1001
+        },
+        "fetch": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 1701,
+          "end_line": 54,
+          "line": 45,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 1245
+        }
+      }
+    },
+    {
+      "category": "Prices & swaps",
+      "name": "quote_unstake",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+            "end_byte": 2002,
+            "end_line": 66,
+            "line": 66,
+            "path": "sdk/python/bittensor/reads/prices.py",
+            "start_byte": 1991
+          },
+          "required": true
+        },
+        {
+          "annotation": "float",
+          "default": {
+            "present": false
+          },
+          "json_type": "number",
+          "name": "amount_alpha",
+          "own_key": false,
+          "provenance": {
+            "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+            "end_byte": 2023,
+            "end_line": 66,
+            "line": 66,
+            "path": "sdk/python/bittensor/reads/prices.py",
+            "start_byte": 2004
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 1960,
+          "end_line": 65,
+          "line": 57,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 1705
+        },
+        "fetch": {
+          "blob": "6378a57c520ce155b075830fd53e752bffe40eef",
+          "end_byte": 2347,
+          "end_line": 72,
+          "line": 66,
+          "path": "sdk/python/bittensor/reads/prices.py",
+          "start_byte": 1961
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "reveal_period",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 1477,
+          "end_line": 46,
+          "line": 42,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 1338
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Identity & commitments",
+      "name": "revealed_commitment",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 3781,
+            "end_line": 113,
+            "line": 113,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 3770
+          },
+          "required": true
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+            "end_byte": 3799,
+            "end_line": 113,
+            "line": 113,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 3783
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 3733,
+          "end_line": 112,
+          "line": 104,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 3459
+        },
+        "fetch": {
+          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+          "end_byte": 3985,
+          "end_line": 115,
+          "line": 113,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 3734
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "root_basket_owed",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 7594,
+            "end_line": 172,
+            "line": 172,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 7577
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 7543,
+          "end_line": 171,
+          "line": 166,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 7373
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 8325,
+          "end_line": 184,
+          "line": 172,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 7544
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "root_basket_owed_breakdown",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 8575,
+            "end_line": 193,
+            "line": 193,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 8558
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 8514,
+          "end_line": 192,
+          "line": 187,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 8329
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 9265,
+          "end_line": 209,
+          "line": 193,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 8515
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "root_basket_portfolio",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 11952,
+            "end_line": 273,
+            "line": 273,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 11935
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 11896,
+          "end_line": 272,
+          "line": 267,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 11728
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 12690,
+          "end_line": 286,
+          "line": 273,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 11897
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "root_basket_total_nav",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 18509,
+          "end_line": 427,
+          "line": 423,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 18441
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 18850,
+          "end_line": 434,
+          "line": 428,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 18510
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "root_baskets",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 15111,
+          "end_line": 351,
+          "line": 347,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 15052
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 16260,
+          "end_line": 374,
+          "line": 352,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 15112
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "root_claim_threshold",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 18921,
+          "end_line": 441,
+          "line": 437,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 18854
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 19425,
+          "end_line": 451,
+          "line": 442,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 18922
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 2291,
+            "end_line": 75,
+            "line": 75,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 2274
+          },
+          "required": false
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 2309,
+            "end_line": 75,
+            "line": 75,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 2293
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 2322,
+            "end_line": 75,
+            "line": 75,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 2311
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 2251,
+          "end_line": 74,
+          "line": 65,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 1956
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 2650,
+          "end_line": 81,
+          "line": 75,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 2252
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake_availability",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 6634,
+            "end_line": 194,
+            "line": 194,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 6617
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 6647,
+            "end_line": 194,
+            "line": 194,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 6636
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 6581,
+          "end_line": 193,
+          "line": 185,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 6341
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 7615,
+          "end_line": 215,
+          "line": 194,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 6582
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake_availability_for_coldkey",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 7966,
+            "end_line": 227,
+            "line": 227,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 7949
+          },
+          "required": false
+        },
+        {
+          "annotation": "list[int]",
+          "default": {
+            "present": false
+          },
+          "json_type": "array",
+          "name": "netuids",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 7986,
+            "end_line": 227,
+            "line": 227,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 7968
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 7901,
+          "end_line": 226,
+          "line": 218,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 7619
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 8845,
+          "end_line": 248,
+          "line": 227,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 7902
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake_for_coldkey",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 2869,
+            "end_line": 90,
+            "line": 90,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 2852
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 2817,
+          "end_line": 89,
+          "line": 84,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 2654
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 3326,
+          "end_line": 98,
+          "line": 90,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 2818
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake_for_coldkeys",
+      "params": [
+        {
+          "annotation": "list[str]",
+          "default": {
+            "present": false
+          },
+          "json_type": "array",
+          "name": "coldkey_ss58s",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 3556,
+            "end_line": 107,
+            "line": 107,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 3532
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 3496,
+          "end_line": 106,
+          "line": 101,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 3330
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 4054,
+          "end_line": 119,
+          "line": 107,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 3497
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake_value_for_coldkey",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 4726,
+            "end_line": 139,
+            "line": 139,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 4709
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 4668,
+          "end_line": 138,
+          "line": 133,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 4508
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 5325,
+          "end_line": 153,
+          "line": 139,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 4669
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "stake_value_for_coldkeys",
+      "params": [
+        {
+          "annotation": "list[str]",
+          "default": {
+            "present": false
+          },
+          "json_type": "array",
+          "name": "coldkey_ss58s",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 5558,
+            "end_line": 162,
+            "line": 162,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 5534
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 5492,
+          "end_line": 161,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 5329
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 6337,
+          "end_line": 182,
+          "line": 162,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 5493
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "staking_hotkeys",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "coldkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 9946,
+            "end_line": 277,
+            "line": 277,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 9929
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 9896,
+          "end_line": 276,
+          "line": 271,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 9719
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 10601,
+          "end_line": 288,
+          "line": 277,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 9897
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 639,
+            "end_line": 30,
+            "line": 30,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 628
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 604,
+          "end_line": 29,
+          "line": 24,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 485
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 1165,
+          "end_line": 43,
+          "line": 30,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 605
+        }
+      }
+    },
+    {
+      "category": "Mining & collateral",
+      "name": "subnet_collateral",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+            "end_byte": 4116,
+            "end_line": 102,
+            "line": 102,
+            "path": "sdk/python/bittensor/reads/collateral.py",
+            "start_byte": 4105
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+          "end_byte": 4070,
+          "end_line": 101,
+          "line": 96,
+          "path": "sdk/python/bittensor/reads/collateral.py",
+          "start_byte": 3928
+        },
+        "fetch": {
+          "blob": "f7a5449605500afba96822a45704397d06f90d5e",
+          "end_byte": 5361,
+          "end_line": 129,
+          "line": 102,
+          "path": "sdk/python/bittensor/reads/collateral.py",
+          "start_byte": 4071
+        }
+      }
+    },
+    {
+      "category": "Locks & conviction",
+      "name": "subnet_convictions",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+            "end_byte": 10564,
+            "end_line": 295,
+            "line": 295,
+            "path": "sdk/python/bittensor/reads/locks.py",
+            "start_byte": 10553
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 10517,
+          "end_line": 294,
+          "line": 289,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 10375
+        },
+        "fetch": {
+          "blob": "40115bfe96fec8bda42351d18fbe3477e342ec25",
+          "end_byte": 16295,
+          "end_line": 419,
+          "line": 295,
+          "path": "sdk/python/bittensor/reads/locks.py",
+          "start_byte": 10518
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "subnet_emission_enabled",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 1821,
+          "end_line": 54,
+          "line": 47,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 1478
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet_hyperparameters",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 5313,
+            "end_line": 156,
+            "line": 156,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 5302
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 5262,
+          "end_line": 155,
+          "line": 150,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 5127
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 5899,
+          "end_line": 167,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 5263
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet_identity",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 6962,
+            "end_line": 199,
+            "line": 199,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 6951
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 6918,
+          "end_line": 198,
+          "line": 193,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 6776
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 7188,
+          "end_line": 202,
+          "line": 199,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 6919
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet_names",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 7236,
+          "end_line": 205,
+          "line": 205,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 7192
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 7640,
+          "end_line": 214,
+          "line": 206,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 7237
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet_registration_cost",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 9980,
+          "end_line": 282,
+          "line": 282,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 9924
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 10335,
+          "end_line": 290,
+          "line": 283,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 9981
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet_start_schedule",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+            "end_byte": 8345,
+            "end_line": 235,
+            "line": 235,
+            "path": "sdk/python/bittensor/reads/subnets.py",
+            "start_byte": 8334
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 8295,
+          "end_line": 234,
+          "line": 229,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 8161
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 9044,
+          "end_line": 251,
+          "line": 235,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 8296
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnet_tao_flows",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 2799,
+          "end_line": 92,
+          "line": 92,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 2751
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 3798,
+          "end_line": 111,
+          "line": 93,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 2800
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "subnets",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 1208,
+          "end_line": 46,
+          "line": 46,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 1169
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 2187,
+          "end_line": 70,
+          "line": 47,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 1209
+        }
+      }
+    },
+    {
+      "category": "Weights & bonds",
+      "name": "timelocked_weight_commits",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+            "end_byte": 3366,
+            "end_line": 89,
+            "line": 89,
+            "path": "sdk/python/bittensor/reads/weights.py",
+            "start_byte": 3355
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "mechid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+            "end_byte": 3383,
+            "end_line": 89,
+            "line": 89,
+            "path": "sdk/python/bittensor/reads/weights.py",
+            "start_byte": 3368
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+          "end_byte": 3312,
+          "end_line": 88,
+          "line": 79,
+          "path": "sdk/python/bittensor/reads/weights.py",
+          "start_byte": 3042
+        },
+        "fetch": {
+          "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+          "end_byte": 4470,
+          "end_line": 113,
+          "line": 89,
+          "path": "sdk/python/bittensor/reads/weights.py",
+          "start_byte": 3313
+        }
+      }
+    },
+    {
+      "category": "Chain",
+      "name": "timestamp",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 245,
+          "end_line": 11,
+          "line": 11,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 206
+        },
+        "fetch": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 515,
+          "end_line": 16,
+          "line": 12,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 246
+        }
+      }
+    },
+    {
+      "category": "Subnets",
+      "name": "token_symbols",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 7689,
+          "end_line": 217,
+          "line": 217,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 7644
+        },
+        "fetch": {
+          "blob": "ad3143c03524a250fe99501ebd74888f5c69a684",
+          "end_byte": 8157,
+          "end_line": 226,
+          "line": 218,
+          "path": "sdk/python/bittensor/reads/subnets.py",
+          "start_byte": 7690
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "total_alpha_staked",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+            "end_byte": 9027,
+            "end_line": 257,
+            "line": 257,
+            "path": "sdk/python/bittensor/reads/staking.py",
+            "start_byte": 9016
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 8980,
+          "end_line": 256,
+          "line": 251,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 8849
+        },
+        "fetch": {
+          "blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9",
+          "end_byte": 9715,
+          "end_line": 268,
+          "line": 257,
+          "path": "sdk/python/bittensor/reads/staking.py",
+          "start_byte": 8981
+        }
+      }
+    },
+    {
+      "category": "Chain",
+      "name": "tx_rate_limit",
+      "params": [],
+      "provenance": {
+        "declaration": {
+          "blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00",
+          "end_byte": 2449,
+          "end_line": 77,
+          "line": 71,
+          "path": "sdk/python/bittensor/reads/chain.py",
+          "start_byte": 2282
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    },
+    {
+      "category": "Neurons & registration",
+      "name": "uid",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 3679,
+            "end_line": 114,
+            "line": 114,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 3663
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+            "end_byte": 3692,
+            "end_line": 114,
+            "line": 114,
+            "path": "sdk/python/bittensor/reads/neurons.py",
+            "start_byte": 3681
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 3642,
+          "end_line": 113,
+          "line": 105,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 3416
+        },
+        "fetch": {
+          "blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de",
+          "end_byte": 3909,
+          "end_line": 117,
+          "line": 114,
+          "path": "sdk/python/bittensor/reads/neurons.py",
+          "start_byte": 3643
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "validator_basket",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 12904,
+            "end_line": 295,
+            "line": 295,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 12888
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 12854,
+          "end_line": 294,
+          "line": 289,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 12694
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 13580,
+          "end_line": 310,
+          "line": 295,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 12855
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "validator_basket_nav",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 16483,
+            "end_line": 383,
+            "line": 383,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 16467
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 16429,
+          "end_line": 382,
+          "line": 377,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 16264
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 16722,
+          "end_line": 386,
+          "line": 383,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 16430
+        }
+      }
+    },
+    {
+      "category": "Staking",
+      "name": "validator_basket_summary",
+      "params": [
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "end_byte": 13815,
+            "end_line": 319,
+            "line": 319,
+            "path": "sdk/python/bittensor/reads/root.py",
+            "start_byte": 13799
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 13757,
+          "end_line": 318,
+          "line": 313,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 13584
+        },
+        "fetch": {
+          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "end_byte": 15048,
+          "end_line": 344,
+          "line": 319,
+          "path": "sdk/python/bittensor/reads/root.py",
+          "start_byte": 13758
+        }
+      }
+    },
+    {
+      "category": "Weights & bonds",
+      "name": "weights",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+            "end_byte": 992,
+            "end_line": 32,
+            "line": 32,
+            "path": "sdk/python/bittensor/reads/weights.py",
+            "start_byte": 981
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "mechid",
+          "own_key": false,
+          "provenance": {
+            "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+            "end_byte": 1009,
+            "end_line": 32,
+            "line": 32,
+            "path": "sdk/python/bittensor/reads/weights.py",
+            "start_byte": 994
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+          "end_byte": 956,
+          "end_line": 31,
+          "line": 22,
+          "path": "sdk/python/bittensor/reads/weights.py",
+          "start_byte": 690
+        },
+        "fetch": {
+          "blob": "6080d5ae74845a5bbf044be7de2463448e31748b",
+          "end_byte": 1849,
+          "end_line": 46,
+          "line": 32,
+          "path": "sdk/python/bittensor/reads/weights.py",
+          "start_byte": 957
+        }
+      }
+    },
+    {
+      "category": "Hyperparameters",
+      "name": "weights_rate_limit",
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+            "end_byte": 5978,
+            "end_line": 161,
+            "line": 161,
+            "path": "sdk/python/bittensor/reads/base.py",
+            "start_byte": 5950
+          },
+          "required": true
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 467,
+          "end_line": 17,
+          "line": 13,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 317
+        },
+        "fetch": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6084,
+          "end_line": 163,
+          "line": 161,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5928
+        },
+        "helper": {
+          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "end_byte": 314,
+          "end_line": 10,
+          "line": 9,
+          "path": "sdk/python/bittensor/reads/hyperparameters.py",
+          "start_byte": 181
+        },
+        "registration_rule": {
+          "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+          "end_byte": 6181,
+          "end_line": 166,
+          "line": 156,
+          "path": "sdk/python/bittensor/reads/base.py",
+          "start_byte": 5640
+        }
+      }
+    }
+  ],
+  "registration": {
+    "decorate": {
+      "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+      "end_byte": 3911,
+      "end_line": 103,
+      "line": 92,
+      "path": "sdk/python/bittensor/reads/base.py",
+      "start_byte": 3294
+    },
+    "read": {
+      "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+      "end_byte": 3932,
+      "end_line": 105,
+      "line": 75,
+      "path": "sdk/python/bittensor/reads/base.py",
+      "start_byte": 2705
+    },
+    "signature_wrapper": {
+      "blob": "f74a29405503ad610431ceded37c31c23be73c40",
+      "end_byte": 4801,
+      "end_line": 126,
+      "line": 119,
+      "path": "sdk/python/bittensor/reads/base.py",
+      "start_byte": 4451
+    }
+  },
+  "requiredness": {
+    "missing_or_none_required": true,
+    "own_key": [
+      "hotkey_ss58",
+      "coldkey_ss58"
+    ],
+    "provenance": {
+      "fetch_default": {
+        "blob": "c20ee75c02c94344bfb868ea3fc9877ecbcdb621",
+        "end_byte": 1355,
+        "end_line": 42,
+        "line": 39,
+        "path": "sdk/python/bittensor/cli/query.py",
+        "start_byte": 1186
+      },
+      "is_required": {
+        "blob": "c20ee75c02c94344bfb868ea3fc9877ecbcdb621",
+        "end_byte": 1922,
+        "end_line": 56,
+        "line": 45,
+        "path": "sdk/python/bittensor/cli/query.py",
+        "start_byte": 1358
+      },
+      "own_key": {
+        "blob": "c20ee75c02c94344bfb868ea3fc9877ecbcdb621",
+        "end_byte": 1014,
+        "end_line": 30,
+        "line": 30,
+        "path": "sdk/python/bittensor/cli/query.py",
+        "start_byte": 972
+      }
+    }
+  }
+}

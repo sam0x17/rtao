@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "python": {
+    "implementation": "cpython",
+    "version": "3.12.11"
+  },
+  "uv": "0.8.24",
+  "build_backends": {
+    "hatchling": "1.27.0",
+    "maturin": "1.9.6",
+    "packaging": "26.2",
+    "pathspec": "0.12.1",
+    "pluggy": "1.6.0",
+    "trove-classifiers": "2025.9.11.17"
+  },
+  "rust_image": "rust@sha256:c9ac3fa8945b61dede1e4500d25028aa8fd8a8fe46365fcf9c0422f8d999b9b0",
+  "uv_image": "ghcr.io/astral-sh/uv@sha256:aa49a668339c61efa77057114bf6d58c3d69b4a6bdd2a4f1aacac70b408d6187",
+  "buildkit": "moby/buildkit@sha256:8c2ce26a3722e0cf4514fad4cfcd0e0f0f16214219ca7b73f3e1fcef74640ac4"
+}

@@ -1,0 +1,16 @@
+The public verifier retries signatures over `<Bytes>message</Bytes>`, while the wallet password utility combines encoding with a process-environment write. Portable callers needing exact signed bytes or pure password encoding currently have to repeat core logic.
+
+This change exposes `keys::verify_strict`, which calls the existing pinned Substrate verifier without the wrapper retry, and an ungated `keyfile_env` module with pure encode/decode helpers. The Python binding and `bittensor.sp_core` expose strict verification and pure encoding. Existing host get/save functions delegate to the codec and retain their API, format and environment-write behavior.
+
+The codec preserves UTF-8 bytewise XOR, standard base64, whitespace handling and the existing errors. It installs a `Zeroizing<Vec<u8>>` before decoding, including errors after several valid blocks, and reserves the decoder's full bound before writing so the buffer cannot grow with sensitive contents. XOR buffers and the host wrappers' owned Rust String temporaries are also guarded. Caller inputs, returned plaintext Strings, the stored environment value and allocations inside other libraries remain outside this cleanup guarantee.
+
+Validation on macOS ARM64 against clean committed HEAD `64f152725dda64c040e8f3c6435c08f450093a59`, enforced by the task-local pre-push hook:
+
+- Rust 1.89 and 1.99: eight portable regressions with default features disabled, including raw/wrapped sr25519 and ed25519 signatures, malformed signature/address boundaries, ASCII/Unicode/empty password vectors, decoder errors/whitespace, no environment write and late base64 failure without buffer growth.
+- Both toolchains: 71 all-feature core library tests passed; one existing physical-OpenCL-GPU test ignored.
+- Strict all-feature/all-target core and binding Clippy on upstream's pinned Rust 1.89 toolchain, with a separate target directory for this checkout.
+- Portable `wasm32-unknown-unknown` checks with default features disabled on both toolchains; formatting and committed-diff checks.
+
+An additional independent Rust audit checked the actual pinned signature algorithms, the original index-based XOR implementation, preservation of a pre-existing child-process environment value, and the dependency's partial-output/sizing behavior. Python binding regressions are included for hosted CI only. No Python interpreter ran during this work; binding checks set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because the user confines Python execution to CI; scoped Rust checks used the authorized `sam0x17` identity.
+
+Separate Rust 1.99 strict Clippy diagnostics report two new `chunks_exact_to_as_chunks` lints in unchanged base58 and Ledger source files. Those findings are retained and no lint suppression is included. No dependency, lockfile, generated Python, pallet or runtime change is included.

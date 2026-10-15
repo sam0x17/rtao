@@ -1,0 +1,1021 @@
+//! Coherent best-head weight preparation and actual-epoch reveal tracking.
+
+mod reveal;
+mod submit;
+#[cfg(test)]
+mod tests;
+
+use crate::{Clock, ClockGuard, NeuronCx, StateCell, Validator};
+use blake2::{Blake2b, Digest, digest::consts::U32};
+use futures::StreamExt;
+pub use reveal::{EpochNotice, RevealMissReason, RevealOutcome, RevealWatcher};
+use rtao_client::{BlockHeader, BlockRef, Client, Finality, ReadPlan, Snapshot, ViewExt};
+use rtao_core::{DynValue, codec::Value, timelock::epoch_schedule::EpochScheduleState};
+use rtao_intents::weights::{
+    CommitSizeLimit, ConformState, TimelockCommitRequest, TimelockCommitter, conform,
+};
+use rtao_primitives::{AccountId, IntoCoreValue, MechId, NetUid, NetUidStorageIndex, Uid};
+use rtao_runtime::storage::subtensor_module as st;
+use rtao_signer::KeyView;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
+
+/// Commit-reveal payload version supported by this build.
+pub const SUPPORTED_CR_VERSION: u16 = 4;
+
+/// Pure scoring result, evaluated only after one coherent preflight.
+#[derive(Clone, Debug, PartialEq)]
+pub enum WeightsProposal {
+    /// Prepare and submit a new row.
+    Set(WeightsInput),
+    /// Retain the previous chain row.
+    HoldPrevious,
+    /// Skip this opportunity with an operator-visible reason.
+    Skip(&'static str),
+}
+
+/// Destinations and scores accepted by a validator's pure weights callback.
+#[derive(Clone, Debug, PartialEq)]
+pub enum WeightsInput {
+    /// Deterministically ordered UID-to-score mapping.
+    ByUid(BTreeMap<Uid, f64>),
+    /// Parallel destination and relative-score vectors.
+    Parallel {
+        /// Destinations in submission order.
+        uids: Vec<Uid>,
+        /// Finite, nonnegative relative scores.
+        weights: Vec<f64>,
+    },
+    /// Resolve account identities using the current last-good graph.
+    ByHotkey(Vec<(AccountId, f64)>),
+    /// Preserve integer ratios under a sole-permit Null consensus proof.
+    RawU16 {
+        /// Destinations in submission order.
+        uids: Vec<Uid>,
+        /// Chain-native integer ratios.
+        values: Vec<u16>,
+    },
+}
+
+/// Explicit weight version; never follows storage and defeats upgrade policy.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum VersionKey {
+    /// Python v11's default.
+    #[default]
+    Zero,
+    /// Operator-selected version supported by the scoring implementation.
+    Fixed(u64),
+}
+impl VersionKey {
+    /// Value carried by both direct rows and encrypted payloads.
+    pub const fn value(self) -> u64 {
+        match self {
+            Self::Zero => 0,
+            Self::Fixed(value) => value,
+        }
+    }
+}
+
+/// Weight opportunity cadence, independent of the scoring callback cadence.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WeightCadence {
+    /// One attempt in each actual subnet epoch after this offset.
+    OncePerEpoch {
+        /// Minimum blocks after the observed epoch boundary.
+        offset_blocks: u64,
+    },
+    /// Wait for the chain rate limit plus an operator margin.
+    RateLimited {
+        /// Extra blocks beyond the chain rate limit.
+        margin: u64,
+    },
+}
+
+/// Validator-specific submission policy.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WeightPolicy {
+    /// Explicit supported weight version.
+    pub version_key: VersionKey,
+    /// Override the default CR epoch jitter or direct-row rate limit.
+    pub cadence: Option<WeightCadence>,
+}
+
+/// Certain preflight rejection with a shared semantic code and remediation.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("{name}: {remediation}")]
+pub struct WeightRefusal {
+    /// Semantic chain-error category.
+    pub code: rtao_catalog::ErrorCode,
+    /// Specific failed check.
+    pub name: &'static str,
+    /// Action needed before another attempt can succeed.
+    pub remediation: String,
+}
+
+/// Observable result of the latest mechanism scheduling opportunity.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum WeightAttemptOutcome {
+    /// Cadence, rate limit or unresolved submission prevented work.
+    Scheduled,
+    /// The chain rate limit schedules this row without marking readiness failed.
+    RateLimited {
+        /// Earliest best height allowed by the current chain limit.
+        retry_after_block: u64,
+        /// Explanation for the next scheduling opportunity.
+        remediation: String,
+    },
+    /// The application or self/owner guard retained the existing row.
+    HoldPrevious,
+    /// The application supplied a reason to skip this opportunity.
+    Skipped(String),
+    /// A certain chain rejection was detected before signing.
+    Refused(WeightRefusal),
+    /// Runtime call shape changed; this mechanism resumes after verification.
+    PausedSurface {
+        /// Full name of the incompatible descriptor.
+        descriptor: String,
+        /// Operator remediation and structural difference.
+        detail: String,
+    },
+    /// The row reached finalized inclusion.
+    Submitted {
+        /// Immutable finalized inclusion identity.
+        block_hash: rtao_primitives::H256,
+        /// Inclusion height.
+        block_number: u64,
+    },
+    /// Fate remains unknown and requires reconciliation before another row.
+    Unresolved(String),
+    /// RPC, preparation or a definite submission failed.
+    Failed(String),
+}
+impl WeightAttemptOutcome {
+    /// Shared semantic category for an actionable refusal or scheduled rate limit.
+    pub fn code(&self) -> Option<rtao_catalog::ErrorCode> {
+        match self {
+            Self::Refused(refusal) => Some(refusal.code),
+            Self::RateLimited { .. } => Some(rtao_catalog::ErrorCode::RateLimited),
+            Self::PausedSurface { .. } => Some(rtao_catalog::ErrorCode::PolicyViolation),
+            Self::Unresolved(_) | Self::Failed(_) => Some(rtao_catalog::ErrorCode::Internal),
+            Self::Scheduled | Self::HoldPrevious | Self::Skipped(_) | Self::Submitted { .. } => {
+                None
+            }
+        }
+    }
+}
+
+/// Retained scheduling result available without inspecting tracing logs.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WeightAttempt {
+    /// Mechanism evaluated by the scheduler.
+    pub mechanism: MechId,
+    /// Best height used for the coherent preflight.
+    pub best_block: u64,
+    /// Latest scheduling or finalized-submission outcome.
+    pub outcome: WeightAttemptOutcome,
+}
+fn refuse(
+    code: rtao_catalog::ErrorCode,
+    name: &'static str,
+    remediation: impl Into<String>,
+) -> anyhow::Error {
+    WeightRefusal {
+        code,
+        name,
+        remediation: remediation.into(),
+    }
+    .into()
+}
+
+/// The seventeen storage fields used by one mechanism's preflight.
+#[derive(Clone, Debug)]
+pub struct WeightPreflight {
+    /// Block hash and best height used for every field and the predictor.
+    pub at: rtao_client::PinnedBlock,
+    /// Current UID, absent when the hotkey is unregistered.
+    pub uid: Option<Uid>,
+    /// Per-UID last updates for this mechanism.
+    pub last_updates: Vec<u64>,
+    /// Minimum interval between weight submissions.
+    pub rate_limit: u64,
+    /// Select the timelocked path rather than direct mechanism weights.
+    pub commit_reveal: bool,
+    /// Runtime's required client payload version.
+    pub commit_reveal_version: u16,
+    /// Number of epochs between commitment and reveal.
+    pub reveal_period: u64,
+    /// Runtime's forced-upgrade key.
+    pub required_version_key: u64,
+    /// Required count before population capping.
+    pub min_allowed_weights: u16,
+    /// Maximum relative share, represented over 65535.
+    pub max_weights_limit: u16,
+    /// Current registered population.
+    pub population: u16,
+    /// Whether consensus is Null rather than Yuma.
+    pub null_consensus: bool,
+    /// Current validator-permit vector.
+    pub permits: Vec<bool>,
+    /// Coherent schedule at the pinned best head.
+    pub schedule: EpochScheduleState,
+}
+
+impl WeightPreflight {
+    /// Fetch all seventeen fields using one `state_queryStorageAt` at `snapshot`.
+    pub async fn fetch(
+        snapshot: &Snapshot,
+        netuid: NetUid,
+        mech: MechId,
+        hotkey: AccountId,
+    ) -> anyhow::Result<Self> {
+        let index = NetUidStorageIndex::new(netuid, mech)?;
+        let net = vec![netuid.into_core_value()];
+        let mut plan = ReadPlan::new();
+        plan.push(
+            st::UIDS.surface(),
+            vec![netuid.into_core_value(), hotkey.into_core_value()],
+        );
+        plan.push(st::LAST_UPDATE.surface(), vec![index.into_core_value()]);
+        plan.push(st::WEIGHTS_SET_RATE_LIMIT.surface(), net.clone());
+        plan.push(st::COMMIT_REVEAL_WEIGHTS_ENABLED.surface(), net.clone());
+        plan.push(st::COMMIT_REVEAL_WEIGHTS_VERSION.surface(), Vec::new());
+        for surface in [
+            st::REVEAL_PERIOD_EPOCHS.surface(),
+            st::WEIGHTS_VERSION_KEY.surface(),
+            st::MIN_ALLOWED_WEIGHTS.surface(),
+            st::MAX_WEIGHTS_LIMIT.surface(),
+            st::SUBNETWORK_N.surface(),
+            st::SUBNET_EPOCH_CONSENSUS.surface(),
+            st::VALIDATOR_PERMIT.surface(),
+            st::TEMPO.surface(),
+            st::LAST_EPOCH_BLOCK.surface(),
+            st::PENDING_EPOCH_AT.surface(),
+            st::SUBNET_EPOCH_INDEX.surface(),
+            st::BLOCKS_SINCE_LAST_STEP.surface(),
+        ] {
+            plan.push(surface, net.clone());
+        }
+        let values = snapshot.fetch(plan).await?;
+        anyhow::ensure!(
+            values.len() == 17,
+            "weight preflight omitted storage fields"
+        );
+        let integer = |index, name| number(&values[index], name);
+        let uid = if matches!(values[0].as_core(), Value::Null) {
+            None
+        } else {
+            Some(Uid(u16::try_from(integer(0, "Uids")?)?))
+        };
+        Ok(Self {
+            at: snapshot.block().clone(),
+            uid,
+            last_updates: integers(&values[1], "LastUpdate")?,
+            rate_limit: integer(2, "WeightsSetRateLimit")?,
+            commit_reveal: boolean(&values[3], "CommitRevealWeightsEnabled")?,
+            commit_reveal_version: u16::try_from(integer(4, "CommitRevealWeightsVersion")?)?,
+            reveal_period: integer(5, "RevealPeriodEpochs")?,
+            required_version_key: integer(6, "WeightsVersionKey")?,
+            min_allowed_weights: u16::try_from(integer(7, "MinAllowedWeights")?)?,
+            max_weights_limit: u16::try_from(integer(8, "MaxWeightsLimit")?)?,
+            population: u16::try_from(integer(9, "SubnetworkN")?)?,
+            null_consensus: consensus_null(&values[10])?,
+            permits: booleans(&values[11], "ValidatorPermit")?,
+            schedule: EpochScheduleState {
+                tempo: u16::try_from(integer(12, "Tempo")?)?,
+                last_epoch_block: integer(13, "LastEpochBlock")?,
+                pending_epoch_at: integer(14, "PendingEpochAt")?,
+                subnet_epoch_index: integer(15, "SubnetEpochIndex")?,
+                blocks_since_last_step: integer(16, "BlocksSinceLastStep")?,
+                current_block: snapshot.block().number,
+            },
+        })
+    }
+
+    /// Check certain registration, Null permit and client upgrade refusals.
+    pub fn check(&self, version_key: u64) -> anyhow::Result<Uid> {
+        let uid = self.uid.ok_or_else(|| {
+            refuse(
+                rtao_catalog::ErrorCode::NotRegistered,
+                "HotKeyNotRegisteredInSubNet",
+                "register this hotkey in the configured subnet",
+            )
+        })?;
+        if self.null_consensus
+            && !self
+                .permits
+                .get(usize::from(uid.0))
+                .copied()
+                .unwrap_or(false)
+        {
+            return Err(refuse(
+                rtao_catalog::ErrorCode::NotAuthorized,
+                "NeuronNoValidatorPermit",
+                "Null consensus requires this hotkey to hold the validator permit",
+            ));
+        }
+        if self.commit_reveal && self.commit_reveal_version != SUPPORTED_CR_VERSION {
+            return Err(refuse(
+                rtao_catalog::ErrorCode::InvalidArgument,
+                "IncorrectCommitRevealVersion",
+                format!(
+                    "the chain requires commit-reveal client version {}; this rtao build supports {SUPPORTED_CR_VERSION}; upgrade rtao",
+                    self.commit_reveal_version
+                ),
+            ));
+        }
+        if version_key < self.required_version_key {
+            return Err(refuse(
+                rtao_catalog::ErrorCode::InvalidArgument,
+                "IncorrectWeightVersionKey",
+                format!(
+                    "the chain requires weight version {}; configure a scoring implementation that supports this version",
+                    self.required_version_key
+                ),
+            ));
+        }
+        Ok(uid)
+    }
+    fn last_update(&self, uid: Uid) -> u64 {
+        self.last_updates
+            .get(usize::from(uid.0))
+            .copied()
+            .unwrap_or(0)
+    }
+}
+
+#[derive(Default)]
+struct Slot {
+    last_attempt_epoch: Option<u64>,
+    last_attempt_block: Option<u64>,
+    uncertain: bool,
+}
+
+/// One scheduler owns cadence slots and outstanding commits for a validator.
+pub struct WeightScheduler {
+    policy: WeightPolicy,
+    clock: Arc<dyn Clock>,
+    clock_guard: ClockGuard,
+    slots: BTreeMap<MechId, Slot>,
+    attempts: BTreeMap<MechId, WeightAttempt>,
+    reveals: RevealWatcher,
+}
+impl WeightScheduler {
+    /// Construct a scheduler with explicit wall time and a best-head skew guard.
+    pub fn new(
+        policy: WeightPolicy,
+        clock: Arc<dyn Clock>,
+        clock_guard: ClockGuard,
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            policy,
+            clock,
+            clock_guard,
+            slots: BTreeMap::new(),
+            attempts: BTreeMap::new(),
+            reveals: RevealWatcher::default(),
+        })
+    }
+    /// Borrow retained reveal outcomes and outstanding commitment state.
+    pub fn reveals(&self) -> &RevealWatcher {
+        &self.reveals
+    }
+    /// Replace operator policy while preserving uncertainty and reveal tracking.
+    pub fn update_policy(&mut self, policy: WeightPolicy) {
+        self.policy = policy;
+    }
+    /// Inspect the latest mechanism outcome and any actionable refusal.
+    pub fn last_attempt(&self, mechanism: MechId) -> Option<&WeightAttempt> {
+        self.attempts.get(&mechanism)
+    }
+    /// Clear an uncertainty block only after an external operator has reconciled it.
+    ///
+    /// The scheduler normally reconciles through the executor. An unresolved
+    /// result remains blocked so the same pool provides-tag cannot be duplicated.
+    pub fn resolve_uncertainty(&mut self, mechanism: MechId) {
+        if let Some(slot) = self.slots.get_mut(&mechanism) {
+            slot.uncertain = false;
+        }
+    }
+
+    /// Observe a finalized head, then prepare due proposals at one fresh best head.
+    pub async fn on_finalized(
+        &mut self,
+        cx: &NeuronCx,
+        finalized: &BlockHeader,
+        mut proposals: impl FnMut(MechId) -> WeightsProposal,
+    ) -> anyhow::Result<()> {
+        self.reveals
+            .observe(&cx.client, finalized, &cx.metrics)
+            .await?;
+        if cx.shutdown.is_cancelled() {
+            return Ok(());
+        }
+        let snapshot = cx.client.at(BlockRef::Best).await?;
+        let hotkey = cx.hotkey.hotkey_address()?;
+        let auxiliary = snapshot
+            .fetch((
+                st::MECHANISM_COUNT_CURRENT.at((cx.netuid,)),
+                st::ACTIVITY_CUTOFF_FACTOR_MILLI.at((cx.netuid,)),
+                st::STAKE_THRESHOLD.at(()),
+                st::SUBNET_OWNER_HOTKEY.at((cx.netuid,)),
+            ))
+            .await?;
+        let mechanisms = auxiliary.0.0;
+        anyhow::ensure!(
+            (1..=16).contains(&mechanisms),
+            "runtime mechanism count is outside 1..=16"
+        );
+        let owner = auxiliary.3.raw();
+        for mechanism in 0..mechanisms {
+            let mech = MechId(mechanism);
+            let preflight = WeightPreflight::fetch(&snapshot, cx.netuid, mech, hotkey).await?;
+            let best_block = preflight.at.number;
+            if let Err(error) = self
+                .attempt(
+                    cx,
+                    hotkey,
+                    *owner,
+                    auxiliary.1,
+                    auxiliary.2,
+                    mechanisms,
+                    mech,
+                    preflight,
+                    &mut proposals,
+                )
+                .await
+            {
+                let outcome = if let Some(refusal) = error.downcast_ref::<WeightRefusal>() {
+                    WeightAttemptOutcome::Refused(refusal.clone())
+                } else if submit::uncertain(&error) {
+                    WeightAttemptOutcome::Unresolved(error.to_string())
+                } else {
+                    WeightAttemptOutcome::Failed(error.to_string())
+                };
+                self.attempts.insert(
+                    mech,
+                    WeightAttempt {
+                        mechanism: mech,
+                        best_block,
+                        outcome,
+                    },
+                );
+                cx.metrics.increment("rtao_weights_errors_total");
+                cx.metrics
+                    .update_readiness(|ready| ready.last_weight_succeeded = false);
+                tracing::warn!(mechanism = mech.0, error = %error, "weight attempt failed");
+            }
+            if cx.shutdown.is_cancelled() {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn attempt(
+        &mut self,
+        cx: &NeuronCx,
+        hotkey: AccountId,
+        owner: AccountId,
+        activity_factor: u32,
+        stake_threshold: u64,
+        mechanisms: u8,
+        mech: MechId,
+        preflight: WeightPreflight,
+        proposals: &mut impl FnMut(MechId) -> WeightsProposal,
+    ) -> anyhow::Result<()> {
+        if self.slots.get(&mech).is_some_and(|slot| slot.uncertain) {
+            return Ok(());
+        }
+        if self.reveals.pending_for(mech) >= 10 {
+            cx.metrics.increment("rtao_weights_pending_limit_total");
+            return Ok(());
+        }
+        self.attempts.insert(
+            mech,
+            WeightAttempt {
+                mechanism: mech,
+                best_block: preflight.at.number,
+                outcome: WeightAttemptOutcome::Scheduled,
+            },
+        );
+        let call = if preflight.commit_reveal {
+            &rtao_runtime::calls::subtensor_module::COMMIT_TIMELOCKED_MECHANISM_WEIGHTS
+        } else {
+            &rtao_runtime::calls::subtensor_module::SET_MECHANISM_WEIGHTS
+        };
+        let descriptor = format!("call:{}.{}", call.pallet, call.name);
+        let report = preflight.at.runtime.surface_report();
+        if !report.shape_matches(&descriptor) {
+            let difference = report
+                .changes
+                .iter()
+                .filter(|change| change.descriptor == descriptor)
+                .map(|change| change.detail.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
+            self.attempts.insert(mech, WeightAttempt { mechanism: mech, best_block: preflight.at.number,
+                outcome: WeightAttemptOutcome::PausedSurface { descriptor, detail: format!("weight call is incompatible with this rtao build; update rtao and re-verify the runtime: {difference}") } });
+            cx.metrics.increment("rtao_weights_surface_paused_total");
+            cx.metrics.update_readiness(|ready| {
+                ready.runtime_verified = false;
+                ready.last_weight_succeeded = false;
+            });
+            return Ok(());
+        }
+        let version_key = self.policy.version_key.value();
+        let uid = match preflight.check(version_key) {
+            Ok(uid) => uid,
+            Err(error) => {
+                if preflight.commit_reveal
+                    && preflight.commit_reveal_version != SUPPORTED_CR_VERSION
+                {
+                    cx.metrics
+                        .increment("rtao_weights_cr_version_mismatch_total");
+                }
+                return Err(error);
+            }
+        };
+        if !preflight.null_consensus
+            && !preflight
+                .permits
+                .get(usize::from(uid.0))
+                .copied()
+                .unwrap_or(false)
+        {
+            tracing::warn!(
+                mechanism = mech.0,
+                "Yuma validator permit is absent; chain checks remain authoritative"
+            );
+        }
+        let graph = cx.metagraph.load();
+        if hotkey != owner
+            && graph
+                .by_hotkey(&hotkey)
+                .and_then(|neuron| neuron.total_stake().ok())
+                .is_some_and(|stake| stake.0 < stake_threshold)
+        {
+            tracing::warn!(
+                stake_threshold,
+                "last-good stake is below the chain threshold; chain checks remain authoritative"
+            );
+        }
+        let last = preflight.last_update(uid);
+        let cutoff =
+            u64::from(activity_factor).saturating_mul(u64::from(preflight.schedule.tempo)) / 1000;
+        if cutoff > 0 && preflight.at.number.saturating_sub(last) >= cutoff.saturating_mul(4) / 5 {
+            cx.metrics.increment("rtao_weights_activity_alarm_total");
+            tracing::warn!(
+                mechanism = mech.0,
+                cutoff_blocks = cutoff,
+                "validator is approaching the activity cutoff"
+            );
+        }
+        let slot = self.slots.entry(mech).or_default();
+        if slot.uncertain {
+            return Ok(());
+        }
+        let cadence = self.policy.cadence.unwrap_or_else(|| {
+            default_cadence(hotkey, preflight.schedule.tempo, preflight.commit_reveal)
+        });
+        let last_submission = preflight
+            .last_update(uid)
+            .max(slot.last_attempt_block.unwrap_or(0));
+        if last_submission != 0
+            && preflight.at.number.saturating_sub(last_submission) < preflight.rate_limit
+        {
+            if let Some(attempt) = self.attempts.get_mut(&mech) {
+                attempt.outcome = WeightAttemptOutcome::RateLimited {
+                retry_after_block: last_submission.saturating_add(preflight.rate_limit),
+                remediation: "wait for the mechanism's chain rate-limit slot; this is scheduled work, not a failed transaction".into(),
+            };
+            }
+            return Ok(());
+        }
+        if !due(cadence, slot, &preflight, uid) {
+            return Ok(());
+        }
+        let proposal = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| proposals(mech)))
+            .map_err(|_| anyhow::anyhow!("validator weights callback panicked"))?;
+        let input = match proposal {
+            WeightsProposal::Set(input) => input,
+            WeightsProposal::HoldPrevious => {
+                if let Some(attempt) = self.attempts.get_mut(&mech) {
+                    attempt.outcome = WeightAttemptOutcome::HoldPrevious;
+                }
+                cx.metrics.increment("rtao_weights_hold_total");
+                return Ok(());
+            }
+            WeightsProposal::Skip(reason) => {
+                if let Some(attempt) = self.attempts.get_mut(&mech) {
+                    attempt.outcome = WeightAttemptOutcome::Skipped(reason.into());
+                }
+                tracing::debug!(mechanism = mech.0, reason, "weight proposal skipped");
+                return Ok(());
+            }
+        };
+        let row = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph)?;
+        if hold_previous(&row, uid, owner, &graph) {
+            if let Some(attempt) = self.attempts.get_mut(&mech) {
+                attempt.outcome = WeightAttemptOutcome::HoldPrevious;
+            }
+            cx.metrics.increment("rtao_weights_hold_total");
+            return Ok(());
+        }
+        let block_time = snapshot_slot_duration(&cx.client, &preflight.at).await?;
+        let mut commit = None;
+        if preflight.commit_reveal {
+            self.clock_guard.check(self.clock.as_ref())?;
+            let committer = TimelockCommitter::new(if preflight.null_consensus {
+                CommitSizeLimit::Null {
+                    mechanisms: u16::from(mechanisms),
+                }
+            } else {
+                CommitSizeLimit::Yuma
+            })?;
+            commit = Some(
+                committer
+                    .commit_at(TimelockCommitRequest {
+                        now: self.clock.now_unix(),
+                        hotkey,
+                        row: row.clone(),
+                        version_key,
+                        state: preflight.schedule.clone(),
+                        reveal_period_epochs: preflight.reveal_period,
+                        block_time,
+                    })
+                    .await?,
+            );
+        }
+        // Reserve this cadence slot before await; pool-unknown outcomes must
+        // never cause an unconditional resubmission on the next finalized head.
+        slot.last_attempt_epoch = Some(preflight.schedule.subnet_epoch_index);
+        slot.last_attempt_block = Some(preflight.at.number);
+        let result = submit::execute(
+            cx,
+            mech,
+            row.clone(),
+            version_key,
+            commit.as_ref(),
+            block_time,
+        )
+        .await;
+        let report = match result {
+            Ok(report) => report,
+            Err(error) if submit::invalid_reveal_round(&error) && commit.is_some() => {
+                let fresh = cx.client.at(BlockRef::Best).await?;
+                let state = WeightPreflight::fetch(&fresh, cx.netuid, mech, hotkey).await?;
+                let uid = state.check(version_key)?;
+                let (count, current_owner) = fresh
+                    .fetch((
+                        st::MECHANISM_COUNT_CURRENT.at((cx.netuid,)),
+                        st::SUBNET_OWNER_HOTKEY.at((cx.netuid,)),
+                    ))
+                    .await?;
+                anyhow::ensure!(
+                    mech.0 < count.0 && count.0 <= 16,
+                    "mechanism no longer exists after the rejected commitment"
+                );
+                let graph = cx.metagraph.load();
+                let row = prepare_row(input, &state, uid, cx.netuid, &graph)?;
+                if hold_previous(&row, uid, *current_owner.raw(), &graph) {
+                    if let Some(attempt) = self.attempts.get_mut(&mech) {
+                        attempt.outcome = WeightAttemptOutcome::HoldPrevious;
+                    }
+                    return Ok(());
+                }
+                let block_time = snapshot_slot_duration(&cx.client, &state.at).await?;
+                commit = if state.commit_reveal {
+                    self.clock_guard.check(self.clock.as_ref())?;
+                    Some(
+                        TimelockCommitter::new(if state.null_consensus {
+                            CommitSizeLimit::Null {
+                                mechanisms: u16::from(count.0),
+                            }
+                        } else {
+                            CommitSizeLimit::Yuma
+                        })?
+                        .commit_at(TimelockCommitRequest {
+                            now: self.clock.now_unix(),
+                            hotkey,
+                            row: row.clone(),
+                            version_key,
+                            state: state.schedule.clone(),
+                            reveal_period_epochs: state.reveal_period,
+                            block_time,
+                        })
+                        .await?,
+                    )
+                } else {
+                    None
+                };
+                slot.last_attempt_epoch = Some(state.schedule.subnet_epoch_index);
+                slot.last_attempt_block = Some(state.at.number);
+                cx.metrics
+                    .increment("rtao_weights_reveal_round_recomputed_total");
+                let retry = submit::execute(
+                    cx,
+                    mech,
+                    row.clone(),
+                    version_key,
+                    commit.as_ref(),
+                    block_time,
+                )
+                .await;
+                let report = match retry {
+                    Ok(report) => report,
+                    Err(error) => {
+                        slot.uncertain = submit::uncertain(&error);
+                        return Err(error);
+                    }
+                };
+                if let Some(attempt) = self.attempts.get_mut(&mech) {
+                    attempt.outcome = WeightAttemptOutcome::Submitted {
+                        block_hash: report.block_hash,
+                        block_number: report.block_number,
+                    };
+                }
+                if let Some(commit) = commit {
+                    self.reveals
+                        .record(
+                            &cx.client,
+                            cx.netuid,
+                            mech,
+                            hotkey,
+                            row,
+                            version_key,
+                            state,
+                            commit,
+                            &report,
+                            &cx.metrics,
+                        )
+                        .await?;
+                }
+                cx.metrics
+                    .update_readiness(|ready| ready.last_weight_succeeded = true);
+                return Ok(());
+            }
+            Err(error) => {
+                slot.uncertain = submit::uncertain(&error);
+                return Err(error);
+            }
+        };
+        if let Some(attempt) = self.attempts.get_mut(&mech) {
+            attempt.outcome = WeightAttemptOutcome::Submitted {
+                block_hash: report.block_hash,
+                block_number: report.block_number,
+            };
+        }
+        if let Some(commit) = commit {
+            self.reveals
+                .record(
+                    &cx.client,
+                    cx.netuid,
+                    mech,
+                    hotkey,
+                    row,
+                    version_key,
+                    preflight,
+                    commit,
+                    &report,
+                    &cx.metrics,
+                )
+                .await?;
+        }
+        cx.metrics.increment("rtao_weights_submitted_total");
+        cx.metrics
+            .update_readiness(|ready| ready.last_weight_succeeded = true);
+        Ok(())
+    }
+}
+
+/// Deterministic default jitter, with direct rows governed by the chain limit.
+pub fn default_cadence(hotkey: AccountId, tempo: u16, commit_reveal: bool) -> WeightCadence {
+    if !commit_reveal {
+        return WeightCadence::RateLimited { margin: 0 };
+    }
+    let digest = Blake2b::<U32>::digest(hotkey.0);
+    let modulus = u64::from((tempo / 10).max(1));
+    // Reduce all 256 digest bits rather than silently selecting one limb.
+    let remainder = digest.iter().fold(0u64, |value, byte| {
+        (value * 256 + u64::from(*byte)) % modulus
+    });
+    WeightCadence::OncePerEpoch {
+        offset_blocks: 2 + remainder,
+    }
+}
+fn due(cadence: WeightCadence, slot: &Slot, state: &WeightPreflight, uid: Uid) -> bool {
+    let last = state
+        .last_update(uid)
+        .max(slot.last_attempt_block.unwrap_or(0));
+    if last != 0 && state.at.number.saturating_sub(last) < state.rate_limit {
+        return false;
+    }
+    match cadence {
+        WeightCadence::OncePerEpoch { offset_blocks } => {
+            slot.last_attempt_epoch != Some(state.schedule.subnet_epoch_index)
+                && state
+                    .at
+                    .number
+                    .saturating_sub(state.schedule.last_epoch_block)
+                    >= offset_blocks
+        }
+        WeightCadence::RateLimited { margin } => {
+            last == 0
+                || state.at.number.saturating_sub(last)
+                    >= state.rate_limit.saturating_add(margin).max(1)
+        }
+    }
+}
+fn prepare_row(
+    input: WeightsInput,
+    state: &WeightPreflight,
+    uid: Uid,
+    netuid: NetUid,
+    graph: &rtao_metagraph::Metagraph,
+) -> anyhow::Result<(Vec<Uid>, Vec<u16>)> {
+    let (uids, weights, raw) = match input {
+        WeightsInput::ByUid(row) => {
+            let (uids, values) = row.into_iter().unzip();
+            (uids, values, false)
+        }
+        WeightsInput::Parallel { uids, weights } => (uids, weights, false),
+        WeightsInput::ByHotkey(row) => {
+            let mut uids = Vec::with_capacity(row.len());
+            let mut values = Vec::with_capacity(row.len());
+            for (hotkey, weight) in row {
+                uids.push(
+                    graph
+                        .by_hotkey(&hotkey)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "weight destination {hotkey} is absent from the last-good graph"
+                            )
+                        })?
+                        .uid,
+                );
+                values.push(weight);
+            }
+            (uids, values, false)
+        }
+        WeightsInput::RawU16 { uids, values } => {
+            anyhow::ensure!(
+                state.null_consensus
+                    && state.permits.iter().filter(|permit| **permit).count() == 1
+                    && state.permits.get(usize::from(uid.0)) == Some(&true),
+                "RawU16 requires Null consensus and this hotkey as the sole permit holder"
+            );
+            anyhow::ensure!(
+                uids.len() == values.len(),
+                "raw destinations and values differ in length"
+            );
+            (uids, values.into_iter().map(f64::from).collect(), true)
+        }
+    };
+    anyhow::ensure!(
+        uids.iter().collect::<BTreeSet<_>>().len() == uids.len(),
+        "weight destinations contain duplicate UIDs"
+    );
+    anyhow::ensure!(
+        weights
+            .iter()
+            .all(|weight| weight.is_finite() && *weight >= 0.0),
+        "weights must be finite and non-negative"
+    );
+    anyhow::ensure!(
+        uids.iter().all(|dest| dest.0 < state.population),
+        "weight destination UID is outside the current subnet population"
+    );
+    if raw {
+        // Null passes raw u16 values verbatim; its sole-permit proof does not
+        // impose the Yuma maximum-share rule implemented by Python conform.
+        anyhow::ensure!(
+            weights.iter().any(|value| *value > 0.0),
+            "all raw weights are zero"
+        );
+        let min = state.min_allowed_weights.min(state.population);
+        anyhow::ensure!(
+            uids == [uid] || uids.len() >= usize::from(min),
+            "raw row is below the minimum destination count"
+        );
+        return Ok((
+            uids,
+            weights.into_iter().map(|weight| weight as u16).collect(),
+        ));
+    }
+    Ok(conform(
+        &uids,
+        &weights,
+        ConformState {
+            uid,
+            min_allowed_weights: state.min_allowed_weights.min(state.population),
+            max_weight_limit: state.max_weights_limit,
+        },
+        netuid,
+        false,
+    )?)
+}
+fn hold_previous(
+    row: &(Vec<Uid>, Vec<u16>),
+    uid: Uid,
+    owner: AccountId,
+    graph: &rtao_metagraph::Metagraph,
+) -> bool {
+    row.0
+        .iter()
+        .zip(&row.1)
+        .filter(|(_, value)| **value > 0)
+        .all(|(dest, _)| *dest == uid || graph.hotkey(*dest) == Some(&owner))
+}
+async fn snapshot_slot_duration(
+    client: &Client,
+    block: &rtao_client::PinnedBlock,
+) -> anyhow::Result<f64> {
+    let snapshot = Snapshot::new(client.clone(), block.clone());
+    let millis = snapshot
+        .constant(&rtao_runtime::constants::aura::SLOT_DURATION)
+        .await?;
+    anyhow::ensure!(millis > 0, "Aura slot duration is zero");
+    Ok(millis as f64 / 1000.0)
+}
+pub(super) fn number(value: &DynValue, name: &str) -> anyhow::Result<u64> {
+    value
+        .as_u128()
+        .and_then(|value| u64::try_from(value).ok())
+        .ok_or_else(|| anyhow::anyhow!("{name} is not a u64"))
+}
+fn boolean(value: &DynValue, name: &str) -> anyhow::Result<bool> {
+    value
+        .as_bool()
+        .ok_or_else(|| anyhow::anyhow!("{name} is not a bool"))
+}
+fn integers(value: &DynValue, name: &str) -> anyhow::Result<Vec<u64>> {
+    let Value::List(values) = value.as_core() else {
+        anyhow::bail!("{name} is not a list")
+    };
+    values
+        .iter()
+        .map(|value| number(&DynValue::new(value.clone()), name))
+        .collect()
+}
+fn booleans(value: &DynValue, name: &str) -> anyhow::Result<Vec<bool>> {
+    let Value::List(values) = value.as_core() else {
+        anyhow::bail!("{name} is not a list")
+    };
+    values
+        .iter()
+        .map(|value| boolean(&DynValue::new(value.clone()), name))
+        .collect()
+}
+fn consensus_null(value: &DynValue) -> anyhow::Result<bool> {
+    match value.as_core() {
+        Value::Str(name) if name == "Null" => Ok(true),
+        Value::Str(name) if name == "Yuma" => Ok(false),
+        Value::Dict(fields) if fields.len() == 1 && fields[0].0 == Value::Str("Null".into()) => {
+            Ok(true)
+        }
+        Value::Dict(fields) if fields.len() == 1 && fields[0].0 == Value::Str("Yuma".into()) => {
+            Ok(false)
+        }
+        _ => anyhow::bail!("unknown SubnetEpochConsensus"),
+    }
+}
+
+pub(crate) async fn run_scheduler<V: Validator>(
+    validator: Arc<V>,
+    state: StateCell<V::State>,
+    cx: NeuronCx,
+    guard: ClockGuard,
+    clock: Arc<dyn Clock>,
+    policy: WeightPolicy,
+) -> anyhow::Result<()> {
+    let mut scheduler = WeightScheduler::new(policy, clock, guard)?;
+    let mut heads = cx.client.blocks(Finality::Finalized)?;
+    loop {
+        let head = tokio::select! { biased; () = cx.shutdown.cancelled() => return Ok(()), next = heads.next() => next };
+        let Some(head) = head else {
+            anyhow::bail!("weight finalized-head stream ended")
+        };
+        let head = match head {
+            Ok(head) => head,
+            Err(error) => {
+                tracing::warn!(%error, "weight head observer reconnecting");
+                continue;
+            }
+        };
+        let proposal_cx = cx.clone();
+        if let Err(error) = scheduler
+            .on_finalized(&cx, &head, |mech| {
+                validator.weights(&proposal_cx, &state.read(), mech)
+            })
+            .await
+        {
+            cx.metrics.increment("rtao_weights_errors_total");
+            cx.metrics
+                .update_readiness(|ready| ready.last_weight_succeeded = false);
+            tracing::warn!(%error, "weight scheduler will retry on the next finalized head");
+        }
+    }
+}

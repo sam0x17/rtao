@@ -1,0 +1,190 @@
+{
+  "format": 1,
+  "mortality": {
+    "format": 1,
+    "provenance": {
+      "blob": "2ec5233ed198d33132d1b9bc9cf352861fb5dd93",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "runtime/src/check_mortality.rs",
+      "tag": "v478"
+    },
+    "values": {
+      "MAX_SHIELD_ERA_PERIOD": {
+        "expression": "8",
+        "type": "u64",
+        "value": 8
+      }
+    }
+  },
+  "provenance": {
+    "blob": "b6946fe11fcfd93ce6a9a304f72c09a5cd75294e",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "pallets/subtensor/src/lib.rs",
+    "sha256": "3f2428d42cb420d97994b09cf6c7e071c85e75fff580af1f8968d53d9bc13947",
+    "tag": "v478"
+  },
+  "rate_limiting_provenance": {
+    "blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "pallets/subtensor/src/utils/rate_limiting.rs",
+    "tag": "v478"
+  },
+  "values": {
+    "constants": {
+      "DefaultAdminFreezeWindow": {
+        "expression": "10",
+        "signature": "fn DefaultAdminFreezeWindow < T : Config > () -> u16",
+        "type": "u16",
+        "value": 10
+      },
+      "MAX_ACTIVITY_CUTOFF_FACTOR_MILLI": {
+        "expression": "50_000",
+        "type": "u32",
+        "value": 50000
+      },
+      "MAX_TEMPO": {
+        "expression": "50_400",
+        "type": "u16",
+        "value": 50400
+      },
+      "MIN_ACTIVITY_CUTOFF_FACTOR_MILLI": {
+        "expression": "1_000",
+        "type": "u32",
+        "value": 1000
+      },
+      "MIN_TEMPO": {
+        "expression": "360",
+        "type": "u16",
+        "value": 360
+      }
+    },
+    "rate_limits": {
+      "DefaultPendingCooldown": {
+        "fast": 15,
+        "fast_expression": "15",
+        "production": 7200,
+        "production_expression": "7_200",
+        "signature": "fn DefaultPendingCooldown < T : Config > () -> u64",
+        "type": "u64"
+      },
+      "MaxUidsTrimmingRateLimit": {
+        "fast": 1,
+        "fast_expression": "1",
+        "production": 216000,
+        "production_expression": "30 * 7200",
+        "signature": "fn MaxUidsTrimmingRateLimit < T : Config > () -> u64",
+        "type": "u64"
+      },
+      "MechanismCountSetRateLimit": {
+        "fast": 1,
+        "fast_expression": "1",
+        "production": 7200,
+        "production_expression": "7_200",
+        "signature": "fn MechanismCountSetRateLimit < T : Config > () -> u64",
+        "type": "u64"
+      },
+      "MechanismEmissionRateLimit": {
+        "fast": 1,
+        "fast_expression": "1",
+        "production": 7200,
+        "production_expression": "7_200",
+        "signature": "fn MechanismEmissionRateLimit < T : Config > () -> u64",
+        "type": "u64"
+      }
+    },
+    "transaction_type_rules": {
+      "TransactionType": {
+        "variants": [
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "SetChildren"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "SetChildkeyTake"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "Unknown"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "RegisterNetwork"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "SetWeightsVersionKey"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "SetSNOwnerHotkey"
+          },
+          {
+            "discriminant": null,
+            "fields": "(Hyperparameter)",
+            "name": "OwnerHyperparamUpdate"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "MechanismCountUpdate"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "MechanismEmission"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "MaxUidsTrimming"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "AddStakeBurn"
+          },
+          {
+            "discriminant": null,
+            "fields": "",
+            "name": "TempoUpdate"
+          }
+        ]
+      },
+      "check_passes_rate_limit": {
+        "body": "{ last_block == 0 || block . saturating_sub (last_block) >= limit }",
+        "signature": "fn check_passes_rate_limit (limit : u64 , block : u64 , last_block : u64) -> bool"
+      },
+      "last_block": {
+        "body": "{ match self { Self :: RegisterNetwork => Pallet :: < T > :: get_network_last_lock_block () , _ => self . last_block_on_subnet :: < T > (key , NetUid :: ROOT) , } }",
+        "signature": "fn last_block < T : Config > (& self , key : & T :: AccountId) -> u64"
+      },
+      "last_block_on_subnet": {
+        "body": "{ match self { Self :: RegisterNetwork => Pallet :: < T > :: get_network_last_lock_block () , Self :: SetSNOwnerHotkey => { Pallet :: < T > :: get_rate_limited_last_block (& RateLimitKey :: SetSNOwnerHotkey (netuid)) } Self :: OwnerHyperparamUpdate (hparam) => Pallet :: < T > :: get_rate_limited_last_block (& RateLimitKey :: OwnerHyperparamUpdate (netuid , * hparam) ,) , _ => { let tx_type : u16 = (* self) . into () ; TransactionKeyLastBlock :: < T > :: get ((hotkey , netuid , tx_type)) } } }",
+        "signature": "fn last_block_on_subnet < T : Config > (& self , hotkey : & T :: AccountId , netuid : NetUid) -> u64"
+      },
+      "rate_limit": {
+        "body": "{ match self { Self :: SetChildren => 150 , Self :: SetChildkeyTake => TxChildkeyTakeRateLimit :: < T > :: get () , Self :: RegisterNetwork => NetworkRateLimit :: < T > :: get () , Self :: MechanismCountUpdate => MechanismCountSetRateLimit :: < T > :: get () , Self :: MechanismEmission => MechanismEmissionRateLimit :: < T > :: get () , Self :: MaxUidsTrimming => MaxUidsTrimmingRateLimit :: < T > :: get () , Self :: Unknown => 0 , _ => 0 , } }",
+        "signature": "fn rate_limit < T : Config > (& self) -> u64"
+      },
+      "rate_limit_on_subnet": {
+        "body": "{ # [allow (clippy :: match_single_binding)] match self { Self :: SetWeightsVersionKey => (Tempo :: < T > :: get (netuid) as u64) . saturating_mul (WeightsVersionKeyRateLimit :: < T > :: get ()) , Self :: OwnerHyperparamUpdate (_) => { let epochs = OwnerHyperparamRateLimit :: < T > :: get () as u64 ; (Tempo :: < T > :: get (netuid) as u64) . saturating_mul (epochs) } Self :: SetSNOwnerHotkey => DefaultSetSNOwnerHotkeyRateLimit :: < T > :: get () , Self :: AddStakeBurn => Tempo :: < T > :: get (netuid) as u64 , Self :: TempoUpdate => MIN_TEMPO as u64 , _ => self . rate_limit :: < T > () , } }",
+        "signature": "fn rate_limit_on_subnet < T : Config > (& self , netuid : NetUid) -> u64"
+      },
+      "set_last_block_on_subnet": {
+        "body": "{ match self { Self :: RegisterNetwork => Pallet :: < T > :: set_network_last_lock_block (block) , Self :: SetSNOwnerHotkey => Pallet :: < T > :: set_rate_limited_last_block (& RateLimitKey :: SetSNOwnerHotkey (netuid) , block ,) , Self :: OwnerHyperparamUpdate (hparam) => Pallet :: < T > :: set_rate_limited_last_block (& RateLimitKey :: OwnerHyperparamUpdate (netuid , * hparam) , block ,) , _ => { let tx_type : u16 = (* self) . into () ; TransactionKeyLastBlock :: < T > :: insert ((key , netuid , tx_type) , block) ; } } }",
+        "signature": "fn set_last_block_on_subnet < T : Config > (& self , key : & T :: AccountId , netuid : NetUid , block : u64 ,)"
+      },
+      "transaction_type_to_u16": {
+        "body": "{ match tx_type { TransactionType :: SetChildren => 0 , TransactionType :: SetChildkeyTake => 1 , TransactionType :: Unknown => 2 , TransactionType :: RegisterNetwork => 3 , TransactionType :: SetWeightsVersionKey => 4 , TransactionType :: SetSNOwnerHotkey => 5 , TransactionType :: OwnerHyperparamUpdate (_) => 6 , TransactionType :: MechanismCountUpdate => 7 , TransactionType :: MechanismEmission => 8 , TransactionType :: MaxUidsTrimming => 9 , TransactionType :: AddStakeBurn => 10 , TransactionType :: TempoUpdate => 11 , } }",
+        "signature": "fn from (tx_type : TransactionType) -> Self"
+      }
+    }
+  }
+}

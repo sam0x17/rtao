@@ -1,0 +1,198 @@
+{
+  "format": 1,
+  "provenance": {
+    "blob": "ca9875b0ee1bbbd8d7bb4600f8a45625d7722f1b",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "runtime/src/fee_filters.rs",
+    "tag": "v478"
+  },
+  "python_mirror": {
+    "provenance": {
+      "blob": "e00c10d2a7e23f4e54d3336d5f3012b8ca121dfb",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/fee_filters.py",
+      "tag": "v478"
+    },
+    "source": {
+      "end_line": 32,
+      "line": 12,
+      "value": {
+        "frozenset": [
+          {
+            "tuple": [
+              "Commitments",
+              "set_commitment"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "associate_evm_key"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "batch_commit_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "batch_reveal_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "batch_set_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "commit_crv3_mechanism_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "commit_mechanism_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "commit_timelocked_mechanism_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "commit_timelocked_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "commit_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "reveal_mechanism_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "reveal_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "serve_axon"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "serve_axon_tls"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "serve_prometheus"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "set_mechanism_weights"
+            ]
+          },
+          {
+            "tuple": [
+              "SubtensorModule",
+              "set_weights"
+            ]
+          }
+        ]
+      }
+    },
+    "table": "COLDKEY_PAYS_FEE_CALLS"
+  },
+  "values": [
+    [
+      "Commitments",
+      "set_commitment"
+    ],
+    [
+      "SubtensorModule",
+      "associate_evm_key"
+    ],
+    [
+      "SubtensorModule",
+      "batch_commit_weights"
+    ],
+    [
+      "SubtensorModule",
+      "batch_reveal_weights"
+    ],
+    [
+      "SubtensorModule",
+      "batch_set_weights"
+    ],
+    [
+      "SubtensorModule",
+      "commit_crv3_mechanism_weights"
+    ],
+    [
+      "SubtensorModule",
+      "commit_mechanism_weights"
+    ],
+    [
+      "SubtensorModule",
+      "commit_timelocked_mechanism_weights"
+    ],
+    [
+      "SubtensorModule",
+      "commit_timelocked_weights"
+    ],
+    [
+      "SubtensorModule",
+      "commit_weights"
+    ],
+    [
+      "SubtensorModule",
+      "reveal_mechanism_weights"
+    ],
+    [
+      "SubtensorModule",
+      "reveal_weights"
+    ],
+    [
+      "SubtensorModule",
+      "serve_axon"
+    ],
+    [
+      "SubtensorModule",
+      "serve_axon_tls"
+    ],
+    [
+      "SubtensorModule",
+      "serve_prometheus"
+    ],
+    [
+      "SubtensorModule",
+      "set_mechanism_weights"
+    ],
+    [
+      "SubtensorModule",
+      "set_weights"
+    ]
+  ]
+}

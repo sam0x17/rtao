@@ -1,0 +1,41 @@
+# Immutable, recorded runtime-API responses; synthetic payload is reproducible.
+schema = 1
+network = "finney"
+endpoint = "https://entrypoint-finney.opentensor.ai:443"
+finalized_head = "0x5069877ce8f7b95a12fa346ba3d2bf578819f4cd1e7bc89dc22c335f798be3cb"
+block_number = 9279852
+spec_version = 478
+code_hash = "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1"
+transaction_version = 1
+metadata = "../metadata/finney/478.v15.scale"
+method = "SubnetInfoRuntimeApi_get_metagraph"
+
+[[payloads]]
+path = "finney-1.scale"
+netuid = 1
+encoded_args = "0x0100"
+bytes = 49869
+sha256 = "14fb54add55d23b005093a1fc7b89149df497331a53f83bc4bd2e250524b854d"
+
+[[payloads]]
+path = "finney-3.scale"
+netuid = 3
+encoded_args = "0x0300"
+bytes = 48119
+sha256 = "8bc11a5d31b67cd75cb92c6ff302b5641d3fc36098fc193cbe3375545f7f06bf"
+
+[[payloads]]
+path = "finney-64.scale"
+netuid = 64
+encoded_args = "0x4000"
+bytes = 51229
+sha256 = "b37cc80d8df9c518a3d356ecbc157be1209afee4b0608f518dc7067e8458eba3"
+
+[[payloads]]
+path = "synthetic-2500.scale"
+netuid = 1
+synthetic = true
+source = "finney-1.scale"
+regenerate = "cargo run -p rtao-metagraph --example synthetic_fixture -- vendor/bench/synthetic-2500.scale"
+bytes = 333856
+sha256 = "1bf16bda091a8e66433135e8df80ccd657e68d6f219fe8091f79ec05c2a12a5f"

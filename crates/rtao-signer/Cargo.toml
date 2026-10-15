@@ -1,0 +1,28 @@
+[package]
+name = "rtao-signer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Bittensor signing contracts and key sources."
+
+[lints]
+workspace = true
+
+[features]
+ledger = ["rtao-core/ledger","rtao-core/offload"]
+vault = []
+extension = []
+test-util = []
+
+[dependencies]
+rtao-core = { workspace = true }
+rtao-primitives = { workspace = true }
+bitflags = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+futures = { workspace = true }
+

@@ -1,0 +1,63 @@
+[package]
+name = "rtao-neuron"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Bittensor validator, miner and owner runtimes."
+
+[lints]
+workspace = true
+
+[features]
+default = ["prometheus"]
+validator = ["rtao-intents/weights", "rtao-intents/serving"]
+miner = ["rtao-intents/serving", "rtao-btauth/server", "rtao-btauth/metagraph-policy", "dep:axum", "dep:reqwest", "dep:rustls", "dep:rustls-native-certs"]
+owner = ["rtao-intents/hyperparameters"]
+prometheus = ["dep:metrics", "rtao-rpc/metrics"]
+
+[dependencies]
+rtao-intents = { workspace = true }
+rtao-metagraph = { workspace = true }
+rtao-btauth = { workspace = true, features = ["client"] }
+rtao-wallet = { workspace = true }
+rtao-client.workspace = true
+rtao-tx.workspace = true
+rtao-primitives = { workspace = true, features = ["serde"] }
+rtao-signer.workspace = true
+rtao-core.workspace = true
+rtao-runtime.workspace = true
+rtao-core-ext.workspace = true
+rtao-catalog.workspace = true
+rtao-rpc.workspace = true
+rtao-reads.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+futures.workspace = true
+bytes.workspace = true
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["json"] }
+metrics = { workspace = true, optional = true }
+blake2.workspace = true
+hex.workspace = true
+thiserror.workspace = true
+url = { workspace = true, features = ["serde"] }
+axum = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+rustls-native-certs = { workspace = true, optional = true }
+
+[dev-dependencies]
+rtao-testkit.workspace = true
+
+[[bin]]
+name = "rtao-validator"
+path = "src/bin/validator.rs"
+required-features = ["validator"]
+

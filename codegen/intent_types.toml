@@ -1,0 +1,43 @@
+# Intent JSON types beyond chain metadata. All balances resolve to native u64 rao.
+# netuid/mechid/uids, Money and Ratio rules live in regen_intents.rs.
+# Validated textual inputs preserve their spelling; wire AccountId stays binary.
+[address_types]
+scalar = "rtao_primitives::Ss58Address"
+plural = "Vec<rtao_primitives::Ss58Address>"
+
+[fields]
+"set_weights.weights" = "Option<crate::WeightsArg>"
+"commit_weights.weights" = "Option<crate::WeightsArg>"
+"reveal_weights.weights" = "Vec<rtao_primitives::Ratio>"
+"reveal_weights.salt" = "Vec<u16>"
+"set_weights.version_key" = "u64"
+"commit_weights.version_key" = "u64"
+"commit_weights.commit_reveal_version" = "u16"
+"serve_axon.port" = "u16"
+"serve_axon.version" = "u32"
+"serve_axon.protocol" = "u8"
+"serve_axon_tls.port" = "u16"
+"serve_axon_tls.version" = "u32"
+"serve_axon_tls.protocol" = "u8"
+"serve_prometheus.port" = "u16"
+"serve_prometheus.version" = "u32"
+"register_leased_network.emissions_share" = "rtao_primitives::Percent"
+"set_mechanism_count.mechanism_count" = "rtao_primitives::MechId"
+# Python leaves this default integer untouched until the PoW timeout is used.
+"pow_register.mining_timeout" = "serde_json::Number"
+
+[money_units]
+"set_min_collateral.min_alpha" = "alpha:netuid"
+"swap_basket.amount" = "alpha:origin_netuid"
+"swap_basket.min_amount_out" = "alpha:dest_netuid"
+"set_root_claim_threshold.threshold" = "tao"
+
+[outputs]
+set_weights = "rtao_tx::WeightsSubmitted"
+commit_weights = "rtao_tx::WeightsSubmitted"
+register_subnet = "rtao_tx::SubnetRegistered"
+create_pure_proxy = "rtao_tx::PureCreated"
+multisig_approve = "rtao_tx::MultisigCall"
+multisig_cancel = "rtao_tx::MultisigCall"
+multisig_execute = "rtao_tx::MultisigCall"
+multisig_threshold_1 = "rtao_tx::MultisigCall"

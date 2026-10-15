@@ -1,0 +1,22 @@
+[Unit]
+Description=Subnet %i neuron
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=subnet
+Group=subnet
+EnvironmentFile=/etc/subnet/%i.env
+ExecStart=/usr/local/bin/subnet-%i --netuid ${NETUID}
+Restart=on-failure
+KillSignal=SIGTERM
+TimeoutStopSec=90
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/subnet/wallets
+ReadWritePaths=/var/lib/subnet/state/%i
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

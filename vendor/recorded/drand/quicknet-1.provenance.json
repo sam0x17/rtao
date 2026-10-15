@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "source_url": "https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/1",
+  "round": 1,
+  "chain_hash": "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+  "body_sha256": "5569874d5d1506c96e4c1437ce2afa68fd20d313acbd1994c42265cd4dac72f4",
+  "signature_sha256": "1466a6cd24e327188770752f6134001c64d6efcc590ccc26b721611ad96f165a",
+  "verification": "Randomness is SHA256 of the signature; pr_u4_past_round_cross_decrypts_and_has_identical_ciphertext_bytes authenticates the round signature by decrypting its TLE ciphertext with the pinned Quicknet public key."
+}

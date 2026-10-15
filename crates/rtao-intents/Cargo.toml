@@ -1,0 +1,66 @@
+[package]
+name = "rtao-intents"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Bittensor transaction intents."
+
+[lints]
+workspace = true
+
+[features]
+association = []
+batch = []
+children = []
+coldkey = []
+crowdloan = []
+evm = []
+leasing = []
+lock = []
+root = []
+transfer = []
+staking = []
+weights = ["dep:tokio"]
+serving = []
+registration = []
+governance = ["hyperparameters"]
+hyperparameters = ["dep:futures", "dep:tokio", "dep:tokio-util"]
+identity = []
+proxy = []
+multisig = []
+collateral = []
+pow = ["rtao-core/host", "dep:tokio", "dep:tokio-util"]
+pow-gpu = ["pow"]
+all = ["association", "batch", "children", "coldkey", "collateral", "crowdloan", "evm", "governance", "hyperparameters", "identity", "leasing", "lock", "multisig", "proxy", "registration", "root", "serving", "staking", "transfer", "weights"]
+
+[dependencies]
+rtao-tx = { workspace = true }
+rtao-reads = { workspace = true }
+rtao-core.workspace = true
+rtao-primitives.workspace = true
+rtao-catalog.workspace = true
+rtao-client.workspace = true
+rtao-runtime.workspace = true
+rtao-signer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+smallvec = "1"
+tokio = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+
+[dev-dependencies]
+criterion = "0.7"
+tokio.workspace = true
+rtao-testkit.workspace = true
+anyhow.workspace = true
+
+[[bench]]
+name = "weights"
+harness = false
+required-features = ["weights"]
+

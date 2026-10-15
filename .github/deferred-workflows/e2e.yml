@@ -1,0 +1,257 @@
+name: e2e
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: '47 3 * * *'
+    - cron: '23 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/e2e-ci
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/e2e-ci/build
+  TMPDIR: ${{ github.workspace }}/target/e2e-ci/tmp
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      matrix: ${{ steps.filter.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SCHEDULE: ${{ github.event.schedule }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=true
+          if test "$EVENT" = push || test "$EVENT" = pull_request; then
+            if test -n "$BASE" && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+              code=false
+              while IFS= read -r -d '' path; do
+                case "$path" in templates/*|docs/licenses/*) code=true ;; book/*|docs/*|*.md) ;; *) code=true ;; esac
+              done < <(git diff --name-only -z "$BASE" HEAD)
+            fi
+          fi
+          matrix='[{"lane":"pinned","blocks":"fast","allowed":false},{"lane":"pinned","blocks":"slow","allowed":false}]'
+          if test "$EVENT" != pull_request; then
+            matrix=$(jq -c '. + [{"lane":"mainnet","blocks":"fast","allowed":false}]' <<< "$matrix")
+          fi
+          if test "$EVENT" = schedule || test "$EVENT" = workflow_dispatch; then
+            matrix=$(jq -c '. + [{"lane":"testnet","blocks":"fast","allowed":true},{"lane":"devnet","blocks":"fast","allowed":true}]' <<< "$matrix")
+          fi
+          if test "$SCHEDULE" = '23 4 * * 0' || test "$EVENT" = workflow_dispatch; then
+            matrix=$(jq -c '. + [{"lane":"main","blocks":"fast","allowed":true}]' <<< "$matrix")
+          fi
+          printf 'code=%s\nmatrix={"include":%s}\n' "$code" "$matrix" >> "$GITHUB_OUTPUT"
+
+  localnet:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: ${{ matrix.allowed }}
+    permissions:
+      contents: read
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/e2e-ci/build
+          cache-directories: |
+            ~/.cargo/git
+            target/e2e-ci/tools
+      - name: Check outbound drand and required scenario contracts
+        id: contracts
+        run: |
+          mkdir -p "$RTAO_TEMP_ROOT/tmp"
+          curl -fsS --proto '=https' --tlsv1.2 https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/latest -o "$RTAO_TEMP_ROOT/drand-preflight.json"
+          cargo run --locked -p xtask -- localnet contracts --check
+      - name: Install pinned nextest
+        run: cargo install cargo-nextest --version 0.9.143 --locked --root "$RTAO_TEMP_ROOT/tools"
+      - name: Build the isolated registry BLS probe and retain its source proof
+        run: bash ci/pr-u4-probe/prepare.sh
+      - name: Start and bootstrap one node per partition plus a global node
+        env:
+          LANE: ${{ matrix.lane }}
+          BLOCKS: ${{ matrix.blocks }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for partition in 1 2 global; do
+            cargo run --locked -p xtask -- localnet up --lane "$LANE" --profile "$BLOCKS" --out "$RTAO_TEMP_ROOT/node-$partition.json"
+          done
+      - name: Extract the digest-pinned main fast runtime for the upgrade scenario
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --locked -p xtask -- localnet up --lane main --profile fast --out "$RTAO_TEMP_ROOT/node-upgrade-source.json"
+          id=$(jq -er .container_id "$RTAO_TEMP_ROOT/node-upgrade-source.json")
+          [[ "$id" =~ ^[0-9a-f]{64}$ ]]
+          test "$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$id")" = e2e
+          docker cp "$id:/target/fast-runtime/release/node_subtensor_runtime.compact.compressed.wasm" "$RTAO_TEMP_ROOT/main-fast-runtime.wasm"
+          sha256sum "$RTAO_TEMP_ROOT/main-fast-runtime.wasm" > "$RTAO_TEMP_ROOT/main-fast-runtime.sha256"
+      - name: Execute isolated and serialized global scenarios
+        env:
+          E2E_BLOCKS: ${{ matrix.blocks }}
+          E2E_LANE: ${{ matrix.lane }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          for partition in 1 2; do
+            E2E_ENDPOINT=$(jq -er .endpoint "$RTAO_TEMP_ROOT/node-$partition.json") \
+              cargo nextest run --locked -p rtao-testkit --features docker --test e2e --profile "e2e-$E2E_BLOCKS" \
+              --partition "hash:$partition/2" --no-tests fail -E 'not (test(/^scenario_06_/) | test(/^scenario_08_/) | test(/^scenario_16_/) | test(protocol_cr_version_gate_returns_chain_dispatch_error) | test(test_compose_nested_sudo_call))'
+          done
+          E2E_ENDPOINT=$(jq -er .endpoint "$RTAO_TEMP_ROOT/node-global.json") \
+            E2E_UPGRADE_ENDPOINT=$(jq -er .endpoint "$RTAO_TEMP_ROOT/node-upgrade-source.json") \
+            E2E_UPGRADE_WASM="$RTAO_TEMP_ROOT/main-fast-runtime.wasm" \
+            cargo nextest run --locked -p rtao-testkit --features docker --test e2e --profile "e2e-$E2E_BLOCKS" \
+            --test-threads 1 --no-tests fail -E 'test(/^scenario_06_/) | test(/^scenario_08_/) | test(/^scenario_16_/) | test(protocol_cr_version_gate_returns_chain_dispatch_error) | test(test_compose_nested_sudo_call)'
+      - name: Capture logs and remove only owned containers
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup_status=0
+          for partition in 1 2 global upgrade-source; do
+            report="$RTAO_TEMP_ROOT/node-$partition.json"
+            test -f "$report" || continue
+            if ! id=$(jq -er .container_id "$report") || ! [[ "$id" =~ ^[0-9a-f]{64}$ ]]; then
+              cleanup_status=1
+              continue
+            fi
+            if ! label=$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$id") || test "$label" != e2e; then
+              cleanup_status=1
+              continue
+            fi
+            docker logs --tail 1000 "$id" > "$RTAO_TEMP_ROOT/node-$partition.log" 2>&1 || true
+            if ! docker rm -f "$id"; then
+              cleanup_status=1
+            fi
+          done
+          exit "$cleanup_status"
+      - name: Upload bounded localnet evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-${{ matrix.lane }}-${{ matrix.blocks }}
+          path: |
+            target/e2e-ci/*.json
+            target/e2e-ci/*.log
+            target/e2e-ci/*.sha256
+            target/e2e-ci/e2e/*.log
+            target/e2e-ci/nextest/**/junit.xml
+            target/e2e-ci/pr-u4-proof/prepared.json
+            target/e2e-ci/pr-u4-proof/pr-u4.patch
+            target/e2e-ci/pr-u4-proof/cargo-metadata.json
+            target/e2e-ci/pr-u4-proof/records/*.json
+          if-no-files-found: ignore
+      - name: Open or update the testnet pre-break issue
+        if: failure() && steps.contracts.outcome == 'success' && matrix.lane == 'testnet' && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='pre-break(testnet): localnet e2e failure'
+          body="$RTAO_TEMP_ROOT/pre-break-issue.md"
+          printf 'The digest-pinned testnet localnet failed the Rust e2e lane.\n\nRun: %s\n\nInspect its scenario contract, drand and node logs before changing the pin.\n' "$RUN_URL" > "$body"
+          number=$(gh issue list --state open --search "$title in:title" --json number,title --jq '.[] | select(.title == "pre-break(testnet): localnet e2e failure") | .number' | head -1)
+          if test -n "$number"; then
+            gh issue edit "$number" --body-file "$body"
+          else
+            gh issue create --title "$title" --body-file "$body"
+          fi
+  template:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYO3_NO_PYTHON: '1'
+      RTAO_CARGO_GENERATE: ${{ github.workspace }}/target/e2e-ci/tools/template/cargo-generate
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR" "$RTAO_TEMP_ROOT/tools/template"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - name: Install the template's minimum toolchain and checksum-pinned generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.89.0 --profile minimal --component clippy,rustfmt
+          archive="$RTAO_TEMP_ROOT/tools/template/generator.tar.gz"
+          curl -fsSL --proto '=https' --tlsv1.2 --retry 3 https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.12/cargo-generate-v0.23.12-x86_64-unknown-linux-gnu.tar.gz -o "$archive"
+          printf '%s  %s\n' '20e51f445322e39a9d3aa1a383cb8b02c6cc5993852d4dd43c9d08f52a6147f3' "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RTAO_TEMP_ROOT/tools/template"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/e2e-ci/build
+          cache-directories: ~/.cargo/git
+      - name: Generate against this checkout and run the generated project's own CI
+        run: cargo run --locked -p xtask -- template check
+      - name: Retain generated-project native, image and real-chain evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: template-localnet
+          path: target/e2e-ci/template-evidence-*/
+          if-no-files-found: ignore
+
+  e2e-required:
+    needs: [changes, localnet, template]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          LOCALNET: ${{ needs.localnet.result }}
+          TEMPLATE: ${{ needs.template.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+        run: |
+          test "$CHANGES" = success
+          if test "$CODE" = true; then
+            test "$LOCALNET" = success
+            test "$TEMPLATE" = success
+          else
+            test "$LOCALNET" = skipped
+            test "$TEMPLATE" = skipped
+          fi

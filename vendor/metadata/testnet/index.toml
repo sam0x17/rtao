@@ -1,0 +1,14 @@
+# Immutable finalized runtime fixtures for metadata drift.
+schema = 1
+network = "testnet"
+
+[[runtimes]]
+spec = 478
+code_hash = "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1"
+genesis = "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105"
+tag = "v478"
+commit = "850f2755bb05a3851f948489f0ab27b0645cebce"
+finalized_head = "0x896a929adb8f2ab17b12eb21a5e4e6069e7b6a87316429778e6af14d8913bea0"
+endpoint = "https://test.finney.opentensor.ai:443"
+v15 = { path = "478.v15.scale", sha256 = "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502", bytes = 400688 }
+v16 = { path = "478.v16.scale", sha256 = "723240b9f3761915eed75a5e158484bfdb39f6eea8ddd06d32e77996e67b14c7", bytes = 404727 }

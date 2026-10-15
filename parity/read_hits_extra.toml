@@ -1,0 +1,37 @@
+# Out-of-module descriptor accesses reviewed against the pinned v478 Python source.
+[read.timestamp]
+hits = [{ kind = "storage", container = "Timestamp", name = "Now", reason = "Client.timestamp reads the Timestamp pallet; Snapshot forwards its pinned block.", python = "sdk/python/bittensor/client.py:332-335; sdk/python/bittensor/snapshot.py:82-84" }]
+
+[read.block_time]
+hits = [{ kind = "constant", container = "Aura", name = "SlotDuration", reason = "The transport detects block duration from the live Aura constant.", python = "sdk/python/bittensor/client.py:337-343; sdk/python/bittensor/_substrate.py:423-433" }]
+
+[read.is_fast_blocks]
+hits = [{ kind = "constant", container = "Aura", name = "SlotDuration", reason = "Client.is_fast_blocks calls Client.block_time.", python = "sdk/python/bittensor/client.py:337-347; sdk/python/bittensor/_substrate.py:423-433" }]
+
+[read.block_info]
+pinning = "pinned"
+pinning_reason = "Client.block_info aggregates a block lookup and optional timestamp fallback."
+pinning_python = "sdk/python/bittensor/client.py:349-372"
+hits = [{ kind = "storage", container = "Timestamp", name = "Now", reason = "BlockInfo falls back to Client.timestamp when no timestamp extrinsic is decoded.", python = "sdk/python/bittensor/client.py:349-372" }]
+
+[read.epoch_status]
+hits = [{ kind = "constant", container = "Aura", name = "SlotDuration", reason = "EpochStatus includes Snapshot.block_time and the transport's Aura duration.", python = "sdk/python/bittensor/reads/epochs.py:94-138; sdk/python/bittensor/snapshot.py:86-88; sdk/python/bittensor/_substrate.py:423-433" }]
+
+[read.commitments]
+hits = [
+  { kind = "storage", container = "Commitments", name = "CommitmentOf", reason = "fetch_commitments scans current commitment records.", python = "sdk/python/bittensor/metagraph.py:258-289" },
+  { kind = "storage", container = "Commitments", name = "RevealedCommitments", reason = "fetch_commitments retains chain-decrypted commitment records.", python = "sdk/python/bittensor/metagraph.py:258-289" },
+  { kind = "storage", container = "SubtensorModule", name = "Uids", reason = "fetch_commitments requests with_uids=True and scans registered hotkey UIDs.", python = "sdk/python/bittensor/metagraph.py:258-289" },
+]
+
+[read.stake_value_for_coldkey]
+hits = [{ kind = "runtime", container = "SwapRuntimeApi", name = "current_alpha_price_all", reason = "The imported alpha_prices helper supplies subnet prices for the stake valuation.", python = "sdk/python/bittensor/reads/staking.py:144; sdk/python/bittensor/reads/prices.py:78" }]
+
+[read.stake_value_for_coldkeys]
+hits = [{ kind = "runtime", container = "SwapRuntimeApi", name = "current_alpha_price_all", reason = "The imported alpha_prices helper supplies subnet prices for each coldkey's stake valuation.", python = "sdk/python/bittensor/reads/staking.py:167; sdk/python/bittensor/reads/prices.py:78" }]
+
+# D-040 retains raw Python hit evidence and replaces only the corrected access.
+[read.subnet_start_schedule]
+replacements = [
+  { divergence = "D-040", from_kind = "constant", from_container = "SubtensorModule", from_name = "InitialStartCallDelay", kind = "storage", container = "SubtensorModule", name = "StartCallDelay", source_path = "sdk/python/bittensor/reads/subnets.py", source_blob = "ad3143c03524a250fe99501ebd74888f5c69a684", source_sha256 = "c7049b583e8de525c7509939d197e11209f84f7e5b85c8883978380879525139", runtime_path = "pallets/subtensor/src/subnets/subnet.rs", runtime_sha256 = "3732ca61fcf02883f5a72797f8032628982527edfa98cd57fb93a9ce52c87812", runtime_predicate = "registration_block_number.saturating_add(StartCallDelay::<T>::get())", reason = "D-040: live start eligibility uses mutable StartCallDelay and native saturating u64 addition; InitialStartCallDelay is only its default." },
+]

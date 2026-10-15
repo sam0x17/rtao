@@ -1,0 +1,17 @@
+[package]
+name = "rtao-validator-image-probe"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[workspace]
+
+[dependencies]
+rtao-testkit = { path = "../../../crates/rtao-testkit" }
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "process", "time"] }
+base64 = "0.22"
+
+[patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }

@@ -1,0 +1,52 @@
+name: subnet
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  localnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RTAO_TEMP_ROOT: ${{ github.workspace }}/target/subnet-ci
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/subnet-ci/build
+      TMPDIR: ${{ github.workspace }}/target/subnet-ci/tmp
+      PYO3_NO_PYTHON: '1'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ''
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/subnet-ci/build
+          cache-directories: ~/.cargo/git
+      - name: Resolve and retain the generated project's dependency lock
+        run: |
+          mkdir -p "$RTAO_TEMP_ROOT/tmp"
+          if ! test -f Cargo.lock; then
+            cargo generate-lockfile
+          fi
+          cargo fetch --locked
+      - name: Install the SDK doctor from the resolved SDK checkout
+        run: |
+          sdk=$(bash ci/source.sh | sed -n 's/^RTAO_SOURCE=//p')
+          cargo install --locked --path "$sdk/crates/rtao-cli" --root "$RTAO_TEMP_ROOT/tools"
+          echo "RTAO_DOCTOR=$RTAO_TEMP_ROOT/tools/bin/rtao" >> "$GITHUB_ENV"
+      - name: Check, build both no-host images, and run the real compose localnet
+        run: bash ci/check.sh
+      - name: Retain public integration evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: subnet-localnet
+          path: |
+            Cargo.lock
+            target/subnet-ci/*.json
+            target/subnet-ci/*.log
+            target/subnet-ci/*-tree.txt
+          if-no-files-found: ignore

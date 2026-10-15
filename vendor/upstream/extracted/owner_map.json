@@ -1,0 +1,855 @@
+{
+  "format": 1,
+  "metadata_provenance": {
+    "finalized_head": "0x2bc979722ab7c83b9992900c5463dfd1daebbac77d5e64ae1e45413c69e5401f",
+    "path": "vendor/metadata/finney/478.v15.scale",
+    "sha256": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502",
+    "spec": 478
+  },
+  "provenance": {
+    "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "sdk/python/bittensor/intents/hyperparameters.py",
+    "tag": "v478"
+  },
+  "sources": [
+    {
+      "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/intents/hyperparameters.py",
+      "tag": "v478"
+    },
+    {
+      "blob": "acd67c9910489c0d94a6b09a60dd763fb12e5ade",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/hyperparams.py",
+      "tag": "v478"
+    },
+    {
+      "blob": "f438b23549c74e8d740c66a2e1897b5ff68b7aa7",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "pallets/admin-utils/src/lib.rs",
+      "tag": "v478"
+    },
+    {
+      "blob": "98c0081114fb19d18d4f7a76b2fecd67a8b53243",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "pallets/subtensor/src/coinbase/tempo_control.rs",
+      "tag": "v478"
+    },
+    {
+      "blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "pallets/subtensor/src/utils/rate_limiting.rs",
+      "tag": "v478"
+    },
+    {
+      "blob": "a1db5d139dd79bc5afaa2642ecb25540448f5bca",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "pallets/subtensor/src/utils/misc.rs",
+      "tag": "v478"
+    },
+    {
+      "blob": "b97ad0e448f879425a1407a4e320802877d2e4ab",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "pallets/subtensor/src/coinbase/run_coinbase.rs",
+      "tag": "v478"
+    }
+  ],
+  "values": {
+    "framework_rules": {
+      "blocks_until_next_auto_epoch": {
+        "body": "{ if tempo == 0 { return u64 :: MAX ; } let last = LastEpochBlock :: < T > :: get (netuid) ; let next_auto = last . saturating_add (tempo as u64) ; next_auto . saturating_sub (block_number) }",
+        "signature": "fn blocks_until_next_auto_epoch (netuid : NetUid , tempo : u16 , block_number : u64) -> u64"
+      },
+      "ensure_admin_window_open": {
+        "body": "{ let now = Self :: get_current_block_as_u64 () ; ensure ! (! Self :: is_in_admin_freeze_window (netuid , now) , Error ::< T >:: AdminActionProhibitedDuringWeightsWindow) ; Ok (()) }",
+        "signature": "fn ensure_admin_window_open (netuid : NetUid) -> Result < () , DispatchError >"
+      },
+      "ensure_sn_owner_or_root_with_limits": {
+        "body": "{ let maybe_who = Self :: ensure_subnet_owner_or_root (o , netuid) ? ; if let Some (who) = maybe_who . as_ref () { for tx in limits . iter () { ensure ! (tx . passes_rate_limit_on_subnet ::< T > (who , netuid) , Error ::< T >:: TxRateLimitExceeded) ; } } Ok (maybe_who) }",
+        "signature": "fn ensure_sn_owner_or_root_with_limits (o : OriginFor < T > , netuid : NetUid , limits : & [crate :: utils :: rate_limiting :: TransactionType] ,) -> Result < Option < T :: AccountId > , DispatchError >"
+      },
+      "is_in_admin_freeze_window": {
+        "body": "{ let tempo = Self :: get_tempo (netuid) ; if tempo == 0 { return false ; } let pending = PendingEpochAt :: < T > :: get (netuid) ; if pending > 0 && pending > current_block { return true ; } let remaining = Self :: blocks_until_next_auto_epoch (netuid , tempo , current_block) ; let window = AdminFreezeWindow :: < T > :: get () as u64 ; remaining < window }",
+        "signature": "fn is_in_admin_freeze_window (netuid : NetUid , current_block : u64) -> bool"
+      },
+      "record_owner_rl": {
+        "body": "{ if let Some (who) = maybe_owner { let now = Self :: get_current_block_as_u64 () ; for tx in txs { tx . set_last_block_on_subnet :: < T > (& who , netuid , now) ; } } }",
+        "signature": "fn record_owner_rl (maybe_owner : Option < < T as frame_system :: Config > :: AccountId > , netuid : NetUid , txs : & [TransactionType] ,)"
+      }
+    },
+    "hyperparameters": [
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "ActivityCutoffFactorMilli"
+        },
+        "current": {
+          "name": "ActivityCutoffFactorMilli",
+          "pallet": "SubtensorModule"
+        },
+        "name": "activity_cutoff_factor",
+        "params": [
+          "factor_milli"
+        ],
+        "setter": "sudo_set_activity_cutoff_factor",
+        "setter_body": "{ pallet_subtensor :: Pallet :: < T > :: do_set_activity_cutoff_factor (origin , netuid , factor_milli ,) ? ; log :: debug ! (\"ActivityCutoffFactorMilliSet( netuid: {netuid:?} factor_milli: {factor_milli:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_activity_cutoff_factor (origin : OriginFor < T > , netuid : NetUid , factor_milli : u32 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "AdjustmentAlpha"
+        },
+        "current": {
+          "name": "AdjustmentAlpha",
+          "pallet": "SubtensorModule"
+        },
+        "name": "adjustment_alpha",
+        "params": [
+          "adjustment_alpha"
+        ],
+        "setter": "sudo_set_adjustment_alpha",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: AdjustmentAlpha . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_adjustment_alpha (netuid , adjustment_alpha) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: AdjustmentAlpha . into ()] ,) ; log :: debug ! (\"AdjustmentAlphaSet( adjustment_alpha: {adjustment_alpha:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_adjustment_alpha (origin : OriginFor < T > , netuid : NetUid , adjustment_alpha : u64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "AlphaValues"
+        },
+        "current": {
+          "name": "AlphaValues",
+          "pallet": "SubtensorModule"
+        },
+        "name": "alpha_high",
+        "params": [
+          "alpha_low",
+          "alpha_high"
+        ],
+        "setter": "sudo_set_alpha_values",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin . clone () , netuid , & [Hyperparameter :: AlphaValues . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; let res = pallet_subtensor :: Pallet :: < T > :: do_set_alpha_values (origin , netuid , alpha_low , alpha_high ,) ; if res . is_ok () { pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: AlphaValues . into ()] ,) ; } res }",
+        "setter_signature": "fn sudo_set_alpha_values (origin : OriginFor < T > , netuid : NetUid , alpha_low : u16 , alpha_high : u16 ,) -> DispatchResult",
+        "shape": {
+          "index": 1,
+          "kind": "alpha_pair"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "AlphaValues"
+        },
+        "current": {
+          "name": "AlphaValues",
+          "pallet": "SubtensorModule"
+        },
+        "name": "alpha_low",
+        "params": [
+          "alpha_low",
+          "alpha_high"
+        ],
+        "setter": "sudo_set_alpha_values",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin . clone () , netuid , & [Hyperparameter :: AlphaValues . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; let res = pallet_subtensor :: Pallet :: < T > :: do_set_alpha_values (origin , netuid , alpha_low , alpha_high ,) ; if res . is_ok () { pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: AlphaValues . into ()] ,) ; } res }",
+        "setter_signature": "fn sudo_set_alpha_values (origin : OriginFor < T > , netuid : NetUid , alpha_low : u16 , alpha_high : u16 ,) -> DispatchResult",
+        "shape": {
+          "index": 0,
+          "kind": "alpha_pair"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "AlphaSigmoidSteepness"
+        },
+        "current": {
+          "name": "AlphaSigmoidSteepness",
+          "pallet": "SubtensorModule"
+        },
+        "name": "alpha_sigmoid_steepness",
+        "params": [
+          "steepness"
+        ],
+        "setter": "sudo_set_alpha_sigmoid_steepness",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin . clone () , netuid , & [Hyperparameter :: AlphaSigmoidSteepness . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; let is_root = ensure_root (origin) . is_ok () ; ensure ! (is_root || steepness >= 0 , Error ::< T >:: NegativeSigmoidSteepness) ; pallet_subtensor :: Pallet :: < T > :: set_alpha_sigmoid_steepness (netuid , steepness) ; log :: debug ! (\"AlphaSigmoidSteepnessSet( netuid: {netuid:?}, steepness: {steepness:?} )\") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: AlphaSigmoidSteepness . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_alpha_sigmoid_steepness (origin : OriginFor < T > , netuid : NetUid , steepness : i16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "BondsMovingAverage"
+        },
+        "current": {
+          "name": "BondsMovingAverage",
+          "pallet": "SubtensorModule"
+        },
+        "name": "bonds_moving_avg",
+        "params": [
+          "bonds_moving_average"
+        ],
+        "setter": "sudo_set_bonds_moving_average",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: BondsMovingAverage . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; if maybe_owner . is_some () { ensure ! (bonds_moving_average <= MAX_BONDS_MOVING_AVERAGE , Error ::< T >:: BondsMovingAverageMaxReached) } ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_bonds_moving_average (netuid , bonds_moving_average) ; log :: debug ! (\"BondsMovingAverageSet( netuid: {netuid:?} bonds_moving_average: {bonds_moving_average:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: BondsMovingAverage . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_bonds_moving_average (origin : OriginFor < T > , netuid : NetUid , bonds_moving_average : u64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "BondsPenalty"
+        },
+        "current": {
+          "name": "BondsPenalty",
+          "pallet": "SubtensorModule"
+        },
+        "name": "bonds_penalty",
+        "params": [
+          "bonds_penalty"
+        ],
+        "setter": "sudo_set_bonds_penalty",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: BondsPenalty . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_bonds_penalty (netuid , bonds_penalty) ; log :: debug ! (\"BondsPenalty( netuid: {netuid:?} bonds_penalty: {bonds_penalty:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: BondsPenalty . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_bonds_penalty (origin : OriginFor < T > , netuid : NetUid , bonds_penalty : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "BondsResetEnabled"
+        },
+        "current": {
+          "name": "BondsResetOn",
+          "pallet": "SubtensorModule"
+        },
+        "name": "bonds_reset_enabled",
+        "params": [
+          "enabled"
+        ],
+        "setter": "sudo_set_bonds_reset_enabled",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: BondsResetEnabled . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: set_bonds_reset (netuid , enabled) ; Self :: deposit_event (Event :: BondsResetToggled { netuid , enabled }) ; log :: debug ! (\"BondsResetToggled( netuid: {netuid:?} bonds_reset: {enabled:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: BondsResetEnabled . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_bonds_reset_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "BurnHalfLife"
+        },
+        "current": {
+          "name": "BurnHalfLife",
+          "pallet": "SubtensorModule"
+        },
+        "name": "burn_half_life",
+        "params": [
+          "burn_half_life"
+        ],
+        "setter": "sudo_set_burn_half_life",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: BurnHalfLife . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; ensure ! (burn_half_life > 0 && burn_half_life <= pallet_subtensor :: MaxBurnHalfLife ::< T >:: get () , Error ::< T >:: InvalidValue) ; pallet_subtensor :: BurnHalfLife :: < T > :: insert (netuid , burn_half_life) ; Self :: deposit_event (Event :: BurnHalfLifeSet { netuid , burn_half_life , }) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: BurnHalfLife . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_burn_half_life (origin : OriginFor < T > , netuid : NetUid , burn_half_life : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "BurnIncreaseMult"
+        },
+        "current": {
+          "name": "BurnIncreaseMult",
+          "pallet": "SubtensorModule"
+        },
+        "name": "burn_increase_mult",
+        "params": [
+          "burn_increase_mult"
+        ],
+        "setter": "sudo_set_burn_increase_mult",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: BurnIncreaseMult . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; ensure ! ((1 ..= 3) . contains (& burn_increase_mult) , Error ::< T >:: InvalidValue) ; pallet_subtensor :: BurnIncreaseMult :: < T > :: insert (netuid , U64F64 :: from_num (burn_increase_mult) ,) ; Self :: deposit_event (Event :: BurnIncreaseMultSet { netuid , burn_increase_mult , }) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: BurnIncreaseMult . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_burn_increase_mult (origin : OriginFor < T > , netuid : NetUid , burn_increase_mult : U64F64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "fixed_bits"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "CollateralDrainRatio"
+        },
+        "current": {
+          "name": "CollateralDrainRatio",
+          "pallet": "SubtensorModule"
+        },
+        "name": "collateral_drain_ratio",
+        "params": [
+          "drain_ratio"
+        ],
+        "setter": "sudo_set_collateral_drain_ratio",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: CollateralDrainRatio . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; ensure ! (drain_ratio > U64F64 :: from_num (0) && drain_ratio <= pallet_subtensor :: MaxCollateralDrainRatio ::< T >:: get () , Error ::< T >:: CollateralDrainRatioOutOfBounds) ; pallet_subtensor :: CollateralDrainRatio :: < T > :: insert (netuid , drain_ratio) ; Self :: deposit_event (Event :: CollateralDrainRatioSet { netuid , drain_ratio , }) ; log :: debug ! (\"CollateralDrainRatioSet( netuid: {netuid:?}, drain_ratio: {drain_ratio:?} )\") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: CollateralDrainRatio . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_collateral_drain_ratio (origin : OriginFor < T > , netuid : NetUid , drain_ratio : U64F64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "fixed_bits"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "CollateralLockShare"
+        },
+        "current": {
+          "name": "CollateralLockShare",
+          "pallet": "SubtensorModule"
+        },
+        "name": "collateral_lock_share",
+        "params": [
+          "lock_share"
+        ],
+        "setter": "sudo_set_collateral_lock_share",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: CollateralLockShare . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; ensure ! (lock_share <= pallet_subtensor :: MaxCollateralLockShare ::< T >:: get () , Error ::< T >:: CollateralLockShareTooHigh) ; pallet_subtensor :: CollateralLockShare :: < T > :: insert (netuid , lock_share) ; Self :: deposit_event (Event :: CollateralLockShareSet { netuid , lock_share }) ; log :: debug ! (\"CollateralLockShareSet( netuid: {netuid:?}, lock_share: {lock_share:?} )\") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: CollateralLockShare . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_collateral_lock_share (origin : OriginFor < T > , netuid : NetUid , lock_share : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "WeightCommitInterval"
+        },
+        "current": {
+          "name": "RevealPeriodEpochs",
+          "pallet": "SubtensorModule"
+        },
+        "name": "commit_reveal_period",
+        "params": [
+          "interval"
+        ],
+        "setter": "sudo_set_commit_reveal_weights_interval",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: WeightCommitInterval . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; log :: debug ! (\"SetWeightCommitInterval( netuid: {netuid:?}, interval: {interval:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: set_reveal_period (netuid , interval) ? ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: WeightCommitInterval . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_commit_reveal_weights_interval (origin : OriginFor < T > , netuid : NetUid , interval : u64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "CommitRevealEnabled"
+        },
+        "current": {
+          "name": "CommitRevealWeightsEnabled",
+          "pallet": "SubtensorModule"
+        },
+        "name": "commit_reveal_weights_enabled",
+        "params": [
+          "enabled"
+        ],
+        "setter": "sudo_set_commit_reveal_weights_enabled",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: CommitRevealEnabled . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_commit_reveal_weights_enabled (netuid , enabled) ; log :: debug ! (\"ToggleSetWeightsCommitReveal( netuid: {netuid:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: CommitRevealEnabled . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_commit_reveal_weights_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "EpochConsensus"
+        },
+        "current": {
+          "name": "SubnetEpochConsensus",
+          "pallet": "SubtensorModule"
+        },
+        "name": "epoch_consensus",
+        "params": [
+          "mode"
+        ],
+        "setter": "sudo_set_epoch_consensus",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: EpochConsensus . into ()] ,) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , pallet_subtensor :: Error ::< T >:: SubnetNotExists) ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: do_set_epoch_consensus (netuid , mode) ? ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: EpochConsensus . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_epoch_consensus (origin : OriginFor < T > , netuid : NetUid , mode : EpochConsensus ,) -> DispatchResult",
+        "shape": {
+          "kind": "epoch_consensus"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "ImmunityPeriod"
+        },
+        "current": {
+          "name": "ImmunityPeriod",
+          "pallet": "SubtensorModule"
+        },
+        "name": "immunity_period",
+        "params": [
+          "immunity_period"
+        ],
+        "setter": "sudo_set_immunity_period",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: ImmunityPeriod . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_immunity_period (netuid , immunity_period) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: ImmunityPeriod . into ()] ,) ; log :: debug ! (\"ImmunityPeriodSet( netuid: {netuid:?} immunity_period: {immunity_period:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_immunity_period (origin : OriginFor < T > , netuid : NetUid , immunity_period : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "LiquidAlphaEnabled"
+        },
+        "current": {
+          "name": "LiquidAlphaOn",
+          "pallet": "SubtensorModule"
+        },
+        "name": "liquid_alpha_enabled",
+        "params": [
+          "enabled"
+        ],
+        "setter": "sudo_set_liquid_alpha_enabled",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: LiquidAlphaEnabled . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: set_liquid_alpha_enabled (netuid , enabled) ; log :: debug ! (\"LiquidAlphaEnableToggled( netuid: {netuid:?}, Enabled: {enabled:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: LiquidAlphaEnabled . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_liquid_alpha_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "MaxAllowedUids"
+        },
+        "current": {
+          "name": "MaxAllowedUids",
+          "pallet": "SubtensorModule"
+        },
+        "name": "max_allowed_uids",
+        "params": [
+          "max_allowed_uids"
+        ],
+        "setter": "sudo_set_max_allowed_uids",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: MaxAllowedUids . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (max_allowed_uids >= pallet_subtensor :: Pallet ::< T >:: get_min_allowed_uids (netuid) , Error ::< T >:: MaxAllowedUidsLessThanMinAllowedUids) ; ensure ! (pallet_subtensor :: Pallet ::< T >:: get_subnetwork_n (netuid) <= max_allowed_uids , Error ::< T >:: MaxAllowedUIdsLessThanCurrentUIds) ; ensure ! (max_allowed_uids <= pallet_subtensor :: Pallet ::< T >:: epoch_uid_budget (pallet_subtensor :: Pallet ::< T >:: get_epoch_consensus (netuid)) , Error ::< T >:: MaxAllowedUidsGreaterThanDefaultMaxAllowedUids) ; let mechanism_count = pallet_subtensor :: MechanismCountCurrent :: < T > :: get (netuid) ; pallet_subtensor :: Pallet :: < T > :: ensure_max_uids_over_all_mechanisms (netuid , max_allowed_uids , mechanism_count . into () ,) ? ; pallet_subtensor :: Pallet :: < T > :: set_max_allowed_uids (netuid , max_allowed_uids) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: MaxAllowedUids . into ()] ,) ; log :: debug ! (\"MaxAllowedUidsSet( netuid: {netuid:?} max_allowed_uids: {max_allowed_uids:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_max_allowed_uids (origin : OriginFor < T > , netuid : NetUid , max_allowed_uids : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "MaxBurn"
+        },
+        "current": {
+          "name": "MaxBurn",
+          "pallet": "SubtensorModule"
+        },
+        "name": "max_burn",
+        "params": [
+          "max_burn"
+        ],
+        "setter": "sudo_set_max_burn",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: MaxBurn . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (max_burn > T :: MaxBurnLowerBound :: get () , Error ::< T >:: ValueNotInBounds) ; ensure ! (max_burn > pallet_subtensor :: Pallet ::< T >:: get_min_burn (netuid) , Error ::< T >:: ValueNotInBounds) ; pallet_subtensor :: Pallet :: < T > :: set_max_burn (netuid , max_burn) ; log :: debug ! (\"MaxBurnSet( netuid: {netuid:?} max_burn: {max_burn:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: MaxBurn . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_max_burn (origin : OriginFor < T > , netuid : NetUid , max_burn : TaoBalance ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "MaxDifficulty"
+        },
+        "current": {
+          "name": "MaxDifficulty",
+          "pallet": "SubtensorModule"
+        },
+        "name": "max_difficulty",
+        "params": [
+          "max_difficulty"
+        ],
+        "setter": "sudo_set_max_difficulty",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: MaxDifficulty . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_max_difficulty (netuid , max_difficulty) ; log :: debug ! (\"MaxDifficultySet( netuid: {netuid:?} max_difficulty: {max_difficulty:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: MaxDifficulty . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_max_difficulty (origin : OriginFor < T > , netuid : NetUid , max_difficulty : u64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "MinAllowedWeights"
+        },
+        "current": {
+          "name": "MinAllowedWeights",
+          "pallet": "SubtensorModule"
+        },
+        "name": "min_allowed_weights",
+        "params": [
+          "min_allowed_weights"
+        ],
+        "setter": "sudo_set_min_allowed_weights",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: MinAllowedWeights . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_min_allowed_weights (netuid , min_allowed_weights) ; log :: debug ! (\"MinAllowedWeightSet( netuid: {netuid:?} min_allowed_weights: {min_allowed_weights:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: MinAllowedWeights . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_min_allowed_weights (origin : OriginFor < T > , netuid : NetUid , min_allowed_weights : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "MinBurn"
+        },
+        "current": {
+          "name": "MinBurn",
+          "pallet": "SubtensorModule"
+        },
+        "name": "min_burn",
+        "params": [
+          "min_burn"
+        ],
+        "setter": "sudo_set_min_burn",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: MinBurn . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (min_burn < T :: MinBurnUpperBound :: get () , Error ::< T >:: ValueNotInBounds) ; ensure ! (min_burn < pallet_subtensor :: Pallet ::< T >:: get_max_burn (netuid) , Error ::< T >:: ValueNotInBounds) ; pallet_subtensor :: Pallet :: < T > :: set_min_burn (netuid , min_burn) ; log :: debug ! (\"MinBurnSet( netuid: {netuid:?} min_burn: {min_burn:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: MinBurn . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_min_burn (origin : OriginFor < T > , netuid : NetUid , min_burn : TaoBalance ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "MinChildkeyTake"
+        },
+        "current": {
+          "name": "MinChildkeyTakePerSubnet",
+          "pallet": "SubtensorModule"
+        },
+        "name": "min_childkey_take",
+        "params": [
+          "take"
+        ],
+        "setter": "sudo_set_min_childkey_take_per_subnet",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: MinChildkeyTake . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (take . deconstruct () >= pallet_subtensor :: Pallet ::< T >:: get_min_childkey_take () && take . deconstruct () <= pallet_subtensor :: Pallet ::< T >:: get_max_childkey_take () , Error ::< T >:: InvalidValue) ; pallet_subtensor :: Pallet :: < T > :: set_min_childkey_take_for_subnet (netuid , take) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: MinChildkeyTake . into ()] ,) ; log :: debug ! (\"MinChildkeyTakePerSubnetSet( netuid: {netuid:?}, min_childkey_take: {take:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_min_childkey_take_per_subnet (origin : OriginFor < T > , netuid : NetUid , take : PerU16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "PowRegistrationAllowed"
+        },
+        "current": {
+          "name": "NetworkPowRegistrationAllowed",
+          "pallet": "SubtensorModule"
+        },
+        "name": "network_pow_registration_allowed",
+        "params": [
+          "registration_allowed"
+        ],
+        "setter": "sudo_set_network_pow_registration_allowed",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: PowRegistrationAllowed . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; ensure ! (registration_allowed || pallet_subtensor :: Pallet ::< T >:: get_network_registration_allowed (netuid) , Error ::< T >:: InvalidValue) ; pallet_subtensor :: Pallet :: < T > :: set_network_pow_registration_allowed (netuid , registration_allowed ,) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: PowRegistrationAllowed . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_network_pow_registration_allowed (origin : OriginFor < T > , netuid : NetUid , registration_allowed : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "none"
+        },
+        "current": {
+          "name": "OwnerCutAutoLockEnabled",
+          "pallet": "SubtensorModule"
+        },
+        "name": "owner_cut_auto_lock_enabled",
+        "params": [
+          "enabled"
+        ],
+        "setter": "sudo_set_owner_cut_auto_lock_enabled",
+        "setter_body": "{ pallet_subtensor :: Pallet :: < T > :: ensure_subnet_owner_or_root (origin , netuid) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; pallet_subtensor :: Pallet :: < T > :: set_owner_cut_auto_lock_enabled (netuid , enabled) ; log :: debug ! (\"OwnerCutAutoLockEnabledSet( netuid: {netuid:?}, enabled: {enabled:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_owner_cut_auto_lock_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "none"
+        },
+        "current": {
+          "name": "OwnerCutEnabled",
+          "pallet": "SubtensorModule"
+        },
+        "name": "owner_cut_enabled",
+        "params": [
+          "enabled"
+        ],
+        "setter": "sudo_set_owner_cut_enabled",
+        "setter_body": "{ pallet_subtensor :: Pallet :: < T > :: ensure_subnet_owner_or_root (origin , netuid) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; pallet_subtensor :: Pallet :: < T > :: set_owner_cut_enabled_flag (netuid , enabled) ; log :: debug ! (\"OwnerCutEnabledSet( netuid: {netuid:?}, enabled: {enabled:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_owner_cut_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "ImmuneNeuronLimit"
+        },
+        "current": {
+          "name": "ImmuneOwnerUidsLimit",
+          "pallet": "SubtensorModule"
+        },
+        "name": "owner_immune_neuron_limit",
+        "params": [
+          "immune_neurons"
+        ],
+        "setter": "sudo_set_owner_immune_neuron_limit",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: ImmuneNeuronLimit . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: set_owner_immune_neuron_limit (netuid , immune_neurons) ? ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: ImmuneNeuronLimit . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_owner_immune_neuron_limit (origin : OriginFor < T > , netuid : NetUid , immune_neurons : u16 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "BurnRegistrationAllowed"
+        },
+        "current": {
+          "name": "NetworkRegistrationAllowed",
+          "pallet": "SubtensorModule"
+        },
+        "name": "registration_allowed",
+        "params": [
+          "registration_allowed"
+        ],
+        "setter": "sudo_set_network_registration_allowed",
+        "setter_body": "{ if netuid . is_root () { ensure_root (origin) ? ; pallet_subtensor :: Pallet :: < T > :: set_network_registration_allowed (netuid , registration_allowed ,) ; return Ok (()) ; } let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: BurnRegistrationAllowed . into ()] ,) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (registration_allowed || pallet_subtensor :: Pallet ::< T >:: get_network_pow_registration_allowed (netuid) , Error ::< T >:: InvalidValue) ; pallet_subtensor :: Pallet :: < T > :: set_network_registration_allowed (netuid , registration_allowed ,) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: BurnRegistrationAllowed . into ()] ,) ; log :: debug ! (\"NetworkRegistrationAllowed( registration_allowed: {registration_allowed:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_network_registration_allowed (origin : OriginFor < T > , netuid : NetUid , registration_allowed : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "Rho"
+        },
+        "current": {
+          "name": "Rho",
+          "pallet": "SubtensorModule"
+        },
+        "name": "rho",
+        "params": [
+          "rho"
+        ],
+        "setter": "sudo_set_rho",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: Rho . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: set_rho (netuid , rho) ; log :: debug ! (\"RhoSet( netuid: {netuid:?} rho: {rho:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: Rho . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_rho (origin : OriginFor < T > , netuid : NetUid , rho : u16) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "ServingRateLimit"
+        },
+        "current": {
+          "name": "ServingRateLimit",
+          "pallet": "SubtensorModule"
+        },
+        "name": "serving_rate_limit",
+        "params": [
+          "serving_rate_limit"
+        ],
+        "setter": "sudo_set_serving_rate_limit",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: ServingRateLimit . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: set_serving_rate_limit (netuid , serving_rate_limit) ; log :: debug ! (\"ServingRateLimitSet( serving_rate_limit: {serving_rate_limit:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: ServingRateLimit . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_serving_rate_limit (origin : OriginFor < T > , netuid : NetUid , serving_rate_limit : u64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "code": 11,
+          "kind": "transaction",
+          "rate": {
+            "constant": "MinTempo",
+            "kind": "fixed_constant"
+          },
+          "variant": "TempoUpdate"
+        },
+        "current": {
+          "name": "Tempo",
+          "pallet": "SubtensorModule"
+        },
+        "name": "tempo",
+        "params": [
+          "tempo"
+        ],
+        "setter": "sudo_set_tempo",
+        "setter_body": "{ pallet_subtensor :: Pallet :: < T > :: do_set_tempo (origin , netuid , tempo) ? ; log :: debug ! (\"TempoSet( netuid: {netuid:?} tempo: {tempo:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_tempo (origin : OriginFor < T > , netuid : NetUid , tempo : u16) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "TransferEnabled"
+        },
+        "current": {
+          "name": "TransferToggle",
+          "pallet": "SubtensorModule"
+        },
+        "name": "transfers_enabled",
+        "params": [
+          "toggle"
+        ],
+        "setter": "sudo_set_toggle_transfer",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: TransferEnabled . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; let res = pallet_subtensor :: Pallet :: < T > :: toggle_transfer (netuid , toggle) ; if res . is_ok () { pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: TransferEnabled . into ()] ,) ; } res }",
+        "setter_signature": "fn sudo_set_toggle_transfer (origin : OriginFor < T > , netuid : NetUid , toggle : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      },
+      {
+        "cooldown": {
+          "code": 4,
+          "kind": "transaction",
+          "rate": {
+            "kind": "tempo_multiplier",
+            "storage": "WeightsVersionKeyRateLimit"
+          },
+          "variant": "SetWeightsVersionKey"
+        },
+        "current": {
+          "name": "WeightsVersionKey",
+          "pallet": "SubtensorModule"
+        },
+        "name": "weights_version",
+        "params": [
+          "weights_version_key"
+        ],
+        "setter": "sudo_set_weights_version_key",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin . clone () , netuid , & [TransactionType :: SetWeightsVersionKey] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [TransactionType :: SetWeightsVersionKey] ,) ; pallet_subtensor :: Pallet :: < T > :: set_weights_version_key (netuid , weights_version_key) ; log :: debug ! (\"WeightsVersionKeySet( netuid: {netuid:?} weights_version_key: {weights_version_key:?} ) \") ; Ok (()) }",
+        "setter_signature": "fn sudo_set_weights_version_key (origin : OriginFor < T > , netuid : NetUid , weights_version_key : u64 ,) -> DispatchResult",
+        "shape": {
+          "kind": "integer"
+        }
+      },
+      {
+        "cooldown": {
+          "kind": "owner",
+          "variant": "Yuma3Enabled"
+        },
+        "current": {
+          "name": "Yuma3On",
+          "pallet": "SubtensorModule"
+        },
+        "name": "yuma3_enabled",
+        "params": [
+          "enabled"
+        ],
+        "setter": "sudo_set_yuma3_enabled",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [Hyperparameter :: Yuma3Enabled . into ()] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: set_yuma3_enabled (netuid , enabled) ; Self :: deposit_event (Event :: Yuma3EnableToggled { netuid , enabled }) ; log :: debug ! (\"Yuma3EnableToggled( netuid: {netuid:?}, Enabled: {enabled:?} ) \") ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [Hyperparameter :: Yuma3Enabled . into ()] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_yuma3_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
+        "shape": {
+          "kind": "bool"
+        }
+      }
+    ],
+    "operations": [
+      {
+        "continuation_storage": null,
+        "cooldown": {
+          "code": 7,
+          "kind": "transaction",
+          "rate": {
+            "constant": "MechanismCountSetRateLimit",
+            "kind": "runtime_default"
+          },
+          "variant": "MechanismCountUpdate"
+        },
+        "params": [
+          "mechanism_count"
+        ],
+        "setter": "sudo_set_mechanism_count",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [TransactionType :: MechanismCountUpdate] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: do_set_mechanism_count (netuid , mechanism_count) ? ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [TransactionType :: MechanismCountUpdate] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_mechanism_count (origin : OriginFor < T > , netuid : NetUid , mechanism_count : MechId ,) -> DispatchResult"
+      },
+      {
+        "continuation_storage": null,
+        "cooldown": {
+          "code": 8,
+          "kind": "transaction",
+          "rate": {
+            "constant": "MechanismEmissionRateLimit",
+            "kind": "runtime_default"
+          },
+          "variant": "MechanismEmission"
+        },
+        "params": [
+          "maybe_split"
+        ],
+        "setter": "sudo_set_mechanism_emission_split",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , & [TransactionType :: MechanismEmission] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: do_set_emission_split (netuid , maybe_split) ? ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [TransactionType :: MechanismEmission] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_set_mechanism_emission_split (origin : OriginFor < T > , netuid : NetUid , maybe_split : Option < Vec < u16 > > ,) -> DispatchResult"
+      },
+      {
+        "continuation_storage": null,
+        "cooldown": {
+          "code": 9,
+          "kind": "transaction",
+          "rate": {
+            "constant": "MaxUidsTrimmingRateLimit",
+            "kind": "runtime_default"
+          },
+          "variant": "MaxUidsTrimming"
+        },
+        "params": [
+          "max_n"
+        ],
+        "setter": "sudo_trim_to_max_allowed_uids",
+        "setter_body": "{ let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin . clone () , netuid , & [TransactionType :: MaxUidsTrimming] ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: trim_to_max_allowed_uids (netuid , max_n) ? ; pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [TransactionType :: MaxUidsTrimming] ,) ; Ok (()) }",
+        "setter_signature": "fn sudo_trim_to_max_allowed_uids (origin : OriginFor < T > , netuid : NetUid , max_n : u16 ,) -> DispatchResult"
+      },
+      {
+        "continuation_storage": {
+          "name": "NullPruningTarget",
+          "pallet": "SubtensorModule"
+        },
+        "cooldown": {
+          "code": 9,
+          "kind": "transaction",
+          "rate": {
+            "constant": "MaxUidsTrimmingRateLimit",
+            "kind": "runtime_default"
+          },
+          "variant": "MaxUidsTrimming"
+        },
+        "params": [
+          "target"
+        ],
+        "setter": "sudo_trim_null_uids_batch",
+        "setter_body": "{ let continuing = pallet_subtensor :: NullPruningTarget :: < T > :: get (netuid) == Some (target) ; let limits : & [TransactionType] = if continuing { & [] } else { & [TransactionType :: MaxUidsTrimming] } ; let maybe_owner = pallet_subtensor :: Pallet :: < T > :: ensure_sn_owner_or_root_with_limits (origin , netuid , limits ,) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; pallet_subtensor :: Pallet :: < T > :: trim_null_uids_batch (netuid , target) ? ; if ! continuing { pallet_subtensor :: Pallet :: < T > :: record_owner_rl (maybe_owner , netuid , & [TransactionType :: MaxUidsTrimming] ,) ; } Ok (()) }",
+        "setter_signature": "fn sudo_trim_null_uids_batch (origin : OriginFor < T > , netuid : NetUid , target : u16 ,) -> DispatchResult"
+      }
+    ],
+    "production_slot_duration_ms": 12000
+  }
+}

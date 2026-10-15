@@ -1,0 +1,20 @@
+[package]
+name = "rtao-catalog"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Generated Bittensor intent, read and error catalogs."
+
+[lints]
+workspace = true
+
+[dependencies]
+serde.workspace = true
+rtao-primitives = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+

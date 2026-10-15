@@ -1,4 +1,49 @@
 [profile.ci]
+default-filter = "not (binary(e2e) | binary(interop) | binary(core_oracle) | binary(ledger_emu))"
 fail-fast = false
 failure-output = "immediate-final"
 success-output = "never"
+
+[profile.e2e-fast]
+default-filter = "binary(e2e)"
+test-threads = 8
+fail-fast = false
+failure-output = "immediate-final"
+success-output = "final"
+slow-timeout = { period = "60s", terminate-after = 30 }
+
+[profile.e2e-fast.junit]
+path = "junit.xml"
+
+[profile.e2e-slow]
+default-filter = "binary(e2e)"
+test-threads = 8
+fail-fast = false
+failure-output = "immediate-final"
+success-output = "final"
+slow-timeout = { period = "120s", terminate-after = 20 }
+
+[profile.e2e-slow.junit]
+path = "junit.xml"
+
+[profile.core-oracle]
+default-filter = "binary(core_oracle)"
+test-threads = 1
+fail-fast = false
+failure-output = "immediate-final"
+success-output = "final"
+slow-timeout = { period = "60s", terminate-after = 10 }
+
+[profile.core-oracle.junit]
+path = "junit.xml"
+
+[test-groups.global]
+max-threads = 1
+
+[[profile.e2e-fast.overrides]]
+filter = "test(/^scenario_06_/) | test(/^scenario_08_/) | test(/^scenario_16_/) | test(protocol_cr_version_gate_returns_chain_dispatch_error) | test(test_compose_nested_sudo_call)"
+test-group = "global"
+
+[[profile.e2e-slow.overrides]]
+filter = "test(/^scenario_06_/) | test(/^scenario_08_/) | test(/^scenario_16_/) | test(protocol_cr_version_gate_returns_chain_dispatch_error) | test(test_compose_nested_sudo_call)"
+test-group = "global"

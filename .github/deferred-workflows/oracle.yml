@@ -1,0 +1,158 @@
+name: oracle-refresh
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Must match the committed parity tag (empty uses that pin)
+        type: string
+        default: ""
+      scope:
+        description: Generate current M2 operations/reads, or the complete registry
+        type: choice
+        options: [M2, all]
+        default: M2
+      dry-run:
+        description: Build and check outputs without pushing GHCR or opening a PR
+        type: boolean
+        default: true
+      record:
+        description: Also run the current-spec upstream recorders on an isolated localnet (requires GHCR push)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracle-refresh
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/oracle
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/oracle/build
+  TMPDIR: ${{ github.workspace }}/target/oracle/tmp
+  RTAO_PYTHON_LANE: oracle
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  oracle:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.execution.outputs.image }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Create task scratch
+        run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        with:
+          driver-opts: image=moby/buildkit@sha256:8c2ce26a3722e0cf4514fad4cfcd0e0f0f16214219ca7b73f3e1fcef74640ac4
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: ${{ !inputs.dry-run }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve and verify exact oracle inputs
+        env:
+          RTAO_REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          cargo run --locked -p xtask -- oracle inputs > "$RTAO_TEMP_ROOT/inputs.json"
+          tag=$(jq -r .tag "$RTAO_TEMP_ROOT/inputs.json")
+          test -z "$RTAO_REQUESTED_TAG" || test "$RTAO_REQUESTED_TAG" = "$tag"
+          cat "$RTAO_TEMP_ROOT/inputs.json"
+      - name: Build the pinned Python source image
+        env:
+          RTAO_ORACLE_DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          if test "$RTAO_ORACLE_DRY_RUN" = true; then
+            cargo run --locked -p xtask -- oracle image
+          else
+            cargo run --locked -p xtask -- oracle image --push
+          fi
+      - name: Produce and verify vectors in the designated Python lane
+        id: execution
+        env:
+          RTAO_ORACLE_DRY_RUN: ${{ inputs.dry-run }}
+          RTAO_ORACLE_SCOPE: ${{ inputs.scope }}
+        run: |
+          if test "$RTAO_ORACLE_DRY_RUN" = true; then
+            image_tag=$(jq -r .image_tag "$RTAO_TEMP_ROOT/inputs.json")
+            image_id=$(docker image inspect --format '{{.Id}}' "$image_tag")
+            echo "image=$image_id" >> "$GITHUB_OUTPUT"
+            cargo run --locked -p xtask -- oracle dump --built-image-id "$image_id" --scope "$RTAO_ORACLE_SCOPE"
+          else
+            source ci/oracle/pins.env
+            digest=$(jq -er '."containerimage.digest"' "$RTAO_TEMP_ROOT/oracle-image-metadata.json")
+            echo "image=$RTAO_ORACLE_IMAGE@$digest" >> "$GITHUB_OUTPUT"
+            cargo run --locked -p xtask -- oracle dump --image "$RTAO_ORACLE_IMAGE@$digest" --scope "$RTAO_ORACLE_SCOPE"
+          fi
+          cargo run --locked -p xtask -- oracle --check --out "$RTAO_TEMP_ROOT/oracle-output"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: oracle-output
+          path: |
+            target/oracle/oracle-output
+            target/oracle/inputs.json
+            target/oracle/oracle-image-metadata.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Record adoption policy
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
+          Python executed only inside this designated Ubuntu oracle lane.
+          Download and review the verified output before committing vectors.
+          This workflow never replaces existing committed vectors or opens a PR
+          during the goal loop. A failed build/dump leaves prior vectors authoritative.
+          Full Rust intent/read/conform differential adapters must also pass before
+          claiming M2 oracle parity.
+          SUMMARY
+
+  record:
+    if: always() && inputs.record && !inputs.dry-run && needs.oracle.outputs.image != ''
+    needs: oracle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      RTAO_PYTHON_LANE: record
+      RTAO_ORACLE_RECORD_IMAGE: ${{ needs.oracle.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create task scratch
+        run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Record upstream formats from the owned current-spec localnet
+        run: bash ci/oracle/record-localnet.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: current-spec-recordings
+          path: |
+            target/oracle/recorded-*
+            target/oracle/record-localnet.log
+            target/oracle/drand-preflight.json
+          if-no-files-found: warn
+          retention-days: 14

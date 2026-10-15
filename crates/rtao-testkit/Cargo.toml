@@ -1,0 +1,92 @@
+[package]
+name = "rtao-testkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Fixtures and test infrastructure for rtao."
+
+[lints]
+workspace = true
+
+[features]
+docker = ["dep:rtao-signer", "dep:toml_edit", "dep:url"]
+interop = ["docker"]
+core-policy = ["dep:bittensor-core"]
+core-oracle = ["docker", "core-policy"]
+ledger-emu = ["docker"]
+rpc-rate-limit = ["rtao-rpc/rate-limit"]
+rpc-metrics = ["rtao-rpc/metrics"]
+
+[dependencies]
+bittensor-core = { workspace = true, optional = true, features = ["host"] }
+rtao-client = { workspace = true }
+rtao-signer = { workspace = true, optional = true }
+toml_edit = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
+bytes = { workspace = true }
+rtao-core = { workspace = true }
+rtao-primitives = { workspace = true }
+rtao-runtime = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+blake2 = { workspace = true }
+frame-metadata = { workspace = true }
+futures = { workspace = true }
+http = { workspace = true }
+parity-scale-codec = { workspace = true }
+rcgen = { workspace = true }
+rustls = { workspace = true }
+scale-info = { workspace = true }
+subxt-rpcs = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "test-util"] }
+tokio-rustls = { workspace = true }
+tokio-tungstenite = { workspace = true }
+
+[dev-dependencies]
+rtao-tx = { workspace = true }
+rtao-intents = { workspace = true, features = ["transfer", "weights"] }
+rtao-neuron = { workspace = true, features = ["validator"] }
+rtao-metagraph = { workspace = true }
+rtao-wallet = { workspace = true }
+rtao-btauth = { workspace = true, features = ["client"] }
+tokio-util = { workspace = true }
+ark-serialize = "=0.4.2"
+rand_chacha = "0.3.1"
+rand_core = "0.6.4"
+tle = { git = "https://github.com/ideal-lab5/timelock", rev = "5416406cfd32799e31e1795393d4916894de4468", features = ["std"] }
+w3f-bls = { workspace = true, features = ["std"] }
+sha2 = { workspace = true }
+rtao-catalog = { workspace = true }
+metrics = { workspace = true }
+scale-decode = { workspace = true }
+rtao-rpc = { workspace = true }
+url = { workspace = true }
+
+[[test]]
+name = "e2e"
+path = "tests/e2e.rs"
+test = true
+required-features = ["docker"]
+
+[[test]]
+name = "interop"
+path = "tests/interop.rs"
+test = false
+required-features = ["interop"]
+
+[[test]]
+name = "core_oracle"
+path = "tests/core_oracle.rs"
+test = true
+required-features = ["core-oracle"]
+
+[[test]]
+name = "ledger_emu"
+path = "tests/ledger_emu.rs"
+test = false
+required-features = ["docker","ledger-emu"]
+

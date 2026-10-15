@@ -1,0 +1,5 @@
+# Generated scope follows sdk/python/codegen/check.py COVERED_PALLETS plus the core pallets.
+covered_pallets = ["SubtensorModule", "Balances", "Proxy", "Utility", "Multisig", "Crowdloan", "Swap", "LimitOrders", "MevShield", "EVM", "Commitments", "AdminUtils", "Contracts"]
+extra_pallets = ["System", "Timestamp", "Aura", "Drand", "Sudo"]
+# All advertised APIs are recorded; their opaque models remain DynValue until a hand model is mapped.
+runtime_apis = "all"

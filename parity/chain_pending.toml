@@ -1,0 +1,4 @@
+# Missing consumer assertions are explicit milestone evidence gaps.
+schema = 1
+
+[assertion]

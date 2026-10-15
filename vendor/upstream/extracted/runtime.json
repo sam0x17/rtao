@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "provenance": {
+    "blob": "76101e5247da8356118e4bb179aadf77b2f14c34",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "sdk/python/bittensor/_transport/runtime.py",
+    "tag": "v478"
+  },
+  "values": {
+    "_DISK_CACHE_MAX_FILES": {
+      "end_line": 39,
+      "line": 39,
+      "value": 8
+    },
+    "_DISK_FORMAT_VERSION": {
+      "end_line": 38,
+      "line": 38,
+      "value": 1
+    },
+    "_DISK_MAGIC": {
+      "end_line": 37,
+      "line": 37,
+      "value": {
+        "bytes_hex": "53544d44"
+      }
+    },
+    "_V15_MISSING_NEEDLE": {
+      "end_line": 34,
+      "line": 34,
+      "value": "Exported method Metadata_metadata_at_version is not found"
+    },
+    "_V15_VERSION_HEX": {
+      "end_line": 33,
+      "line": 33,
+      "value": "0x0f000000"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+[package]
+name = "rtao-wallet"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Bittensor wallet files and password resolution."
+
+[lints]
+workspace = true
+
+[features]
+encrypted = ["rtao-core/host"]
+keychain = []
+keyring = []
+prompt = []
+
+[dependencies]
+rtao-signer = { workspace = true }
+rtao-core = { workspace = true, features = ["offload"] }
+rtao-primitives.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+secrecy.workspace = true
+zeroize.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+proptest.workspace = true
+

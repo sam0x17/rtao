@@ -1,0 +1,68 @@
+name: validator-image
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**'
+      - 'ci/validator/**'
+      - 'docs/licenses/**'
+      - '.dockerignore'
+      - '.github/workflows/validator-image.yml'
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**'
+      - 'ci/validator/**'
+      - 'docs/licenses/**'
+      - '.dockerignore'
+      - '.github/workflows/validator-image.yml'
+
+permissions:
+  contents: read
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/validator-image
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/validator-image/build
+  TMPDIR: ${{ github.workspace }}/target/validator-image/tmp
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          toolchain: '1.89.0'
+          cache: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        with:
+          driver-opts: image=moby/buildkit@sha256:8c2ce26a3722e0cf4514fad4cfcd0e0f0f16214219ca7b73f3e1fcef74640ac4
+      - name: Build the no-host Rust 1.89 validator image
+        run: |
+          docker buildx build --load --platform linux/amd64 \
+            --file ci/validator/Dockerfile --tag rtao-validator:check .
+          docker image inspect --format '{{.Id}}' rtao-validator:check > "$RTAO_TEMP_ROOT/image-id"
+      - name: Check real TLS startup and certificate refusal
+        run: |
+          export RTAO_VALIDATOR_IMAGE
+          RTAO_VALIDATOR_IMAGE=$(cat "$RTAO_TEMP_ROOT/image-id")
+          cargo run --locked --manifest-path ci/validator/probe/Cargo.toml \
+            > "$RTAO_TEMP_ROOT/tls-probe.log" 2>&1
+          cat "$RTAO_TEMP_ROOT/tls-probe.log"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: validator-image-verification
+          path: |
+            target/validator-image/image-id
+            target/validator-image/tls-probe.log
+          if-no-files-found: warn
+          retention-days: 14

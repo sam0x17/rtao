@@ -1,0 +1,31 @@
+[package]
+name = "rtao-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "The curated boundary to the upstream Bittensor core."
+
+[lints]
+workspace = true
+
+[features]
+default = ["offload"]
+offload = ["dep:tokio"]
+host = ["bittensor-core/host"]
+ledger = ["bittensor-core/ledger"]
+
+[dependencies]
+rtao-core-ext = { workspace = true }
+bittensor-core.workspace = true
+tokio = { workspace = true, optional = true }
+serde_json.workspace = true
+
+[build-dependencies]
+toml_edit.workspace = true
+
+[dev-dependencies]
+toml_edit.workspace = true
+

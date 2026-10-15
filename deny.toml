@@ -1,0 +1,68 @@
+[advisories]
+db-path = "${RTAO_TEMP_ROOT}/ci/advisory-dbs"
+unmaintained = "workspace"
+yanked = "deny"
+ignore = []
+
+[licenses]
+confidence-threshold = 0.8
+# The pinned mnemonic/Bitcoin stack uses CC0; xtask's Python literal parser
+# includes the Unicode data tables under Unicode-DFS-2016.
+allow = [
+  "PSF-2.0",
+  "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC",
+  "Unicode-3.0", "Unicode-DFS-2016", "Zlib", "MPL-2.0", "CC0-1.0",
+]
+
+# Reqwest's platform verifier includes this trust-data package. Its exact
+# permissive data license is retained in docs/licenses and shipped with assets.
+[[licenses.exceptions]]
+name = "webpki-root-certs"
+version = "=1.0.9"
+allow = ["CDLA-Permissive-2.0"]
+
+# v478 omits these crates' license fields. Both are covered by the monorepo's
+# Apache-2.0 LICENSE; procedural-fork retains its Parity Apache-2.0 headers.
+# cargo-deny verifies the actual license bytes before accepting the expression.
+[[licenses.clarify]]
+name = "procedural-fork"
+version = "=1.10.0-rc3"
+expression = "Apache-2.0"
+license-files = [{ path = "../../LICENSE", hash = 0x1ff0b2a9 }]
+
+[[licenses.clarify]]
+name = "subtensor-linting"
+version = "=0.1.0"
+expression = "Apache-2.0"
+license-files = [{ path = "../../LICENSE", hash = 0x1ff0b2a9 }]
+
+[bans]
+# Cryptographic and runtime stacks intentionally carry different generations
+# of unrelated crates. The shared SCALE and transport crates below cannot split.
+multiple-versions = "allow"
+# Workspace path and immutable Git dependencies have no registry version.
+wildcards = "allow"
+deny = [
+  { name = "aws-lc-rs", reason = "rustls uses the ring provider throughout the workspace" },
+  { name = "aws-lc-sys", reason = "rustls uses the ring provider throughout the workspace" },
+  { name = "native-tls", reason = "TLS uses rustls with the ring provider" },
+  { name = "parity-scale-codec", deny-multiple-versions = true },
+  { name = "scale-info", deny-multiple-versions = true },
+  { name = "scale-decode", deny-multiple-versions = true },
+  { name = "scale-encode", deny-multiple-versions = true },
+  { name = "scale-type-resolver", deny-multiple-versions = true },
+  { name = "frame-metadata", deny-multiple-versions = true },
+  { name = "sp-core", deny-multiple-versions = true },
+  { name = "tokio", deny-multiple-versions = true },
+  { name = "tungstenite", deny-multiple-versions = true },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+  "https://github.com/RaoFoundation/subtensor.git",
+  "https://github.com/RaoFoundation/polkadot-sdk.git",
+  "https://github.com/ideal-lab5/timelock",
+]
