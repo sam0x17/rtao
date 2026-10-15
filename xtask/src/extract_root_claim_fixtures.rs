@@ -69,6 +69,248 @@ const PREVIEWS: &[&str] = &[
     "test_quote_prices_consolidated_rows_as_full_claim_units",
     "test_quote_counts_consolidation_even_when_the_claim_is_below_threshold",
 ];
+const MODELS: &[&str] = &[
+    "test_spent_caps_at_the_fee_allowance",
+    "test_spent_keeps_non_weight_base_fee",
+    "test_scan_only_uses_scan_ref_time",
+    "test_coldkey_wide_empty_baskets_floor_to_hotkey_count",
+    "test_single_hotkey_spent_caps_at_the_same_allowance",
+    "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust",
+    "test_quote_prices_consolidated_rows_as_full_claim_units",
+];
+
+fn native_number(
+    resolver: &mut Resolver<'_>,
+    bindings: &Bindings,
+    expr: &ast::Expr,
+) -> Result<u64> {
+    literal(resolver, bindings, expr)?
+        .as_u64()
+        .context("model input must be native u64")
+}
+
+fn model_case(
+    resolver: &mut Resolver<'_>,
+    suite: &[ast::Stmt],
+    wanted: &str,
+    node: &ast::ExprCall,
+    default_work: u64,
+) -> Result<Value> {
+    let body = function(suite, wanted)?.body;
+    fixture_scope(body)?;
+    ensure!(
+        (2..=3).contains(&node.args.len()),
+        "spent model positional arguments changed"
+    );
+    let mut bindings = Bindings::from([("fees".into(), Binding::Module(FEES.into()))]);
+    if wanted == MODELS[4] {
+        let expression = assignment(body, "declared_work")?;
+        let value = resolver.eval_binding(expression, &bindings, TEST, 0)?;
+        bindings.insert("declared_work".into(), value);
+    }
+    let optional = keywords(node, &[], &["declared_work"])?;
+    ensure!(
+        node.args.len() == 2 || optional.is_empty(),
+        "duplicate declared-work model input"
+    );
+    let declared = if let Some(expression) = node
+        .args
+        .get(2)
+        .or_else(|| optional.get("declared_work").copied())
+    {
+        native_number(resolver, &bindings, expression)?
+    } else {
+        default_work
+    };
+    let ast::Expr::Call(work) = &node.args[1] else {
+        bail!("spent work input must be a constructor")
+    };
+    ensure!(
+        call_path(&work.func).as_deref() == Some("fees.RootClaimWork") && work.args.is_empty(),
+        "spent work constructor changed"
+    );
+    let fields = keywords(
+        work,
+        &["hotkeys", "redeem_holdings", "scan_holdings"],
+        &["selection_scans"],
+    )?;
+    let mut output = json!({"reserve_rao":null,"reserve_limit":0,"base":0,"declared_work":declared,"selection_scans":0});
+    for (field, expression) in fields {
+        output[field] = json!(count(expression)?);
+    }
+    let ast::Expr::Name(reserved) = &node.args[0] else {
+        bail!("spent reserve input must be a reviewed local binding")
+    };
+    ensure!(
+        matches!(reserved.id.as_str(), "reserved" | "uncapped"),
+        "unrecognized model reserve binding"
+    );
+    let expression = assignment(body, reserved.id.as_str())?;
+    let ast::Expr::Call(balance) = expression else {
+        bail!("model reserve constructor changed")
+    };
+    ensure!(
+        matches!(
+            call_path(&balance.func).as_deref(),
+            Some("Balance.from_rao" | "fees.Balance.from_rao")
+        ) && balance.args.len() == 1
+            && balance.keywords.is_empty(),
+        "model reserve constructor changed"
+    );
+    let expression = &balance.args[0];
+    let (base, weight) = if let ast::Expr::BinOp(addition) = expression
+        && addition.op == ast::Operator::Add
+    {
+        ensure!(
+            name(&addition.left, "base"),
+            "model reserve base input changed"
+        );
+        (integer(assignment(body, "base")?)?, &*addition.right)
+    } else {
+        (0, expression)
+    };
+    output["base"] = json!(base);
+    if let ast::Expr::Call(approximate) = weight {
+        ensure!(
+            call_path(&approximate.func).as_deref() == Some("fees._approx_declared_fee_rao")
+                && approximate.args.len() == 1
+                && approximate.keywords.is_empty(),
+            "model approximate reserve shape changed"
+        );
+        output["reserve_limit"] = json!(native_number(resolver, &bindings, &approximate.args[0])?);
+    } else {
+        ensure!(base == 0, "fixed reserve cannot have an approximate base");
+        output["reserve_rao"] = json!(native_number(resolver, &bindings, weight)?);
+    }
+    Ok(output)
+}
+
+fn eligibility(suite: &[ast::Stmt], source: &str, wanted: &str) -> Result<Value> {
+    let body = function(suite, wanted)?.body;
+    let matches = calls(body, "substrate.seed_runtime")?;
+    ensure!(matches.len() == 1, "eligibility override missing/ambiguous");
+    let node = &matches[0];
+    ensure!(
+        node.args.len() == 3
+            && node.keywords.is_empty()
+            && string(&node.args[0])? == "StakeInfoRuntimeApi"
+            && string(&node.args[1])? == "get_stake_info_for_coldkey",
+        "eligibility runtime target changed"
+    );
+    let mut rows = Vec::new();
+    for expression in list(&node.args[2])? {
+        let ast::Expr::Dict(row) = expression else {
+            bail!("eligibility row must be a literal dict")
+        };
+        let mut fields = BTreeMap::new();
+        for (field, value) in row.keys.iter().zip(&row.values) {
+            let field = string(field.as_ref().context("eligibility dictionary unpacking")?)?;
+            ensure!(
+                fields.insert(field, value).is_none(),
+                "duplicate eligibility field"
+            );
+        }
+        ensure!(
+            fields.len() == 4
+                && ["hotkey", "coldkey", "netuid", "stake"]
+                    .iter()
+                    .all(|name| fields.contains_key(name)),
+            "eligibility fields changed"
+        );
+        rows.push(json!({"hotkey":key(fields["hotkey"])?,"coldkey":key(fields["coldkey"])?,"netuid":count(fields["netuid"])?,"stake":integer(fields["stake"])?}));
+    }
+    let mut value = json!({"stake_rows":rows,"watermark":null});
+    let watermarks = calls(body, "substrate.seed")?;
+    if wanted == "test_coldkey_wide_admission_keeps_unstaked_basket_claimant" {
+        ensure!(
+            watermarks.len() == 1,
+            "watermark override missing/ambiguous"
+        );
+        let seed = &watermarks[0];
+        ensure!(
+            seed.args.len() == 4
+                && seed.keywords.is_empty()
+                && string(&seed.args[0])? == "SubtensorModule"
+                && string(&seed.args[1])? == "BasketClaimed",
+            "watermark target changed"
+        );
+        let keys = list(&seed.args[2])?;
+        ensure!(
+            keys.len() == 2 && key(&keys[0])? == "ALICE_HOT" && key(&keys[1])? == "ALICE",
+            "watermark keys changed"
+        );
+        let ast::Expr::UnaryOp(negative) = &seed.args[3] else {
+            bail!("watermark must be the reviewed negative input")
+        };
+        ensure!(
+            negative.op == ast::UnaryOp::USub && integer(&negative.operand)? == 1,
+            "watermark negative boundary changed"
+        );
+        value["watermark"] = json!(-1);
+    } else {
+        ensure!(
+            watermarks.is_empty(),
+            "unexpected eligibility watermark override"
+        );
+    }
+    let mut projected = record(source, wanted, &ast::Expr::Call(node.clone()), value);
+    projected["sources"] = json!(
+        std::iter::once(node)
+            .chain(watermarks.iter())
+            .map(|node| span(TEST, source, &ast::Expr::Call(node.clone())))
+            .collect::<Vec<_>>()
+    );
+    Ok(projected)
+}
+
+fn helper_threshold(
+    resolver: &mut Resolver<'_>,
+    suite: &[ast::Stmt],
+    source: &str,
+) -> Result<Value> {
+    let matches = calls(function(suite, "_seed_claim_quote")?.body, "substrate.seed")?;
+    let matches = matches
+        .iter()
+        .filter(|node| {
+            node.args.get(1).and_then(|expr| string(expr).ok()) == Some("RootClaimableThreshold")
+        })
+        .collect::<Vec<_>>();
+    ensure!(
+        matches.len() == 1,
+        "source helper threshold missing/ambiguous"
+    );
+    let node = matches[0];
+    ensure!(
+        node.args.len() == 4
+            && node.keywords.is_empty()
+            && string(&node.args[0])? == "SubtensorModule",
+        "source helper threshold target changed"
+    );
+    let netuids = list(&node.args[2])?;
+    ensure!(
+        netuids.len() == 1 && integer(&netuids[0])? == 0,
+        "source threshold must use ROOT"
+    );
+    let ast::Expr::Dict(bits) = &node.args[3] else {
+        bail!("threshold input must be fixed-point bits")
+    };
+    ensure!(
+        bits.keys.len() == 1
+            && string(
+                bits.keys[0]
+                    .as_ref()
+                    .context("threshold dictionary unpacking")?
+            )? == "bits",
+        "threshold fixed-point fields changed"
+    );
+    let value = native_number(resolver, &Bindings::new(), &bits.values[0])?;
+    Ok(record(
+        source,
+        "_seed_claim_quote.RootClaimableThreshold",
+        &node.args[3],
+        json!(value),
+    ))
+}
 
 fn name(expr: &ast::Expr, expected: &str) -> bool {
     matches!(expr, ast::Expr::Name(node) if node.id.as_str() == expected)
@@ -488,6 +730,7 @@ fn calls(body: &[ast::Stmt], wanted: &str) -> Result<Vec<ast::ExprCall>> {
         let expr = match stmt {
             ast::Stmt::Expr(node) => Some(&*node.value),
             ast::Stmt::Assign(node) => Some(&*node.value),
+            ast::Stmt::Assert(node) => Some(&*node.test),
             _ => None,
         };
         if let Some(expr) = expr {
@@ -1028,6 +1271,117 @@ fn project(resolver: &mut Resolver<'_>, pins: &DocumentMut) -> Result<Value> {
         projected["sources"] = json!(sources);
         preview_cases.insert((*wanted).into(), projected);
     }
+    let spent_function = function(&fee_suite, "_spent_fee")?;
+    let default_argument = spent_function
+        .args
+        .args
+        .iter()
+        .find(|argument| argument.def.arg.as_str() == "declared_work")
+        .and_then(|argument| argument.default.as_ref())
+        .context("spent default envelope missing")?;
+    ensure!(
+        name(default_argument, "_MAX_ROOT_CLAIM_WORK"),
+        "spent default envelope changed"
+    );
+    let default_work = values["_MAX_ROOT_CLAIM_WORK"]["value"]
+        .as_u64()
+        .context("default model envelope")?;
+    let work_class = fee_suite
+        .iter()
+        .filter_map(|stmt| {
+            if let ast::Stmt::ClassDef(node) = stmt {
+                (node.name.as_str() == "RootClaimWork").then_some(node)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    ensure!(
+        work_class.len() == 1,
+        "RootClaimWork declaration missing/ambiguous"
+    );
+    let scan_default = work_class[0]
+        .body
+        .iter()
+        .filter_map(|stmt| {
+            if let ast::Stmt::AnnAssign(node) = stmt {
+                name(&node.target, "selection_scans").then_some(node.value.as_deref())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    ensure!(
+        scan_default.len() == 1
+            && scan_default[0].is_some_and(|expr| integer(expr).ok() == Some(0)),
+        "model selection-scans default changed"
+    );
+    let mut model_cases = serde_json::Map::new();
+    for (index, wanted) in MODELS.iter().enumerate() {
+        let matches = calls(function(&suite, wanted)?.body, "fees._spent_fee")?;
+        let expected = if index == 5 {
+            2
+        } else if index == 6 {
+            3
+        } else {
+            1
+        };
+        ensure!(
+            matches.len() == expected,
+            "{wanted}: model call count changed"
+        );
+        let selected = if index == 6 {
+            let expected = &matches[0];
+            ensure!(
+                expected.args.len() == 3
+                    && expected.keywords.is_empty()
+                    && call_path(&expected.args[0]).as_deref() == Some("quote.reserved")
+                    && call_path(&expected.args[2]).as_deref() == Some("quote.admission_limit"),
+                "consolidation reference expression changed"
+            );
+            &matches[1..]
+        } else {
+            matches.as_slice()
+        };
+        let rows = selected
+            .iter()
+            .map(|node| model_case(resolver, &suite, wanted, node, default_work))
+            .collect::<Result<Vec<_>>>()?;
+        let expression = ast::Expr::Call(selected[0].clone());
+        let mut row = record(&test, wanted, &expression, json!(rows));
+        row["sources"] = json!(
+            selected
+                .iter()
+                .map(|node| span(TEST, &test, &ast::Expr::Call(node.clone())))
+                .collect::<Vec<_>>()
+        );
+        model_cases.insert((*wanted).into(), row);
+    }
+    let allowance_name = "test_reserved_fallback_charges_the_fee_allowance_not_the_envelope";
+    let allowance_calls = calls(function(&suite, allowance_name)?.body, "fees._fee_units")?;
+    ensure!(
+        allowance_calls.len() == 3,
+        "allowance unit input count changed"
+    );
+    let allowance_values = allowance_calls
+        .iter()
+        .map(|node| {
+            ensure!(
+                node.args.len() == 1 && node.keywords.is_empty(),
+                "allowance call input shape changed"
+            );
+            native_number(resolver, &bindings, &node.args[0])
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let allowance_expr = ast::Expr::Call(allowance_calls[0].clone());
+    let mut eligibility_cases = serde_json::Map::new();
+    for wanted in [
+        "test_coldkey_wide_admission_ignores_non_root_hotkeys",
+        "test_coldkey_wide_admission_keeps_unstaked_basket_claimant",
+    ] {
+        eligibility_cases.insert(wanted.into(), eligibility(&suite, &test, wanted)?);
+    }
+    let threshold = helper_threshold(resolver, &suite, &test)?;
     Ok(
         json!({"format":1,"provenance":{"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str(),"inputs":inputs},
         "constants":constants,"extension_ref_time":record(&test,"_EXTENSION_REF_TIME",extension,json!(integer(extension)?)),
@@ -1035,8 +1389,10 @@ fn project(resolver: &mut Resolver<'_>, pins: &DocumentMut) -> Result<Value> {
         "admission_inclusive":record(&test,PARAMETRIZED[4],inclusive,json!(inclusive_rows)),"payout_failures":failures,
         "network_population":record(&test,network_name,&map.args[2],json!({"hotkeys":count,"added":added,"absent":end-added})),
         "shielded_heavy":record(&test,shield_name,&shield_expr,shield_case),
-        "seed_cases":seed_cases,"preview_cases":preview_cases,
-        "adaptations":["Dev-key names identify native fixture roles, not identical account bytes.","Native fees and account defaults remain adapted except where a projected case explicitly supplies them.","Inline arithmetic assertions and unprojected calls remain source-reviewed authored fixtures; this document does not claim all Python inputs were extracted."]}),
+        "seed_cases":seed_cases,"preview_cases":preview_cases,"model_cases":model_cases,
+        "allowance_units":record(&test,allowance_name,&allowance_expr,json!(allowance_values)),
+        "eligibility_cases":eligibility_cases,"helper_threshold_bits":threshold,
+        "adaptations":["Dev-key names identify native fixture roles, not identical account bytes.","Native fees and account defaults remain adapted except where a projected case explicitly supplies them.","Independent expected arithmetic outputs remain authored assertions; native-only supplemental cases and proxy fixture identities are documented adaptations."]}),
     )
 }
 
@@ -1136,6 +1492,47 @@ mod tests {
                 .context("node quote source line")?
                 > 0
         );
+        assert_eq!(
+            document["model_cases"]
+                .as_object()
+                .context("model cases")?
+                .len(),
+            7
+        );
+        assert_eq!(
+            document["model_cases"][MODELS[0]]["value"][0]["redeem_holdings"],
+            json!(32)
+        );
+        assert_eq!(
+            document["model_cases"][MODELS[1]]["value"][0]["base"],
+            json!(12_345)
+        );
+        assert_eq!(
+            document["model_cases"][MODELS[5]]["value"]
+                .as_array()
+                .context("dust comparison inputs")?
+                .len(),
+            2
+        );
+        assert_eq!(
+            document["model_cases"][MODELS[6]]["value"][1]["scan_holdings"],
+            json!(5)
+        );
+        assert_eq!(document["allowance_units"]["value"], json!([256, 129, 2]));
+        assert_eq!(
+            document["helper_threshold_bits"]["value"],
+            json!(500_000u64 << 32)
+        );
+        assert_eq!(
+            document["eligibility_cases"]["test_coldkey_wide_admission_ignores_non_root_hotkeys"]["value"]
+                ["stake_rows"][1]["netuid"],
+            json!(7)
+        );
+        assert_eq!(
+            document["eligibility_cases"]["test_coldkey_wide_admission_keeps_unstaked_basket_claimant"]
+                ["value"]["watermark"],
+            json!(-1)
+        );
         Ok(())
     }
 
@@ -1186,6 +1583,22 @@ mod tests {
                 "for netuid in range(15, 40)",
                 "for netuid in range(15, 40) if netuid",
             ),
+            ("redeem_holdings=32", "redeem_holdings=1048576"),
+            (
+                "hotkeys=1, redeem_holdings=32, scan_holdings=0",
+                "hotkeys=1, redeem_holdings=32, scan_holdings=0, unknown=1",
+            ),
+            ("base = 12_345", "base = arbitrary()"),
+            (
+                "uncapped = Balance.from_rao(10**9)",
+                "uncapped = arbitrary(10**9)",
+            ),
+            (
+                "{\"hotkey\": BOB_HOT, \"coldkey\": ALICE, \"netuid\": 7, \"stake\": 1}",
+                "{\"hotkey\": BOB_HOT, \"coldkey\": ALICE, \"netuid\": 7, \"stake\": 1, \"extra\": 1}",
+            ),
+            ("[ALICE_HOT, ALICE], -1)", "[ALICE_HOT, ALICE], -2)"),
+            ("{\"bits\": 500_000 << 32}", "{\"bits\": arbitrary()}"),
         ] {
             ensure!(original.contains(from), "mutation needle missing: {from}");
             let changed = original.replace(from, to);
