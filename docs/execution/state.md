@@ -16,6 +16,33 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Generation [38754665115](https://github.com/sam0x17/rtao/actions/runs/38754665115)
+succeeds at clean `d65e5a8`. Both exact archive identities/digests, nineteen
+regular allowlisted members and all 23 committed/current dependency inputs
+are verified before adoption. Role counts remain 225/362/366/417 and host
+selection remains false/false/false/true. The sole generated Rust change is
+AnyIntent's reviewed unknown-op delegation; twelve other Rust files and the
+environment artifact are byte-identical. Chain rules gain only the reviewed
+proxy-codec and reveal payload/epoch-prefix sections; existing rules are
+unchanged. Matrix changes are eleven file homes/statuses, three e2e dispositions
+and new unverified D-061. Compatibility/runtime/oracle claims do not change.
+Bounded proof is `d65-generation-adoption.json`; no archive or extraction
+directory remains.
+
+Normal run [38753200118](https://github.com/sam0x17/rtao/actions/runs/38753200118)
+is now terminal: all five supporting jobs pass, and main compilation/strict
+Clippy pass. Parity stops before tests on xtask's inherited license and a
+Unix-only D-057 pinning reference. Declare the existing combined Apache
+obligation in xtask's manifest and register the existing unconditional regular
+file/rotation witnesses. Keep the Unix FIFO and broken-symlink tests intact as
+additional platform fixtures, with their execution still pending. No coverage
+or license rule changes. Evidence is `check-38753200118.json`.
+
+The changed manifest needs a fresh hosted dependency/compatibility record,
+and the changed D-057 witnesses need an updated matrix. Use a compatibility-only
+refresh before the next normal combined run. No local build/test or milestone
+acceptance is claimed.
+
 Normal run [38753200118](https://github.com/sam0x17/rtao/actions/runs/38753200118)
 at `164247c` passes semver, MSRV, no-host and supply at inspection; main check
 and features remain live. It includes the named signing-recorder type. No

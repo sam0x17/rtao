@@ -23,11 +23,193 @@
     "sha256": "3f2428d42cb420d97994b09cf6c7e071c85e75fff580af1f8968d53d9bc13947",
     "tag": "v478"
   },
+  "proxy_contract": {
+    "format": 1,
+    "provenance": {
+      "blob": "5a9636a7571cafd85cfc2d8ff00205b0d2b6b023",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "common/src/proxy.rs",
+      "tag": "v478"
+    },
+    "python_mirror": {
+      "path": "sdk/python/bittensor/intents/proxy.py",
+      "provenance": {
+        "blob": "e19113d503ef0b2f488af38bec57cadb934e1f56",
+        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "path": "sdk/python/bittensor/intents/proxy.py",
+        "tag": "v478"
+      },
+      "table": "PROXY_TYPES"
+    },
+    "values": {
+      "unknown_index": "Err(())",
+      "variants": [
+        {
+          "index": 0,
+          "name": "Any"
+        },
+        {
+          "index": 1,
+          "name": "Owner"
+        },
+        {
+          "index": 2,
+          "name": "NonCritical"
+        },
+        {
+          "index": 3,
+          "name": "NonTransfer"
+        },
+        {
+          "index": 4,
+          "name": "Senate"
+        },
+        {
+          "index": 5,
+          "name": "NonFungible"
+        },
+        {
+          "index": 6,
+          "name": "Triumvirate"
+        },
+        {
+          "index": 7,
+          "name": "Governance"
+        },
+        {
+          "index": 8,
+          "name": "Staking"
+        },
+        {
+          "index": 9,
+          "name": "Registration"
+        },
+        {
+          "index": 10,
+          "name": "Transfer"
+        },
+        {
+          "index": 11,
+          "name": "SmallTransfer"
+        },
+        {
+          "index": 12,
+          "name": "RootWeights"
+        },
+        {
+          "index": 13,
+          "name": "ChildKeys"
+        },
+        {
+          "index": 14,
+          "name": "SudoUncheckedSetCode"
+        },
+        {
+          "index": 15,
+          "name": "SwapHotkey"
+        },
+        {
+          "index": 16,
+          "name": "SubnetLeaseBeneficiary"
+        },
+        {
+          "index": 17,
+          "name": "RootClaim"
+        },
+        {
+          "index": 18,
+          "name": "BasketTrading"
+        }
+      ]
+    }
+  },
   "rate_limiting_provenance": {
     "blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb",
     "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
     "path": "pallets/subtensor/src/utils/rate_limiting.rs",
     "tag": "v478"
+  },
+  "reveal_contract": {
+    "core_provenance": {
+      "blob": "aec057443ad430fdc96db518cfea5aacdacf9a51",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/bittensor-core/src/timelock/mod.rs",
+      "tag": "v478"
+    },
+    "format": 1,
+    "provenance": {
+      "blob": "32b0f98a75e383a2e34d3328561761ee506084d9",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "pallets/subtensor/src/coinbase/reveal_commits.rs",
+      "tag": "v478"
+    },
+    "scope": "SCALE payload fields and first three reveal-epoch bindings only; runtime reveal/decryption/dispatch acceptance is not certified",
+    "values": {
+      "canonical_payload": {
+        "fields": [
+          {
+            "name": "hotkey",
+            "type": "Vec < u8 >"
+          },
+          {
+            "name": "uids",
+            "type": "Vec < u16 >"
+          },
+          {
+            "name": "values",
+            "type": "Vec < u16 >"
+          },
+          {
+            "name": "version_key",
+            "type": "u64"
+          }
+        ],
+        "freeze_struct": "b6833b5029be4127"
+      },
+      "core_payload": {
+        "fields": [
+          {
+            "name": "hotkey",
+            "type": "Vec < u8 >"
+          },
+          {
+            "name": "uids",
+            "type": "Vec < u16 >"
+          },
+          {
+            "name": "values",
+            "type": "Vec < u16 >"
+          },
+          {
+            "name": "version_key",
+            "type": "u64"
+          }
+        ],
+        "freeze_struct": "705b0f6dde3ed6e"
+      },
+      "epoch": {
+        "counter": "current_epoch_with_lookahead",
+        "operation": "saturating_sub",
+        "rhs": "get_reveal_period(netuid)"
+      },
+      "legacy_payload": {
+        "fields": [
+          {
+            "name": "uids",
+            "type": "Vec < u16 >"
+          },
+          {
+            "name": "values",
+            "type": "Vec < u16 >"
+          },
+          {
+            "name": "version_key",
+            "type": "u64"
+          }
+        ],
+        "freeze_struct": "304e55f41267caa"
+      }
+    }
   },
   "values": {
     "constants": {

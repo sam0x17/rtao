@@ -69,12 +69,12 @@ status = "active"
 class = "stricter"
 milestone = "M9"
 pinning_tests = [
-  "rtao_client::bounded_file::tests::fifos_without_writers_are_refused_without_blocking",
+  "rtao_client::bounded_file::tests::regular_reads_and_copies_enforce_limits_before_touching_the_destination",
   "rtao_client::bounded_file::tests::file_growth_after_descriptor_validation_stops_after_one_excess_byte",
   "rtao_client::cache::tests::live_cache_treats_oversized_files_as_misses_and_fetches_bounded_replacements",
   "rtao_metagraph::persist::oversized_and_nonregular_files_fail_before_decoding_or_metadata_lookup",
   "rtao_neuron::state::tests::oversized_rotation_sources_preserve_current_and_remove_all_owned_temporaries",
-  "rtao_neuron::state::tests::broken_rotation_symlinks_are_errors_instead_of_missing_generations",
+  "rtao_neuron::state::tests::failed_replace_preserves_directory_and_removes_only_its_temporary_files",
 ]
 upstream_report = "Independent source review and eleven boundary/lifecycle regression sources, including a killable/reaped FIFO probe. Hosted compilation and execution remain pending. No new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/runtime.py"
