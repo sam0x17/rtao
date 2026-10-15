@@ -54,3 +54,28 @@ The independent read additions (`proxies` and `root_claim_threshold`) match
 the current descriptors and native `u64` balances. They can be reviewed and
 validated separately. The candidate contains no multisig-book or call-cache
 writers, so it does not complete M5-01 by itself.
+
+The five-file read subset has now been adopted from the authenticated patch:
+`crates/rtao-client/src/read_decode.rs`,
+`crates/rtao-reads/src/reads/owner.rs`,
+`crates/rtao-reads/tests/owner.rs`, `codegen/read_types.toml` and
+`parity/pending.toml`. No snapshot or generated output was restored.
+`Proxy.Proxies` already describes an ordered vector of `ProxyDefinition` and
+a native TAO deposit. The read retains that order and Python's ordinary TAO
+display without applying the connection's custom symbol. The root claim
+threshold reads only netuid zero through the current `I96F32` descriptor,
+shifts away the fractional bits as Python does, then checks conversion to
+`u64`; negative and oversized balances are refused. Its display uses the
+client's connection-scoped token symbols.
+
+Six recovered regression sources cover proxy fields and chain order, both
+metadata defaults, fractional and native-balance boundaries, truncated SCALE
+refusal, generated dispatch and namespace entry points, and exact descriptor
+sets at pinned block hashes. Source and formatting review pass. Hosted
+regeneration must update the read interfaces and declared parity inventory
+before compilation and tests can establish acceptance.
+
+Against committed `0812681`, the read pending list changes from 64 entries to
+62 by removing exactly `proxies` and `root_claim_threshold`. This declares
+40 of 102 read implementations in source; current generated dispatch and
+successful hosted validation are separate requirements.

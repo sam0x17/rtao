@@ -823,3 +823,317 @@ async fn d040_start_schedule_descriptor_coverage_is_exact_at_pinned_hashes() {
     }
     client.close().await;
 }
+
+#[tokio::test]
+async fn m5_proxies_keep_model_fields_chain_order_and_native_deposit() {
+    use rtao_reads::Namespaces;
+    use rtao_runtime::models::ProxyType;
+
+    let mut state = FakeState::default();
+    let rows = json!([
+        {"delegate": OTHER, "proxy_type": "RootClaim", "delay": u32::MAX},
+        {"delegate": HOT, "proxy_type": "Any", "delay": 0},
+        {"delegate": OTHER, "proxy_type": "BasketTrading", "delay": 7}
+    ]);
+    state
+        .seed_python(
+            "Proxy",
+            "Proxies",
+            &[json!(COLD)],
+            json!([rows, 1000000000]),
+        )
+        .unwrap();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "TokenSymbol",
+            &[json!(0)],
+            json!("root-symbol"),
+        )
+        .unwrap();
+    let (client, chain) = client(state).await;
+    let result = owner::proxies(&client, COLD).await.unwrap();
+    assert_eq!(
+        result
+            .proxies
+            .iter()
+            .map(|proxy| (proxy.delegate, proxy.proxy_type, proxy.delay))
+            .collect::<Vec<_>>(),
+        [
+            (OTHER, ProxyType::RootClaim, u32::MAX),
+            (HOT, ProxyType::Any, 0),
+            (OTHER, ProxyType::BasketTrading, 7),
+        ]
+    );
+    assert_eq!(result.deposit.rao, 1000000000);
+    assert_eq!(result.deposit.netuid, NetUid::ROOT);
+    assert!(result.deposit.symbol.is_none()); // Python uses Balance.from_rao, not view.balance.
+    let expected = json!({"proxies": rows, "deposit": "τ1.000000000"});
+    assert_eq!(serde_json::to_value(&result).unwrap(), expected);
+    assert_eq!(
+        serde_json::to_value(client.balances().proxies(COLD).await.unwrap()).unwrap(),
+        expected
+    );
+    assert_eq!(
+        dispatch(
+            &client,
+            ReadName::Proxies,
+            &params(json!({"coldkey_ss58": COLD}))
+        )
+        .await
+        .unwrap(),
+        expected
+    );
+    chain.mutate_state(|state| {
+        state
+            .seed_python("Proxy", "Proxies", &[json!(COLD)], json!([[], u64::MAX]))
+            .unwrap();
+    });
+    let result = owner::proxies(&client, COLD).await.unwrap();
+    assert!(result.proxies.is_empty());
+    assert_eq!(result.deposit.rao, u64::MAX);
+    assert!(result.deposit.symbol.is_none());
+    client.close().await;
+}
+
+#[tokio::test]
+async fn m5_read_misses_decode_metadata_defaults() {
+    let mut state = FakeState::default();
+    for (pallet, item, keys) in [
+        (
+            "Proxy",
+            "Proxies",
+            vec![rtao_core::codec::Value::Str(COLD.to_string())],
+        ),
+        (
+            "SubtensorModule",
+            "RootClaimableThreshold",
+            vec![rtao_core::codec::Value::Uint(0)],
+        ),
+    ] {
+        let info = state.runtime.storage_entry(pallet, item).unwrap();
+        let key = state.runtime.storage_key(info, &keys).unwrap();
+        state.seed_encoded(key, None); // Explicit RPC miss, bypassing fake default seeds.
+    }
+    let (client, _) = client(state).await;
+    let proxies = owner::proxies(&client, COLD).await.unwrap();
+    assert!(proxies.proxies.is_empty());
+    assert_eq!(proxies.deposit.rao, 0);
+    assert_eq!(proxies.deposit.netuid, NetUid::ROOT);
+    assert_eq!(
+        owner::root_claim_threshold(&client).await.unwrap().rao,
+        500000 // Pinned DefaultMinRootClaimAmount and metadata default, not a local zero.
+    );
+    client.close().await;
+}
+
+#[tokio::test]
+async fn m5_root_claim_threshold_discards_fractional_rao_and_reads_only_root() {
+    use rtao_reads::Namespaces;
+
+    let mut state = FakeState::default();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "TokenSymbol",
+            &[json!(0)],
+            json!("root-symbol"),
+        )
+        .unwrap();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "RootClaimableThreshold",
+            &[json!(1)],
+            json!({"bits": 1000000000i128 << 32}),
+        )
+        .unwrap();
+    let (client, chain) = client(state).await;
+    for (bits, expected_rao) in [
+        (0, 0),
+        (1, 0),
+        (i128::from(u32::MAX), 0),
+        (1i128 << 32, 1),
+        ((42i128 << 32) | i128::from(u32::MAX), 42),
+        (
+            (i128::from(u64::MAX) << 32) | i128::from(u32::MAX),
+            u64::MAX,
+        ),
+    ] {
+        chain.mutate_state(|state| {
+            state
+                .seed_python(
+                    "SubtensorModule",
+                    "RootClaimableThreshold",
+                    &[json!(0)],
+                    json!({"bits": bits}),
+                )
+                .unwrap();
+        });
+        let result = owner::root_claim_threshold(&client).await.unwrap();
+        assert_eq!(result.rao, expected_rao, "bits={bits}");
+        assert_eq!(result.netuid, NetUid::ROOT);
+        assert_eq!(result.symbol.as_ref().unwrap().as_str(), "root-symbol");
+        assert_eq!(
+            client.staking().root_claim_threshold().await.unwrap(),
+            result
+        );
+        assert_eq!(
+            dispatch(&client, ReadName::RootClaimThreshold, &params(json!({})))
+                .await
+                .unwrap(),
+            serde_json::to_value(result).unwrap()
+        );
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn m5_root_claim_threshold_rejects_negative_and_overflowing_native_balances() {
+    let (client, chain) = client(FakeState::default()).await;
+    for bits in [
+        -1, // Arithmetic >> 32 is -1, even when the fraction is less than one rao.
+        -(1i128 << 32),
+        i128::MIN,
+        (i128::from(u64::MAX) + 1) << 32,
+        i128::MAX,
+    ] {
+        chain.mutate_state(|state| {
+            state
+                .seed_python(
+                    "SubtensorModule",
+                    "RootClaimableThreshold",
+                    &[json!(0)],
+                    json!({"bits": bits}),
+                )
+                .unwrap();
+        });
+        let error = owner::root_claim_threshold(&client).await.unwrap_err();
+        assert!(
+            matches!(
+                error,
+                rtao_reads::ReadError::SurfaceChanged {
+                    descriptor: "SubtensorModule.RootClaimableThreshold",
+                    ..
+                }
+            ),
+            "bits={bits}: {error}"
+        );
+        assert!(error.to_string().contains("native u64 balance"));
+        assert!(
+            dispatch(&client, ReadName::RootClaimThreshold, &params(json!({})))
+                .await
+                .is_err()
+        );
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn m5_reads_reject_truncated_scale_instead_of_returning_defaults() {
+    let mut state = FakeState::default();
+    for (pallet, item, keys, bytes) in [
+        (
+            "Proxy",
+            "Proxies",
+            vec![rtao_core::codec::Value::Str(COLD.to_string())],
+            vec![4, 0], // One delegation, with an incomplete account field.
+        ),
+        (
+            "SubtensorModule",
+            "RootClaimableThreshold",
+            vec![rtao_core::codec::Value::Uint(0)],
+            vec![0; 15], // I96F32 requires all 16 signed fixed-point bytes.
+        ),
+    ] {
+        let info = state.runtime.storage_entry(pallet, item).unwrap();
+        let key = state.runtime.storage_key(info, &keys).unwrap();
+        state.seed_encoded(key, Some(bytes));
+    }
+    let (client, _) = client(state).await;
+    assert!(matches!(
+        owner::proxies(&client, COLD).await.unwrap_err(),
+        rtao_reads::ReadError::Client(_)
+    ));
+    assert!(matches!(
+        owner::root_claim_threshold(&client).await.unwrap_err(),
+        rtao_reads::ReadError::Client(_)
+    ));
+    client.close().await;
+}
+
+#[tokio::test]
+async fn m5_two_reads_observe_exact_descriptor_sets_at_pinned_hashes() {
+    use rtao_client::ReadKind;
+    use rtao_reads::HitKind;
+
+    let (client, chain) = client(FakeState::default()).await;
+    for (name, args, pallet, item) in [
+        (
+            ReadName::Proxies,
+            json!({"coldkey_ss58": COLD}),
+            "Proxy",
+            "Proxies",
+        ),
+        (
+            ReadName::RootClaimThreshold,
+            json!({}),
+            "SubtensorModule",
+            "RootClaimableThreshold",
+        ),
+    ] {
+        let expected = BTreeSet::from([(ReadKind::Storage, pallet.to_owned(), item.to_owned())]);
+        let declared: BTreeSet<_> = name
+            .spec()
+            .hits
+            .iter()
+            .map(|hit| {
+                assert_eq!(hit.kind, HitKind::Storage);
+                (
+                    ReadKind::Storage,
+                    hit.container.to_owned(),
+                    hit.name.to_owned(),
+                )
+            })
+            .collect();
+        assert_eq!(declared, expected);
+        for block in [99, 100] {
+            let snapshot = client.at(BlockRef::Number(block)).await.unwrap();
+            let hash = snapshot.block().hash;
+            let view = RecordingView::new(snapshot);
+            let before = chain.requests().len();
+            dispatch(&view, name, &params(args.clone())).await.unwrap();
+            let touches = view.touches();
+            assert_eq!(touches.len(), 1, "{name}");
+            let observed: BTreeSet<_> = touches
+                .iter()
+                .map(|touch| {
+                    assert_eq!(touch.at, Some(hash), "{name}");
+                    (touch.kind, touch.pallet_or_api.clone(), touch.item.clone())
+                })
+                .collect();
+            assert_eq!(observed, expected);
+            assert_eq!(view.block_hashes(), BTreeSet::from([hash]));
+            let requests = chain.requests();
+            let reads: Vec<_> = requests[before..]
+                .iter()
+                .filter(|request| {
+                    [
+                        "state_getStorage",
+                        "state_queryStorageAt",
+                        "state_call",
+                        "state_getKeysPaged",
+                    ]
+                    .contains(&request.method.as_str())
+                })
+                .collect();
+            assert_eq!(reads.len(), 1, "{name}");
+            assert_eq!(reads[0].method, "state_queryStorageAt");
+            assert_eq!(
+                reads[0].params.as_array().unwrap().last(),
+                Some(&json!(format!("0x{}", hex::encode(hash.0))))
+            );
+        }
+    }
+    client.close().await;
+}
