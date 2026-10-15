@@ -731,6 +731,26 @@ const FEE_CLIENT_E2E_LIMITS: &[&str] = &["live-runtime-fee-query"];
 // only for their reviewed client contracts. Each retains its own runtime limits.
 const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
     ClientE2eFixture {
+        key: "test_serving_endpoints",
+        target: "rtao_intents::client_serving_lifecycles::client_tls_axon_and_prometheus_submit_exact_upstream_calls",
+        identifiers: &[
+            "fixture",
+            "execute",
+            "tls",
+            "prometheus",
+            "assert_receipt",
+            "assert_consumed",
+            "nonces",
+            "assert_eq",
+        ],
+        runtime_limits: &[
+            "controlled-success-receipts",
+            "runtime-serving-admission-unverified",
+            "endpoint-certificate-state-unverified",
+            "tls-reachability-unverified",
+        ],
+    },
+    ClientE2eFixture {
         key: "test_plan_simulates_real_fee",
         target: "rtao_intents::client_policy_scenarios::client_transfer_plan_decodes_positive_fee_for_the_exact_call",
         identifiers: &[

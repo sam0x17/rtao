@@ -111,6 +111,128 @@ mod tests {
 
     use super::*;
 
+    fn extracted_preset_table() -> serde_json::Value {
+        let extracted: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../vendor/upstream/extracted/named_tables.json"
+        ))
+        .unwrap();
+        extracted["tables"]["sdk/python/bittensor/evm/networks.py"]["values"]["EVM_NETWORKS"]
+            ["value"]
+            .clone()
+    }
+
+    fn extracted_presets(
+        table: &serde_json::Value,
+        environment: impl Fn(&str) -> Option<String>,
+    ) -> BTreeMap<String, EvmNetwork> {
+        let mut networks = BTreeMap::new();
+        for pair in table["dict"].as_array().unwrap() {
+            let pair = pair.as_array().unwrap();
+            assert_eq!(pair.len(), 2);
+            let name = pair[0].as_str().unwrap();
+            assert_eq!(pair[1]["constructor"], "EvmNetwork");
+            let fields = pair[1]["fields"].as_object().unwrap();
+            assert_eq!(fields.len(), 5);
+            let chain_id = match fields.get("chain_id").unwrap() {
+                serde_json::Value::Null => None,
+                value => Some(value.as_u64().unwrap()),
+            };
+            let endpoint = fields.get("rpc_url").unwrap();
+            let rpc_url = if let Some(url) = endpoint.as_str() {
+                url.to_owned()
+            } else {
+                let descriptor = endpoint.as_object().unwrap();
+                assert_eq!(descriptor.len(), 3);
+                let empty_is_unset = descriptor["empty_is_unset"].as_bool().unwrap();
+                environment(descriptor["env"].as_str().unwrap())
+                    .filter(|value| !empty_is_unset || !value.is_empty())
+                    .unwrap_or_else(|| descriptor["default"].as_str().unwrap().to_owned())
+            };
+            let network = EvmNetwork {
+                name: fields["name"].as_str().unwrap().to_owned(),
+                chain_id,
+                rpc_url,
+                currency_symbol: fields["currency_symbol"].as_str().unwrap().to_owned(),
+                evm_decimals: fields["evm_decimals"].as_u64().unwrap().try_into().unwrap(),
+            };
+            assert!(networks.insert(name.to_owned(), network).is_none());
+        }
+        networks
+    }
+
+    fn preset_consumers_match(table: &serde_json::Value) -> bool {
+        let exported: BTreeMap<_, _> = evm_networks()
+            .into_iter()
+            .map(|(name, network)| (name.to_owned(), network))
+            .collect();
+        if exported != extracted_presets(table, |key| std::env::var(key).ok()) {
+            return false;
+        }
+        [None, Some(""), Some("https://local.example:1444/custom")]
+            .into_iter()
+            .all(|value| {
+                let environment = |key: &str| {
+                    if key == "BT_EVM_ENDPOINT" {
+                        value.map(str::to_owned)
+                    } else {
+                        None
+                    }
+                };
+                let resolved: BTreeMap<_, _> = exported
+                    .keys()
+                    .map(|name| {
+                        (
+                            name.clone(),
+                            evm_network_with_env(name, environment).unwrap(),
+                        )
+                    })
+                    .collect();
+                extracted_presets(table, environment) == resolved
+            })
+    }
+
+    #[test]
+    fn preset_consumers_match_the_complete_extracted_python_table() {
+        assert!(preset_consumers_match(&extracted_preset_table()));
+    }
+
+    #[test]
+    fn preset_consumer_guard_detects_table_and_environment_drift() {
+        use serde_json::json;
+
+        let table = extracted_preset_table();
+        assert!(preset_consumers_match(&table));
+        for (pointer, replacement) in [
+            ("/dict/0/1/fields/name", json!("other")),
+            ("/dict/0/1/fields/chain_id", json!(965)),
+            ("/dict/0/1/fields/rpc_url", json!("https://changed.example")),
+            ("/dict/0/1/fields/currency_symbol", json!("OTHER")),
+            ("/dict/0/1/fields/evm_decimals", json!(9)),
+            ("/dict/2/1/fields/chain_id", json!(42)),
+            ("/dict/2/1/fields/rpc_url/env", json!("OTHER_ENDPOINT")),
+            (
+                "/dict/2/1/fields/rpc_url/default",
+                json!("http://localhost:9945"),
+            ),
+            ("/dict/2/1/fields/rpc_url/empty_is_unset", json!(false)),
+        ] {
+            let mut mutant = table.clone();
+            *mutant.pointer_mut(pointer).unwrap() = replacement;
+            assert!(
+                !preset_consumers_match(&mutant),
+                "missed drift at {pointer}"
+            );
+        }
+        let mut removed = table.clone();
+        removed["dict"].as_array_mut().unwrap().remove(1);
+        assert!(!preset_consumers_match(&removed));
+        let mut added = table;
+        let mut new_preset = added["dict"][0].clone();
+        new_preset[0] = json!("new-preset");
+        added["dict"].as_array_mut().unwrap().push(new_preset);
+        assert!(!preset_consumers_match(&added));
+    }
+
     #[test]
     fn presets_and_known_substrate_endpoints_match_pinned_facts() {
         for (input, name, chain_id, url) in [
