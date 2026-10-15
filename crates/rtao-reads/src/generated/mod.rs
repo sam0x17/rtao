@@ -14,7 +14,7 @@ pub mod namespaces;
 /// Complete rendering, pinning and descriptor coverage contracts.
 pub mod specs;
 pub use dispatch::{dispatch, fill_defaults};
-pub use names::ReadName;
+pub use names::{ReadInterfaceMetadata, ReadName};
 pub use specs::{
     Category, Hit, HitKind, JsonType, ParamSpec, Pinning, READ_HIT_REPLACEMENTS, READ_SPECS,
     ReadHitReplacement, ReadSpec, RenderHint,

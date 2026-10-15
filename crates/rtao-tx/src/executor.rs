@@ -290,12 +290,23 @@ impl Executor {
         keys: &dyn DynKeySource,
         opts: &PlanOptions,
     ) -> Result<Plan, TxError> {
+        self.plan_and_preflight_dyn(intent, keys, opts)
+            .await
+            .map(|(plan, _)| plan)
+    }
+    /// Dynamic plan and structural facts from the same state snapshot and call.
+    /// Neither planning nor the preflight hooks acquire a private signing key.
+    pub async fn plan_and_preflight_dyn(
+        &self,
+        intent: &dyn DynIntent,
+        keys: &dyn DynKeySource,
+        opts: &PlanOptions,
+    ) -> Result<(Plan, IntentPreflight), TxError> {
         let budget = TimeBudget::new(opts.deadline)?;
         budget
             .run(&self.client, async {
                 self.plan_with_keys(intent, keys, public_address(intent, keys)?, opts)
                     .await
-                    .map(|(plan, _)| plan)
             })
             .await
     }
@@ -322,14 +333,9 @@ impl Executor {
         keys: &dyn DynKeySource,
         opts: &PlanOptions,
     ) -> Result<IntentPreflight, TxError> {
-        let budget = TimeBudget::new(opts.deadline)?;
-        budget
-            .run(&self.client, async {
-                self.plan_with_keys(intent, keys, public_address(intent, keys)?, opts)
-                    .await
-                    .map(|(_, preview)| preview)
-            })
+        self.plan_and_preflight_dyn(intent, keys, opts)
             .await
+            .map(|(_, preview)| preview)
     }
 
     async fn plan_with_keys(
