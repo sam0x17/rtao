@@ -16,14 +16,17 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Normal run `38719470543` at `6a88621` fails before tests. Check/no-host reject a
-manual ASCII-digit range; MSRV finds root swap display treating its successful
-status as optional without wrapping it; supply finds fuzz's client lock entry
-missing the already-locked chrono dependency. The parser now uses
-`is_ascii_digit()`, the optional display context is explicit, and a bounded
-offline workspace lock update adds only that edge with zero package changes.
-Formatting/whitespace checks pass; no local build or test ran. Another hosted
-run must validate these corrections. Features was still running at inspection.
+Normal run [38720004914](https://github.com/sam0x17/rtao/actions/runs/38720004914)
+at `4058413` passes features, MSRV, no-host, supply and semver. Main check passes
+compilation and strict Clippy, then fails parity before tests on canonical
+attribution, the generator's two escaped rustdoc placeholders, private read
+helpers counted as duplicate entry points, and four M6 ordinary read-test
+bindings. Source repairs retain strict attribution and exact rendered wording,
+count public async read entry points, and allow only the four reviewed read
+bindings with assertion/source checks. Negative fixtures preserve rejection of
+changed wording, real duplicates and unrelated mappings. The basket generator's
+header order also needs hosted regeneration/adoption. Another ordinary hosted
+run must execute this source. No local build or test ran.
 
 Source adds the remaining 62 reads and the blocking facade. All five read
 groups have fixture source and independent source reviews. Generation run

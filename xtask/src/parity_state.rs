@@ -270,6 +270,55 @@ fn shrink(
     Ok(())
 }
 
+fn tested_read_functions(
+    file: &syn::File,
+    all_reads: &BTreeSet<String>,
+    index: &Index,
+    implemented: &mut BTreeSet<String>,
+) -> Result<()> {
+    for item in &file.items {
+        let syn::Item::Fn(function) = item else {
+            continue;
+        };
+        // Catalog contracts expose public async entry points. Private conversion
+        // helpers may share a catalog name (for example, `balance`) without
+        // implementing another read.
+        if !matches!(function.vis, syn::Visibility::Public(_)) || function.sig.asyncness.is_none() {
+            continue;
+        }
+        let name = function.sig.ident.to_string();
+        if all_reads.contains(&name)
+            && !function
+                .block
+                .to_token_stream()
+                .to_string()
+                .contains("NotYetPorted")
+            && index.feature_test_bodies.iter().any(|(test, body)| {
+                let variant = name
+                    .split('_')
+                    .map(|word| {
+                        let mut chars = word.chars();
+                        chars.next().map_or_else(String::new, |first| {
+                            format!("{}{}", first.to_ascii_uppercase(), chars.as_str())
+                        })
+                    })
+                    .collect::<String>();
+                test.starts_with("rtao_reads::")
+                    && (identifier(body, &name)
+                        || identifier(body, &variant)
+                        || body.contains(&format!("{name:?}")))
+                    && body.contains("assert")
+            })
+        {
+            ensure!(
+                implemented.insert(name.clone()),
+                "read {name} has duplicate tested public async functions"
+            );
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn pending(
     root: &Path,
     index: &Index,
@@ -370,39 +419,7 @@ pub(super) fn pending(
     let mut implemented_reads = BTreeSet::new();
     for path in files {
         let file = syn::parse_file(&fs::read_to_string(path)?)?;
-        for item in file.items {
-            if let syn::Item::Fn(function) = item {
-                let name = function.sig.ident.to_string();
-                if all_reads.contains(&name)
-                    && !function
-                        .block
-                        .to_token_stream()
-                        .to_string()
-                        .contains("NotYetPorted")
-                    && index.feature_test_bodies.iter().any(|(test, body)| {
-                        let variant = name
-                            .split('_')
-                            .map(|word| {
-                                let mut chars = word.chars();
-                                chars.next().map_or_else(String::new, |first| {
-                                    format!("{}{}", first.to_ascii_uppercase(), chars.as_str())
-                                })
-                            })
-                            .collect::<String>();
-                        test.starts_with("rtao_reads::")
-                            && (identifier(body, &name)
-                                || identifier(body, &variant)
-                                || body.contains(&format!("{name:?}")))
-                            && body.contains("assert")
-                    })
-                {
-                    ensure!(
-                        implemented_reads.insert(name),
-                        "read has duplicate tested functions"
-                    );
-                }
-            }
-        }
+        tested_read_functions(&file, &all_reads, index, &mut implemented_reads)?;
     }
     ensure!(
         implemented_reads == all_reads.difference(&reads).cloned().collect(),
@@ -622,17 +639,63 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
     Ok(json!({"total":seen.len(),"active":active,"pending":pending,"withdrawn":1}))
 }
 
+// These ordinary fake-chain tests preserve the named upstream read assertions.
+// Keep the bindings exact: a catalog-wide plan test cannot stand in for a read,
+// and an unrelated assertion-bearing workspace test cannot claim e2e coverage.
+const READ_E2E_FIXTURES: &[(&str, &str, &[&str])] = &[
+    (
+        "test_leases_read",
+        "rtao_reads::m6_delegation::leases_preserve_cost_precision_perpetual_expiry_and_map_order",
+        &["leases", "lease", "lease_id"],
+    ),
+    (
+        "test_metagraph_fast_path_matches_runtime",
+        "rtao_reads::m6_accounts::neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum",
+        &["neurons", "call_dyn", "raw"],
+    ),
+    (
+        "test_quote_stake_slippage_and_fee",
+        "rtao_reads::m6_staking::quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding",
+        &["quote_stake", "alpha", "tao_fee", "tao"],
+    ),
+    (
+        "test_subnets_all_batched",
+        "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows",
+        &["subnets", "netuid", "requests"],
+    ),
+];
+
 fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
     let target = if value.starts_with("e2e::") || value.starts_with("interop::") {
         format!("rtao_testkit::{value}")
     } else {
-        ensure!(
-            value == "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
-                && name
-                    .strip_prefix("intent_")
+        if value == "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain" {
+            ensure!(
+                name.strip_prefix("intent_")
                     .is_some_and(|op| { rtao_catalog::INTENTS.iter().any(|spec| spec.name == op) }),
-            "only catalog intent-plan keys may map to the complete ordinary plan fixture"
-        );
+                "only catalog intent-plan keys may map to the complete ordinary plan fixture"
+            );
+        } else {
+            let (_, fixture, identifiers) = READ_E2E_FIXTURES
+                .iter()
+                .find(|(key, _, _)| *key == name)
+                .context("ordinary e2e mapping lacks a reviewed read binding")?;
+            ensure!(
+                value == *fixture,
+                "ordinary e2e read {name} must map to its exact reviewed fixture {fixture}"
+            );
+            let body = index
+                .feature_test_bodies
+                .get(value)
+                .context("ordinary e2e read fixture has no indexed all-feature source body")?;
+            ensure!(
+                identifiers.iter().all(|name| identifier(body, name))
+                    && ["assert", "assert_eq", "assert_ne"]
+                        .iter()
+                        .any(|name| identifier(body, name)),
+                "ordinary e2e read fixture lacks its read operations or assertions"
+            );
+        }
         divergence_test(index, value)?;
         value.to_owned()
     };
@@ -937,6 +1000,80 @@ fn document_pins(root: &Path) -> Result<DocumentMut> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn pending_reads_ignore_private_helpers_but_reject_duplicate_public_entrypoints() -> Result<()>
+    {
+        let reads = BTreeSet::from(["balance".into()]);
+        let mut index = Index::default();
+        index.feature_test_bodies.insert(
+            "rtao_reads::owner::balance_matches_storage".into(),
+            "{ assert_eq!(balance(&view, account).await?.rao, 7); }".into(),
+        );
+        let mut implemented = BTreeSet::new();
+        for source in [
+            "fn balance(rao: u64) -> u64 { rao }",
+            "async fn balance() { conversion().await; }",
+            "pub(crate) async fn balance() { conversion().await; }",
+            "pub fn balance(rao: u64) -> u64 { rao }",
+            "pub async fn balance() { Err(NotYetPorted) }",
+        ] {
+            tested_read_functions(&syn::parse_file(source)?, &reads, &index, &mut implemented)?;
+            assert!(implemented.is_empty(), "helper/stub counted: {source}");
+        }
+        let public = syn::parse_file("pub async fn balance() { storage().await }")?;
+        tested_read_functions(&public, &reads, &index, &mut implemented)?;
+        assert_eq!(implemented, reads);
+        let duplicate = tested_read_functions(&public, &reads, &index, &mut implemented)
+            .expect_err("duplicate public async read must still fail");
+        assert!(duplicate.to_string().contains("read balance has duplicate"));
+        implemented.clear();
+        index.feature_test_bodies.clear();
+        tested_read_functions(&public, &reads, &index, &mut implemented)?;
+        assert!(implemented.is_empty(), "untested entrypoint counted");
+        Ok(())
+    }
+
+    #[test]
+    fn ordinary_read_mapping_requires_exact_binding_and_actual_assertion_bearing_test() -> Result<()>
+    {
+        for (key, test, identifiers) in READ_E2E_FIXTURES {
+            let mut index = Index::default();
+            assert!(e2e_target(key, test, &index).is_err());
+            index.feature_tests.insert((*test).into());
+            assert!(e2e_target(key, test, &index).is_err());
+            index.feature_test_bodies.insert(
+                (*test).into(),
+                format!("{{ assert_eq!({:?}, {:?}); }}", identifiers, identifiers),
+            );
+            assert!(e2e_target(key, test, &index).is_err(), "literal-only spoof");
+            index.feature_test_bodies.insert(
+                (*test).into(),
+                format!("{{ let actual = ({}); }}", identifiers.join(", ")),
+            );
+            assert!(e2e_target(key, test, &index).is_err(), "no assertion");
+            index.feature_test_bodies.insert(
+                (*test).into(),
+                format!(
+                    "{{ let actual = ({}); assert_eq!(actual, expected); }}",
+                    identifiers.join(", ")
+                ),
+            );
+            assert_eq!(e2e_target(key, test, &index)?, *test);
+            for wrong_key in ["intent_transfer", "test_transfer", "test_typed_reads"] {
+                assert!(e2e_target(wrong_key, test, &index).is_err());
+            }
+            for (other_key, other_test, _) in READ_E2E_FIXTURES {
+                if key != other_key {
+                    assert!(e2e_target(other_key, test, &index).is_err());
+                    assert!(e2e_target(key, other_test, &index).is_err());
+                }
+            }
+            index.feature_tests.remove(*test);
+            assert!(e2e_target(key, test, &index).is_err());
+        }
+        Ok(())
+    }
+
     #[test]
     fn ordinary_plan_mapping_requires_catalog_plan_key_and_actual_all_feature_test_body()
     -> Result<()> {

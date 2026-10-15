@@ -1,5 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/basket_index.py
-// @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/basket_index.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Chain-first index-spliced basket display pricing. Monetary inputs remain
 //! native checked balances; only display ratios use floating point.
 use super::basket_index_data::{BASELINES, INDEX, TR_INDEX};
