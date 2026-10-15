@@ -2,6 +2,7 @@
 #![deny(missing_docs)]
 
 mod files;
+mod keyfile;
 mod messages;
 mod password;
 #[cfg(test)]
@@ -11,6 +12,10 @@ mod wallet;
 
 pub use files::read_data as read_keyfile_data;
 pub use files::{ColdkeyFile, HotkeyFile, Overwrite, PublicKeyInfo, WriteOptions};
+pub use keyfile::{
+    KeyPasswordSources, Keyfile, KeyfileEnvironment, KeyfileEnvironmentOverlay,
+    resolve_key_password,
+};
 #[cfg(feature = "encrypted")]
 pub use messages::{EncryptedMessage, encrypt_message};
 pub use messages::{SignedMessage, verify_message};
@@ -44,6 +49,10 @@ pub enum WalletError {
     FeatureRequired(&'static str),
     /// No password source supplied a usable password.
     PasswordRequired,
+    /// A nonterminal password prompt returned an empty entry.
+    PasswordEmpty,
+    /// A nonterminal confirming prompt returned two different passwords.
+    PasswordMismatch,
     /// Decryption rejected the first chosen password source.
     WrongPassword {
         /// The first password source selected, with no secret value.
@@ -73,6 +82,8 @@ impl fmt::Display for WalletError {
             }
             Self::FeatureRequired(feature) => write!(f, "wallet operation requires {feature}"),
             Self::PasswordRequired => f.write_str("password required to decrypt keyfile"),
+            Self::PasswordEmpty => f.write_str("password cannot be empty"),
+            Self::PasswordMismatch => f.write_str("passwords do not match"),
             Self::WrongPassword { source } => write!(f, "wrong password ({source})"),
             Self::PromptUnavailable => {
                 f.write_str("wallet password prompt requires a terminal and a CLI prompt callback")

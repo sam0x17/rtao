@@ -122,14 +122,18 @@ fn listener(command: Command) -> Command {
             Arg::new("host")
                 .long("host")
                 .default_value(DEFAULT_BRIDGE_HOST)
-                .value_parser(clap::value_parser!(IpAddr))
                 .help("Numeric loopback bind address."),
         )
         .arg(
             Arg::new("port")
                 .long("port")
                 .default_value("39295")
-                .value_parser(clap::value_parser!(u16))
+                .allow_negative_numbers(true)
+                .value_parser(|raw: &str| {
+                    rtao::primitives::pyfmt::parse_integer(raw)
+                        .map(|port| port.to_string())
+                        .ok_or_else(|| "bridge port must be an integer".to_owned())
+                })
                 .help("Bridge listen port."),
         )
 }
@@ -177,20 +181,22 @@ pub fn command() -> Command {
 
 fn address(leaf: &ArgMatches) -> Result<SocketAddr, CliError> {
     let host = leaf
-        .get_one::<IpAddr>("host")
-        .copied()
-        .ok_or_else(|| CliError::input("missing bridge host"))?;
+        .get_one::<String>("host")
+        .ok_or_else(|| CliError::input("missing bridge host"))?
+        .parse::<IpAddr>()
+        .map_err(|_| CliError::input("extension bridge host must be a numeric loopback address"))?;
     if !host.is_loopback() {
         return Err(CliError::input(
             "extension bridge must bind a loopback address",
         ));
     }
-    Ok(SocketAddr::new(
-        host,
-        leaf.get_one::<u16>("port")
-            .copied()
-            .unwrap_or(DEFAULT_BRIDGE_PORT),
-    ))
+    let port = leaf
+        .get_one::<String>("port")
+        .map(|port| port.parse::<u16>())
+        .transpose()
+        .map_err(|_| CliError::input("extension bridge port must be between 0 and 65535"))?
+        .unwrap_or(DEFAULT_BRIDGE_PORT);
+    Ok(SocketAddr::new(host, port))
 }
 
 /// Execute an explicitly requested extension command, resolving Python-compatible daemon paths.
@@ -246,12 +252,12 @@ pub async fn run_with_backend(
                 .map_err(failure)
         }
         "accounts" => {
+            let url = match &ctx.globals.extension_bridge_url {
+                Some(url) if !url.is_empty() => url.clone(),
+                _ => bridge_ws_url(address(leaf)?),
+            };
             let options = EnsureBridgeOptions {
-                url: ctx
-                    .globals
-                    .extension_bridge_url
-                    .clone()
-                    .unwrap_or(bridge_ws_url(address(leaf)?)),
+                url,
                 paths,
                 allow_spawn: true,
                 open_browser: !ctx.output.options().quiet,

@@ -3,6 +3,27 @@
 schema = 1
 
 [[divergences]]
+id = "D-053"
+upstream_symbol = "bittensor.masked_input.masked_input"
+python_behavior = "Uses the interpreter-selected input codec and terminal signal bindings; getpass supplies hidden controlling-terminal fallback."
+rtao_behavior = "Uses UTF-8 and fixed Ctrl-C/backspace/Ctrl-U/Ctrl-D bindings in owned Unix star and hidden editors. Ctrl-C restores terminal settings before cancellation in every parser state. Other ASCII control bytes are ignored; remapped signal keys are not interpreted. External signals have no restoration guarantee. Invalid UTF-8 is replaced during editing and rejected by the warned plain-line fallback. Windows is unsupported."
+rationale = "The native String API has no interpreter codec. Disabling ISIG while interpreting fixed control keys avoids process termination, core dumps or suspension from those keys before Rust can restore termios. The controlling-terminal fallback shares the owned guard instead of raising SIGINT before restoration."
+decision = "PLAN.md execution rule 5 design-gap resolution; docs/plan/architecture.md section 10.3"
+status = "active"
+class = "improved"
+milestone = "M8"
+pinning_tests = [
+  "rtao_cli::prompt::masked_input::tests::unicode_entry_echoes_one_star_per_decoded_character_and_no_plaintext",
+  "rtao_cli::prompt::masked_input::tests::cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes",
+  "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_is_hidden_and_uses_owned_editing_and_restoration",
+  "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_cancellation_restores_and_never_retries_plain_input",
+  "rtao_cli::prompt::masked_input::tests::controlling_terminal_failures_attempt_restoration_without_plain_input_retry",
+  "rtao_cli::prompt::masked_input::tests::unavailable_controlling_terminal_selects_the_warned_plain_line_fallback",
+]
+upstream_report = "Native lifecycle adaptation and authored source fixtures; current hosted execution is pending. No upstream defect or new filing is claimed."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/masked_input.py"
+
+[[divergences]]
 id = "D-052"
 upstream_symbol = "bittensor.cli.commands.upgrade.sign"
 python_behavior = "An unopened sudo multisig uses approve_as_multi even at threshold one; trust and proposal state are read before operator confirmation."
@@ -414,13 +435,16 @@ id = "D-017"
 upstream_symbol = "ServeAxonTls"
 python_behavior = "a certificate over 65 bytes is silently dropped on chain"
 rtao_behavior = "rejected client-side with an explanation"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-017); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "The authenticated chain certificate permits one algorithm byte and at most 64 key bytes. Refusing oversized certificates prevents a successful serving call from silently losing its TLS material. Admission follows hex decoding so syntax diagnostics keep their original precedence."
+status = "active"
 class = "stricter"
 milestone = "M8"
-pinning_tests = ["`tls_certificate_length_checked`"]
+pinning_tests = [
+  "rtao_intents::serving::tests::certificate_length_counts_decoded_bytes_at_the_chain_boundary",
+  "rtao_intents::serving::tests::tls_validation_orders_ip_then_hex_syntax_then_certificate_length",
+]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "issue"
+upstream_report = "Existing approved client-side admission difference; exact source fixtures are authored and current hosted execution is pending. No new filing."
 
 [[divergences]]
 id = "D-018"
@@ -639,13 +663,13 @@ id = "D-034"
 upstream_symbol = "multisig_approve` plan"
 python_behavior = "sends a hash-only `approve_as_multi` at the threshold without comment"
 rtao_behavior = 'same call, plus the warning "this approval cannot execute the call; send multisig_execute" (§3.12)'
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-034); pending means the behavior/test is not claimed implemented."
-status = "pending"
+rationale = "Extract the exact hash and explicit opening from the reviewed approve_as_multi bytes through known wrappers, without rebuilding timed or randomized children. Match the threshold/signatories and refuse ambiguous approvals. Read pinned multisig state and warn when this unrecorded signer reaches the threshold. A replaced opening, existing signer approval or lower count does not claim final approval. An unavailable advisory count returns within two seconds without blocking the explicit approval; null timepoints retain opening warnings. Source and authored regressions only; hosted execution remains pending."
+status = "active"
 class = "addition"
 milestone = "M8"
-pinning_tests = ["`approve_at_threshold_warns`"]
+pinning_tests = ["rtao_intents::multisig::tests::approve_at_threshold_warns_without_executing_or_changing_the_hash_only_call", "rtao_intents::multisig::tests::approval_count_read_failure_preserves_the_explicit_hash_only_approval", "rtao_intents::multisig::tests::approval_warning_uses_exact_reviewed_hash_through_wrappers_without_child_rpc", "rtao_intents::multisig::tests::stalled_approval_count_returns_a_warning_within_two_seconds", "rtao_intents::multisig::tests::null_timepoint_uses_opening_warnings_and_preserves_as_multi"]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "—"
+upstream_report = "Documented local UX addition; no upstream defect or filing claimed."
 
 
 [[divergences]]

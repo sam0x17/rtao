@@ -188,15 +188,7 @@ impl UpgradeFetch for GithubFetch {
                 return Err(CliError::input("upgrade asset URL is not valid HTTP(S)"));
             }
             let token = if api && api_origin(&url) {
-                std::env::var("GH_TOKEN")
-                    .ok()
-                    .filter(|value| !value.is_empty())
-                    .or_else(|| {
-                        std::env::var("GITHUB_TOKEN")
-                            .ok()
-                            .filter(|value| !value.is_empty())
-                    })
-                    .map(Zeroizing::new)
+                crate::commands::multisig::github_token()
             } else {
                 None
             };

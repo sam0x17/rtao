@@ -147,7 +147,13 @@ impl<'ast> Visit<'ast> for RustScanner<'_> {
     }
     fn visit_item_enum(&mut self, item: &'ast syn::ItemEnum) {
         self.record(&item.ident.to_string(), &item.attrs);
+        self.scope.push(item.ident.to_string());
         visit::visit_item_enum(self, item);
+        self.scope.pop();
+    }
+    fn visit_variant(&mut self, variant: &'ast syn::Variant) {
+        self.record(&variant.ident.to_string(), &variant.attrs);
+        visit::visit_variant(self, variant);
     }
     fn visit_item_const(&mut self, item: &'ast syn::ItemConst) {
         self.record(&item.ident.to_string(), &item.attrs);
@@ -1152,6 +1158,88 @@ mod tests {
         assert!(!index.aliases.contains_key("bittensor.fake"));
         assert!(index.tests.contains("example::tests::pinned"));
         assert!(!index.tests.contains("example::tests::helper"));
+        Ok(())
+    }
+
+    #[test]
+    fn enum_variant_aliases_keep_their_owning_enum_and_ignore_unparsed_text() -> Result<()> {
+        let source = r#"
+mod auth {
+    #[doc(alias = "bittensor.http_auth.AuthError")]
+    pub enum AuthError {
+        #[doc(alias = "bittensor.http_auth.MalformedAuth")]
+        MalformedAuth(String),
+        #[doc(alias("bittensor.http_auth.WrongReceiver", "other.unrelated"))]
+        WrongReceiver { message: String },
+        // #[doc(alias = "bittensor.comment_only")]
+        Other,
+    }
+    pub enum AnotherError {
+        #[doc(alias = "bittensor.another.MalformedAuth")]
+        MalformedAuth,
+        #[doc = "bittensor.doc_text_only"]
+        Other,
+    }
+}
+"#;
+        let file = syn::parse_file(source)?;
+        let mut index = Index::default();
+        let mut scanner = RustScanner {
+            index: &mut index,
+            path: "crates/example/src/lib.rs".into(),
+            source,
+            scope: vec!["example".into()],
+            error: None,
+        };
+        scanner.visit_file(&file);
+        assert!(scanner.error.is_none());
+        for (alias, item) in [
+            ("bittensor.http_auth.AuthError", "example::auth::AuthError"),
+            (
+                "bittensor.http_auth.MalformedAuth",
+                "example::auth::AuthError::MalformedAuth",
+            ),
+            (
+                "bittensor.http_auth.WrongReceiver",
+                "example::auth::AuthError::WrongReceiver",
+            ),
+            (
+                "bittensor.another.MalformedAuth",
+                "example::auth::AnotherError::MalformedAuth",
+            ),
+        ] {
+            let locations = index.aliases.get(alias).context("enum alias missing")?;
+            assert_eq!(locations.len(), 1);
+            assert_eq!(locations[0].item, item);
+            assert_eq!(locations[0].path, "crates/example/src/lib.rs");
+        }
+        assert_eq!(index.aliases.len(), 4);
+        assert!(!index.aliases.contains_key("bittensor.comment_only"));
+        assert!(!index.aliases.contains_key("bittensor.doc_text_only"));
+        assert!(!index.aliases.contains_key("other.unrelated"));
+        Ok(())
+    }
+
+    #[test]
+    fn enum_variant_aliases_reject_non_string_attribute_values() -> Result<()> {
+        let source = "pub enum Error { #[doc(alias = 7)] Invalid }";
+        let file = syn::parse_file(source)?;
+        let mut index = Index::default();
+        let mut scanner = RustScanner {
+            index: &mut index,
+            path: "crates/example/src/lib.rs".into(),
+            source,
+            scope: vec!["example".into()],
+            error: None,
+        };
+        scanner.visit_file(&file);
+        assert!(
+            scanner
+                .error
+                .as_ref()
+                .is_some_and(|error| error.to_string().contains("doc alias must be a string"))
+        );
+        assert!(index.aliases.is_empty());
         Ok(())
     }
 

@@ -515,8 +515,14 @@ fn effective_prompt_context(
 }
 
 fn clap_error(error: clap::Error) -> crate::error::CliError {
+    // Python cli/help_theme.py changes only NoArgsIsHelpError to exit 0.
+    // Clap gives the same opt-in help path its own kind: do not change
+    // MissingRequiredArgument, MissingSubcommand or malformed-input errors.
+    let informational = error.kind()
+        == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        || !error.use_stderr();
     crate::error::CliError {
-        code: if error.use_stderr() { 2 } else { 0 },
+        code: if informational { 0 } else { 2 },
         message: error.to_string(),
         help: None,
     }

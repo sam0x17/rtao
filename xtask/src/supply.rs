@@ -27,6 +27,50 @@ const SUBXT_MACRO_CHECKSUM: &str =
     "77d22d8350ef5f6b455f09b211be9468c47499778e8d18615a00c12143f7f400";
 const PROC_MACRO_DESCRIPTION: &str =
     "2f735d4ab46291cc8340d0ab166530ea0ea94959736ef7dc13cc932d6f6913c9";
+const SMALLSTR_ADVISORY: &str = "RUSTSEC-2026-0215";
+const SMALLSTR_CHECKSUM: &str = "862077b1e764f04c251fe82a2ef562fd78d7cadaeb072ca7c2bcaf7217b1ff3b";
+const SCALE_INFO_LEGACY_CHECKSUM: &str =
+    "d972ce93a4f81efc40fce251e992faf99ecb090c02bcbd3614e213991038c181";
+const SUBXT_METADATA_CHECKSUM: &str =
+    "cc5c32a26366a6eac132535164b4f0034a5f4d56718f34db6814af7fc5e10f35";
+const FRAME_DECODE_CHECKSUM: &str =
+    "c9a9e93cab13c8e9a6accf029997d19943cf54fea5f5eb028a1133b7179d06aa";
+const SMALLSTR_DESCRIPTION: &str =
+    "1e732bf83d21445cd724ccdd77a21839169c4b8b0a5ccea14c6c8187e56a3f80";
+
+struct ReviewedMaintenance {
+    advisory: &'static str,
+    name: &'static str,
+    version: &'static str,
+    checksum: &'static str,
+    date: &'static str,
+    title: &'static str,
+    url: Option<&'static str>,
+    description: &'static str,
+}
+
+const REVIEWED_MAINTENANCE: &[ReviewedMaintenance] = &[
+    ReviewedMaintenance {
+        advisory: PROC_MACRO_ADVISORY,
+        name: "proc-macro-error2",
+        version: "2.0.1",
+        checksum: PROC_MACRO_CHECKSUM,
+        date: "2026-06-07",
+        title: "proc-macro-error2 is unmaintained",
+        url: Some("https://github.com/GnomedDev/proc-macro-error-2/issues/17"),
+        description: PROC_MACRO_DESCRIPTION,
+    },
+    ReviewedMaintenance {
+        advisory: SMALLSTR_ADVISORY,
+        name: "smallstr",
+        version: "0.3.1",
+        checksum: SMALLSTR_CHECKSUM,
+        date: "2026-07-22",
+        title: "smallstr is unmaintained",
+        url: None,
+        description: SMALLSTR_DESCRIPTION,
+    },
+];
 
 struct DormantException {
     name: &'static str,
@@ -119,6 +163,7 @@ fn lock_identities(text: &str) -> Result<BTreeSet<Identity>> {
         .as_array_of_tables()
         .context("lockfile missing packages")?;
     proc_macro_maintenance_chain(packages)?;
+    smallstr_maintenance_chain(packages)?;
     let mut identities = BTreeSet::new();
     for package in packages {
         let identity = Identity {
@@ -156,17 +201,59 @@ fn lock_identities(text: &str) -> Result<BTreeSet<Identity>> {
 // optional Subxt adapter. Its reviewed parent chain is pinned until upstream
 // replaces the abandoned diagnostic helper. See supply-proc-macro-error2.md.
 fn proc_macro_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<()> {
+    reviewed_maintenance_chain(
+        packages,
+        "proc-macro-error2",
+        &[
+            ("proc-macro-error2", "2.0.1", PROC_MACRO_CHECKSUM),
+            ("subxt-macro", "0.51.1", SUBXT_MACRO_CHECKSUM),
+            ("subxt", "0.51.1", SUBXT_CHECKSUM),
+        ],
+        &[
+            ("proc-macro-error2", "2.0.1", &["subxt-macro"]),
+            ("subxt-macro", "0.51.1", &["subxt"]),
+        ],
+    )
+}
+
+// This dependency is active in the Subxt adapter; it is not a dormant exception.
+// A compatible upstream release must migrate scale-info-legacy's string type.
+// See supply-smallstr.md for the retained raw warning and dependency evidence.
+fn smallstr_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<()> {
+    reviewed_maintenance_chain(
+        packages,
+        "smallstr",
+        &[
+            ("smallstr", "0.3.1", SMALLSTR_CHECKSUM),
+            ("scale-info-legacy", "0.4.2", SCALE_INFO_LEGACY_CHECKSUM),
+            ("frame-decode", "0.18.1", FRAME_DECODE_CHECKSUM),
+            ("subxt", "0.51.1", SUBXT_CHECKSUM),
+            ("subxt-metadata", "0.51.1", SUBXT_METADATA_CHECKSUM),
+        ],
+        &[
+            ("smallstr", "0.3.1", &["scale-info-legacy"]),
+            (
+                "scale-info-legacy",
+                "0.4.2",
+                &["frame-decode", "subxt", "subxt-metadata"],
+            ),
+        ],
+    )
+}
+
+fn reviewed_maintenance_chain(
+    packages: &toml_edit::ArrayOfTables,
+    child: &str,
+    identities: &[(&str, &str, &str)],
+    edges: &[(&str, &str, &[&str])],
+) -> Result<()> {
     if !packages
         .iter()
-        .any(|package| package["name"].as_str() == Some("proc-macro-error2"))
+        .any(|package| package["name"].as_str() == Some(child))
     {
         return Ok(());
     }
-    for (name, version, checksum) in [
-        ("proc-macro-error2", "2.0.1", PROC_MACRO_CHECKSUM),
-        ("subxt-macro", "0.51.1", SUBXT_MACRO_CHECKSUM),
-        ("subxt", "0.51.1", SUBXT_CHECKSUM),
-    ] {
+    for &(name, version, checksum) in identities {
         let matching: Vec<_> = packages
             .iter()
             .filter(|package| package["name"].as_str() == Some(name))
@@ -183,10 +270,7 @@ fn proc_macro_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<(
             "reviewed maintenance dependency identity changed: {name}"
         );
     }
-    for (child, version, parent) in [
-        ("proc-macro-error2", "2.0.1", "subxt-macro"),
-        ("subxt-macro", "0.51.1", "subxt"),
-    ] {
+    for &(child, version, expected_parents) in edges {
         let mut parents = Vec::new();
         for package in packages {
             let Some(dependencies) = package.get("dependencies") else {
@@ -208,8 +292,11 @@ fn proc_macro_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<(
                 }
             }
         }
+        parents.sort_unstable();
+        let mut expected_parents = expected_parents.to_vec();
+        expected_parents.sort_unstable();
         ensure!(
-            parents.as_slice() == [parent],
+            parents == expected_parents,
             "reviewed maintenance parent changed for {child}: {parents:?}"
         );
     }
@@ -315,13 +402,17 @@ fn audit_finding(value: &Json, kind: Option<&str>, locks: &BTreeSet<Identity>) -
         );
         return Ok(true);
     }
-    if id == PROC_MACRO_ADVISORY {
+    if let Some(rule) = REVIEWED_MAINTENANCE.iter().find(|rule| rule.advisory == id) {
+        object_keys(
+            value,
+            &["kind", "package", "advisory", "affected", "versions"],
+        )?;
         ensure!(
             kind == Some("unmaintained")
-                && identity.name == "proc-macro-error2"
-                && identity.version == "2.0.1"
+                && identity.name == rule.name
+                && identity.version == rule.version
                 && identity.source.as_deref() == Some(SOURCE)
-                && identity.checksum.as_deref() == Some(PROC_MACRO_CHECKSUM),
+                && identity.checksum.as_deref() == Some(rule.checksum),
             "reviewed maintenance finding identity or classification changed"
         );
         object_keys(&value["versions"], &["patched", "unaffected"])?;
@@ -362,15 +453,15 @@ fn audit_finding(value: &Json, kind: Option<&str>, locks: &BTreeSet<Identity>) -
                 && advisory["aliases"] == json!([])
                 && advisory["related"] == json!([])
                 && advisory["references"] == json!([])
-                && advisory["date"] == "2026-06-07"
-                && advisory["title"] == "proc-macro-error2 is unmaintained"
-                && advisory["url"] == "https://github.com/GnomedDev/proc-macro-error-2/issues/17"
+                && advisory["date"] == rule.date
+                && advisory["title"] == rule.title
+                && advisory["url"] == rule.url.map_or(Json::Null, |url| json!(url))
                 && advisory["license"] == "CC0-1.0"
                 && advisory["expect-deleted"] == json!(false)
                 && format!(
                     "{:x}",
                     Sha256::digest(field(advisory, "description")?.as_bytes())
-                ) == PROC_MACRO_DESCRIPTION,
+                ) == rule.description,
             "reviewed maintenance advisory scope or severity changed"
         );
         return Ok(false);
@@ -973,6 +1064,208 @@ mod tests {
         ))?;
         report["warnings"]["unmaintained"] = json!([finding]);
         Ok(report)
+    }
+
+    fn smallstr_lock() -> String {
+        format!(
+            "{}\n[[package]]\nname = 'smallstr'\nversion = '0.3.1'\nsource = '{SOURCE}'\nchecksum = '{SMALLSTR_CHECKSUM}'\n\n[[package]]\nname = 'frame-decode'\nversion = '0.18.1'\nsource = '{SOURCE}'\nchecksum = '{FRAME_DECODE_CHECKSUM}'\ndependencies = ['scale-info-legacy']\n\n[[package]]\nname = 'scale-info-legacy'\nversion = '0.4.2'\nsource = '{SOURCE}'\nchecksum = '{SCALE_INFO_LEGACY_CHECKSUM}'\ndependencies = ['smallstr']\n\n[[package]]\nname = 'subxt'\nversion = '0.51.1'\nsource = '{SOURCE}'\nchecksum = '{SUBXT_CHECKSUM}'\ndependencies = ['scale-info-legacy', 'subxt-metadata']\n\n[[package]]\nname = 'subxt-metadata'\nversion = '0.51.1'\nsource = '{SOURCE}'\nchecksum = '{SUBXT_METADATA_CHECKSUM}'\ndependencies = ['scale-info-legacy']\n",
+            lock()
+        )
+    }
+
+    fn smallstr_report() -> Result<Json> {
+        let mut report = report();
+        report["lockfile"]["dependency-count"] = json!(6);
+        // Actual warning from hosted run 38734177643, artifact 11973500903.
+        // The independent raw fixture includes the original advisory text.
+        let finding: Json =
+            serde_json::from_str(include_str!("../tests/fixtures/supply/smallstr.json"))?;
+        report["warnings"]["unmaintained"] = json!([finding]);
+        Ok(report)
+    }
+
+    #[test]
+    fn active_smallstr_notice_is_retained_without_a_dormancy_claim() -> Result<()> {
+        let locks = lock_identities(&smallstr_lock())?;
+        let report = smallstr_report()?;
+        let original = report.clone();
+        ensure!(
+            validate_audit(&report, &locks)?
+                == Audit {
+                    exceptions: 1,
+                    maintenance: 1,
+                    failing_status: true,
+                }
+        );
+        ensure!(report == original, "classification mutated the raw audit");
+        check_graph(
+            "rtao v0.1.0\nsubxt v0.51.1\nsubxt-metadata v0.51.1\nframe-decode v0.18.1\nscale-info-legacy v0.4.2\nsmallstr v0.3.1\n",
+            &["rtao".into()],
+        )?;
+        #[cfg(unix)]
+        {
+            let terminal = format!(
+                "      Loaded 1300 security advisories\n    Scanning Cargo.lock for vulnerabilities (6 crate dependencies)\nID:        {ADVISORY}\nID:        {SMALLSTR_ADVISORY}\nerror: 1 denied warning found!\n"
+            );
+            ensure!(
+                raw_audit(1, &terminal, &report)?
+                    .validate(&locks)?
+                    .maintenance
+                    == 1
+            );
+            ensure!(
+                raw_audit(1, &terminal.replace(SMALLSTR_ADVISORY, ""), &report)?
+                    .validate(&locks)
+                    .is_err()
+            );
+            let mut only_maintenance = report.clone();
+            only_maintenance["warnings"]["unsound"] = json!([]);
+            let terminal = terminal
+                .replace(&format!("ID:        {ADVISORY}\n"), "")
+                .replace("error: 1 denied warning found!\n", "");
+            ensure!(
+                raw_audit(0, &terminal, &only_maintenance)?.validate(&locks)?
+                    == Audit {
+                        exceptions: 0,
+                        maintenance: 1,
+                        failing_status: false,
+                    }
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn smallstr_notice_cannot_hide_a_vulnerability_or_new_advisory() -> Result<()> {
+        let locks = lock_identities(&smallstr_lock())?;
+        let original = smallstr_report()?;
+        let mut vulnerability = original.clone();
+        let mut finding = vulnerability["warnings"]["unmaintained"][0].take();
+        finding
+            .as_object_mut()
+            .context("fixture warning is not an object")?
+            .remove("kind");
+        finding["advisory"]["informational"] = Json::Null;
+        vulnerability["warnings"]["unmaintained"] = json!([]);
+        vulnerability["vulnerabilities"] = json!({"found": true, "count": 1, "list": [finding]});
+        ensure!(validate_audit(&vulnerability, &locks).is_err());
+        for kind in ["unsound", "notice"] {
+            let mut report = original.clone();
+            let mut warning = report["warnings"]["unmaintained"][0].take();
+            warning["kind"] = json!(kind);
+            warning["advisory"]["informational"] = json!(kind);
+            report["warnings"]["unmaintained"] = json!([]);
+            report["warnings"][kind] = json!([warning]);
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        let mut new_advisory = original;
+        new_advisory["warnings"]["unmaintained"][0]["advisory"]["id"] = json!("RUSTSEC-2099-9999");
+        ensure!(validate_audit(&new_advisory, &locks).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn smallstr_notice_rejects_changed_identity_even_when_audited() -> Result<()> {
+        let locks = lock_identities(&smallstr_lock())?;
+        let original = smallstr_report()?;
+        for (key, value) in [
+            ("name", "another-package"),
+            ("version", "0.3.2"),
+            ("source", "git+https://example.test/smallstr#1234"),
+            ("checksum", "changed-checksum"),
+        ] {
+            let mut report = original.clone();
+            let finding = &mut report["warnings"]["unmaintained"][0];
+            let old = json_identity(&finding["package"])?;
+            finding["package"][key] = json!(value);
+            if key == "name" {
+                finding["advisory"]["package"] = json!(value);
+            }
+            let mut updated_locks = locks.clone();
+            updated_locks.remove(&old);
+            updated_locks.insert(json_identity(&finding["package"])?);
+            ensure!(validate_audit(&report, &updated_locks).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn smallstr_notice_rejects_scope_severity_and_advisory_changes() -> Result<()> {
+        let locks = lock_identities(&smallstr_lock())?;
+        let original = smallstr_report()?;
+        for (key, value) in [
+            (
+                "cvss",
+                json!("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"),
+            ),
+            ("categories", json!(["denial-of-service"])),
+            ("aliases", json!(["CVE-2099-1234"])),
+            ("description", json!("A newly reported correctness issue")),
+            ("date", json!("2026-07-23")),
+            ("url", json!("https://example.test/new-evidence")),
+            ("severity", json!("high")),
+        ] {
+            let mut report = original.clone();
+            report["warnings"]["unmaintained"][0]["advisory"][key] = value;
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        for (key, value) in [
+            ("patched", json!([">=0.3.2"])),
+            ("unaffected", json!(["<0.3.1"])),
+        ] {
+            let mut report = original.clone();
+            report["warnings"]["unmaintained"][0]["versions"][key] = value;
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        let mut missing_scope = original.clone();
+        missing_scope["warnings"]["unmaintained"][0]
+            .as_object_mut()
+            .context("fixture warning is not an object")?
+            .remove("affected");
+        ensure!(validate_audit(&missing_scope, &locks).is_err());
+        let mut report = original;
+        report["warnings"]["unmaintained"][0]["affected"] =
+            json!({"functions": {"smallstr::SmallString::push_str": ["*"]}});
+        ensure!(validate_audit(&report, &locks).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn smallstr_maintenance_chain_requires_exact_parents_and_identities() -> Result<()> {
+        let original = smallstr_lock();
+        lock_identities(&original)?;
+        for changed in [
+            original.replace("0.3.1", "0.3.2"),
+            original.replace("0.4.2", "0.4.3"),
+            original.replace("0.51.1", "0.51.2"),
+            original.replace(SMALLSTR_CHECKSUM, "changed"),
+            original.replace(SCALE_INFO_LEGACY_CHECKSUM, "changed"),
+            original.replace(SUBXT_METADATA_CHECKSUM, "changed"),
+            original.replace(FRAME_DECODE_CHECKSUM, "changed"),
+            original.replace(SUBXT_CHECKSUM, "changed"),
+            original.replace(SOURCE, "git+https://example.test/changed#1234"),
+            original.replace("dependencies = ['smallstr']", "dependencies = []"),
+            original.replace(
+                "dependencies = ['smallstr']",
+                "dependencies = ['smallstr 0.3.2']",
+            ),
+            original.replace("dependencies = ['scale-info-legacy']", "dependencies = []"),
+            original.replace(
+                "['scale-info-legacy', 'subxt-metadata']",
+                "['subxt-metadata']",
+            ),
+            format!(
+                "{original}\n[[package]]\nname = 'new-parent'\nversion = '1.0.0'\ndependencies = ['smallstr']\n"
+            ),
+            format!(
+                "{original}\n[[package]]\nname = 'new-parent'\nversion = '1.0.0'\ndependencies = ['scale-info-legacy']\n"
+            ),
+        ] {
+            ensure!(lock_identities(&changed).is_err());
+        }
+        // Removal does not need an exception, and does not weaken unrelated gates.
+        lock_identities(&lock())?;
+        Ok(())
     }
 
     #[test]

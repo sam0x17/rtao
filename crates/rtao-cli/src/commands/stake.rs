@@ -750,7 +750,7 @@ async fn list(
         let ordered = groups
             .into_iter()
             .map(|(netuid, mut records)| {
-                records.sort_by(|left, right| right.0.cmp(&left.0));
+                records.sort_by_key(|row| std::cmp::Reverse(row.0));
                 let rao = valuation
                     .positions
                     .iter()

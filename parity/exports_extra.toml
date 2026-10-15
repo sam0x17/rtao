@@ -1,1304 +1,1827 @@
-# Explicit API completeness decisions; pending rows do not claim behavior parity.
+# Reviewed public API homes. Decisions identify typed/language replacements; they do not certify executed oracle parity.
+# Remaining pending rows require substantive API or behavior reconciliation.
 schema = 1
 
 [[export]]
 python = "bittensor.basket_index.EPOCH_BLOCK"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::EPOCH_BLOCK"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.GENERATED_BLOCK"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::GENERATED_BLOCK"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.DisplayPricing"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::DisplayPricing"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.age_days"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::age_days"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.fund_pricing"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::fund_pricing"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.index_level"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::index_level"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.normalize_position"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::normalize_position"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.normalize_positions"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::normalize_positions"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.spot_beta_price"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::spot_beta_price"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.stake_value"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::stake_value"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.staker_yield"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::staker_yield"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.basket_index.tr_index_level"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::root_helpers::basket_index::tr_index_level"
+reason = "Reviewed public CLI-library counterpart using typed Fund/DisplayPricing inputs and immutable pinned tables. This display-only API lives in rtao_cli, not the rtao facade; chain pricing takes precedence over frozen/provisional fallbacks. The fixtures cover sample selection, absent baselines, migration/yield clamping and shared live levels."
 source = "sdk/python/bittensor/basket_index.py"
+pinning_tests = [
+  "rtao_cli::root_helpers::basket_index::tests::frozen_baseline_subtracts_migration_rate_and_clamps_negative_delta",
+  "rtao_cli::root_helpers::basket_index::tests::frozen_series_uses_previous_sample_and_latest_default",
+  "rtao_cli::root_helpers::basket_index::tests::unknown_fund_preserves_position_value_and_uses_raw_spot_yield",
+  "rtao_cli::root_helpers::basket_index::tests::runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels",
+]
 
 [[export]]
 python = "bittensor.error_descriptions.DESCRIPTIONS"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_catalog::CHAIN_ERRORS; rtao_catalog::ChainErrorSpec::{name,description}"
+reason = "Immutable typed error records replace the mutable Python dictionary. All 390 full explanatory texts come from the authenticated Python description assembly; these are distinct from runtime metadata error docs."
 source = "sdk/python/bittensor/error_descriptions/__init__.py"
+pinning_tests = [
+  "rtao_catalog::specs::all_semantic_and_chain_error_records_preserve_documentation_and_sources",
+]
 
 [[export]]
 python = "bittensor.evm.ETH_DERIVATION_PATH"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::ETH_DERIVATION_PATH"
+reason = "Same pinned BIP-44 path, represented by a public string constant."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::private_key_one_and_bip44_mnemonic_have_independent_known_addresses",
+]
 
 [[export]]
 python = "bittensor.evm.EVM_NETWORKS"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::evm_networks"
+reason = "Public preset-map factory replaces the Python dictionary. Direct fixtures exercise its exact chain facts, per-call environment resolution and independent returned values. Source coverage is authored; hosted execution remains pending."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::networks::tests::exported_preset_map_has_exact_chain_facts_and_independent_values",
+  "rtao_evm::networks::tests::local_environment_is_injectable_and_empty_means_unset",
+]
 
 [[export]]
 python = "bittensor.evm.PRECOMPILES"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::PRECOMPILES"
+reason = "Immutable ordered slice replaces the Python dictionary and preserves all 21 registered catalog entries and embedded ABI sources."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::catalog_embeds_every_registered_abi_and_runtime_index",
+]
 
 [[export]]
 python = "bittensor.evm.STANDARD_PRECOMPILES"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::STANDARD_PRECOMPILES"
+reason = "Immutable name/index pairs replace the Python dictionary with the same pinned entries and indices."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::catalog_embeds_every_registered_abi_and_runtime_index",
+]
 
 [[export]]
 python = "bittensor.evm.WEI_PER_TAO"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::WEI_PER_TAO"
+reason = "Public constant preserves the exact 10^18 conversion factor. Native TAO remains checked u64 rao, while wei arithmetic uses U256."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::money::tests::conversions_truncate_only_sub_rao_dust_and_check_native_limits",
+]
 
 [[export]]
 python = "bittensor.evm.ContractArtifact"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::ContractArtifact"
+reason = "The public ABI field retains ordered typed AbiItem entries, preserving source order, interleaved overloads, duplicates and caller edits. Constructors and bare-name lookup use the first source match. Missing ABI/bytecode stays explicit. These native typed fields replace Python dictionaries without treating Alloy grouped-map iteration as source order."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::contracts::tests::function_enumeration_preserves_source_order_interleaved_overloads_and_duplicates",
+  "rtao_evm::contracts::tests::hardhat_foundry_abi_array_and_bin_artifacts_share_constructor_semantics",
+  "rtao_evm::contracts::tests::bytecode_only_and_abi_only_artifacts_keep_missing_fields_explicit",
+]
 
 [[export]]
 python = "bittensor.evm.EvmKeyInfo"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::EvmKeyInfo"
+reason = "Public metadata record uses PathBuf for the path. Readers require a structurally valid V3 keystore, a stricter input policy than Python's address-only metadata inspection; this row identifies the typed API home rather than equal malformed-file acceptance."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::paths_reject_escape_and_list_sorted_metadata_without_unlocking",
+]
 
 [[export]]
 python = "bittensor.evm.EvmNetwork"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::EvmNetwork"
+reason = "Public typed record preserves network name, chain ID, RPC URL, currency symbol and decimals with checked integer fields. Environment is evaluated at function call rather than Python import."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::networks::tests::presets_and_known_substrate_endpoints_match_pinned_facts",
+  "rtao_evm::networks::tests::local_environment_is_injectable_and_empty_means_unset",
+]
 
 [[export]]
 python = "bittensor.evm.EvmRpc"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::EvmRpc"
+reason = "Asynchronous typed equivalent with bounded request/response acquisition, explicit TLS provider, response correlation and no automatic submission replay. Typed addresses/quantities replace Python strings and arbitrary integers."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::rpc::tests::typed_methods_send_exact_pinned_parameters_and_share_ids",
+  "rtao_evm::rpc::tests::invalid_envelopes_and_error_shapes_are_rejected",
+  "rtao_evm::rpc::tests::every_submission_response_failure_retains_the_exact_attempted_hash",
+  "rtao_evm::rpc::tests::advertised_and_chunked_response_limits_and_request_bounds_are_enforced",
+]
 
 [[export]]
 python = "bittensor.evm.EvmRpcError"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::EvmError::Rpc"
+reason = "Structured public error variant preserves endpoint code, message and data; Rust error matching replaces a separate Python exception class."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::rpc::tests::invalid_envelopes_and_error_shapes_are_rejected",
+]
 
 [[export]]
 python = "bittensor.evm.EvmTxPreview"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::EvmTxPreview"
+reason = "Typed addresses, U256 values and byte vectors replace strings and Python integers; JSON and native-balance accessors expose the preview fields, and signing rechecks identity/chain/value/fee."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::transactions::tests::official_eip155_signed_transaction_vector",
+  "rtao_evm::transactions::tests::signing_rechecks_sender_chain_native_value_and_fee",
+]
 
 [[export]]
 python = "bittensor.evm.Precompile"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::Precompile"
+reason = "Public catalog entry exposes address, grouped ABI interoperability, ordered source function enumeration, exact/bare-name lookup and encoding. Function lists preserve embedded ABI order including interleaved overloads and duplicates. Independent source review and authored wire/parser fixtures; hosted execution remains pending."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::catalog_function_enumeration_matches_each_raw_abi_array_order",
+  "rtao_evm::precompiles::tests::function_enumeration_keeps_interleaved_overloads_duplicates_and_first_lookup",
+  "rtao_evm::precompiles::tests::catalog_roles_and_deprecations_match_pinned_dispatch_semantics",
+]
 
 [[export]]
 python = "bittensor.evm.association_proof"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::association_proof"
+reason = "Typed native hotkey and EVM signing-account inputs preserve the SCALE-u64 plus EIP-191 ownership domain and return prefixed signature text with its block number."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::transactions::tests::association_uses_scale_u64_then_sixty_four_byte_eip191_domain",
+]
 
 [[export]]
 python = "bittensor.evm.balance_to_wei"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::balance_to_wei"
+reason = "Exact TAO-only conversion from the approved native u64 rao domain into U256 wei; cross-subnet balances are rejected."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::money::tests::conversions_truncate_only_sub_rao_dust_and_check_native_limits",
+]
 
 [[export]]
 python = "bittensor.evm.caller_role"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::caller_role"
+reason = "Same documented optional per-function role lookup, expressed as Option<&str> over the pinned catalog."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::catalog_roles_and_deprecations_match_pinned_dispatch_semantics",
+]
 
 [[export]]
 python = "bittensor.evm.create_evm_key"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::create_evm_key"
+reason = "Direct production-path fixture creates independent random EVM accounts, stores and unlocks encrypted V3 files, and preserves existing native wallet keys. It supplements the import-path storage fixtures. This records authored source coverage without a current hosted execution claim."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::public_creation_stores_fresh_independent_encrypted_accounts_and_preserves_native_keys",
+  "rtao_evm::keys::tests::public_import_encrypts_and_unlocks_without_exposing_plaintext_on_disk",
+]
 
 [[export]]
 python = "bittensor.evm.decode_result"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::decode_result; rtao_evm::precompiles::decode_result_bytes"
+reason = "Typed Alloy function ABI replaces the Python dictionary; decoded JSON retains full ABI integer widths, bytes, arrays and tuples. Bounded decoding rejects offset/amplification inputs."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::dynamic_results_keep_bytes_tuples_and_full_width_integers",
+  "rtao_evm::precompiles::tests::decode_refuses_huge_arrays_and_offset_amplification_before_allocation",
+]
 
 [[export]]
 python = "bittensor.evm.describe_arguments"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::describe_arguments"
+reason = "The public preview truncates paired inputs with Python zip semantics while encode_call still enforces arity. Python scalar/container str and nested string repr preserve the raw preview; coercion uses Python whitespace and bounded native ABI values. Rao integers stay exact and the nine-place explanatory amount uses correctly rounded Python binary64 division/formatting, including u64::MAX. Source and regression fixtures are authored; hosted execution is pending."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::previews_follow_python_zip_repr_and_preserve_raw_strings",
+  "rtao_evm::precompiles::tests::coerced_strings_use_python_text_and_whitespace_with_bounded_containers",
+  "rtao_evm::precompiles::tests::previews_use_exact_native_amounts_and_ss58",
+  "rtao_evm::precompiles::tests::short_bytes32_previews_preserve_raw_input_without_padded_key_annotation",
+]
 
 [[export]]
 python = "bittensor.evm.encode_call"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::encode_call"
+reason = "Typed Alloy function ABI replaces dictionaries. Solidity integer widths are retained independently of the checked native monetary fields, and the resulting selector/arguments follow standard ABI encoding."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::ethereum_transfer_vector_has_known_selector_and_exact_words",
+  "rtao_evm::precompiles::tests::native_amounts_are_u64_but_generic_contract_integers_keep_256_bits",
+]
 
 [[export]]
 python = "bittensor.evm.encode_deploy"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::encode_deploy"
+reason = "Appends constructor ABI encoding without a selector to validated bounded init bytecode; typed constructor arguments replace Python ABI dictionaries."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::contracts::tests::hardhat_foundry_abi_array_and_bin_artifacts_share_constructor_semantics",
+  "rtao_evm::contracts::tests::constructor_dynamic_tuple_array_uses_abi_offsets_without_a_selector",
+]
 
 [[export]]
 python = "bittensor.evm.evm_network"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::evm_network; rtao_evm::networks::evm_network_with_env"
+reason = "Same preset/known-WebSocket/direct-URL resolution with an injectable resolver. Local environment is deliberately read per call rather than frozen at Python import."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::networks::tests::presets_and_known_substrate_endpoints_match_pinned_facts",
+  "rtao_evm::networks::tests::local_environment_is_injectable_and_empty_means_unset",
+  "rtao_evm::networks::tests::direct_urls_and_unknown_websocket_urls_preserve_identity",
+]
 
 [[export]]
 python = "bittensor.evm.export_evm_key"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::export_evm_key"
+reason = "Public encrypted-JSON export preserves metadata while validating V3 structure. Python can export arbitrary parsed JSON; this stricter file-validation policy is recorded explicitly and does not claim equal malformed-input acceptance."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::paths_reject_escape_and_list_sorted_metadata_without_unlocking",
+  "rtao_evm::keys::tests::importing_keystore_uses_distinct_unlock_and_storage_passwords",
+]
 
 [[export]]
 python = "bittensor.evm.function_deprecation"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::function_deprecation"
+reason = "Same optional per-function warning lookup over the pinned runtime dispatch semantics."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::catalog_roles_and_deprecations_match_pinned_dispatch_semantics",
+]
 
 [[export]]
 python = "bittensor.evm.get_evm_key_info"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::get_evm_key_info"
+reason = "Public metadata lookup preserves wallet/key selection and named facts. Paths and V3 structure are validated more strictly than Python address-only inspection."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::paths_reject_escape_and_list_sorted_metadata_without_unlocking",
+]
 
 [[export]]
 python = "bittensor.evm.get_precompile"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::get_precompile"
+reason = "Same exact-name catalog lookup and unknown-name refusal over immutable typed precompile records."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::precompiles::tests::catalog_embeds_every_registered_abi_and_runtime_index",
+]
 
 [[export]]
 python = "bittensor.evm.h160_to_ss58"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::h160_to_ss58; rtao_evm::addresses::h160_to_ss58_with_prefix"
+reason = "Same hashed EVM mirror mapping. Rust exposes the optional explicit SS58 prefix through a separate function rather than a keyword parameter."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::addresses::tests::pinned_python_mirrors_and_native_truncation",
+]
 
 [[export]]
 python = "bittensor.evm.import_evm_key"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::import_evm_key"
+reason = "Typed ImportSource enforces exactly one raw-key, mnemonic or encrypted-keystore source; authenticated import and separate unlock/storage passwords precede destination publication."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::private_key_one_and_bip44_mnemonic_have_independent_known_addresses",
+  "rtao_evm::keys::tests::public_import_encrypts_and_unlocks_without_exposing_plaintext_on_disk",
+  "rtao_evm::keys::tests::importing_keystore_uses_distinct_unlock_and_storage_passwords",
+  "rtao_evm::keys::tests::imported_keystore_authentication_precedes_any_destination_write",
+]
 
 [[export]]
 python = "bittensor.evm.is_h160"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::is_h160"
+reason = "Preserves Python's historical textual acceptance, including its short-decoded whitespace shape; strict typed-wire address parsing remains a separate API."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::addresses::tests::typed_wire_addresses_refuse_pythons_short_decoded_shape",
+]
 
 [[export]]
 python = "bittensor.evm.list_evm_keys"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::list_evm_keys"
+reason = "Sorted public key metadata listing without unlocking. Invalid/non-V3 records are excluded or refused under the stricter validated-keystore policy rather than accepted as arbitrary address-only JSON."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::paths_reject_escape_and_list_sorted_metadata_without_unlocking",
+]
 
 [[export]]
 python = "bittensor.evm.load_artifact"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::load_artifact"
+reason = "Public bounded regular-file loader accepts compiler JSON, ABI arrays and raw init bytecode. Typed ABI parsing and constructor encoding have fixture coverage; raw function ordering remains tracked on ContractArtifact."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::contracts::tests::hardhat_foundry_abi_array_and_bin_artifacts_share_constructor_semantics",
+  "rtao_evm::contracts::tests::file_loader_uses_the_shared_bounded_reader_for_a_real_vendored_abi",
+]
 
 [[export]]
 python = "bittensor.evm.normalize_h160"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::normalize_h160"
+reason = "Same historical Python text normalization and accepted syntax; typed-wire parsing separately rejects malformed decoded widths."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::addresses::tests::typed_wire_addresses_refuse_pythons_short_decoded_shape",
+]
 
 [[export]]
 python = "bittensor.evm.prepare_transaction"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::prepare_transaction"
+reason = "Public asynchronous typed preparation preserves estimate, gas-price, nonce and chain-ID request ordering; native value/fee bounds are checked during preparation, while sender/account identity is checked later by signing."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::transactions::tests::prepare_uses_exact_rpc_order_and_stops_after_failed_estimate",
+]
 
 [[export]]
 python = "bittensor.evm.pubkey_to_ss58"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::pubkey_to_ss58; rtao_evm::addresses::pubkey_to_ss58_with_prefix"
+reason = "Typed raw public-key bytes replace Python-style hex text; optional explicit prefix is a separate function. Account bytes and SS58 mappings retain pinned vectors."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::addresses::tests::pinned_python_mirrors_and_native_truncation",
+  "rtao_evm::addresses::tests::typed_wire_addresses_refuse_pythons_short_decoded_shape",
+]
 
 [[export]]
 python = "bittensor.evm.send_transaction"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::send_transaction"
+reason = "Typed result replaces the Python result dictionary. The implementation signs/submits once, and unresolved submission/receipt failures retain the exact attempted hash instead of replaying the transaction."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::transactions::tests::official_eip155_signed_transaction_vector",
+  "rtao_evm::transactions::tests::send_preserves_recovery_hash_on_endpoint_error_without_retransmitting",
+  "rtao_evm::rpc::tests::every_submission_response_failure_retains_the_exact_attempted_hash",
+]
 
 [[export]]
 python = "bittensor.evm.ss58_to_h160_truncated"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::ss58_to_h160_truncated"
+reason = "Same truncation of the first 20 native-account bytes, retaining the distinction from the hashed EVM mirror mapping."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::addresses::tests::pinned_python_mirrors_and_native_truncation",
+]
 
 [[export]]
 python = "bittensor.evm.ss58_to_pubkey"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::ss58_to_pubkey"
+reason = "Same prefixed public-key text obtained from decoded SS58 account bytes."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::addresses::tests::pinned_python_mirrors_and_native_truncation",
+]
 
 [[export]]
 python = "bittensor.evm.unlock_evm_key"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::unlock_evm_key"
+reason = "Typed options and explicit resolver replace keyword inputs/implicit prompting. Bounded V3 authentication and KDF checks return an Alloy signing account while secret buffers are guarded."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::keys::tests::public_import_encrypts_and_unlocks_without_exposing_plaintext_on_disk",
+  "rtao_evm::keys::tests::importing_keystore_uses_distinct_unlock_and_storage_passwords",
+  "rtao_evm::keys::tests::decrypts_independent_ethereum_v3_scrypt_pbkdf2_and_wrapping_iv_vectors",
+]
 
 [[export]]
 python = "bittensor.evm.wei_to_balance"
-home = "rtao_evm"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_evm::wei_to_balance"
+reason = "Truncates sub-rao wei dust and refuses balances outside the approved native u64 domain; generic Solidity/U256 values remain separate."
 source = "sdk/python/bittensor/evm/__init__.py"
+pinning_tests = [
+  "rtao_evm::money::tests::conversions_truncate_only_sub_rao_dust_and_check_native_limits",
+]
 
 [[export]]
 python = "bittensor.http_auth.DEFAULT_ALLOWED_SKEW"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::DEFAULT_ALLOWED_SKEW"
+reason = "Public Duration constant preserves the pinned default in explicit time units: maximum age 10 seconds and allowed skew 2 seconds. Python numeric seconds become Duration values; no runtime API is missing."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.DEFAULT_MAX_AGE"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::DEFAULT_MAX_AGE"
+reason = "Public Duration constant preserves the pinned default in explicit time units: maximum age 10 seconds and allowed skew 2 seconds. Python numeric seconds become Duration values; no runtime API is missing."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.HEADER_CRYPTO"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::HEADER_CRYPTO"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.HEADER_HOTKEY"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::HEADER_HOTKEY"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.HEADER_NONCE"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::HEADER_NONCE"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.HEADER_RECEIVER"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::HEADER_RECEIVER"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.HEADER_SIGNATURE"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::HEADER_SIGNATURE"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.HEADER_VERSION"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::HEADER_VERSION"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.PROTOCOL"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::PROTOCOL"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.http_auth.VERSION"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_btauth::VERSION"
+reason = "Public protocol/header constant preserves the exact pinned string and casing; signing and verification use this same value."
 source = "sdk/python/bittensor/http_auth.py"
-
-[[export]]
-python = "bittensor.http_auth.BadSignature"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
-source = "sdk/python/bittensor/http_auth.py"
-
-[[export]]
-python = "bittensor.http_auth.MalformedAuth"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
-source = "sdk/python/bittensor/http_auth.py"
-
-[[export]]
-python = "bittensor.http_auth.ReplayedRequest"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
-source = "sdk/python/bittensor/http_auth.py"
-
-[[export]]
-python = "bittensor.http_auth.StaleRequest"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
-source = "sdk/python/bittensor/http_auth.py"
-
-[[export]]
-python = "bittensor.http_auth.WrongReceiver"
-home = "rtao_btauth"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
-source = "sdk/python/bittensor/http_auth.py"
+pinning_tests = [
+  "rtao_btauth::conformance::test_round_trip",
+  "rtao_btauth::conformance::test_golden_payload_bytes",
+  "rtao_btauth::conformance::fractional_freshness_boundaries_and_messages_match_python_general_format",
+]
 
 [[export]]
 python = "bittensor.intents.ALL"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_primitives::Amount::All"
+reason = "Python's string sentinel is represented by the typed All variant; Amount::parse and JSON input accept trimmed case-insensitive all, and only opted-in fields can resolve it. No separate mutable string constant is needed."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_primitives::money::tests::native_balance_wire_and_intent_currency_resolution",
+  "rtao_cli::generated_commands::exact_money_keeps_native_u64_precision_exponents_and_all_policy",
+]
 
 [[export]]
 python = "bittensor.intents.OWNER_HYPERPARAMETERS"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_catalog::owner_map::OWNER_HYPERPARAMETERS"
+reason = "Immutable generated typed owner-setter table replaces the Python dictionary; owner_parameter/to_raw look up its authenticated setter, argument and range metadata."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::hyperparameters::tests::tools_normalize_values_and_preserve_native_fixed_widths",
+  "rtao_intents::hyperparameters::tests::real_builds_keep_alpha_partner_and_shape_boolean_enum_and_fixed_calls",
+]
 
 [[export]]
 python = "bittensor.intents.PROXY_TYPES"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::proxy::PROXY_TYPES"
+reason = "Immutable public string array preserves the pinned names/order; narrow validation and native discriminant construction share this source."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::proxy::tests::proxy_choices_validate_exact_spelling_with_python_diagnostic",
+  "rtao_intents::proxy::tests::proxy_builds_match_native_variant_and_integer_boundaries",
+]
 
 [[export]]
 python = "bittensor.intents.REGISTRY"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_catalog::INTENTS; rtao_intents::{Registry,interface_metadata}"
+reason = "Python's mutable import-populated class dictionary is represented by the immutable authenticated catalog plus feature-scoped parser/metadata. Discovery retains disabled operations explicitly; runtime mutation of the built-in registry is not a Rust API."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_cli::generated_commands::advertisement_distinguishes_real_behavior_and_compiled_feature_availability",
+  "rtao_intents::registry::tests::unknown_tools_fail_before_any_client_or_key_is_available",
+]
 
 [[export]]
 python = "bittensor.intents.UNBOUNDED"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_primitives::Spend::Unbounded"
+reason = "The Python singleton becomes the Unbounded enum variant. Policy checks distinguish unknown spend from bounded native TAO and no spend, without sentinel object identity."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::policy_equivalence::all_free_tao_keeps_python_unbounded_spend_while_core_exact_constructor_is_bounded",
+]
 
 [[export]]
 python = "bittensor.intents.AddCollateral"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AddCollateral"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.AddProxy"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AddProxy"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.AddStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AddStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.AddStakeLimit"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AddStakeLimit"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.AnnounceColdkeySwap"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AnnounceColdkeySwap"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.AssociateEvmKey"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AssociateEvmKey"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.AssociateHotkey"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AssociateHotkey"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.Batch"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::Batch"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.BurnedRegister"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::BurnedRegister"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ClaimRoot"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ClaimRoot"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ClaimRootWithHotkey"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ClaimRootWithHotkey"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ClearColdkeySwapAnnouncement"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ClearColdkeySwapAnnouncement"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.CommitWeights"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::CommitWeights"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ContributeCrowdloan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ContributeCrowdloan"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.CreateCrowdloan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::CreateCrowdloan"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.CreatePureProxy"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::CreatePureProxy"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.DecreaseTake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::DecreaseTake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.DisputeColdkeySwap"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::DisputeColdkeySwap"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.DissolveCrowdloan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::DissolveCrowdloan"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.EvmWithdraw"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::EvmWithdraw"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ExecuteProxyAnnounced"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ExecuteProxyAnnounced"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.FinalizeCrowdloan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::FinalizeCrowdloan"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.FundEvmKey"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::FundEvmKey"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.IncreaseTake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::IncreaseTake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.Intent"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_tx::{Intent,IntentInterface,DynIntent}"
+reason = "The Python ABC is split into typed metadata, behavior and object-safe dynamic traits. Applications can implement custom Rust intents and execute them directly; generated JSON dispatch remains a closed catalog and does not promise arbitrary Python class registration."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::executor::plan_and_preflight_do_not_unlock_or_change_cached_nonce",
+  "rtao_tx::executor::execute_submits_exact_reviewed_call_and_merges_success_extras",
+]
 
 [[export]]
 python = "bittensor.intents.KillPureProxy"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::KillPureProxy"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.LockStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::LockStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.Money"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_primitives::{Money,Amount,DynBalance}"
+reason = "Python's typing Union is represented by checked Rust money/amount enums and explicit conversions, rather than a runtime union object. Unit-aware constructors and JSON retain exact rao; monetary values use the approved native u64 domain (Q25, D-035), so negative and oversized Python balances are intentionally refused."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_primitives::money::tests::native_balance_wire_and_intent_currency_resolution",
+  "rtao_primitives::money::tests::native_balance_rejects_negative_and_oversized_input",
+]
 
 [[export]]
 python = "bittensor.intents.MoveLock"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MoveLock"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.MoveStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MoveStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.MoveSwapStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MoveSwapStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.MultisigApprove"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MultisigApprove"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.MultisigCancel"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MultisigCancel"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.MultisigExecute"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MultisigExecute"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.MultisigThreshold1"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::MultisigThreshold1"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.Plan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_tx::Plan"
+reason = "Typed public plan record with public facts, exact arguments, policy violations and to_json; call bytes are exposed by a read-only accessor. Planning remains free of private-key acquisition."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::executor::plan_and_preflight_do_not_unlock_or_change_cached_nonce",
+  "rtao_cli::output_contract::dry_run_payload_preserves_full_plan_and_exact_replay_command",
+]
 
 [[export]]
 python = "bittensor.intents.Policy"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_tx::Policy"
+reason = "Typed max-fee/spend/netuid/raw-call policy replaces the Python dataclass. Checks apply to semantic and dynamic execution before acquiring signing secrets."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::executor::native_policy_and_hard_blocks_refuse_before_unlocking",
+  "rtao_tx::shield_raw::matching_raw_review_does_not_bypass_the_raw_policy",
+]
 
 [[export]]
 python = "bittensor.intents.PowRegister"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::PowRegister"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RefundCrowdloan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RefundCrowdloan"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RegisterLeasedNetwork"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RegisterLeasedNetwork"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RegisterSubnet"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RegisterSubnet"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RemoveProxies"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RemoveProxies"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RemoveProxy"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RemoveProxy"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RemoveStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RemoveStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RemoveStakeLimit"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RemoveStakeLimit"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ResetAxon"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ResetAxon"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RevealWeights"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RevealWeights"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.RootRegister"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::RootRegister"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ServeAxon"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ServeAxon"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ServeAxonTls"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ServeAxonTls"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.ServePrometheus"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::ServePrometheus"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetAutoStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetAutoStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetChildkeyTake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetChildkeyTake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetChildren"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetChildren"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetCrowdloanMaxContribution"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetCrowdloanMaxContribution"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetHyperparameter"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetHyperparameter"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetIdentity"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetIdentity"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetMechanismCount"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetMechanismCount"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetMinCollateral"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetMinCollateral"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetPerpetualLock"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetPerpetualLock"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetRejectLockedAlpha"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetRejectLockedAlpha"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetRootClaimThreshold"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetRootClaimThreshold"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetSubnetEmissionEnabled"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetSubnetEmissionEnabled"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetSubnetIdentity"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetSubnetIdentity"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetTake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetTake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SetWeights"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SetWeights"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.Spend"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_primitives::Spend"
+reason = "Python's Balance/unbounded/None typing Union becomes the typed Bounded/Unbounded/None spend classification used by Policy; bounded values are checked native TAO."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::policy_equivalence::all_free_tao_keeps_python_unbounded_spend_while_core_exact_constructor_is_bounded",
+]
 
 [[export]]
 python = "bittensor.intents.StakeBurn"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::StakeBurn"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.StakeIntoBasket"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::StakeIntoBasket"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.StartCall"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::StartCall"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SwapBasket"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SwapBasket"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SwapBasketMany"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SwapBasketMany"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SwapColdkeyAnnounced"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SwapColdkeyAnnounced"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SwapHotkey"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SwapHotkey"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.SwapStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::SwapStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.TerminateLease"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::TerminateLease"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.Transfer"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::Transfer"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.TransferAll"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::TransferAll"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.TransferStake"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::TransferStake"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.TrimNullSubnetBatch"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::TrimNullSubnetBatch"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.TrimSubnet"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::TrimSubnet"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.UnstakeAll"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::UnstakeAll"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.UnstakeAllAlpha"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::UnstakeAllAlpha"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.UpdateCrowdloanCap"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::UpdateCrowdloanCap"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.UpdateCrowdloanEnd"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::UpdateCrowdloanEnd"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.UpdateCrowdloanMinContribution"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::UpdateCrowdloanMinContribution"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.UpdateSymbol"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::UpdateSymbol"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.WithdrawCrowdloan"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::WithdrawCrowdloan"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 83-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.intents.build"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::AnyIntent::from_tool; rtao_intents::Registry"
+reason = "Generated feature-scoped constructor accepts an operation name and JSON object, normalizes typed arguments and rejects unknown or disabled operations before connecting or unlocking. The op field is ignored as in Python."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::registry::tests::owned_tools_keep_constructor_normalization_and_role",
+  "rtao_intents::tests::tool_arguments_require_an_object_and_keep_unknown_op_precedence",
+  "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+]
 
 [[export]]
 python = "bittensor.intents.list_tools"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_tx::Executor::tools; rtao_cli::commands::catalog::tools_payload"
+reason = "Executor tools exposes all nine pinned Python catalog fields from authenticated records; the CLI adds documented Rust availability metadata (D-029). This is immutable catalog discovery, not reflection over user-supplied Python classes."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::executor::tools_project_all_authenticated_schemas_into_python_manifest_fields",
+  "rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata",
+]
 
 [[export]]
 python = "bittensor.intents.normalize"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_intents::weights::normalize"
+reason = "Typed UID/weight slices replace Python input containers; normalization keeps pinned rounding, finite-value checks, ordering and quantization behavior."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::weights::math::tests::ties_even_and_small_values",
+  "rtao_intents::weights::math::tests::compensated_sum_and_left_fold_have_distinct_roles",
+]
 
 [[export]]
 python = "bittensor.intents.register"
-home = "rtao_intents"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "n/a: Python class decorator; rtao_tx::{Intent,IntentInterface} and xtask generation"
+reason = "Import-time Python class decoration and schema reflection are language machinery, replaced by Rust trait implementations and authenticated source generation. Custom Rust intents execute directly; registering arbitrary runtime Python classes into the generated JSON catalog is deliberately not claimed."
 source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_tx::executor::execute_submits_exact_reviewed_call_and_merges_success_extras",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
 
 [[export]]
 python = "bittensor.keyfiles.Keyfile"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_wallet::Keyfile"
+reason = "Public generic Keyfile supplies inspection, directories, standalone/public keypairs, read/write and password save/remove operations. Async methods, explicit overwrite permission, bounded regular-file reads and feature-gated encryption are native SDK contracts. Environment writes mutate an explicitly owned KeyfileEnvironment; the default overlay reads process values but never performs unsafe global mutation. Prompting defaults to disabled and requires an installed callback. Rustdoc and getting-started documentation state these differences; fixtures prove supported behavior rather than literal Python process-global mutation."
 source = "sdk/python/bittensor/keyfiles.py"
+pinning_tests = [
+  "rtao_wallet::keyfile::generic_plaintext_and_public_files_use_exact_codec_without_companion_side_effects",
+  "rtao_wallet::keyfile::generic_keyfile_rejects_oversize_nonregular_and_symlink_writes",
+  "rtao_wallet::keyfile::generic_relative_basename_write_finishes_and_keeps_the_exact_env_name",
+  "rtao_wallet::keyfile::generic_environment_save_remove_mutates_only_the_owned_environment",
+  "rtao_wallet::keyfile::generic_encrypted_write_saves_only_after_success_and_uses_first_password_source",
+]
 
 [[export]]
 python = "bittensor.keyfiles.KeyfileError"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_wallet::WalletError; rtao_core::CoreError::Keyfile"
+reason = "Rust uses a broader typed wallet/native-core error taxonomy rather than Python exception inheritance. Malformed keyfile errors retain their source classification; wrong-password handling has its own variant."
 source = "sdk/python/bittensor/keyfiles.py"
+pinning_tests = [
+  "rtao_wallet::wallet::public_views_never_read_or_unlock_secret_files",
+  "rtao_wallet::wallet::nacl_coldkey_unlock_wrong_password_and_cache_follow_core",
+]
 
 [[export]]
 python = "bittensor.keyfiles.Keypair"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_core::keys::Keypair; rtao_signer::KeypairSigner"
+reason = "The public keypair is the pinned upstream Rust type, with KeypairSigner providing role-aware signing. Secret constructors remain behind the wallet/signer redaction boundaries for safe high-level use; direct upstream constructor diagnostics retain the documented upstream risk."
 source = "sdk/python/bittensor/keyfiles.py"
+pinning_tests = [
+  "rtao_wallet::wallet::valid_disposable_recovery_inputs_keep_pinned_derivation_and_codec_bytes",
+  "rtao_wallet::wallet::plaintext_create_regenerate_public_views_and_role_signing",
+]
 
 [[export]]
 python = "bittensor.keyfiles.WrongPasswordError"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_wallet::WalletError::WrongPassword; rtao_core::CoreError::WrongPassword"
+reason = "Typed variants replace Python exception subclass identity. High-level failures preserve the selected password-source category without returning the password; native-keyfile operations retain the upstream core classification."
 source = "sdk/python/bittensor/keyfiles.py"
+pinning_tests = [
+  "rtao_wallet::wallet::nacl_coldkey_unlock_wrong_password_and_cache_follow_core",
+]
 
 [[export]]
 python = "bittensor.keyfiles.resolve_key_password"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_wallet::resolve_key_password; rtao_wallet::KeyPasswordSources"
+reason = "Public generic password resolution is independent of wallet-wide globals, files and keychain policy. Nonempty explicit input wins, then the selected encoded environment variable, then an explicitly enabled callback with custom message and optional confirmation. Typed PromptPolicy and explicitly owned environment replace Python implicit prompting and global mutation. Fixed validation diagnostics and secret-owning carriers avoid exposing callback errors or password bytes. Authored fixtures cover precedence, confirmation, retries and failures; hosted execution remains pending."
 source = "sdk/python/bittensor/keyfiles.py"
+pinning_tests = [
+  "rtao_wallet::keyfile::generic_password_order_uses_only_explicit_chosen_environment_and_enabled_prompt",
+  "rtao_wallet::keyfile::generic_confirming_prompt_retries_only_on_tty_and_keeps_diagnostics_secret_free",
+]
 
 [[export]]
 python = "bittensor.masked_input.masked_input"
-home = "rtao facade/public export review"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_cli::prompt::masked_input"
+reason = "Public masked_input and LiveTerminal implement native Unix star entry and an owned hidden controlling-terminal fallback. D-053 records UTF-8 and fixed control-key adaptation rather than claiming interpreter-codec or signal parity. Ctrl-C restores before cancellation in every parser state; an unavailable terminal selects the warned plain-line fallback for direct callers. Eighteen injected fixtures are authored; hosted and native-platform execution remain pending. Windows is unsupported."
 source = "sdk/python/bittensor/masked_input.py"
+pinning_tests = [
+  "rtao_cli::prompt::masked_input::tests::unicode_entry_echoes_one_star_per_decoded_character_and_no_plaintext",
+  "rtao_cli::prompt::masked_input::tests::cancellation_restores_before_returning_and_never_starts_a_fallback",
+  "rtao_cli::prompt::masked_input::tests::non_tty_fallback_warns_and_reads_one_untrimmed_plain_line_without_stars",
+  "rtao_cli::prompt::masked_input::tests::cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes",
+  "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_cancellation_restores_and_never_retries_plain_input",
+  "rtao_cli::prompt::masked_input::tests::controlling_terminal_failures_attempt_restoration_without_plain_input_retry",
+]
 
 [[export]]
 python = "bittensor.reads.REGISTRY"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::{READ_SPECS,ReadName,dispatch}"
+reason = "The import-populated mutable read dictionary becomes immutable generated ReadSpec records, a closed ReadName enum and exhaustive dispatch. Runtime mutation/custom decorator registration is not exposed."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_cli::generated_commands::complete_query_tree_exposes_every_read_and_authenticated_parameter",
+]
 
 [[export]]
 python = "bittensor.reads.Commitment"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::m6_accounts::Commitment"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_accounts::commitment_read_raw_fields_differ_from_metagraph_hash_rendering",
+]
 
 [[export]]
 python = "bittensor.reads.DelegateInfo"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::owner::DelegateInfo"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_delegation::delegates_keep_native_boundaries_and_runtime_sequence_without_deduplication",
+]
 
 [[export]]
 python = "bittensor.reads.DelegatedStake"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::owner::DelegatedStake"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::owner::delegation_and_stake_valuation_keep_chain_order_units_and_symbols",
+]
 
 [[export]]
 python = "bittensor.reads.Grouped"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::RenderHint::Grouped"
+reason = "The Python render-hint dataclass becomes a named enum variant with its key field; generated metadata retains it and CLI query rendering consumes the same shape."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_cli::generated_commands::human_grouped_or_matrix_projection_never_changes_machine_json",
+]
 
 [[export]]
 python = "bittensor.reads.Matrix"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::RenderHint::Matrix"
+reason = "The Python render-hint dataclass becomes a named enum variant carrying row, col and value labels; it is presentation metadata, with no dynamic callback or Python class identity."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_cli::generated_commands::human_grouped_or_matrix_projection_never_changes_machine_json",
+]
 
 [[export]]
 python = "bittensor.reads.Neuron"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::m6_accounts::Neuron"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_accounts::neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum",
+]
 
 [[export]]
 python = "bittensor.reads.ReadSpec"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::ReadSpec"
+reason = "Generated immutable public metadata preserves name, summary, description, typed parameters/category/docs and render hints, and adds pinning/descriptor hits. Python's fetch callback field is replaced by exhaustive generated dispatch; arbitrary mutable runtime callback registration is not claimed."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m2::all_read_names_have_authenticated_defaults_and_parameters",
+]
 
 [[export]]
 python = "bittensor.reads.StakePosition"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::owner::StakePosition"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_staking::positions_keep_runtime_order_exact_native_amounts_and_only_reported_coldkeys",
+]
 
 [[export]]
 python = "bittensor.reads.StakeValuation"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::owner::StakeValuation"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::owner::delegation_and_stake_valuation_keep_chain_order_units_and_symbols",
+]
 
 [[export]]
 python = "bittensor.reads.SubnetInfo"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::m6_root::SubnetInfo"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows",
+]
 
 [[export]]
 python = "bittensor.reads.SwapQuote"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::reads::m6_staking::SwapQuote"
+reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_staking::quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding",
+]
 
 [[export]]
 python = "bittensor.reads.dispatch"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_reads::dispatch"
+reason = "Public asynchronous dynamic dispatch accepts a checked ReadName and JSON parameter map, fills only omitted extracted defaults and invokes the existing typed read on the supplied view."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_reads::m6_staking::all_thirteen_reads_have_exact_descriptor_hits_and_one_head_or_pinned_hash",
+]
 
 [[export]]
 python = "bittensor.reads.list_reads"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_catalog::READS; rtao_reads::READ_SPECS"
+reason = "Immutable typed catalog slices replace allocation of Python dictionaries on each call. Complete catalog_json records preserve the list_reads discovery fields; READ_SPECS adds typed pinning, arguments and render metadata."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_catalog::specs::every_intent_and_read_retains_its_complete_catalog_record",
+]
 
 [[export]]
 python = "bittensor.reads.read"
-home = "rtao_reads"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "n/a: Python decorator; rtao_reads::{ReadName,READ_SPECS,dispatch}"
+reason = "Python's import-time decorator/reflection machinery is replaced by authenticated source extraction, generated typed functions and exhaustive dispatch. A custom Rust async function can operate on View directly; mutable runtime extension of the generated registry is not claimed."
 source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = [
+  "rtao_cli::generated_commands::complete_query_tree_exposes_every_read_and_authenticated_parameter",
+]
 
 [[export]]
 python = "bittensor.wallet.DEFAULT_WALLET_PATH"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_wallet::{WalletRef,Wallet}::default_wallet"
+reason = "The default path is supplied by explicit constructors rather than an import-time public constant. They expand the current HOME at invocation; no environment mutation or secret acquisition occurs during import. This is a Rust API-shape choice, not a literal constant alias."
 source = "sdk/python/bittensor/wallet.py"
+pinning_tests = [
+  "rtao_wallet::wallet::compound_layout_and_python_validation_messages",
+]
 
 [[export]]
 python = "bittensor.wallet.Wallet"
-home = "rtao_wallet"
-reason = "Public Python export has no exact Rust doc alias yet; its existing or planned home requires an explicit API review before this row leaves pending."
-pending = "M8"
+home = "rtao_wallet::{Wallet,WalletRef}"
+reason = "Public immutable layout/inspection is separated from asynchronous key acquisition and creation/regeneration. Coldkey/hotkey sources preserve the btcli directory layout and independent caches; typed role APIs replace Python dynamic key attributes."
 source = "sdk/python/bittensor/wallet.py"
+pinning_tests = [
+  "rtao_wallet::wallet::compound_layout_and_python_validation_messages",
+  "rtao_wallet::wallet::plaintext_create_regenerate_public_views_and_role_signing",
+  "rtao_wallet::wallet::clones_and_concurrent_unlocks_share_one_cached_signer",
+]

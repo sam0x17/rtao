@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 
 use futures::TryStreamExt;
+use num_traits::ToPrimitive;
 use rtao_client::{View, ViewExt};
 use rtao_core::{DynValue, codec::Value};
 use rtao_primitives::NetUid;
@@ -98,10 +99,11 @@ pub(crate) fn utf8_text(value: JsonValue) -> Result<JsonValue, ReadError> {
             .iter()
             .map(|value| match value {
                 JsonValue::Number(number) => {
-                    number.as_u64().and_then(|value| u8::try_from(value).ok())
+                    let truncated = number.as_f64()?.trunc();
+                    (0.0..256.0).contains(&truncated).then_some(truncated as u8)
                 }
                 JsonValue::Bool(value) => Some(u8::from(*value)),
-                JsonValue::String(value) => value.trim().parse().ok(),
+                JsonValue::String(value) => rtao_primitives::pyfmt::parse_integer(value)?.to_u8(),
                 _ => None,
             })
             .collect::<Option<Vec<_>>>(),
@@ -170,5 +172,68 @@ mod tests {
             panic!("wrong error")
         };
         assert!(message.contains("position 0"));
+    }
+
+    #[test]
+    fn utf8_text_truncates_numeric_items_before_checking_byte_bounds() {
+        assert_eq!(
+            utf8_text(json!([65.9, 66.1, -0.9, true, false])).unwrap(),
+            json!("AB\u{0}\u{1}\u{0}")
+        );
+        assert_eq!(utf8_text(json!([255.999])).unwrap(), json!("0xff"));
+        for item in [json!(256.0), json!(-1.0), json!(f64::MAX), json!(u128::MAX)] {
+            let original = json!([65, item, 66]);
+            assert_eq!(utf8_text(original.clone()).unwrap(), original);
+        }
+    }
+
+    #[test]
+    fn utf8_text_accepts_python_signed_underscored_unicode_decimal_items() {
+        assert_eq!(
+            utf8_text(json!([
+                " \t+6_5\n",
+                "\u{2003}٠٦٦\u{a0}",
+                "６_７",
+                "𝟞𝟠",
+                "-٠"
+            ]))
+            .unwrap(),
+            json!("ABCD\u{0}")
+        );
+        assert_eq!(utf8_text(json!([128.9, "2_5_5"])).unwrap(), json!("0x80ff"));
+    }
+
+    #[test]
+    fn utf8_text_keeps_the_entire_original_array_when_integer_coercion_fails() {
+        for spelling in [
+            "",
+            "_65",
+            "65_",
+            "6__5",
+            "+ 65",
+            "65.0",
+            "6.5e1",
+            "0x41",
+            "²",
+            "Ⅵ",
+            "\u{1c}65",
+            "65\u{1f}",
+            "-1",
+            "256",
+            "99999999999999999999999999999999999999",
+            "-99999999999999999999999999999999999999",
+        ] {
+            let original = json!([65, spelling, 66]);
+            assert_eq!(
+                utf8_text(original.clone()).unwrap(),
+                original,
+                "{spelling:?}"
+            );
+        }
+        for item in [json!(null), json!([]), json!({"byte": 65})] {
+            let original = json!([65, item, 66]);
+            assert_eq!(utf8_text(original.clone()).unwrap(), original);
+        }
+        assert_eq!(utf8_text(json!([])).unwrap(), json!(""));
     }
 }
