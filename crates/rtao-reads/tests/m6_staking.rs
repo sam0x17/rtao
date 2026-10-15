@@ -497,6 +497,7 @@ async fn prices_keep_native_rao_and_python_integer_division_with_last_duplicate_
 }
 
 #[tokio::test]
+// upstream-e2e: sdk/bittensor-core/tests/e2e.rs::test_quote_stake_slippage_and_fee
 async fn quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding()
 {
     let (client, chain) = client(seed()).await;
@@ -509,6 +510,8 @@ async fn quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decim
         (1_234_567_890, 2_345_678_901)
     );
     assert_eq!((quote.tao_fee.rao, quote.alpha_fee.rao), (3, 5));
+    assert!(quote.alpha.rao > 0);
+    assert!(quote.tao_fee.rao <= quote.tao.rao);
     assert_eq!((quote.tao_slippage.rao, quote.alpha_slippage.rao), (7, 11));
     for amount in [&quote.tao, &quote.tao_fee, &quote.tao_slippage] {
         assert_eq!(amount.netuid, NetUid::ROOT);

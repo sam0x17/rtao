@@ -288,6 +288,7 @@ async fn child_relations_keep_exact_proportions_and_distinguish_present_unit_mar
 }
 
 #[tokio::test]
+// upstream-e2e: sdk/bittensor-core/tests/e2e.rs::test_leases_read
 async fn leases_preserve_cost_precision_perpetual_expiry_and_map_order() {
     let state = seed();
     let mut expected_ids = [1u32, 2, 11].map(|id| {
