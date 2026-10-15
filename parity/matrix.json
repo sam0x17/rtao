@@ -1955,6 +1955,22 @@
     ],
     "divergences": [
       {
+        "id": "D-048",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::commands::multisig::tests::unknown_upgrade_layer_is_not_rendered_as_absent_after_failed_asset_enrichment"
+        ]
+      },
+      {
+        "id": "D-047",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::commands::proxy::tests::pure_lifecycle_persists_event_coordinates_only_after_actual_success"
+        ]
+      },
+      {
         "id": "D-046",
         "oracle": "unverified",
         "rtao": "active",
@@ -1963,7 +1979,8 @@
           "rtao_intents::crowdloan::tests::tool_constructor_bounds_nested_call_before_serde_conversion",
           "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits",
           "rtao_intents::proxy::tests::announced_proxy_refusals_preserve_nested_error_order_and_never_read",
-          "rtao_intents::batch::tests::batch_constructor_and_programmatic_guards_reject_private_carriers_and_depth"
+          "rtao_intents::batch::tests::batch_constructor_and_programmatic_guards_reject_private_carriers_and_depth",
+          "rtao_intents::multisig::tests::raw_multisig_timepoint_coercion_defaults_and_bounded_nested_inputs"
         ]
       },
       {
@@ -2370,314 +2387,314 @@
       {
         "name": "intent_add_proxy",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_add_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_add_stake_limit",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_announce_coldkey_swap",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_associate_evm_key",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_associate_hotkey",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_batch",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_burned_register",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_claim_root",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_claim_root_with_hotkey",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_clear_coldkey_swap_announcement",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_commit_weights",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_contribute_crowdloan",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_create_crowdloan",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_create_pure_proxy",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_decrease_take",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_dispute_coldkey_swap",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_dissolve_crowdloan",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_evm_withdraw",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_execute_proxy_announced",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_finalize_crowdloan",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_fund_evm_key",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_increase_take",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_kill_pure_proxy",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_lock_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_move_lock",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_move_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_multisig_approve",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_multisig_cancel",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_multisig_execute",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_multisig_threshold_1",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_refund_crowdloan",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_register_leased_network",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_register_subnet",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_remove_proxies",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_remove_proxy",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_remove_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_remove_stake_limit",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_reset_axon",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_reveal_weights",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_root_register",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_serve_axon",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_serve_axon_tls",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_serve_prometheus",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_auto_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_childkey_take",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_children",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_crowdloan_max_contribution",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_hyperparameter",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_identity",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_mechanism_count",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_perpetual_lock",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_root_claim_type",
@@ -2688,122 +2705,122 @@
       {
         "name": "intent_set_subnet_identity",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_take",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_set_weights",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_stake_burn",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_start_call",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_swap_coldkey_announced",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_swap_hotkey",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_swap_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_terminate_lease",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_transfer",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_transfer_all",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_transfer_stake",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_trim_subnet",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_unstake_all",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_unstake_all_alpha",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_update_crowdloan_cap",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_update_crowdloan_end",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_update_crowdloan_min_contribution",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_update_symbol",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "intent_withdraw_crowdloan",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
       },
       {
         "name": "pyt:e2e/test_null_consensus.py::test_null_yuma_null_emissions_via_python_sdk",
@@ -9759,7 +9776,7 @@
         "name": "move_stake",
         "oracle": "missing",
         "python_class": "MoveStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "move_swap_stake",
@@ -9771,25 +9788,25 @@
         "name": "multisig_approve",
         "oracle": "missing",
         "python_class": "MultisigApprove",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "multisig_cancel",
         "oracle": "missing",
         "python_class": "MultisigCancel",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "multisig_execute",
         "oracle": "missing",
         "python_class": "MultisigExecute",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "multisig_threshold_1",
         "oracle": "missing",
         "python_class": "MultisigThreshold1",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "pow_register",
@@ -9831,13 +9848,13 @@
         "name": "remove_stake",
         "oracle": "missing",
         "python_class": "RemoveStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "remove_stake_limit",
         "oracle": "missing",
         "python_class": "RemoveStakeLimit",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "reset_axon",
@@ -9969,7 +9986,7 @@
         "name": "stake_burn",
         "oracle": "missing",
         "python_class": "StakeBurn",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_into_basket",
@@ -10035,7 +10052,7 @@
         "name": "transfer_stake",
         "oracle": "missing",
         "python_class": "TransferStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "trim_null_subnet_batch",
@@ -10053,7 +10070,7 @@
         "name": "unstake_all",
         "oracle": "missing",
         "python_class": "UnstakeAll",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "unstake_all_alpha",

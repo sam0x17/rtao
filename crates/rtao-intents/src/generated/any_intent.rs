@@ -598,6 +598,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::multisig::check_constructor_input(&args)?;
                 let intent: super::interfaces::MultisigApprove = serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::MultisigApprove(intent))
@@ -609,6 +610,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::multisig::check_constructor_input(&args)?;
                 let intent: super::interfaces::MultisigCancel = serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::MultisigCancel(intent))
@@ -620,6 +622,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::multisig::check_constructor_input(&args)?;
                 let intent: super::interfaces::MultisigExecute = serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::MultisigExecute(intent))
@@ -631,6 +634,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::multisig::check_constructor_input(&args)?;
                 let intent: super::interfaces::MultisigThreshold1 = serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::MultisigThreshold1(intent))

@@ -16,7 +16,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Source through `429f727` implements 73 of 83 intents and 40 of 102 reads,
+Source through `a929bcd` implements all 83 intents and 40 of 102 reads,
 with the corresponding hosted generated output verified and adopted.
 The newer crowdloan/root and coldkey intent ports have verified hosted generated
 dispatch and availability metadata, with combined validation still pending;
@@ -51,8 +51,9 @@ shared multisig book/cache writers are committed. The importer authenticates
 all signing views, refuses serde private carrier injection and preserves nonce
 cache state for invalid, stale, expired or foreign preparations. Cache lookup
 authenticates exact canonical call bytes. The M5 fuzz target is source only;
-no fuzz campaign ran. The remaining 10 intents, other command families and
-later milestones still require implementation and acceptance.
+no fuzz campaign ran. The remaining 62 reads, other command families and
+later milestones still require implementation and acceptance. The full intent
+source and M5 CLI integration still require combined hosted acceptance.
 
 Latest normal hosted run
 [38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
@@ -65,11 +66,15 @@ hosted Cargo/cfg/harness qualification remains authoritative. Tests, doctests
 and docs builds were not reached. Private evidence is `check-38707066144.json`.
 
 The final ten ports, 20 M5 CLI routes, 21-constructor policy fixture, all-83
-plan fixture and transaction reference are prepared. Generated adoption and
-combined hosted execution remain pending; integrated counts stay 73/83 and
-40/102. See [m5-final-intents.md](m5-final-intents.md). D-047/D-048 record the
-reviewed pure-proxy lifecycle and unknown proposal-status corrections. No
-new filing or local build is implied.
+plan fixture and transaction reference have verified generated integration.
+Run [38709002368](https://github.com/sam0x17/rtao/actions/runs/38709002368)
+at `a929bcd` was verified and adopted unchanged: fourteen exact regular archive
+members/digests, 23 dependency hashes, unchanged role inventories, ten pending/
+availability changes, four guarded constructors, four bounded JSON bodies,
+72 ordinary plan mappings, D-046's new fixture and D-047/D-048. Other generated
+interfaces and matrix families remain unchanged. Counts are 83/83 intents and
+40/102 reads. Combined hosted execution and acceptance remain pending.
+See [m5-final-intents.md](m5-final-intents.md). No new filing or local build.
 
 Earlier normal hosted run
 [38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
