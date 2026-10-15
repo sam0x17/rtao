@@ -602,7 +602,7 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 id = "D-044"
 upstream_symbol = "bittensor.cli.context.AppContext.submit PoW preparation and dry-run planning"
 python_behavior = "PowRegister.build composes structurally valid work without checking the current public challenge. Unshielded CLI execution refreshes expired, future or difficulty-invalid work after confirmation and unlock. Dry-run planning can therefore preview stale work."
-rtao_behavior = "The SDK validates the public challenge during build. Actual unshielded CLI requests refresh stale or difficulty-invalid work using public identities before strict planning and review, then recheck after confirmation and unlock. Dry runs do not mine or unlock and reject work that fails the SDK challenge checks. Proxy owner and explicit hotkey remain fixed."
+rtao_behavior = "The SDK validates the public challenge during build. Actual unshielded CLI requests refresh stale or difficulty-invalid work using public identities before strict planning and review, then recheck after confirmation and unlock. Dry runs do not mine or unlock and reject work that fails the SDK challenge checks. The higher-level subnets register --pow --dry-run refuses before initial search and points to the existing-proof tx preview. Proxy owner and explicit hotkey remain fixed."
 rationale = "Retain the SDK's fail-closed PoW validation while allowing actual CLI requests to refresh their public proof. A dry run must not start CPU workers or acquire signing keys. Refresh timing and stale-proof preview acceptance differ deliberately from Python; successful registration semantics are preserved."
 decision = "PLAN.md execution rule 5 design-gap decision, M4-10 source review (2026-10-15)"
 status = "active"
@@ -612,6 +612,7 @@ pinning_tests = [
   "rtao_cli::generated_commands::initially_expired_future_and_difficulty_invalid_pow_prepare_before_signing",
   "rtao_cli::generated_commands::expired_pow_dry_run_never_enters_public_mining_or_unlocks",
   "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock",
+  "rtao_cli::subnets_commands::unsupported_pow_root_gpu_and_mining_preview_refuse_before_connection",
 ]
 upstream_report = "Local validation policy; no upstream defect alleged and no issue or PR filed. Active records prepared source with regression bodies, not successful execution. Hosted build/test validation remains pending."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L1511-L1548"

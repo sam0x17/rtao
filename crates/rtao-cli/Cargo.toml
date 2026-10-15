@@ -40,6 +40,8 @@ futures.workspace = true
 which = "8"
 smallvec = "1"
 parking_lot = "0.12"
+caseless = "=0.2.2"
+unicode-general-category.workspace = true
 
 [dev-dependencies]
 rtao-testkit.workspace = true

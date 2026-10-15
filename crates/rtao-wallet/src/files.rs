@@ -425,7 +425,10 @@ macro_rules! file_roles {
 file_roles!(HotkeyFile, Hotkey, SignerRole::Hotkey, hotkey_address);
 file_roles!(ColdkeyFile, Coldkey, SignerRole::Coldkey, coldkey_address);
 
-pub(crate) fn read_data(path: &Path) -> Result<Zeroizing<Vec<u8>>, WalletError> {
+/// Read at most 16 MiB from an opened regular keyfile, wiping the returned bytes
+/// on drop. Regular symlink targets are supported; Unix special files cannot
+/// block before the descriptor's file type is checked.
+pub fn read_data(path: &Path) -> Result<Zeroizing<Vec<u8>>, WalletError> {
     read_secret_file(path, "keyfile")
 }
 
