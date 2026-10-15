@@ -41,6 +41,8 @@ pub mod hyperparameters;
 #[cfg(feature = "pow")]
 pub mod pow;
 
+#[cfg(feature = "crowdloan")]
+pub mod crowdloan;
 #[cfg(feature = "governance")]
 pub mod governance;
 #[cfg(feature = "identity")]
@@ -49,6 +51,8 @@ pub mod identity;
 pub mod registration;
 #[cfg(feature = "registration")]
 mod registration_pow;
+#[cfg(feature = "root")]
+pub mod root;
 
 // The generated records contain only infallibly serializable primitive values.
 #[allow(clippy::expect_used)]

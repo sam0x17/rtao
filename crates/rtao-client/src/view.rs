@@ -171,6 +171,41 @@ pub trait View: Send + Sync {
     ) -> impl Future<Output = Result<Bytes, ClientError>> + Send;
 }
 
+impl<V: View + ?Sized> View for &V {
+    fn read_observer(&self) -> Option<&dyn ReadObserver> {
+        View::read_observer(*self)
+    }
+    fn metagraph_view_enabled(&self) -> bool {
+        View::metagraph_view_enabled(*self)
+    }
+    fn pinned(&self) -> Option<&PinnedBlock> {
+        View::pinned(*self)
+    }
+    async fn pin(&self) -> Result<Snapshot, ClientError> {
+        View::pin(*self).await
+    }
+    async fn runtime(&self) -> Result<RuntimeHandle, ClientError> {
+        View::runtime(*self).await
+    }
+    async fn storage_raw(&self, key: &[u8]) -> Result<Option<Bytes>, ClientError> {
+        View::storage_raw(*self, key).await
+    }
+    async fn storage_raw_many(&self, keys: &[Vec<u8>]) -> Result<Vec<Option<Bytes>>, ClientError> {
+        View::storage_raw_many(*self, keys).await
+    }
+    async fn keys_paged(
+        &self,
+        prefix: &[u8],
+        count: u32,
+        start: Option<&[u8]>,
+    ) -> Result<Vec<Vec<u8>>, ClientError> {
+        View::keys_paged(*self, prefix, count, start).await
+    }
+    async fn state_call(&self, method: &str, args: &[u8]) -> Result<Bytes, ClientError> {
+        View::state_call(*self, method, args).await
+    }
+}
+
 /// Object-safe twin of [`View`] for dispatchers and recording transports.
 pub trait DynView: Send + Sync {
     /// Optional descriptor observer retained by the object-safe view.
@@ -1460,12 +1495,19 @@ mod tests {
         }
     }
     async fn fixture(runtime: RuntimeHandle) -> (Snapshot, Arc<Fake>) {
+        fixture_with_metagraph(runtime, true).await
+    }
+    async fn fixture_with_metagraph(
+        runtime: RuntimeHandle,
+        metagraph_view: bool,
+    ) -> (Snapshot, Arc<Fake>) {
         let fake = Arc::new(Fake::default());
         let network = crate::Network::resolve_with("ws://127.0.0.1:9944", |_| None).unwrap();
         let mut config = crate::ClientConfig::new(network).unwrap();
         config.runtime_cache_dir = None;
         config.config_store = None;
         config.track_heads = false;
+        config.metagraph_view = metagraph_view;
         let client = Client::from_rpc(RpcClient::new(fake.clone()), config)
             .await
             .unwrap();
@@ -1495,6 +1537,117 @@ mod tests {
         fn on_read(&self, touch: ReadTouch) {
             self.0.lock().unwrap().push(touch);
         }
+    }
+
+    #[tokio::test]
+    async fn borrowed_views_forward_identity_options_and_all_reads_after_erasure() {
+        let (snapshot, fake) = fixture_with_metagraph(current(), false).await;
+        let observer = Arc::new(Observer::default());
+        let snapshot = snapshot.with_read_observer(observer.clone());
+        let runtime = &snapshot.block.runtime;
+        let key = storage_key(
+            runtime,
+            storage::subtensor_module::TEMPO.surface(),
+            &[Value::Int(1)],
+        )
+        .unwrap();
+        let prefix = runtime
+            .core()
+            .storage_key(
+                runtime.storage_entry("SubtensorModule", "Tempo").unwrap(),
+                &[],
+            )
+            .unwrap();
+        let bytes = Bytes::from(100u16.encode());
+        fake.values
+            .lock()
+            .unwrap()
+            .insert(hex_bytes(&key), json!(hex_bytes(&bytes)));
+        fake.calls.lock().unwrap().insert(
+            "AccountNonceApi_account_nonce".into(),
+            json!(hex_bytes(&7u32.encode())),
+        );
+        let concrete = &snapshot;
+        let dynamic: &dyn DynView = &snapshot;
+        let views: [&dyn DynView; 2] = [&concrete, &dynamic];
+        let keys = vec![key.clone(), vec![0], key.clone()];
+        let args = [7; 32];
+        let mut expected_requests: Vec<(String, JsonValue)> = Vec::new();
+        for view in views {
+            assert!(std::ptr::eq(
+                DynView::pinned(view).unwrap(),
+                snapshot.block()
+            ));
+            assert!(std::ptr::addr_eq(
+                DynView::read_observer(view).unwrap(),
+                observer.as_ref() as &dyn ReadObserver
+            ));
+            assert!(!DynView::metagraph_view_enabled(view));
+            let resolved = DynView::runtime(view).await.unwrap();
+            assert!(std::ptr::eq(resolved.entry(), runtime.entry()));
+            let pinned = DynView::pin(view).await.unwrap();
+            assert_eq!(pinned.block.hash, HASH);
+            assert!(!View::metagraph_view_enabled(&pinned));
+            assert!(std::ptr::addr_eq(
+                View::read_observer(&pinned).unwrap(),
+                observer.as_ref() as &dyn ReadObserver
+            ));
+            assert_eq!(
+                DynView::storage_raw(view, &key).await.unwrap(),
+                Some(bytes.clone())
+            );
+            assert_eq!(
+                DynView::storage_raw_many(view, &keys).await.unwrap(),
+                vec![Some(bytes.clone()), None, Some(bytes.clone())]
+            );
+            assert_eq!(
+                DynView::keys_paged(view, &prefix, 1, None).await.unwrap(),
+                vec![key.clone()]
+            );
+            assert!(
+                DynView::keys_paged(view, &prefix, 2, Some(&key))
+                    .await
+                    .unwrap()
+                    .is_empty()
+            );
+            assert_eq!(
+                DynView::state_call(view, "AccountNonceApi_account_nonce", &args)
+                    .await
+                    .unwrap(),
+                Bytes::from(7u32.encode())
+            );
+            let hash = crate::hash_hex(HASH);
+            expected_requests.extend([
+                ("state_getStorage".into(), json!([hex_bytes(&key), hash])),
+                (
+                    "state_queryStorageAt".into(),
+                    json!([[hex_bytes(&key), "0x00"], hash]),
+                ),
+                (
+                    "state_getKeysPaged".into(),
+                    json!([hex_bytes(&prefix), 1, null, hash]),
+                ),
+                (
+                    "state_getKeysPaged".into(),
+                    json!([hex_bytes(&prefix), 2, hex_bytes(&key), hash]),
+                ),
+                (
+                    "state_call".into(),
+                    json!(["AccountNonceApi_account_nonce", hex_bytes(&args), hash]),
+                ),
+            ]);
+        }
+        assert_eq!(*fake.requests.lock().unwrap(), expected_requests);
+        let touches = observer.0.lock().unwrap();
+        assert_eq!(touches.len(), 10);
+        assert!(touches.iter().all(|touch| touch.at == Some(HASH)));
+        assert_eq!(
+            touches
+                .iter()
+                .filter(|touch| touch.kind == ReadKind::RuntimeApi)
+                .count(),
+            2
+        );
     }
 
     #[tokio::test]

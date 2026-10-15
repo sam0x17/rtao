@@ -16,9 +16,11 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Source through `6d5cf40` implements 20 of 83 intents and 40 of 102 reads.
-The generated read interfaces and dispatch for both M5 owner reads are adopted.
-No milestone exit or current all-job success is claimed.
+Current source prepares 32 of 83 intents and 40 of 102 reads. The twelve
+newer crowdloan/root intent ports need hosted regeneration and combined
+validation; see [m5-crowdloan-root.md](m5-crowdloan-root.md). The generated read
+interfaces and dispatch for both M5 owner reads are adopted. No milestone
+exit or current all-job success is claimed.
 
 The binary routes generated transactions/queries, config/tools/explain,
 weights/axon, wallet management, subnet registration/metagraph views and the M4
@@ -34,16 +36,18 @@ shared multisig book/cache writers are committed. The importer authenticates
 all signing views, refuses serde private carrier injection and preserves nonce
 cache state for invalid, stale, expired or foreign preparations. Cache lookup
 authenticates exact canonical call bytes. The M5 fuzz target is source only;
-no fuzz campaign ran. The remaining 63 intents, other command families and
+no fuzz campaign ran. The remaining 51 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
-[38692013543](https://github.com/sam0x17/rtao/actions/runs/38692013543)
-on `3afa90b` found a missing HeadProvider import in the subnet fixture;
-`95c4028` corrects it. Earlier runs found CLI Clippy and fixture API issues,
-which are corrected in source. The all-target Clippy gate now keeps going to
-report independent failures in one hosted run. Tests and doctests still need
-to pass on the final combined source. Current runs are listed in the
+[38693471340](https://github.com/sam0x17/rtao/actions/runs/38693471340)
+on `c6f3025` passed MSRV, features, supply, no-host and semver. Compilation and
+strict Clippy passed, but parity rejected D-045's Unix-only fixture reference
+before nextest or doctests. The fixture correction keeps portable directory
+refusal unconditional and retains Unix mode/symlink/FIFO assertions under Unix.
+The parity checker remains unchanged. Earlier missing-import, rendering and
+receipt-fixture API issues are corrected in source. Tests and doctests still
+need to pass on the final combined source. Current runs are listed in the
 [workflow history](https://github.com/sam0x17/rtao/actions/workflows/pr.yml?query=branch%3Amain).
 
 Hosted regeneration
@@ -55,8 +59,10 @@ Review checked artifact digests, exact regular-file members, all 23 dependency
 hashes, unchanged role package inventories, the two read-status changes and
 D-044/D-045 regression references. Private bounded records are
 `m5-read-adoption.json` and `m5-persistence-adoption.json` under
-`.local/recovery/2026-10-14/`. The new CLI owner feature and sha2 dependency
-require a fresh hosted compatibility report before combined acceptance.
+`.local/recovery/2026-10-14/`. Report refresh
+[38692634551](https://github.com/sam0x17/rtao/actions/runs/38692634551)
+was verified and adopted in `a9c720c`, covering the CLI owner feature and sha2
+dependency. Its proof is `m4-pruning-adoption.json` in the same recovery directory.
 Runtime validation remains null/empty; Linux graph measurement does not
 establish native Mac, hardware, oracle or chain interoperability coverage.
 

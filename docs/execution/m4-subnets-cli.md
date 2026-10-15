@@ -17,7 +17,7 @@ proof and points to `tx pow-register` for an existing-proof preview. Other dry
 runs use SDK planning. CLI hooks, module routing and tests are prepared; no
 local build, test or mining ran, and hosted acceptance remains pending.
 
-The sequential `hparams trim-null` workflow is still incomplete. Its prepared
-parser is not advertised. SDK journal/state guards need a shared session that
-preserves per-approval CLI review, saved multisig openings, ambiguous-delivery
-recovery and finalized on-chain progress before another batch.
+The sequential `hparams trim-null` source now uses a shared SDK/CLI session.
+It preserves per-approval review, saved multisig openings, ambiguous-delivery
+recovery and finalized progress checks before another batch. Its fixtures
+still require successful hosted execution; see [m4-null-pruning.md](m4-null-pruning.md).

@@ -4,6 +4,19 @@ use rtao_primitives::{Ratio, Uid};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Resolve an exact TAO field without permitting alpha currencies or `all`.
+#[cfg(any(feature = "crowdloan", feature = "root"))]
+pub(crate) fn tao_amount(
+    amount: &rtao_primitives::Amount,
+) -> Result<rtao_primitives::Balance<rtao_primitives::Tao>, rtao_tx::IntentError> {
+    match amount {
+        rtao_primitives::Amount::Exact(money) => {
+            Ok(money.resolve(rtao_primitives::NetUid::ROOT)?.tao()?)
+        }
+        rtao_primitives::Amount::All => Err(rtao_primitives::UnitError::AllNotAllowed.into()),
+    }
+}
+
 /// Python's weights mapping or parallel-list input, decoded through a JSON value.
 #[derive(Debug, Clone, PartialEq)]
 pub enum WeightsArg {
@@ -118,4 +131,41 @@ pub(crate) fn weights_json(
         result["weights"] = serde_json::json!(values);
     }
     result
+}
+
+#[cfg(all(test, any(feature = "crowdloan", feature = "root")))]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::tao_amount;
+    use rtao_primitives::{Alpha, Amount, Balance, Money, NetUid, Tao, UnitError};
+    use rtao_tx::IntentError;
+
+    #[test]
+    fn exact_tao_fields_preserve_native_rao_at_both_boundaries() {
+        for rao in [0, 1, u64::MAX] {
+            let expected = Balance::<Tao>::from_rao(rao);
+            for amount in [Amount::from(Money::from_rao(rao)), Amount::from(expected)] {
+                let resolved = tao_amount(&amount).unwrap();
+                assert_eq!(resolved, expected);
+                assert_eq!(resolved.to_wire().0, rao);
+            }
+        }
+    }
+
+    #[test]
+    fn exact_tao_fields_refuse_draining_and_alpha() {
+        assert!(matches!(
+            tao_amount(&Amount::All),
+            Err(IntentError::UnitMismatch(UnitError::AllNotAllowed))
+        ));
+        let alpha = Balance::<Alpha>::new(NetUid(1), 1).unwrap();
+        assert!(matches!(
+            tao_amount(&alpha.into()),
+            Err(IntentError::UnitMismatch(UnitError::UnitMismatch {
+                expected: NetUid::ROOT,
+                actual: NetUid(1),
+            }))
+        ));
+    }
 }
