@@ -108,6 +108,9 @@ fn capture(root: &Path, program: &str, args: &[&str]) -> Result<String> {
         .args(args)
         .current_dir(root)
         .env("GIT_OPTIONAL_LOCKS", "0")
+        // These outputs are machine inputs. CI enables color for human logs,
+        // which otherwise decorates cargo tree's repeated-node suffix.
+        .env("CARGO_TERM_COLOR", "never")
         .output()?;
     ensure!(
         output.status.success(),
@@ -151,6 +154,10 @@ fn build_inputs(root: &Path) -> Result<Json> {
 }
 
 fn package_identities(tree: &str, root: &Path) -> Result<BTreeSet<String>> {
+    ensure!(
+        !tree.contains('\u{1b}'),
+        "cargo tree package identities contain terminal formatting; disable Cargo color"
+    );
     let root = root.to_str().context("workspace path is not UTF-8")?;
     let mut packages = BTreeSet::new();
     for line in tree.lines() {
@@ -1155,6 +1162,9 @@ mod tests {
         assert_eq!(packages.len(), 4);
         assert!(packages.contains("rtao v0.1.0 ($WORKSPACE/crates/rtao)"));
         assert!(package_identities("unparseable", root).is_err());
+        assert!(
+            package_identities("serde v1.0.1\nserde v1.0.1 \u{1b}[33m(*)\u{1b}[0m", root).is_err()
+        );
         Ok(())
     }
 
