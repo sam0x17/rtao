@@ -178,7 +178,7 @@ async fn ledger_signer_proof_vector_flows_through_core_apdu_driver() {
         })
         .await
         .unwrap();
-    assert_eq!(signature.bytes, raw_signature);
+    assert_eq!(signature.bytes.as_slice(), raw_signature.as_slice());
     assert!(verify(&payload, &signature.bytes, &address, CRYPTO_ED25519).unwrap());
     replay.assert_finished().unwrap();
 }

@@ -216,7 +216,7 @@ fn authentication_failures_and_misleading_address_metadata_are_refused() {
 #[test]
 fn empty_explicit_password_falls_through_environment_then_explicit_resolver() {
     let calls = AtomicUsize::new(0);
-    let resolver = |confirm| {
+    let resolver = |confirm: bool| {
         assert!(confirm);
         calls.fetch_add(1, Ordering::SeqCst);
         Ok(Zeroizing::new("resolved-secret".to_owned()))

@@ -63,6 +63,9 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
   "https://github.com/RaoFoundation/subtensor.git",
+  # core-patch and dependency-policy checks require this fork's sole package
+  # to be bittensor-core at the full immutable core.patch.rev.
+  "https://github.com/sam0x17/subtensor.git",
   "https://github.com/RaoFoundation/polkadot-sdk.git",
   "https://github.com/ideal-lab5/timelock",
 ]
