@@ -834,12 +834,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/_transport/contract.py"
-rs = ["`rtao_runtime::CallBytes`; `rtao_client::{UnsignedExtrinsic, ExtrinsicReport}`; `rtao_signer::{SigningContext, SignerPayloadJson}`"]
+rs = ["crates/rtao-runtime/src/handle.rs", "crates/rtao-client/src/submit.rs", "crates/rtao-client/src/offline.rs", "crates/rtao-signer/src/lib.rs", "crates/rtao-tx/src/multisig.rs", "crates/rtao-client/src/block_info.rs", "crates/rtao-core-ext/src/ir.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "fb01ce3096af01e97eaff28a27def819c30b9ad0"
 synced_tag = "v478"
 milestone = "M2–M7"
-notes = "`UnsignedExtrinsic` JSON `:67-134` (§3.14, M5); `SignerPayloadJSON` quirks `:87-132` (§6.3, extension signer M7)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 245-line module, all 14 dataclasses/64 fields, one ClassVar and six properties/serialization methods reviewed against actual native producers and consumers. Immutable CallBytes preserves bytes/spec/hash with an additional transaction stamp; signed bytes/hash are the public attachment tuple rather than a separate private Python dataclass. SigningContext groups spec/name/SS58 in ChainInfo. UnsignedExtrinsic exports the exact 17-field JSON schema and six hex byte views; authenticated strict import replaces arbitrary mutable from_dict construction and enforces native widths, budgets, independent runtime/genesis/era/digest and view consistency. Canonical Multisig derives public bytes/SS58 from one AccountId. Eager ExtrinsicReport retains typed inclusion/errors, native u64 rao, exact DynValue weight and failed events per D-023. BlockInfo preserves header/ordered decoded extrinsics with null failures while adding timestamp/explorer aggregation; no raw strict get_block mode is claimed. The seven original metadata IR classes retain fields/order in a documented richer native serde schema, not exact minimal Python asdict interchange. Python root UnsignedExtrinsic/SigningContext have explicit namespaced export dispositions. Current hosted/Python/oracle/fresh interop execution and milestone acceptance remain unclaimed; M2-S02/S9 requirements are unchanged."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/errors.py"
@@ -852,12 +852,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated exception/form
 
 [[file]]
 py = "sdk/python/bittensor/_transport/extrinsics.py"
-rs = ["`rtao_client::{NonceManager, NonceLease}`; `rtao_signer` dispatch"]
+rs = ["crates/rtao-client/src/nonce.rs","crates/rtao-client/src/submit.rs","crates/rtao-client/src/offline.rs","crates/rtao-core-ext/src/ops/receipt.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "9a26b9d235e9bdd76a8d460493dc613a1d08f721"
 synced_tag = "v478"
 milestone = "M2"
-notes = "nonce cache `:55-84` (§3.9.1); `account_nextIndex` `:69-77`; payload JSON `:87-132`; signer capability order `:321-347` (§6.3)"
+notes = "Source reconciliation 2026-10-15: complete authenticated module (426 physical lines; 427 newline-split entries include the terminal empty entry), all 13 methods/functions and literal/default branches reviewed against actual nonce, preparation, signing, external-submission, watch and receipt consumers plus substantive named fixture bodies. Native private immutable prepared fields retain exact call/extra/additional/payload views; only payloads above 256 bytes are hashed. Unsigned JSON keeps exactly 17 Python fields, including nullable metadata/asset fields, fixed-width big-endian numeric SignerPayloadJSON, raw SCALE method/era and compact assetId. Import authenticates metadata, chain/era identity and every view; strict supported-algorithm signatures, duplicate/budget checks and trusted RFC-0078 digests remain native protections. Async Signer implementations select whole-unsigned hardware, extension JSON or software raw views; signer protocols/backends and the upstream core codec are integration dependencies, not additional direct derived homes for this row. Typed native u64 fee/asset bounds and u32 JSON nonce width are explicit. Public preparation uses fresh nonces without leases; submission uses checked shared leases and cancellation/failure invalidation. Pure Python helpers require era/nonce; native client defaults are mortal 128 blocks and finalization, distinct from the low-level Python interface's absent-era immortal/pool defaults. D-008 checks both runtime stamps; D-023 retains failed events, exact receipt weight and native fate; D-024 watch recovery and D-026 adjacent shield nonces remain intentional. External submission preserves current policy, exact reviewed call, absolute admission/full deadlines and attempted hash/cause without post-signature wrappers, replanning or replay; S9 opaque continuation proofs remain unchanged. Python's permissive signature/digest mutation assertions and exact Utility.batch offline fixture are not claimed fully ported; malformed dynamic protocol inputs use typed refusals. Full contract.py/interface.py and complete signer/shield lifecycle parity remain separate. This source disposition claims no new tests, builds, Python/oracle execution, current hosted acceptance, pytest-row promotion or milestone completion."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/interface.py"
@@ -897,12 +897,12 @@ notes = "classifier `:84-135, 190-241`; non-idempotent set `:66`; resend `:686-7
 
 [[file]]
 py = "sdk/python/bittensor/_transport/runtime.py"
-rs = ["`rtao_client::RuntimeCache`"]
+rs = ["crates/rtao-client/src/cache.rs", "crates/rtao-catalog/src/runtime_py.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "76101e5247da8356118e4bb179aadf77b2f14c34"
 synced_tag = "v478"
 milestone = "M1"
-notes = "V15 fetch and needle `:34, 292-312`; disk cache `:36-121`; parent-runtime resolution `:178-207`; version poll `:142-176`; `transactionVersion` `:42-54` (§3.4)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 310-line module, all 15 functions, imported contracts and actual cache/fetch/version/parent-selection/signing consumers and substantive fixture bodies reviewed. Direct derivation is RuntimeCache plus the five constants extracted through extract_resolved/extract_catalog into runtime_py; reused Client watcher, RuntimeHandle and signing-context dependencies retain separate attribution. Native defaults are four runtime handles, 512 block identities and a 12-second head TTL; fixed capacities replace private constructor kwargs. The (genesis,spec,transaction_version) identity and live transaction-version override preserve historical handles and existing shared disk bytes. Parent-selected decoding, shared success/failure/cancellation lifecycle and background refresh are implemented. Disk names, STMD/u32-LE/u8 header, metadata bytes and eight-file md*.bin pruning match the source format; fresh cross-language interoperability is not claimed. Missing-method or absent-V15 (null/empty/SCALE None) responses select legacy fetch; malformed Some and unrelated errors refuse. V14 remains read-only under D-010. spec_name is reacquired in submit/offline ChainInfo rather than retained as a Python codec attribute. D-057 bounds persisted acquisition/saves to 64 MiB, not general network metadata or decoded memory; offline cached_runtime adds no-RPC/no-mutation lookup with stricter file admission. Inspected fixtures do not directly cover 12-second TTL expiry, exact mtime survivor identities, isolated default/override/missing-HOME directory branches, or failed disk I/O/concurrent atomic readers. No supported-input production defect found; source correspondence and authored fixtures establish neither current hosted execution, complete test coverage, Python/oracle parity, archive interoperability nor milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/runtime_api.py"
@@ -933,12 +933,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/_transport/utils/receipt.py"
-rs = ["staged `rtao_core_ext::ops::receipt` (PR-U2)"]
+rs = ["crates/rtao-core-ext/src/ops/receipt.rs","crates/rtao-core-ext/src/ops/dispatch_error.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "4c33d256550a45a951e9c75c6e3b74b7dd0fa0d3"
 synced_tag = "v478"
 milestone = "M2"
-notes = "6 nested wrappers `:8-16`, MevShield failures, fee fallback `:75-96` (§1.6 G3, §3.9.4)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 237-line module, all 11 functions and literal-table/import dispositions reviewed against actual metadata/event/report consumers and substantive fixture bodies. All six ordered nested-result fields and 52 dispatch-description pairs match the authenticated extraction corpus. Integrated resolution preserves event order, final FeePaid precedence over fallback deposits, all five shield failures, metadata module errors, exact system-description branches and event-derived weight. Fees use checked native u64; malformed Python dynamic objects and incidental error shapes are outside the decoded-SCALE contract. The standalone arbitrary-event failure-details fallback is unreachable from the source classifier and has no separate native API. Legacy attributes.weight support is present, but inspected weight fixtures focus on modern forms; no historical-runtime execution is claimed. Public report weight and D-023 failed events remain retained; S9 continuation protections are unchanged. Full extrinsics.py/contract.py/submission behavior stays separately pending. No new tests, Python/oracle execution, current hosted result or milestone acceptance follows from this source review."
 
 [[file]]
 py = "sdk/python/bittensor/balance.py"
@@ -2310,12 +2310,12 @@ notes = "Generic public Keyfile now covers inspection, directory creation, stand
 
 [[file]]
 py = "sdk/python/bittensor/ledger.py"
-rs = ["`rtao_signer::LedgerSigner` (feature `ledger`) over core `signers::ledger::LedgerDevice`"]
+rs = ["rtao_signer::ledger::{LedgerSigner,LedgerOptions,LedgerError} (feature ledger)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "ed3559de6b78fa6e5cf004e15d27f9bbadfba0ca"
 synced_tag = "v478"
 milestone = "M7"
-notes = "§6.5; proof from `digest::generate_extrinsic_proof`"
+notes = "Source reconciliation 2026-10-15: complete authenticated 181-line module, all five upstream test bodies, native Ledger implementation and actual role/client consumers reviewed. Defaults, runtime metadata identity, signer token constants and original call/extra/additional proof payload are retained; typed per-request context replaces Python cached context, async offloaded operations retain a complete-device lock, raw signing refuses, and confirmed-account and reply-scheme guards remain. Client attachment verifies the negotiated Ed25519 signature against the exact account and normalized payload before broadcast. The ledger feature gates the backend; facade signer exposure additionally requires tx. Core ledger/digest/offload, CLI, client and testkit are behavior dependencies, not extra derived homes. Authored fake-backend/APDU fixtures and authenticated spec461 proof/golden vectors retained in v478 were inspected only. Native algorithm policies, checked-u64 balances and S9 protections are unchanged. M2-S02 remains open and unaccepted. No current test/hosted/oracle success, fresh Python dump, device/emulator/firmware/display/platform validation, universal erasure or M7/M9 acceptance is established; known TaoBalance/relative-price display caveats remain."
 
 [[file]]
 py = "sdk/python/bittensor/macos_password.py"
@@ -2562,12 +2562,12 @@ notes = "Source reconciliation 2026-10-15: xtask extract authenticates resolved 
 
 [[file]]
 py = "sdk/python/bittensor/signing.py"
-rs = ["`rtao_signer::{Signer, SignerRole, KeyView, DynKeySource}`; lazy unlock in `rtao_wallet`; address coercion in `rtao_tx`"]
+rs = ["crates/rtao-signer/src/lib.rs", "crates/rtao-signer/src/roles.rs", "crates/rtao-wallet/src/files.rs", "crates/rtao-wallet/src/wallet.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "25e9a4a9dcbe5ac7fadcc8dedb41c011e904adcd"
 synced_tag = "v478"
 milestone = "M2"
-notes = "`resolve_signer` `:227-263`, `public_view` `:266-283` (§6.4); `WalletSigner` `:143-224` (§6.1)"
+notes = "Source reconciliation 2026-10-15: complete authenticated signing.py and substantive signer/role/wallet/client fixtures reviewed. Explicit Signer, KeyView and typed/dynamic key sources replace structural WalletLike/KeyedWallet dispatch; strict roles reject tokens Python bare/extension/keyed branches may accept. Wallet constructors replace implicit string normalization. Address suffix selection belongs to intent/read generation and checked AccountId/Ss58Address inputs, with no runtime rtao_tx coercer, unknown-object or tuple/list identity API. Source acquisition unlocks on await; clones share a role cache, independent/reconfigured sources do not, and returned Arc signers retain ownership. Public companions remain authoritative after unlock; missing-hotkey fallback reads public JSON only and refuses encrypted legacy files. Account display is canonical or explicitly prefixed; Ss58Address preserves caller spelling. One async sign method chooses backend views; the client computes authenticated metadata digests instead of invoking structural hooks. Architecture6.3/6.4 records the complete native API dispositions and prepare_public split. D-003 remains unchanged; M2-S02 stays open and unaccepted. Source reconciliation is not current hosted, Python-oracle, hardware or milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/snapshot.py"
