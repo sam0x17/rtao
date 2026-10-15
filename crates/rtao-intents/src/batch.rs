@@ -505,6 +505,11 @@ mod tests {
         for (item, expected) in [
             (json!({}), "batched intent needs an 'op' key: {}"),
             (
+                serde_json::from_str::<Value>(r#"{"z":0,"a":1}"#)
+                    .expect("ordered input dictionary"),
+                "batched intent needs an 'op' key: {'z': 0, 'a': 1}",
+            ),
+            (
                 json!({"op":""}),
                 "batched intent needs an 'op' key: {'op': ''}",
             ),

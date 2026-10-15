@@ -16,6 +16,31 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38753200118](https://github.com/sam0x17/rtao/actions/runs/38753200118)
+at `164247c` passes semver, MSRV, no-host and supply at inspection; main check
+and features remain live. It includes the named signing-recorder type. No
+current full workspace test success is established.
+
+The next source batch reconciles eight more files: 180 of 357 source rows are
+now reconciled, with 177 pending. Two exact ordinary read bindings and the
+obsolete core tempo-rejection disposition reduce pending e2e mappings to 29.
+Source evidence is in `intent-map-batch-review.txt`, `plan-registry-review.txt`
+and `e2e-source-audit.md`. Complete Plan approval JSON and all nine manifest
+fields have stronger fixtures. Registry diagnostics now retain Python quoting
+and the sorted callable operation set; generated AnyIntent needs hosted refresh.
+Subnet creation discloses a pinned exact cost and queue/pruning flow. D-061
+records accepted Yuma/Null setter examples instead of Python's rejected numeric
+examples, with both-mode CLI round-trip source.
+
+The same batch adds narrow source-backed proxy-codec and reveal-payload/epoch
+projections to the existing chain-rules artifact. Independent review found
+unchecked parameter and containing-impl bindings; the correction validates
+their signatures/owners/configuration and adds five source mutations. A final
+corrected-parser reread is unverified. Full proxy/filter, reveal-loop and payment
+wrapper rows remain pending. The hosted artifact allowlist retains this exact
+chain-rules file for review. Generation/adoption, compilation and execution of
+this batch remain pending; no milestone is accepted and no local build ran.
+
 Normal run [38751673871](https://github.com/sam0x17/rtao/actions/runs/38751673871)
 at `4f28dbf` passes semver, MSRV, no-host and supply at inspection; features is
 still running. The three fixture type errors are gone. Main check stops before
@@ -24,6 +49,8 @@ recorder. Name that fixture type without suppressing the lint. Retained evidence
 is `check-38751673871.json`. Final independent rereads find no remaining defect
 in the corrected multisig dynamic-role continuation or pinned-only shielding
 guard; executed regression closure remains pending. No local build or test ran.
+The run is now terminal; features was cancelled when the lint-correction push
+superseded it.
 
 Normal run [38750380241](https://github.com/sam0x17/rtao/actions/runs/38750380241)
 at `eefbfa2` passes semver, MSRV and supply at inspection; features and no-host

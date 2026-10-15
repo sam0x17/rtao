@@ -121,7 +121,7 @@ fn tool_arguments_require_an_object_and_keep_unknown_op_precedence() {
             crate::AnyIntent::from_tool("unknown", args)
                 .unwrap_err()
                 .to_string(),
-            "Unknown or disabled intent: unknown"
+            crate::registry::unknown_op("unknown").to_string()
         );
     }
     let intent =

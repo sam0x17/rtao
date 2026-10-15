@@ -679,6 +679,16 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
 // and an unrelated assertion-bearing workspace test cannot claim e2e coverage.
 const READ_E2E_FIXTURES: &[(&str, &str, &[&str])] = &[
     (
+        "test_balance_and_existential_deposit",
+        "rtao_reads::owner::balances_keep_u64_precision_and_batch_heterogeneous_duplicates",
+        &["balance", "constant", "EXISTENTIAL_DEPOSIT"],
+    ),
+    (
+        "test_mev_shield_next_key_is_mlkem768",
+        "rtao_reads::owner::owner_scalar_identity_epoch_and_hyperparameter_projections_match_python",
+        &["mev_shield_next_key", "repeat"],
+    ),
+    (
         "test_leases_read",
         "rtao_reads::m6_delegation::leases_preserve_cost_precision_perpetual_expiry_and_map_order",
         &["leases", "lease", "lease_id"],
