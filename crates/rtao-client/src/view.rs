@@ -1088,6 +1088,10 @@ pub trait ViewExt: View {
     ///
     /// Free key components remain a vector so a scan with a fixed prefix can
     /// distinguish a single free component from several components.
+    /// Keys and values decode strictly. A deleted value is skipped before key
+    /// decoding; an invalid present key or value fails the whole page.
+    /// Python's private transport can optionally retain an undecodable key as
+    /// `None`; this method follows the strict public SDK map contract instead.
     fn query_map_dyn<'a>(
         &'a self,
         pallet: &'a str,

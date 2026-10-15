@@ -1004,7 +1004,7 @@ pub async fn execute_rounds_with(
                         },
                     )
                     .await
-                    .map_err(public_failure);
+                    .map_err(CliError::transaction);
             }
             approve_or_submit(
                 ctx,
@@ -1054,11 +1054,16 @@ pub async fn execute_rounds_with(
     Ok(Some(result))
 }
 
-fn continuation_failure(error: CliError, call: &CallBytes) -> CliError {
-    error.with_help(format!(
+fn continuation_failure(mut error: CliError, call: &CallBytes) -> CliError {
+    let recovery = format!(
         "earlier approvals may remain pending for call hash 0x{}; run `rtao multisig pending` to finish or cancel before retrying",
         hex::encode(call.hash()),
-    ))
+    );
+    error.help = Some(match error.help.take() {
+        Some(help) => format!("{help}; {recovery}"),
+        None => recovery,
+    });
+    error
 }
 
 async fn prepare_continuation(
@@ -1100,7 +1105,7 @@ async fn prepare_continuation(
         },
     )
     .await
-    .map_err(public_failure)?;
+    .map_err(CliError::transaction)?;
     // The existing opening is encoded in `outer`. If state disappears after
     // this read, submission keeps Some(expected) and cannot open a new operation.
     Ok(outer)
@@ -1146,7 +1151,7 @@ async fn approve_or_submit(
                 },
             )
             .await
-            .map_err(public_failure);
+            .map_err(CliError::transaction);
     }
     executor
         .submit_call_dyn(
@@ -1160,7 +1165,7 @@ async fn approve_or_submit(
             },
         )
         .await
-        .map_err(public_failure)
+        .map_err(CliError::transaction)
 }
 
 async fn honor_raw_shield(

@@ -151,6 +151,10 @@ fn listener(command: Command) -> Command {
 pub fn command() -> Command {
     Command::new("extension")
         .about("Manage browser-extension signing through the local bridge.")
+        .long_about(format!(
+            "Manage browser-extension signing through the local bridge.\n\nGuide: {}/guides/extension-signing",
+            rtao_catalog::py::DOCS_URL,
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(with_globals(

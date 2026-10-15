@@ -846,7 +846,7 @@ rtao/
 | `rtao-rpc` | transport (§3.2) | `Session`, `SessionConfig`, `EndpointPool`, `ReadMethod`, `RpcError`, `PolicyRefusal`, `RefusalKind`, `SubmitError`, `SessionEvent`, `SessionState`, `RateLimit`; `impl subxt_rpcs::client::RpcClientT for Session` | `rate-limit` (default), `metrics` | none (third-party only; generated `py_rpc.rs` constants) |
 | `rtao-signer` | signing seam (§6.3) | `Signer`, `SignerCaps`, `SigningRequest`, `SigningContext`, `MultiSignature`, `Role`, `Coldkey`, `Hotkey`, `SignerRole`, `KeySource<R>`, `DynKeySource`, `KeypairSigner`, `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `extension::{BridgeServer, BridgeClient, connect_extension_signer, ensure_bridge, run_bridge, stop_bridge_daemon}`, `vault::{VaultSigner, VaultSessionServer, VaultError, VaultPageError, scan_vault_address}`, `RemoteSigner` (M10) | `ledger`, `vault` (the one-shot page server on axum with a hyper WebSocket upgrade, and the QR encoder, §6.5), `extension` (bridge client on `tokio-tungstenite`, bridge server on axum with a hyper upgrade, §6.5), `remote` (M10, outside `full`), `test-util` (makes the `LedgerBackend` seam and `LedgerSigner::with_backend` public for `rtao-testkit`, §6.5) | `rtao-core`, `rtao-primitives` |
 | `rtao-wallet` | btcli-compatible wallets (§6.1-6.2) | `Wallet`, `WalletRef`, `HotkeyFile`, `ColdkeyFile`, `PasswordSource`, `PasswordSources`, `PromptPolicy`, `resolve_wallet_password`, create/regen | `encrypted` (→ `rtao-core/host`), `keychain` (macOS), `keyring` (Linux, rtao extra), `prompt` | `rtao-signer`, `rtao-core` |
-| `rtao-client` | chain access (§3) | `Client` (`connect`, `from_rpc`, `nonces()`, `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`), `ClientConfig`, `ClientError`, `Network`, `HeadPolicy`, `Snapshot`, `View`, `DynView`, `RuntimeCache` (and re-exports of `rtao_runtime::{RuntimeHandle, MetadataLevel, CallBytes, ComposeError}`), `ReadPlan`, `HeadTracker`, `BlockHeader`, `BlockInfo`, `EpochEvent`, `Events`, `EventRecord`, `SubmitOptions`, `SubmitFailure`, `Wait`, `Mortality`, `ShieldPeriod`, `ShieldCiphertext`, `NonceManager`, `NonceLease`, `ExtrinsicReport`, `PoolRejection`, `UnsignedExtrinsic`, `compose::*`, `config` (btcli files and caches, §10.2), `EpochClock`, `EpochStatus`, `wait_for_*`, `blocking::BlockingRuntime` | `blocking` (the runtime thread only; the facades are in `rtao::blocking`), `subxt` (escape hatch), `metrics`, `test-util` | `rtao-rpc`, `rtao-runtime`, `rtao-catalog`, `rtao-signer`, `rtao-core` |
+| `rtao-client` | chain access (§3) | `Client` (`connect`, `from_rpc`, `nonces()`, `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`), `ClientConfig`, `ClientError`, `Network`, `HeadPolicy`, `Snapshot`, `View`, `DynView`, `RuntimeCache` (and re-exports of `rtao_runtime::{RuntimeHandle, MetadataLevel, CallBytes, ComposeError}`), `ReadPlan`, `HeadTracker`, `BlockHeader`, `BlockInfo`, `EpochEvent`, `WaitError`, `Events`, `EventRecord`, `SubmitOptions`, `SubmitFailure`, `Wait`, `Mortality`, `ShieldPeriod`, `ShieldCiphertext`, `NonceManager`, `NonceLease`, `ExtrinsicReport`, `PoolRejection`, `UnsignedExtrinsic`, `compose::*`, `config` (btcli files and caches, §10.2), `EpochClock`, `EpochStatus`, `wait_for_*`, `blocking::BlockingRuntime` | `blocking` (the runtime thread only; the facades are in `rtao::blocking`), `subxt` (escape hatch), `metrics`, `test-util` | `rtao-rpc`, `rtao-runtime`, `rtao-catalog`, `rtao-signer`, `rtao-core` |
 | `rtao-tx` | product layer for writes (§4.2-4.7) | `IntentInterface`, `Intent`, `DynIntent`, `BuildCx`, `PreflightCx`, `Built`, `IntentPreflight`, `Spend` (re-exported from `rtao-primitives`), `Executor`, `ExecuteOptions`, `PlanOptions`, `ShieldOptions`, `Plan`, `Policy`, `ExtrinsicResult<O>`, `ChainError`, `PolicyError`, `TxError`, `classify`, `multisig::{Multisig, ApproveOptions}` and the multisig funds preflight (§3.12, §4.6), `timelock::{seal, open, Timelocked, Reveal, OpenOptions, TimelockError, DrandClient}` (§9.8) | none | `rtao-client`, `rtao-catalog`, `rtao-signer` |
 | `rtao-intents` | the 83 intents (§4.2-4.5) | one struct per op (`AddStake`, `SetWeights`, …), `AnyIntent`, `weights::{conform, TimelockCommitter}`, `pow::PowSolver`, `hyperparameters::{Hyperparameter, to_raw}` (`to_raw` delegates to `rtao_catalog::hyperparams::TABLE`, §5.5), `MultisigAdapter`, `MultisigThreshold1Adapter` | one feature per Python group (`staking`, `weights`, `registration`, `transfer`, `evm`, `children`, `coldkey`, `collateral`, `lock`, `governance`, `hyperparameters`, `identity`, `root`, `serving`, `proxy`, `multisig`, `crowdloan`, `leasing`, `association`, `batch`), `all`, `pow` (→ core `host`), `pow-gpu` | `rtao-tx`, `rtao-reads` |
 | `rtao-reads` | the 102 reads (§4.8) | `ReadName`, `ReadSpec`, `ParamSpec`, `dispatch`, `ReadError`, read fns, 14 namespace types (`Balances`, `Chain`, `Delegation`, `Epochs`, `Hyperparameters`, `Identity`, `Leasing`, `Locks`, `Collateral`, `Neurons`, `Prices`, `Staking`, `Subnets`, `Weights`), read output models, `commitments::{NeuronCommitment, CommitmentMap, fetch_commitments, fetch_commitment_map}` (§8.2) | none | `rtao-client`, `rtao-catalog`, `rtao-runtime` |
@@ -1540,7 +1540,14 @@ pub trait ViewExt: View {   // provided methods, generic over View (RPITIT; show
   rtao visitors.
 - **Map iteration**: `state_getKeysPaged` plus `state_queryStorageAt` per page, all at one hash (Python pins
   `query_map` to one head, `interface.py:347-351`). Free key components come from `decode_storage_key_params` (reversible
-  hashers only). Pages above 64 items decode through `batch::decode_map_page` under `offload`.
+  hashers only). Decoded map scans call the core for each key and value; raw-value iterators leave value decoding
+  to their caller. Pages above 64 keys or with a value above 64 KiB run under `offload`. Deleted values are skipped
+  before decoding keys. A present key or decoded value failure aborts the page. Native map streams validate the
+  pinned response identity and cursor progression and restore requested-key order. Dynamic free keys remain
+  vectors; typed maps require decodable key identities.
+  Python's private `SubstrateConnection.query_map(ignore_decoding_errors=True)`, reachable through
+  `RpcSubstrate.raw`, can retain a decoded value with an undecodable whole key represented as `None`; rtao omits
+  this private option. Supported Python `Substrate`, `Client`, `Snapshot` and sync map methods use strict defaults.
 
 **Coalesced reads (`ReadPlan`)** address [J-PD concern 6]. `fetch` takes a tuple of up to 16 `StorageQuery` values
 (macro-generated impls). It builds every key from the live runtime, issues **one** `state_queryStorageAt(keys, hash)` at
@@ -1913,8 +1920,12 @@ zero.
 4. Fee: `TransactionPayment.TransactionFeePaid.actual_fee`, else the sum of `Treasury.Deposit` and `Balances.Deposit`
    (`receipt.py:75-96`).
 5. The result is `ExtrinsicReport { hash, inclusion, success, message, block_hash, block_number, extrinsic_index, extrinsic_id:
-   "{block}-{idx:04}", fee: Option<TaoBalance>, events: Vec<EventRecord>, error: Option<DispatchErrorInfo> }`. The
-   executor lifts it into `ExtrinsicResult` (§4.7).
+   "{block}-{idx:04}", fee: Option<TaoBalance>, weight: DynValue, events: Vec<EventRecord>, error: Option<DispatchErrorInfo> }`.
+   `weight` preserves the resolved event value: null before inclusion or when no applicable weight was emitted, an
+   integer for WeightV1, or `{ref_time, proof_size}` for WeightV2 (`contract.py:163`, `interface.py:709`,
+   `extrinsics.py:377-426`). The public `DynValue` wrapper keeps the core carrier internal and exposes lossless
+   corpus-compatible JSON without converting the weight to a fee or floating point. The executor lifts the report
+   into `ExtrinsicResult` (§4.7); that higher-level result does not promise a weight field.
 
 #### 3.9.5 Transport failures during submit (port of `_failed_submit`, `PY/_substrate.py:753-772` [V])
 
@@ -2107,11 +2118,17 @@ pub mod compose {
   - `client.blocks_strict(..)` keeps Python's semantics.
 - `client.blocks(..)` yields `BlockHeader { number, parent_hash, raw }` (`PY/client.py:74-80`), and
   `client.block_info(n)` returns `BlockInfo { number, hash, timestamp, explorer_url, header, extrinsics }`
-  (`:83-92, 349`; `multisig pending` recovers call data through it, `PY/cli/multisig_helpers.py:945-975`).
+  (`:83-92, 349`). Native multisig recovery separately fetches its pinned opening block and extracts exact
+  inner-call bytes; decoded display values are not its call-byte source.
 - `wait_for_block(n)`, `wait_for_timestamp(t)` (sleeping through long gaps on chain time) and `wait_for_epoch(netuid)`
   port `PY/client.py:376-444`. `wait_for_epoch` returns `EpochEvent { netuid, block, previous }` (`:109-115`). It
   watches `LastEpochBlock[netuid]` advance, the only trustworthy signal, because the schedule is stateful ([R] C2 §0
   item 6).
+  The three helpers are async `Client` methods; `SyncClient` delegates to them. `EpochEvent` lives in `rtao_client`
+  and remains re-exported from `rtao::blocking`. They return `WaitError` for read/head failures, timeout, stream end
+  or tempo zero. Native `None` means indefinite; `Some(Duration::ZERO)` supplies a zero budget for pending work.
+  Python's false-valued `timeout=0` must be translated to `None` for its indefinite-wait spelling; this is an
+  explicit native typed-budget disposition, separate from timelock decryption's D-066 policy.
 - `wait_for_event::<E>(filter, until)` is the typed lazy-event follower.
 - **`register_subnet` completion** ports `_complete_subnet_registration` (`PY/executor.py:333-568`):
   1. scan the receipt for `NetworkAdded` vs `NetworkRegistrationQueued`;
@@ -3141,8 +3158,9 @@ value (from Python's generated descriptors, so from the pinned metadata) decides
 
 - **Layout** is identical to Python's: `<path>/<wallet>/coldkey`, `coldkeypub.txt`, `hotkeys/<hotkey>`,
   `hotkeys/<hotkey>pub.txt`. The default path is `~/.bittensor/wallets` (`PY/wallet.py:11`). `BT_WALLET_PATH` is read
-  only by the CLI's `--wallet-path` option (`PY/cli/main.py:203-206`); rtao's library `Wallet` reads no environment
-  variable either, and `rtao-cli` and `NeuronConfig` (§9.9) read it. The compound form `"cold/hot"` parses with
+  by the CLI's `--wallet-path` option (`PY/cli/main.py:203-206`) and `NeuronConfig` (§9.9), not the library
+  `Wallet`. Native default constructors expand the current `HOME` when called; Python captures its default path
+  at import. Explicit wallet roots remain explicit. The compound form `"cold/hot"` parses with
   Python's validation messages (`PY/wallet.py:29-70`).
 - **Loading.**
   1. Read the bytes and detect the format with the core's detectors (`$NACL`, `$ANSIBLE_VAULT`, `gAAAAA`;
@@ -3164,11 +3182,30 @@ value (from Python's generated descriptors, so from the pinned metadata) decides
     (`PY/keyfiles.py:128-163`; `PYT/unit/test_keyfiles_golden.py:121-140`).
   - Nothing is overwritten without `Overwrite::Yes`.
   - Polkadot-js JSON import uses `Keypair::from_encrypted_json` (`host`).
-- **Unlock** happens once per process in `spawn_blocking` (Argon2i, 512 MiB, t = 8). The key lives in core `Zeroizing`
-  buffers behind an `Arc`, mirroring Python's lazy `WalletSigner` (`PY/signing.py:143-224`). The coldkey address comes
-  from `coldkeypub.txt` and never requires unlocking (`PY/intents/base.py:288-298`).
+- **Unlock** is lazy and cached once per shared role source, with keyfile/KDF work offloaded (Argon2i, 512 MiB,
+  t = 8). Clones share an `Arc` signer; independent wallet sources have independent caches. The core separately
+  zeroizes retained mnemonic and seed buffers, but rtao cannot wipe the opaque signing pair. The pinned Ed25519
+  pair has no guaranteed final-drop erasure: **M2-S02 remains open and unaccepted** (§6.3, `docs/security/m2.md`,
+  `docs/security/m9.md`, upstream issue #3251). No dependency/KDF/allocator/OS erasure guarantee is implied.
+  The coldkey address comes from `coldkeypub.txt` without unlocking (`PY/intents/base.py:288-298`).
+- **Native API placement.** `WalletRef` exposes layout/public identity; `Wallet` returns role-checked signers rather
+  than mutable private Python `Keypair` attributes. Creation/regeneration take an explicit `CryptoType`, one
+  `RegenerateFrom` variant and `WriteOptions`. New phrases return as guarded `GeneratedKey` values without printing
+  or invoking Python callbacks; callers own display. To create both keys, call `create_new_coldkey` and
+  `create_new_hotkey` and retain both results. The CLI composes those calls; two-key publication is not atomic.
+  Wallet inventory and natural sorting currently live in `rtao_cli::commands::wallet::{list_records,natural_cmp}`.
+  There is no `rtao_wallet::list_wallets`/`list_wallets_detailed` or public Python-style inventory dataclass. Native
+  CLI records use formatted crypto labels and best-effort listing I/O. Library APIs take typed `CryptoType`;
+  Python's root `parse_crypto_type`/`format_crypto_type` have reasoned typed/CLI dispositions, not library aliases.
 
-### 6.2 Password resolution (exactly `PY/wallets.py:62-118` [V])
+### 6.2 Coldkey password resolution and explicit native I/O
+
+The precedence below describes Python's coldkey-unlock helper (`PY/wallets.py:62-118` [V]). Native encrypted
+role-specific creation/regeneration also reuses the configured `PasswordSources`, unless `WriteOptions.password`
+overrides it. This write behavior is a native configured-source API: Python's `Keyfile.set_keypair` and native
+generic `Keyfile::set_keypair` instead use explicit input or an enabled confirming prompt, skipping existing
+environment values. Role writes make one callback invocation; arbitrary SDK callbacks own confirmation. The
+CLI's writing callback requests and checks the second entry. Hotkey sources retain their separate policy.
 
 ```rust
 pub struct PasswordSources {
@@ -3191,13 +3228,18 @@ pub async fn resolve_wallet_password(w: &Wallet, s: &PasswordSources) -> Result<
   exactly as Python does (`PY/macos_password.py:58-80` [V]), with no shell. Items saved by `btcli wallet keychain save`
   (whose trusted application is `security`) are then readable by rtao without a second system prompt, and the reverse
   holds too. A native `security-framework` call would trigger an access prompt for a different binary [I].
-- **The library never prompts.** `PromptPolicy::Never` is the library default and the CLI uses `IfTty` (divergence
+- **Library prompting is explicit.** `PromptPolicy::Never` is the library default and the CLI uses `IfTty` (divergence
   D-003, from A). Without a TTY the CLI refuses to prompt, as btcli does (`PY/keyfiles.py:42-62`). On an interactive
   wrong password the CLI re-prompts twice (`PY/cli/context.py:1900-1935`). Every other source fails fast with
   `WalletError::WrongPassword { source }`.
-- **`rtao wallet save-password-env`** prints `export BT_PW_…=<encoded>` using the staged pure encoder (G10). It never
-  calls `set_var`.
-- **Secrets** are `secrecy::SecretString` and zeroized on drop. No `Debug` impl exposes them.
+- **Environment saving is explicit.** Role-specific `Wallet` creation/regeneration omits Python's automatic
+  `save_coldkey_to_env`/`save_hotkey_to_env` flags. Generic `Keyfile` can save after a successful write into a
+  caller-owned `KeyfileEnvironment`; its default overlay reads process variables but stores/masks changes in
+  memory. Independently created overlays are not implicitly shared with wallet `PasswordSources`. The CLI
+  `rtao wallet save-password-env` prints `export BT_PW_…=<encoded>` using the staged pure encoder (G10). None of
+  these operations calls `set_var` or changes the parent shell environment.
+- **SDK-owned passwords/recovery values** use `secrecy::SecretString` or `Zeroizing`, and their `Debug` output
+  redacts secrets. This does not extend the erasure claim to the opaque signing pair or dependency/OS copies.
 - **`keyring`** (Linux Secret Service) is an rtao-only source between 4 and 5, behind a feature and off by default.
 
 ### 6.3 The `Signer` contract
@@ -5519,7 +5561,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 | 49 | Head streams resubscribe and backfill by default (D-012); `blocks_strict` keeps Python semantics | Python's dying stream | operators need gap-free streams | `rpc.py:582-602` |
 | 50 | The library never prompts (D-003); the CLI prompts only on a TTY | Python's prompt fallback | libraries must not block on stdin | [R] E §4.2.9; A §6.2 |
 | 51 | `RuntimeHandle`, `RuntimeEntry`, `MetadataLevel`, `CallBytes`, `ComposeError` in `rtao-runtime` (no I/O); `RuntimeCache` in `rtao-client` | the handle in `rtao-client` | `Call::compose` and `verify_surface` in `rtao-runtime` take them, and `rtao-client` depends on `rtao-runtime`: otherwise a crate cycle | §3.7 |
-| 52 | `ClientError` for every `rtao-client` API, `ReadError` for reads, `SubmitFailure` for `Client::submit`; `TxError: From<ClientError>`; `ChainError` stays Python-shaped in `rtao-tx` | `ChainError` everywhere | a `View` (L4) cannot return an `rtao-tx` (L5) type, and reads must surface policy refusals typed so a neuron can honor `retry_after` | §3.5, §3.9, §4.7, §4.8 |
+| 52 | `ClientError` for chain access, `WaitError` for client waits (retaining client/head causes), `ReadError` for reads, `SubmitFailure` for `Client::submit`; `TxError: From<ClientError>`; `ChainError` stays Python-shaped in `rtao-tx` | `ChainError` everywhere | a `View` (L4) cannot return an `rtao-tx` (L5) type, and reads must surface policy refusals typed so a neuron can honor `retry_after` | §3.5, §3.9, §4.7, §4.8 |
 | 53 | Intent money is `Amount { Exact(Money), All }`, resolved per field by a port of `call_amount` with the unit from the call argument and the netuid from a sibling field | `Amount<Tao>`/`Amount<Alpha>` by name suffix | Python accepts alpha on netuid 0 (TAO 1:1) and the root branches need it; three money fields have no suffix | `PY/intents/_money.py:85-165`; `PY/intents/staking.py:306-345`; §5.2 |
 | 54 | Commitments in `rtao_reads::commitments`; the curated `metagraph()` as `rtao_metagraph::SubnetsMetagraphExt` in the prelude, with no inherent `Subnets::metagraph`; drand round math in `rtao_primitives::drand` | commitments in `rtao-metagraph` (a cycle); moving the `Metagraph` model into `rtao-reads` | keeps the three-path decoder, its fuzz target and persistence in `rtao-metagraph`; both alternatives compile, and every example already imports the prelude | `PY/namespaces.py:161-188`; `PY/reads/identity.py:139-162`; §4.8, §8.2 |
 | 55 | `StateCell` over `std::sync::RwLock` | `tokio::sync::RwLock` plus a clippy lint; `parking_lot` | std guards are `!Send`, so a guard across `.await` in a `Send` callback is a compile error; clippy does not flag tokio guards, and `parking_lot/send_guard` makes its guards `Send` | §9.1 (reproduced with rustc/clippy 1.99) |

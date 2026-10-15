@@ -516,7 +516,7 @@ impl AppContext {
         let (mut plan, preflight) = executor
             .plan_and_preflight_dyn(intent, keys, &plan_options)
             .await
-            .map_err(|e| CliError::failure(e.to_string()))?;
+            .map_err(CliError::transaction)?;
         if let Some(period) = control.period {
             plan.effects
                 .push(format!("mortal transaction period: {period} blocks"));
@@ -701,7 +701,7 @@ impl AppContext {
             } else {
                 executor.execute_dyn(intent, signing, &opts).await
             }
-            .map_err(|e| CliError::failure(e.to_string()))
+            .map_err(CliError::transaction)
         }
         .await;
         // The raw receipt must reach durable storage before releasing an

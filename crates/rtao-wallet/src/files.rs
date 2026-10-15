@@ -59,6 +59,11 @@ pub struct WriteOptions {
     /// encrypts when `password` is present.
     pub encrypt: bool,
     /// Password for encryption, otherwise resolved from the file's sources.
+    ///
+    /// Role-specific wallet writes reuse configured [`PasswordSources`],
+    /// including coldkey environment/file/native sources. Generic
+    /// [`crate::Keyfile::set_keypair`] uses explicit input or an enabled
+    /// confirming prompt and skips existing environment values.
     pub password: Option<SecretString>,
     /// Permission to replace existing secret and public files.
     pub overwrite: Overwrite,

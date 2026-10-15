@@ -21,6 +21,20 @@ impl CliError {
             help: None,
         }
     }
+    /// Preserve chain remediation when a transaction fails before a receipt.
+    pub(crate) fn transaction(error: rtao::tx::TxError) -> Self {
+        let help = match &error {
+            rtao::tx::TxError::Chain(error)
+            | rtao::tx::TxError::Intent(rtao::tx::IntentError::Chain(error)) => {
+                Some(error.remediation().to_owned())
+            }
+            _ => None,
+        };
+        Self {
+            help,
+            ..Self::failure(error.to_string())
+        }
+    }
     /// An invalid or missing argument.
     pub fn input(message: impl Into<String>) -> Self {
         Self {

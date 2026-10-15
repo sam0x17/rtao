@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/wallets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional sources at the same commit/license: sdk/python/bittensor/wallets.py; sdk/python/bittensor/cli/helpers.py; sdk/python/bittensor/cli/multisig_helpers.py.
 //! Explicit wallet key management and public account information.
 

@@ -337,6 +337,45 @@ async fn opening_shortfall_refuses_before_unlock_with_exact_funding_help() {
 }
 
 #[tokio::test]
+async fn funding_help_treats_empty_labels_as_absent_without_trimming_other_labels() {
+    let (executor, fake, keys, call) = fixture(0).await;
+    fake.mutate_state(|state| state.fee = 100_000);
+    let multisig = group(&executor, &keys, 2).await;
+    let address = keys.key.account().to_string();
+    for (label, display) in [
+        (None, address.clone()),
+        (Some(String::new()), address.clone()),
+        (Some(address.clone()), address.clone()),
+        (Some("treasury".into()), format!("{address} (treasury)")),
+        (Some(" ".into()), format!("{address} ( )")),
+    ] {
+        let error = multisig
+            .approve(
+                &executor,
+                call.clone(),
+                &keys,
+                &ApproveOptions {
+                    signer_label: label,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap_err();
+        let TxError::Chain(error) = error else {
+            panic!("expected observed funds error")
+        };
+        assert_eq!(error.code, rtao_catalog::ErrorCode::InsufficientBalance);
+        assert_eq!(
+            error.remediation(),
+            format!("fund {display} with ≥ τ0.197 — the deposit is returned when the op executes")
+        );
+    }
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(fake.mutate_state(|state| state.submissions.is_empty()));
+    executor.client().close().await;
+}
+
+#[tokio::test]
 async fn funded_opening_preserves_full_call_sorted_members_and_probe_weight() {
     let (executor, fake, keys, call) = fixture(1_000_000_000).await;
     let inner_hash = call.hash();
