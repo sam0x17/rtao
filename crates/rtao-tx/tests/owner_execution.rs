@@ -3,6 +3,7 @@
 
 use rtao_client::{
     Client, ClientConfig, Inclusion, Mortality, Network, NoncePolicy, Period, SubmitOptions, View,
+    ViewExt,
 };
 use rtao_intents::hyperparameters::owner_rate_key;
 use rtao_intents::{BurnedRegister, RegisterSubnet, SetHyperparameter};

@@ -17,6 +17,19 @@ crates/rtao-primitives/LICENSE-PSF; the package also declares PSF-2.0.
 The copied ISO-parser logic was ported to Rust and chrono, with outputs adapted
 to Unix seconds and checked calendar/time conversion.
 
+CPython difflib SequenceMatcher
+
+The CLI name suggestions in crates/rtao-cli/src/books.rs include SequenceMatcher
+logic derived from CPython 3.12.12 Lib/difflib.py at commit
+4a5632fbf9bf59477c540e3f53fa7cdbeea3e3f5 (source SHA256
+3eb2d371b4a171b063921de6bbf115108bc39de8bf72866315868ce2599213b7).
+Copyright Python Software Foundation and contributors. The full license is
+preserved in crates/rtao-cli/LICENSE-PSF; the package declares PSF-2.0.
+Modified by rtao: Rust character matching with no-junk/autojunk behavior and
+ratio computation for offline CLI name suggestions. The byte-identical full
+PSF license already retained for the datetime port covers both distributed
+ports in the release notice bundle.
+
 Unicode 15 printable data
 
 The generated printable ranges in rtao-core-ext come from UnicodeData-15.0.0.txt.

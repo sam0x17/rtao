@@ -1,0 +1,9 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+//! Metadata-only license fixture; its implementation is original test code.
+
+// Derived from CPython 3.12.12 Lib/difflib.py @ 4a5632fbf9bf59477c540e3f53fa7cdbeea3e3f5 (PSF-2.0); modified by rtao.
+// The actual full CLI port is exercised by the separate composite rehearsal.
+pub(crate) fn sequence_ratio(left: &str, right: &str) -> f64 {
+    let _ = (left, right);
+    0.0
+}

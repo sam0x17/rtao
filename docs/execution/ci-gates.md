@@ -157,9 +157,10 @@ current Rust tests and the complete jobs still need the next hosted run.
 The workflow's manual `refresh_compat=true` mode runs one 20-minute Ubuntu
 job and skips the six test jobs. It measures the existing Apple-target
 dependency graph with `cargo tree`, records its actual Linux compiler host,
-and generates compatibility source reports. This is not a Mac build or
-native-platform coverage. It uploads only three small report files for
-review, with three-day retention, and cannot push a commit. Normal pushes
+and generates compatibility source reports, followed by the declared parity
+inventory. This is not a Mac build or native-platform coverage. It uploads
+only four source reports for review (`COMPAT.md`, `compat.json`, the build-weight
+JSON and `parity/matrix.json`), with three-day retention, and cannot push a commit. Normal pushes
 continue running the unchanged checks against the committed source reports.
 
 The first refresh job succeeded, but artifact review rejected its inflated
@@ -170,3 +171,13 @@ that formatting in an independent read-only check recovers the original
 forces `CARGO_TERM_COLOR=never`; the parser rejects terminal formatting,
 and the existing package-identity regression includes the colored duplicate.
 Regenerate the reports from the corrected producer before adopting them.
+
+Corrected run [38682108313](https://github.com/sam0x17/rtao/actions/runs/38682108313)
+produced the three compatibility files at `b57e851`. Artifact `11949090125`
+matched its API SHA-256 digest
+`d447a56f86dd40357e0d2c78991b9568e781fa73f04f349633f2eb3566eced1a`.
+Review verified all 23 input hashes, the clean source identity, unchanged
+package sets/counts and empty runtime-validation claims before byte-for-byte
+adoption in `71f28d2`. Later CLI dependency changes need another hosted refresh.
+The parity inventory was added to the refresh after this run; it declares
+source status and does not certify test or oracle success.

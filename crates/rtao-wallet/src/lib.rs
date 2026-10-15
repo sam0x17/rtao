@@ -10,8 +10,8 @@ mod wallet;
 
 pub use files::{ColdkeyFile, HotkeyFile, Overwrite, PublicKeyInfo, WriteOptions};
 pub use password::{
-    PasswordPrompt, PasswordSource, PasswordSources, PromptPolicy, env_var_name,
-    resolve_wallet_password,
+    NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSource, PasswordSources,
+    PromptPolicy, env_var_name, resolve_wallet_password,
 };
 pub use secrecy::{ExposeSecret, SecretString};
 pub use wallet::{GeneratedKey, RegenerateFrom, Wallet, WalletRef};
@@ -46,6 +46,10 @@ pub enum WalletError {
     },
     /// A CLI prompt was requested without an eligible terminal or callback.
     PromptUnavailable,
+    /// An explicit native password operation failed with a fixed diagnostic.
+    NativePassword(&'static str),
+    /// The requested Keychain wallet account did not contain a password.
+    KeychainMissing(String),
     /// Blocking work could not finish.
     Blocking(String),
     /// A keyfile lacks the public fields needed for a public-only view.
@@ -68,6 +72,12 @@ impl fmt::Display for WalletError {
             Self::PromptUnavailable => {
                 f.write_str("wallet password prompt requires a terminal and a CLI prompt callback")
             }
+            Self::NativePassword(message) => f.write_str(message),
+            Self::KeychainMissing(wallet_name) => write!(
+                f,
+                "no Keychain password for wallet {}; run `rtao wallet keychain save -w {wallet_name}`",
+                rtao_primitives::pyfmt::string_repr(wallet_name)
+            ),
             Self::PublicKeyUnavailable(path) => write!(f, "public key unavailable at {path:?}"),
             Self::Symlink(path) => write!(f, "refusing to write keyfile through symlink {path:?}"),
         }

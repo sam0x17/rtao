@@ -1,5 +1,12 @@
 # Recording compatibility validation
 
+Under Q30, use the manual `pr-gates` workflow with `refresh_compat=true` to
+regenerate these source reports on free Ubuntu CI. Verify its source commit,
+artifact digest and report inputs before adoption; see
+[the hosted procedure](../execution/ci-gates.md#regenerating-compatibility-inputs-in-ci).
+The command descriptions below explain that hosted job. They do not require a
+local build or platform rehearsal. Release publication remains deferred.
+
 `cargo xtask compat` generates the release matrix from the workspace version,
 `upstream.toml`, and the immutable metadata index. It verifies the stored metadata
 checksums, SCALE decoding, provenance and Python project version before writing
