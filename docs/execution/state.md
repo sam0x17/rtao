@@ -16,21 +16,21 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Published checkpoint `2f9a30d2cc9c222d772838d49c63e91c629732f8` adopts the real
-legacy runtime-API lookup and four generated reports. Hosted generation
-[38812061254](https://github.com/sam0x17/rtao/actions/runs/38812061254) passed
-source parity at clean `1b9ecd5a4ae33311848c480bc6ad76af53bece6f`. Both artifact
-archives were authenticated and independently fetched twice. All 13 emitted
-contracts match the authenticated source inventory; the other 17 generated
-files and all 23 dependency inputs are unchanged. No new runtime or oracle
-validation is inferred. Bounded review/adoption proofs are retained under
-`.local/recovery/2026-10-15/` without archives or extraction directories.
+Hosted generation
+[38816297566](https://github.com/sam0x17/rtao/actions/runs/38816297566) passed
+source parity at clean `2ad5d1b41673dc4804640edc11e4703ed834ec19`. Both artifact
+archives were authenticated and independently fetched twice. Adopted outputs
+replace the explicit precompile bootstrap with the actual generated consumer,
+add five authenticated Python tables and refresh four reports. Exactly seven
+files change; the other 16 generated files and all 23 dependency inputs are
+unchanged. Existing legacy runtime-API output is unchanged. Bounded proofs
+`2ad5d1b-artifact-inspection.json` and `2ad5d1b-artifact-adoption.json` remain
+under `.local/recovery/2026-10-15/`, without archives or extraction directories.
 
-The published matrix has 275/357 source rows reconciled, 82 pending, 20 pending
-e2e mappings and 68 divergences. The next working batch has five additional
-source dispositions: codec, runtime API, registration, crowdloan and Ledger
-pytest input. Those source relationships have explicit native API/strictness
-and coverage limits. This is source reconciliation, not a passing test result.
+The published matrix has 280/357 source rows reconciled, 77 pending, 20 pending
+e2e mappings and 68 divergences. The five new dispositions cover codec, runtime
+API, registration, crowdloan and Ledger pytest input, with explicit native
+API/strictness and coverage limits. These are source reconciliation results.
 Strict M8 completeness remains off; no milestone is accepted. M2-S02 remains
 open and unaccepted, and upstream issue #3251 is still open.
 
@@ -40,13 +40,24 @@ jobs successful. Its main gate passed 2,963 tests with zero failures and four
 skips, then passed the workspace doctests. Both serving-fixture repairs are
 therefore confirmed for that source. The gate subsequently failed strict
 rustdoc because public StateStore::save/load documentation linked through a
-private module to MAX_CHECKPOINT_BYTES. The working correction states the
+private module to MAX_CHECKPOINT_BYTES. The published correction states the
 actual 64 MiB limit without changing visibility, behavior or lint policy.
 The exact 781,765-byte terminal log has SHA256
 `ba00375b057c261cbb8ec7efb71fb77897bfe305e384b6b2231a6aebeb35c502`;
 bounded proof is `check-38809901640.json`. Book generation was not completed.
-Newer legacy-dispatch/extraction, CLI canonical-signature notice and nested
-Utility.batch signing fixtures still require exact-source hosted execution.
+Follow-up ordinary
+[38814558931](https://github.com/sam0x17/rtao/actions/runs/38814558931) at
+`4e9447b195abe1d11123b3b153bd1955f81af747` completed with all five supporting
+jobs passing. Its main gate passed all 2,968 tests with four skips and workspace
+doctests, then failed strict rustdoc on one unresolved PythonBalance link.
+Qualify that existing public type's link without changing behavior or lint
+policy. The 782,118-byte log has SHA256
+`8343a0f3afc901d20745f0f6b5d1c12f053e0f33d7fa7feac4c18141ca115394`;
+bounded proof is `check-38814558931.json`. Book generation was not reached.
+Newer precompile extraction, CLI canonical-signature notice,
+nested Utility.batch and positive offline reconstruction fixtures still
+require exact-source hosted execution. The hand-authored positive fuzz seed
+has not been executed or validated, and no sanitizer coverage is claimed.
 
 All current work follows Q30. Local target output remains 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.
