@@ -16,6 +16,33 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38767926902](https://github.com/sam0x17/rtao/actions/runs/38767926902)
+at `bbfa09a` is active. At 16:24 UTC supply, MSRV, no-host and semver pass;
+main check and features remain in progress. Do not infer ordinary tests,
+doctests or docs success yet.
+
+Independent review clears the balance/property source mappings, workspace
+test discovery and earlier parity-gate ordering. It finds a mapping escape:
+a known client/read key could change to an unrelated hosted test and remove
+its evidence fields. Both validators now require exact known targets before
+hosted-prefix classification; a regression exercises that combined mutation
+against an indexed real hosted target, retaining pending/NA handling. Corrected
+source rereview finds no remaining issue; hosted execution remains pending.
+
+The Q30 plan audit finds no active costly local milestone requirement. Remove
+stale automatic-filing and unconditional Ledger-transcript refresh wording in
+the plan and architecture, and clarify that cleanup removed the task-owned
+cache inside the retired root. Independent rereview clears those corrections.
+Additional proposals remain local. The audit preserves all current C1-C7,
+strict source-parity, docs and security-disposition requirements.
+
+The `_money.py` audit traces all eleven current call-amount sites to correct
+native currency/sibling-netuid handling. Its whole row stays pending: generic
+unit-table selection, override-value validation and an inactive alpha generator
+branch still need implementation/coverage. Three new transfer/batch transcript
+fixtures are being reviewed separately, with no mapping or runtime acceptance
+yet. No local build/test, service, temporary directory or upstream filing.
+
 Refresh [38766936693](https://github.com/sam0x17/rtao/actions/runs/38766936693)
 succeeds at clean `41f3838`. Verify and adopt its four exact regular report
 members, immutable archive digest/size and all 23 committed/current dependency
@@ -607,8 +634,8 @@ and [disk-cleanup.md](disk-cleanup.md).
 
 Removed the entire task-created
 `/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC` directory. Its measured
-allocation before cleanup was 335,709,460 KiB (320.16 GiB). The shared Cargo
-cache and fifteen additional compiler target directories were removed.
+allocation before cleanup was 335,709,460 KiB (320.16 GiB). The task-owned Cargo
+cache shared inside that temporary root and fifteen additional compiler target directories were removed.
 Tools, copied caches, source clones, disposable fixtures and raw logs were
 also removed after checking running processes/open files, launchd/config,
 symlinks, virtual environments and Git worktree/alternate dependencies.
