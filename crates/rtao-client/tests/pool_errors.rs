@@ -120,3 +120,30 @@ fn custom_payload_integer_coercion_matches_python_and_keeps_malformed_data() {
         PoolRejection::Custom(8)
     );
 }
+
+#[test]
+fn oversized_custom_integer_strings_allow_message_fallback_without_discarding_valid_bigints()
+-> Result<(), Box<dyn Error>> {
+    let accepted = json!({"Custom": "9".repeat(4_300)});
+    assert!(matches!(
+        PoolRejection::from_rpc(1010, "Custom error: 8", Some(&accepted)),
+        PoolRejection::Unknown(_)
+    ));
+    for spelling in [
+        "9".repeat(4_301),
+        format!(" +{} ", "٩_".repeat(4_300) + "٩"),
+    ] {
+        let data = json!({"Custom":spelling});
+        assert_eq!(
+            PoolRejection::from_rpc(1010, "Custom error: 8", Some(&data)),
+            PoolRejection::Custom(8)
+        );
+    }
+    // Structured numeric integers keep their existing arbitrary-size behavior.
+    let integer: Value = serde_json::from_str(&"9".repeat(4_301))?;
+    assert!(matches!(
+        PoolRejection::from_rpc(1010, "Custom error: 8", Some(&json!({"Custom":integer}))),
+        PoolRejection::Unknown(_)
+    ));
+    Ok(())
+}

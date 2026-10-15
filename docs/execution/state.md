@@ -16,6 +16,20 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+The three focused boundary repairs now pass independent source rereview:
+cache/custom-payload decimal strings enforce the 4,300-digit limit; empty
+weights-helper names select the default wallet; blocking client/snapshot
+balance factories retain registered nonroot symbols without starting cold
+work or RPC. A seeded root symbol is ignored, including its optional metadata.
+Boundary file rows remain pending their full-file qualifications. Direct
+formatting and whitespace checks pass; compilation/execution remain unverified.
+At 17:02 UTC normal run38770765426 still has main active and all five supporting
+jobs passing. Preserve its ordinary outcome before dispatching the final source.
+Further source review found checkpoint temporary-name ownership and closed-client
+RPC gaps; focused repairs are in progress. Block lookups also need Python's
+null placeholders for individual decode failures. No local builds/tests or
+new temporary directories.
+
 Refresh [38771543517](https://github.com/sam0x17/rtao/actions/runs/38771543517)
 succeeds at clean `ddd73e5`. Authenticate and adopt exactly four regular report
 members, archive digest/size and all 23 committed/current dependency inputs.
