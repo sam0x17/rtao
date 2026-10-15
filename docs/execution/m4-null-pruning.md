@@ -14,9 +14,15 @@ The command accepts the pinned Python options: netuid, optional target,
 The target defaults to an existing on-chain target or the current Yuma ceiling.
 The default journal path uses Python's SHA-256 chain/subnet identity beside the
 shared CLI config. An explicit `--state-file` uses the supplied recovery path.
-Each submitted step also receives an executor deadline. The executor drains
-attempted delivery when that deadline expires; the CLI never cancels a
-submission future to implement a polling timeout.
+The native wait budget starts with the session and resets only after verified
+finalized progress (population decreases, commitments clear, pruning completes
+or the Yuma switch is confirmed). Opening another wait does not reset it. This
+can stop earlier than Python, which starts its timer on the first wait and
+clears it after any successful batch. The CLI help states the native limit.
+Each submitted step also receives an executor deadline, unless an explicit
+submission deadline overrides it. The executor drains attempted delivery when
+that deadline expires; the CLI never cancels a submission future to implement a
+polling timeout.
 
 Before private signer acquisition, the journal records the reviewed outer call,
 runtime versions, semantic operation and pruning state. Known raw receipts reach
@@ -26,7 +32,11 @@ approval does not count as a pruning batch. An ambiguous attempt blocks another
 broadcast until its inclusion or expiry is reconciled. Confirmed pending
 approvals may continue only for the same guarded operation and opening. After
 each approval, the shared session verifies canonical finalized inclusion,
-matching approval events and pending storage before permitting the next signer.
+the original opening from the receipt's matching event and extrinsic position,
+and equality with pending storage before permitting the next signer. Explicit
+reviewed timepoints must also match. Restart repeats this receipt check, so a
+same-block cancellation and replacement cannot silently change the journal's
+opening. An inconsistent older journal remains for operator reconciliation.
 The executor also binds its rebuilt outer call to the exact reviewed bytes and
 runtime versions before acquiring the private signer.
 

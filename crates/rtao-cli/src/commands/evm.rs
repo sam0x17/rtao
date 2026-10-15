@@ -1,5 +1,8 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/__init__.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional sources at the same commit/license: sdk/python/bittensor/cli/commands/evm/_shared.py, address.py, money.py, stake.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/_shared.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/address.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/money.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/stake.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! EVM keys, native funding, JSON-RPC transactions, precompiles and configuration.
 
 mod association;
@@ -17,7 +20,7 @@ use crate::{
     error::CliError,
     globals::{Tier, with_globals},
     output::ReviewSection,
-    prompt::{PromptHistory, PromptSpec, PromptValidation, ask_with},
+    prompt::{PromptHistory, PromptSpec, PromptValidation, ask_with, python_strip},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::{
@@ -189,22 +192,69 @@ pub fn validate_before_connect(ctx: &AppContext, group: &ArgMatches) -> Result<(
         setup::refuse_public_network(ctx)?;
     }
     if name == "fund" {
-        let amount = optional(leaf, "amount_tao");
-        let all = leaf.get_flag("all_amount");
-        if all
-            && amount.is_some_and(|amount| {
-                rtao::primitives::Amount::parse(amount) != Ok(rtao::primitives::Amount::All)
-            })
-        {
-            return Err(CliError::input("pass --amount-tao or --all, not both"));
-        }
-        if let Some(amount) = amount {
-            rtao::primitives::Amount::parse(amount)
-                .and_then(|amount| amount.resolve(NetUid::ROOT, true))
-                .map_err(|error| CliError::input(error.to_string()))?;
-        }
+        fund_amount(leaf)?;
     }
     Ok(())
+}
+
+// Resolve --all once so early admission and actual dispatch share its semantics.
+// Only the --all companion accepts blank text; ordinary amounts retain native grammar.
+fn fund_amount(leaf: &ArgMatches) -> Result<Option<String>, CliError> {
+    let amount = optional(leaf, "amount_tao");
+    if leaf.get_flag("all_amount") {
+        if amount.is_some_and(|amount| {
+            let amount = python_strip(amount);
+            !amount.is_empty() && !amount.eq_ignore_ascii_case("all")
+        }) {
+            return Err(CliError::input("pass --amount-tao or --all, not both"));
+        }
+        return Ok(Some("all".into()));
+    }
+    if let Some(amount) = amount {
+        rtao::primitives::Amount::parse(amount)
+            .and_then(|amount| amount.resolve(NetUid::ROOT, true))
+            .map_err(|error| CliError::input(error.to_string()))?;
+    }
+    Ok(amount.map(str::to_owned))
+}
+
+async fn fund_request(
+    ctx: &AppContext,
+    leaf: &ArgMatches,
+    history: &mut PromptHistory,
+) -> Result<TxRequest, CliError> {
+    let amount = fund_amount(leaf)?;
+    let address = address_of(ctx, optional(leaf, "evm_key")).await?;
+    let amount = if let Some(amount) = amount {
+        amount
+    } else {
+        let mut terminal = ctx.terminal.clone();
+        let (_, raw) = ask_with(
+            &ctx.prompt_context(),
+            &mut terminal,
+            &PromptSpec::new("amount_tao", "--amount-tao"),
+            |raw| {
+                rtao::primitives::Amount::parse(raw)
+                    .and_then(|amount| amount.resolve(NetUid::ROOT, true))
+                    .map_err(|error| PromptValidation::Message(error.to_string()))
+            },
+        )
+        .map_err(|error| CliError {
+            code: error.exit_code(),
+            message: error.to_string(),
+            help: None,
+        })?;
+        history.record_answers(vec!["--amount-tao".into(), raw.clone()]);
+        raw
+    };
+    Ok(TxRequest {
+        op: "fund_evm_key",
+        args: Map::from_iter([
+            ("evm_address".into(), json!(address)),
+            ("amount_tao".into(), json!(amount)),
+        ]),
+        period: None,
+    })
 }
 
 async fn resolve_account(
@@ -257,8 +307,24 @@ fn tao_to_wei(raw: &str) -> Result<U256, CliError> {
         .map_err(|error| CliError::input(format!("invalid TAO amount {raw:?}: {error}")))?;
     evm::balance_to_wei(&amount).map_err(failure)
 }
+fn rpc_network_with_env(
+    configured: &str,
+    endpoint: Option<&str>,
+    lookup: impl FnOnce(&str) -> Option<String>,
+) -> evm::Result<EvmNetwork> {
+    evm::networks::evm_network_with_env(
+        endpoint
+            .filter(|endpoint| !endpoint.is_empty())
+            .unwrap_or(configured),
+        lookup,
+    )
+}
+
 async fn rpc(ctx: &AppContext, endpoint: Option<&str>) -> Result<(EvmNetwork, EvmRpc), CliError> {
-    let network = evm::evm_network(endpoint.unwrap_or(&ctx.globals.network)).map_err(failure)?;
+    let network = rpc_network_with_env(&ctx.globals.network, endpoint, |name| {
+        std::env::var(name).ok()
+    })
+    .map_err(failure)?;
     let url = network.rpc_url.clone();
     let rpc = rtao::core::offload(move || EvmRpc::new(url))
         .await
@@ -589,48 +655,7 @@ pub async fn run(
             Ok(())
         }
         "fund" => {
-            let address = address_of(ctx, optional(leaf, "evm_key")).await?;
-            let all = leaf.get_flag("all_amount");
-            let amount = optional(leaf, "amount_tao");
-            if all
-                && amount.is_some_and(|amount| {
-                    rtao::primitives::Amount::parse(amount) != Ok(rtao::primitives::Amount::All)
-                })
-            {
-                return Err(CliError::input("pass --amount-tao or --all, not both"));
-            }
-            let amount = if all {
-                "all".to_owned()
-            } else if let Some(amount) = amount {
-                amount.to_owned()
-            } else {
-                let mut terminal = ctx.terminal.clone();
-                let (_, raw) = ask_with(
-                    &ctx.prompt_context(),
-                    &mut terminal,
-                    &PromptSpec::new("amount_tao", "--amount-tao"),
-                    |raw| {
-                        rtao::primitives::Amount::parse(raw)
-                            .and_then(|amount| amount.resolve(NetUid::ROOT, true))
-                            .map_err(|error| PromptValidation::Message(error.to_string()))
-                    },
-                )
-                .map_err(|error| CliError {
-                    code: error.exit_code(),
-                    message: error.to_string(),
-                    help: None,
-                })?;
-                history.record_answers(vec!["--amount-tao".into(), raw.clone()]);
-                raw
-            };
-            let request = TxRequest {
-                op: "fund_evm_key",
-                args: Map::from_iter([
-                    ("evm_address".into(), json!(address)),
-                    ("amount_tao".into(), json!(amount)),
-                ]),
-                period: None,
-            };
+            let request = fund_request(ctx, leaf, history).await?;
             generated::execute_tx(
                 ctx,
                 client.ok_or_else(|| failure("native client is required"))?,
@@ -764,6 +789,14 @@ async fn send(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), Cli
     Ok(())
 }
 async fn stake(ctx: &AppContext, group: &ArgMatches) -> Result<(), CliError> {
+    stake_with_backend(ctx, group, &NativeEvmTx).await
+}
+
+async fn stake_with_backend(
+    ctx: &AppContext,
+    group: &ArgMatches,
+    backend: &dyn EvmTxBackend,
+) -> Result<(), CliError> {
     let (name, leaf) = group
         .subcommand()
         .ok_or_else(|| CliError::input("missing evm stake command"))?;
@@ -824,7 +857,7 @@ async fn stake(ctx: &AppContext, group: &ArgMatches) -> Result<(), CliError> {
             ("addStake", amount, summary)
         }
         "remove" => {
-            let amount = DynBalance::from_amount(required(leaf, "amount_alpha")?, NetUid(netuid))
+            let amount = DynBalance::from_alpha(required(leaf, "amount_alpha")?, NetUid(netuid))
                 .map_err(|error| CliError::input(error.to_string()))?;
             let summary =
                 format!("unstake {amount} from {hotkey} on netuid {netuid} to the EVM key");
@@ -839,7 +872,7 @@ async fn stake(ctx: &AppContext, group: &ArgMatches) -> Result<(), CliError> {
     let data = precompile
         .encode_call(function, &[json!(hotkey), json!(amount.rao), json!(netuid)])
         .map_err(failure)?;
-    submit_evm_tx(
+    submit_evm_tx_with_backend(
         ctx,
         optional(leaf, "evm_key"),
         Some(&precompile.address()),
@@ -848,7 +881,452 @@ async fn stake(ctx: &AppContext, group: &ArgMatches) -> Result<(), CliError> {
         summary,
         optional(leaf, "rpc_url"),
         Map::new(),
+        backend,
     )
     .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod input_regression_tests {
+    use super::*;
+    use crate::{
+        application,
+        books::Books,
+        globals::Globals,
+        output::{MemorySink, Output, OutputOptions, Stream},
+        prompt::{PromptError, Terminal},
+    };
+    use std::{
+        error::Error,
+        path::Path,
+        sync::{Arc, Mutex},
+    };
+
+    type TestResult = Result<(), Box<dyn Error>>;
+
+    struct NoTerminal;
+    impl Terminal for NoTerminal {
+        fn stdin_is_tty(&self) -> bool {
+            false
+        }
+        fn stderr_is_tty(&self) -> bool {
+            false
+        }
+        fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
+            Err(PromptError::Unavailable)
+        }
+        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+            Err(PromptError::Unavailable)
+        }
+        fn message(&mut self, _: &str) -> Result<(), PromptError> {
+            Ok(())
+        }
+    }
+
+    struct Fixture {
+        matches: ArgMatches,
+        ctx: AppContext,
+        sink: MemorySink,
+    }
+    impl Fixture {
+        fn new(args: &[&str]) -> Result<Self, Box<dyn Error>> {
+            let matches = application::command_tree([command()?]).try_get_matches_from(args)?;
+            let group = matches.subcommand().ok_or("missing EVM group")?.1;
+            let leaf = group
+                .subcommand()
+                .map(|(_, command)| command)
+                .and_then(|command| {
+                    if group.subcommand_name() == Some("stake") {
+                        command.subcommand().map(|(_, leaf)| leaf)
+                    } else {
+                        Some(command)
+                    }
+                })
+                .ok_or("missing EVM leaf")?;
+            let mut globals = Globals::resolve(
+                &matches,
+                &Map::new(),
+                Path::new("/fixture/evm-cli-core-no-wallets"),
+                |_| None,
+            )?;
+            globals.apply_with_env(leaf, &reserved(group)?, |_| None)?;
+            let sink = MemorySink::default();
+            let mut ctx = AppContext::new(
+                globals,
+                Map::new(),
+                Books::default(),
+                Arc::new(Mutex::new(Box::new(NoTerminal))),
+            );
+            ctx.output = Output::with_sink(
+                OutputOptions {
+                    json_mode: ctx.globals.json,
+                    quiet: ctx.globals.quiet,
+                    network: None,
+                },
+                Arc::new(sink.clone()),
+            );
+            Ok(Self { matches, ctx, sink })
+        }
+        fn group(&self) -> Result<&ArgMatches, Box<dyn Error>> {
+            Ok(self.matches.subcommand().ok_or("missing EVM group")?.1)
+        }
+        fn leaf(&self) -> Result<&ArgMatches, Box<dyn Error>> {
+            Ok(self.group()?.subcommand().ok_or("missing EVM command")?.1)
+        }
+    }
+
+    #[test]
+    fn rpc_override_uses_configured_network_only_for_absent_or_exact_empty() -> TestResult {
+        const ADDRESS: &str = "0x1111111111111111111111111111111111111111";
+        for endpoint in [None, Some(""), Some("https://rpc.example.test/evm")] {
+            let mut args = vec!["rtao", "evm", "balance", ADDRESS, "--network", "test"];
+            if let Some(endpoint) = endpoint {
+                args.extend(["--rpc-url", endpoint]);
+            }
+            let fixture = Fixture::new(&args)?;
+            assert_eq!(fixture.ctx.globals.network, "test");
+            let leaf = fixture.leaf()?;
+            assert_eq!(optional(leaf, "rpc_url"), endpoint);
+            let mut environment_reads = 0;
+            let selected = rpc_network_with_env(
+                &fixture.ctx.globals.network,
+                optional(leaf, "rpc_url"),
+                |_| {
+                    environment_reads += 1;
+                    None
+                },
+            )?;
+            assert_eq!(environment_reads, 0);
+            match endpoint {
+                None | Some("") => {
+                    assert_eq!(selected.chain_id, Some(945));
+                    assert_eq!(selected.rpc_url, "https://test.chain.opentensor.ai");
+                }
+                Some(endpoint) => {
+                    assert_eq!(selected.chain_id, None);
+                    assert_eq!(selected.rpc_url, endpoint);
+                }
+            }
+        }
+        for endpoint in [" ", "\t", "unknown-network"] {
+            let fixture = Fixture::new(&[
+                "rtao",
+                "evm",
+                "balance",
+                ADDRESS,
+                "--network",
+                "test",
+                "--rpc-url",
+                endpoint,
+            ])?;
+            assert!(
+                rpc_network_with_env(
+                    &fixture.ctx.globals.network,
+                    optional(fixture.leaf()?, "rpc_url"),
+                    |_| None,
+                )
+                .is_err()
+            );
+        }
+        let fixture = Fixture::new(&[
+            "rtao",
+            "evm",
+            "balance",
+            ADDRESS,
+            "--network",
+            "local",
+            "--rpc-url",
+            "",
+        ])?;
+        let mut names = Vec::new();
+        let selected = rpc_network_with_env(
+            &fixture.ctx.globals.network,
+            optional(fixture.leaf()?, "rpc_url"),
+            |name| {
+                names.push(name.to_owned());
+                Some("http://rpc.example.test:8545".into())
+            },
+        )?;
+        assert_eq!(names, ["BT_EVM_ENDPOINT"]);
+        assert_eq!(selected.rpc_url, "http://rpc.example.test:8545");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn fund_all_blank_companions_reach_the_real_intent_as_all() -> TestResult {
+        const ADDRESS: &str = "0x1111111111111111111111111111111111111111";
+        for amount in [
+            None,
+            Some(""),
+            Some(" \t"),
+            Some("\u{1c}\u{1f}"),
+            Some(" AlL "),
+        ] {
+            let mut args = vec!["rtao", "evm", "fund", "--evm-key", ADDRESS, "--all"];
+            if let Some(amount) = amount {
+                args.extend(["--amount-tao", amount]);
+            }
+            let fixture = Fixture::new(&args)?;
+            validate_before_connect(&fixture.ctx, fixture.group()?)?;
+            let request =
+                fund_request(&fixture.ctx, fixture.leaf()?, &mut PromptHistory::default()).await?;
+            assert_eq!(request.op, "fund_evm_key");
+            assert_eq!(request.args["amount_tao"], "all");
+            assert_eq!(request.args["evm_address"], ADDRESS);
+            assert_eq!(request.intent()?.to_json()["amount_tao"], "all");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn fund_conflicts_and_ordinary_blank_amounts_refuse_in_both_paths() -> TestResult {
+        const ADDRESS: &str = "0x1111111111111111111111111111111111111111";
+        for all in [true, false] {
+            let amounts: &[&str] = if all {
+                &["1", "0", "bogus"]
+            } else {
+                &["", " \t"]
+            };
+            for amount in amounts {
+                let mut args = vec!["rtao", "evm", "fund", "--evm-key", ADDRESS];
+                if all {
+                    args.push("--all");
+                }
+                args.extend(["--amount-tao", amount]);
+                let fixture = Fixture::new(&args)?;
+                let early = validate_before_connect(&fixture.ctx, fixture.group()?)
+                    .err()
+                    .ok_or("expected early refusal")?;
+                let actual =
+                    fund_request(&fixture.ctx, fixture.leaf()?, &mut PromptHistory::default())
+                        .await
+                        .err()
+                        .ok_or("expected dispatch refusal")?;
+                assert_eq!(early.code, 2);
+                assert_eq!(actual.code, 2);
+                assert_eq!(early.message, actual.message);
+            }
+        }
+        let fixture = Fixture::new(&[
+            "rtao",
+            "evm",
+            "fund",
+            "--evm-key",
+            ADDRESS,
+            "--amount-tao",
+            "1.000000001",
+        ])?;
+        validate_before_connect(&fixture.ctx, fixture.group()?)?;
+        let request =
+            fund_request(&fixture.ctx, fixture.leaf()?, &mut PromptHistory::default()).await?;
+        assert_eq!(request.args["amount_tao"], "1.000000001");
+        assert!(request.intent().is_ok());
+        Ok(())
+    }
+
+    #[derive(Default)]
+    struct FakeTx {
+        calls: Mutex<Vec<&'static str>>,
+        previews: Mutex<Vec<EvmTxPreview>>,
+    }
+    impl EvmTxBackend for FakeTx {
+        fn key_info<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+        ) -> EvmFuture<'a, EvmKeyInfo> {
+            Box::pin(async move {
+                self.calls
+                    .lock()
+                    .map_err(|_| failure("poisoned"))?
+                    .push("public-key");
+                let address = format!("{:#x}", Address::from([7; 20]));
+                Ok(EvmKeyInfo {
+                    name: "fixture".into(),
+                    ss58_mirror: evm::h160_to_ss58(&address).map_err(failure)?,
+                    address,
+                    path: "/fixture/no-keystore".into(),
+                })
+            })
+        }
+        fn prepare<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+            sender: Address,
+            to: Option<Address>,
+            value_wei: U256,
+            data: Vec<u8>,
+        ) -> EvmFuture<'a, EvmTxPreview> {
+            Box::pin(async move {
+                self.calls
+                    .lock()
+                    .map_err(|_| failure("poisoned"))?
+                    .push("prepare");
+                let preview = EvmTxPreview {
+                    sender,
+                    to,
+                    value_wei,
+                    data,
+                    gas: 21_000,
+                    gas_price_wei: U256::from(1_000_000_000_u64),
+                    nonce: 9,
+                    chain_id: 964,
+                };
+                self.previews
+                    .lock()
+                    .map_err(|_| failure("poisoned"))?
+                    .push(preview.clone());
+                Ok(preview)
+            })
+        }
+        fn submit<'a>(
+            &'a self,
+            _: &'a AppContext,
+            _: Option<&'a str>,
+            _: Option<&'a str>,
+            _: EvmTxPreview,
+        ) -> EvmFuture<'a, Value> {
+            Box::pin(async move {
+                self.calls
+                    .lock()
+                    .map_err(|_| failure("poisoned"))?
+                    .push("submit");
+                Err(failure("fixture must never unlock, sign or submit"))
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn root_alpha_remove_refuses_before_public_or_private_backend_calls() -> TestResult {
+        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        let fixture = Fixture::new(&[
+            "rtao",
+            "evm",
+            "stake",
+            "remove",
+            "--netuid",
+            "0",
+            "--amount-alpha",
+            "1",
+            "--hotkey",
+            &hotkey,
+            "--json",
+            "--yes",
+        ])?;
+        let fake = FakeTx::default();
+        let error = stake_with_backend(&fixture.ctx, fixture.leaf()?, &fake)
+            .await
+            .err()
+            .ok_or("expected alpha unit refusal")?;
+        assert_eq!(error.code, 2);
+        assert!(fake.calls.lock().map_err(|_| "poisoned")?.is_empty());
+        assert!(fake.previews.lock().map_err(|_| "poisoned")?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn valid_alpha_remove_and_root_add_keep_exact_call_words_and_dry_run() -> TestResult {
+        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        for (command, flag, netuid, amount, rao, function) in [
+            (
+                "remove",
+                "--amount-alpha",
+                "7",
+                "1.000000001",
+                1_000_000_001_u64,
+                "removeStake",
+            ),
+            (
+                "remove",
+                "--amount-alpha",
+                "7",
+                "18446744073.709551615",
+                u64::MAX,
+                "removeStake",
+            ),
+            (
+                "add",
+                "--amount-tao",
+                "0",
+                "1",
+                1_000_000_000_u64,
+                "addStake",
+            ),
+        ] {
+            let fixture = Fixture::new(&[
+                "rtao",
+                "evm",
+                "stake",
+                command,
+                "--netuid",
+                netuid,
+                flag,
+                amount,
+                "--hotkey",
+                &hotkey,
+                "--json",
+                "--dry-run",
+            ])?;
+            let fake = FakeTx::default();
+            stake_with_backend(&fixture.ctx, fixture.leaf()?, &fake).await?;
+            assert_eq!(
+                *fake.calls.lock().map_err(|_| "poisoned")?,
+                ["public-key", "prepare"]
+            );
+            let previews = fake.previews.lock().map_err(|_| "poisoned")?;
+            assert_eq!(previews.len(), 1);
+            let preview = &previews[0];
+            assert_eq!(preview.value_wei, U256::ZERO);
+            assert_eq!(
+                preview.to.map(|address| format!("{address:#x}")),
+                Some("0x0000000000000000000000000000000000000805".into())
+            );
+            assert_eq!(preview.data.len(), 100);
+            let selected = evm::get_precompile("staking-v2")?.function(function)?;
+            assert_eq!(&preview.data[..4], selected.selector().as_slice());
+            assert_eq!(&preview.data[4..36], &[9; 32]);
+            assert_eq!(&preview.data[36..68], &U256::from(rao).to_be_bytes::<32>());
+            let netuid = netuid.parse::<u16>()?;
+            assert_eq!(
+                &preview.data[68..100],
+                &U256::from(netuid).to_be_bytes::<32>()
+            );
+            let public: Value = serde_json::from_str(&fixture.sink.text(Stream::Stdout)?)?;
+            assert_eq!(public["data"], format!("0x{}", hex::encode(&preview.data)));
+            assert_eq!(public["value_wei"], 0);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn alpha_remove_retains_native_negative_precision_range_and_text_refusals() -> TestResult
+    {
+        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        for amount in ["-1", "0.0000000001", "18446744073.709551616", "+1", " 1"] {
+            let amount_flag = format!("--amount-alpha={amount}");
+            let fixture = Fixture::new(&[
+                "rtao",
+                "evm",
+                "stake",
+                "remove",
+                "--netuid",
+                "7",
+                &amount_flag,
+                "--hotkey",
+                &hotkey,
+                "--json",
+                "--yes",
+            ])?;
+            let fake = FakeTx::default();
+            let error = stake_with_backend(&fixture.ctx, fixture.leaf()?, &fake)
+                .await
+                .err()
+                .ok_or("expected native amount refusal")?;
+            assert_eq!(error.code, 2);
+            assert!(fake.calls.lock().map_err(|_| "poisoned")?.is_empty());
+        }
+        Ok(())
+    }
 }

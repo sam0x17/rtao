@@ -68,6 +68,13 @@ enum Step {
     Switch,
     Approval(AccountId, H256, u32, u32),
     ApprovalChanged(AccountId, H256, u32, u32, ApprovalChange),
+    ApprovalSnapshot {
+        group: AccountId,
+        hash: H256,
+        pending: (u32, u32),
+        event_opening: Option<(u32, u32)>,
+        previous: Option<AccountId>,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -147,12 +154,24 @@ impl Signer for JournalSigner {
                     state.queue_submit(SubmitScript::InBlockThenFinalized { events: json!([success()]) });
                     return;
                 }
-                if let Step::Approval(group, hash, height, index)
-                    | Step::ApprovalChanged(group, hash, height, index, _) = step {
+                let approval = match step {
+                    Step::Approval(group, hash, height, index)
+                    | Step::ApprovalChanged(group, hash, height, index, _) =>
+                        Some((group, hash, (height, index), None, None)),
+                    Step::ApprovalSnapshot { group, hash, pending, event_opening, previous } =>
+                        Some((group, hash, pending, event_opening, previous)),
+                    _ => None,
+                };
+                if let Some((group, hash, (height, index), event_opening, previous)) = approval {
                     let hash = format!("0x{}", hex::encode(hash.0));
+                    let mut approvals = vec![self.account()];
+                    if let Some(previous) = previous {
+                        approvals.push(previous);
+                        approvals.sort_by_key(|account| account.0);
+                    }
                     state.seed_python("Multisig", "Multisigs", &[json!(group), json!(hash)], json!({
                         "when":{"height":height,"index":index}, "deposit":280_800_000,
-                        "depositor":self.account(), "approvals":[self.account()],
+                        "depositor":previous.unwrap_or_else(|| self.account()), "approvals":approvals,
                     })).expect("pending approval seed");
                     if let Step::ApprovalChanged(_, _, _, _, change) = step {
                         match change {
@@ -161,9 +180,16 @@ impl Signer for JournalSigner {
                             ApprovalChange::Consensus => state.seed_python("SubtensorModule", "SubnetEpochConsensus", &[json!(NET.0)], json!("Yuma")).expect("changed consensus"),
                         }
                     }
+                    let mut attributes = json!({"approving":self.account(),"multisig":group,"call_hash":hash});
+                    let event_id = if let Some((height, index)) = event_opening {
+                        attributes["timepoint"] = json!({"height":height,"index":index});
+                        "MultisigApproval"
+                    } else {
+                        "NewMultisig"
+                    };
                     state.queue_submit(SubmitScript::InBlockThenFinalized { events: json!([success(), {
-                        "phase":"ApplyExtrinsic", "extrinsic_idx":0, "module_id":"Multisig", "event_id":"NewMultisig",
-                        "attributes":{"approving":self.account(),"multisig":group,"call_hash":hash}, "topics":[],
+                        "phase":"ApplyExtrinsic", "extrinsic_idx":0, "module_id":"Multisig", "event_id":event_id,
+                        "attributes":attributes, "topics":[],
                     }]) });
                     return;
                 }
@@ -713,6 +739,74 @@ async fn already_yuma_is_reported_without_claiming_target_population() -> anyhow
 }
 
 #[tokio::test]
+async fn already_yuma_with_implicit_target_ignores_null_pruning_bounds() -> anyhow::Result<()> {
+    let f = fixture(128, []).await?;
+    f.chain.mutate_state(|state| -> anyhow::Result<()> {
+        state.seed(&st::MAX_ALLOWED_UIDS, (NET,), 128u16)?;
+        state.seed_python(
+            "SubtensorModule",
+            "SubnetEpochConsensus",
+            &[json!(NET.0)],
+            json!("Yuma"),
+        )?;
+        Ok(())
+    })?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        None,
+        &f.recovery,
+        TrimNullConfig {
+            switch_to_yuma: true,
+            ..Default::default()
+        },
+    )
+    .await?;
+    let TrimNullStep::Complete(report) = session.next_action().await? else {
+        anyhow::bail!("an already-Yuma subnet requires no pruning or setter");
+    };
+    assert!(report.already_yuma);
+    assert!(!report.switched_to_yuma);
+    assert_eq!(report.population, 128);
+    assert_eq!(report.target, 256);
+    assert_eq!(report.batches, 0);
+    assert_eq!(report.removed_uids, 0);
+    assert_eq!(report.cleared_commits, 0);
+    assert_eq!(report.last_extrinsic_id, None);
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    drop(session);
+    f.chain.mutate_state(|state| {
+        state.seed_python(
+            "SubtensorModule",
+            "SubnetEpochConsensus",
+            &[json!(NET.0)],
+            json!("Null"),
+        )
+    })?;
+    // The same implicit target is still invalid when a Null mutation is needed.
+    assert!(
+        TrimNullSession::begin(
+            f.owner.client().clone(),
+            f.owner.effective_owner()?,
+            NET,
+            None,
+            &f.recovery,
+            TrimNullConfig::default(),
+        )
+        .await
+        .is_err()
+    );
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    f.owner.client().close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn target_population_with_pending_cleanup_still_submits_a_batch() -> anyhow::Result<()> {
     let f = fixture(TARGET, []).await?;
     f.chain
@@ -901,7 +995,8 @@ async fn yuma_switch_probes_legacy_queues_and_rechecks_before_signing() -> anyho
 struct ApprovalIntent {
     semantic: Json,
     inner: rtao_runtime::CallBytes,
-    other: AccountId,
+    others: Vec<AccountId>,
+    threshold: u16,
     timepoint: Option<rtao_runtime::models::MultisigTimepoint>,
 }
 impl IntentInterface for ApprovalIntent {
@@ -912,7 +1007,7 @@ impl IntentInterface for ApprovalIntent {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::multisig::AS_MULTI];
     fn to_json(&self) -> Json {
-        json!({"op":"multisig_execute", "threshold":2, "other_signatories":[self.other],
+        json!({"op":"multisig_execute", "threshold":self.threshold, "other_signatories":self.others,
             "call":self.semantic, "timepoint":self.timepoint})
     }
 }
@@ -926,8 +1021,8 @@ impl Intent for ApprovalIntent {
             ("proof_size".into(), Value::Uint(0)),
         ]));
         let call = rtao_runtime::calls::multisig::as_multi(
-            2,
-            vec![self.other],
+            self.threshold,
+            self.others.clone(),
             self.timepoint.clone(),
             self.inner.clone(),
             weight,
@@ -973,11 +1068,12 @@ async fn finalized_pending_approval_retains_one_journal_and_requires_same_timepo
         .steps
         .lock()
         .expect("steps")
-        .push_back(Step::Approval(group.address, H256(inner.hash()), 100, 0));
+        .push_back(Step::Approval(group.address, H256(inner.hash()), 101, 0));
     let mut approval = ApprovalIntent {
         semantic: action.intent().to_json_dyn(),
         inner,
-        other,
+        others: vec![other],
+        threshold: 2,
         timepoint: None,
     };
     let plan = f
@@ -1022,7 +1118,7 @@ async fn finalized_pending_approval_retains_one_journal_and_requires_same_timepo
     );
     assert_eq!(
         recorded["pending_timepoint"],
-        json!({"height":100,"index":0})
+        json!({"height":101,"index":0})
     );
     drop(session);
     let mut session = TrimNullSession::begin(
@@ -1039,7 +1135,7 @@ async fn finalized_pending_approval_retains_one_journal_and_requires_same_timepo
         "null opening cannot reopen retained operation"
     );
     approval.timepoint = Some(rtao_runtime::models::MultisigTimepoint {
-        height: 100,
+        height: 101,
         index: 0,
     });
     let followup = f
@@ -1255,8 +1351,8 @@ async fn pending_hook_fixture(
     let other = AccountId([9; 32]);
     let group = rtao_tx::multisig::Multisig::new(&runtime, &[f.owner.keys.address()?, other], 2)?;
     let scripted = match change {
-        Some(change) => Step::ApprovalChanged(group.address, H256(inner.hash()), 100, 0, change),
-        None => Step::Approval(group.address, H256(inner.hash()), 100, 0),
+        Some(change) => Step::ApprovalChanged(group.address, H256(inner.hash()), 101, 0, change),
+        None => Step::Approval(group.address, H256(inner.hash()), 101, 0),
     };
     f.owner
         .keys
@@ -1268,7 +1364,8 @@ async fn pending_hook_fixture(
     let approval = ApprovalIntent {
         semantic: action.intent().to_json_dyn(),
         inner,
-        other,
+        others: vec![other],
+        threshold: 2,
         timepoint: None,
     };
     let plan = f
@@ -1294,7 +1391,7 @@ async fn reviewed_receipt_hook_allows_next_approval_without_finishing_action() -
     assert_eq!(opening["approval_confirmed"], json!(true));
     assert_eq!(
         opening["pending_timepoint"],
-        json!({"height":100,"index":0})
+        json!({"height":101,"index":0})
     );
     assert_eq!(opening["receipt"]["inclusion"], json!("Finalized"));
     assert_eq!(opening["attempts"].as_array().map(Vec::len), Some(1));
@@ -1303,7 +1400,7 @@ async fn reviewed_receipt_hook_allows_next_approval_without_finishing_action() -
     assert_eq!(session.report().last_extrinsic_id, None);
 
     approval.timepoint = Some(rtao_runtime::models::MultisigTimepoint {
-        height: 100,
+        height: 101,
         index: 0,
     });
     let next_plan = f
@@ -1373,7 +1470,7 @@ async fn reviewed_pending_approval_with_changed_pruning_state_retains_receipt_an
         assert_eq!(session.report().batches, 0);
         assert_eq!(session.report().population, 200);
         approval.timepoint = Some(rtao_runtime::models::MultisigTimepoint {
-            height: 100,
+            height: 101,
             index: 0,
         });
         let next_plan = f
@@ -1389,6 +1486,217 @@ async fn reviewed_pending_approval_with_changed_pruning_state_retains_receipt_an
         assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
         assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
         f.owner.client().close().await;
+    }
+    Ok(())
+}
+
+// Model the receipt's own approval plus block-end state after optional later
+// cancellation/reopening. FakeChain supplies the actual signed receipt at 101/0;
+// it does not execute the extra runtime calls whose resulting state is seeded.
+async fn first_approval_opening_case(explicit: bool, replaced: bool) -> anyhow::Result<()> {
+    let f = fixture(200, []).await?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig::default(),
+    )
+    .await?;
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("expected guarded batch");
+    };
+    let runtime = f.owner.client().refresh_runtime().await?;
+    let inner = rtao_runtime::calls::admin_utils::sudo_trim_null_uids_batch(NET, TARGET)
+        .compose(&runtime)?;
+    let others = vec![AccountId([8; 32]), AccountId([9; 32])];
+    // A non-final explicit approval is valid for 3-of-3: one earlier signer,
+    // this signer second, and one remaining signer. It must not execute H yet.
+    let group = rtao_tx::multisig::Multisig::new(
+        &runtime,
+        &[f.owner.keys.address()?, others[0], others[1]],
+        3,
+    )?;
+    let original = if explicit { (90, 1) } else { (101, 0) };
+    let pending = if replaced { (101, 2) } else { original };
+    if explicit {
+        f.chain.mutate_state(|state| {
+            state.seed_python(
+                "Multisig",
+                "Multisigs",
+                &[
+                    json!(group.address),
+                    json!(format!("0x{}", hex::encode(inner.hash()))),
+                ],
+                json!({"when":{"height":original.0,"index":original.1},"deposit":280_800_000,
+                "depositor":others[0],"approvals":[others[0]]}),
+            )
+        })?;
+    }
+    f.owner
+        .keys
+        .signer
+        .steps
+        .lock()
+        .expect("steps")
+        .push_back(Step::ApprovalSnapshot {
+            group: group.address,
+            hash: H256(inner.hash()),
+            pending,
+            event_opening: explicit.then_some(original),
+            previous: (explicit && !replaced).then_some(others[0]),
+        });
+    let mut approval = ApprovalIntent {
+        semantic: action.intent().to_json_dyn(),
+        inner,
+        others,
+        threshold: 3,
+        timepoint: explicit.then_some(MultisigTimepoint {
+            height: original.0,
+            index: original.1,
+        }),
+    };
+    let plan = f
+        .owner
+        .executor
+        .plan(&approval, f.owner.keys.as_ref(), &PlanOptions::default())
+        .await?;
+    session.before_attempt(&action, &plan)?;
+    let before: Json = serde_json::from_slice(&fs::read(&f.recovery)?)?;
+    assert_eq!(before["pending_timepoint"], json!(approval.timepoint));
+    let receipt = f
+        .owner
+        .executor
+        .execute(&approval, f.owner.keys.as_ref(), &ExecuteOptions::default())
+        .await?;
+    assert_eq!(receipt.extrinsic_id.as_deref(), Some("101-0000"));
+    assert_eq!(receipt.inclusion, Inclusion::Finalized);
+    let confirmed = session.record_reviewed_result(&action, &receipt).await;
+    let retained: Json = serde_json::from_slice(&fs::read(&f.recovery)?)?;
+    assert_eq!(retained["receipt"]["success"], json!(true));
+    assert_eq!(retained["receipt"]["inclusion"], json!("Finalized"));
+    assert_eq!(
+        retained["receipt"]["extrinsic_id"],
+        json!(receipt.extrinsic_id)
+    );
+    assert_eq!(
+        retained["receipt"]["events"],
+        Json::Array(
+            receipt
+                .events
+                .iter()
+                .map(|event| DynValue::new(event.value().clone()).to_json())
+                .collect()
+        )
+    );
+    assert_eq!(retained["attempts"][0]["receipt"], retained["receipt"]);
+    assert_eq!(session.report().batches, 0);
+    assert_eq!(session.report().population, 200);
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    if replaced {
+        assert!(
+            confirmed.is_err(),
+            "a receipt for P1 cannot confirm block-end P2"
+        );
+        assert_eq!(retained["approval_confirmed"], json!(false));
+        assert_eq!(retained["pending_timepoint"], before["pending_timepoint"]);
+        let unchanged = fs::read(&f.recovery)?;
+        approval.timepoint = Some(MultisigTimepoint {
+            height: pending.0,
+            index: pending.1,
+        });
+        let replacement_plan = f
+            .owner
+            .executor
+            .plan(&approval, f.owner.keys.as_ref(), &PlanOptions::default())
+            .await?;
+        assert!(session.before_attempt(&action, &replacement_plan).is_err());
+        assert_eq!(fs::read(&f.recovery)?, unchanged);
+        drop(session);
+        assert!(
+            TrimNullSession::begin(
+                f.owner.client().clone(),
+                f.owner.effective_owner()?,
+                NET,
+                Some(TARGET),
+                &f.recovery,
+                TrimNullConfig::default(),
+            )
+            .await
+            .is_err(),
+            "unconfirmed P1 cannot restart against P2"
+        );
+        assert_eq!(fs::read(&f.recovery)?, unchanged);
+
+        // An old, incorrectly confirmed journal must also fail receipt-based
+        // restart authentication; equality with current P2 alone is insufficient.
+        let mut legacy = retained;
+        legacy["approval_confirmed"] = json!(true);
+        legacy["pending_timepoint"] = json!({"height":pending.0,"index":pending.1});
+        fs::write(&f.recovery, serde_json::to_vec(&legacy)?)?;
+        let legacy_bytes = fs::read(&f.recovery)?;
+        assert!(
+            TrimNullSession::begin(
+                f.owner.client().clone(),
+                f.owner.effective_owner()?,
+                NET,
+                Some(TARGET),
+                &f.recovery,
+                TrimNullConfig::default(),
+            )
+            .await
+            .is_err(),
+            "legacy misbound P2 must not restart"
+        );
+        assert_eq!(fs::read(&f.recovery)?, legacy_bytes);
+    } else {
+        confirmed?;
+        assert_eq!(retained["approval_confirmed"], json!(true));
+        assert_eq!(
+            retained["pending_timepoint"],
+            json!({"height":original.0,"index":original.1})
+        );
+        drop(session);
+        let resumed = TrimNullSession::begin(
+            f.owner.client().clone(),
+            f.owner.effective_owner()?,
+            NET,
+            Some(TARGET),
+            &f.recovery,
+            TrimNullConfig::default(),
+        )
+        .await?;
+        assert_eq!(resumed.report().batches, 0);
+        drop(resumed);
+    }
+    assert_eq!(
+        f.owner.keys.unlocks.load(Ordering::SeqCst),
+        1,
+        "no next signer acquired"
+    );
+    assert_eq!(f.owner.keys.signer.calls.lock().expect("calls").len(), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    assert!(!f.recovery.with_file_name("pruning.json.next").exists());
+    f.owner.client().close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn new_approval_binds_receipt_position_and_refuses_later_same_block_opening()
+-> anyhow::Result<()> {
+    for replaced in [false, true] {
+        first_approval_opening_case(false, replaced).await?;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn explicit_approval_binds_review_and_event_timepoint_before_pending_storage()
+-> anyhow::Result<()> {
+    for replaced in [false, true] {
+        first_approval_opening_case(true, replaced).await?;
     }
     Ok(())
 }

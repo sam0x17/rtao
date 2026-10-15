@@ -6,7 +6,10 @@ use rtao_client::{BlockRef, Client, Inclusion, Snapshot, View, ViewExt};
 use rtao_core::{DynValue, codec::Value, value_ext::ValueExt};
 use rtao_intents::{SetHyperparameter, TrimNullSubnetBatch, hyperparameters::HyperparamPlanner};
 use rtao_primitives::{AccountId, H256, NetUid};
-use rtao_runtime::storage::{subtensor_module as st, system};
+use rtao_runtime::{
+    models::MultisigTimepoint,
+    storage::{subtensor_module as st, system},
+};
 use rtao_signer::{
     BoxFuture, Coldkey, KeySource, KeyView, MultiSignature, Signer, SignerError, SigningRequest,
 };
@@ -89,7 +92,9 @@ impl PruningState {
         if self.pending_target.is_some_and(|pending| pending != target) {
             return Err(invalid("conflicting on-chain Null pruning target"));
         }
-        if target < self.minimum || target > self.maximum.min(self.yuma_ceiling()) {
+        if self.consensus == Consensus::Null
+            && (target < self.minimum || target > self.maximum.min(self.yuma_ceiling()))
+        {
             return Err(invalid(format!(
                 "Null pruning target must be between {} and {}",
                 self.minimum,
@@ -1222,6 +1227,7 @@ impl SubmissionJournal {
             return Err(self.unresolved());
         }
         let (account, call_hash) = multisig_identity(&record)?;
+        let (opening, signer) = self.approval_opening(&record, included.block().number)?;
         for at in [&included, &finalized] {
             let pending = at
                 .storage(
@@ -1230,7 +1236,10 @@ impl SubmissionJournal {
                 )
                 .await?;
             let pending = pending.as_ref().ok_or_else(|| self.unresolved())?;
-            if json!(pending.when) != record["pending_timepoint"] {
+            if pending.when != opening
+                || json!(opening) != record["pending_timepoint"]
+                || !pending.approvals.contains(&signer)
+            {
                 return Err(self.unresolved());
             }
         }
@@ -1271,11 +1280,17 @@ impl SubmissionJournal {
             "reviewed_op": plan.op, "reviewed_args": plan.args,
         });
         if !self.exists()? {
+            let pending_timepoint = if multisig.is_null() {
+                Json::Null
+            } else {
+                plan.args["timepoint"].clone()
+            };
             let record = json!({
                 "version":2, "operation":action.operation(), "semantic_args":semantic,
                 "genesis":state.genesis, "owner":state.owner, "netuid":netuid, "target":target,
                 "block":state.block, "population":state.population, "pending_target":state.pending_target,
                 "mechanisms":state.mechanisms, "call_hex":call_hex, "multisig":multisig,
+                "pending_timepoint":pending_timepoint,
                 "approval_confirmed":false, "attempts":[attempt],
             });
             return self.write(&record, true);
@@ -1390,6 +1405,96 @@ impl SubmissionJournal {
         Ok(false)
     }
 
+    // Authenticate the opening from the retained receipt, never from later
+    // block-end pending state. Recheck durable evidence on restart as well.
+    // NewMultisig height inference assumes pinned v478's BlockNumberProvider
+    // is System, as in the CLI's receipt-opening authentication (D-041).
+    fn approval_opening(
+        &self,
+        record: &Json,
+        included_height: u64,
+    ) -> Result<(MultisigTimepoint, AccountId), TxError> {
+        let receipt = &record["receipt"];
+        if receipt["success"] != json!(true)
+            || receipt["inclusion"] != json!("Finalized")
+            || !receipt["fate_unknown"].is_null()
+        {
+            return Err(self.unresolved());
+        }
+        let position = receipt["extrinsic_id"]
+            .as_str()
+            .and_then(|id| {
+                let (height, index) = id.split_once('-')?;
+                Some(MultisigTimepoint {
+                    height: height.parse().ok()?,
+                    index: index.parse().ok()?,
+                })
+            })
+            .ok_or_else(|| self.unresolved())?;
+        if u64::from(position.height) != included_height {
+            return Err(self.unresolved());
+        }
+        let (account, hash) = multisig_identity(record)?;
+        let attempt = record["attempts"]
+            .as_array()
+            .and_then(|attempts| attempts.last())
+            .ok_or_else(|| self.unresolved())?;
+        let signer: AccountId =
+            serde_json::from_value(attempt["signer"].clone()).map_err(|_| self.unresolved())?;
+        let events = receipt["events"]
+            .as_array()
+            .ok_or_else(|| self.unresolved())?;
+        let mut opening = None;
+        for event in events {
+            if event["module_id"] != json!("Multisig")
+                || !matches!(
+                    event["event_id"].as_str(),
+                    Some("NewMultisig" | "MultisigApproval")
+                )
+            {
+                continue;
+            }
+            let attributes = &event["attributes"];
+            let event_account: AccountId = serde_json::from_value(attributes["multisig"].clone())
+                .map_err(|_| self.unresolved())?;
+            let approving: AccountId = serde_json::from_value(attributes["approving"].clone())
+                .map_err(|_| self.unresolved())?;
+            let event_hash =
+                receipt_block_hash(&attributes["call_hash"]).ok_or_else(|| self.unresolved())?;
+            if event_account != account || event_hash.0 != hash || approving != signer {
+                continue;
+            }
+            if event["phase"] != json!("ApplyExtrinsic")
+                || event["extrinsic_idx"] != json!(position.index)
+                || opening.is_some()
+            {
+                return Err(self.unresolved());
+            }
+            let reviewed = &attempt["reviewed_args"]["timepoint"];
+            let actual = if event["event_id"] == json!("NewMultisig") {
+                if !reviewed.is_null() {
+                    return Err(self.unresolved());
+                }
+                position.clone()
+            } else {
+                let actual: MultisigTimepoint =
+                    serde_json::from_value(attributes["timepoint"].clone())
+                        .map_err(|_| self.unresolved())?;
+                if *reviewed != json!(actual) {
+                    return Err(self.unresolved());
+                }
+                actual
+            };
+            if !record["pending_timepoint"].is_null()
+                && record["pending_timepoint"] != json!(actual)
+            {
+                return Err(self.unresolved());
+            }
+            opening = Some(actual);
+        }
+        Ok((opening.ok_or_else(|| self.unresolved())?, signer))
+    }
+
     async fn confirm_pending(
         &self,
         client: &Client,
@@ -1397,45 +1502,20 @@ impl SubmissionJournal {
     ) -> Result<(), TxError> {
         let mut record = self.read()?;
         let (account, hash) = multisig_identity(&record)?;
-        let signer: AccountId = serde_json::from_value(
-            record["attempts"]
-                .as_array()
-                .and_then(|a| a.last())
-                .ok_or_else(|| self.unresolved())?["signer"]
-                .clone(),
-        )
-        .map_err(|_| self.unresolved())?;
-        let matching = receipt
-            .events
-            .iter()
-            .filter(|event| {
-                (event.matches("Multisig", "NewMultisig")
-                    || event.matches("Multisig", "MultisigApproval"))
-                    && event_account(event, "multisig") == Some(account)
-                    && event_account(event, "approving") == Some(signer)
-                    && event_hash(event, "call_hash") == Some(hash)
-            })
-            .count();
-        if matching != 1 {
-            return Err(self.unresolved());
-        }
         let included = client
             .at(BlockRef::Hash(
                 receipt.block_hash.ok_or_else(|| self.unresolved())?,
             ))
             .await?;
+        let (opening, signer) = self.approval_opening(&record, included.block().number)?;
         let pending = included
             .storage(&rtao_runtime::storage::multisig::MULTISIGS, (account, hash))
             .await?;
         let pending = pending.as_ref().ok_or_else(|| self.unresolved())?;
-        if !pending.approvals.contains(&signer) {
+        if !pending.approvals.contains(&signer) || pending.when != opening {
             return Err(self.unresolved());
         }
-        let retained = &record["pending_timepoint"];
-        if !retained.is_null() && *retained != json!(pending.when) {
-            return Err(self.unresolved());
-        }
-        record["pending_timepoint"] = json!(pending.when);
+        record["pending_timepoint"] = json!(opening);
         record["approval_confirmed"] = json!(true);
         self.write(&record, false)
     }

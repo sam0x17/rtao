@@ -16,15 +16,52 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+The next source batch reconciles thirteen complete source relationships: all
+ten EVM CLI modules, basket display pricing and both optional recorders. The
+source map reaches 297/357 reconciled and 60 pending; the generated matrix
+remains at 284 pending its next hosted refresh. Seven EVM input corrections
+preserve exact-empty option semantics, one shared fund-all decision and the
+alpha-only root guard. Fourteen new injected fixture functions exercise actual
+handlers, intent construction, ABI words, preview/confirmation and refusal
+boundaries. They have not compiled or executed yet. A distinct-price basket
+fixture now detects incorrect dust inclusion and the exact cutoff.
+
+The same batch repairs first-approval journal authentication: derive the original
+multisig opening from the retained receipt/event and explicit reviewed timepoint,
+compare block-end state, then repeat that authentication on restart. New and
+explicit nonexecuting approvals each have same-opening/replaced-opening cases;
+old artificial receipts now use their actual inclusion position. Preserve raw
+evidence, D-023, D-041, S9 and no automatic reopening. Already-Yuma no-op ordering
+is corrected; wait-budget help now states the existing native behavior. Both
+complete null-pruning rows remain pending, including their exact pytest and
+wait-semantics obligations.
+
+Complete codegen/check.py review found missing metadata/classifier and nonblank
+prose guards. Native parity now checks those contracts with targeted source
+fixtures; the whole-file row remains pending follow-up review and hosted tests.
+Source sample declarations have a separate bounded proposal, also still pending.
+No Python/oracle, device, live runtime or sanitizer execution is inferred.
+All new fixtures and strict M8/milestone acceptance remain unverified; M2-S02
+is open/unaccepted. Bounded source/adoption reviews live under the existing
+recovery root; no build output, archive or extraction tree was created.
+
 Ordinary [38824416747](https://github.com/sam0x17/rtao/actions/runs/38824416747)
-is running at `d9ae66842d0cdb261b353ea0284b1f5936c324b4`. Supply, MSRV and
-semver jobs passed; no-host failed strict Clippy on session.rs's Url import,
+at `d9ae66842d0cdb261b353ea0284b1f5936c324b4` passed supply, MSRV and
+semver; no-host failed strict Clippy on session.rs's Url import,
 which the handshake refactor left needed only by tests and frame fuzzing.
 Gate that import with the existing test/fuzzing condition; do not suppress
 linting. The terminal no-host log is 184,651 bytes, SHA256
 `9254c2e86e6d7a6fc83d9ad914780d14822329ec028150f3987a91e8f68a2355`.
 Bounded proofs are `check-no-host-38824416747.json` and its authenticated detail
-follow-up. Main/feature results and execution of this correction remain pending.
+follow-up. Main also failed during strict Clippy compilation: the new public RPC
+fixture used primitive H256 where RpcError::FateUnknown requires RPC H256.
+Qualify that one constructor while retaining native hashes in client APIs.
+Its 77,984-byte terminal log has SHA256
+`351ce4a11a4b49f367c5bbe81e8f28722e76af135fb38b564df3a1214fd1cb3d`;
+bounded proof is `check-main-38824416747.json`. No tests or documentation ran
+there. The feature job subsequently passed and the run is terminally failed.
+Execution of both corrections remains pending. Push the reviewed source batch
+for a separate report refresh before the next combined ordinary checkpoint.
 
 Hosted report refresh
 [38823630645](https://github.com/sam0x17/rtao/actions/runs/38823630645) passed

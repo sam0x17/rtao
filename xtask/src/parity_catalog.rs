@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/codegen/check.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Independent catalog contracts and exact pinned call-coverage checks.
 
 use anyhow::{Context, Result, bail, ensure};
@@ -24,6 +25,42 @@ pub(super) fn json_file(root: &Path, path: &str) -> Result<Value> {
 fn equal(actual: &Value, expected: &Value, what: &str) -> Result<()> {
     rtao_primitives::json::compare(actual, expected)
         .with_context(|| format!("catalog mismatch: {what}"))
+}
+
+fn nonblank_error_prose<'a>(
+    rows: impl IntoIterator<Item = (&'a str, &'a str)>,
+    family: &str,
+) -> Result<()> {
+    for (name, prose) in rows {
+        // Python str.strip also removes ASCII U+001C through U+001F.
+        ensure!(
+            prose.chars().any(|character| {
+                !character.is_whitespace() && !matches!(character, '\u{1c}'..='\u{1f}')
+            }),
+            "{family} error {name} has blank prose"
+        );
+    }
+    Ok(())
+}
+
+fn error_name_rules<'a>(
+    metadata: &BTreeSet<&str>,
+    classified: impl IntoIterator<Item = &'a str>,
+    classify: impl Fn(&str) -> rtao_catalog::ErrorCode,
+) -> Result<()> {
+    for name in classified {
+        ensure!(
+            metadata.contains(name),
+            "classified chain error {name} is absent from pinned metadata"
+        );
+    }
+    for name in metadata {
+        ensure!(
+            classify(name) != rtao_catalog::ErrorCode::Unknown,
+            "pinned metadata error {name} has no semantic classification"
+        );
+    }
+    Ok(())
 }
 fn text<'a>(row: &'a Value, key: &str) -> Result<&'a str> {
     row[key]
@@ -907,6 +944,16 @@ pub(super) fn catalogs(root: &Path) -> Result<Value> {
             "chain error full record",
         )?;
     }
+    nonblank_error_prose(
+        rtao_catalog::CHAIN_ERRORS
+            .iter()
+            .map(|spec| (spec.name, spec.description)),
+        "chain",
+    )?;
+    nonblank_error_prose(
+        rtao_catalog::py::DISPATCH_ERROR_DOCS.iter().copied(),
+        "dispatch",
+    )?;
     check_interfaces(
         &source_file(root, "crates/rtao-intents/src/generated/interfaces.rs")?,
         &source_file(root, "crates/rtao-intents/src/generated/defaults.rs")?,
@@ -1140,6 +1187,18 @@ pub(super) fn coverage(root: &Path) -> Result<Value> {
         })
         .collect::<BTreeSet<_>>();
     let ir = MetadataIr::from_runtime(&runtime(root)?)?;
+    let metadata_errors = ir
+        .pallets
+        .iter()
+        .flat_map(|pallet| pallet.errors.iter().map(|error| error.name.as_str()))
+        .collect::<BTreeSet<_>>();
+    error_name_rules(
+        &metadata_errors,
+        rtao_catalog::errors::NAME_TO_CODE
+            .iter()
+            .map(|(name, _)| *name),
+        rtao_catalog::errors::classify_chain_error,
+    )?;
     let count = coverage_rules(&ir, &covered, &raw, &extra, &wrapped)?;
     for spec in &rtao_catalog::INTENTS {
         if let Some(verify) = spec.verify {
@@ -1329,6 +1388,61 @@ pub(super) fn chain(root: &Path, strict: bool) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn metadata_errors_require_current_names_and_non_unknown_classification() -> Result<()> {
+        use rtao_catalog::{ErrorCode, errors::classify_chain_error};
+        // A heuristic-only metadata name need not appear in NAME_TO_CODE.
+        let metadata = BTreeSet::from(["InsufficientBalance", "FreshRateLimit"]);
+        error_name_rules(&metadata, ["InsufficientBalance"], classify_chain_error)?;
+        let stale = error_name_rules(
+            &metadata,
+            ["InsufficientBalance", "RemovedChainError"],
+            classify_chain_error,
+        )
+        .err()
+        .context("jointly stale classifier/catalog names bypassed metadata")?;
+        assert!(stale.to_string().contains("RemovedChainError"));
+        let mut changed = metadata.clone();
+        changed.insert("FreshUnclassifiedError");
+        let unknown = error_name_rules(&changed, ["InsufficientBalance"], classify_chain_error)
+            .err()
+            .context("new metadata errors need an actual classification")?;
+        assert!(unknown.to_string().contains("FreshUnclassifiedError"));
+        let unknown = error_name_rules(&metadata, ["InsufficientBalance"], |name| {
+            if name == "InsufficientBalance" {
+                ErrorCode::Unknown
+            } else {
+                classify_chain_error(name)
+            }
+        })
+        .err()
+        .context("agreement on Unknown is not a chain-error classification")?;
+        assert!(unknown.to_string().contains("InsufficientBalance"));
+        Ok(())
+    }
+
+    #[test]
+    fn chain_and_dispatch_error_prose_use_python_nonblank_semantics() -> Result<()> {
+        for family in ["chain", "dispatch"] {
+            for blank in [
+                "",
+                " \t\n\r",
+                "\u{85}\u{a0}\u{2003}\u{2028}\u{3000}",
+                "\u{1c}\u{1d}\u{1e}\u{1f}",
+            ] {
+                let failure = nonblank_error_prose([("PublicError", blank)], family)
+                    .err()
+                    .context("Python strips every character in the blank fixture")?;
+                assert!(failure.to_string().contains(family));
+                assert!(failure.to_string().contains("PublicError"));
+            }
+            for text in ["visible", " \u{1c} explanation \u{a0}", "\u{200b}", "\0"] {
+                nonblank_error_prose([("PublicError", text)], family)?;
+            }
+        }
+        Ok(())
+    }
+
     #[test]
     fn shield_consumer_assertion_pending_has_explicit_milestone_and_expires() -> Result<()> {
         let pending = "[assertion.shield_period_max]\nmilestone = 'M4'\nplan = 'M4-03'\nreason = 'The typed ShieldPeriod maximum assertion belongs to the M4-03 shield pipeline.'\n".parse::<DocumentMut>()?;

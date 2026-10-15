@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/keys.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional sources at the same commit/license: sdk/python/bittensor/cli/commands/evm/_shared.py; sdk/python/bittensor/evm/keys.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/evm/_shared.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/keys.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Encrypted EVM key creation, import, public inspection and explicit export.
 
 use super::{failure, key_ref};
@@ -607,7 +608,10 @@ async fn run_with_backend(
             ctx.output.table(&table).map_err(failure)
         }
         "show" | "export" => {
-            if name == "export" && enabled(leaf, "private_key") && text(leaf, "out").is_some() {
+            if name == "export"
+                && enabled(leaf, "private_key")
+                && text(leaf, "out").is_some_and(|path| !path.is_empty())
+            {
                 return Err(CliError::input("--private-key prints to stdout only")
                     .with_help("a raw key on disk defeats the keystore; drop --out"));
             }
@@ -629,7 +633,9 @@ async fn run_with_backend(
                 return display_private_key(ctx, &info, raw, enabled(leaf, "show")).await;
             }
             let root = ctx.globals.wallet_path.clone();
-            let out = text(leaf, "out").map(str::to_owned);
+            let out = text(leaf, "out")
+                .filter(|path| !path.is_empty())
+                .map(str::to_owned);
             let destination = out.as_deref().map(Path::new).map(expand_path).transpose()?;
             let document = rtao::core::offload(move || {
                 let document = backend.export(&key, &wallet, &root)?;
@@ -1230,5 +1236,51 @@ mod tests {
                 .message
                 .contains("exceeds")
         );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn empty_export_destination_uses_stdout_and_nonempty_raw_destinations_still_refuse() {
+        for private in [false, true] {
+            let args = if private {
+                vec!["export", "--private-key", "--out", "", "--json"]
+            } else {
+                vec!["export", "--out", "", "--json"]
+            };
+            let (ctx, group, sink, terminal) = fixture(&args, false, &[]);
+            let backend = FakeKeys::new();
+            run_with_backend(&ctx, &group, backend.clone())
+                .await
+                .unwrap();
+            let value: Value = serde_json::from_str(&sink.text(Stream::Stdout).unwrap()).unwrap();
+            if private {
+                assert_eq!(value, RAW);
+                assert_eq!(
+                    backend.calls(),
+                    ["info:default/default", "unlock:default/default"]
+                );
+            } else {
+                assert_eq!(value["extra"], "retained");
+                assert_eq!(
+                    backend.calls(),
+                    ["info:default/default", "export:default/default"]
+                );
+            }
+            assert!(terminal.lock().unwrap().secret_labels.is_empty());
+        }
+        for destination in ["/fixture/raw", " "] {
+            let (ctx, group, sink, terminal) = fixture(
+                &["export", "--private-key", "--out", destination],
+                false,
+                &[],
+            );
+            let backend = FakeKeys::new();
+            let error = run_with_backend(&ctx, &group, backend.clone())
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, 2);
+            assert!(backend.calls().is_empty());
+            assert!(terminal.lock().unwrap().secret_labels.is_empty());
+            assert!(sink.text(Stream::Stdout).unwrap().is_empty());
+        }
     }
 }
