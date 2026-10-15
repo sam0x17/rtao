@@ -1524,4 +1524,100 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn divergence_evidence_follows_required_all_feature_targets_and_source_gates() -> Result<()> {
+        let workspace = TestWorkspace::new()?;
+        workspace.write(
+            "crates/example/Cargo.toml",
+            r#"[package]
+name = "example"
+version = "0.1.0"
+edition = "2024"
+[features]
+default = []
+behavior = []
+[[test]]
+name = "enabled_target"
+required-features = ["behavior"]
+[[test]]
+name = "unknown_target"
+required-features = ["undeclared"]
+[[test]]
+name = "disabled_target"
+test = false
+[[test]]
+name = "custom_harness"
+harness = false
+"#,
+        )?;
+        workspace.write(
+            "crates/example/src/lib.rs",
+            r#"#[cfg(feature = "behavior")] mod behavior;
+#[cfg(feature = "undeclared")] mod unknown;
+#[cfg(unix)] mod platform;
+#[test] #[cfg(not(feature = "behavior"))]
+fn default_only() { assert_eq!([1, 2].len(), 2); }
+"#,
+        )?;
+        workspace.write(
+            "crates/example/src/behavior.rs",
+            r#"#[test] fn evidence() { assert_eq!([1, 2].len(), 2); }
+#[ignore] #[test] fn ignored() { assert_eq!([1, 2].len(), 2); }
+#[cfg_attr(feature = "behavior", ignore)] #[test]
+fn conditional_ignored() { assert_eq!([1, 2].len(), 2); }
+#[test] fn helper_evidence() { assert_length([1, 2].len()); }
+fn assert_length(actual: usize) { assert_eq!(actual, 2); }
+#[test] fn result_evidence() -> Result<(), &'static str> {
+    if [1, 2].len() == 2 { Ok(()) } else { Err("wrong length") }
+}
+fn not_a_test() { assert_eq!([1, 2].len(), 2); }
+"#,
+        )?;
+        for relative in [
+            "src/unknown.rs",
+            "src/platform.rs",
+            "src/orphan.rs",
+            "tests/enabled_target.rs",
+            "tests/unknown_target.rs",
+            "tests/disabled_target.rs",
+            "tests/custom_harness.rs",
+        ] {
+            workspace.write(
+                &format!("crates/example/{relative}"),
+                "#[test] fn evidence() { assert_eq!([1, 2].len(), 2); }",
+            )?;
+        }
+        let indexed = index(&workspace.path)?;
+        assert!(indexed.tests.contains("example::default_only"));
+        assert!(!indexed.tests.contains("example::behavior::evidence"));
+        for accepted in [
+            "behavior::evidence",
+            "behavior::helper_evidence",
+            "behavior::result_evidence",
+            "enabled_target::evidence",
+        ] {
+            super::super::state::divergence_test(&indexed, &format!("example::{accepted}"))?;
+        }
+        for rejected in [
+            "default_only",
+            "unknown::evidence",
+            "platform::evidence",
+            "orphan::evidence",
+            "unknown_target::evidence",
+            "disabled_target::evidence",
+            "custom_harness::evidence",
+            "behavior::ignored",
+            "behavior::conditional_ignored",
+            "behavior::not_a_test",
+            "missing::evidence",
+        ] {
+            let test = format!("example::{rejected}");
+            assert!(
+                super::super::state::divergence_test(&indexed, &test).is_err(),
+                "{test}"
+            );
+        }
+        Ok(())
+    }
 }

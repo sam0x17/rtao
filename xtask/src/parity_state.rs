@@ -517,6 +517,25 @@ pub(super) fn exports(root: &Path, index: &Index, strict: bool) -> Result<Value>
     )
 }
 
+pub(super) fn divergence_test(index: &Index, test: &str) -> Result<()> {
+    // The required check lane runs nextest --workspace --all-features. Use
+    // that exact source index, as pending-intent evidence already does. A
+    // default-only test is not executed by this lane and cannot qualify here.
+    ensure!(
+        index.feature_tests.contains(test),
+        "{}",
+        index.rejected_feature_tests.get(test).map_or(
+            "test does not exist in all-feature Cargo targets",
+            String::as_str
+        )
+    );
+    ensure!(
+        index.feature_test_bodies.contains_key(test),
+        "test has no indexed all-feature source body"
+    );
+    Ok(())
+}
+
 pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Value> {
     let map = document(root, "parity/divergences.toml")?;
     let rows = map
@@ -584,14 +603,9 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
                 active += 1;
                 for test in tests {
                     let test = test.as_str().context("divergence test must be string")?;
-                    ensure!(
-                        index.tests.contains(test),
-                        "divergence {id} pinning test does not qualify: {test}: {}",
-                        index
-                            .rejected_tests
-                            .get(test)
-                            .map_or("test does not exist", String::as_str)
-                    );
+                    divergence_test(index, test).with_context(|| {
+                        format!("divergence {id} pinning test does not qualify: {test}")
+                    })?;
                 }
             }
             _ => bail!("divergence {id} unknown state"),
@@ -911,6 +925,25 @@ fn document_pins(root: &Path) -> Result<DocumentMut> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn divergence_evidence_requires_both_all_feature_harness_entry_and_exact_indexed_body()
+    -> Result<()> {
+        let test = "example::behavior::evidence";
+        let mut index = Index::default();
+        let body = "{ let values = [1, 2]; assert_eq!(values.len(), 2); }";
+        index.feature_test_bodies.insert(test.into(), body.into());
+        assert!(divergence_test(&index, test).is_err());
+        index.feature_tests.insert(test.into());
+        divergence_test(&index, test)?;
+        index.feature_test_bodies.remove(test);
+        assert!(divergence_test(&index, test).is_err());
+        // A default-only body cannot substitute for the actual CI source.
+        index.tests.insert(test.into());
+        index.test_bodies.insert(test.into(), body.into());
+        assert!(divergence_test(&index, test).is_err());
+        Ok(())
+    }
+
     #[test]
     fn behavior_citations_accept_macro_identifiers_and_refuse_literal_spoofs() {
         assert!(identifier(
