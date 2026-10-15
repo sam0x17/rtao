@@ -3,7 +3,7 @@
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
 use rtao::{
-    client::{Client, ClientConfig, Network, View},
+    client::{Client, ClientConfig, HeadProvider, Network, View},
     primitives::{AccountId, CryptoType, NetUid},
     signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
     tx::{ExtrinsicResult, IntentInterface},
