@@ -583,6 +583,10 @@ fn optional_m10_divergence(id: &str, milestone: &str, class: &str) -> bool {
 
 pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Value> {
     let map = document(root, "parity/divergences.toml")?;
+    divergences_document(&map, index, strict)
+}
+
+fn divergences_document(map: &DocumentMut, index: &Index, strict: bool) -> Result<Value> {
     let rows = map
         .get("divergences")
         .and_then(Item::as_array_of_tables)
@@ -1305,11 +1309,7 @@ mod tests {
                 }
             }
         }
-        let temporary = tempfile::tempdir()?;
-        fs::create_dir(temporary.path().join("parity"))?;
-        let path = temporary.path().join("parity/divergences.toml");
-        fs::write(&path, register.to_string())?;
-        let report = divergences(temporary.path(), &index, true)?;
+        let report = divergences_document(&register, &index, true)?;
         assert_eq!(report["pending"], 1);
         assert_eq!(report["deferred_optional"], 1);
         let rows = register["divergences"]
@@ -1335,8 +1335,7 @@ mod tests {
                 .find(|row| row["id"].as_str() == Some("D-031"))
                 .context("M10 row")?;
             row[field] = value(changed);
-            fs::write(&path, changed_register.to_string())?;
-            assert!(divergences(temporary.path(), &index, true).is_err());
+            assert!(divergences_document(&changed_register, &index, true).is_err());
         }
         Ok(())
     }
