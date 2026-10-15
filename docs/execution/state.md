@@ -16,6 +16,25 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Source audit reconciles the twelve `oracle-only` core-py files after reviewing
+all 1,956 lines, exact watched blobs/artifact SHA256 pins, and the Dockerfile's
+tag/commit/frozen-uv build plus image-identity consumer chain. These are optional
+oracle dependency inputs. The previous pending notes required a first corpus
+for source reconciliation, contrary to the existing Q30 separation. Keep the
+same classification and all image/Python/differential/device/published-wheel
+coverage unverified. Native product source and export obligations are unchanged.
+The file map is now 192 reconciled/165 pending; 29 e2e mappings remain pending.
+Proof is `core-py-source-review.json`; no Python, container or local build ran.
+Fresh hosted matrix generation is required before ordinary validation.
+
+Normal run [38756773737](https://github.com/sam0x17/rtao/actions/runs/38756773737)
+at `d179b14` passes semver and MSRV at inspection; supply, no-host and features
+remain live. Main Clippy stops before tests on two cloned values used only to
+create borrowed one-element slices in the new Children ordering fixture. Use
+`std::slice::from_ref` at those call sites, preserving both assertions and the
+later owned tool arguments. Proof is `check-38756773737.json`. No lint gate or
+assertion is disabled; the corrected source needs another normal hosted run.
+
 Compatibility refresh
 [38756143897](https://github.com/sam0x17/rtao/actions/runs/38756143897)
 succeeds at clean `877a39c`. Verify/adopt its four exact regular report members,

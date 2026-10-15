@@ -292,111 +292,111 @@ notes = "Complete authenticated source review 2026-10-15: direct Proxy.proxy opt
 
 [[file]]
 py = "sdk/bittensor-core-py/Cargo.toml"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "4c67d9b75aeb0267d3816bb07d67d657583db46e"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. The PyO3 cdylib uses the sibling bittensor-core path, abi3-py310 and default Ledger feature; this package is not linked into native rtao. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/README.md"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "474631e2fb442181f69ff942ea30236cb30261d4"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. The documented extension distribution, device prerequisites and native-core versus product boundary describe the optional Python oracle dependency; native client docs remain separate. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/pyproject.toml"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "f74371f1940e852295fce71bbb1f2eba35dad324"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Maturin builds the named bittensor_core module from Cargo.toml with extension-module enabled. Static Python package version and Cargo core version are distinct; this source review proves no published-wheel availability or compatible release pair. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/digest.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "dac91ba10f7547e309204d45e8c7cbbca0fc9807"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed ChainInfo projection, explicit SS58 prefix 42, 9 decimals and TAO defaults, digest/proof forwarding and Python byte materialization. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/errors.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "f140f53b6b754b484359258160012c0515696244"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed every CoreError to Python exception mapping and the KeyfileError/WrongPasswordError/LedgerError definitions. Native error behavior and redaction remain separately mapped. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/keys.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "d2f9fa02eda6f300ea09af5d1d925a37dbebca2a"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed message text/0x/bytes coercion, key constructors and aliases, signing/verification, sealed-box/keyfile/password-environment forwarding and registered constants. This source input decision is not universal erasure or native-wallet equivalence evidence. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/ledger.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "852c7efa1fce8a6066bc1990fbc518102e3d4498"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed HID open, version/address forwarding, account/index 0 and SS58 prefix 42 defaults and off-GIL proof signing. Device and platform execution remain unverified. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/lib.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "dbbb2dc1dcb8d4880cd9f230cbe5fe61be8b0e02"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. The module registers typed keyfile/password/device exceptions, digest/key/PoW/runtime/timelock exports and feature-gated Ledger. Native product exports are tracked separately. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/pow.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "7515a39f92bfa24f5db40dcbebb0d22d51c31faf"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed bounded CPU/GPU public-challenge forwarding, device dictionary/solution projection, GPU mutex ownership and GIL release. No mining or hardware run is implied. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/runtime.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "a81737591f49b75d5f1ecc194a9cfd0ac132d979"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed the complete 702-line Runtime/StorageEntry binding, value conversion, strict call remainder check, storage/map projections, transaction parameter/h256 validation, signed payload/extrinsic forwarding, metadata IR materialization and era/multisig exports. Native runtime/client rows retain their own behavior obligations. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/timelock.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "8d439a214b8f35f9a2d71551bd1b87423dfed60a"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed epoch-state arguments, commit/encrypt/decrypt/signature/inner-ciphertext forwarding, tuple/bytes materialization, block-time/no-errors defaults and ML-KEM exports. No live drand, decryption or Python interoperability result is established. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/values.rs"
-rs = ["Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"]
+rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "e660c12c3445faeb89c950cbbae3563fde094108"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: PyO3 binding/package source retained for the optional hosted Python oracle dependency: keys, values, errors, runtime, timelock, digest, Ledger and PoW. Pinned identity/image-build wiring exists, but vendor/oracle has no manifested corpus. This pending row does not claim direct coverage or execution of all binding functions."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed Python materialization and input conversion: bool before int, signed/unsigned 128-bit and U256, bytes versus lists, tuple/dict preservation, depth 256, per-call caches and scalar/tuple map keys. Native dynamic-value behavior is tracked outside this oracle-only row. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation."
 
 [[file]]
 py = "sdk/bittensor-core/Cargo.toml"
