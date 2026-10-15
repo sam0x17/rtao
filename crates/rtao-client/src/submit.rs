@@ -110,36 +110,38 @@ impl Default for SubmitOptions {
 #[derive(Debug)]
 pub struct UnsignedExtrinsic {
     /// Spec-stamped SCALE call bytes.
-    call: CallBytes,
+    pub(crate) call: CallBytes,
     /// Expected signing account.
-    address: AccountId,
+    pub(crate) address: AccountId,
     /// Expected MultiSignature algorithm.
-    crypto_type: CryptoType,
+    pub(crate) crypto_type: CryptoType,
     /// Normalized era carrier used by the core encoder.
-    era: Value,
+    pub(crate) era: Value,
     /// Selected pool-aware nonce.
-    nonce: u64,
+    pub(crate) nonce: u64,
+    pub(crate) tip: u64,
+    pub(crate) tip_asset_id: Option<u64>,
     /// Immutable chain genesis identity.
-    genesis_hash: H256,
+    pub(crate) genesis_hash: H256,
     /// Era's finalized-history anchor hash.
-    era_block_hash: H256,
+    pub(crate) era_block_hash: H256,
     /// RFC-0078 digest, enabling CheckMetadataHash when present.
-    metadata_hash: Option<[u8; 32]>,
+    pub(crate) metadata_hash: Option<[u8; 32]>,
     /// Already size-normalized signing bytes.
-    payload: Bytes,
+    pub(crate) payload: Bytes,
     /// Signed fields transmitted in the extrinsic.
-    included_in_extrinsic: Bytes,
+    pub(crate) included_in_extrinsic: Bytes,
     /// Signed implied fields omitted from the extrinsic.
-    included_in_signed_data: Bytes,
+    pub(crate) included_in_signed_data: Bytes,
     /// Polkadot-JS JSON view of the same transaction.
-    payload_json: SignerPayloadJson,
+    pub(crate) payload_json: SignerPayloadJson,
     /// Metadata-verifying signer context.
-    context: SigningContext,
+    pub(crate) context: SigningContext,
     /// Finalized height when this transaction was prepared.
-    submission_head: u64,
+    pub(crate) submission_head: u64,
     /// First height after its last mortal validity window.
-    expiry: Option<u64>,
-    runtime: RuntimeHandle,
+    pub(crate) expiry: Option<u64>,
+    pub(crate) runtime: RuntimeHandle,
 }
 impl UnsignedExtrinsic {
     /// Borrow the spec-stamped SCALE call bytes.
@@ -161,6 +163,14 @@ impl UnsignedExtrinsic {
     /// Selected pool-aware nonce.
     pub fn nonce(&self) -> u64 {
         self.nonce
+    }
+    /// Native TAO tip in rao.
+    pub fn tip(&self) -> u64 {
+        self.tip
+    }
+    /// Optional fee asset identifier.
+    pub fn tip_asset_id(&self) -> Option<u64> {
+        self.tip_asset_id
     }
     /// Immutable chain genesis identity.
     pub fn genesis_hash(&self) -> H256 {
@@ -218,8 +228,8 @@ impl UnsignedExtrinsic {
         TxParams {
             era: self.era.clone(),
             nonce: self.nonce,
-            tip: 0,
-            tip_asset_id: None,
+            tip: self.tip.into(),
+            tip_asset_id: self.tip_asset_id.map(u128::from),
             genesis_hash: self.genesis_hash.0,
             era_block_hash: self.era_block_hash.0,
             metadata_hash: self.metadata_hash,
@@ -836,13 +846,14 @@ impl Client {
         let limits = SubmissionLimits::new(opts)?;
         let attempted_hash = OnceLock::new();
         let operation = async {
-            let lease = self
-                .nonces()
-                .lease_explicit(&unsigned.address, unsigned.nonce);
+            unsigned.verify_signature(signature)?;
             let (bytes, hash) = limits
                 .admission
                 .run(self, self.attach_signature(unsigned, signature))
                 .await?;
+            let lease = self
+                .nonces()
+                .lease_explicit(&unsigned.address, unsigned.nonce);
             match self
                 .send_and_watch(&bytes, hash, opts, limits.admission, &attempted_hash)
                 .await
@@ -890,6 +901,19 @@ impl Client {
         opts: &SubmitOptions,
         nonce: u64,
         finalized_height: Option<u64>,
+    ) -> Result<UnsignedExtrinsic, ClientError> {
+        self.prepare_at_nonce_with_fees(call, signer, opts, nonce, finalized_height, (0, None))
+            .await
+    }
+
+    pub(crate) async fn prepare_at_nonce_with_fees(
+        &self,
+        call: CallBytes,
+        signer: &dyn Signer,
+        opts: &SubmitOptions,
+        nonce: u64,
+        finalized_height: Option<u64>,
+        fees: (u64, Option<u64>),
     ) -> Result<UnsignedExtrinsic, ClientError> {
         self.ensure_signing().await?;
         let runtime = self.refresh_runtime().await?;
@@ -964,8 +988,8 @@ impl Client {
         let params = TxParams {
             era: era.clone(),
             nonce,
-            tip: 0,
-            tip_asset_id: None,
+            tip: fees.0.into(),
+            tip_asset_id: fees.1.map(u128::from),
             genesis_hash: self.genesis().0,
             era_block_hash: anchor.0,
             metadata_hash,
@@ -991,6 +1015,8 @@ impl Client {
             crypto_type: signer.crypto_type(),
             era,
             nonce,
+            tip: fees.0,
+            tip_asset_id: fees.1,
             genesis_hash: self.genesis(),
             era_block_hash: anchor,
             metadata_hash,
@@ -1010,6 +1036,7 @@ impl Client {
         unsigned: &UnsignedExtrinsic,
         signature: MultiSignature,
     ) -> Result<(Bytes, H256), ClientError> {
+        unsigned.verify_signature(signature)?;
         self.ensure_signing().await?;
         let runtime = self.refresh_runtime().await?;
         let version: serde_json::Value = self
@@ -1025,10 +1052,13 @@ impl Client {
                 reason: "prepared transaction belongs to a different genesis".into(),
             });
         }
-        if signature.crypto != unsigned.crypto_type {
-            return Err(ClientError::Protocol(
-                "MultiSignature variant does not match signer crypto type".into(),
-            ));
+        if let Some(expiry) = unsigned.expiry
+            && self.at(BlockRef::Finalized).await?.block().number >= expiry
+        {
+            return Err(ClientError::SigningDisabled {
+                reason: "prepared transaction's mortal era has expired; prepare and sign again"
+                    .into(),
+            });
         }
         let (bytes, hash) = unsigned
             .runtime
@@ -1074,7 +1104,7 @@ fn check_live_stamp(version: &serde_json::Value, call: &CallBytes) -> Result<(),
     }
     Ok(())
 }
-fn payload_json(
+pub(crate) fn payload_json(
     runtime: &RuntimeHandle,
     call: &CallBytes,
     address: AccountId,
@@ -1115,7 +1145,7 @@ fn payload_json(
         ),
         (
             "tip",
-            json!(format!("0x{}", hex::encode(0u128.to_be_bytes()))),
+            json!(format!("0x{}", hex::encode(params.tip.to_be_bytes()))),
         ),
         (
             "transactionVersion",
@@ -1138,6 +1168,14 @@ fn payload_json(
         .collect::<Vec<_>>();
     if !extensions.is_empty() {
         payload.insert("signedExtensions".into(), json!(extensions));
+    }
+    if let Some(asset) = params.tip_asset_id {
+        let mut encoded = Vec::new();
+        rtao_core::codec::encode::compact(asset, &mut encoded).map_err(CoreError::from)?;
+        payload.insert(
+            "assetId".into(),
+            json!(format!("0x{}", hex::encode(encoded))),
+        );
     }
     if let Some(hash) = params.metadata_hash {
         payload.insert("mode".into(), json!(1));

@@ -25,6 +25,7 @@ rtao-signer = { path = "../crates/rtao-signer", default-features = false }
 http = "1.4"
 futures = "0.3"
 hex = "0.4"
+serde_json = { version = "1", features = ["arbitrary_precision", "preserve_order"] }
 axum = { version = "0.8", default-features = false, features = ["json"] }
 tower = { version = "0.5", features = ["util"] }
 
@@ -80,6 +81,13 @@ bench = false
 [[bin]]
 name = "event_splitting"
 path = "fuzz_targets/event_splitting.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "unsigned_extrinsic_json"
+path = "fuzz_targets/unsigned_extrinsic_json.rs"
 test = false
 doc = false
 bench = false

@@ -23,6 +23,8 @@ mod legacy_api;
 /// Network presets and immutable public-network identities.
 pub mod network;
 mod nonce;
+/// Public-identity preparation and authenticated Python unsigned-JSON import.
+pub mod offline;
 /// Metadata-directed decoding for typed primitive and dynamic read outputs.
 pub mod read_decode;
 mod rpc;
@@ -42,6 +44,7 @@ pub use head::{
 };
 pub use network::{Network, NetworkError};
 pub use nonce::{NonceLease, NonceManager};
+pub use offline::{PublicPrepareOptions, UntrustedUnsignedExtrinsic};
 pub use read_decode::{ReadValue, decode_typed};
 pub(crate) use rpc::{hash_hex, parse_hash, rpc_request};
 /// Run blocking chain-code work on Tokio's blocking pool.
