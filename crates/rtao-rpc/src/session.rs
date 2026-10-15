@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Single-owner WebSocket supervision and request correlation.
 use crate::{
     policy,
@@ -822,6 +823,10 @@ impl Supervisor {
         self.index = (self.index + 1) % self.config.pool.urls.len();
     }
     fn record_loss(&mut self, reason: RpcError) -> Result<(), RpcError> {
+        // Refusals received while pacing reconnect setup are terminal too.
+        if matches!(reason, RpcError::Policy(_)) {
+            return Err(reason);
+        }
         self.connection_lost(reason.clone());
         self.failures = self.failures.saturating_add(1);
         if self.failures.is_multiple_of(self.config.max_retries) {

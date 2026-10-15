@@ -1626,3 +1626,191 @@ async fn untrusted_wss_certificate_is_rejected() -> Result {
     assert!(node.requests().is_empty());
     Ok(())
 }
+
+#[cfg(feature = "rpc-rate-limit")]
+async fn policy_during_paced_reconnect(reads: usize, policy_close: bool) -> Result {
+    let node = FakeNode::start().await?;
+    let fallback = FakeNode::start().await?;
+    node.set_handler("rpc_methods", |_, _| Reply::silent());
+    node.set_handler("system_chain", |_, _| Reply::silent());
+    let pool =
+        EndpointPool::new(Url::parse(node.url())?).with_fallbacks([Url::parse(fallback.url())?]);
+    let mut cfg = SessionConfig::public(pool);
+    cfg.retry_forever = true;
+    cfg.silence_timeout = Duration::from_secs(30);
+    let session = Session::connect(cfg).await?;
+    spin_until("initial discovery", || {
+        node.requests()
+            .iter()
+            .filter(|r| r.method == "rpc_methods")
+            .count()
+            == 1
+    })
+    .await?;
+    tokio::time::pause();
+    let mut requests = Vec::new();
+    for index in 0..reads {
+        let mut request =
+            Box::pin(session.request::<Value>(ReadMethod::SystemChain, json!([index])));
+        // Polling queues the production request before moving the token clock.
+        assert!(futures::poll!(request.as_mut()).is_pending());
+        requests.push(request);
+        tokio::time::advance(Duration::from_millis(1001)).await;
+        spin_until("initial read", || {
+            node.requests()
+                .iter()
+                .filter(|r| r.method == "system_chain")
+                .count()
+                == index + 1
+        })
+        .await?;
+    }
+    let original: Vec<_> = node
+        .requests()
+        .into_iter()
+        .filter(|r| r.method == "system_chain")
+        .collect();
+    assert_eq!(original.len(), reads);
+    node.drop_connection()?;
+    spin_until("reconnect backoff", || {
+        matches!(
+            &*session.state().borrow(),
+            SessionState::Reconnecting { .. }
+        )
+    })
+    .await?;
+    // Backoff uses 250 ms; this opens exactly one public-preset replay token.
+    tokio::time::advance(Duration::from_millis(1001)).await;
+    spin_until("first replay", || {
+        node.requests()
+            .iter()
+            .filter(|r| r.method == "system_chain")
+            .count()
+            == reads + 1
+    })
+    .await?;
+    assert_eq!(node.connect_attempts(), 2);
+    assert!(matches!(
+        &*session.state().borrow(),
+        SessionState::Reconnecting { .. }
+    ));
+    assert_eq!(
+        node.requests()
+            .iter()
+            .filter(|r| r.method == "rpc_methods")
+            .count(),
+        1
+    );
+    let replay = node
+        .requests()
+        .into_iter()
+        .filter(|r| r.method == "system_chain")
+        .nth(reads)
+        .ok_or("missing replay")?;
+    assert_eq!(replay.id, original[0].id);
+    assert_eq!(replay.params, original[0].params);
+    // With two reads the next token wait belongs to resend; with one it
+    // belongs to diagnostic discovery. Neither path has entered pump yet.
+    let mut events = session.events();
+    let server_error = json!({"code":-32005,"message":"capacity exceeded", "data":{
+        "policy":"public-rpc", "reason":"weighted_rate", "retryAfter":17,
+        "opaque":{"original":[1,2,3]}
+    }});
+    if policy_close {
+        node.close_connection(1008, "slow\u{1b}[2J\u{202e}down")?;
+    } else {
+        node.push_frame(json!({"jsonrpc":"2.0","id":replay.id,"error":server_error}))?;
+    }
+    spin_until("terminal paced policy refusal", || {
+        matches!(&*session.state().borrow(), SessionState::Failed { .. })
+    })
+    .await?;
+    let terminal = match &*session.state().borrow() {
+        SessionState::Failed {
+            error: RpcError::Policy(refusal),
+        } => refusal.clone(),
+        state => return Err(format!("policy became {state:?}").into()),
+    };
+    if policy_close {
+        assert_eq!(terminal.kind, rtao_rpc::RefusalKind::Close1008);
+        assert_eq!(terminal.status_code, Some(1008));
+        assert_eq!(terminal.reason.as_deref(), Some("slow [2J down"));
+        assert!(terminal.payload.is_none());
+    } else {
+        assert_eq!(
+            terminal.kind,
+            rtao_rpc::RefusalKind::JsonRpc { code: -32005 }
+        );
+        assert_eq!(terminal.status_code, None);
+        assert_eq!(terminal.policy.as_deref(), Some("public-rpc"));
+        assert_eq!(terminal.reason.as_deref(), Some("weighted_rate"));
+        assert_eq!(terminal.retry_after.as_deref(), Some("17"));
+        assert_eq!(
+            terminal.payload.as_deref(),
+            Some(&json!({"error":server_error}))
+        );
+    }
+    for request in requests {
+        assert_eq!(request.await, Err(RpcError::Policy(terminal.clone())));
+    }
+    assert_eq!(
+        session
+            .request::<Value>(ReadMethod::SystemChain, json!([]))
+            .await,
+        Err(RpcError::Policy(terminal.clone()))
+    );
+    assert!(
+        matches!(events.try_recv()?, rtao_rpc::SessionEvent::PolicyRefused(ref refusal) if refusal == terminal.as_ref())
+    );
+    assert!(matches!(
+        events.try_recv(),
+        Err(tokio::sync::broadcast::error::TryRecvError::Empty)
+    ));
+    tokio::time::advance(Duration::from_secs(60)).await;
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(node.connect_attempts(), 2);
+    assert_eq!(fallback.connect_attempts(), 0);
+    assert_eq!(
+        node.requests()
+            .iter()
+            .filter(|r| r.method == "system_chain")
+            .count(),
+        reads + 1
+    );
+    assert_eq!(
+        node.requests()
+            .iter()
+            .filter(|r| r.method == "rpc_methods")
+            .count(),
+        1
+    );
+    session.close().await;
+    tokio::time::resume();
+    Ok(())
+}
+
+#[cfg(feature = "rpc-rate-limit")]
+#[tokio::test]
+async fn policy_rpc_during_reconnect_resend_is_terminal() -> Result {
+    policy_during_paced_reconnect(2, false).await
+}
+
+#[cfg(feature = "rpc-rate-limit")]
+#[tokio::test]
+async fn policy_close_during_reconnect_resend_is_terminal() -> Result {
+    policy_during_paced_reconnect(2, true).await
+}
+
+#[cfg(feature = "rpc-rate-limit")]
+#[tokio::test]
+async fn policy_rpc_during_reconnect_discovery_wait_is_terminal() -> Result {
+    policy_during_paced_reconnect(1, false).await
+}
+
+#[cfg(feature = "rpc-rate-limit")]
+#[tokio::test]
+async fn policy_close_during_reconnect_discovery_wait_is_terminal() -> Result {
+    policy_during_paced_reconnect(1, true).await
+}
