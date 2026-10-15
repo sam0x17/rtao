@@ -4,21 +4,30 @@
 
 use super::generated::{self, QueryRequest, TxRequest};
 use crate::{
-    context::{AppContext, ExternalSignerFactory, SubmissionOptions},
+    context::{AppContext, ExternalSignerFactory, SubmissionHooks, SubmissionOptions},
     error::CliError,
-    output::{Output, TableSpec},
+    globals::{Tier, with_globals},
+    output::{Output, StepState, TableSpec},
     prompt::{PromptHistory, WalletConfirmation},
 };
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::{
     client::{BlockRef, Client, View, ViewExt},
     core::codec::Value as CoreValue,
+    neuron::{TrimNullAction, TrimNullConfig, TrimNullSession, TrimNullStep},
     primitives::{NetUid, hyperparams::RawInteger, pyfmt},
     reads::ReadName,
-    tx::ExtrinsicResult,
+    signer::BoxFuture,
+    tx::{ExtrinsicResult, Plan},
 };
 use rtao_catalog::{hyperparams::TABLE, owner_map::OWNER_HYPERPARAMETERS};
 use serde_json::{Map, Value, json};
+use sha2::{Digest, Sha256};
+use std::{
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
@@ -36,7 +45,387 @@ fn mutation(name: &str) -> Option<&'static str> {
     }
 }
 
-/// Functional owner commands; sequential Null pruning is a separate workflow.
+fn wait_seconds(raw: &str) -> Result<String, String> {
+    seconds(raw, 86_400.0)
+}
+
+fn poll_seconds(raw: &str) -> Result<String, String> {
+    seconds(raw, 60.0)
+}
+
+fn seconds(raw: &str, maximum: f64) -> Result<String, String> {
+    raw.parse::<f64>()
+        .ok()
+        .filter(|seconds| seconds.is_finite() && (1.0..=maximum).contains(seconds))
+        .map(|_| raw.to_owned())
+        .ok_or_else(|| format!("seconds must be finite and within 1..{maximum}"))
+}
+
+/// Bounded inputs for sequential, finalized Null pruning and optional activation.
+pub struct NullPruningRequest {
+    /// Non-root native subnet identity.
+    pub netuid: NetUid,
+    /// Explicit population ceiling, or the current target/Yuma ceiling.
+    pub target: Option<u16>,
+    /// Switch consensus only after finalized pruning and queue drainage.
+    pub switch_to_yuma: bool,
+    /// Maximum wait for each administration or switch prerequisite window.
+    pub wait_timeout: Duration,
+    /// Interval between live state checks while waiting.
+    pub poll_interval: Duration,
+    /// Maximum successful bounded batches before a resumable stop.
+    pub max_batches: u32,
+    /// Explicit recovery record, otherwise derived beside shared CLI config.
+    pub state_file: Option<PathBuf>,
+    /// Optional mortality override for every actual submitted transaction.
+    pub period: Option<u32>,
+}
+
+/// Sequential Null pruning options, preserving Python's bounded CLI inputs.
+pub fn trim_null_command() -> Command {
+    with_globals(
+        Command::new("trim-null")
+            .about("Prune finalized Null batches, with an optional return to Yuma.")
+            .long_about("Prune sequential finalized Null batches. Deregisters participants and can change survivor UIDs. Restart with the same target to resume from finalized storage. Each transaction uses the normal confirmation and signing flow; --yes skips prompts. --dry-run previews one transaction. --switch-to-yuma is opt-in.")
+            .arg(Arg::new("netuid").long("netuid").required(true).value_parser(clap::value_parser!(u16).range(1..=4095)))
+            .arg(Arg::new("target").long("target").value_parser(clap::value_parser!(u16).range(1..=65535)).help("Final population; defaults to the pending target or floor(256 / mechanism_count)."))
+            .arg(Arg::new("switch_to_yuma").long("switch-to-yuma").action(ArgAction::SetTrue).help("Switch to Yuma after finalized pruning and prerequisite checks."))
+            .arg(Arg::new("wait_timeout").long("wait-timeout").default_value("3600").value_parser(clap::builder::ValueParser::new(wait_seconds)).help("Maximum seconds for each administration or switch-prerequisite wait (1..86400)."))
+            .arg(Arg::new("poll_seconds").long("poll-seconds").default_value("12").value_parser(clap::builder::ValueParser::new(poll_seconds)).help("Seconds between live state polls (1..60)."))
+            .arg(Arg::new("max_batches").long("max-batches").default_value("256").value_parser(clap::value_parser!(u32).range(1..=4096)).help("Stop after this many batches; rerun to resume."))
+            .arg(Arg::new("state_file").long("state-file").value_parser(clap::value_parser!(PathBuf)).help("Durable unresolved-submission record; defaults beside CLI config, keyed by chain and subnet."))
+            .arg(Arg::new("__period").long("period").value_parser(clap::value_parser!(u32)).help("Mortal transaction period in blocks (rtao addition).")),
+        Tier::Tx,
+    )
+}
+
+impl NullPruningRequest {
+    /// Confirm the owner wallet, then retain exact validated workflow controls.
+    pub fn from_matches(
+        ctx: &mut AppContext,
+        matches: &ArgMatches,
+        history: &mut PromptHistory,
+    ) -> Result<Self, CliError> {
+        ctx.confirm_wallet(
+            &WalletConfirmation {
+                help: "Subnet owner coldkey signing every batch.".into(),
+                require_coldkey: true,
+                ..Default::default()
+            },
+            history,
+        )?;
+        let duration = |key: &str| -> Result<Duration, CliError> {
+            let raw = matches
+                .get_one::<String>(key)
+                .ok_or_else(|| CliError::input(format!("missing {key}")))?;
+            Duration::try_from_secs_f64(raw.parse::<f64>().map_err(failure)?).map_err(failure)
+        };
+        Ok(Self {
+            netuid: NetUid(
+                *matches
+                    .get_one::<u16>("netuid")
+                    .ok_or_else(|| CliError::input("missing --netuid"))?,
+            ),
+            target: matches.get_one::<u16>("target").copied(),
+            switch_to_yuma: matches.get_flag("switch_to_yuma"),
+            wait_timeout: duration("wait_timeout")?,
+            poll_interval: duration("poll_seconds")?,
+            max_batches: *matches
+                .get_one::<u32>("max_batches")
+                .ok_or_else(|| CliError::input("missing --max-batches"))?,
+            state_file: matches.get_one::<PathBuf>("state_file").cloned(),
+            period: matches.get_one::<u32>("__period").copied(),
+        })
+    }
+}
+
+fn pruning_recovery_path(
+    ctx: &AppContext,
+    client: &Client,
+    request: &NullPruningRequest,
+) -> Result<PathBuf, CliError> {
+    if let Some(path) = &request.state_file {
+        return Ok(path.clone());
+    }
+    let process_paths;
+    let paths = if let Some(store) = &ctx.config_store {
+        store.paths()
+    } else {
+        process_paths = rtao::client::config::Paths::from_process().map_err(failure)?;
+        &process_paths
+    };
+    let config = paths.path(rtao::client::config::ConfigFile::Config);
+    let parent = config
+        .parent()
+        .ok_or_else(|| failure("CLI config has no parent"))?;
+    let genesis = format!("0x{}", hex::encode(client.genesis().0));
+    let identity = Sha256::digest(format!("{genesis}:{}", request.netuid).as_bytes());
+    Ok(parent
+        .join("null-pruning")
+        .join(format!("{}.json", &hex::encode(identity)[..20])))
+}
+
+struct PruningHooks<'a> {
+    session: &'a TrimNullSession,
+    action: &'a TrimNullAction,
+    forwarded: Option<&'a dyn SubmissionHooks>,
+    receipt: parking_lot::Mutex<Option<ExtrinsicResult>>,
+    failed: AtomicBool,
+}
+
+impl SubmissionHooks for PruningHooks<'_> {
+    fn before_submit(&self) -> BoxFuture<'_, Result<(), CliError>> {
+        Box::pin(async {
+            Err(failure(
+                "Null pruning requires the reviewed outer plan before signing",
+            ))
+        })
+    }
+
+    fn before_submit_with_plan<'a>(
+        &'a self,
+        plan: &'a Plan,
+    ) -> BoxFuture<'a, Result<(), CliError>> {
+        Box::pin(async move {
+            self.session
+                .before_attempt(self.action, plan)
+                .map_err(failure)?;
+            if let Some(hooks) = self.forwarded {
+                hooks.before_submit_with_plan(plan).await?;
+            }
+            Ok(())
+        })
+    }
+
+    fn on_result<'a>(
+        &'a self,
+        receipt: &'a ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), CliError>> {
+        Box::pin(async move {
+            *self.receipt.lock() = Some(receipt.clone());
+            let result = async {
+                self.session.record_result(receipt).map_err(failure)?;
+                if let Some(hooks) = self.forwarded {
+                    hooks.on_result(receipt).await?;
+                }
+                Ok(())
+            }
+            .await;
+            if result.is_err() {
+                self.failed.store(true, Ordering::SeqCst);
+            }
+            result
+        })
+    }
+
+    fn after_followup<'a>(
+        &'a self,
+        receipt: &'a ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), CliError>> {
+        Box::pin(async move {
+            *self.receipt.lock() = Some(receipt.clone());
+            let result = async {
+                self.session
+                    .record_reviewed_result(self.action, receipt)
+                    .await
+                    .map_err(failure)?;
+                if let Some(hooks) = self.forwarded {
+                    hooks.after_followup(receipt).await?;
+                }
+                Ok(())
+            }
+            .await;
+            if result.is_err() {
+                self.failed.store(true, Ordering::SeqCst);
+            }
+            result
+        })
+    }
+}
+
+fn retain_recovery(mut error: CliError, recovery: &Path) -> CliError {
+    if recovery.exists() {
+        let message = format!(
+            "retain {}; reconcile its recorded inclusion, expiry or pending multisig approval before starting a different operation",
+            recovery.display()
+        );
+        error.help = Some(match error.help.take() {
+            Some(help) => format!("{help}; {message}"),
+            None => message,
+        });
+    }
+    error
+}
+
+async fn execute_null_pruning(
+    ctx: &mut AppContext,
+    client: &Client,
+    request: &NullPruningRequest,
+    options: SubmissionOptions<'_>,
+    external: Option<&dyn ExternalSignerFactory>,
+    history: &mut PromptHistory,
+) -> Result<Option<ExtrinsicResult>, CliError> {
+    // Carrier finality alone does not prove the inner pruning operation ran.
+    // Refuse that route before any durable attempt or signing acquisition.
+    if ctx.resolve_mev_shield(false, false, "trim-null")?.enabled {
+        return Err(CliError::input(
+            "sequential Null pruning requires direct finalized receipts; pass --no-mev-shield",
+        ));
+    }
+    let owner = match ctx.dispatch_proxy(None)? {
+        Some(owner) => owner,
+        None => {
+            let owner = if ctx.globals.uses_external_signer()
+                && ctx.books.multisig(&ctx.globals.wallet_name).is_none()
+            {
+                ctx.external_signer_address()?
+            } else {
+                ctx.resolve_address("coldkey_ss58", None)?
+            };
+            owner.ok_or_else(|| {
+                CliError::input("Null pruning requires the public subnet owner coldkey")
+            })?
+        }
+    };
+    let recovery = pruning_recovery_path(ctx, client, request)?;
+    let mut session = TrimNullSession::begin(
+        client.clone(),
+        owner,
+        request.netuid,
+        request.target,
+        &recovery,
+        TrimNullConfig {
+            preview: ctx.globals.dry_run,
+            switch_to_yuma: request.switch_to_yuma,
+            max_batches: request.max_batches,
+            poll_interval: request.poll_interval,
+            wait_timeout: request.wait_timeout,
+        },
+    )
+    .await
+    .map_err(failure)?;
+    ctx.output.message(&format!("Pruning deregisters participants and may change survivor UIDs. Target {}. Each transaction uses the normal confirmation and signing flow.", session.report().target)).map_err(failure)?;
+    let saved_multisig = ctx.books.multisig(&ctx.globals.wallet_name).is_some();
+    let mut last = None;
+    loop {
+        match session.next_action().await.map_err(failure)? {
+            TrimNullStep::Complete(report) => {
+                let payload = if report.already_yuma {
+                    json!({"status":"already Yuma", "population": report.population})
+                } else {
+                    json!({"status":"complete", "population":report.population, "target":report.target,
+                        "consensus":if report.switched_to_yuma {"Yuma"} else {"Null"}, "batches":report.batches})
+                };
+                let fields = payload
+                    .as_object()
+                    .ok_or_else(|| failure("invalid pruning summary"))?
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .collect::<Vec<_>>();
+                ctx.output
+                    .detail(Some("Null pruning"), &fields, Some(&payload))
+                    .map_err(failure)?;
+                return Ok(last);
+            }
+            TrimNullStep::Wait { reason, delay } => {
+                ctx.output
+                    .step("waiting", &reason, StepState::Fact)
+                    .map_err(failure)?;
+                session.wait(&reason, delay).await.map_err(failure)?;
+            }
+            TrimNullStep::Submit(action) => {
+                let hooks = PruningHooks {
+                    session: &session,
+                    action: &action,
+                    forwarded: options.hooks,
+                    receipt: parking_lot::Mutex::new(None),
+                    failed: AtomicBool::new(false),
+                };
+                let result = ctx
+                    .submit_with_options(
+                        client,
+                        action.intent(),
+                        SubmissionOptions {
+                            bind_reviewed_call: true,
+                            period: request.period.or(options.period),
+                            wait_for_finalization: true,
+                            replan_owner_rate_limit: Some(false),
+                            // The executor owns this deadline and drains attempted delivery.
+                            // Do not wrap submission in a timeout that drops its future.
+                            deadline: options.deadline.or(Some(request.wait_timeout)),
+                            hooks: Some(&hooks),
+                            ..options
+                        },
+                        external,
+                        history,
+                    )
+                    .await;
+                let captured = hooks.receipt.lock().take();
+                let hook_failed = hooks.failed.load(Ordering::SeqCst);
+                drop(hooks);
+                let (receipt, submission_error) = match result {
+                    Ok(None) => return Ok(None), // A preview never begins an attempt.
+                    Ok(Some(receipt)) => (receipt, None),
+                    Err(error) if !hook_failed && captured.is_some() => (
+                        captured.ok_or_else(|| failure("missing captured pruning receipt"))?,
+                        Some(error),
+                    ),
+                    Err(error) => return Err(retain_recovery(error, &recovery)),
+                };
+                let retry_window = !saved_multisig
+                    && !receipt.success
+                    && receipt
+                        .error
+                        .as_ref()
+                        .and_then(|error| error.name.as_deref())
+                        == Some("AdminActionProhibitedDuringWeightsWindow");
+                let before_batches = session.report().batches;
+                let before_removed = session.report().removed_uids;
+                let before_cleared = session.report().cleared_commits;
+                let finished = session.finish_action(action, &receipt).await;
+                if let Err(error) = finished {
+                    let mut error = failure(error);
+                    if let Some(submission_error) =
+                        submission_error.filter(|error| !error.message.is_empty())
+                    {
+                        error.help = Some(format!("submission also reported: {submission_error}"));
+                    }
+                    return Err(retain_recovery(error, &recovery));
+                }
+                if let Some(error) = submission_error
+                    && !retry_window
+                {
+                    return Err(retain_recovery(error, &recovery));
+                }
+                if session.report().batches != before_batches {
+                    let report = session.report();
+                    let removed = report
+                        .removed_uids
+                        .checked_sub(before_removed)
+                        .ok_or_else(|| failure("pruning removal counter moved backwards"))?;
+                    let cleared = report
+                        .cleared_commits
+                        .checked_sub(before_cleared)
+                        .ok_or_else(|| failure("pruning cleanup counter moved backwards"))?;
+                    let payload = json!({"status":"finalized", "batch":report.batches, "population":report.population,
+                        "target":report.target, "removed_uids":removed, "cleared_commits":cleared, "extrinsic":receipt.extrinsic_id});
+                    let fields = payload
+                        .as_object()
+                        .ok_or_else(|| failure("invalid pruning progress"))?
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect::<Vec<_>>();
+                    ctx.output
+                        .detail(Some("Pruning progress"), &fields, Some(&payload))
+                        .map_err(failure)?;
+                }
+                last = Some(receipt);
+            }
+        }
+    }
+}
+
+/// Owner commands and the shared durable sequential Null-pruning workflow.
 pub fn command() -> Result<Command, CliError> {
     let mut group = Command::new("hparams")
         .about("Subnet-owner config and governance.")
@@ -81,6 +470,7 @@ pub fn command() -> Result<Command, CliError> {
         });
     let emissions = generated::read_command(ReadName::MechanismEmissionSplit)?.name("emissions");
     Ok(group
+        .subcommand(trim_null_command())
         .subcommand(get)
         .subcommand(generated::read_command(ReadName::DelegateTake)?.name("get-take"))
         .subcommand(generated::read_command(ReadName::SubnetStartSchedule)?.name("check-start"))
@@ -116,6 +506,16 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
         return generated::intent_reserved(op);
     }
     let mut fields = match name {
+        "trim-null" => vec![
+            "netuid",
+            "target",
+            "switch_to_yuma",
+            "wait_timeout",
+            "poll_seconds",
+            "max_batches",
+            "state_file",
+            "__period",
+        ],
         "count" => generated::intent_reserved("set_mechanism_count")?,
         "get" => generated::read_reserved(ReadName::SubnetHyperparameters),
         "get-take" => generated::read_reserved(ReadName::DelegateTake),
@@ -143,6 +543,8 @@ pub enum Request {
     },
     /// A curated read with its original command-specific machine payload.
     Read(QueryRequest),
+    /// Sequential finalized pruning through the SDK's shared durable session.
+    NullPruning(NullPruningRequest),
 }
 
 impl Request {
@@ -153,6 +555,9 @@ impl Request {
         history: &mut PromptHistory,
     ) -> Result<Self, CliError> {
         let (name, matches) = leaf(matches)?;
+        if name == "trim-null" {
+            return NullPruningRequest::from_matches(ctx, matches, history).map(Self::NullPruning);
+        }
         if let Some(op) = mutation(name) {
             return TxRequest::from_matches(ctx, op, matches, history).map(Self::Transaction);
         }
@@ -471,6 +876,9 @@ pub async fn execute(
     history: &mut PromptHistory,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
     match request {
+        Request::NullPruning(request) => {
+            execute_null_pruning(ctx, client, request, options, external, history).await
+        }
         Request::Transaction(request) => {
             generated::execute_tx(ctx, client, request, options, external, history).await
         }

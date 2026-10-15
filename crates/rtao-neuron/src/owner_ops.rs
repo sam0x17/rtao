@@ -2,7 +2,7 @@
 
 mod routing;
 mod trim;
-pub use trim::TrimReport;
+pub use trim::{TrimNullAction, TrimNullConfig, TrimNullSession, TrimNullStep, TrimReport};
 #[cfg(test)]
 mod tests;
 
