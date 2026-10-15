@@ -901,6 +901,151 @@ fn chained_request(keys: &[Keys]) -> RawCallRequest {
 }
 
 #[tokio::test]
+async fn raw_multisig_funding_help_survives_cli_conversion_and_both_output_modes() -> TestResult {
+    let keys = [Keys::new(7)?, Keys::new(8)?];
+    let (client, chain) = fixture(&keys).await?;
+    let payer = keys[0].key.account();
+    chain.mutate_state(|state| {
+        state.fee = 100_000;
+        state.seed_python(
+            "System",
+            "Account",
+            &[json!(payer)],
+            json!({"data":{"free":0}}),
+        )
+    })?;
+    let factory = Factory::new(
+        keys.iter()
+            .enumerate()
+            .map(|(index, key)| (format!("member{index}"), key.clone())),
+    );
+    let (ctx, _) = context(&["--yes", "--json", "--no-mev-shield"])?;
+    let error = call::execute_rounds_with(
+        &ctx,
+        &client,
+        &chained_request(&keys),
+        "rtao call",
+        &factory,
+        &Cache::default(),
+    )
+    .await
+    .err()
+    .ok_or("funding must refuse")?;
+    let expected_message = format!(
+        "the signing account cannot cover the multisig deposit plus the transaction fee: {payer} holds τ0 free, but opening this operation reserves a τ0.196 deposit on top of a ~τ0.0001 fee"
+    );
+    let expected_help =
+        format!("fund {payer} with ≥ τ0.197 — the deposit is returned when the op executes");
+    assert_eq!(error.code, 1);
+    assert_eq!(error.message, expected_message);
+    assert_eq!(error.help.as_deref(), Some(expected_help.as_str()));
+    for json_mode in [false, true] {
+        let sink = MemorySink::default();
+        let output = Output::new(
+            OutputOptions {
+                json_mode,
+                ..Default::default()
+            },
+            Arc::new(sink.clone()),
+        );
+        output.error(
+            &error.message,
+            rtao_cli::output::DiagnosticContext {
+                help: error.help.as_deref(),
+                ..Default::default()
+            },
+        )?;
+        let stderr = sink.text(Stream::Stderr)?;
+        if json_mode {
+            assert_eq!(
+                serde_json::from_str::<Value>(&stderr)?,
+                json!({"error":expected_message,"help":expected_help})
+            );
+        } else {
+            assert!(stderr.contains(&expected_message));
+            assert!(stderr.contains(&expected_help));
+        }
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+    }
+    assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        *factory.released.lock().map_err(|_| "release")?,
+        vec![false]
+    );
+    assert!(
+        keys.iter()
+            .all(|key| key.unlocks.load(Ordering::SeqCst) == 0)
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn continued_funding_refusal_keeps_remediation_and_original_opening_recovery() -> TestResult {
+    let keys = [Keys::new(7)?, Keys::new(8)?];
+    let (client, chain) = fixture(&keys).await?;
+    let runtime = View::runtime(&client).await?;
+    let raw = chained_request(&keys);
+    let inner = call::compose(&runtime, &raw)?;
+    let hash = format!("0x{}", hex::encode(inner.hash()));
+    let second = keys[1].key.account();
+    let group = Multisig::new(
+        &runtime,
+        &raw.multisig.as_ref().ok_or("group")?.signatories,
+        2,
+    )?;
+    chain.mutate_state(|state| -> TestResult {
+        state.fee = 100_000;
+        state.seed_python(
+            "System",
+            "Account",
+            &[json!(second)],
+            json!({"data":{"free":0}}),
+        )?;
+        state.queue_submit(SubmitScript::InBlockThenFinalized {
+            events: approval_events(keys[0].key.account(), &group, inner.hash(), None),
+        });
+        Ok(())
+    })?;
+    let factory = ContinuationFactory {
+        factory: Factory::new(
+            keys.iter()
+                .enumerate()
+                .map(|(index, key)| (format!("member{index}"), key.clone())),
+        ),
+        chain: chain.clone(),
+        group,
+        call: inner,
+        pending: PendingAfterFirst::Same,
+    };
+    let (ctx, _) = context(&["--yes", "--json", "--no-mev-shield"])?;
+    let error = call::execute_rounds_with(
+        &ctx,
+        &client,
+        &raw,
+        "rtao call",
+        &factory,
+        &Cache::default(),
+    )
+    .await
+    .err()
+    .ok_or("continued funding must refuse")?;
+    let expected_help = format!(
+        "fund {second} (member1) with ≥ τ0.001; earlier approvals may remain pending for call hash {hash}; run `rtao multisig pending` to finish or cancel before retrying"
+    );
+    assert_eq!(error.code, 1);
+    assert!(error.message.contains("this approval costs a ~τ0.0001 fee"));
+    assert_eq!(error.help.as_deref(), Some(expected_help.as_str()));
+    assert_eq!(factory.factory.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(keys[1].unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn chained_approval_encodes_the_authenticated_opening_in_the_actual_second_extrinsic()
 -> TestResult {
     let keys = [Keys::new(7)?, Keys::new(8)?];

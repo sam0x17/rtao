@@ -143,6 +143,16 @@ impl KeyView for WalletRef {
     }
 }
 /// A wallet with independent, shared hotkey/coldkey unlock caches.
+///
+/// Creation and regeneration take an explicit role, recovery source and write
+/// options. New recovery phrases return as guarded [`GeneratedKey`] values;
+/// the library never prints them. Compose the two role methods to create a
+/// coldkey and hotkey; publication of the two keys is not one transaction.
+///
+/// Python's automatic `save_coldkey_to_env` / `save_hotkey_to_env` flags are
+/// not provided here. Password saving is a separate generic [`crate::Keyfile`]
+/// operation over a caller-owned [`crate::KeyfileEnvironment`]. It does not
+/// implicitly share a new environment overlay with these wallet sources.
 #[derive(Clone, Debug)]
 pub struct Wallet {
     reference: WalletRef,
@@ -206,13 +216,22 @@ impl Wallet {
     pub fn coldkey_only(&self) -> ColdkeyFile {
         self.coldkey.clone()
     }
-    /// Configure lazy password resolution for the coldkey.
+    /// Configure password resolution for coldkey unlock and encrypted writes.
+    ///
+    /// Creation and regeneration reuse these sources unless
+    /// [`WriteOptions::password`] overrides them. A role write calls the supplied
+    /// prompt once; a callback that requires confirmation must implement it.
+    /// The CLI installs a confirming callback for writes. Generic
+    /// [`crate::Keyfile::set_keypair`] has its own encryption-password policy.
     pub fn with_password_sources(mut self, sources: PasswordSources) -> Self {
         self.coldkey = self.coldkey.with_password_sources(sources);
         self
     }
-    /// Configure the selected hotkey's independent password-resolution policy.
-    /// Coldkey password files and native password services are not inherited.
+    /// Configure the selected hotkey's independent unlock/write password policy.
+    ///
+    /// Encrypted hotkey writes reuse these sources unless an explicit write
+    /// password overrides them. Coldkey password files and native password
+    /// services are not inherited. Callback confirmation is caller-owned.
     pub fn with_hotkey_password_sources(mut self, sources: PasswordSources) -> Self {
         self.hotkey = self.hotkey.with_password_sources(sources);
         self

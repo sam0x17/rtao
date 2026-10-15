@@ -915,12 +915,12 @@ notes = "encoding (§1.6 G1); `LEGACY_RUNTIME_APIS` `:95-171` and `_is_legacy_me
 
 [[file]]
 py = "sdk/python/bittensor/_transport/storage.py"
-rs = ["`rtao_client` reads; staged `ops::storage`"]
+rs = ["crates/rtao-client/src/view.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "cc9650a645895b2823efa0f958e39ffedc7b7fdb"
 synced_tag = "v478"
 milestone = "M1"
-notes = "miss semantics `:8-27` (§3.6)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 85-line module and supported/private caller chains reviewed against native scalar/batch/map consumers. Live Default/Optional misses, stable logical batch order/duplicates, fixed-prefix/free-key recovery and deleted-value skip are retained. Native per-value decoding/offload replaces Python batch/FFI paths; dynamic free keys are vectors. Map pages strictly validate block/key/cursor identity and restore requested-key order. Python private opt-in tolerant decoding, reachable through RpcSubstrate.raw, keeps a value with an undecodable whole None key and is explicitly omitted; supported Substrate/Client/Snapshot/sync map methods use strict defaults. Present key/value errors abort the page. No private-option equivalence, fresh Python execution or current whole-suite pass is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/utils/__init__.py"
@@ -1140,12 +1140,12 @@ notes = "`stake add/remove/show`"
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/extension.py"
-rs = ["`rtao-cli` `extension` group"]
+rs = ["crates/rtao-cli/src/commands/extension.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "db7371764bb1d89d1f7f4a52f87e20d1bfdd4d03"
 synced_tag = "v478"
 milestone = "M7"
-notes = "§10.5; under `misc`; feature `extension`"
+notes = "Source reconciliation 2026-10-15: complete authenticated two-helper/three-command source and actual native consumers reviewed. Restore the pinned extension-signing guide URL in group help. Foreground/stop/accounts messages, four-field records, global tiers, URL/browser/fresh options and all misc/utils/top-level aliases have native homes. Typed numeric-loopback/port validation, explicit tokens/private ownership files, bounded session callbacks and owned task cleanup are native adaptations (D-068); injected command fixtures do not execute a daemon, browser or OS signals. JSON value/schema equality is separate from terminal/pretty-print layout. Source review and fixtures do not establish current hosted, process or Python execution."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/lock.py"
@@ -1455,12 +1455,12 @@ notes = ""
 
 [[file]]
 py = "sdk/python/bittensor/client.py"
-rs = ["`rtao_client::Client` (incl. `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`; `BlockHeader`, `BlockInfo`, `EpochEvent`); `rtao_tx::Executor::{execute_tool, multisig}`; `rtao_intents::pow::PowSolver`"]
+rs = ["rtao_client::{Client,BlockHeader,BlockInfo,EpochEvent,WaitError}; rtao::blocking::SyncClient"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "18b103c8717b60b5fa00c695991712aba747e0f0"
 synced_tag = "v478"
 milestone = "M1–M5"
-notes = "`wait_for_*` `:376-444` (§3.13); token symbols at connect `:613-633` (§3.3 step 6); `execute_tool` `:483-488` (§4.6); `decode_scale` `:264-271`, `estimate_shielded_carrier_fee` `:464-466`, `estimate_weight` `:554-572`, `multisig` `:564-590` (§3.10, §4.6; M4); `block_info` `:349` (M5, `multisig pending`); dataclasses `:74-115` (§3.13); `mine_pow_registration` → `PowSolver` (§9.6)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 688-line module, all 49 functions and declaration/default/lifecycle dispositions reviewed. Public async block/timestamp/epoch waits now share implementations with the blocking facade; observed LastEpochBlock, pinned baseline, chain-clock completion and typed error causes are retained. Native None is indefinite and Some(Duration::ZERO) is a zero budget; Python timeout=0 translates to None. Four authored FakeNode fixtures cover observed headers, epoch changes/zero tempo, long-gap chain time and all wait budgets; they remain unexecuted. Typed SystemTime/BlockRef/descriptors, eager async connection versus cold SyncClient, public-only fee probes and native handle/RAII representations replace Python dynamic construction. Executor/tool/multisig convenience operations delegate to rtao_tx::Executor; PoW delegates to rtao_intents::pow::PowSolver rather than duplicated client implementations. BlockInfo retains normalized header/extrinsic/timestamp behavior; multisig recovery separately extracts exact bytes from its pinned raw block. No exact repr, arbitrary-input, whole Python execution or current hosted acceptance claim."
 
 [[file]]
 py = "sdk/python/bittensor/config.py"
@@ -2346,12 +2346,12 @@ notes = "`fetch` `:238-291` (curated `client.subnets().metagraph(..)` through `S
 
 [[file]]
 py = "sdk/python/bittensor/multisig.py"
-rs = ["`rtao_tx::multisig::{Multisig, ApproveOptions}` and the funds preflight; `rtao_client::compose::{as_multi, approve_as_multi}`"]
+rs = ["rtao_tx::multisig::{Multisig,ApproveOptions,FundsRequest,check_multisig_funds,multisig_opening_shortfall}; rtao_client::compose::{as_multi,as_multi_existing,approve_as_multi}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "25b5105b4300daa25b2fae8626064ee0f2697f15"
 synced_tag = "v478"
 milestone = "M4"
-notes = "`Multisig.approve` `:166-313` (§4.6; `rtao call --multisig` is CLI v0); `MultisigFundingError` `:32-49` → `ChainError { code: InsufficientBalance }` with `fund_help` remediation; deposit and `_FEE_ALLOWANCE_RAO` `:121-162` extracted (§3.12); the M5 multisig intents reuse the preflight; tests port `PYT/unit/test_multisig_safety.py`"
+notes = "Source reconciliation 2026-10-15: complete authenticated 319-line module and every source helper/consumer reviewed. Native checked money/account/runtime bounds, canonical members, exact opening/continuation funding formulas, extracted fee allowance, best-effort read/probe failures and full-call approvals are retained. Typed CLI transaction errors now preserve computed funding remediation; continuation errors append original-opening recovery, and empty labels match Python truthiness without trimming whitespace labels. Four substantive actual-funds/raw/semantic fixtures remain unexecuted. Native threshold-one shield composition deliberately uses as_multi_threshold_1; the pinned Python helper unconditionally constructs as_multi. Raw public fee probes default to sr25519, semantic adapters use known crypto; no all-scheme estimate execution is claimed. Fixed three-decimal private funding hints replace arbitrary formatter arguments. D-023 failed events, D-041 exact timepoints and S9 opaque continuation proofs remain intact. No full CLI module, fresh Python/oracle, live threshold-one runtime result or current hosted acceptance follows."
 
 [[file]]
 py = "sdk/python/bittensor/namespaces.py"
@@ -2679,21 +2679,21 @@ notes = "Source reconciliation 2026-10-15: complete 148-line module authenticate
 
 [[file]]
 py = "sdk/python/bittensor/wallet.py"
-rs = ["`rtao_wallet::Wallet`"]
+rs = ["rtao_wallet::{Wallet,WalletRef,GeneratedKey,RegenerateFrom}","rtao_wallet::{ColdkeyFile,HotkeyFile,WriteOptions,Overwrite}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "8206e3b032184f52506ce38abb5ca6b4cf75b9a3"
 synced_tag = "v478"
 milestone = "M2"
-notes = "layout `:63-68`; `DEFAULT_WALLET_PATH` `:11`; reads no environment variable (`BT_WALLET_PATH` is the CLI's `--wallet-path` option, `PY/cli/main.py:203-206`; §6.1); `cold/hot` parsing `:29-70`"
+notes = "Source reconciliation 2026-10-15: complete authenticated 366-line module and actual layout, derivation, public companion, cache and persistence consumers reviewed. WalletRef/Wallet with typed role sources, RegenerateFrom and WriteOptions replace dynamic Keypair properties, ambiguous keyword recovery inputs and mutable-self returns. Default constructors resolve current HOME; BT_WALLET_PATH remains CLI configuration. Per-role generation returns guarded nonprinting recovery values; callers compose two-key creation. Native role writes reuse configured PasswordSources, with caller-owned callback confirmation; generic Keyfile writes have their separate Python-shaped explicit/confirming policy. Automatic Wallet environment-save flags are omitted; owned generic Keyfile saving and CLI export are separate operations. Public-only views, atomic per-file writes, overwrite/cancellation cache behavior and source fixtures are reviewed; pair publication is not a transaction and M2-S02 Ed25519 final-drop erasure remains open/unaccepted. Architecture 6.1-6.2 and the book record these native API dispositions. Current hosted execution, Python/oracle and universal dependency/OS erasure remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/wallets.py"
-rs = ["`rtao_wallet` (passwords, create/regen, listing)"]
+rs = ["rtao_wallet::{resolve_wallet_password,PasswordSources,PasswordSource,PromptPolicy,NativePasswordProvider}","rtao_wallet::{SignedMessage,EncryptedMessage,verify_message,encrypt_message}; rtao_wallet::Wallet::{sign_message,decrypt_message}","rtao_cli::commands::wallet::{natural_cmp,list_records}; wallet CLI create/regenerate and private crypto helpers"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "cf6d9e094eb73e45923f73a7603e15cf75504626"
 synced_tag = "v478"
 milestone = "M2–M8"
-notes = "`resolve_wallet_password` `:62-118` (§6.2); hotkeys written without a password `:239-245`; message sign/verify/encrypt serve CLI commands of M8"
+notes = "Source reconciliation 2026-10-15: complete authenticated 542-line module, actual password/message/public-listing consumers and substantive fixtures reviewed. Nonempty password precedence, whole-file Python trimming, native-provider ordering and hotkey isolation are preserved through explicit async sources; library prompting defaults to Never. Message helpers sign exact UTF-8, retain default-sr25519 verification and sealed-box framing; typed errors, guarded decrypted text, hex bounds and pre-acquisition parsing are native API policies. Library per-role create/regenerate replaces convenience wrappers; composite creation, crypto text parsing/labels and ordered best-effort inventory live in the CLI, with no library listing/dataclass API. Root parse_crypto_type/format_crypto_type have reasoned typed/CLI export dispositions. Role writes reuse configured PasswordSources and caller-owned callback confirmation; generic Keyfile retains its separate writer policy. Automatic Wallet save-to-env flags are omitted, with explicit owned-environment/CLI export alternatives. Architecture 6.1-6.2, book and rustdoc document these choices. Source relationships do not establish current hosted/Python/oracle execution, hardware/OS behavior or M2-S02 closure; no milestone accepted."
 
 [[file]]
 py = "sdk/python/codegen/__init__.py"
@@ -2976,21 +2976,21 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_extension_bridge.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["Complete reviewed upstream pytest input; native assertion homes in crates/rtao-signer/src/extension/tests.rs"]
+kind = "oracle-only"
+synced_blob = "4c3444ecd1fa38c8af0e93d628718acb94ff03ce"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: complete authenticated five-test/six-case assertion mapping covers missing/wrong/matching token refusal/status, stale browser session, and exact transaction.result requests for both booleans. Native matching-token construction supplies the token explicitly; Python implicit environment/file discovery and context-manager construction have no identical native constructor. Native path/private-token ownership fixtures cover separate operations. Retain oracle-only status: optional oracle scripts do not run this pytest file, and no Python execution or complete fixture-technology equivalence is claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_extension_signer.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["Complete reviewed upstream pytest input; native assertion homes in crates/rtao-signer/src/extension/tests.rs"]
+kind = "oracle-only"
+synced_blob = "8eb5edd6a010feec23fe5ce5336929a6b15cb0d9"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: complete authenticated four-test/six-case assertion mapping covers both supported algorithms, all three exact unsupported-name inputs, and exact two-stage strings/moreComing booleans. Native typed CryptoType replaces Python integer results; the dedicated sr25519 test additionally normalizes case/whitespace. Native two-stage fixture uses a valid selected identity because the Python invalid 5F Mock constructor is deliberately refused. Its dummy payload reply asserts request/UI behavior, not cryptographic signature validity. Retain oracle-only status; no pytest execution, new oracle run or full malformed-input domain parity is claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_facades.py"
@@ -3174,12 +3174,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated four-case asse
 
 [[file]]
 py = "sdk/python/tests/unit/test_storage_golden.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
+rs = ["Complete reviewed upstream pytest input; native consumers in crates/rtao-testkit/tests/goldens.rs, crates/rtao-client/src/view.rs and crates/rtao-core-ext/tests/protocol_ops.rs"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "183099f4e5fb878c859a64ad94fdf9507dfa4ede"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-15: complete authenticated five-test assertion mapping. Native consumers compare all 10 complete key goldens, all 8 scalar outputs and all 16 complete map outputs, with explicit scalar-key projection. Exact one-Account batch-key equality and grouped recorded bulk/scalar comparisons remain native assertion gaps. Recorded misses cover Default only; no Optional miss, duplicate change, multiple-free-component tuple key or deletion-race coverage is inferred. The separate absent-value fixture filters absence before listing. Native batching/pagination tests add distinct coverage; Python batch/FFI/tolerant paths and this pytest module remain oracle-only and unexecuted. Optional oracle scripts do not run it; no complete native port or differential execution claim."
 
 [[file]]
 py = "sdk/python/tests/unit/test_v446_accounting_and_commitments.py"

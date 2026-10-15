@@ -1825,3 +1825,23 @@ pinning_tests = [
   "rtao_wallet::wallet::plaintext_create_regenerate_public_views_and_role_signing",
   "rtao_wallet::wallet::clones_and_concurrent_unlocks_share_one_cached_signer",
 ]
+
+[[export]]
+python = "bittensor.parse_crypto_type"
+home = "n/a: dynamic root string helper; rtao_primitives::CryptoType; private rtao_cli::commands::wallet::crypto"
+reason = "Library callers select the checked CryptoType enum directly. The actual CLI privately parses ed25519/sr25519 and numeric 0/1 spellings before writing files; that parser is not a public native SDK export. This is a typed API-placement disposition, not an invented library alias or executed Python comparison."
+source = "sdk/python/bittensor/__init__.py"
+pinning_tests = [
+  "rtao_cli::wallet_commands::creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payload",
+  "rtao_cli::wallet_commands::new_key_commands_refuse_overwrite_and_create_rejects_bad_hot_scheme_before_writes",
+]
+
+[[export]]
+python = "bittensor.format_crypto_type"
+home = "n/a: dynamic root formatting helper; rtao_primitives::CryptoType; private rtao_cli::commands::wallet::{crypto_name,stored_crypto}"
+reason = "The SDK exposes typed crypto schemes rather than a formatter accepting Python arbitrary integers or None. Private CLI helpers render scheme labels and legacy/missing metadata for inventory; native CLI JSON uses those labels instead of Python raw-scheme dataclasses. Their placement and native metadata bounds are documented, with no claim of a public wallet formatter or universal malformed-input equality."
+source = "sdk/python/bittensor/__init__.py"
+pinning_tests = [
+  "rtao_cli::wallet_commands::creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payload",
+  "rtao_cli::wallet_commands::list_retains_partial_wallets_without_deriving_or_unlocking_secret_files",
+]

@@ -1543,6 +1543,47 @@ async fn saved_semantic_dry_run_and_refusal_do_not_acquire_any_source() -> TestR
     Ok(())
 }
 #[tokio::test]
+async fn saved_semantic_funding_help_survives_planning_refusal_before_source() -> TestResult {
+    let keys = members()?;
+    let (client, chain, _) = fixture(0).await?;
+    chain.mutate_state(|state| state.fee = 100_000);
+    let factory = factory(&keys);
+    let (mut ctx, _) = saved_context(&keys, &["--yes", "--json", "--no-mev-shield"], 2)?;
+    ctx.books.multisigs[0]["threshold"] = json!(2);
+    let error = ctx
+        .submit_saved_with_factory(
+            &client,
+            &Preview { blocked: false },
+            false,
+            None,
+            &factory,
+            &CallCache::default(),
+        )
+        .await
+        .err()
+        .ok_or("semantic planning must refuse")?;
+    let expected_help = format!(
+        "fund {} with ≥ τ0.197 — the deposit is returned when the op executes",
+        keys[0].key.account()
+    );
+    assert_eq!(error.code, 1);
+    assert!(
+        error
+            .message
+            .contains("multisig deposit plus the transaction fee")
+    );
+    assert_eq!(error.help.as_deref(), Some(expected_help.as_str()));
+    assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+    assert!(
+        keys.iter()
+            .all(|key| key.unlocks.load(Ordering::SeqCst) == 0)
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> TestResult {
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
