@@ -70,6 +70,7 @@ fn main() -> Result<()> {
   cargo xtask supply\n\
   cargo xtask template check [--native-only]\n\
   cargo xtask pin --check\n\
+  cargo xtask pin --check --prepare-cache (hosted source-cache bootstrap)\n\
   cargo xtask pin --networks [--check]\n\
   cargo xtask pin --parity <vN|auto> --check [--github-output <path>]\n\
   cargo xtask pin --parity <vN|auto>\n\
