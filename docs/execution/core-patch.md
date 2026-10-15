@@ -44,8 +44,18 @@ partially consumed streams. Authored fixtures cover chunk boundaries, address
 parameters, status errors, malformed replies, a complete signer/proof-vector
 path and fragmented, truncated, excessive and stalled TCP responses.
 
-These are source changes and authored protocol fixtures. They have not yet passed
-hosted compilation or execution. No new emulator transcript was recorded, and no
+Hosted preparation [38730694470](https://github.com/sam0x17/rtao/actions/runs/38730694470)
+passed the exact pin checks and the patched/unpatched API probes at `e775003`.
+Its reviewed artifact changes only `Cargo.toml`, `Cargo.lock` and `upstream.toml`;
+the sole lock identity change is `bittensor-core` to the reviewed fork commit.
+Those candidate files are adopted without changing the base, BLS or macro pins.
+
+The replay module is now gated by `ledger-emu` independently of Docker. The
+ordinary all-features hosted suite includes its authored protocol fixtures, while
+the live emulator binary remains excluded. The feature job then strips the patch
+in its disposable checkout and checks shipped crates with the same build target.
+These replay fixtures have not yet passed hosted compilation or execution.
+No new emulator transcript was recorded, and no
 hardware, HID, firmware, app acceptance or screen evidence is claimed. Relevant
 hosted validation must also strip the patch and check shipped crates with all
 features while excluding testkit and xtask. No node, Docker, emulator or hardware

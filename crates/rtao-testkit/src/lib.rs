@@ -16,6 +16,8 @@ pub use recording::RecordingView;
 /// RPC types used by dev-only fake backends and their client adapters.
 pub use subxt_rpcs as rpc;
 
+#[cfg(feature = "ledger-emu")]
+pub mod ledger_emu;
 #[cfg(feature = "docker")]
 pub mod localnet;
 #[cfg(feature = "docker")]
