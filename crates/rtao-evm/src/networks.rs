@@ -197,6 +197,37 @@ mod tests {
     }
 
     #[test]
+    fn websocket_aliases_resolve_to_their_extracted_python_presets() {
+        let extracted: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../vendor/upstream/extracted/named_tables.json"
+        ))
+        .unwrap();
+        let aliases = extracted["tables"]["sdk/python/bittensor/evm/networks.py"]["values"]
+            ["_WS_TO_LABEL"]["value"]["dict"]
+            .as_array()
+            .unwrap();
+        assert_eq!(aliases.len(), 4);
+        for value in [None, Some(""), Some("https://local.example:1444/custom")] {
+            let environment = |key: &str| {
+                assert_eq!(key, "BT_EVM_ENDPOINT");
+                value.map(str::to_owned)
+            };
+            let expected = extracted_presets(&extracted_preset_table(), environment);
+            for pair in aliases {
+                let pair = pair.as_array().unwrap();
+                assert_eq!(pair.len(), 2);
+                let endpoint = pair[0].as_str().unwrap();
+                let label = pair[1].as_str().unwrap();
+                assert_eq!(
+                    evm_network_with_env(endpoint, environment).unwrap(),
+                    expected[label],
+                    "{endpoint} -> {label} with {value:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn preset_consumer_guard_detects_table_and_environment_drift() {
         use serde_json::json;
 

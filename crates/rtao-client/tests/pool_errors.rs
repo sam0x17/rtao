@@ -147,3 +147,174 @@ fn oversized_custom_integer_strings_allow_message_fallback_without_discarding_va
     ));
     Ok(())
 }
+
+#[test]
+fn regex_custom_code_boundaries_preserve_precedence_and_stop_failed_normalization() {
+    for digits in [4_300, 4_301] {
+        // Leading zeroes count toward Python's limit, including Unicode digits.
+        for capture in [
+            format!("{}8", "0".repeat(digits - 1)),
+            format!("{}٨", "٠".repeat(digits - 1)),
+        ] {
+            let data_text = format!("{{'Custom': {capture}}}");
+            let data = json!(data_text);
+            let message = "Custom error: 3; Extrinsic dropped; transaction is outdated";
+            let actual = PoolRejection::from_rpc(1014, message, Some(&data));
+            let expected = if digits == 4_300 {
+                PoolRejection::Custom(8)
+            } else {
+                PoolRejection::InvalidCustomCode(format!("{message}: {data_text}"))
+            };
+            assert_eq!(actual, expected);
+            assert_eq!(
+                actual.name(),
+                (digits == 4_300).then_some("SlippageTooHigh")
+            );
+            if digits == 4_301 {
+                assert_eq!(actual.to_string(), format!("{message}: {data_text}"));
+            }
+
+            let message = format!(
+                "Custom error: {capture}; Custom error: 3; Extrinsic dropped; transaction is outdated"
+            );
+            let actual = PoolRejection::from_rpc(1014, &message, None);
+            let expected = if digits == 4_300 {
+                PoolRejection::Custom(8)
+            } else {
+                PoolRejection::InvalidCustomCode(message.clone())
+            };
+            assert_eq!(actual, expected);
+            assert_eq!(
+                actual.name(),
+                (digits == 4_300).then_some("SlippageTooHigh")
+            );
+            if digits == 4_301 {
+                assert_eq!(actual.to_string(), message);
+            }
+        }
+    }
+}
+
+#[test]
+fn authoritative_structured_codes_do_not_parse_a_later_oversized_message_capture() {
+    let message = format!("Custom error: {}; Extrinsic dropped", "9".repeat(4_301));
+    assert_eq!(
+        PoolRejection::from_rpc(1014, &message, Some(&json!({"Custom":8}))),
+        PoolRejection::Custom(8)
+    );
+    let unmapped = json!({"Custom":256});
+    assert_eq!(
+        PoolRejection::from_rpc(1014, &message, Some(&unmapped)),
+        PoolRejection::Watch(format!("{message}: {{'Custom': 256}}"))
+    );
+    // A caught structured conversion failure still reaches the message regex.
+    assert_eq!(
+        PoolRejection::from_rpc(1014, &message, Some(&json!({"Custom":"9".repeat(4_301)}))),
+        PoolRejection::InvalidCustomCode(format!(
+            "{message}: {{'Custom': '{}'}}",
+            "9".repeat(4_301)
+        ))
+    );
+}
+
+#[tokio::test]
+async fn invalid_custom_code_normalization_preserves_author_ack_fate_and_known_codes()
+-> Result<(), Box<dyn Error>> {
+    use blake2::{Blake2b, Digest, digest::consts::U32};
+    use rtao_client::{
+        Client, ClientConfig, ClientError, Network, SubmitFailure, SubmitOptions, Wait,
+    };
+    use rtao_primitives::{CryptoType, H256};
+    use rtao_signer::{KeypairSigner, Signer};
+    use rtao_testkit::{FakeChain, FakeState, Reply, rpc::RpcClient};
+
+    let capture = "9".repeat(4_301);
+    for (code, definite_refusal) in [(-32603, false), (1010, true), (1014, true)] {
+        for in_data in [true, false] {
+            let (message, data) = if in_data {
+                (
+                    "Custom error: 8; Extrinsic dropped; transaction is outdated".to_owned(),
+                    Some(json!(format!("Custom error: {capture}"))),
+                )
+            } else {
+                (
+                    format!("Custom error: {capture}; Extrinsic dropped; transaction is outdated"),
+                    None,
+                )
+            };
+            let diagnostic = match &data {
+                Some(Value::String(text)) => format!("{message}: {text}"),
+                _ => message.clone(),
+            };
+            let fake = FakeChain::from_state(FakeState::try_default()?);
+            let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+            config.track_heads = false;
+            config.runtime_cache_dir = None;
+            config.config_store = None;
+            let client = Client::from_rpc(RpcClient::new(fake.clone()), config).await?;
+            let signer = KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519)?;
+            let call = rtao_runtime::calls::system::remark(vec![])
+                .compose(&client.refresh_runtime().await?)?;
+            let response_message = message.clone();
+            let response_data = data.clone();
+            fake.mutate_state(|state| {
+                state.set_handler("author_submitExtrinsic", move |_, _| {
+                    Reply::error(code, response_message.clone(), response_data.clone())
+                });
+            });
+            let failure = client
+                .submit(
+                    call,
+                    &signer,
+                    &SubmitOptions {
+                        wait: Wait::Pool,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .err()
+                .ok_or("author error was accepted")?;
+            let requests = fake.requests();
+            let submissions = requests
+                .iter()
+                .filter(|request| request.method == "author_submitExtrinsic")
+                .collect::<Vec<_>>();
+            assert_eq!(submissions.len(), 1);
+            let encoded = submissions[0].params[0]
+                .as_str()
+                .and_then(|text| text.strip_prefix("0x"))
+                .ok_or("submission bytes absent")?;
+            let hash = H256(Blake2b::<U32>::digest(hex::decode(encoded)?).into());
+            assert_eq!(
+                failure.unknown_fate_hash(),
+                (!definite_refusal).then_some(hash)
+            );
+            if definite_refusal {
+                assert!(matches!(
+                    &failure,
+                    SubmitFailure::Pool(PoolRejection::InvalidCustomCode(text))
+                        if text == &diagnostic
+                ));
+            } else {
+                assert!(matches!(
+                    &failure,
+                    SubmitFailure::Unresolved { cause, reconciliation: None, .. }
+                        if matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Rpc(
+                            rtao_rpc::RpcError::JsonRpc {
+                                code: actual_code,
+                                message: actual_message,
+                                data: actual_data,
+                                ..
+                            }
+                        )) if *actual_code == code && actual_message == &message && actual_data == &data)
+                ));
+            }
+            assert_eq!(
+                client.nonces().cached(&signer.account().to_string()).await,
+                None
+            );
+            client.close().await;
+        }
+    }
+    Ok(())
+}
