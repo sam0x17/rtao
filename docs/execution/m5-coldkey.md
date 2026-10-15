@@ -43,3 +43,14 @@ The bounded private proof is
 Runtime validation remains empty. Combined compilation, fixture execution and
 milestone acceptance remain pending. Only source review, rustfmt and whitespace
 checks ran locally; no tests, builds or scratch directories were created.
+
+Source review found unused intent parameters in the generated zero-argument
+builds, which would fail strict Clippy. The generator now names an unused
+binding `_intent`. Follow-up run
+[38696690648](https://github.com/sam0x17/rtao/actions/runs/38696690648)
+at `7c9c8cac5394099f48a420effc454fbc0afe071f` succeeded. Its output was
+adopted unchanged after verifying exactly those two generated parameter-name
+changes, unchanged other interfaces/matrix, all thirteen archive members,
+23 dependency hashes and unchanged role inventories. The private proof is
+`.local/recovery/2026-10-14/m5-fieldless-adoption.json`. This generator result
+does not establish successful ordinary fixture execution.

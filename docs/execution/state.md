@@ -42,14 +42,15 @@ no fuzz campaign ran. The remaining 47 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
-[38693471340](https://github.com/sam0x17/rtao/actions/runs/38693471340)
-on `c6f3025` passed MSRV, features, supply, no-host and semver. Compilation and
-strict Clippy passed, but parity rejected D-045's Unix-only fixture reference
-before nextest or doctests. The fixture correction keeps portable directory
-refusal unconditional and retains Unix mode/symlink/FIFO assertions under Unix.
-The parity checker remains unchanged. Earlier missing-import, rendering and
-receipt-fixture API issues are corrected in source. Tests and doctests still
-need to pass on the final combined source. Current runs are listed in the
+[38695489489](https://github.com/sam0x17/rtao/actions/runs/38695489489)
+on `fa77262` passed MSRV, features, supply, no-host and semver. Compilation and
+strict Clippy passed, and D-045's corrected fixture qualified. Parity then
+rejected D-046 because it used the default-feature test index, while the normal
+nextest and doctest commands enable all features. The source correction aligns
+divergence qualification with the indexed ordinary all-feature tests, preserving
+cfg, ignore and harness rejections. Earlier missing-import, rendering and
+receipt-fixture API issues are corrected in source. Nextest and doctests were
+not reached; both still need to pass on the final combined source. Current runs are listed in the
 [workflow history](https://github.com/sam0x17/rtao/actions/workflows/pr.yml?query=branch%3Amain).
 
 Hosted regeneration
@@ -79,6 +80,12 @@ additions; all other generated interfaces and matrix families are unchanged.
 All 23 dependency hashes include the updated CLI feature declaration, with
 unchanged role package sets/counts and no runtime claims. Its bounded proof is
 `m5-coldkey-adoption.json` in the same recovery directory.
+Follow-up generation
+[38696690648](https://github.com/sam0x17/rtao/actions/runs/38696690648)
+at `7c9c8ca` corrects two unused zero-argument pass-through bindings. Review
+verified the same thirteen paths and 23 hashes, exactly two parameter-name
+changes, unchanged other interfaces/matrix and unchanged role inventories.
+Its proof is `m5-fieldless-adoption.json`.
 Runtime validation remains null/empty; Linux graph measurement does not
 establish native Mac, hardware, oracle or chain interoperability coverage.
 
