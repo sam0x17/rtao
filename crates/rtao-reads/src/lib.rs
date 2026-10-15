@@ -11,7 +11,8 @@ pub mod generated;
 pub use generated::namespaces::*;
 pub use generated::{
     Category, Hit, HitKind, JsonType, ParamSpec, Pinning, READ_HIT_REPLACEMENTS, READ_SPECS,
-    ReadHitReplacement, ReadName, ReadSpec, RenderHint, dispatch, fill_defaults,
+    ReadHitReplacement, ReadInterfaceMetadata, ReadName, ReadSpec, RenderHint, dispatch,
+    fill_defaults,
 };
 /// Typed entry points for catalog reads.
 pub mod reads;

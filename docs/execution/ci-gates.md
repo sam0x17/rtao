@@ -253,3 +253,15 @@ so mutating one copy left another valid copy. The fixture now appends the
 section only when absent, verifies its initial validity and requires exactly
 one copy before mutation. The production attribution gate is unchanged.
 Both repairs need the next hosted test run; no local build or test was run.
+
+Hosted generation [38686769925](https://github.com/sam0x17/rtao/actions/runs/38686769925)
+succeeded at `f841f63`. Generated artifact `11950657025` matched SHA-256
+`910f698e1dfc27bb65e39cb4f4ed5f7471b9aae09fba1a4a1c0710c91f88b906`;
+report artifact `11950581955` matched
+`2b14fcf0ddba8b35e66310d08a56d4a4650bbb22ea3e12bdbd476e060e70b664`.
+Review validated exact four-file sets, all 83 intent and 102 read names, pending
+flags, 23 current dependency hashes, clean source identity, unchanged profile
+package sets and empty runtime-validation claims. All eight files were adopted
+byte for byte in memory, with no extraction directory. The bootstrap normal
+no-host job correctly rejected the old generated read names before adoption;
+the combined source still requires a normal hosted run.

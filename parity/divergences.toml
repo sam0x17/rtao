@@ -580,3 +580,38 @@ pinning_tests = [
 ]
 upstream_report = "Local safety policy; no upstream issue or PR filed. Active denotes implemented source with named regression bodies, including the new direct programmatic raw-call test. Combined hosted validation remains pending; no local build or test was run for registration."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/config.py#L138-L286"
+
+[[divergences]]
+id = "D-043"
+upstream_symbol = "bittensor.cli.query._make_command plural account parameters"
+python_behavior = "Splits declared array arguments into trimmed comma-separated strings, then resolves only parameter names ending exactly _ss58. Plural coldkey_ss58s and hotkey_ss58s arrays reach the read dispatcher without per-entry name expansion."
+rtao_behavior = "Generated queries additionally resolve each explicit _ss58s entry using the corresponding scalar account kind before read dispatch. Account-list order and duplicates are preserved; an unresolved entry returns input status 2 before connecting. Plural-option help describes account references without an implicit wallet fallback."
+rationale = "Offer the same explicit account-reference inputs for plural queries as for scalar queries. This is an additive CLI convenience; it does not change read bodies, resolved account values or result JSON and does not assert an upstream defect."
+decision = "PLAN.md execution rule 5 design-gap decision; generated query source preparation (2026-10-15)"
+status = "active"
+class = "addition"
+milestone = "M4"
+pinning_tests = [
+  "rtao_cli::generated_commands::account_list_queries_resolve_every_reference_and_refuse_an_unknown_entry",
+  "rtao_cli::generated_commands::query_resolves_csv_contact_names_before_actual_batched_read_dispatch",
+]
+upstream_report = "No upstream defect alleged and no issue or PR filed. Active denotes prepared source and the named regression bodies present in the worktree. Hosted validation is pending; no successful CLI build or test run is claimed."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/query.py#L161-L178"
+
+[[divergences]]
+id = "D-044"
+upstream_symbol = "bittensor.cli.context.AppContext.submit PoW preparation and dry-run planning"
+python_behavior = "PowRegister.build composes structurally valid work without checking the current public challenge. Unshielded CLI execution refreshes expired, future or difficulty-invalid work after confirmation and unlock. Dry-run planning can therefore preview stale work."
+rtao_behavior = "The SDK validates the public challenge during build. Actual unshielded CLI requests refresh stale or difficulty-invalid work using public identities before strict planning and review, then recheck after confirmation and unlock. Dry runs do not mine or unlock and reject work that fails the SDK challenge checks. Proxy owner and explicit hotkey remain fixed."
+rationale = "Retain the SDK's fail-closed PoW validation while allowing actual CLI requests to refresh their public proof. A dry run must not start CPU workers or acquire signing keys. Refresh timing and stale-proof preview acceptance differ deliberately from Python; successful registration semantics are preserved."
+decision = "PLAN.md execution rule 5 design-gap decision, M4-10 source review (2026-10-15)"
+status = "active"
+class = "stricter"
+milestone = "M4"
+pinning_tests = [
+  "rtao_cli::generated_commands::initially_expired_future_and_difficulty_invalid_pow_prepare_before_signing",
+  "rtao_cli::generated_commands::expired_pow_dry_run_never_enters_public_mining_or_unlocks",
+  "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock",
+]
+upstream_report = "Local validation policy; no upstream defect alleged and no issue or PR filed. Active records prepared source with regression bodies, not successful execution. Hosted build/test validation remains pending."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L1511-L1548"
