@@ -76,8 +76,12 @@ fn validate_class(source: &str, bindings: &Bindings) -> Result<()> {
                 };
                 let (expected_name, annotation) =
                     schema.get(fields.len()).context("extra Precompile field")?;
+                // RustPython 0.4 drops parentheses before deriving simple.
+                // CPython omits parenthesized names from dataclass annotations.
                 ensure!(
                     field.simple
+                        && source.get(field.range.start().to_usize()..name.range.end().to_usize())
+                            == Some(*expected_name)
                         && name.id.as_str() == *expected_name
                         && matches!(field.annotation.as_ref(), ast::Expr::Name(actual) if actual.id.as_str() == *annotation),
                     "Precompile fields must use the ordinary builtin annotation schema"
@@ -620,6 +624,8 @@ mod tests {
             ("deprecated: bool = False", "deprecated: bool", ""),
             ("deprecated: bool = False", "deprecated: bool = 0", ""),
             ("name: str", "(name): str", ""),
+            ("name: str", "((name)): str", ""),
+            ("index: int", "(index): int", ""),
         ] {
             ensure!(
                 source.contains(before) && source.contains("from typing import Any"),
@@ -636,7 +642,7 @@ mod tests {
             );
             ensure!(
                 resolved(&changed).is_err(),
-                "unsupported constructor semantics accepted"
+                "unsupported constructor semantics accepted: {after:?}; imports: {imports:?}"
             );
         }
         Ok(())

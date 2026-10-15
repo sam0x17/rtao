@@ -3218,6 +3218,7 @@ dependencies = [
  "serde_json",
  "subxt-rpcs",
  "tokio",
+ "tokio-rustls",
  "tokio-tungstenite",
  "tracing",
  "unicode-general-category",
