@@ -135,7 +135,16 @@ jobs:
         run: cargo fetch --locked
       - run: cargo run --locked -p xtask -- gates --job features
         # Each facade/intent feature, btauth/signer powersets, all role
-        # profiles and no features. Real examples join at M2-18/M3-06/M4-17.
+        # profiles and no features. Generated downstream template builds and
+        # owner-tool tests share the target; no live integration is started.
+      - name: Retain generated-template validation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: template-${{ github.sha }}
+          path: target/pr-gates/template-evidence-*
+          if-no-files-found: warn
+          retention-days: 7
 
   supply:
     if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen)
@@ -241,6 +250,7 @@ jobs:
             'crates/rtao-reads/src/generated/mod.rs',
             'crates/rtao-reads/src/generated/interfaces.rs',
             'crates/rtao-reads/src/generated/namespace_methods.rs',
+            'crates/rtao/src/generated/blocking_namespaces.rs',
           ];
           const allowed = new Set([...reports, ...(process.env.REFRESH_CODEGEN === 'true' ? interfaces : [])]);
           for (const path of allowed) {
@@ -280,5 +290,6 @@ jobs:
             crates/rtao-reads/src/generated/mod.rs
             crates/rtao-reads/src/generated/interfaces.rs
             crates/rtao-reads/src/generated/namespace_methods.rs
+            crates/rtao/src/generated/blocking_namespaces.rs
           if-no-files-found: error
           retention-days: 3

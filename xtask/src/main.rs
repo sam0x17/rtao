@@ -68,7 +68,7 @@ fn main() -> Result<()> {
                 "Repository maintenance\n\n\
   cargo xtask gates [--job <name>] [--list]\n\
   cargo xtask supply\n\
-  cargo xtask template check [--native-only]\n\
+  cargo xtask template check [--localnet]\n\
   cargo xtask pin --check\n\
   cargo xtask pin --check --prepare-cache (hosted source-cache bootstrap)\n\
   cargo xtask pin --networks [--check]\n\

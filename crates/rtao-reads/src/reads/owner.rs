@@ -22,7 +22,7 @@ fn surface(descriptor: &'static str, detail: impl Into<String>) -> ReadError {
     }
 }
 
-fn contextual_balance(rao: u64, netuid: NetUid, symbols: &Symbols) -> DynBalance {
+pub(crate) fn contextual_balance(rao: u64, netuid: NetUid, symbols: &Symbols) -> DynBalance {
     let mut amount = DynBalance::from_rao(rao, netuid);
     amount.symbol = symbols
         .get(&netuid)
@@ -185,7 +185,7 @@ pub struct DelegateInfo {
     pub total_daily_return: DynBalance,
 }
 
-fn delegate_info(info: models::DelegateInfo) -> DelegateInfo {
+pub(crate) fn delegate_info(info: models::DelegateInfo) -> DelegateInfo {
     DelegateInfo {
         hotkey: info.delegate_ss58,
         owner: info.owner_ss58,
@@ -682,7 +682,10 @@ pub struct ValidatorBasketSummary {
     pub chain_pricing: Option<ChainPricing>,
 }
 
-fn basket_summary(summary: models::BasketSummary, symbols: &Symbols) -> ValidatorBasketSummary {
+pub(crate) fn basket_summary(
+    summary: models::BasketSummary,
+    symbols: &Symbols,
+) -> ValidatorBasketSummary {
     let nav = summary.nav_tao.0;
     let deposited = summary.deposited_tao.0;
     let redeemed = summary.redeemed_tao.0;

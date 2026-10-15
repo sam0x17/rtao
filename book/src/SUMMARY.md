@@ -4,6 +4,8 @@
 - [Getting started](getting-started.md)
 - [Running a validator](validator.md)
 - [Running a miner](miner.md)
+- [Subnet owner operations](owner.md)
+- [MEV shield](mev-shield.md)
 - [Multisig and external signing](multisig.md)
 - [Transaction reference](tx-reference.md)
 - [Release verification](releases.md)

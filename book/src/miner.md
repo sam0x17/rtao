@@ -11,27 +11,19 @@ received JSON and persists a request count. The [validator example](validator.md
 queries this route. Replace the echo handler with your subnet's protocol before
 running a miner for that subnet.
 
-## Start the example
+## Configure the example
 
-Build from the workspace root:
-
-```sh
-cargo build --locked -p rtao --example miner --no-default-features \
-  --features miner,prometheus
-```
+The source example uses the `miner` feature; `prometheus` enables its telemetry.
+Substantial example builds and tests run in hosted CI. Running a miner or
+starting a local node is not a client-development prerequisite.
 
 Provide a btcli-compatible wallet hotkey that is registered in the selected
 subnet and has access to enough TAO for serving transaction fees. Set
 `BT_AXON_EXTERNAL_IP` to your host's globally routable IP. Forward public TCP
-port 8091 to the miner's listener, then run:
-
-```sh
-cargo run --locked -p rtao --example miner --no-default-features \
-  --features miner,prometheus -- \
-  --netuid 123 --network test --wallet miner --wallet-hotkey default \
-  --axon.port 8091 --state-dir ./miner-state \
-  --metrics-addr 127.0.0.1:9091
-```
+port 8091 to the miner's listener. An operator's existing example build accepts
+`--netuid 123 --network test --wallet miner --wallet-hotkey default
+--axon.port 8091 --state-dir ./miner-state --metrics-addr 127.0.0.1:9091`.
+It uses the selected network endpoint without starting a node.
 
 Replace subnet 123 and the wallet names with your registered identity. Keep the
 wallet mount read-only and the state directory writable and persistent across
@@ -62,9 +54,8 @@ the public port differs from the listener port.
 Without an explicit external IP, the publisher tries the configured IPv4
 discovery services with five-second deadlines. An explicit IP can be IPv4 or
 IPv6. Publication rejects private, loopback and other non-global addresses.
-`--network local` permits non-global addresses for localnet use; for that setup,
-also supply an address such as `--axon.external-ip 127.0.0.1` that the local
-validator can reach.
+The `local` network setting permits non-global addresses for callers using an
+existing development endpoint. It does not start or manage a localnet.
 
 The publisher compares IP, port, IP type, protocol and version with stored axon
 data. An unchanged endpoint produces no new serving transaction. The default
@@ -214,10 +205,13 @@ context. A second signal exits immediately with status 130. For systemd, allow
 time for state persistence with `KillSignal=SIGTERM`, `TimeoutStopSec=90` and
 `Restart=on-failure`. Abrupt termination can lose changes since the last save.
 
-Before deploying your handler, verify a signed request from an eligible
+Before operating your handler, verify a signed request from an eligible
 validator, the 401/403/413/429 refusals, unchanged-endpoint idempotence,
 certificate-only rotation when configured, state recovery and shutdown. Test
 the endpoint from the validator's network through the actual forwarding or
-TLS setup. Local Rust regression checks cover the framework; the required
-localnet scenario, Python interoperability lanes and generated-template CI
-must also pass before the miner milestone is complete.
+TLS setup. Hosted Rust regression tests cover framework behavior with fake
+transports and committed fixtures; inspect the result for the exact source
+commit. Live networking and operational behavior require separate evidence.
+Localnet and Python interoperability checks are optional targeted hosted work
+under PLAN.md Q30. They do not require local nodes, containers or a local test
+campaign, and their absence is a coverage limit rather than a passing result.

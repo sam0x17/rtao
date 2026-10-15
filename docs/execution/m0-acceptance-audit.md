@@ -39,6 +39,14 @@ identity. These source relationships do not prove runtime conformance.
 
 ## Remaining acceptance work
 
+Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
+at `06a3598` passes compilation, strict Clippy, parity and the five other jobs.
+Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. Source-backed
+fixture corrections are authored without disabling assertions or gates. The
+all-83 plan fixture passes; doctests and docs are not reached. Subsequent M6
+source still needs generated integration and full hosted validation. Bounded
+failure evidence is `check-38710720744.json` in private recovery.
+
 Latest inspected normal run
 [38710157011](https://github.com/sam0x17/rtao/actions/runs/38710157011)
 at `c6bd593` passes MSRV/no-host/supply/semver. Check compilation reaches

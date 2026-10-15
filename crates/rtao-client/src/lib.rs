@@ -2,6 +2,10 @@
 
 #![deny(missing_docs)]
 
+mod block_info;
+/// Private runtime thread used by the facade's synchronous adapters.
+#[cfg(feature = "blocking")]
+pub mod blocking;
 /// Runtime metadata resolution, coalescing, and Python-compatible disk cache.
 pub mod cache;
 mod client;
@@ -35,6 +39,7 @@ pub mod submit;
 /// Typed and dynamic read views pinned to immutable chain state.
 pub mod view;
 
+pub use block_info::BlockInfo;
 pub use cache::RuntimeCache;
 pub use client::{Client, ClientConfig};
 pub use error::ClientError;

@@ -1,11 +1,19 @@
 name: subnet
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      localnet:
+        description: Also build images and run the optional compose integration
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
-  localnet:
+  client:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 50
     env:
       RTAO_TEMP_ROOT: ${{ github.workspace }}/target/subnet-ci
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/subnet-ci/build
@@ -37,16 +45,22 @@ jobs:
           sdk=$(bash ci/source.sh | sed -n 's/^RTAO_SOURCE=//p')
           cargo install --locked --path "$sdk/crates/rtao-cli" --root "$RTAO_TEMP_ROOT/tools"
           echo "RTAO_DOCTOR=$RTAO_TEMP_ROOT/tools/bin/rtao" >> "$GITHUB_ENV"
-      - name: Check, build both no-host images, and run the real compose localnet
-        run: bash ci/check.sh
-      - name: Retain public integration evidence
+      - name: Check generated client source and owner-tool without live services
+        if: github.event_name != 'workflow_dispatch' || !inputs.localnet
+        run: timeout --signal=TERM --kill-after=30s 35m bash ci/check.sh
+      - name: Optional hosted image and compose integration
+        if: github.event_name == 'workflow_dispatch' && inputs.localnet
+        run: timeout --signal=TERM --kill-after=30s 45m bash ci/check.sh --localnet
+      - name: Retain bounded public validation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: subnet-localnet
+          name: subnet-client
           path: |
             Cargo.lock
             target/subnet-ci/*.json
             target/subnet-ci/*.log
+            target/subnet-ci/*-help.txt
             target/subnet-ci/*-tree.txt
           if-no-files-found: ignore
+          retention-days: 7

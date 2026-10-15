@@ -43,6 +43,7 @@ num-traits.workspace = true
 unicode-general-category.workspace = true
 metrics = { workspace = true, optional = true }
 regex.workspace = true
+chrono.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
