@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/config.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Command-boundary fixtures for persistent defaults and catalog discovery.
 
 use clap::ArgMatches;

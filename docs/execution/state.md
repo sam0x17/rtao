@@ -16,6 +16,42 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
+at `237d189` is terminal: all five supporting jobs, main compilation,
+strict Clippy and ordinary parity pass. Nextest runs 2,831 tests: 2,784 pass,
+47 fail and 4 are skipped. Doctests/docs are not reached. Raw main log is
+1,258,642 bytes, SHA256
+`b5a3c5b4b04cc477e8b322c38d131a3703149d6877e63296592007e5318acc9a`;
+bounded exact-source failures are retained in
+`test-failures-38770765426.json`. These results predate the later source batch.
+
+All 47 failure causes now have source corrections or reviewed fixture repairs.
+Production corrections include signer-specific metadata digests without stale
+cache reuse, result hash hex, authenticated modern preimage length, deterministic
+Vault replacement close, upgrade repository validation and decrypted-title
+stream. Fake request recording preserves every separate transport call while
+excluding internal delegation, including recovery after injected panic.
+Fixture repairs preserve one-submit/deadline/nonce/shield, parent-runtime and
+exact numeric-bit checks. Independent source rereviews and root cross-review
+pass; hosted execution is still required.
+
+The same batch repairs closed-client snapshot/subscription admission and
+cancellation, block-decode null placeholders, Python ABI text grammar/network
+text and CLI help/attribution. Three reviewed source rows bring the map to
+212 reconciled/145 pending, with 21 e2e keys pending. Address prefix evidence is
+registered 0/42/128 with unregistered 1000 refusal. The hparams empty view omits its
+footer, matching Python; its renamed fixture is reflected in the map.
+
+New source-only catalog fixtures consume all 102 authenticated READ_SAMPLES at
+head and snapshot 90, keep exact semantic spots, and assert ordinary intent
+summary/fee. A dedicated root-claim extractor projects authenticated tables,
+constants and bounded recognized case inputs without weakening the shared
+resolver. Its test-only JSON must be generated/adopted in hosted CI before
+ordinary execution; both full root-claim rows remain pending their disclosed
+inline-input/API adaptations. The refresh allowlist includes exactly that new
+output. No local generation, builds/tests, node or temporary directory.
+
+
 The three focused boundary repairs now pass independent source rereview:
 cache/custom-payload decimal strings enforce the 4,300-digit limit; empty
 weights-helper names select the default wallet; blocking client/snapshot

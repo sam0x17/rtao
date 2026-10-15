@@ -452,11 +452,14 @@ fn parameter_examples_use_human_units_and_preserve_raw_machine_values() -> TestR
 }
 
 #[test]
-fn parameter_listing_hint_selects_a_present_name_or_the_empty_default() -> TestResult {
+fn parameter_listing_hint_selects_a_present_name_and_empty_tables_omit_it() -> TestResult {
     for (rows, name) in [
-        (vec![("rho", json!(7)), ("kappa", json!(32767))], "kappa"),
-        (vec![("rho", json!(7))], "rho"),
-        (vec![], "tempo"),
+        (
+            vec![("rho", json!(7)), ("kappa", json!(32767))],
+            Some("kappa"),
+        ),
+        (vec![("rho", json!(7))], Some("rho")),
+        (vec![], None),
     ] {
         let params = Some(serde_json::Map::from_iter(
             rows.into_iter().map(|(name, raw)| (name.into(), raw)),
@@ -464,9 +467,16 @@ fn parameter_listing_hint_selects_a_present_name_or_the_empty_default() -> TestR
         let sink = MemorySink::default();
         let output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
         hparams::render_hyperparameters(&output, NetUid(1), &params, None)?;
-        assert!(sink.text(Stream::Stdout)?.contains(&format!(
-            "`--name {name}` explains one parameter and how to set it"
-        )));
+        let human = sink.text(Stream::Stdout)?;
+        if let Some(name) = name {
+            assert!(human.contains(&format!(
+                "`--name {name}` explains one parameter and how to set it"
+            )));
+        } else {
+            // Python's hyperparameters renderer returns after the empty row.
+            assert_eq!(human, "hyperparameters netuid 1\n  none\n");
+            assert!(!human.contains("--name"));
+        }
     }
     Ok(())
 }

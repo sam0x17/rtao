@@ -353,9 +353,20 @@ fn all_sixteen_routes_and_hidden_group_command_aliases_parse() -> TestResult {
             .try_get_matches_from(["rtao", "wallet", "overview", "--netuid", "65536"])
             .is_err()
     );
+    let wallet = tree.find_subcommand("wallet").ok_or("wallet command")?;
+    for alias in ["w", "wallets"] {
+        assert!(wallet.get_all_aliases().any(|name| name == alias));
+        assert!(!wallet.get_visible_aliases().any(|name| name == alias));
+        tree.clone()
+            .try_get_matches_from(["rtao", alias, "sign", "--message", "hello"])?;
+    }
     let mut tree = tree;
     let help = tree.render_long_help().to_string();
-    assert!(!help.contains("wallets"));
+    assert!(
+        !help
+            .lines()
+            .any(|line| matches!(line.split_whitespace().next(), Some("w" | "wallets")))
+    );
     Ok(())
 }
 
@@ -454,22 +465,26 @@ async fn encrypt_decrypt_preserves_utf8_and_copy_json_refuses_before_wallet_acce
     let (parsed, mut ctx, sink) = context(&root, &["wallet", "decrypt", "--ciphertext", &spaced])?;
     local(&mut ctx, &parsed).await?;
     assert_eq!(value(&sink)?, json!({"message":plaintext}));
-    let (parsed, mut ctx, sink) =
-        context(&root, &["wallet", "decrypt", "--ciphertext", ciphertext])?;
-    ctx.globals.json = false;
-    ctx.output = Output::with_sink(
-        OutputOptions {
-            json_mode: false,
-            quiet: false,
-            network: None,
-        },
-        Arc::new(sink.clone()),
-    );
-    local(&mut ctx, &parsed).await?;
-    let human = sink.text(Stream::Stdout)?;
-    assert!(human.contains("decrypted"));
-    assert!(human.contains("private message π"));
-    assert!(human.contains("done"));
+    for quiet in [false, true] {
+        let (parsed, mut ctx, sink) =
+            context(&root, &["wallet", "decrypt", "--ciphertext", ciphertext])?;
+        ctx.globals.json = false;
+        ctx.globals.quiet = quiet;
+        ctx.output = Output::with_sink(
+            OutputOptions {
+                json_mode: false,
+                quiet,
+                network: None,
+            },
+            Arc::new(sink.clone()),
+        );
+        local(&mut ctx, &parsed).await?;
+        assert_eq!(
+            sink.text(Stream::Stdout)?,
+            "decrypted\n  message: private message π\\n\\x00done\n"
+        );
+        assert!(sink.bytes(Stream::Stderr)?.is_empty());
+    }
     let (parsed, mut ctx, sink) = context(
         &root,
         &["wallet", "decrypt", "--ciphertext", "bad", "--copy"],

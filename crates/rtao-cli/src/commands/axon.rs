@@ -14,7 +14,7 @@ fn subnet() -> Arg {
         .long("netuid")
         .required(true)
         .value_parser(clap::value_parser!(u16))
-        .help("Subnet on which to publish or reset the endpoint.")
+        .help("Subnet on which to publish the endpoint.")
 }
 
 fn period() -> Arg {
@@ -27,18 +27,25 @@ fn period() -> Arg {
 /// Build endpoint publishing commands. These commands only write chain data.
 pub fn command() -> Command {
     Command::new("axon")
-        .about("Publish or reset a neuron endpoint on chain.")
+        .about("Axon serving commands.")
+        .long_about(format!(
+            "Axon serving commands.\n\nGuide: {}/guides/mining",
+            rtao_catalog::py::DOCS_URL
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(with_globals(
             Command::new("set")
-                .about("Publish an endpoint for the wallet hotkey; does not start a server.")
+                .about("Publish an axon endpoint for the wallet hotkey.")
+                .long_about(
+                    "Publish an axon endpoint for the wallet hotkey.\n\nThis records connection info as chain data only; it does not start a server. Signed by the hotkey, which must be registered on the subnet.",
+                )
                 .arg(subnet())
                 .arg(
                     Arg::new("ip")
                         .long("ip")
                         .required(true)
-                        .help("Public IPv4 or IPv6 address of the axon."),
+                        .help("Public IPv4 or IPv6 address of the endpoint, in standard dotted or colon notation."),
                 )
                 .arg(
                     Arg::new("port")
@@ -51,21 +58,21 @@ pub fn command() -> Command {
                     Arg::new("tls")
                         .long("tls")
                         .action(ArgAction::SetTrue)
-                        .help("Also publish a neuron certificate for inter-neuron TLS."),
+                        .help("Also publish a TLS certificate for inter-neuron TLS."),
                 )
                 .arg(
                     Arg::new("certificate")
                         .long("certificate")
                         .default_value("")
-                        .help("0x-hex neuron certificate bytes (with --tls)."),
+                        .help("Neuron certificate as 0x-prefixed hex: 1 algorithm byte followed by up to 64 bytes of public key. Not an X.509 certificate; other formats fail to decode on chain."),
                 )
                 .arg(period()),
             Tier::Tx,
         ))
         .subcommand(with_globals(
             Command::new("reset")
-                .about("Reset the wallet hotkey's advertised axon on a subnet.")
-                .arg(subnet())
+                .about("Reset (stop serving) the wallet hotkey's axon on a subnet.")
+                .arg(subnet().help("Subnet whose published axon endpoint to clear."))
                 .arg(period()),
             Tier::Tx,
         ))

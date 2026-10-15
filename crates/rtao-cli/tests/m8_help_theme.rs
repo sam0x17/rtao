@@ -114,7 +114,21 @@ fn bare_installed_groups_and_historical_aliases_print_help_and_exit_zero() -> Te
         );
         let help = String::from_utf8_lossy(&result.stdout);
         assert!(help.contains("Usage:"), "{}: {help}", path.join(" "));
-        assert!(help.contains("Commands:"), "{}: {help}", path.join(" "));
+        let mut group = &command;
+        for name in &path {
+            group = group.find_subcommand(name).ok_or("installed help path")?;
+        }
+        // Generated tx/query help groups commands by category rather than
+        // using Clap's generic Commands heading. Require the actual entries.
+        for child in group.get_subcommands().filter(|child| !child.is_hide_set()) {
+            assert!(
+                help.lines()
+                    .any(|line| line.split_whitespace().next() == Some(child.get_name())),
+                "{}: missing {} in {help}",
+                path.join(" "),
+                child.get_name()
+            );
+        }
         assert!(!help.contains("error:"), "{}: {help}", path.join(" "));
         assert!(
             result.stderr.is_empty(),

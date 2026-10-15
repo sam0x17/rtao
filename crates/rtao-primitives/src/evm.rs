@@ -269,7 +269,10 @@ mod tests {
     fn ss58_conversion_preserves_full_keys_and_truncates_only_the_origin()
     -> Result<(), AddressError> {
         let key: [u8; 32] = std::array::from_fn(|index| index as u8);
-        for prefix in [0, 42, 1000] {
+        // Decode uses the same pinned core helper as Python: registered
+        // prefixes are allowed, while an unregistered custom prefix requires
+        // the process default. 128 exercises a registered two-byte prefix.
+        for prefix in [0, 42, 128] {
             let address = pubkey_to_ss58_with_prefix(&key, prefix)?;
             assert_eq!(
                 ss58_to_pubkey(&address)?,
@@ -280,6 +283,9 @@ mod tests {
                 "0x000102030405060708090a0b0c0d0e0f10111213"
             );
         }
+        let unknown_prefix = pubkey_to_ss58_with_prefix(&key, 1000)?;
+        assert!(ss58_to_pubkey(&unknown_prefix).is_err());
+        assert!(ss58_to_h160_truncated(&unknown_prefix).is_err());
         assert_eq!(pubkey_to_ss58(&key)?, pubkey_to_ss58_with_prefix(&key, 42)?);
         for length in [0, 20, 31, 33] {
             assert!(pubkey_to_ss58(&vec![0; length]).is_err());

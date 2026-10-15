@@ -865,6 +865,19 @@ fn transfer_unit_mismatch_cannot_become_a_bounded_tao_spend() {
             }
             .check(&intent, None)
         ),
+        [Violation::RawCall, Violation::SpendUnbounded]
+    );
+    // Invalid semantic input also fails the direct raw-contract guard. Even
+    // explicit raw authorization cannot turn its alpha amount into TAO spend.
+    assert_eq!(
+        categories(
+            &Policy {
+                max_spend: Some(Balance::<Tao>::from_rao(u64::MAX)),
+                allow_raw_calls: true,
+                ..Default::default()
+            }
+            .check(&intent, None)
+        ),
         [Violation::SpendUnbounded]
     );
     assert_eq!(Balance::<Tao>::try_from(-1_i128), Err(UnitError::Negative));

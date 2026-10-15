@@ -561,7 +561,7 @@ pub(super) async fn run_local(
                 )
                 .map_err(failure)
         } else {
-            ctx.output.message("decrypted").map_err(failure)?;
+            ctx.output.secret_line(&["decrypted"]).map_err(failure)?;
             ctx.output
                 .secret_line(&["  message: ", plaintext.expose_secret()])
                 .map_err(failure)

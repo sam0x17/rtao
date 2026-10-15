@@ -371,7 +371,7 @@ pub fn decode_result(function: &Function, data: &str) -> Result<Vec<Value>> {
     if data.len() > MAX_ABI_BYTES * 2 + 2 {
         return Err(invalid("ABI result exceeds 16 MiB limit"));
     }
-    let bytes = hex::decode(data.strip_prefix("0x").unwrap_or(data)).map_err(abi_error)?;
+    let bytes = python_fromhex(data.strip_prefix("0x").unwrap_or(data))?;
     decode_result_bytes(function, &bytes)
 }
 
@@ -624,27 +624,10 @@ fn coerce_value(
             let text = argument_text(raw)?;
             budget.bytes(text.len().max(32))?;
             let text = python_strip(&text);
-            if matches!(ty, DynSolType::Int(_) | DynSolType::Uint(_)) {
-                // Do not silently accept Solidity units, decimals or exponents.
-                let digits = text.strip_prefix("0x").unwrap_or_else(|| {
-                    text.strip_prefix('-')
-                        .or_else(|| text.strip_prefix('+'))
-                        .unwrap_or(text)
-                });
-                let valid = !digits.is_empty()
-                    && if text.starts_with("0x") {
-                        digits.bytes().all(|byte| byte.is_ascii_hexdigit())
-                    } else {
-                        digits.bytes().all(|byte| byte.is_ascii_digit())
-                    };
-                if !valid {
-                    return Err(invalid(
-                        "ABI integers require exact decimal or 0x hexadecimal input",
-                    ));
-                }
-            }
-            let text = if matches!(ty, DynSolType::Uint(_)) {
-                text.strip_prefix('+').unwrap_or(text)
+            let normalized;
+            let text = if matches!(ty, DynSolType::Int(_) | DynSolType::Uint(_)) {
+                normalized = python_integer_text(text)?;
+                normalized.as_str()
             } else {
                 text
             };
@@ -661,11 +644,115 @@ fn python_strip(value: &str) -> &str {
     })
 }
 
+fn hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn python_integer_text(text: &str) -> Result<String> {
+    // Python selects base16 only for a literal leading lowercase 0x. A sign
+    // before that prefix therefore follows base10 and is refused, as is 0X.
+    let (body, hexadecimal, negative) = if let Some(body) = text.strip_prefix("0x") {
+        (body, true, false)
+    } else if let Some(body) = text.strip_prefix('-') {
+        (body, false, true)
+    } else {
+        (text.strip_prefix('+').unwrap_or(text), false, false)
+    };
+    let limit = if hexadecimal { 64 } else { 78 };
+    let mut digits = String::with_capacity(limit);
+    let mut unicode_digits = BTreeMap::new();
+    let mut previous_digit = false;
+    let mut any_digit = false;
+    for (index, character) in body.chars().enumerate() {
+        if character == '_' {
+            // int(text,16) permits one separator immediately after 0x too.
+            if !previous_digit && !(hexadecimal && index == 0) {
+                return Err(invalid("invalid separator in ABI integer"));
+            }
+            previous_digit = false;
+            continue;
+        }
+        let digit = if character.is_ascii() {
+            hex_nibble(character as u8).filter(|digit| hexadecimal || *digit < 10)
+        } else if let Some(digit) = unicode_digits.get(&character) {
+            Some(*digit)
+        } else {
+            // Reuse the shared parser's pinned Python Unicode Nd identity.
+            // Cache each accepted character, rather than constructing a BigInt
+            // for every occurrence in a long leading-zero spelling.
+            let mut buffer = [0; 4];
+            let digit = rtao_primitives::pyfmt::parse_integer(character.encode_utf8(&mut buffer))
+                .and_then(|integer| integer.to_string().parse::<u8>().ok())
+                .filter(|digit| *digit < 10);
+            if let Some(digit) = digit {
+                unicode_digits.insert(character, digit);
+            }
+            digit
+        }
+        .ok_or_else(|| invalid("ABI integers require exact decimal or 0x hexadecimal input"))?;
+        previous_digit = true;
+        any_digit = true;
+        if digit != 0 || !digits.is_empty() {
+            // Bound significant digits before handing text to an integer
+            // parser. All Solidity widths fit within 64 hex /78 decimal digits;
+            // leading zeroes remain a linear scan under the input byte budget.
+            if digits.len() == limit {
+                return Err(invalid("ABI integer exceeds 256 bits"));
+            }
+            digits.push(char::from(b"0123456789abcdef"[usize::from(digit)]));
+        }
+    }
+    if !any_digit || !previous_digit {
+        return Err(invalid("incomplete ABI integer"));
+    }
+    if digits.is_empty() {
+        digits.push('0');
+    }
+    Ok(if hexadecimal {
+        format!("0x{digits}")
+    } else if negative && digits != "0" {
+        format!("-{digits}")
+    } else {
+        digits
+    })
+}
+
+fn python_fromhex(text: &str) -> Result<Vec<u8>> {
+    // bytes.fromhex accepts six ASCII whitespace bytes between whole byte
+    // pairs. Removing all whitespace would incorrectly accept split nibbles.
+    let groups = || {
+        text.as_bytes()
+            .split(|byte| matches!(byte, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c))
+    };
+    let mut count = 0usize;
+    for group in groups() {
+        if !group.len().is_multiple_of(2) || !group.iter().all(|byte| hex_nibble(*byte).is_some()) {
+            return Err(invalid("invalid ABI hexadecimal byte pair"));
+        }
+        count = add(count, group.len() / 2)?;
+        check_byte_length(count)?;
+    }
+    // Validate grammar and decoded size before allocating the decoded buffer.
+    let mut bytes = vec![0; count];
+    let mut offset = 0usize;
+    for group in groups() {
+        let end = add(offset, group.len() / 2)?;
+        hex::decode_to_slice(group, &mut bytes[offset..end]).map_err(abi_error)?;
+        offset = end;
+    }
+    Ok(bytes)
+}
+
 fn argument_bytes(raw: &Value, budget: &mut Budget) -> Result<Vec<u8>> {
     let text = argument_text(raw)?;
     budget.bytes(text.len().max(32))?;
     let text = python_strip(&text);
-    let bare_h160 = text.len() == 40 && text.bytes().all(|byte| byte.is_ascii_hexdigit());
+    let bare_h160 = text.len() == 40 && addresses::is_h160(&format!("0x{text}"));
     let converted;
     let hex_text = if !text.starts_with("0x") && !bare_h160 {
         converted = addresses::ss58_to_pubkey(text)?;
@@ -673,7 +760,7 @@ fn argument_bytes(raw: &Value, budget: &mut Budget) -> Result<Vec<u8>> {
     } else {
         text
     };
-    hex::decode(hex_text.strip_prefix("0x").unwrap_or(hex_text)).map_err(abi_error)
+    python_fromhex(hex_text.strip_prefix("0x").unwrap_or(hex_text))
 }
 
 fn argument_text(raw: &Value) -> Result<String> {
@@ -1270,7 +1357,9 @@ mod tests {
     #[test]
     fn ss58_bytes32_and_bounded_array_calls_encode_exact_arguments() {
         // pyt: tests/unit/test_evm.py::TestPrecompileEncoding::test_coerce_argument_accepts_ss58_for_bytes32
-        let alice = "5GrwvaEF5zXb26Fz9rcQpDWS64D1AU2pEdPhBY6VZC6pQYgB";
+        // Pinned golden.json extrinsics[0] address/public_key_hex. The earlier
+        // authored address had a different tail and an invalid checksum.
+        let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
         let public = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
         let staking = get_precompile("staking-v2").unwrap();
         let from_ss58 = staking
@@ -1287,6 +1376,13 @@ mod tests {
             .unwrap();
         assert_eq!(from_ss58, from_hex);
         assert!(from_hex[10..].starts_with(&public[2..]));
+        assert!(
+            coerce_argument(
+                "bytes32",
+                &json!("5GrwvaEF5zXb26Fz9rcQpDWS64D1AU2pEdPhBY6VZC6pQYgB")
+            )
+            .is_err()
+        );
         // pyt: tests/unit/test_evm.py::TestPrecompileEncoding::test_balance_transfer_encode
         assert!(
             get_precompile("balance-transfer")
@@ -1359,6 +1455,153 @@ mod tests {
             encode_call(&function, &[json!("+1")]).unwrap(),
             encode_call(&function, &[json!(1)]).unwrap()
         );
+    }
+
+    #[test]
+    fn integer_text_keeps_python_separators_unicode_digits_and_abi_widths() {
+        let small = Function::parse("f(uint8,int8)").unwrap();
+        let expected = encode_call(&small, &[json!(255), json!(-128)]).unwrap();
+        for (unsigned, signed) in [
+            ("2_5_5", "-1_2_8"),
+            ("٢_٥٥", "-１２_８"),
+            ("\u{1c} +２٥_５ \u{1f}", "\u{a0}-١٢٨\u{a0}"),
+            ("0x_f_f", "-00128"),
+        ] {
+            assert_eq!(
+                encode_call(&small, &[json!(unsigned), json!(signed)]).unwrap(),
+                expected
+            );
+        }
+        assert_eq!(
+            &expected[10..],
+            format!("{:064x}{}80", 255, "ff".repeat(31))
+        );
+        for (text, value) in [("0x_١_f", 31u64), ("0x_१२", 18), ("-0_0", 0)] {
+            assert_eq!(
+                coerce_argument("uint8", &json!(text)).unwrap(),
+                DynSolValue::Uint(U256::from(value), 8)
+            );
+        }
+        let function = Function::parse("f(uint256)").unwrap();
+        let max = U256::MAX.to_string();
+        let separated = max
+            .chars()
+            .map(|digit| digit.to_string())
+            .collect::<Vec<_>>()
+            .join("_");
+        assert!(
+            encode_call(&function, &[json!(separated)])
+                .unwrap()
+                .ends_with(&"ff".repeat(32))
+        );
+        assert_eq!(
+            encode_call(&function, &[json!(format!("{}1", "0_".repeat(1000)))]).unwrap(),
+            encode_call(&function, &[json!(1)]).unwrap()
+        );
+        assert!(encode_call(&function, &[json!("9".repeat(79))]).is_err());
+        assert!(encode_call(&function, &[json!(format!("0x1{}", "0".repeat(64)))]).is_err());
+        assert!(encode_call(&small, &[json!("٢٥٦"), json!(0)]).is_err());
+        assert!(encode_call(&small, &[json!(0), json!("-１２９")]).is_err());
+        for text in [
+            "_1", "1_", "1__0", "+_1", "0x_", "0x__1", "0x1_", "0x1__f", "0x+1", "0x-1", "+0x1",
+            "-0x1", "0X1", "0xＦ", "¹", "1.0", "1e3", "1 ether", "1 0", "1\u{1c}0",
+        ] {
+            assert!(
+                coerce_argument("uint256", &json!(text)).is_err(),
+                "accepted {text:?}"
+            );
+        }
+        let precompile = get_precompile("staking-v2").unwrap();
+        let key = format!("0x{}", "11".repeat(32));
+        assert!(
+            precompile
+                .encode_call(
+                    "addStake",
+                    &[json!(key), json!("18_446_744_073_709_551_615"), json!(1)]
+                )
+                .is_ok()
+        );
+        assert!(
+            precompile
+                .encode_call(
+                    "addStake",
+                    &[json!(key), json!("18_446_744_073_709_551_616"), json!(1)]
+                )
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn abi_hex_arguments_and_previews_accept_only_python_whole_byte_whitespace() {
+        let function = Function::parse("f(bytes)").unwrap();
+        let expected = encode_call(&function, &[json!("0xabcd")]).unwrap();
+        let key_function: Function = serde_json::from_value(json!({
+            "type":"function","name":"preview","stateMutability":"view",
+            "inputs":[{"name":"hotkey","type":"bytes32"}],"outputs":[]
+        }))
+        .unwrap();
+        let compact_key = format!("0x{}", "11".repeat(32));
+        let expected_preview = describe_arguments(&key_function, &[json!(compact_key)]).unwrap();
+        for whitespace in [" ", "\t", "\n", "\r", "\u{b}", "\u{c}"] {
+            let raw = format!("0x{whitespace}ab{whitespace}cd{whitespace}");
+            assert_eq!(encode_call(&function, &[json!(raw)]).unwrap(), expected);
+            let spaced_key = format!("0x{}", ["11"; 32].join(whitespace));
+            assert_eq!(
+                describe_arguments(&key_function, &[json!(spaced_key)]).unwrap(),
+                expected_preview
+            );
+            assert_eq!(
+                encode_call(&key_function, &[json!(spaced_key)]).unwrap(),
+                encode_call(&key_function, &[json!(compact_key)]).unwrap()
+            );
+        }
+        // Python's is_h160 guard accepts this unprefixed forty-character
+        // spelling as hex even though whitespace leaves nineteen decoded bytes.
+        let legacy_bare = format!("11  {}", "11".repeat(18));
+        let legacy = coerce_argument("bytes32", &json!(legacy_bare)).unwrap();
+        assert!(matches!(legacy, DynSolValue::FixedBytes(word,32)
+            if word[..19] == [0x11;19] && word[19..].iter().all(|byte| *byte == 0)));
+        assert_eq!(
+            describe_arguments(&key_function, &[json!(legacy_bare)]).unwrap()["hotkey"],
+            legacy_bare
+        );
+        for raw in ["0xa b", "0xabc", "0x12\u{a0}34", "0X1234", "0x１２"] {
+            assert!(coerce_argument("bytes", &json!(raw)).is_err(), "{raw:?}");
+        }
+        let mut budget = Budget {
+            items: 2,
+            remaining_bytes: 4,
+        };
+        assert!(argument_bytes(&json!("0xab cd"), &mut budget).is_err());
+    }
+
+    #[test]
+    fn abi_result_hex_preserves_fromhex_whitespace_and_rejects_split_nibbles() {
+        let function: Function = serde_json::from_value(json!({
+            "type":"function","name":"read","stateMutability":"view",
+            "inputs":[],"outputs":[{"name":"n","type":"uint256"}]
+        }))
+        .unwrap();
+        let mut pairs = vec!["00"; 31];
+        pairs.push("07");
+        for whitespace in [" ", "\t", "\n", "\r", "\u{b}", "\u{c}"] {
+            let raw = format!("0x{whitespace}{}{whitespace}", pairs.join(whitespace));
+            assert_eq!(decode_result(&function, &raw).unwrap(), vec![json!(7)]);
+        }
+        assert!(
+            decode_result(&function, " \t\n\r\u{b}\u{c}")
+                .unwrap()
+                .is_empty()
+        );
+        for raw in [
+            format!("0x0 0{}", "00".repeat(31)),
+            format!("0x00\u{a0}{}", "00".repeat(31)),
+            format!("\u{a0}{}", "00".repeat(32)),
+            format!(" 0x{}", "00".repeat(32)),
+            format!("0X{}", "00".repeat(32)),
+        ] {
+            assert!(decode_result(&function, &raw).is_err(), "accepted {raw:?}");
+        }
     }
 
     #[test]

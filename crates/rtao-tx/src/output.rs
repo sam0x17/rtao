@@ -219,7 +219,10 @@ impl<O> ExtrinsicResult<O> {
             ("message".into(), json!(self.message)),
         ]);
         if let Some(hash) = self.block_hash {
-            payload.insert("block_hash".into(), json!(hash));
+            payload.insert(
+                "block_hash".into(),
+                json!(format!("0x{}", hex::encode(hash.0))),
+            );
         }
         if let Some(id) = self.extrinsic_id.as_ref().filter(|id| !id.is_empty()) {
             payload.insert("extrinsic_id".into(), json!(id));

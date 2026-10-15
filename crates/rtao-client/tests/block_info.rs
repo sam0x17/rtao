@@ -196,34 +196,57 @@ async fn absent_height_body_and_header_return_none() {
 }
 
 #[tokio::test]
-async fn malformed_extrinsics_fail_instead_of_silently_dropping_entries() {
-    for bad in [json!("0x"), json!("0xff"), json!("0xgg"), Value::Null] {
+async fn malformed_extrinsics_keep_null_positions_and_valid_neighbors() {
+    for bad in [
+        json!("0x"),
+        json!("0xff"),
+        json!("0xgg"),
+        Value::Null,
+        json!(7),
+    ] {
         let mut state = FakeState::default();
         let inherent = timestamp_extrinsic(&state, 1700000000000);
+        let expected =
+            DynValue::new(state.runtime.decode_extrinsic(&inherent, true).unwrap()).to_json();
         let response = response(
             &state,
             100,
-            vec![json!(format!("0x{}", hex::encode(inherent))), bad],
+            vec![
+                bad.clone(),
+                json!(format!("0x{}", hex::encode(inherent))),
+                bad,
+            ],
         );
         state.set_result("chain_getBlock", response);
         let (client, _) = setup_client(state).await;
-        assert!(client.block_info(Some(100)).await.is_err());
+        let info = client.block_info(Some(100)).await.unwrap().unwrap();
+        assert_eq!(info.extrinsics, vec![Value::Null, expected, Value::Null]);
+        assert_eq!(info.timestamp.timestamp_millis(), 1700000000000);
         client.close().await;
     }
     let mut state = FakeState::default();
+    state
+        .seed_python("Timestamp", "Now", &[], json!(1700000000123u64))
+        .unwrap();
     let mut framed = timestamp_extrinsic(&state, 1700000000000);
     framed.push(0); // strict core decode must reject trailing bytes after the declared body.
     serve(&mut state, vec![framed]);
-    let (client, _) = setup_client(state).await;
-    assert!(matches!(
-        client.block_info(Some(100)).await,
-        Err(ClientError::Core(_))
-    ));
+    let (client, chain) = setup_client(state).await;
+    let before = chain.requests().len();
+    let info = client.block_info(Some(100)).await.unwrap().unwrap();
+    assert_eq!(info.extrinsics, vec![Value::Null]);
+    assert_eq!(info.timestamp.timestamp_millis(), 1700000000123);
+    assert!(chain.requests()[before..].iter().any(|request| {
+        matches!(
+            request.method.as_str(),
+            "state_getStorage" | "state_queryStorageAt"
+        ) && request.params.as_array().unwrap().last() == Some(&json!(info.hash))
+    }));
     client.close().await;
 }
 
 #[tokio::test]
-async fn large_block_decode_retains_every_call_and_propagates_errors() {
+async fn large_block_decode_retains_every_call_and_null_error_positions() {
     let mut state = FakeState::default();
     let inherent = timestamp_extrinsic(&state, 1700000000000);
     let remark = unsigned(
@@ -244,7 +267,10 @@ async fn large_block_decode_retains_every_call_and_propagates_errors() {
     assert_eq!(info.extrinsics[64]["call"]["call_function"], "remark");
     encoded.push(vec![0xff]);
     chain.mutate_state(|state| serve(state, encoded));
-    assert!(client.block_info(Some(100)).await.is_err());
+    let decoded = client.block_info(Some(100)).await.unwrap().unwrap();
+    assert_eq!(decoded.extrinsics.len(), 66);
+    assert_eq!(&decoded.extrinsics[..65], info.extrinsics.as_slice());
+    assert!(decoded.extrinsics[65].is_null());
     client.close().await;
 }
 
@@ -317,13 +343,15 @@ async fn block_execution_uses_parent_runtime_during_upgrade() {
     let upgraded_runtime = state.runtime.clone();
     state.set_runtime_at(block_hash, upgraded_runtime);
     let (client, chain) = setup_client(state).await;
-    let start = chain.requests().len();
     let info = client.block_info(Some(100)).await.unwrap().unwrap();
     assert_eq!(info.extrinsics[0]["call"]["call_function"], "set");
     assert_eq!(info.timestamp.timestamp_millis(), 1700000000000);
     let parent = chain.mutate_state(|state| state.block_hash(99).unwrap());
+    // Connection-time symbol discovery can already cache this parent runtime.
+    // The decoded old call above remains the evidence for execution metadata.
     assert!(
-        chain.requests()[start..]
+        chain
+            .requests()
             .iter()
             .any(|request| request.method == "state_getRuntimeVersion"
                 && request.params == json!([parent]))

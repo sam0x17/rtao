@@ -187,7 +187,10 @@ async fn converts_offline_to_python_shaped_json_and_uses_context_symbols() -> Te
         let fixture = Fixture::new(&argv)?;
         fixture.ctx.output.update_token_symbols([(7, "γ".into())])?;
         fixture.run(&backend).await?;
-        assert_eq!(fixture.payload()?, expected);
+        let actual = fixture.payload()?;
+        // Python emits 1e-09 while serde_json's float literal uses 1e-9.
+        // The shared comparison keeps the shape and integer/float token kinds.
+        rtao::primitives::json::compare(&expected, &actual)?;
         assert!(fixture.sink.bytes(Stream::Stderr)?.is_empty());
     }
     assert!(backend.calls()?.is_empty());
