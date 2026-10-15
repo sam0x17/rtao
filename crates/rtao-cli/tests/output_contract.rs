@@ -9,7 +9,8 @@ use rtao::primitives::{Balance, DynBalance, NetUid, Symbol, Tao};
 use rtao::tx::{ChainError, ExtrinsicResult};
 use rtao_cli::output::{
     DiagnosticContext, HumanView, MemorySink, Output, OutputOptions, OutputSink, PythonBalance,
-    PythonBytes, PythonString, StepState, Stream, TableSpec, diagnostic,
+    PythonBytes, PythonString, ReviewSection, StepState, Stream, TableSpec, diagnostic,
+    terminal_text,
 };
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -29,6 +30,360 @@ fn capture(json_mode: bool, quiet: bool) -> (Output, MemorySink) {
         ),
         sink,
     )
+}
+
+const HOSTILE_TEXT: &str =
+    "\x1b[2J\x1b]0;owned\x07\rrewrite\nforged\t\u{7f}\u{85}\u{2028}\u{2029}\u{202e}\u{2066}";
+const VISIBLE_HOSTILE_TEXT: &str =
+    r"\x1b[2J\x1b]0;owned\x07\rrewrite\nforged\t\x7f\x85\u{2028}\u{2029}\u{202e}\u{2066}";
+
+fn hostile(label: &str) -> String {
+    format!("{label}{HOSTILE_TEXT}")
+}
+
+fn assert_safe_human_text(text: &str, labels: &[&str]) {
+    for character in text.chars() {
+        assert!(
+            !character.is_control() || character == '\n',
+            "unexpected terminal control U+{:04X}",
+            u32::from(character)
+        );
+        assert!(
+            !matches!(character, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}'),
+            "unexpected directional or line formatting U+{:04X}",
+            u32::from(character)
+        );
+    }
+    for label in labels {
+        let expected = format!("{label}{VISIBLE_HOSTILE_TEXT}");
+        assert!(text.contains(&expected), "missing visible field {label}");
+    }
+}
+
+#[test]
+fn human_terminal_text_escapes_controls_and_directional_formatting() {
+    assert_eq!(terminal_text(HOSTILE_TEXT), VISIBLE_HOSTILE_TEXT);
+    assert_eq!(
+        terminal_text(
+            "\u{061c}\u{200e}\u{200f}\u{202a}\u{202b}\u{202c}\u{202d}\u{202e}\u{2066}\u{2067}\u{2068}\u{2069}"
+        ),
+        r"\u{61c}\u{200e}\u{200f}\u{202a}\u{202b}\u{202c}\u{202d}\u{202e}\u{2066}\u{2067}\u{2068}\u{2069}"
+    );
+    let controls: String = ('\0'..='\u{9f}')
+        .filter(|character| character.is_control())
+        .collect();
+    let escaped = terminal_text(&controls);
+    assert!(escaped.chars().all(|character| !character.is_control()));
+    assert!(escaped.contains(r"\x00\x01\x02"));
+    assert!(escaped.contains(r"\x1b"));
+    assert!(escaped.contains(r"\x9f"));
+    let ordinary = "τ ش 日本語 [red]literal[/red] 0x010203";
+    assert_eq!(terminal_text(ordinary), ordinary);
+}
+
+#[test]
+fn human_detail_escapes_titles_keys_and_nested_values_without_changing_json() -> TestResult {
+    let fields = vec![
+        (hostile("field-key"), json!(hostile("scalar-value"))),
+        (
+            "object".into(),
+            json!({(hostile("object-key")): hostile("object-value")}),
+        ),
+        (
+            "array".into(),
+            json!([
+                hostile("array-value"),
+                [hostile("nested-array-value")],
+                {(hostile("repr-key")): hostile("repr-value")}
+            ]),
+        ),
+        (
+            "records".into(),
+            json!([{(hostile("record-key")): hostile("record-value")}]),
+        ),
+    ];
+    let title = hostile("detail-title");
+    let (human, sink) = capture(false, false);
+    human.detail(Some(&title), &fields, None)?;
+    let rendered = sink.text(Stream::Stdout)?;
+    assert_safe_human_text(
+        &rendered,
+        &[
+            "detail-title",
+            "field-key",
+            "scalar-value",
+            "object-key",
+            "object-value",
+            "array-value",
+            "nested-array-value",
+            "repr-key",
+            "repr-value",
+            "record-key",
+            "record-value",
+        ],
+    );
+    assert_eq!(
+        rendered.lines().count(),
+        7,
+        "input newlines must remain within their fields"
+    );
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+
+    let expected = Value::Object(fields.iter().cloned().collect());
+    let (machine, sink) = capture(true, false);
+    machine.detail(Some(&title), &fields, None)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        expected
+    );
+    let rich_payload = json!({"original": expected, "opaque": HOSTILE_TEXT});
+    let (machine, sink) = capture(true, false);
+    machine.detail(Some(&title), &fields, Some(&rich_payload))?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        rich_payload
+    );
+    Ok(())
+}
+
+#[test]
+fn human_tables_escape_input_before_layout_and_keep_machine_records_exact() -> TestResult {
+    let mut spec = TableSpec::new(
+        hostile("table-title"),
+        vec![hostile("header"), "count".into()],
+        vec![vec![json!(hostile("cell")), json!(7)]],
+    );
+    spec.right_align.insert(1);
+    spec.legend
+        .push((hostile("legend-term"), hostile("legend-meaning")));
+    spec.footer = Some(hostile("footer"));
+    for bordered in [true, false] {
+        let (human, sink) = capture(false, false);
+        if bordered {
+            human.table(&spec)?;
+        } else {
+            human.columns(&spec)?;
+        }
+        let rendered = sink.text(Stream::Stdout)?;
+        assert_safe_human_text(&rendered, &["table-title", "header", "cell", "footer"]);
+        if bordered {
+            assert_safe_human_text(&rendered, &["legend-term", "legend-meaning"]);
+            assert_eq!(
+                rendered.lines().count(),
+                8,
+                "trusted table borders must stay on separate lines"
+            );
+            assert!(
+                rendered.contains("\n│"),
+                "table rows must retain structural newlines"
+            );
+        } else {
+            assert_eq!(
+                rendered.lines().count(),
+                4,
+                "columns must have exactly one header and data row"
+            );
+        }
+        let expected = json!([{(hostile("header")): hostile("cell"), "count": 7}]);
+        let (machine, sink) = capture(true, false);
+        if bordered {
+            machine.table(&spec)?;
+        } else {
+            machine.columns(&spec)?;
+        }
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            expected
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn human_cached_subnet_names_and_symbols_are_escaped_after_cell_substitution() -> TestResult {
+    let (human, sink) = capture(false, false);
+    human.update_subnet_names([(4, hostile("cached-subnet"))])?;
+    human.update_token_symbols([(4, Symbol::new(hostile("cached-symbol")))])?;
+    let fields = vec![("netuid".into(), json!(4))];
+    human.detail(Some("subnet"), &fields, None)?;
+    let spec = TableSpec::new("subnets", vec!["netuid".into()], vec![vec![json!(4)]]);
+    human.table(&spec)?;
+    let rendered = sink.text(Stream::Stdout)?;
+    assert_safe_human_text(&rendered, &["cached-subnet", "cached-symbol"]);
+    assert_eq!(rendered.matches("cached-subnet").count(), 2);
+    assert_eq!(rendered.matches("cached-symbol").count(), 2);
+    assert_eq!(human.subnet_names()?[&4], hostile("cached-subnet"));
+    assert_eq!(
+        human.token_symbols()?[&4].as_str(),
+        hostile("cached-symbol")
+    );
+
+    let (machine, sink) = capture(true, false);
+    machine.update_subnet_names([(4, hostile("cached-subnet"))])?;
+    machine.update_token_symbols([(4, Symbol::new(hostile("cached-symbol")))])?;
+    machine.table(&spec)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        json!([{"netuid": 4}])
+    );
+    Ok(())
+}
+
+#[test]
+fn human_trees_and_registered_text_escape_input_while_json_bypasses_views() -> TestResult {
+    let title = hostile("tree-title");
+    let nodes = vec![(hostile("branch"), vec![hostile("leaf")])];
+    let records = json!({"name": HOSTILE_TEXT, "nested": [{(hostile("key")): HOSTILE_TEXT}]});
+    let (mut human, sink) = capture(false, false);
+    human.tree(&title, &nodes, Some(&records))?;
+    human.registry_mut().register("hostile-text", |_| {
+        Ok(HumanView::Text(hostile("registered-text")))
+    });
+    human.render("hostile-text", &records)?;
+    let rendered = sink.text(Stream::Stdout)?;
+    assert_safe_human_text(
+        &rendered,
+        &["tree-title", "branch", "leaf", "registered-text"],
+    );
+    assert_eq!(rendered.lines().count(), 4);
+    let (mut lines, sink) = capture(false, false);
+    lines.registry_mut().register("trusted-layout", |_| {
+        Ok(HumanView::Lines(vec![
+            "Trusted heading".into(),
+            hostile("line-value"),
+            "Trusted next section".into(),
+        ]))
+    });
+    lines.render("trusted-layout", &records)?;
+    let rendered = sink.text(Stream::Stdout)?;
+    assert_safe_human_text(&rendered, &["line-value"]);
+    assert_eq!(rendered.lines().count(), 3);
+    assert!(rendered.starts_with("Trusted heading\n"));
+    assert!(rendered.ends_with("\nTrusted next section\n"));
+    let (machine, sink) = capture(true, false);
+    machine.tree(&title, &nodes, Some(&records))?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        records
+    );
+    let (mut machine, sink) = capture(true, false);
+    machine.registry_mut().register("hostile-text", |_| {
+        Ok(HumanView::Text(hostile("registered-text")))
+    });
+    machine.render("hostile-text", &records)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        records
+    );
+    Ok(())
+}
+
+#[test]
+fn human_messages_and_diagnostics_escape_controls_but_json_retains_original_strings() -> TestResult
+{
+    let error = hostile("diagnostic");
+    let note = hostile("note-value");
+    let help = hostile("help-value");
+    let see = hostile("see-value");
+    for json_mode in [false, true] {
+        let (output, sink) = capture(json_mode, false);
+        output.message(&hostile("message"))?;
+        output.step(
+            &hostile("step-label"),
+            &hostile("step-value"),
+            StepState::Running,
+        )?;
+        output.error(
+            &error,
+            DiagnosticContext {
+                note: Some(&note),
+                help: Some(&help),
+                see: Some(&see),
+            },
+        )?;
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        let rendered = sink.text(Stream::Stderr)?;
+        if json_mode {
+            assert_eq!(
+                serde_json::from_str::<Value>(&rendered)?,
+                json!({"error": error, "note": note, "help": help, "see": see})
+            );
+        } else {
+            assert_safe_human_text(
+                &rendered,
+                &[
+                    "message",
+                    "step-label",
+                    "step-value",
+                    "diagnostic",
+                    "note-value",
+                    "help-value",
+                    "see-value",
+                ],
+            );
+            assert_eq!(rendered.lines().count(), 6);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn semantic_and_raw_review_cards_keep_signer_and_operation_visible_with_hostile_arguments()
+-> TestResult {
+    let call_hex = "0x050300000100020003000400";
+    let sections = vec![
+        ReviewSection {
+            title: hostile("SetSubnetIdentity"),
+            rows: vec![(hostile("description"), json!(hostile("identity-value")))],
+        },
+        ReviewSection {
+            title: hostile("Balances.transfer_keep_alive"),
+            rows: vec![
+                (
+                    "arguments".into(),
+                    json!({(hostile("argument-key")): hostile("argument-value")}),
+                ),
+                ("encoded call".into(), json!(call_hex)),
+            ],
+        },
+        ReviewSection {
+            title: "Transaction".into(),
+            rows: vec![
+                ("signer".into(), json!("5Signer")),
+                ("role".into(), json!("coldkey")),
+            ],
+        },
+    ];
+    let (human, sink) = capture(false, false);
+    human.transaction_card(&sections)?;
+    let rendered = sink.text(Stream::Stdout)?;
+    assert_safe_human_text(
+        &rendered,
+        &[
+            "SetSubnetIdentity",
+            "description",
+            "identity-value",
+            "Balances.transfer_keep_alive",
+            "argument-key",
+            "argument-value",
+        ],
+    );
+    for expected in [
+        "Transaction",
+        "signer",
+        "5Signer",
+        "role",
+        "coldkey",
+        call_hex,
+    ] {
+        assert!(rendered.contains(expected), "review lost {expected}");
+    }
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    let (machine, sink) = capture(true, false);
+    machine.transaction_card(&sections)?;
+    assert!(sink.text(Stream::Stdout)?.is_empty());
+    assert_eq!(sections[1].rows[1].1, json!(call_hex));
+    Ok(())
 }
 
 fn outcome(success: bool) -> ExtrinsicResult {
@@ -381,7 +736,7 @@ fn mnemonic_is_primary_data_under_quiet_and_not_an_extra_json_document() -> Test
     );
     let (output, sink) = capture(true, true);
     output.mnemonic("coldkey", "synthetic recovery phrase")?;
-    output.value(&json!({"mnemonic":"synthetic recovery phrase"}))?;
+    output.secret_detail(None, &[], &[("mnemonic", "synthetic recovery phrase")])?;
     assert_eq!(
         serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
         json!({"mnemonic":"synthetic recovery phrase"})

@@ -390,7 +390,9 @@ fn emit(output: &Output, payload: &Value, human: String) -> Result<(), CliError>
     rendered
         .registry_mut()
         .register("catalog-explain", move |_| {
-            Ok(HumanView::Text(human.clone()))
+            Ok(HumanView::Lines(
+                human.split('\n').map(str::to_owned).collect(),
+            ))
         });
     rendered
         .render("catalog-explain", payload)
