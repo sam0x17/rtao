@@ -383,9 +383,30 @@ impl Client {
         &self,
         finality: crate::Finality,
     ) -> Result<crate::head::BlockStream, ClientError> {
-        crate::head::HeadProvider::subscribe(&self.inner.rpc, finality)
-            .await
-            .map_err(head_error)
+        use futures::StreamExt;
+
+        self.ensure_open()?;
+        let stream = tokio::select! {
+            biased;
+            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            stream = crate::head::HeadProvider::subscribe(&self.inner.rpc, finality) => {
+                stream.map_err(head_error)?
+            }
+        };
+        // A supplied transport may finish admission while also closing the
+        // client. Refusing here drops its newly opened subscription.
+        self.ensure_open()?;
+        let cancelled = self.inner.cancelled.clone();
+        Ok(Box::pin(futures::stream::unfold(
+            (stream, cancelled),
+            |(mut stream, cancelled)| async move {
+                tokio::select! {
+                    biased;
+                    () = cancelled.cancelled() => None,
+                    item = stream.next() => item.map(|item| (item, (stream, cancelled))),
+                }
+            },
+        )))
     }
 
     /// Follow advancing headers with reconnect backfill and explicit best reorgs.
@@ -560,17 +581,20 @@ impl Client {
 
     /// Resolve a requested block once and retain its parent-selected runtime.
     pub async fn at(&self, block: crate::BlockRef) -> Result<crate::Snapshot, ClientError> {
+        self.ensure_open()?;
         let hash = match block {
             crate::BlockRef::Hash(hash) => hash,
             crate::BlockRef::Best => {
-                parse_hash(&rpc_request(&self.inner.rpc, "chain_getBlockHash", json!([])).await?)?
+                parse_hash(&self.request("chain_getBlockHash", json!([])).await?)?
             }
-            crate::BlockRef::Finalized => parse_hash(
-                &rpc_request(&self.inner.rpc, "chain_getFinalizedHead", json!([])).await?,
-            )?,
+            crate::BlockRef::Finalized => {
+                parse_hash(&self.request("chain_getFinalizedHead", json!([])).await?)?
+            }
             crate::BlockRef::Number(number) => self.hash_for_number(number).await?,
         };
-        let raw = rpc_request(&self.inner.rpc, "chain_getHeader", json!([hash_hex(hash)])).await?;
+        let raw: Value = self
+            .request("chain_getHeader", json!([hash_hex(hash)]))
+            .await?;
         if raw.is_null() {
             return Err(ClientError::BlockNotFound(hash));
         }
@@ -587,17 +611,21 @@ impl Client {
     }
 
     async fn hash_for_number(&self, number: u64) -> Result<H256, ClientError> {
-        let mut cache = self.inner.hash_cache.lock().await;
+        self.ensure_open()?;
+        let mut cache = tokio::select! {
+            biased;
+            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            cache = self.inner.hash_cache.lock() => cache,
+        };
         if cache
             .finalized
             .as_ref()
             .is_none_or(|(_, checked)| checked.elapsed() >= Duration::from_secs(12))
         {
-            let hash = parse_hash(
-                &rpc_request(&self.inner.rpc, "chain_getFinalizedHead", json!([])).await?,
-            )?;
-            let raw =
-                rpc_request(&self.inner.rpc, "chain_getHeader", json!([hash_hex(hash)])).await?;
+            let hash = parse_hash(&self.request("chain_getFinalizedHead", json!([])).await?)?;
+            let raw = self
+                .request("chain_getHeader", json!([hash_hex(hash)]))
+                .await?;
             let header = crate::BlockHeader::from_json_with_hash(raw, hash).map_err(head_error)?;
             cache.finalized = Some((header.number, tokio::time::Instant::now()));
         }
@@ -608,7 +636,7 @@ impl Client {
         if finalized && let Some(hash) = cache.hashes.get(&number) {
             return Ok(*hash);
         }
-        let value = rpc_request(&self.inner.rpc, "chain_getBlockHash", json!([number])).await?;
+        let value = self.request("chain_getBlockHash", json!([number])).await?;
         if value.is_null() {
             return Err(ClientError::Protocol(format!(
                 "Block not found for height {number}"

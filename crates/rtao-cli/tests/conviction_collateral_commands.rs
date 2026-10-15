@@ -293,7 +293,7 @@ async fn fake_client()
         (
             "LockingColdkeys",
             vec![json!(1), json!(hot), json!(cold)],
-            json!(null),
+            json!([]),
         ),
         ("DecayingLock", vec![json!(cold), json!(1)], json!(false)),
         (
@@ -389,7 +389,11 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
         }
         let payload: serde_json::Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
         if family == "conviction" && command == "list" {
-            assert_eq!(payload[0]["locked_amount"], json!(0.0000001));
+            assert_eq!(
+                payload[0]["locked_amount"].as_f64().map(f64::to_bits),
+                Some(0.0000001_f64.to_bits())
+            );
+            assert_eq!(payload[0]["locked_amount"].to_string(), "1e-07");
             assert_eq!(payload[0]["hotkey"], json!(hot));
         }
         if family == "conviction" && command == "targeting" {
@@ -469,7 +473,11 @@ async fn targeting_keeps_truthy_contact_json_types_and_ignores_falsy_labels() ->
         assert_eq!(payload.as_array().ok_or("targeting records")?.len(), 1);
         assert_eq!(payload[0]["name"], expected, "label {name}");
         assert_eq!(payload[0]["coldkey"], cold);
-        assert_eq!(payload[0]["locked_amount"], json!(0.0000001));
+        assert_eq!(
+            payload[0]["locked_amount"].as_f64().map(f64::to_bits),
+            Some(0.0000001_f64.to_bits())
+        );
+        assert_eq!(payload[0]["locked_amount"].to_string(), "1e-07");
     }
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     assert!(

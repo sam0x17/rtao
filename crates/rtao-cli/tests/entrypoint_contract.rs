@@ -307,7 +307,7 @@ fn doctor_missing_patch_fails_with_the_exact_required_patch_through_the_binary()
     let expected_patch =
         format!("[patch.crates-io]\nw3f-bls = {{ git = {repository:?}, tag = {tag:?} }}");
     assert!(diagnostic.contains("the final workspace needs this exact core-matching patch"));
-    assert!(diagnostic.contains(&expected_patch));
+    assert!(diagnostic.contains(&rtao_cli::output::terminal_text(&expected_patch).into_owned()));
     assert!(diagnostic.contains("root Cargo.toml"));
     Ok(())
 }

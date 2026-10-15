@@ -2,7 +2,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use rtao_client::{BlockRef, Client, ClientConfig, Network, View};
+use rtao_client::{BlockRef, Client, ClientConfig, ClientError, Finality, Network, View};
 use rtao_testkit::fakes::{FakeChain, FakeNode, FakeState, Reply};
 use serde_json::json;
 use subxt_rpcs::RpcClient;
@@ -13,6 +13,189 @@ fn config(input: &str) -> ClientConfig {
     cfg.config_store = None;
     cfg.session.rate_limit = None;
     cfg
+}
+
+fn assert_closed<T>(result: Result<T, ClientError>) {
+    assert!(matches!(
+        result,
+        Err(ClientError::Rpc(rtao_rpc::RpcError::Closed))
+    ));
+}
+
+#[tokio::test]
+async fn closed_clones_refuse_all_snapshot_references_and_strict_subscriptions_without_rpc() {
+    let raw = FakeChain::from_state(FakeState::default());
+    let mut cfg = config("local");
+    cfg.track_heads = false;
+    let client = Client::from_rpc(RpcClient::new(raw.clone()), cfg)
+        .await
+        .unwrap();
+    let hash = client.at(BlockRef::Number(99)).await.unwrap().block().hash;
+    let clone = client.clone();
+    client.close().await;
+    let before = raw.requests();
+
+    for reference in [
+        BlockRef::Hash(hash),
+        BlockRef::Number(99),
+        BlockRef::Best,
+        BlockRef::Finalized,
+    ] {
+        assert_closed(clone.at(reference).await);
+    }
+    assert_closed(View::pin(&clone).await);
+    for finality in [Finality::Best, Finality::Finalized] {
+        assert_closed(clone.blocks_strict(finality).await);
+    }
+    assert_eq!(raw.requests(), before);
+}
+
+#[tokio::test]
+async fn close_cancels_pending_snapshot_headers_for_every_block_reference() {
+    use std::time::Duration;
+
+    for reference in [
+        BlockRef::Hash(rtao_primitives::H256([7; 32])),
+        BlockRef::Number(99),
+        BlockRef::Best,
+        BlockRef::Finalized,
+    ] {
+        let raw = FakeChain::from_state(FakeState::default());
+        let mut cfg = config("local");
+        cfg.track_heads = false;
+        let client = Client::from_rpc(RpcClient::new(raw.clone()), cfg)
+            .await
+            .unwrap();
+        raw.mutate_state(|state| state.queue_reply("chain_getHeader", Reply::silent()));
+        let before = raw.requests().len();
+        let pending_client = client.clone();
+        let pending = tokio::spawn(async move { pending_client.at(reference).await });
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while !raw.requests()[before..]
+                .iter()
+                .any(|request| request.method == "chain_getHeader")
+            {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        client.close().await;
+        let after_close = raw.requests();
+        assert_closed(
+            tokio::time::timeout(Duration::from_secs(1), pending)
+                .await
+                .unwrap()
+                .unwrap(),
+        );
+        assert_eq!(raw.requests(), after_close);
+    }
+}
+
+struct PendingHeadSubscription {
+    chain: FakeChain,
+    admitted: std::sync::Arc<tokio::sync::Notify>,
+}
+
+impl subxt_rpcs::RpcClientT for PendingHeadSubscription {
+    fn request_raw<'a>(
+        &'a self,
+        method: &'a str,
+        params: Option<Box<serde_json::value::RawValue>>,
+    ) -> subxt_rpcs::client::RawRpcFuture<'a, Box<serde_json::value::RawValue>> {
+        self.chain.request_raw(method, params)
+    }
+
+    fn subscribe_raw<'a>(
+        &'a self,
+        sub: &'a str,
+        params: Option<Box<serde_json::value::RawValue>>,
+        unsub: &'a str,
+    ) -> subxt_rpcs::client::RawRpcFuture<'a, subxt_rpcs::client::RawRpcSubscription> {
+        Box::pin(async move {
+            let subscription = self.chain.subscribe_raw(sub, params, unsub).await?;
+            self.admitted.notify_one();
+            std::future::pending::<()>().await;
+            Ok(subscription)
+        })
+    }
+}
+
+#[tokio::test]
+async fn close_cancels_strict_subscription_admission_and_drops_its_open_transport_stream() {
+    use std::{sync::Arc, time::Duration};
+
+    let raw = FakeChain::from_state(FakeState::default());
+    let admitted = Arc::new(tokio::sync::Notify::new());
+    let transport = PendingHeadSubscription {
+        chain: raw.clone(),
+        admitted: admitted.clone(),
+    };
+    let mut cfg = config("local");
+    cfg.track_heads = false;
+    let client = Client::from_rpc(RpcClient::new(transport), cfg)
+        .await
+        .unwrap();
+    let pending_client = client.clone();
+    let pending = tokio::spawn(async move { pending_client.blocks_strict(Finality::Best).await });
+    tokio::time::timeout(Duration::from_secs(1), admitted.notified())
+        .await
+        .unwrap();
+    client.close().await;
+    assert_closed(
+        tokio::time::timeout(Duration::from_secs(1), pending)
+            .await
+            .unwrap()
+            .unwrap(),
+    );
+    let requests = raw.requests();
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|request| request.method == "chain_subscribeNewHeads")
+            .count(),
+        1
+    );
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|request| request.method == "chain_unsubscribeNewHeads")
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn close_ends_open_strict_streams_and_unsubscribes_even_with_an_injected_transport() {
+    use futures::StreamExt;
+    use std::time::Duration;
+
+    for (finality, unsubscribe) in [
+        (Finality::Best, "chain_unsubscribeNewHeads"),
+        (Finality::Finalized, "chain_unsubscribeFinalizedHeads"),
+    ] {
+        let raw = FakeChain::from_state(FakeState::default());
+        let mut cfg = config("local");
+        cfg.track_heads = false;
+        let client = Client::from_rpc(RpcClient::new(raw.clone()), cfg)
+            .await
+            .unwrap();
+        let mut stream = client.blocks_strict(finality).await.unwrap();
+        client.close().await;
+        assert!(
+            tokio::time::timeout(Duration::from_secs(1), stream.next())
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            raw.requests()
+                .iter()
+                .filter(|request| request.method == unsubscribe)
+                .count(),
+            1
+        );
+    }
 }
 
 #[tokio::test]

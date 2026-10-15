@@ -270,14 +270,27 @@ async fn fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history() {
 async fn swap_dispute_truthiness_and_absence_match_python() {
     for dispute in [None, Some(0), Some(99)] {
         let mut state = seed();
-        state
-            .seed_python(
-                "SubtensorModule",
-                "ColdkeySwapDisputes",
-                &[json!(COLD)],
-                json!(dispute),
-            )
-            .unwrap();
+        if let Some(block) = dispute {
+            state
+                .seed_python(
+                    "SubtensorModule",
+                    "ColdkeySwapDisputes",
+                    &[json!(COLD)],
+                    json!(block),
+                )
+                .unwrap();
+        } else {
+            // OptionQuery absence is a missing storage value, not encoded null.
+            let entry = state
+                .runtime
+                .storage_entry("SubtensorModule", "ColdkeySwapDisputes")
+                .unwrap();
+            let key = state
+                .runtime
+                .storage_key(entry, &[rtao_core::codec::Value::Str(COLD.to_string())])
+                .unwrap();
+            state.seed_encoded(key, None);
+        }
         let (client, _) = setup_client(state).await;
         let value = reads::coldkey_swap_announcement(&client, COLD)
             .await

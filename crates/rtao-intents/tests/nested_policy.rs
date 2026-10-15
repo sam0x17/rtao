@@ -618,7 +618,7 @@ async fn stored_lookup_and_legacy_preimages_authenticate_length_hash_and_policy(
                     "Preimage",
                     name,
                     &[json!(format!("0x{}", hex::encode(callback.hash())))],
-                    json!({"Requested":{"count":1,"len":len}}),
+                    json!({"Requested":{"count":1,"maybe_ticket":null,"maybe_len":len}}),
                 )
             })?;
         }

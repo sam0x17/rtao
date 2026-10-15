@@ -416,9 +416,14 @@ pub(super) fn pages(
         let python_path = provenance["declaration"]["path"]
             .as_str()
             .context("read declaration path")?;
-        let python = catalog["python"]
-            .as_str()
-            .context("catalog Python read expression")?;
+        // The authenticated metagraph record intentionally has no Python
+        // expression. Retain that absence rather than inventing a namespace
+        // method; present values still have to satisfy the catalog's type.
+        let python = catalog
+            .get("python")
+            .map(|value| value.as_str().context("catalog Python read expression"))
+            .transpose()?
+            .unwrap_or("not declared in pinned catalog");
         let command = (!is_stub).then(|| format!("rtao query {}", spec.name.replace('_', "-")));
         let mut text = format!(
             "{GENERATED}# {}\n\n{}\n\n{}## Parameters\n\n",
@@ -702,7 +707,7 @@ mod tests {
         let catalog: Value = serde_json::from_str(INTENTS[0].catalog_json)?;
         assert!(upstream_links(&catalog)?.contains("https://www.bittensor.com/llms.mdx/docs/tx/"));
         let citations = sources(&catalog, "sources")?;
-        assert!(citations.contains("SubtensorModule.add_collateral"));
+        assert!(citations.contains(&code("SubtensorModule.add_collateral")));
         assert!(citations.contains("pallets/subtensor/src/macros/dispatches.rs"));
         assert!(!citations.contains("#L"));
         let balance: Value = serde_json::from_str(
@@ -769,6 +774,7 @@ mod tests {
             .collect();
         let generated = pages(root, &BTreeSet::new(), &pending_reads)?;
         assert_eq!(generated.len(), INTENTS.len() + READS.len() + 3);
+        assert!(generated["query/metagraph.md"].contains(&code("not declared in pinned catalog")));
         for (directory, specs) in [
             (
                 "tx",

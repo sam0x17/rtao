@@ -70,15 +70,16 @@ pub fn evm_network_with_env(
                 .unwrap_or_else(|| "http://127.0.0.1:9944".into());
             EvmNetwork::endpoint("local", None, &local)
         }
-        other if other.starts_with("wss://") => {
-            EvmNetwork::endpoint(network, None, &format!("https://{}", &other[6..]))
-        }
-        other if other.starts_with("ws://") => {
-            EvmNetwork::endpoint(network, None, &format!("http://{}", &other[5..]))
+        other if other.starts_with("wss://") || other.starts_with("ws://") => {
+            let http = other
+                .replacen("wss://", "https://", 1)
+                .replacen("ws://", "http://", 1);
+            EvmNetwork::endpoint(network, None, &http)
         }
         _ => {
             return Err(Error::Validation(format!(
-                "unknown network {network:?} for EVM access; known: finney, local, test, or an HTTP(S) EVM RPC URL"
+                "Unknown network {} for EVM access. Known: ['finney', 'local', 'test'], or pass an http(s):// EVM RPC URL.",
+                rtao_primitives::pyfmt::string_repr(network)
             )));
         }
     };
@@ -221,5 +222,47 @@ mod tests {
         }
         assert!(evm_network_with_env("Finney", |_| None).is_err());
         assert!(evm_network_with_env("unknown", |_| None).is_err());
+    }
+
+    #[test]
+    fn websocket_conversion_applies_each_python_replacement_once() {
+        for (input, expected) in [
+            (
+                "wss://example.test/ws://path/ws://tail",
+                "https://example.test/http://path/ws://tail",
+            ),
+            (
+                "ws://example.test/wss://path/wss://tail",
+                "http://example.test/https://path/wss://tail",
+            ),
+            (
+                "https://example.test/ws://path/wss://tail",
+                "https://example.test/ws://path/wss://tail",
+            ),
+        ] {
+            let network = evm_network_with_env(input, |_| None).unwrap();
+            assert_eq!(network.name, input);
+            assert_eq!(network.chain_id, None);
+            assert_eq!(network.rpc_url, expected);
+        }
+    }
+
+    #[test]
+    fn unknown_network_diagnostic_retains_python_repr_and_sorted_labels() {
+        for (input, expected_repr) in [
+            ("", "''"),
+            ("Finney", "'Finney'"),
+            ("it's", "\"it's\""),
+            ("line\nbreak", "'line\\nbreak'"),
+            ("\u{a0}", "'\\xa0'"),
+        ] {
+            let error = evm_network_with_env(input, |_| None).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "Unknown network {expected_repr} for EVM access. Known: ['finney', 'local', 'test'], or pass an http(s):// EVM RPC URL."
+                )
+            );
+        }
     }
 }

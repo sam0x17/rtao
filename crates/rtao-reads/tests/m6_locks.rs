@@ -48,12 +48,12 @@ fn seed() -> FakeState {
         (
             "LockingColdkeys",
             vec![json!(1), json!(HOT), json!(COLD)],
-            json!(null),
+            json!([]),
         ),
         (
             "LockingColdkeys",
             vec![json!(1), json!(HOT), json!(OTHER)],
-            json!(null),
+            json!([]),
         ),
         ("DecayingLock", vec![json!(COLD), json!(1)], json!(false)),
         ("DecayingLock", vec![json!(COLD), json!(2)], json!(true)),

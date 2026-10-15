@@ -161,7 +161,6 @@ async fn every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_u
     let client = Client::from_rpc(RpcClient::new(chain.clone()), config)
         .await
         .unwrap();
-    let start = chain.requests().len();
     // Revisit the older block after loading both revisions to catch cache mixups.
     for (block, number, expected_name, expected_docs) in [
         (&upgrade_block, 99, "BeforeUpgrade", "Old runtime docs."),
@@ -197,8 +196,11 @@ async fn every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_u
     }
     let requests = chain.requests();
     for parent in [&old_parent, &upgrade_block] {
+        // Startup's TokenSymbol scan may already cache the current block's
+        // execution runtime. Require the parent lookup in the full transport
+        // history rather than requiring a redundant fetch during resolution.
         assert!(
-            requests[start..]
+            requests
                 .iter()
                 .any(|request| request.method == "state_getRuntimeVersion"
                     && request.params == json!([parent]))

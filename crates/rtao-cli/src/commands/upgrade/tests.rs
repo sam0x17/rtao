@@ -270,6 +270,14 @@ fn docs(sink: &MemorySink) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
     )
 }
 
+fn call_argument<'a>(call: &'a Value, name: &str) -> Result<&'a Value, Box<dyn std::error::Error>> {
+    call.get("call_args")
+        .and_then(Value::as_array)
+        .and_then(|args| args.iter().find(|arg| arg["name"] == name))
+        .and_then(|arg| arg.get("value"))
+        .ok_or_else(|| format!("missing decoded call argument {name}").into())
+}
+
 #[test]
 fn source_validation_and_signer_set_options_match_the_python_surface() -> TestResult {
     for args in [
@@ -301,7 +309,15 @@ fn source_validation_and_signer_set_options_match_the_python_surface() -> TestRe
         let family = parsed.subcommand().ok_or("family")?.1;
         validate_before_connect(family)?;
     }
-    for bad in ["../repo", "A/B/C", "A/", "A/B?per_page=999"] {
+    for bad in [
+        "../repo",
+        "A/..",
+        "./repo",
+        "A/.",
+        "A/B/C",
+        "A/",
+        "A/B?per_page=999",
+    ] {
         let parsed = parse(&["pending", "--repo", bad])?;
         assert!(validate_before_connect(parsed.subcommand().ok_or("family")?.1).is_err());
     }
@@ -497,37 +513,45 @@ async fn first_interior_and_final_submissions_use_correct_hash_or_full_call_and_
             .submissions
             .clone();
         assert_eq!(submissions.len(), 1);
-        let decoded = runtime()?.core().decode_extrinsic(&submissions[0], true)?;
-        let call = decoded.field("call").ok_or("extrinsic call")?;
+        let decoded =
+            rtao::core::DynValue::new(runtime()?.core().decode_extrinsic(&submissions[0], true)?)
+                .to_json();
+        let call = decoded.get("call").ok_or("extrinsic call")?;
         assert_eq!(
-            call.field("call_function").and_then(ValueExt::as_str),
+            call.get("call_function").and_then(Value::as_str),
             Some(if final_approval {
                 "as_multi"
             } else {
                 "approve_as_multi"
             })
         );
-        let args = call.field("call_args").ok_or("call args")?;
-        let weight = args.field("max_weight").ok_or("max weight")?;
+        let weight = call_argument(call, "max_weight")?;
         assert_eq!(
-            weight.field("ref_time").and_then(ValueExt::as_u128),
+            weight.get("ref_time").and_then(Value::as_u64),
             Some(99_000_000_000)
         );
         assert_eq!(
-            weight.field("proof_size").and_then(ValueExt::as_u128),
+            weight.get("proof_size").and_then(Value::as_u64),
             Some(66_000)
         );
         assert_eq!(
-            args.field("maybe_timepoint")
-                .is_some_and(|value| !matches!(value, rtao::core::codec::Value::Null)),
-            interior
+            call_argument(call, "maybe_timepoint")?,
+            &if interior { json!(when()) } else { Value::Null }
         );
         if !final_approval {
             assert_eq!(
-                args.field("call_hash")
-                    .and_then(ValueExt::value_bytes)
-                    .as_deref(),
-                Some(finalizing.hash().as_slice())
+                call_argument(call, "call_hash")?,
+                &json!(hash(finalizing.hash()))
+            );
+        } else {
+            let expected = runtime()?.core().decode_spec(
+                &rtao::core::runtime::TypeSpec::Call,
+                finalizing.as_bytes(),
+                true,
+            )?;
+            assert_eq!(
+                call_argument(call, "call")?,
+                &rtao::core::DynValue::new(expected).to_json()
             );
         }
         assert_eq!(factory.sources.load(Ordering::SeqCst), 1);
@@ -670,7 +694,7 @@ async fn threshold_one_dispatches_full_finalizing_call_with_native_threshold_one
 -> TestResult {
     let factory = Factory::new()?;
     let refs = format!("{},{},{}", factory.signer(), OTHER, THIRD);
-    let (state, blob, _, _) = proposal_state(factory.signer(), 1, None)?;
+    let (state, blob, finalizing, _) = proposal_state(factory.signer(), 1, None)?;
     let (client, chain) = make_client(state).await?;
     let parsed = parse(&[
         "sign",
@@ -692,24 +716,29 @@ async fn threshold_one_dispatches_full_finalizing_call_with_native_threshold_one
         .submissions
         .clone();
     assert_eq!(submissions.len(), 1);
-    let decoded = runtime()?.core().decode_extrinsic(&submissions[0], true)?;
-    let call = decoded.field("call").ok_or("call")?;
+    let decoded =
+        rtao::core::DynValue::new(runtime()?.core().decode_extrinsic(&submissions[0], true)?)
+            .to_json();
+    let call = decoded.get("call").ok_or("call")?;
     assert_eq!(
-        call.field("call_function").and_then(ValueExt::as_str),
+        call.get("call_function").and_then(Value::as_str),
         Some("as_multi_threshold_1")
     );
-    let inner = call
-        .field("call_args")
-        .and_then(|args| args.field("call"))
-        .ok_or("inner call")?;
+    let inner = call_argument(call, "call")?;
     assert_eq!(
-        inner.field("call_module").and_then(ValueExt::as_str),
+        inner.get("call_module").and_then(Value::as_str),
         Some("Multisig")
     );
     assert_eq!(
-        inner.field("call_function").and_then(ValueExt::as_str),
+        inner.get("call_function").and_then(Value::as_str),
         Some("as_multi")
     );
+    let expected = runtime()?.core().decode_spec(
+        &rtao::core::runtime::TypeSpec::Call,
+        finalizing.as_bytes(),
+        true,
+    )?;
+    assert_eq!(inner, &rtao::core::DynValue::new(expected).to_json());
     assert_eq!(factory.sources.load(Ordering::SeqCst), 1);
     assert_eq!(factory.releases.load(Ordering::SeqCst), 1);
     client.close().await;

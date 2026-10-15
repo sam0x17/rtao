@@ -1,4 +1,6 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/{client.py,_transport/interface.py} @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/client.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Pinned block contents, metadata-directed extrinsics and UTC timestamps.
 
 use chrono::{DateTime, Datelike, Utc};
@@ -20,7 +22,7 @@ pub struct BlockInfo {
     pub explorer_url: Option<String>,
     /// Original header fields with Python's numeric number and resolved hash.
     pub header: Value,
-    /// Core-decoded values in block order.
+    /// Core-decoded values in block order, with null for undecodable entries.
     pub extrinsics: Vec<Value>,
 }
 
@@ -28,7 +30,7 @@ impl Client {
     /// Fetch a numbered block, or the configured head when omitted.
     ///
     /// Extrinsics use the runtime that executed this block. Missing blocks
-    /// return `None`; malformed extrinsics propagate the core decoding error.
+    /// return `None`; malformed extrinsics retain a null entry at their index.
     // py: sdk/python/bittensor/client.py:349-372
     pub async fn block_info(&self, block: Option<u64>) -> Result<Option<BlockInfo>, ClientError> {
         let Some(snapshot) = select(self, block).await? else {
@@ -114,27 +116,30 @@ pub(crate) async fn fetch(snapshot: &Snapshot) -> Result<Option<BlockInfo>, Clie
         encoded
             .into_iter()
             .map(|value| {
-                let text = value
-                    .as_str()
-                    .ok_or_else(|| protocol("block extrinsic is not hexadecimal text"))?;
-                let bytes =
-                    hex::decode(text.strip_prefix("0x").unwrap_or(text)).map_err(|error| {
-                        protocol(format!("invalid block extrinsic hexadecimal: {error}"))
-                    })?;
-                runtime
-                    .core()
-                    .decode_extrinsic(&bytes, true)
-                    .map(|value| DynValue::new(value).to_json())
-                    .map_err(|error| ClientError::from(CoreError::from(error)))
+                let decoded = (|| {
+                    let text = value
+                        .as_str()
+                        .ok_or_else(|| protocol("block extrinsic is not hexadecimal text"))?;
+                    let bytes =
+                        hex::decode(text.strip_prefix("0x").unwrap_or(text)).map_err(|error| {
+                            protocol(format!("invalid block extrinsic hexadecimal: {error}"))
+                        })?;
+                    runtime
+                        .core()
+                        .decode_extrinsic(&bytes, true)
+                        .map(|value| DynValue::new(value).to_json())
+                        .map_err(|error| ClientError::from(CoreError::from(error)))
+                })();
+                decoded.unwrap_or(Value::Null)
             })
-            .collect::<Result<Vec<_>, ClientError>>()
+            .collect::<Vec<_>>()
     };
     let extrinsics = if large {
         crate::offload(decode)
             .await
-            .map_err(|error| protocol(format!("block decoder task failed: {error}")))??
+            .map_err(|error| protocol(format!("block decoder task failed: {error}")))?
     } else {
-        decode()?
+        decode()
     };
     let mut inherent = None;
     for value in &extrinsics {
