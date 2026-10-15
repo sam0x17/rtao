@@ -274,11 +274,12 @@ async fn explicit_account_bridge_url_ignores_unused_listener_host_and_port() -> 
         false,
     )?;
     fixture.run(&backend).await?;
-    let state = backend.state.lock().map_err(|_| "fixture lock")?;
-    assert_eq!(state.accounts.len(), 1);
-    assert_eq!(state.accounts[0].url, "ws://127.0.0.1:40000/ws");
-    assert!(state.serve.is_empty());
-    drop(state);
+    {
+        let state = backend.state.lock().map_err(|_| "fixture lock")?;
+        assert_eq!(state.accounts.len(), 1);
+        assert_eq!(state.accounts[0].url, "ws://127.0.0.1:40000/ws");
+        assert!(state.serve.is_empty());
+    }
 
     let fixture = Fixture::new(
         &[
@@ -296,10 +297,11 @@ async fn explicit_account_bridge_url_ignores_unused_listener_host_and_port() -> 
         false,
     )?;
     fixture.run(&backend).await?;
-    let state = backend.state.lock().map_err(|_| "fixture lock")?;
-    assert_eq!(state.accounts.len(), 2);
-    assert_eq!(state.accounts[1].url, "ws://[::1]:12345/ws");
-    drop(state);
+    {
+        let state = backend.state.lock().map_err(|_| "fixture lock")?;
+        assert_eq!(state.accounts.len(), 2);
+        assert_eq!(state.accounts[1].url, "ws://[::1]:12345/ws");
+    }
 
     for (host, port) in [("ignored.example", "12345"), ("127.0.0.1", "70000")] {
         let fixture = Fixture::new(
@@ -408,9 +410,10 @@ async fn account_human_output_escapes_extension_controls_and_errors_emit_no_rows
     fixture.run(&backend).await?;
     let printed = String::from_utf8(fixture.sink.bytes(Stream::Stdout)?)?;
     assert!(!printed.contains('\u{1b}') && !printed.contains('\u{202e}'));
-    let state = backend.state.lock().map_err(|_| "fixture lock")?;
-    assert!(state.accounts[0].open_browser);
-    drop(state);
+    {
+        let state = backend.state.lock().map_err(|_| "fixture lock")?;
+        assert!(state.accounts[0].open_browser);
+    }
     let fixture = Fixture::new(&["rtao", "extension", "accounts"], true, false)?;
     assert!(
         fixture

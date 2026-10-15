@@ -37,6 +37,13 @@ const FRAME_DECODE_CHECKSUM: &str =
     "c9a9e93cab13c8e9a6accf029997d19943cf54fea5f5eb028a1133b7179d06aa";
 const SMALLSTR_DESCRIPTION: &str =
     "1e732bf83d21445cd724ccdd77a21839169c4b8b0a5ccea14c6c8187e56a3f80";
+const UNSAFE_LIBYAML_ADVISORY: &str = "RUSTSEC-2024-0449";
+const UNSAFE_LIBYAML_CHECKSUM: &str =
+    "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861";
+const SERDE_YAML_CHECKSUM: &str =
+    "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47";
+const UNSAFE_LIBYAML_DESCRIPTION: &str =
+    "fbaecdaa813d8fbe71e2864557722e8fe22367aefe39b598d2f77c68486c0ada";
 
 struct ReviewedMaintenance {
     advisory: &'static str,
@@ -69,6 +76,16 @@ const REVIEWED_MAINTENANCE: &[ReviewedMaintenance] = &[
         title: "smallstr is unmaintained",
         url: None,
         description: SMALLSTR_DESCRIPTION,
+    },
+    ReviewedMaintenance {
+        advisory: UNSAFE_LIBYAML_ADVISORY,
+        name: "unsafe-libyaml",
+        version: "0.2.11",
+        checksum: UNSAFE_LIBYAML_CHECKSUM,
+        date: "2024-03-25",
+        title: "unsafe-libyaml is unmaintained",
+        url: Some("https://github.com/dtolnay/unsafe-libyaml"),
+        description: UNSAFE_LIBYAML_DESCRIPTION,
     },
 ];
 
@@ -164,6 +181,7 @@ fn lock_identities(text: &str) -> Result<BTreeSet<Identity>> {
         .context("lockfile missing packages")?;
     proc_macro_maintenance_chain(packages)?;
     smallstr_maintenance_chain(packages)?;
+    unsafe_libyaml_maintenance_chain(packages)?;
     let mut identities = BTreeSet::new();
     for package in packages {
         let identity = Identity {
@@ -237,6 +255,28 @@ fn smallstr_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<()>
                 "0.4.2",
                 &["frame-decode", "subxt", "subxt-metadata"],
             ),
+        ],
+    )
+}
+
+// Subxt 0.51.1 unconditionally enables frame-decode's legacy-types feature,
+// keeping serde_yaml/unsafe-libyaml active even without Subxt defaults. See
+// supply-unsafe-libyaml.md; the raw informational finding remains unfiltered.
+fn unsafe_libyaml_maintenance_chain(packages: &toml_edit::ArrayOfTables) -> Result<()> {
+    reviewed_maintenance_chain(
+        packages,
+        "unsafe-libyaml",
+        &[
+            ("unsafe-libyaml", "0.2.11", UNSAFE_LIBYAML_CHECKSUM),
+            ("serde_yaml", "0.9.34+deprecated", SERDE_YAML_CHECKSUM),
+            ("frame-decode", "0.18.1", FRAME_DECODE_CHECKSUM),
+            ("subxt", "0.51.1", SUBXT_CHECKSUM),
+            ("subxt-metadata", "0.51.1", SUBXT_METADATA_CHECKSUM),
+        ],
+        &[
+            ("unsafe-libyaml", "0.2.11", &["serde_yaml"]),
+            ("serde_yaml", "0.9.34+deprecated", &["frame-decode"]),
+            ("frame-decode", "0.18.1", &["subxt", "subxt-metadata"]),
         ],
     )
 }
@@ -1082,6 +1122,187 @@ mod tests {
             serde_json::from_str(include_str!("../tests/fixtures/supply/smallstr.json"))?;
         report["warnings"]["unmaintained"] = json!([finding]);
         Ok(report)
+    }
+
+    fn unsafe_libyaml_lock() -> String {
+        format!(
+            "{}\n[[package]]\nname = 'unsafe-libyaml'\nversion = '0.2.11'\nsource = '{SOURCE}'\nchecksum = '{UNSAFE_LIBYAML_CHECKSUM}'\n\n[[package]]\nname = 'serde_yaml'\nversion = '0.9.34+deprecated'\nsource = '{SOURCE}'\nchecksum = '{SERDE_YAML_CHECKSUM}'\ndependencies = ['unsafe-libyaml']\n\n[[package]]\nname = 'frame-decode'\nversion = '0.18.1'\nsource = '{SOURCE}'\nchecksum = '{FRAME_DECODE_CHECKSUM}'\ndependencies = ['serde_yaml']\n\n[[package]]\nname = 'subxt'\nversion = '0.51.1'\nsource = '{SOURCE}'\nchecksum = '{SUBXT_CHECKSUM}'\ndependencies = ['frame-decode', 'subxt-metadata']\n\n[[package]]\nname = 'subxt-metadata'\nversion = '0.51.1'\nsource = '{SOURCE}'\nchecksum = '{SUBXT_METADATA_CHECKSUM}'\ndependencies = ['frame-decode']\n",
+            lock()
+        )
+    }
+
+    fn unsafe_libyaml_report() -> Result<Json> {
+        let mut report = report();
+        report["lockfile"]["dependency-count"] = json!(6);
+        // Actual unfiltered hosted warning from run 38740705929, artifact 11975709033.
+        let finding: Json =
+            serde_json::from_str(include_str!("../tests/fixtures/supply/unsafe-libyaml.json"))?;
+        report["warnings"]["unmaintained"] = json!([finding]);
+        Ok(report)
+    }
+
+    #[test]
+    fn active_unsafe_libyaml_notice_is_retained_in_both_raw_formats() -> Result<()> {
+        let locks = lock_identities(&unsafe_libyaml_lock())?;
+        let report = unsafe_libyaml_report()?;
+        let original = report.clone();
+        ensure!(
+            validate_audit(&report, &locks)?
+                == Audit {
+                    exceptions: 1,
+                    maintenance: 1,
+                    failing_status: true,
+                }
+        );
+        ensure!(report == original, "classification mutated the raw audit");
+        check_graph(
+            "rtao v0.1.0\nsubxt v0.51.1\nsubxt-metadata v0.51.1\nframe-decode v0.18.1\nserde_yaml v0.9.34+deprecated\nunsafe-libyaml v0.2.11\n",
+            &["rtao".into()],
+        )?;
+        #[cfg(unix)]
+        {
+            let terminal = format!(
+                "      Loaded 1300 security advisories\n    Scanning Cargo.lock for vulnerabilities (6 crate dependencies)\nID:        {ADVISORY}\nID:        {UNSAFE_LIBYAML_ADVISORY}\nerror: 1 denied warning found!\n"
+            );
+            ensure!(
+                raw_audit(1, &terminal, &report)?
+                    .validate(&locks)?
+                    .maintenance
+                    == 1
+            );
+            ensure!(
+                raw_audit(1, &terminal.replace(UNSAFE_LIBYAML_ADVISORY, ""), &report)?
+                    .validate(&locks)
+                    .is_err()
+            );
+            let mut only_maintenance = report.clone();
+            only_maintenance["warnings"]["unsound"] = json!([]);
+            let terminal = terminal
+                .replace(&format!("ID:        {ADVISORY}\n"), "")
+                .replace("error: 1 denied warning found!\n", "");
+            ensure!(
+                raw_audit(0, &terminal, &only_maintenance)?.validate(&locks)?
+                    == Audit {
+                        exceptions: 0,
+                        maintenance: 1,
+                        failing_status: false,
+                    }
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn unsafe_libyaml_notice_rejects_vulnerabilities_identity_scope_and_advisory_changes()
+    -> Result<()> {
+        let locks = lock_identities(&unsafe_libyaml_lock())?;
+        let original = unsafe_libyaml_report()?;
+        let mut vulnerability = original.clone();
+        let mut finding = vulnerability["warnings"]["unmaintained"][0].take();
+        finding
+            .as_object_mut()
+            .context("fixture warning is not an object")?
+            .remove("kind");
+        finding["advisory"]["informational"] = Json::Null;
+        vulnerability["warnings"]["unmaintained"] = json!([]);
+        vulnerability["vulnerabilities"] = json!({"found": true, "count": 1, "list": [finding]});
+        ensure!(validate_audit(&vulnerability, &locks).is_err());
+        for kind in ["unsound", "notice"] {
+            let mut report = original.clone();
+            let mut finding = report["warnings"]["unmaintained"][0].take();
+            finding["kind"] = json!(kind);
+            finding["advisory"]["informational"] = json!(kind);
+            report["warnings"]["unmaintained"] = json!([]);
+            report["warnings"][kind] = json!([finding]);
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        for (key, value) in [
+            ("name", "another-package"),
+            ("version", "0.2.12"),
+            ("source", "git+https://example.test/unsafe-libyaml#1234"),
+            ("checksum", "changed-checksum"),
+        ] {
+            let mut report = original.clone();
+            let finding = &mut report["warnings"]["unmaintained"][0];
+            let old = json_identity(&finding["package"])?;
+            finding["package"][key] = json!(value);
+            if key == "name" {
+                finding["advisory"]["package"] = json!(value);
+            }
+            let mut updated_locks = locks.clone();
+            updated_locks.remove(&old);
+            updated_locks.insert(json_identity(&finding["package"])?);
+            ensure!(validate_audit(&report, &updated_locks).is_err());
+        }
+        for (key, value) in [
+            ("id", json!("RUSTSEC-2099-9999")),
+            (
+                "cvss",
+                json!("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"),
+            ),
+            ("categories", json!(["denial-of-service"])),
+            ("aliases", json!(["CVE-2099-1234"])),
+            ("description", json!("A newly reported correctness issue")),
+            ("date", json!("2024-03-26")),
+            ("url", json!("https://example.test/new-evidence")),
+            ("severity", json!("high")),
+        ] {
+            let mut report = original.clone();
+            report["warnings"]["unmaintained"][0]["advisory"][key] = value;
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        for (key, value) in [
+            ("patched", json!([">=0.2.12"])),
+            ("unaffected", json!(["<0.2.11"])),
+        ] {
+            let mut report = original.clone();
+            report["warnings"]["unmaintained"][0]["versions"][key] = value;
+            ensure!(validate_audit(&report, &locks).is_err());
+        }
+        let mut missing_scope = original.clone();
+        missing_scope["warnings"]["unmaintained"][0]
+            .as_object_mut()
+            .context("fixture warning is not an object")?
+            .remove("affected");
+        ensure!(validate_audit(&missing_scope, &locks).is_err());
+        let mut report = original;
+        report["warnings"]["unmaintained"][0]["affected"] =
+            json!({"functions": {"unsafe_libyaml::yaml_parser_parse": ["*"]}});
+        ensure!(validate_audit(&report, &locks).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn unsafe_libyaml_maintenance_chain_requires_exact_parents_and_identities() -> Result<()> {
+        let original = unsafe_libyaml_lock();
+        lock_identities(&original)?;
+        for changed in [
+            original.replace("0.2.11", "0.2.12"),
+            original.replace("0.9.34+deprecated", "0.9.35"),
+            original.replace("0.18.1", "0.18.2"),
+            original.replace("0.51.1", "0.51.2"),
+            original.replace(UNSAFE_LIBYAML_CHECKSUM, "changed"),
+            original.replace(SERDE_YAML_CHECKSUM, "changed"),
+            original.replace(FRAME_DECODE_CHECKSUM, "changed"),
+            original.replace(SUBXT_CHECKSUM, "changed"),
+            original.replace(SUBXT_METADATA_CHECKSUM, "changed"),
+            original.replace(SOURCE, "git+https://example.test/changed#1234"),
+            original.replace("dependencies = ['unsafe-libyaml']", "dependencies = []"),
+            original.replace("dependencies = ['serde_yaml']", "dependencies = []"),
+            original.replace("dependencies = ['frame-decode']", "dependencies = []"),
+            original.replace("['frame-decode', 'subxt-metadata']", "['subxt-metadata']"),
+            original.replace("['unsafe-libyaml']", "['unsafe-libyaml 0.2.12']"),
+        ] {
+            ensure!(lock_identities(&changed).is_err());
+        }
+        for child in ["unsafe-libyaml", "serde_yaml", "frame-decode"] {
+            let changed = format!(
+                "{original}\n[[package]]\nname = 'new-parent'\nversion = '1.0.0'\ndependencies = ['{child}']\n"
+            );
+            ensure!(lock_identities(&changed).is_err());
+        }
+        lock_identities(&lock())?;
+        Ok(())
     }
 
     #[test]

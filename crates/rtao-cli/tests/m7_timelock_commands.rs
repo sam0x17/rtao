@@ -236,9 +236,10 @@ async fn show_is_offline_and_preserves_json_and_human_field_difference() -> Test
         fixture.payload()?,
         json!({"reveal_round":1,"reveal_at":expected.reveal_at()?.to_rfc3339(),"revealed":true,"remaining_seconds":0,"bytes":20})
     );
-    let state = backend.state.lock().map_err(|_| "fixture lock")?;
-    assert!(state.seals.is_empty() && state.opens.is_empty());
-    drop(state);
+    {
+        let state = backend.state.lock().map_err(|_| "fixture lock")?;
+        assert!(state.seals.is_empty() && state.opens.is_empty());
+    }
     let mut human = Fixture::new(&["rtao", "timelock", "show", &encoded], false, &[])?;
     human.run(&backend).await?;
     let text = String::from_utf8(human.sink.bytes(Stream::Stdout)?)?;
