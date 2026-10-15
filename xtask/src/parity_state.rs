@@ -629,7 +629,12 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
             .get("pinning_tests")
             .and_then(Item::as_array)
             .context("divergence pinning_tests missing")?;
-        ensure!(!tests.is_empty(), "divergence {id} has no pinning tests");
+        let optional = status == "pending"
+            && optional_m10_divergence(id, string("milestone")?, string("class")?);
+        ensure!(
+            optional || !tests.is_empty(),
+            "divergence {id} has no pinning tests"
+        );
         let link = string("upstream_link")?;
         ensure!(
             link.starts_with("https://github.com/RaoFoundation/subtensor/")
@@ -639,7 +644,6 @@ pub(super) fn divergences(root: &Path, index: &Index, strict: bool) -> Result<Va
         match status {
             "pending" => {
                 pending += 1;
-                let optional = optional_m10_divergence(id, string("milestone")?, string("class")?);
                 deferred_optional += usize::from(optional);
                 ensure!(
                     !strict || optional,
@@ -1281,6 +1285,61 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn whole_divergence_register_accepts_unimplemented_m10_without_inventing_witnesses()
+    -> Result<()> {
+        let register: DocumentMut = include_str!("../../parity/divergences.toml").parse()?;
+        let mut index = Index::default();
+        for row in register["divergences"]
+            .as_array_of_tables()
+            .context("register rows")?
+        {
+            if let Some(tests) = row.get("pinning_tests").and_then(Item::as_array) {
+                for test in tests {
+                    let test = test.as_str().context("test name")?;
+                    index.feature_tests.insert(test.into());
+                    index
+                        .feature_test_bodies
+                        .insert(test.into(), "{ assert!(observed_behavior); }".into());
+                }
+            }
+        }
+        let temporary = tempfile::tempdir()?;
+        fs::create_dir(temporary.path().join("parity"))?;
+        let path = temporary.path().join("parity/divergences.toml");
+        fs::write(&path, register.to_string())?;
+        let report = divergences(temporary.path(), &index, true)?;
+        assert_eq!(report["pending"], 1);
+        assert_eq!(report["deferred_optional"], 1);
+        let rows = register["divergences"]
+            .as_array_of_tables()
+            .context("register rows")?;
+        let row = rows
+            .iter()
+            .find(|row| row["id"].as_str() == Some("D-031"))
+            .context("optional M10 row")?;
+        assert!(
+            row["pinning_tests"]
+                .as_array()
+                .context("test list")?
+                .is_empty()
+        );
+        for (field, changed) in [("status", "active"), ("milestone", "M9"), ("class", "kept")] {
+            let mut changed_register = register.clone();
+            let rows = changed_register["divergences"]
+                .as_array_of_tables_mut()
+                .context("rows")?;
+            let row = rows
+                .iter_mut()
+                .find(|row| row["id"].as_str() == Some("D-031"))
+                .context("M10 row")?;
+            row[field] = value(changed);
+            fs::write(&path, changed_register.to_string())?;
+            assert!(divergences(temporary.path(), &index, true).is_err());
+        }
+        Ok(())
+    }
 
     #[test]
     fn reviewed_exports_require_existing_all_feature_fixtures_without_claiming_execution()
