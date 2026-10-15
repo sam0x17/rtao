@@ -16,6 +16,18 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Refresh [38766936693](https://github.com/sam0x17/rtao/actions/runs/38766936693)
+succeeds at clean `41f3838`. Verify and adopt its four exact regular report
+members, immutable archive digest/size and all 23 committed/current dependency
+inputs. The matrix changes only the two reviewed balance/property dispositions
+and five corrected derived-code homes. Source counts are 204 reconciled and
+153 pending; all 115 e2e rows, oracle classifications and runtime qualifications
+are unchanged. Dependency inventories, host selection and compatibility claims
+also stay fixed. Proof is `41f-generation-adoption.json`; no archive or
+extraction directory remains. Normal combined hosted validation is next.
+Independent rereviews of the balance mapping and final mapping/discovery gates
+are active. No local build/test, service, new filing or milestone acceptance.
+
 Normal run [38762528504](https://github.com/sam0x17/rtao/actions/runs/38762528504)
 at `60ff9a4` is terminal. All five supporting jobs, main compilation and strict
 Clippy pass. Parity checks the new five client-contract bindings and all 115
