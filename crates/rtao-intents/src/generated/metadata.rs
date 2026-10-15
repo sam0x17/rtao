@@ -41,9 +41,9 @@ InterfaceMetadata{name:"add_stake_limit",feature:"staking",compiled:true,impleme
 #[cfg(not(feature="staking"))]
 InterfaceMetadata{name:"add_stake_limit",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
-InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AnnounceColdkeySwap>()),role:Some(std::any::type_name::<<super::interfaces::AnnounceColdkeySwap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AnnounceColdkeySwap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AnnounceColdkeySwap>()),role:Some(std::any::type_name::<<super::interfaces::AnnounceColdkeySwap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AnnounceColdkeySwap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
-InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "association")]
 InterfaceMetadata{name:"associate_evm_key",feature:"association",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AssociateEvmKey>()),role:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="association"))]
@@ -69,9 +69,9 @@ InterfaceMetadata{name:"claim_root_with_hotkey",feature:"registration",compiled:
 #[cfg(not(feature="registration"))]
 InterfaceMetadata{name:"claim_root_with_hotkey",feature:"registration",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
-InterfaceMetadata{name:"clear_coldkey_swap_announcement",feature:"coldkey",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::ClearColdkeySwapAnnouncement>()),role:Some(std::any::type_name::<<super::interfaces::ClearColdkeySwapAnnouncement as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ClearColdkeySwapAnnouncement as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"clear_coldkey_swap_announcement",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ClearColdkeySwapAnnouncement>()),role:Some(std::any::type_name::<<super::interfaces::ClearColdkeySwapAnnouncement as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ClearColdkeySwapAnnouncement as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
-InterfaceMetadata{name:"clear_coldkey_swap_announcement",feature:"coldkey",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"clear_coldkey_swap_announcement",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "weights")]
 InterfaceMetadata{name:"commit_weights",feature:"weights",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CommitWeights>()),role:Some(std::any::type_name::<<super::interfaces::CommitWeights as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CommitWeights as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="weights"))]
@@ -93,9 +93,9 @@ InterfaceMetadata{name:"decrease_take",feature:"children",compiled:true,implemen
 #[cfg(not(feature="children"))]
 InterfaceMetadata{name:"decrease_take",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
-InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::DisputeColdkeySwap>()),role:Some(std::any::type_name::<<super::interfaces::DisputeColdkeySwap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DisputeColdkeySwap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::DisputeColdkeySwap>()),role:Some(std::any::type_name::<<super::interfaces::DisputeColdkeySwap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DisputeColdkeySwap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
-InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
 InterfaceMetadata{name:"dissolve_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::DissolveCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::DissolveCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DissolveCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
@@ -293,9 +293,9 @@ InterfaceMetadata{name:"swap_basket_many",feature:"staking",compiled:true,implem
 #[cfg(not(feature="staking"))]
 InterfaceMetadata{name:"swap_basket_many",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
-InterfaceMetadata{name:"swap_coldkey_announced",feature:"coldkey",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SwapColdkeyAnnounced>()),role:Some(std::any::type_name::<<super::interfaces::SwapColdkeyAnnounced as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapColdkeyAnnounced as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"swap_coldkey_announced",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SwapColdkeyAnnounced>()),role:Some(std::any::type_name::<<super::interfaces::SwapColdkeyAnnounced as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapColdkeyAnnounced as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
-InterfaceMetadata{name:"swap_coldkey_announced",feature:"coldkey",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"swap_coldkey_announced",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "registration")]
 InterfaceMetadata{name:"swap_hotkey",feature:"registration",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SwapHotkey>()),role:Some(std::any::type_name::<<super::interfaces::SwapHotkey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapHotkey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="registration"))]

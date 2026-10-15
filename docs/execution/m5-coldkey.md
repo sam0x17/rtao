@@ -27,7 +27,19 @@ checks continue to advertise only implemented operations, so SDK source ports
 become available through `tx` without another per-group manifest change.
 Pending operations remain absent from the command tree.
 
-Hosted generation of three existing pass-through maps, four pending-body
-removals and availability/report updates is required before combined checks.
-Only source review, rustfmt and whitespace checks ran locally; no tests,
-builds or scratch directories were created.
+Hosted generation
+[38696143491](https://github.com/sam0x17/rtao/actions/runs/38696143491)
+at `18679e34800d237cd20c43566b63d17f473032fd` succeeded and was adopted
+unchanged. Review checked thirteen exact regular-file members, source identity,
+all 23 dependency inputs, unchanged role package sets and counts, four pending
+removals and three pass-through additions. Other generated interfaces and
+matrix families are unchanged. The generated ZIP is 54,283 bytes, SHA-256
+`82c105e55704648e21bb2a5f8b0728154ebbde822aca4dc114d60aaefbc27a6f`;
+the report ZIP is 40,189 bytes, SHA-256
+`b9ec45e7d1c8ab0b864fcabb28d6e5a6ebe0b9ff5a22f848fee86bf2c70042af`.
+The bounded private proof is
+`.local/recovery/2026-10-14/m5-coldkey-adoption.json`.
+
+Runtime validation remains empty. Combined compilation, fixture execution and
+milestone acceptance remain pending. Only source review, rustfmt and whitespace
+checks ran locally; no tests, builds or scratch directories were created.

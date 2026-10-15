@@ -20,6 +20,17 @@ pub(crate) async fn burned_register<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "coldkey")]
+pub(crate) async fn clear_coldkey_swap_announcement<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::ClearColdkeySwapAnnouncement,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::clear_coldkey_swap_announcement();
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "crowdloan")]
 pub(crate) async fn contribute_crowdloan<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::ContributeCrowdloan,
@@ -29,6 +40,17 @@ pub(crate) async fn contribute_crowdloan<V: rtao_client::View + ?Sized>(
         intent.crowdloan_id,
         crate::crowdloan::stakeable_amount(intent, cx).await?,
     );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "coldkey")]
+pub(crate) async fn dispute_coldkey_swap<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::DisputeColdkeySwap,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::dispute_coldkey_swap();
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),
@@ -163,6 +185,19 @@ pub(crate) async fn start_call<V: rtao_client::View + ?Sized>(
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::subtensor_module::start_call(intent.netuid);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "coldkey")]
+pub(crate) async fn swap_coldkey_announced<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SwapColdkeyAnnounced,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::swap_coldkey_announced(
+        intent.new_coldkey_ss58.account(),
+    );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),
