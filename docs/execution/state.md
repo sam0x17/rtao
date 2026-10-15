@@ -29,8 +29,9 @@ rate-limit retries and corrects initial oracle staging for Q30's optional hosted
 refresh. Its five non-check jobs passed. Check caught a missing ViewExt import
 in a test fixture, corrected in `642623b`. The latter's checks are at
 https://github.com/sam0x17/rtao/actions/runs/38683260786: MSRV, supply, no-host and
-semver passed; check and features remain live. Its generated reports were stale
-pending the adoption below. No current all-job success is claimed.
+semver and features passed. Its main check is superseded by the next client
+checkpoint, including the report adoption below and the doctor fixtures.
+No current all-job success is claimed.
 
 Hosted report generation
 https://github.com/sam0x17/rtao/actions/runs/38683267312 succeeded on `642623b`.
@@ -49,7 +50,10 @@ The CLI lockfile was resolved offline with eight additions and no existing
 package upgrades. No local compilation or test ran. License wording includes
 Q1's required PSF/Unicode obligations; approved BLS and dormant advisory guards
 remain intact. Source formatting and whitespace checks pass. Combined source
-acceptance still needs normal hosted checks after report adoption.
+acceptance still needs normal hosted checks after report adoption. The M0
+source audit also adds real doctor binary fixtures and a plain captured-tree
+fix; see [m0-readiness.md](m0-readiness.md). The latest normal run for the
+checkpoint is listed in the [main workflow history](https://github.com/sam0x17/rtao/actions/workflows/pr.yml?query=branch%3Amain).
 
 No active temporary root remains. Audited and removed
 `target/client-ci-20261015`: 14 regular JSON/Markdown/ZIP files, 868,469 bytes.

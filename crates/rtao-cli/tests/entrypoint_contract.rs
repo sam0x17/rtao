@@ -91,3 +91,81 @@ fn invalid_raw_role_is_a_framework_diagnostic_and_never_connects()
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }
+
+#[test]
+fn doctor_verifies_the_canonical_workspace_through_the_binary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Root::new()?;
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../Cargo.toml")
+        .canonicalize()?;
+    let output = root
+        .command()
+        .current_dir(&root.0)
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("CARGO_TERM_COLOR", "always")
+        .args(["doctor", "--manifest-path"])
+        .arg(&manifest)
+        .output()?;
+    assert!(
+        output.status.success(),
+        "doctor failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(output.stdout)?,
+        format!(
+            "Core pin and downstream BLS patch verified for {}\n",
+            manifest.display()
+        )
+    );
+    assert!(output.stderr.is_empty());
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
+    Ok(())
+}
+
+#[test]
+fn doctor_missing_patch_fails_with_the_exact_required_patch_through_the_binary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Root::new()?;
+    let tag = rtao::core::BITTENSOR_CORE_TAG;
+    let repository = "https://github.com/RaoFoundation/subtensor.git";
+    let manifest = root.0.join("Cargo.toml");
+    std::fs::write(
+        &manifest,
+        format!(
+            "[workspace]\nmembers = [\"consumer\"]\nresolver = \"3\"\n\
+             [workspace.dependencies]\n\
+             bittensor-core = {{ git = {repository:?}, tag = {tag:?}, default-features = false }}\n"
+        ),
+    )?;
+    std::fs::create_dir_all(root.0.join("consumer/src"))?;
+    std::fs::write(
+        root.0.join("consumer/Cargo.toml"),
+        "[package]\nname = \"doctor-consumer\"\nversion = \"0.0.0\"\nedition = \"2024\"\n",
+    )?;
+    std::fs::write(root.0.join("consumer/src/lib.rs"), "")?;
+    std::fs::write(
+        root.0.join("Cargo.lock"),
+        "version = 4\n[[package]]\nname = \"doctor-consumer\"\nversion = \"0.0.0\"\n",
+    )?;
+
+    // The unused declaration supplies the pin without fetching upstream code.
+    // Doctor must reject the root patch before inspecting the consumer graph.
+    let output = root
+        .command()
+        .current_dir(&root.0)
+        .env("CARGO_NET_OFFLINE", "true")
+        .args(["doctor", "--manifest-path"])
+        .arg(&manifest)
+        .output()?;
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    let diagnostic = String::from_utf8(output.stderr)?;
+    let expected_patch =
+        format!("[patch.crates-io]\nw3f-bls = {{ git = {repository:?}, tag = {tag:?} }}");
+    assert!(diagnostic.contains("the final workspace needs this exact core-matching patch"));
+    assert!(diagnostic.contains(&expected_patch));
+    assert!(diagnostic.contains("root Cargo.toml"));
+    Ok(())
+}

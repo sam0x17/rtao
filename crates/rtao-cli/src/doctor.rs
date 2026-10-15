@@ -336,6 +336,9 @@ fn built_tree_command(manifest: &Path) -> Command {
     // Cargo must resolve the consumer's complete build graph. `--locked` and
     // `--offline` keep this inspection from updating its lock or fetching code.
     command
+        // Cargo decorates repeated-node markers when the caller forces color;
+        // dependency identities must be parsed from plain captured output.
+        .env("CARGO_TERM_COLOR", "never")
         .args([
             "tree",
             "--locked",
@@ -535,6 +538,9 @@ mod tests {
         let manifest = Path::new("/consumer/workspace/Cargo.toml");
         let command = built_tree_command(manifest);
         assert_eq!(command.get_current_dir(), manifest.parent());
+        assert!(command.get_envs().any(|(name, value)| {
+            name == "CARGO_TERM_COLOR" && value == Some(std::ffi::OsStr::new("never"))
+        }));
         let arguments = command
             .get_args()
             .map(|argument| argument.to_str().ok_or("non-UTF8 argument"))
