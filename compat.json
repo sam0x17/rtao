@@ -11,7 +11,7 @@
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
         "machine": "AMD EPYC 9V74 80-Core Processor",
-        "measured_unix_seconds": 1792087523,
+        "measured_unix_seconds": 1792088069,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1469,11 +1469,11 @@
           },
           "dependency_inputs_sha256": "018893e4e2670b4d78d3f920b40d9e171f5b46030715d5471749ff5fd343d6d2",
           "dirty": false,
-          "head_commit": "30f6369d34297c68b6d396362b9b8a83ddac9870"
+          "head_commit": "a276a83dd74097e15964c9de92bb82e0f34d4389"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "34854c942bb892b89cedc7d0659f08b15b193be973d11d5a12bff24196c9654f"
+      "sha256": "1a2711b56ef7789b9ee392ed8db113ac91192d384a9d3450c8afe00676cdbcdb"
     }
   ],
   "core": {

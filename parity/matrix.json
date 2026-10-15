@@ -9061,11 +9061,12 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/networks.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "rtao_catalog::py::PYTHON_TABLES; rtao_evm::{EvmNetwork,evm_network}"
+          "rtao_evm::networks::{EvmNetwork,evm_network,evm_network_with_env,evm_networks}",
+          "rtao_catalog::py::PYTHON_TABLES; vendor/upstream/extracted/named_tables.json"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e9ee94d16ddb1b89bf94dd94ec63f1484b5d06d7"
       },
       {
         "kind": "ported",
@@ -9286,11 +9287,11 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "rtao_intents::root_claim"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f59999129baaad88b743f2961a75d49fb03ee008"
       },
       {
         "kind": "ported",
@@ -9896,11 +9897,13 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/result.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_tx::{ExtrinsicResult, ChainError, TxError, PolicyError, classify}`"
+          "rtao_tx::{ExtrinsicResult,ChainError,TxError,PolicyError,classify}",
+          "rtao_catalog::{errors,py}; rtao_client::{PoolRejection,SubmitFailure}",
+          "rtao_core::ops::{dispatch_error,receipt}; rtao_rpc::{RpcError,PolicyRefusal}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2f62ffa3c47304ffd8e450fe23fcefa39806d24d"
       },
       {
         "kind": "extracted",
@@ -10610,11 +10613,11 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "rtao_intents::root_claim::tests"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b0d8d27609153bd006024a15f368fed4720fe7aa"
       },
       {
         "kind": "ported",
