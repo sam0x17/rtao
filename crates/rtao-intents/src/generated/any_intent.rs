@@ -517,6 +517,7 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
+                crate::evm::canonicalize_fund_input(&mut args)?;
                 let intent: super::interfaces::FundEvmKey = serde_json::from_value(args)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::FundEvmKey(intent))
@@ -1012,7 +1013,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::SwapBasketMany = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::SwapBasketMany = serde_json::from_value(args)?;
+                crate::staking_baskets::canonical_legs(&mut intent.legs)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::SwapBasketMany(intent))
             }

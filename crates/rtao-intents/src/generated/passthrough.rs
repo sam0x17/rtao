@@ -53,6 +53,31 @@ pub(crate) async fn burned_register<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "registration")]
+pub(crate) async fn claim_root<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::ClaimRoot,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::claim_root(rtao_core::DynValue::new(
+        rtao_primitives::IntoCoreValue::into_core_value(intent.subnets.clone()),
+    ));
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "registration")]
+pub(crate) async fn claim_root_with_hotkey<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::ClaimRootWithHotkey,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call =
+        rtao_runtime::calls::subtensor_module::claim_root_with_hotkey(intent.hotkey_ss58.account());
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "coldkey")]
 pub(crate) async fn clear_coldkey_swap_announcement<V: rtao_client::View + ?Sized>(
     _intent: &super::interfaces::ClearColdkeySwapAnnouncement,
@@ -181,12 +206,60 @@ pub(crate) async fn kill_pure_proxy<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "lock")]
+pub(crate) async fn lock_stake<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::LockStake,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::lock_stake(
+        cx.hotkey_address(
+            intent
+                .hotkey_ss58
+                .as_ref()
+                .map(rtao_primitives::Ss58Address::account),
+        )?,
+        intent.netuid,
+        crate::lock::lockable_amount(intent, cx).await?,
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "lock")]
+pub(crate) async fn move_lock<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::MoveLock,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::move_lock(
+        intent.destination_hotkey_ss58.account(),
+        intent.netuid,
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "crowdloan")]
 pub(crate) async fn refund_crowdloan<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::RefundCrowdloan,
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::crowdloan::refund(intent.crowdloan_id);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "leasing")]
+pub(crate) async fn register_leased_network<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::RegisterLeasedNetwork,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::register_leased_network(
+        intent.emissions_share.clone(),
+        intent.end_block.clone(),
+    );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),
@@ -242,6 +315,25 @@ pub(crate) async fn root_register<V: rtao_client::View + ?Sized>(
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::subtensor_module::root_register(
+        cx.hotkey_address(
+            intent
+                .hotkey_ss58
+                .as_ref()
+                .map(rtao_primitives::Ss58Address::account),
+        )?,
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "staking")]
+pub(crate) async fn set_auto_stake<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SetAutoStake,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::set_coldkey_auto_stake_hotkey(
+        intent.netuid,
         cx.hotkey_address(
             intent
                 .hotkey_ss58
@@ -327,6 +419,29 @@ pub(crate) async fn set_mechanism_count<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "lock")]
+pub(crate) async fn set_perpetual_lock<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SetPerpetualLock,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call =
+        rtao_runtime::calls::subtensor_module::set_perpetual_lock(intent.netuid, intent.enabled);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "lock")]
+pub(crate) async fn set_reject_locked_alpha<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SetRejectLockedAlpha,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::set_reject_locked_alpha(intent.enabled);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "identity")]
 pub(crate) async fn set_subnet_identity<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::SetSubnetIdentity,
@@ -359,6 +474,20 @@ pub(crate) async fn start_call<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "staking")]
+pub(crate) async fn swap_basket_many<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SwapBasketMany,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::swap_basket_many(
+        intent.hotkey_ss58.account(),
+        crate::arguments::basket_legs(&intent.legs)?,
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "coldkey")]
 pub(crate) async fn swap_coldkey_announced<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::SwapColdkeyAnnounced,
@@ -366,6 +495,25 @@ pub(crate) async fn swap_coldkey_announced<V: rtao_client::View + ?Sized>(
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::subtensor_module::swap_coldkey_announced(
         intent.new_coldkey_ss58.account(),
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "leasing")]
+pub(crate) async fn terminate_lease<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::TerminateLease,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::terminate_lease(
+        intent.lease_id,
+        cx.hotkey_address(
+            intent
+                .hotkey_ss58
+                .as_ref()
+                .map(rtao_primitives::Ss58Address::account),
+        )?,
     );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
@@ -407,6 +555,18 @@ pub(crate) async fn trim_subnet<V: rtao_client::View + ?Sized>(
         intent.netuid,
         intent.max_n,
     );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "staking")]
+pub(crate) async fn unstake_all_alpha<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::UnstakeAllAlpha,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call =
+        rtao_runtime::calls::subtensor_module::unstake_all_alpha(intent.hotkey_ss58.account());
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),

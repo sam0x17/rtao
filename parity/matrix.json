@@ -9596,7 +9596,7 @@
         "name": "add_collateral",
         "oracle": "missing",
         "python_class": "AddCollateral",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "add_proxy",
@@ -9650,13 +9650,13 @@
         "name": "claim_root",
         "oracle": "missing",
         "python_class": "ClaimRoot",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "claim_root_with_hotkey",
         "oracle": "missing",
         "python_class": "ClaimRootWithHotkey",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "clear_coldkey_swap_announcement",
@@ -9710,7 +9710,7 @@
         "name": "evm_withdraw",
         "oracle": "missing",
         "python_class": "EvmWithdraw",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "execute_proxy_announced",
@@ -9728,7 +9728,7 @@
         "name": "fund_evm_key",
         "oracle": "missing",
         "python_class": "FundEvmKey",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "increase_take",
@@ -9746,13 +9746,13 @@
         "name": "lock_stake",
         "oracle": "missing",
         "python_class": "LockStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "move_lock",
         "oracle": "missing",
         "python_class": "MoveLock",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "move_stake",
@@ -9806,7 +9806,7 @@
         "name": "register_leased_network",
         "oracle": "missing",
         "python_class": "RegisterLeasedNetwork",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "register_subnet",
@@ -9878,7 +9878,7 @@
         "name": "set_auto_stake",
         "oracle": "missing",
         "python_class": "SetAutoStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_childkey_take",
@@ -9920,19 +9920,19 @@
         "name": "set_min_collateral",
         "oracle": "missing",
         "python_class": "SetMinCollateral",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_perpetual_lock",
         "oracle": "missing",
         "python_class": "SetPerpetualLock",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_reject_locked_alpha",
         "oracle": "missing",
         "python_class": "SetRejectLockedAlpha",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_root_claim_threshold",
@@ -9974,7 +9974,7 @@
         "name": "stake_into_basket",
         "oracle": "missing",
         "python_class": "StakeIntoBasket",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "start_call",
@@ -9986,13 +9986,13 @@
         "name": "swap_basket",
         "oracle": "missing",
         "python_class": "SwapBasket",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "swap_basket_many",
         "oracle": "missing",
         "python_class": "SwapBasketMany",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "swap_coldkey_announced",
@@ -10016,7 +10016,7 @@
         "name": "terminate_lease",
         "oracle": "missing",
         "python_class": "TerminateLease",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "transfer",
@@ -10058,7 +10058,7 @@
         "name": "unstake_all_alpha",
         "oracle": "missing",
         "python_class": "UnstakeAllAlpha",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "update_crowdloan_cap",
