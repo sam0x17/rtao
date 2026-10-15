@@ -29,9 +29,9 @@ InterfaceMetadata{name:"add_collateral",feature:"collateral",compiled:true,imple
 #[cfg(not(feature="collateral"))]
 InterfaceMetadata{name:"add_collateral",feature:"collateral",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"add_proxy",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AddProxy>()),role:Some(std::any::type_name::<<super::interfaces::AddProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"add_proxy",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AddProxy>()),role:Some(std::any::type_name::<<super::interfaces::AddProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"add_proxy",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"add_proxy",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
 InterfaceMetadata{name:"add_stake",feature:"staking",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AddStake>()),role:Some(std::any::type_name::<<super::interfaces::AddStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]
@@ -45,13 +45,13 @@ InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:true,i
 #[cfg(not(feature="coldkey"))]
 InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "association")]
-InterfaceMetadata{name:"associate_evm_key",feature:"association",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AssociateEvmKey>()),role:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"associate_evm_key",feature:"association",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AssociateEvmKey>()),role:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="association"))]
-InterfaceMetadata{name:"associate_evm_key",feature:"association",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"associate_evm_key",feature:"association",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "association")]
-InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AssociateHotkey>()),role:Some(std::any::type_name::<<super::interfaces::AssociateHotkey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AssociateHotkey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AssociateHotkey>()),role:Some(std::any::type_name::<<super::interfaces::AssociateHotkey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AssociateHotkey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="association"))]
-InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "batch")]
 InterfaceMetadata{name:"batch",feature:"batch",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::Batch>()),role:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="batch"))]
@@ -85,13 +85,13 @@ InterfaceMetadata{name:"create_crowdloan",feature:"crowdloan",compiled:true,impl
 #[cfg(not(feature="crowdloan"))]
 InterfaceMetadata{name:"create_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"create_pure_proxy",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::CreatePureProxy>()),role:Some(std::any::type_name::<<super::interfaces::CreatePureProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CreatePureProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"create_pure_proxy",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CreatePureProxy>()),role:Some(std::any::type_name::<<super::interfaces::CreatePureProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CreatePureProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"create_pure_proxy",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"create_pure_proxy",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "children")]
-InterfaceMetadata{name:"decrease_take",feature:"children",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::DecreaseTake>()),role:Some(std::any::type_name::<<super::interfaces::DecreaseTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DecreaseTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"decrease_take",feature:"children",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::DecreaseTake>()),role:Some(std::any::type_name::<<super::interfaces::DecreaseTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DecreaseTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="children"))]
-InterfaceMetadata{name:"decrease_take",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"decrease_take",feature:"children",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
 InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::DisputeColdkeySwap>()),role:Some(std::any::type_name::<<super::interfaces::DisputeColdkeySwap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DisputeColdkeySwap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
@@ -105,9 +105,9 @@ InterfaceMetadata{name:"evm_withdraw",feature:"evm",compiled:true,implemented:fa
 #[cfg(not(feature="evm"))]
 InterfaceMetadata{name:"evm_withdraw",feature:"evm",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::ExecuteProxyAnnounced>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteProxyAnnounced as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteProxyAnnounced as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ExecuteProxyAnnounced>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteProxyAnnounced as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteProxyAnnounced as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
 InterfaceMetadata{name:"finalize_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::FinalizeCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::FinalizeCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::FinalizeCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
@@ -117,13 +117,13 @@ InterfaceMetadata{name:"fund_evm_key",feature:"evm",compiled:true,implemented:fa
 #[cfg(not(feature="evm"))]
 InterfaceMetadata{name:"fund_evm_key",feature:"evm",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "children")]
-InterfaceMetadata{name:"increase_take",feature:"children",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::IncreaseTake>()),role:Some(std::any::type_name::<<super::interfaces::IncreaseTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::IncreaseTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"increase_take",feature:"children",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::IncreaseTake>()),role:Some(std::any::type_name::<<super::interfaces::IncreaseTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::IncreaseTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="children"))]
-InterfaceMetadata{name:"increase_take",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"increase_take",feature:"children",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"kill_pure_proxy",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::KillPureProxy>()),role:Some(std::any::type_name::<<super::interfaces::KillPureProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::KillPureProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"kill_pure_proxy",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::KillPureProxy>()),role:Some(std::any::type_name::<<super::interfaces::KillPureProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::KillPureProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"kill_pure_proxy",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"kill_pure_proxy",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "lock")]
 InterfaceMetadata{name:"lock_stake",feature:"lock",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::LockStake>()),role:Some(std::any::type_name::<<super::interfaces::LockStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::LockStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="lock"))]
@@ -173,13 +173,13 @@ InterfaceMetadata{name:"register_subnet",feature:"registration",compiled:true,im
 #[cfg(not(feature="registration"))]
 InterfaceMetadata{name:"register_subnet",feature:"registration",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"remove_proxies",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RemoveProxies>()),role:Some(std::any::type_name::<<super::interfaces::RemoveProxies as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveProxies as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"remove_proxies",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::RemoveProxies>()),role:Some(std::any::type_name::<<super::interfaces::RemoveProxies as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveProxies as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"remove_proxies",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"remove_proxies",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"remove_proxy",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RemoveProxy>()),role:Some(std::any::type_name::<<super::interfaces::RemoveProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"remove_proxy",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::RemoveProxy>()),role:Some(std::any::type_name::<<super::interfaces::RemoveProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"remove_proxy",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"remove_proxy",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
 InterfaceMetadata{name:"remove_stake",feature:"staking",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RemoveStake>()),role:Some(std::any::type_name::<<super::interfaces::RemoveStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]
@@ -217,13 +217,13 @@ InterfaceMetadata{name:"set_auto_stake",feature:"staking",compiled:true,implemen
 #[cfg(not(feature="staking"))]
 InterfaceMetadata{name:"set_auto_stake",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "children")]
-InterfaceMetadata{name:"set_childkey_take",feature:"children",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetChildkeyTake>()),role:Some(std::any::type_name::<<super::interfaces::SetChildkeyTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChildkeyTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_childkey_take",feature:"children",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetChildkeyTake>()),role:Some(std::any::type_name::<<super::interfaces::SetChildkeyTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChildkeyTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="children"))]
-InterfaceMetadata{name:"set_childkey_take",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_childkey_take",feature:"children",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "children")]
-InterfaceMetadata{name:"set_children",feature:"children",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetChildren>()),role:Some(std::any::type_name::<<super::interfaces::SetChildren as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChildren as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_children",feature:"children",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetChildren>()),role:Some(std::any::type_name::<<super::interfaces::SetChildren as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChildren as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="children"))]
-InterfaceMetadata{name:"set_children",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_children",feature:"children",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
 InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetCrowdloanMaxContribution>()),role:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
@@ -265,9 +265,9 @@ InterfaceMetadata{name:"set_subnet_identity",feature:"identity",compiled:true,im
 #[cfg(not(feature="identity"))]
 InterfaceMetadata{name:"set_subnet_identity",feature:"identity",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "children")]
-InterfaceMetadata{name:"set_take",feature:"children",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetTake>()),role:Some(std::any::type_name::<<super::interfaces::SetTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_take",feature:"children",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetTake>()),role:Some(std::any::type_name::<<super::interfaces::SetTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="children"))]
-InterfaceMetadata{name:"set_take",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_take",feature:"children",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "weights")]
 InterfaceMetadata{name:"set_weights",feature:"weights",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetWeights>()),role:Some(std::any::type_name::<<super::interfaces::SetWeights as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetWeights as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="weights"))]

@@ -16,7 +16,8 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Source through `18679e3` implements 36 of 83 intents and 40 of 102 reads.
+Source through `c39fab3` implements 49 of 83 intents and 40 of 102 reads,
+with the corresponding hosted generated output verified and adopted.
 The newer crowdloan/root and coldkey intent ports have verified hosted generated
 dispatch and availability metadata, with combined validation still pending;
 see [m5-crowdloan-root.md](m5-crowdloan-root.md) and [m5-coldkey.md](m5-coldkey.md).
@@ -24,10 +25,9 @@ The CLI compiles all intent interfaces and advertises implemented operations.
 The generated read interfaces and dispatch for both M5 owner reads are adopted.
 No milestone exit or current all-job success is claimed.
 
-The next source batch adds thirteen proxy, children/take and association
-implementations and removes their authored pending declarations. Its generated
-integration and ordinary hosted validation are pending; the recorded committed
-count remains 36/83 until generated output is adopted. See
+The thirteen proxy, children/take and association implementations have verified
+generated dispatch, constructor normalization and availability metadata.
+Ordinary hosted validation remains pending. See
 [m5-proxy-children-association.md](m5-proxy-children-association.md).
 
 The binary routes generated transactions/queries, config/tools/explain,
@@ -44,7 +44,7 @@ shared multisig book/cache writers are committed. The importer authenticates
 all signing views, refuses serde private carrier injection and preserves nonce
 cache state for invalid, stale, expired or foreign preparations. Cache lookup
 authenticates exact canonical call bytes. The M5 fuzz target is source only;
-no fuzz campaign ran. The remaining 47 intents, other command families and
+no fuzz campaign ran. The remaining 34 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
@@ -54,7 +54,7 @@ other normal jobs. Nextest ran 1,850 tests: 1,832 passed, 18 failed and four
 were skipped. Doctests were not reached. The failures cover CLI schema/output
 fixtures, wallet accounting fixtures, stale pending-operation assertions and
 an unknown SS58 prefix in a coldkey fixture. Their source fixes and the next
-thirteen-intent batch are in review; this run does not validate that batch.
+thirteen-intent batch are committed; this run does not validate that batch.
 The bounded log digest and exact failure inventory are retained privately as
 `check-38697413448.json` in the recovery directory.
 
