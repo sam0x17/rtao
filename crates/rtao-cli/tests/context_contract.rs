@@ -1,7 +1,7 @@
 //! Shared mutation context through a real Client, SCALE metadata and executor.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use rtao::{
-    client::{Client, ClientConfig, Network, View},
+    client::{Client, ClientConfig, HeadProvider, Network, View},
     primitives::{AccountId, CryptoType},
     signer::{
         BoxFuture, Coldkey, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
