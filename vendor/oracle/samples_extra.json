@@ -1,0 +1,732 @@
+{
+  "schema": 1,
+  "intents": {
+    "set_weights": [
+      {
+        "id": "commit-reveal",
+        "args": {
+          "netuid": 1,
+          "uids": [
+            0,
+            1
+          ],
+          "weights": [
+            1,
+            1
+          ]
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "CommitRevealWeightsEnabled",
+            "value": true,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/intents/weights.py; encrypted branch. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "clipped",
+        "args": {
+          "netuid": 1,
+          "uids": [
+            0,
+            1,
+            2
+          ],
+          "weights": [
+            1,
+            2,
+            100
+          ]
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "MaxWeightsLimit",
+            "value": 32768,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "MinAllowedWeights",
+            "value": 2,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/intents/weights.py; clipping and warning. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "raw-null-mechanism",
+        "args": {
+          "netuid": 1,
+          "mechid": 1,
+          "uids": [
+            0,
+            1
+          ],
+          "weights": [
+            100,
+            200
+          ],
+          "raw_u16": true
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "SubnetEpochConsensus",
+            "value": "Null",
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "ValidatorPermit",
+            "value": [
+              true
+            ],
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "MechanismCountCurrent",
+            "value": 2,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "constants": [
+          {
+            "container": "Aura",
+            "name": "SlotDuration",
+            "value": 250
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/intents/weights.py; raw Null consensus, sole permit and nonzero mechanism. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "commit_weights": [
+      {
+        "id": "raw-null-mechanism",
+        "args": {
+          "netuid": 1,
+          "mechid": 1,
+          "uids": [
+            0,
+            1
+          ],
+          "weights": [
+            100,
+            200
+          ],
+          "raw_u16": true
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "SubnetEpochConsensus",
+            "value": "Null",
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "ValidatorPermit",
+            "value": [
+              true
+            ],
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "MechanismCountCurrent",
+            "value": 2,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "constants": [
+          {
+            "container": "Aura",
+            "name": "SlotDuration",
+            "value": 250
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/intents/weights.py; raw Null consensus, sole permit and nonzero mechanism. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "reveal_weights": [
+      {
+        "id": "ties-and-version",
+        "args": {
+          "netuid": 1,
+          "uids": [
+            0,
+            1,
+            2
+          ],
+          "weights": [
+            1,
+            0.000007629510948348211,
+            0.000022888532845044633
+          ],
+          "salt": [
+            0,
+            65535
+          ],
+          "version_key": 7
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/weights.py; normalized legacy reveal with salt and version. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "serve_axon": [
+      {
+        "id": "ipv6",
+        "args": {
+          "netuid": 1,
+          "ip": "2001:db8::5",
+          "port": 8091,
+          "version": 7,
+          "protocol": 4
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/serving.py; IPv6 integer and explicit fields. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "serve_axon_tls": [
+      {
+        "id": "ipv6",
+        "args": {
+          "netuid": 1,
+          "ip": "2001:db8::5",
+          "port": 8091,
+          "version": 7,
+          "protocol": 4,
+          "certificate": "0x000102ff"
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/serving.py; IPv6 integer and explicit fields. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "serve_prometheus": [
+      {
+        "id": "ipv6",
+        "args": {
+          "netuid": 1,
+          "ip": "2001:db8::5",
+          "port": 9090,
+          "version": 7
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/serving.py; IPv6 integer and explicit fields. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "transfer": [
+      {
+        "id": "allow-death",
+        "args": {
+          "dest_ss58": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+          "amount_tao": "0.000000001",
+          "keep_alive": false
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/transfer.py; call selection, unbounded spend and exact rao above 2^53. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "all",
+        "args": {
+          "dest_ss58": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+          "amount_tao": "all",
+          "keep_alive": false
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/transfer.py; call selection, unbounded spend and exact rao above 2^53. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "large-decimal",
+        "args": {
+          "dest_ss58": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+          "amount_tao": "9007199.254740993",
+          "keep_alive": true
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/transfer.py; call selection, unbounded spend and exact rao above 2^53. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "transfer_all": [
+      {
+        "id": "keep-alive",
+        "args": {
+          "dest_ss58": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+          "keep_alive": true
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/transfer.py; explicit keep_alive. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ]
+  },
+  "reads": {
+    "block_time": [
+      {
+        "id": "fast-slot",
+        "params": {},
+        "constants": [
+          {
+            "container": "Aura",
+            "name": "SlotDuration",
+            "value": 250
+          }
+        ],
+        "review": "Pinned v478 sdk/python/tests/unit/test_reads_table.py:145-148; fractional seconds. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "blocks_since_last_update": [
+      {
+        "id": "missing-index",
+        "params": {
+          "netuid": 1,
+          "uid": 4
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "LastUpdate",
+            "value": [
+              91,
+              105
+            ],
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; vector, signed-difference and absence branches. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "future-update",
+        "params": {
+          "netuid": 1,
+          "uid": 1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "LastUpdate",
+            "value": [
+              91,
+              105
+            ],
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; vector, signed-difference and absence branches. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "negative-index",
+        "params": {
+          "netuid": 1,
+          "uid": -1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "LastUpdate",
+            "value": [
+              91,
+              105
+            ],
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; vector, signed-difference and absence branches. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "empty-vector",
+        "params": {
+          "netuid": 1,
+          "uid": 0
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "LastUpdate",
+            "value": [],
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; vector, signed-difference and absence branches. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "timestamp": [
+      {
+        "id": "fractional-millisecond",
+        "params": {},
+        "storage": [
+          {
+            "container": "Timestamp",
+            "name": "Now",
+            "value": 1700000000123,
+            "params": []
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/client.py:332-335; binary64 division and datetime rounding. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "distant-rounding",
+        "params": {},
+        "storage": [
+          {
+            "container": "Timestamp",
+            "name": "Now",
+            "value": 253402300799999,
+            "params": []
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/client.py:332-335; binary64 division and datetime rounding. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "epoch_status": [
+      {
+        "id": "pending-fast",
+        "params": {
+          "netuid": 1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "Tempo",
+            "value": 7,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "LastEpochBlock",
+            "value": 85,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "BlocksSinceLastStep",
+            "value": 5,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "PendingEpochAt",
+            "value": 103,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "SubnetEpochIndex",
+            "value": 8,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "runtime": [
+          {
+            "container": "SubnetInfoRuntimeApi",
+            "name": "get_next_epoch_start_block",
+            "value": 104
+          }
+        ],
+        "constants": [
+          {
+            "container": "Aura",
+            "name": "SlotDuration",
+            "value": 250
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; pending, clamped and absent epoch times. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "overdue",
+        "params": {
+          "netuid": 1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "Tempo",
+            "value": 7,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "LastEpochBlock",
+            "value": 85,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "BlocksSinceLastStep",
+            "value": 5,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "PendingEpochAt",
+            "value": 0,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "SubnetEpochIndex",
+            "value": 8,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "runtime": [
+          {
+            "container": "SubnetInfoRuntimeApi",
+            "name": "get_next_epoch_start_block",
+            "value": 80
+          }
+        ],
+        "constants": [
+          {
+            "container": "Aura",
+            "name": "SlotDuration",
+            "value": 250
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; pending, clamped and absent epoch times. Inputs only; hosted upstream execution supplies expected results."
+      },
+      {
+        "id": "disabled",
+        "params": {
+          "netuid": 1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "Tempo",
+            "value": 7,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "LastEpochBlock",
+            "value": 85,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "BlocksSinceLastStep",
+            "value": 5,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "PendingEpochAt",
+            "value": 0,
+            "params": [
+              1
+            ]
+          },
+          {
+            "container": "SubtensorModule",
+            "name": "SubnetEpochIndex",
+            "value": 8,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "runtime": [
+          {
+            "container": "SubnetInfoRuntimeApi",
+            "name": "get_next_epoch_start_block",
+            "value": null
+          }
+        ],
+        "constants": [
+          {
+            "container": "Aura",
+            "name": "SlotDuration",
+            "value": 250
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/epochs.py:68-138; pending, clamped and absent epoch times. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "uid": [
+      {
+        "id": "unregistered",
+        "params": {
+          "netuid": 1,
+          "hotkey_ss58": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "Uids",
+            "value": null,
+            "params": [
+              1,
+              "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/neurons.py; missing key. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "commit_reveal_enabled": [
+      {
+        "id": "enabled",
+        "params": {
+          "netuid": 1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "CommitRevealWeightsEnabled",
+            "value": true,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/subnets.py:122-123; true in addition to default false. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "mechanism_count": [
+      {
+        "id": "sixteen",
+        "params": {
+          "netuid": 1
+        },
+        "storage": [
+          {
+            "container": "SubtensorModule",
+            "name": "MechanismCountCurrent",
+            "value": 16,
+            "params": [
+              1
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/subnets.py:262-263; count sixteen is valid. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "weights": [
+      {
+        "id": "sparse-duplicate-zero",
+        "params": {
+          "netuid": 1,
+          "mechid": 1
+        },
+        "storage_maps": [
+          {
+            "container": "SubtensorModule",
+            "name": "Weights",
+            "value": [
+              [
+                9,
+                [
+                  [
+                    1,
+                    1
+                  ],
+                  [
+                    1,
+                    2
+                  ],
+                  [
+                    2,
+                    3
+                  ]
+                ]
+              ],
+              [
+                2,
+                [
+                  [
+                    7,
+                    0
+                  ]
+                ]
+              ],
+              [
+                5,
+                []
+              ]
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/weights.py:32-46; full-row denominator, last duplicate, empty rows and sorting. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ],
+    "token_symbols": [
+      {
+        "id": "utf8-and-invalid",
+        "params": {},
+        "storage_maps": [
+          {
+            "container": "SubtensorModule",
+            "name": "TokenSymbol",
+            "value": [
+              [
+                1,
+                [
+                  207,
+                  132
+                ]
+              ],
+              [
+                2,
+                [
+                  255
+                ]
+              ],
+              [
+                3,
+                []
+              ]
+            ]
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/reads/subnets.py:217-226; UTF-8 and invalid byte hex fallback. Inputs only; hosted upstream execution supplies expected results."
+      }
+    ]
+  }
+}

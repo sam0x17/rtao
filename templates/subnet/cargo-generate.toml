@@ -1,0 +1,4 @@
+[template]
+cargo_generate_version = ">=0.23.12"
+include = ["README.md"]
+ignore = ["target", "Cargo.lock"]

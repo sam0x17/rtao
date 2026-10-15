@@ -1,0 +1,3 @@
+# Reviewed raw-only additions beyond Python's authoritative RAW_ONLY table.
+# Every future [[call]] needs pallet, name and a specific reviewed reason.
+schema = 1

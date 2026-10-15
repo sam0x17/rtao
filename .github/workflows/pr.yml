@@ -1,0 +1,164 @@
+name: pr-gates
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/pr-gates
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/pr-gates/build
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_TERM_COLOR: always
+
+# Full gates run here on disposable hosted runners. Local full gates are not
+# required; inspect xtask/src/gates.rs without compiling to see the commands.
+# Python and live Docker/hardware targets are excluded by the ci test profile.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # parity's shrink-only register compares the event base commit
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: clippy,rustfmt
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: |
+            ~/.cargo/git
+            target/pr-gates/ci/tools
+      - name: Fetch locked dependencies for offline source and graph checks
+        run: cargo fetch --locked
+      - run: cargo run --locked -p xtask -- gates --job check
+        # M0: imported hashes, pin/lock, fmt, Clippy, dependencies, surface,
+        # staged probes, upstream lints, extraction, all parity layers, nextest,
+        # and doctests. Pending behavior remains explicit until its port lands.
+
+  no-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: ~/.cargo/git
+      - run: cargo run --locked -p xtask -- gates --job no-host
+
+  msrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      # Install the MSRV only on this disposable hosted runner.
+      - run: rustup toolchain install 1.89 --profile minimal --no-self-update
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: ~/.cargo/git
+      - run: cargo run --locked -p xtask -- gates --job msrv
+
+  features:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: |
+            ~/.cargo/git
+            target/pr-gates/ci/tools
+      - name: Fetch locked dependencies for offline feature graph checks
+        run: cargo fetch --locked
+      - run: cargo run --locked -p xtask -- gates --job features
+        # Each facade/intent feature, btauth/signer powersets, all role
+        # profiles and no features. Real examples join at M2-18/M3-06/M4-17.
+
+  supply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: |
+            ~/.cargo/git
+            target/pr-gates/ci/tools
+      - name: Fetch locked dependencies for offline supply graph checks
+        run: |
+          cargo fetch --locked
+          cargo fetch --locked --manifest-path fuzz/Cargo.toml
+      - run: cargo run --locked -p xtask -- gates --job supply
+        # Pinned cargo-deny (all features, all checks) and cargo-audit 0.22.2.
+      - name: Retain raw supply audit and graph evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: supply-evidence
+          path: target/pr-gates/ci/supply-*
+          if-no-files-found: warn
+          retention-days: 14
+
+  semver:
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: |
+            ~/.cargo/git
+            target/pr-gates/ci/tools
+      - run: cargo run --locked -p xtask -- gates --job semver
+        # No tool installation/comparison before the first rtao-v* tag.
+        # Pre-1.0 comparison failures warn; comparisons from 1.0 block.

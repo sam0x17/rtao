@@ -1,0 +1,247 @@
+name: release
+on:
+  push:
+    tags: ["rtao-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Exact existing release tag
+        required: true
+        type: string
+      mode:
+        description: Prepare hosted artifacts, verify a complete draft, or publish the verified draft
+        required: true
+        default: dry-run
+        type: choice
+        options: [prepare, dry-run, publish]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/release
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/release/build
+  TMPDIR: ${{ github.workspace }}/target/release/tmp
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  linux:
+    if: github.event_name == 'push' || inputs.mode == 'prepare'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
+    # Ubuntu 22.04 amd64 manifest. Hosted ARM coverage is cross/QEMU, never native.
+    container:
+      image: ubuntu@sha256:08ea48a03a3e78ebc7cd526e6a275053223aadd88bfc09cc49b06d5281525fde
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Install container prerequisites
+        shell: bash
+        run: |
+          # Ubuntu's primary archive has amd64; ARM target libraries live on
+          # ports. Keep both repositories on jammy's glibc 2.35 series.
+          dpkg --add-architecture arm64
+          sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          printf '%s\n' \
+            'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe' \
+            'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe' \
+            'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main universe' \
+            > /etc/apt/sources.list.d/rtao-arm64.list
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates curl git build-essential pkg-config libssl-dev clang libclang-dev jq \
+            libudev-dev libusb-1.0-0-dev libssl-dev:arm64 libudev-dev:arm64 libusb-1.0-0-dev:arm64 \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
+          mkdir -p "$TMPDIR"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Recreate task scratch after checkout cleanup
+        shell: bash
+        run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          targets: ${{ matrix.target }}
+          cache: false
+          build-warnings: ""
+      - name: Build and verify the Linux CLI
+        shell: bash
+        env:
+          RTAO_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RTAO_RELEASE_TARGET: ${{ matrix.target }}
+        run: |
+          nextest_version=$(sed -n 's/^cargo-nextest = "\([^"]*\)"/\1/p' ci/tool-versions.toml)
+          test -n "$nextest_version"
+          cargo install cargo-nextest --version "$nextest_version" --locked --root "$RTAO_TEMP_ROOT/tools"
+          export PATH="$RTAO_TEMP_ROOT/tools/bin:$PATH"
+          bash ci/release/linux-build.sh "$RTAO_RELEASE_TAG" "$RTAO_RELEASE_TARGET"
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        id: provenance
+        with:
+          subject-path: ${{ env.RTAO_TEMP_ROOT }}/dist/*
+      - name: Retain actual GitHub build provenance
+        shell: bash
+        env:
+          RTAO_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          RTAO_RELEASE_TARGET: ${{ matrix.target }}
+        run: cp "$RTAO_BUNDLE" "$RTAO_TEMP_ROOT/dist/linux-$RTAO_RELEASE_TARGET.intoto.jsonl"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ inputs.tag || github.ref_name }}-${{ matrix.target }}
+          path: ${{ env.RTAO_TEMP_ROOT }}/dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  docs:
+    if: github.event_name == 'push' || inputs.mode == 'prepare'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Create task scratch directory
+        run: |
+          mkdir -p "$TMPDIR"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev libudev-dev libusb-1.0-0-dev
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - name: Install digest-verified mdBook
+        run: |
+          source ci/release/pins.env
+          mkdir -p "$RTAO_TEMP_ROOT/tools"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            "https://github.com/rust-lang/mdBook/releases/download/v$RTAO_MDBOOK_VERSION/mdbook-v$RTAO_MDBOOK_VERSION-x86_64-unknown-linux-gnu.tar.gz" \
+            -o "$RTAO_TEMP_ROOT/tools/mdbook.tar.gz"
+          printf '%s  %s\n' "$RTAO_MDBOOK_LINUX_SHA256" "$RTAO_TEMP_ROOT/tools/mdbook.tar.gz" | sha256sum --check --strict
+          tar -C "$RTAO_TEMP_ROOT/tools" -xzf "$RTAO_TEMP_ROOT/tools/mdbook.tar.gz" mdbook
+          echo "$RTAO_TEMP_ROOT/tools" >> "$GITHUB_PATH"
+      - name: Build compatibility, release notes, rustdoc, book and pinned data licenses
+        env:
+          RTAO_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: bash ci/release/docs-build.sh "$RTAO_RELEASE_TAG"
+      - name: Verify all six source notices before attestation
+        run: |
+          source ci/release/license.sh
+          rtao_verify_release_licenses "$RTAO_TEMP_ROOT/dist"
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        id: provenance
+        with:
+          subject-path: ${{ env.RTAO_TEMP_ROOT }}/dist/*
+      - name: Retain actual GitHub docs provenance
+        env:
+          RTAO_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+        run: cp "$RTAO_BUNDLE" "$RTAO_TEMP_ROOT/dist/docs.intoto.jsonl"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ inputs.tag || github.ref_name }}-docs
+          path: ${{ env.RTAO_TEMP_ROOT }}/dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  local-assembly:
+    if: github.event_name == 'push' || inputs.mode == 'prepare'
+    needs: [linux, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record the remaining local release step
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
+          Linux and docs builds completed with GitHub provenance. No release is created yet.
+
+          From the same clean tag on Mac Studio, download these run artifacts,
+          run `ci/release/macos-build.sh`, authenticate the local build record
+          with the approved Ed25519 release key, and run `ci/release/complete-draft.sh`.
+          That command verifies all four targets and their provenance before creating
+          the complete draft. Dispatch this workflow in `dry-run` mode to verify
+          the draft, then `publish` mode to publish it.
+          SUMMARY
+
+  verify-draft:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode != 'prepare'
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Create task scratch directory
+        run: mkdir -p "$TMPDIR" "$RTAO_TEMP_ROOT/dist"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - name: Download only an existing complete draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RTAO_RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          test "$(gh release view "$RTAO_RELEASE_TAG" --repo sam0x17/rtao --json isDraft --jq .isDraft)" = true
+          gh release download "$RTAO_RELEASE_TAG" --repo sam0x17/rtao --dir "$RTAO_TEMP_ROOT/dist"
+      - name: Verify every target, all six notices, hash and provenance
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RTAO_RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          cargo run --locked -p xtask -- release verify --tag "$RTAO_RELEASE_TAG" --dir "$RTAO_TEMP_ROOT/dist"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: verified-release-${{ inputs.tag }}
+          path: ${{ env.RTAO_TEMP_ROOT }}/dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    needs: verify-draft
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Create task scratch directory
+        run: mkdir -p "$TMPDIR" "$RTAO_TEMP_ROOT/dist"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      # Re-download and verify immediately before publication; do not trust an
+      # earlier job if an operator changed the draft's asset set in between.
+      - name: Verify current draft and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RTAO_RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          test "$(gh release view "$RTAO_RELEASE_TAG" --repo sam0x17/rtao --json isDraft --jq .isDraft)" = true
+          gh release download "$RTAO_RELEASE_TAG" --repo sam0x17/rtao --dir "$RTAO_TEMP_ROOT/dist"
+          cargo run --locked -p xtask -- release verify --tag "$RTAO_RELEASE_TAG" --dir "$RTAO_TEMP_ROOT/dist"
+          gh release edit "$RTAO_RELEASE_TAG" --repo sam0x17/rtao --draft=false

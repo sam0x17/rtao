@@ -1,0 +1,109 @@
+name: metadata-drift
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        type: boolean
+        default: true
+        description: "Run acquisition, regeneration and checks without pushing or opening a PR"
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: metadata-drift
+  cancel-in-progress: false
+env:
+  RTAO_TEMP_ROOT: ${{ github.workspace }}/target/metadata-drift
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target/metadata-drift/build
+  TMPDIR: ${{ github.workspace }}/target/metadata-drift/tmp
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  RTAO_DRIFT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}
+jobs:
+  drift:
+    if: github.event_name == 'workflow_dispatch' || vars.RTAO_UPKEEP == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        network: [finney, testnet, devnet, localnet-main]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/metadata-drift/build
+          cache-directories: ~/.cargo/git
+      - name: Start the actual pinned main localnet
+        if: matrix.network == 'localnet-main'
+        env:
+          RTAO_DRIFT_CONTAINER: rtao-drift-main
+        run: |
+          digest=$(sed -n 's/^main = { tag = "main", digest = "\([^"]*\)" }.*/\1/p' upstream.toml)
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          image="ghcr.io/raofoundation/subtensor-localnet@$digest"
+          docker pull "$image"
+          docker run --detach --name "$RTAO_DRIFT_CONTAINER" --publish 127.0.0.1:9944:9944 "$image" False
+          for attempt in $(seq 1 90); do
+            if curl --silent --fail --max-time 3 --header 'Content-Type: application/json' --data '{"id":1,"jsonrpc":"2.0","method":"chain_getFinalizedHead","params":[]}' http://127.0.0.1:9944 | jq -e '.result | type == "string"' >/dev/null; then
+              break
+            fi
+            [[ "$attempt" -lt 90 ]]
+            sleep 2
+          done
+      - name: Fixture classification and index checks
+        run: cargo test --locked -p xtask drift::tests
+      - name: Install the independent metadata diff tool
+        run: |
+          cargo install subxt-cli --version 0.51.1 --locked --root "$RTAO_TEMP_ROOT/tools"
+          echo "$RTAO_TEMP_ROOT/tools/bin" >> "$GITHUB_PATH"
+      - name: Compare finalized runtime with indexed identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RTAO_DRIFT_CONTAINER: rtao-drift-main
+        run: ci/metadata-drift.sh '${{ matrix.network }}' scan
+      - name: Regenerate and run offline checks for changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RTAO_DRIFT_CONTAINER: rtao-drift-main
+        run: ci/metadata-drift.sh '${{ matrix.network }}' apply
+      - name: Create publishing token after all checks pass
+        id: app
+        if: env.RTAO_DRIFT_DRY_RUN == 'false' && hashFiles(format('target/metadata-drift/drift/{0}/changed', matrix.network)) != ''
+        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        with:
+          app-id: ${{ vars.RTAO_BOT_APP_ID }}
+          private-key: ${{ secrets.RTAO_BOT_PRIVATE_KEY }}
+      - name: Publish upkeep changes
+        if: steps.app.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          gh auth setup-git
+          ci/metadata-drift.sh '${{ matrix.network }}' publish
+      - name: Collect localnet logs
+        if: always() && matrix.network == 'localnet-main'
+        run: |
+          mkdir -p "$RTAO_TEMP_ROOT/drift/localnet-main"
+          docker logs rtao-drift-main > "$RTAO_TEMP_ROOT/drift/localnet-main/localnet.log" 2>&1 || true
+      - name: Retain immutable acquisition and classification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: metadata-drift-${{ matrix.network }}
+          path: target/metadata-drift/drift/${{ matrix.network }}
+          if-no-files-found: error
+      - name: Stop disposable localnet
+        if: always() && matrix.network == 'localnet-main'
+        run: |
+          docker rm --force rtao-drift-main

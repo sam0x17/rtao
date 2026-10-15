@@ -1,0 +1,9 @@
+[book]
+title = "rtao"
+authors = ["sam0x17"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/sam0x17/rtao"
+edit-url-template = "https://github.com/sam0x17/rtao/edit/main/book/{path}"

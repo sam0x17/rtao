@@ -1,0 +1,16 @@
+[workspace]
+git_only = true
+publish = false
+semver_check = true
+git_release_enable = false
+git_tag_enable = false
+git_tag_name = "rtao-v{{ version }}"
+release_always = false
+changelog_update = false
+
+[[package]]
+name = "rtao"
+git_tag_enable = true
+git_tag_name = "rtao-v{{ version }}"
+changelog_update = true
+changelog_path = "CHANGELOG.md"

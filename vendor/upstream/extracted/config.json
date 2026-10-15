@@ -1,0 +1,228 @@
+{
+  "environment": {
+    "ADDRESSES_ENV_VAR": {
+      "default": "DEFAULT_ADDRESSES_PATH",
+      "empty_is_unset": true,
+      "end_line": 212,
+      "line": 212,
+      "value": "BTCLI_ADDRESSES_PATH"
+    },
+    "CONFIG_ENV_VAR": {
+      "default": "DEFAULT_CONFIG_PATH",
+      "empty_is_unset": true,
+      "end_line": 59,
+      "line": 59,
+      "value": "BTCLI_CONFIG"
+    },
+    "MULTISIGS_ENV_VAR": {
+      "default": "DEFAULT_MULTISIGS_PATH",
+      "empty_is_unset": true,
+      "end_line": 274,
+      "line": 274,
+      "value": "BTCLI_MULTISIGS_PATH"
+    },
+    "MULTISIG_CACHE_ENV_VAR": {
+      "default": "DEFAULT_MULTISIG_CACHE_PATH",
+      "empty_is_unset": true,
+      "end_line": 327,
+      "line": 327,
+      "value": "BTCLI_MULTISIG_CACHE"
+    },
+    "PROXIES_ENV_VAR": {
+      "default": "DEFAULT_PROXIES_PATH",
+      "empty_is_unset": true,
+      "end_line": 139,
+      "line": 139,
+      "value": "BTCLI_PROXIES_PATH"
+    },
+    "SUBNET_NAMES_ENV_VAR": {
+      "default": "DEFAULT_SUBNET_NAMES_PATH",
+      "empty_is_unset": true,
+      "end_line": 355,
+      "line": 355,
+      "value": "BTCLI_SUBNET_NAMES_CACHE"
+    },
+    "TOKEN_SYMBOLS_ENV_VAR": {
+      "default": "DEFAULT_TOKEN_SYMBOLS_PATH",
+      "empty_is_unset": true,
+      "end_line": 416,
+      "line": 416,
+      "value": "BTCLI_TOKEN_SYMBOLS_CACHE"
+    }
+  },
+  "format": 1,
+  "provenance": {
+    "blob": "2958b5d1b8036388354204f0a718f809756cf23a",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "sdk/python/bittensor/config.py",
+    "tag": "v478"
+  },
+  "values": {
+    "DEFAULT_ADDRESSES_PATH": {
+      "end_line": 14,
+      "line": 14,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli_addresses.json"
+        ]
+      }
+    },
+    "DEFAULT_CONFIG_PATH": {
+      "end_line": 12,
+      "line": 12,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli.json"
+        ]
+      }
+    },
+    "DEFAULT_MULTISIGS_PATH": {
+      "end_line": 15,
+      "line": 15,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli_multisigs.json"
+        ]
+      }
+    },
+    "DEFAULT_MULTISIG_CACHE_PATH": {
+      "end_line": 16,
+      "line": 16,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli_multisig_cache.json"
+        ]
+      }
+    },
+    "DEFAULT_PROXIES_PATH": {
+      "end_line": 13,
+      "line": 13,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli_proxies.json"
+        ]
+      }
+    },
+    "DEFAULT_SUBNET_NAMES_PATH": {
+      "end_line": 17,
+      "line": 17,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli_subnet_names.json"
+        ]
+      }
+    },
+    "DEFAULT_TOKEN_SYMBOLS_PATH": {
+      "end_line": 18,
+      "line": 18,
+      "value": {
+        "home_relative": [
+          ".bittensor",
+          "btcli_token_symbols.json"
+        ]
+      }
+    },
+    "SETTABLE": {
+      "end_line": 55,
+      "line": 30,
+      "value": {
+        "dict": [
+          [
+            "network",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "wallet",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "wallet_hotkey",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "wallet_path",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "json",
+            {
+              "type": "bool"
+            }
+          ],
+          [
+            "quiet",
+            {
+              "type": "bool"
+            }
+          ],
+          [
+            "signer_address",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "extension_browser",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "fallback_endpoints",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "archive_endpoints",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "retry_forever",
+            {
+              "type": "bool"
+            }
+          ],
+          [
+            "proxy_for",
+            {
+              "type": "str"
+            }
+          ],
+          [
+            "mev_shield",
+            {
+              "type": "bool"
+            }
+          ]
+        ]
+      }
+    },
+    "SUBNET_NAMES_TTL_SECONDS": {
+      "end_line": 22,
+      "line": 22,
+      "value": 86400
+    },
+    "TOKEN_SYMBOLS_TTL_SECONDS": {
+      "end_line": 27,
+      "line": 27,
+      "value": 604800
+    }
+  }
+}

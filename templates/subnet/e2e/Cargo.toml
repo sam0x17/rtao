@@ -1,0 +1,21 @@
+[package]
+name = "subnet-e2e"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# Scenario belongs only to the integration target, never either neuron image.
+[dev-dependencies]
+rtao = { workspace = true, features = ["validator", "miner"] }
+rtao-testkit.workspace = true
+rtao-runtime.workspace = true
+anyhow.workspace = true
+futures.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[[test]]
+name = "localnet"
+harness = false

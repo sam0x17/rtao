@@ -1,0 +1,89 @@
+[package]
+name = "rtao-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+libfuzzer-sys = "0.4"
+rtao-core = { path = "../crates/rtao-core", default-features = false }
+rtao-client = { path = "../crates/rtao-client", default-features = false }
+rtao-metagraph = { path = "../crates/rtao-metagraph", default-features = false }
+rtao-runtime = { path = "../crates/rtao-runtime", default-features = false }
+rtao-rpc = { path = "../crates/rtao-rpc", default-features = false, features = ["fuzzing"] }
+rtao-btauth = { path = "../crates/rtao-btauth", default-features = false, features = ["server"] }
+rtao-primitives = { path = "../crates/rtao-primitives", default-features = false }
+rtao-signer = { path = "../crates/rtao-signer", default-features = false }
+http = "1.4"
+futures = "0.3"
+hex = "0.4"
+axum = { version = "0.8", default-features = false, features = ["json"] }
+tower = { version = "0.5", features = ["util"] }
+
+[[bin]]
+name = "metagraph_view"
+path = "fuzz_targets/metagraph_view.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "json_rpc_frame"
+path = "fuzz_targets/json_rpc_frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "btauth_headers"
+path = "fuzz_targets/btauth_headers.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "btauth_verify"
+path = "fuzz_targets/btauth_verify.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "btauth_server"
+path = "fuzz_targets/btauth_server.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "keyfile_detection"
+path = "fuzz_targets/keyfile_detection.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "keyfile_json"
+path = "fuzz_targets/keyfile_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "event_splitting"
+path = "fuzz_targets/event_splitting.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this standalone workspace's crypto dependency on the verified core pin.
+[patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }

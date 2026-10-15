@@ -10,3 +10,64 @@ description = "Rust SDK and operator framework for Bittensor subnets"
 
 [lints]
 workspace = true
+
+[features]
+default = ["client","reads","tx"]
+client = ["dep:rtao-client"]
+reads = ["client","dep:rtao-reads"]
+tx = ["client","dep:rtao-tx","dep:rtao-signer"]
+intents = ["tx","reads","dep:rtao-intents"]
+metagraph = ["reads","dep:rtao-metagraph"]
+wallet = ["dep:rtao-wallet"]
+wallet-encrypted = ["wallet","rtao-wallet/encrypted"]
+btauth = ["dep:rtao-btauth"]
+btauth-server = ["btauth","rtao-btauth/server","rtao-btauth/metagraph-policy","metagraph"]
+btauth-client = ["btauth","rtao-btauth/client"]
+redis = ["rtao-btauth/redis"]
+neuron = ["intents","metagraph","wallet","btauth-client","dep:rtao-neuron"]
+validator = ["neuron","rtao-intents/weights","rtao-intents/serving","rtao-neuron/validator"]
+miner = ["neuron","btauth-server","rtao-intents/serving","rtao-neuron/miner"]
+owner = ["neuron","wallet-encrypted","rtao-neuron/owner","rtao-intents/registration","rtao-intents/governance","rtao-intents/hyperparameters","rtao-intents/identity","rtao-intents/proxy","rtao-intents/multisig","rtao-intents/collateral"]
+intents-all = ["intents","rtao-intents/all"]
+pow = ["intents","rtao-intents/pow"]
+pow-gpu = ["pow","rtao-intents/pow-gpu"]
+ledger = ["rtao-signer/ledger"]
+vault = ["rtao-signer/vault"]
+extension = ["rtao-signer/extension"]
+keychain = ["rtao-wallet/keychain"]
+evm = ["dep:rtao-evm"]
+blocking = ["intents-all","metagraph","wallet","rtao-client/blocking"]
+prometheus = ["rtao-neuron?/prometheus","rtao-rpc/metrics"]
+subxt = ["rtao-client/subxt"]
+full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus"]
+
+[dependencies]
+rtao-core.workspace = true
+rtao-primitives.workspace = true
+rtao-rpc.workspace = true
+rtao-client = { workspace = true, optional = true }
+rtao-reads = { workspace = true, optional = true }
+rtao-tx = { workspace = true, optional = true }
+rtao-signer = { workspace = true, optional = true }
+rtao-intents = { workspace = true, optional = true }
+rtao-metagraph = { workspace = true, optional = true }
+rtao-wallet = { workspace = true, optional = true }
+rtao-btauth = { workspace = true, optional = true }
+rtao-neuron = { workspace = true, optional = true }
+rtao-evm = { workspace = true, optional = true }
+
+[dev-dependencies]
+anyhow.workspace = true
+axum.workspace = true
+clap.workspace = true
+tokio.workspace = true
+http.workspace = true
+serde_json.workspace = true
+
+[[example]]
+name = "validator"
+required-features = ["validator"]
+
+[[example]]
+name = "miner"
+required-features = ["miner"]

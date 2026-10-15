@@ -1,0 +1,498 @@
+"""The `btcli tx` command group — generated from the intent registry.
+
+Every registered intent becomes a subcommand whose options are derived from the
+intent's dataclass fields (name, type, required-ness). There is no hand-written
+command per operation: adding an intent to the SDK adds its CLI command for free,
+and the two can't drift. The command body builds the intent from the parsed
+options and runs it through the plan/confirm/execute choke point.
+
+This is the CLI analogue of the tool manifest — both are projections of the same
+single source of truth (the intents), one for humans, one for agents.
+"""
+
+from __future__ import annotations
+
+import functools
+import inspect
+import json
+from dataclasses import MISSING, fields
+from decimal import Decimal, InvalidOperation
+from typing import Any, Optional
+
+import typer
+
+from ..intents import REGISTRY
+from ..intents.base import Intent, is_money
+from ..settings import tx_docs_url
+from . import globals as g
+from .call_names import resolve_intent_args
+from .context import AppContext, address_cli_name, ctx_of, ss58_param_help
+from .intent_prompts import apply_intent_prompt_policy, validate_intent_prompt_policy
+from .prompt import PromptSpec, fill_missing, interactive, signer_specs
+from .stake_picker import required_address_spec
+
+# Field annotation (as a string, under PEP 563) -> the Python type Typer should
+# parse the option as. List/complex fields are taken as strings and parsed in the
+# command body (see `_coerce`).
+_SCALAR_TYPES = {"str": str, "int": int, "float": float, "bool": bool}
+
+
+def _base_annotation(annotation: str) -> str:
+    a = annotation.strip()
+    if a.startswith("Optional[") and a.endswith("]"):
+        a = a[len("Optional[") : -1].strip()
+    if a.endswith("| None"):
+        a = a[: -len("| None")].strip()
+    return a
+
+
+def _is_list(annotation: str) -> bool:
+    return _base_annotation(annotation) in ("list",) or _base_annotation(annotation).startswith(
+        "list["
+    )
+
+
+def _is_dict(annotation: str) -> bool:
+    return _base_annotation(annotation) == "dict" or _base_annotation(annotation).startswith(
+        "dict["
+    )
+
+
+def _option_type(annotation: str) -> type:
+    """Typer parses scalars natively; everything else (lists, dicts) comes in as a string."""
+    return _SCALAR_TYPES.get(_base_annotation(annotation), str)
+
+
+def _coerce(field_annotation: str, value: Any) -> Any:
+    """Parse a raw CLI value into what the intent field expects.
+
+    List fields arrive as strings: JSON when they start with '[' (needed for
+    lists of pairs like set_children), otherwise comma-separated scalars. Dict
+    fields (e.g. a multisig inner call) arrive as a JSON string.
+    """
+    if value is None:
+        return value
+    if _is_dict(field_annotation):
+        return json.loads(value) if isinstance(value, str) else value
+    if not _is_list(field_annotation):
+        return value
+    text = str(value).strip()
+    if text.startswith("["):
+        return json.loads(text)
+    inner = _base_annotation(field_annotation)
+    cast = int if inner == "list[int]" else float if inner == "list[float]" else str
+    return [cast(part.strip()) for part in text.split(",") if part.strip()]
+
+
+_TRUE = {"y", "yes", "true", "1"}
+_FALSE = {"n", "no", "false", "0"}
+
+
+def resolve_all_amount(
+    app_ctx: AppContext,
+    amount: Optional[str],
+    all_amount: bool,
+    *,
+    flag: str,
+) -> str:
+    """Resolve ``--all`` vs an explicit amount for hand-written money commands."""
+    if all_amount:
+        if amount is not None and str(amount).strip().lower() not in ("", "all"):
+            app_ctx.output.error(f"pass `{flag}` or `--all`, not both")
+            raise typer.Exit(2)
+        return "all"
+    if amount is None:
+        if interactive(app_ctx):
+            prompted: dict[str, Any] = {"amount": None}
+            fill_missing(
+                app_ctx,
+                [
+                    PromptSpec(
+                        field="amount",
+                        flag=flag,
+                        help="Amount, or `all` for the entire available amount.",
+                        parse=lambda _ctx, raw: _parse_money(raw, True),
+                        placeholder="number or all",
+                    )
+                ],
+                prompted,
+            )
+            return str(prompted["amount"])
+        app_ctx.output.error(
+            f"missing required option: `{flag}` or `--all`",
+            help="pass an amount, pass `--all`, or run on a terminal to be prompted",
+        )
+        raise typer.Exit(2)
+    try:
+        return _parse_money(amount, True)
+    except ValueError as error:
+        app_ctx.output.error(f"invalid value for `{flag}`: {error}")
+        raise typer.Exit(2)
+
+
+def _parse_money(raw: Any, allow_all: bool) -> str:
+    """Validate a money value, returning it as a string so the amount stays exact
+    (the intent normalizes it to rao; a float here would lose precision)."""
+    text = str(raw).strip()
+    if text.lower() == "all":
+        if allow_all:
+            return "all"
+        raise ValueError(f"expected a number, got {raw!r}")
+    try:
+        value = Decimal(text)
+    except InvalidOperation:
+        expected = "a number or 'all'" if allow_all else "a number"
+        raise ValueError(f"expected {expected}, got {raw!r}")
+    if not value.is_finite() or value < 0:
+        raise ValueError(f"expected a finite non-negative number, got {raw!r}")
+    return text
+
+
+def _parse_prompted(
+    field_name: str, annotation: str, allow_all: bool, app_ctx: AppContext, raw: str
+) -> Any:
+    """Validate one prompted answer; raise ValueError to re-prompt.
+
+    Address fields resolve through the same path as the flag form (ss58,
+    address-book name, or local wallet name). Lists/dicts are validated now but
+    stored raw — the command body re-parses them via ``_coerce`` like any flag.
+    """
+    if field_name.endswith("_ss58"):
+        return app_ctx.resolve_address(field_name, raw)
+    if is_money(annotation):
+        return _parse_money(raw, allow_all)
+    base = _base_annotation(annotation)
+    if base == "bool":
+        lowered = raw.lower()
+        if lowered in _TRUE:
+            return True
+        if lowered in _FALSE:
+            return False
+        raise ValueError(f"expected y or n, got {raw!r}")
+    if base == "int":
+        try:
+            return int(raw)
+        except ValueError:
+            raise ValueError(f"expected an integer, got {raw!r}")
+    if base == "float":
+        try:
+            return float(raw)
+        except ValueError:
+            raise ValueError(f"expected a number, got {raw!r}")
+    if _is_list(annotation) or _is_dict(annotation):
+        _coerce(annotation, raw)
+        return raw
+    return raw
+
+
+def _placeholder(annotation: str) -> Optional[str]:
+    """Short input-shape cue shown next to the prompt label."""
+    base = _base_annotation(annotation)
+    if is_money(annotation):
+        return "number"
+    if base == "bool":
+        return "y/n"
+    if _is_dict(annotation):
+        return "JSON"
+    if _is_list(annotation):
+        return "comma-separated"
+    return None
+
+
+def _list_note(annotation: str) -> Optional[str]:
+    """Input-shape cue for typed list options (e.g. ``list[int]`` netuids).
+
+    Bare ``list`` fields (pairs like set_children) document their own JSON
+    shape in the field help, so they carry no generic note.
+    """
+    if _base_annotation(annotation).startswith("list["):
+        return "Comma-separated values (e.g. 1,2) or a JSON list."
+    return None
+
+
+def _unit_help(field_name: str) -> Optional[str]:
+    """Spell out the unit for money-typed intent fields (``*_tao``/``*_alpha``/``*_rao``)."""
+    if field_name.endswith("_tao"):
+        return "Amount in TAO."
+    if field_name.endswith("_alpha"):
+        return (
+            "Amount in the subnet's alpha "
+            "(the origin subnet for cross-subnet moves; TAO if that netuid is 0)."
+        )
+    if field_name.endswith("_rao"):
+        return "Amount in rao (1 TAO = 1e9 rao)."
+    return None
+
+
+def _privilege_note(intent_cls: type[Intent]) -> Optional[str]:
+    """The "Requires:" doc line for privileged intents (root / subnet owner)."""
+    if intent_cls.origin == "root":
+        return (
+            "Requires: the chain sudo key. The call is submitted wrapped in "
+            "Sudo.sudo; if root is a multisig, use the multisig flow "
+            "(btcli multisig) to dispatch the built call."
+        )
+    if intent_cls.origin == "subnet_owner":
+        return "Requires: the subnet's owner coldkey."
+    return None
+
+
+def _command_doc(intent_cls: type[Intent]) -> str:
+    """The intent's docstring plus generated privilege / verify / docs footers,
+    so the required key, the post-submission check, and the docs page (which
+    carries the on-chain implementation with source links) are visible on
+    --help."""
+    parts = [intent_cls.describe()]
+    note = _privilege_note(intent_cls)
+    if note:
+        parts.append(note)
+    if intent_cls.verify:
+        parts.append(f"Verify afterwards: btcli query {intent_cls.verify.replace('_', '-')}")
+    parts.append(f"Docs: {tx_docs_url(intent_cls.op)}")
+    return "\n\n".join(part for part in parts if part)
+
+
+def _make_command(intent_cls: type[Intent]):
+    """Build a Typer command callback whose signature mirrors the intent's fields."""
+    specs = list(fields(intent_cls))
+    intent_names = {f.name for f in specs}
+    # Intents with a single amount field also take a bare --amount, so the
+    # unit-suffixed canonical flag never has to be guessed on the command line.
+    amount_fields = intent_names & {"amount_alpha", "amount_tao"}
+    amount_alias = next(iter(amount_fields)) if len(amount_fields) == 1 else None
+    # Origin/destination ops are usually same-subnet; --netuid fills both so
+    # `--origin-netuid 51 --dest-netuid 51` collapses to `--netuid 51`.
+    # Ops whose point is that the netuids differ stay excluded.
+    shared_netuid = (
+        {"origin_netuid", "dest_netuid"} <= intent_names
+        and "netuid" not in intent_names
+        and intent_cls.op not in {"swap_stake", "move_swap_stake"}
+    )
+
+    def command(ctx: typer.Context, **kwargs: Any) -> None:
+        g.apply(ctx, kwargs, skip=intent_names)
+        app_ctx = ctx_of(ctx)
+        if kwargs.pop("all_amount", False):
+            for name in intent_cls.all_amount_fields:
+                current = kwargs.get(name)
+                if current is not None and str(current).strip().lower() not in ("", "all"):
+                    flag = "--" + name.replace("_", "-")
+                    app_ctx.output.error(f"pass `{flag}` or `--all`, not both")
+                    raise typer.Exit(2)
+                kwargs[name] = "all"
+        if shared_netuid:
+            netuid = kwargs.pop("netuid", None)
+            if netuid is not None:
+                for netuid_field in ("origin_netuid", "dest_netuid"):
+                    if kwargs.get(netuid_field) is None:
+                        kwargs[netuid_field] = netuid
+        missing = [spec for spec in prompt_specs if kwargs.get(spec.field) is None]
+        missing = apply_intent_prompt_policy(app_ctx, intent_cls.op, missing, kwargs)
+        # The signing wallet is confirmed too (Enter accepts the configured
+        # default); --yes and the extension signer keep the flag-only flow.
+        if not app_ctx.assume_yes and not app_ctx.uses_extension_signer():
+            missing = (
+                signer_specs(
+                    app_ctx,
+                    intent_cls.signer,
+                    wallet_given=app_ctx.wallet_given,
+                    hotkey_given=app_ctx.hotkey_given,
+                )
+                + missing
+            )
+        if missing:
+            fill_missing(app_ctx, missing, kwargs)
+        validate_intent_prompt_policy(app_ctx, intent_cls.op, kwargs)
+        for f in specs:
+            if f.name.endswith("_ss58"):
+                kwargs[f.name] = app_ctx.resolve_address(f.name, kwargs.get(f.name))
+            elif is_money(str(f.type)) and kwargs.get(f.name) is not None:
+                # Money options parse as strings so the amount stays exact (and
+                # the flag form accepts `all` where allowed); bad values are
+                # rejected here.
+                try:
+                    kwargs[f.name] = _parse_money(
+                        kwargs[f.name], f.name in intent_cls.all_amount_fields
+                    )
+                except ValueError as error:
+                    app_ctx.output.error(
+                        f"invalid value for `--{f.name.replace('_', '-')}`: {error}"
+                    )
+                    raise typer.Exit(2)
+        args = {
+            f.name: _coerce(str(f.type), kwargs[f.name])
+            for f in specs
+            if kwargs.get(f.name) is not None
+        }
+        # Flag-level resolution above only covers top-level *_ss58 options;
+        # this pass reaches names inside JSON-shaped fields too (signatory
+        # lists, a multisig inner --call, batch children).
+        args = resolve_intent_args(app_ctx, args)
+        app_ctx.submit(intent_cls.from_args(args))
+
+    # Synthesize the signature Typer introspects: ctx first, then one keyword
+    # option per intent field, typed and defaulted from the dataclass.
+    params = [
+        inspect.Parameter("ctx", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=typer.Context)
+    ]
+    annotations: dict[str, Any] = {"ctx": typer.Context}
+    prompt_specs: list[PromptSpec] = []
+    for f in specs:
+        # The canonical own-key params may be omitted: they fall back to the
+        # configured wallet (see AppContext.resolve_address).
+        wallet_defaulted = f.name in ("hotkey_ss58", "coldkey_ss58")
+        required = f.default is MISSING and f.default_factory is MISSING and not wallet_defaulted
+        cli_name = (
+            address_cli_name(f.name)
+            if f.name.endswith("_ss58") or "_ss58" in f.name
+            else "--" + f.name.replace("_", "-")
+        )
+        allows_all = f.name in intent_cls.all_amount_fields
+        # The field's declared help (metadata["help"], shared with the JSON
+        # schema) says what the parameter *means*; the suffix heuristics add
+        # what shapes it *accepts* (ss58/name resolution, money units).
+        input_note = (
+            ss58_param_help(f.name)
+            if f.name.endswith("_ss58")
+            else _unit_help(f.name) or _list_note(str(f.type))
+        )
+        declared = intent_cls.field_help(f.name)
+        help_text = " ".join(part for part in (declared, input_note) if part) or None
+        if allows_all:
+            all_note = "Pass `all` for the entire available amount."
+            help_text = f"{help_text} {all_note}" if help_text else all_note
+        if required:
+            # Required options parse as optional so a missing one reaches the
+            # command body, which prompts for it interactively (see prompt.py).
+            # Destination-style addresses get a picker (address book / local
+            # keys) instead of a blank text box.
+            richer = required_address_spec(f.name)
+            prompt_specs.append(
+                richer
+                if richer is not None
+                else PromptSpec(
+                    field=f.name,
+                    flag=cli_name,
+                    help=help_text,
+                    parse=functools.partial(_parse_prompted, f.name, str(f.type), allows_all),
+                    placeholder="number or all" if allows_all else _placeholder(str(f.type)),
+                )
+            )
+            # "(required)" not "[required]": rich help parses square brackets as markup.
+            help_text = f"{help_text} (required)" if help_text else "(required)"
+        default = None if required or wallet_defaulted else f.default
+        # Bool options get a negated twin (--flag/--no-flag) so default-True
+        # fields (e.g. keep_alive) can be turned off.
+        flag_name = (
+            f"{cli_name}/--no-{cli_name[2:]}"
+            if _base_annotation(str(f.type)) == "bool"
+            else cli_name
+        )
+        decls = [flag_name]
+        if f.name == amount_alias:
+            decls.append("--amount")
+        elif f.name == "dest_coldkey_ss58" and "dest_ss58" not in intent_names:
+            # Match wallet transfer's --dest so the destination flag is the
+            # same whether TAO or a stake position is being handed over.
+            decls.append("--dest")
+        option = typer.Option(default, *decls, help=help_text)
+        # Money options parse as strings so amounts stay exact and the `all`
+        # sentinel survives typer; the command body validates them (_parse_money).
+        opt_type = str if is_money(str(f.type)) else _option_type(str(f.type))
+        annotations[f.name] = Optional[opt_type]
+        params.append(
+            inspect.Parameter(
+                f.name,
+                inspect.Parameter.KEYWORD_ONLY,
+                default=option,
+                annotation=annotations[f.name],
+            )
+        )
+
+    if shared_netuid:
+        annotations["netuid"] = Optional[int]
+        params.append(
+            inspect.Parameter(
+                "netuid",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=typer.Option(
+                    None,
+                    "--netuid",
+                    help="Shortcut for same-subnet operations: use this subnet as "
+                    "both --origin-netuid and --dest-netuid (either can still be "
+                    "overridden explicitly).",
+                ),
+                annotation=Optional[int],
+            )
+        )
+
+    if intent_cls.all_amount_fields:
+        annotations["all_amount"] = bool
+        params.append(
+            inspect.Parameter(
+                "all_amount",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=typer.Option(
+                    False,
+                    "--all",
+                    help="Use the entire available amount (same as passing `all` "
+                    "to the amount option). The concrete value is read from "
+                    "chain state at build time, so you do not guess fees.",
+                ),
+                annotation=bool,
+            )
+        )
+
+    # Globals go first so the help panels lead with network & wallet. Skip a
+    # global when the intent already owns that field (e.g.
+    # ExecuteProxyAnnounced.force_proxy_type is the chain param, not the wrapper).
+    for p in g.parameters("tx"):
+        if p.name in intent_names:
+            continue
+        annotations[p.name] = p.annotation
+        params.append(p)
+    command.__signature__ = inspect.Signature(params)
+    command.__annotations__ = annotations
+    # Full docstring: typer shows the first line in command listings and the
+    # whole text on the command's own --help, so implications aren't lost.
+    # Privileged intents also carry a generated "Requires:" footer, and intents
+    # with a paired verify read a "Verify afterwards:" one.
+    command.__doc__ = _command_doc(intent_cls)
+    return command
+
+
+def intent_command(op: str):
+    """The generated command callback for one registered intent, so familiar
+    operations can also be mounted under a hand-written group (e.g.
+    `stake add` is the same command as `tx add-stake`)."""
+    return _make_command(REGISTRY[op])
+
+
+def _pallet(intent_cls: type[Intent]) -> str:
+    """The pallet an intent dispatches to, from its first wrapped chain call."""
+    return intent_cls.wraps[0][0] if intent_cls.wraps else "Other"
+
+
+def _help_panel(intent_cls: type[Intent]) -> str:
+    """The --help panel an intent lists under: pallet for plain signed intents,
+    with the required privilege made explicit for the others (root intents get
+    their own panel; subnet-owner intents keep the pallet with a marker)."""
+    if intent_cls.origin == "root":
+        return "Root (chain sudo)"
+    if intent_cls.origin == "subnet_owner":
+        return f"{_pallet(intent_cls)} — subnet owner"
+    return _pallet(intent_cls)
+
+
+def build_tx_app() -> typer.Typer:
+    """Assemble the `tx` group with one generated subcommand per registered intent,
+    grouped in --help by the pallet each intent dispatches to (privileged intents
+    are grouped by the origin the chain demands instead)."""
+    app = typer.Typer(no_args_is_help=True, help="Submit transactions (generated from intents).")
+    for op, intent_cls in sorted(
+        REGISTRY.items(), key=lambda item: (_help_panel(item[1]), item[0])
+    ):
+        app.command(op.replace("_", "-"), rich_help_panel=_help_panel(intent_cls))(
+            _make_command(intent_cls)
+        )
+    return app

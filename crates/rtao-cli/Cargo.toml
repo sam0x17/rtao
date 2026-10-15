@@ -1,0 +1,29 @@
+[package]
+name = "rtao-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The rtao command line application."
+
+[lints]
+workspace = true
+
+[features]
+ledger = ["rtao/ledger"]
+vault = ["rtao/vault"]
+extension = ["rtao/extension"]
+evm = ["rtao/evm"]
+
+[dependencies]
+rtao = { workspace = true }
+toml_edit.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "rtao"
+path = "src/main.rs"
+doc = false
+

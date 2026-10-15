@@ -1,0 +1,25 @@
+# Immutable finalized runtime rows; cargo xtask pin selects the codegen input.
+schema = 1
+network = "finney"
+
+[[runtimes]]
+spec = 477
+code_hash = "0x18b52484d9c5d7523f704c86b17b2ab959fffbc6edb6766a77e9877f0ad19387"
+genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
+tag = "v477"
+commit = "5c6e83e2f4936f257234f246957f75684c35227c"
+finalized_head = "0x1b7cadae2cfc3d2cc96053c13b8b21cbd05738b3142196b42b508add50543531"
+endpoint = "https://archive.chain.opentensor.ai:443"
+v15 = { path = "477.v15.scale", sha256 = "64d37ffe1ee7e006d74f0a01c8e4bfb82e04a8907ac92c5600a49510862a76fa", bytes = 400688 }
+v16 = { path = "477.v16.scale", sha256 = "af0870c1c32b53d8543859c6e0400551620401351a19bd6d111e4a629402acba", bytes = 404727 }
+
+[[runtimes]]
+spec = 478
+code_hash = "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1"
+genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
+tag = "v478"
+commit = "850f2755bb05a3851f948489f0ab27b0645cebce"
+finalized_head = "0x2bc979722ab7c83b9992900c5463dfd1daebbac77d5e64ae1e45413c69e5401f"
+endpoint = "https://entrypoint-finney.opentensor.ai:443"
+v15 = { path = "478.v15.scale", sha256 = "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502", bytes = 400688 }
+v16 = { path = "478.v16.scale", sha256 = "723240b9f3761915eed75a5e158484bfdb39f6eea8ddd06d32e77996e67b14c7", bytes = 404727 }

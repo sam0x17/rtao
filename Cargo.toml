@@ -18,3 +18,84 @@ unsafe_code = "forbid"
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
+
+[workspace.dependencies]
+rtao = { path = "crates/rtao", default-features = false }
+rtao-core-ext = { path = "crates/rtao-core-ext", default-features = false }
+rtao-core = { path = "crates/rtao-core", default-features = false }
+rtao-primitives = { path = "crates/rtao-primitives", default-features = false }
+rtao-catalog = { path = "crates/rtao-catalog", default-features = false }
+rtao-runtime = { path = "crates/rtao-runtime", default-features = false }
+rtao-rpc = { path = "crates/rtao-rpc", default-features = false }
+rtao-signer = { path = "crates/rtao-signer", default-features = false }
+rtao-wallet = { path = "crates/rtao-wallet", default-features = false }
+rtao-client = { path = "crates/rtao-client", default-features = false }
+rtao-tx = { path = "crates/rtao-tx", default-features = false }
+rtao-reads = { path = "crates/rtao-reads", default-features = false }
+rtao-evm = { path = "crates/rtao-evm", default-features = false }
+rtao-intents = { path = "crates/rtao-intents", default-features = false }
+rtao-metagraph = { path = "crates/rtao-metagraph", default-features = false }
+rtao-btauth = { path = "crates/rtao-btauth", default-features = false }
+rtao-neuron = { path = "crates/rtao-neuron", default-features = false }
+rtao-cli = { path = "crates/rtao-cli", default-features = false }
+rtao-testkit = { path = "crates/rtao-testkit", default-features = false }
+bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478", default-features = false }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478", default-features = false, features = ["std"] }
+subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+subtensor-linting = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+serde_json = { version = "1.0.132", features = ["arbitrary_precision"] }
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "sync", "time", "signal", "net", "io-util"] }
+schnorrkel = "0.11.5"
+ed25519-zebra = "4.0"
+toml_edit = "0.23"
+serde = { version = "1.0.228", features = ["derive"] }
+parity-scale-codec = { version = "3.7.5", features = ["derive", "max-encoded-len"] }
+scale-decode = { version = "0.16.2", features = ["derive"] }
+scale-info = { version = "2.11.6", features = ["derive"] }
+scale-type-resolver = { version = "0.2", features = ["scale-info"] }
+frame-metadata = { version = "23.0.1", features = ["current", "decode", "std"] }
+schemars = "1"
+proptest = "1.12"
+ryu = "1"
+num-bigint = "0.4"
+num-traits = "0.2"
+bitflags = "2.10"
+http = "1.4"
+sha2 = "0.10"
+blake2 = "0.10"
+hex = "0.4"
+futures = "0.3"
+bytes = "1"
+# CPython 3.12 uses Unicode 15. Keep numeric syntax and diagnostic escaping
+# at the oracle's data version, independently of the Rust compiler's Unicode.
+unicode-general-category = "=0.6.0"
+subxt-rpcs = { version = "0.51.1", default-features = false, features = ["native"] }
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["connect", "handshake", "rustls-tls-native-roots"] }
+rustls-native-certs = "0.8"
+rustls-pki-types = "1"
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+url = "2"
+tracing = "0.1"
+metrics = "0.24"
+httpdate = "1"
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "ring", "pem"] }
+primitive-types = { version = "0.13", default-features = false, features = ["serde"] }
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+thiserror = "2"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json", "http2", "charset"] }
+arc-swap = "1.9"
+secrecy = "0.8"
+zeroize = "1"
+regex = "1"
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+axum = { version = "0.8", default-features = false, features = ["json", "http1", "tokio"] }
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+mime = "0.3"
+redis = { version = "0.32", default-features = false, features = ["tokio-comp", "script"] }
+
+[patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }

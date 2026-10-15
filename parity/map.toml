@@ -1,0 +1,3224 @@
+# Seeded from docs/plan/python-module-map.md; all 357 rows initially pending.
+# rs preserves each documented Rust home; milestone and notes preserve its scope.
+# tree.txt is the complete watched listing from architecture §4.9, not a list
+# derived from this map. Every listing entry must have a row; none is ignored.
+# Package, tests/{unit,harness,fixtures,e2e}, codegen, completions, both core
+# crates, rpc_info and eco-tests are recursive roots. Only the three named
+# Python record/basket scripts and the named chain sources/catalogs are watched.
+# Python tests/__init__.py and conftest.py, other scripts, and pallet lib.rs
+# are outside that scope (lib.rs constants are separate extraction inputs).
+# A pending home is prospective. Blessed ported/generated/extracted rows plus
+# actual attribution headers determine which packages contain derived material.
+
+[[file]]
+py = "common/src/proxy.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "common/src/transaction_error.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "docs/guides/signed-requests.mdx"
+rs = ["the btauth/1 specification and vectors (§7)"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `docs/guides/signed-requests.mdx`: the btauth/1 specification and vectors (§7)"
+
+[[file]]
+py = "eco-tests/Cargo.toml"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "eco-tests/src/helpers.rs"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "eco-tests/src/lib.rs"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "eco-tests/src/mock.rs"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "eco-tests/src/tests.rs"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "eco-tests/src/tests_mentat_indexer.rs"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "eco-tests/src/tests_taocom_indexer.rs"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `eco-tests/**`: "
+
+[[file]]
+py = "pallets/admin-utils/src/lib.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "pallets/subtensor/src/coinbase/reveal_commits.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/coinbase/run_coinbase.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/coinbase/tempo_control.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/basket_info.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/delegate_info.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/dynamic_info.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/metagraph.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/mod.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/neuron_info.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/show_subnet.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/stake_info.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/rpc_info/subnet_info.rs"
+rs = ["`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `pallets/subtensor/src/rpc_info/**`: `freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+
+[[file]]
+py = "pallets/subtensor/src/subnets/serving.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "pallets/subtensor/src/subnets/subnet.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "pallets/subtensor/src/subnets/weights.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "pallets/subtensor/src/utils/misc.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "pallets/subtensor/src/utils/rate_limiting.rs"
+rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M4"
+notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+
+[[file]]
+py = "runtime/src/check_mortality.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "runtime/src/fee_filters.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "runtime/src/transaction_payment_wrapper.rs"
+rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1-M2"
+notes = "Documented group `common/src/{transaction_error,proxy}.rs`, `runtime/src/{fee_filters,check_mortality,transaction_payment_wrapper}.rs`, `pallets/subtensor/src/coinbase/{run_coinbase,reveal_commits}.rs`: custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+
+[[file]]
+py = "sdk/bittensor-core-py/Cargo.toml"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/README.md"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/pyproject.toml"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/digest.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/errors.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/keys.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)", "rtao_signer; rtao_core::keys"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/ledger.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/lib.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/pow.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/runtime.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)", "rtao_runtime; rtao_core_ext::ir::MetadataIr"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/timelock.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)", "rtao_tx::timelock; rtao_primitives::drand"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core-py/src/values.rs"
+rs = ["the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)", "rtao_primitives::IntoCoreValue; rtao_core::DynValue"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core-py/**`: the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+
+[[file]]
+py = "sdk/bittensor-core/Cargo.toml"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/fixtures/ledger_proof_vector.json"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/client.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/batch.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/decode.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/encode.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/extrinsic.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/storage.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/codec/value.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/digest/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/error.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/keyfiles/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/keys/base58.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/keys/encrypted_json.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/keys/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/lib.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/mlkem/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/pow/kernel.cl"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/pow/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/pow/opencl.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/runtime/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/runtime/type_string.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/signers/hid.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/signers/ledger.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/signers/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/timelock/constants.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/timelock/epoch_schedule.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/timelock/epoch_schedule_vectors.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/timelock/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/src/transaction.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/tests/Dockerfile.localnet-fast"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/tests/e2e-manifest.json"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/tests/e2e.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/bittensor-core/tests/e2e_support/mod.rs"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/bittensor-core/**`: guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+
+[[file]]
+py = "sdk/python/bittensor/__init__.py"
+rs = ["`rtao` facade: `prelude`, per-feature re-exports (§2.4)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0–M8"
+notes = "public names (`Subtensor`, `Client`, intents, reads, `Balance`, signers, `set_weights`); every `__all__` name (`:122-219`) has a row in [Top-level exports](#top-level-exports-py__init__py122-219-__all__), and `xtask parity check` asserts it or a `#[doc(alias)]` hit (§4.9 layer 8); `_REMOVED_V10_HINTS` (`:238-276`) is n/a (migration guide)"
+
+[[file]]
+py = "sdk/python/bittensor/_generated/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "empty package marker"
+
+[[file]]
+py = "sdk/python/bittensor/_generated/calls.py"
+rs = ["`rtao_runtime::generated::calls`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "rtao regenerates from pinned V15 metadata; this file is the codegen cross-check (§11.2); typed call builders and `CallDescriptor`s (§3.7-3.8)"
+
+[[file]]
+py = "sdk/python/bittensor/_generated/constants.py"
+rs = ["`rtao_runtime::generated::constants`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "rtao regenerates from pinned V15 metadata; this file is the codegen cross-check (§11.2)"
+
+[[file]]
+py = "sdk/python/bittensor/_generated/errors.py"
+rs = ["`rtao_runtime::generated::errors::MODULE_ERRORS`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "rtao regenerates from pinned V15 metadata; this file is the codegen cross-check (§11.2); docs and gates only (§4.7)"
+
+[[file]]
+py = "sdk/python/bittensor/_generated/runtime_apis.py"
+rs = ["`rtao_runtime::generated::runtime_apis`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "rtao regenerates from pinned V15 metadata; this file is the codegen cross-check (§11.2)"
+
+[[file]]
+py = "sdk/python/bittensor/_generated/storage.py"
+rs = ["`rtao_runtime::generated::storage`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "rtao regenerates from pinned V15 metadata; this file is the codegen cross-check (§11.2)"
+
+[[file]]
+py = "sdk/python/bittensor/_live.py"
+rs = ["`rtao-cli` prompt module (PLAN §12.6)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "Rich live-display pause used by `keyfiles.py:9`, `masked_input.py:18`, `cli/output.py:31`; the library never prompts (D-003), so only the CLI's prompt module needs the pause"
+
+[[file]]
+py = "sdk/python/bittensor/_substrate.py"
+rs = ["`rtao_client` (`Client`; `View`/`DynView` play the `Substrate` contract)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M2"
+notes = "state-discarded archive retry `:366-400` (§3.2.2); submission `:625-811` (§3.9); `_failed_submit` `:753-772` (§3.9.5)"
+
+[[file]]
+py = "sdk/python/bittensor/_subtensor.py"
+rs = ["`rtao::blocking::{Subtensor, set_weights, close_shared_clients}` (facade, feature `blocking`, §2.2, §2.4)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "sync-or-async entry point; module-level `set_weights` builds `SetWeights` and resolves wallet names (`:152-158, 167-205`), so the facade feature enables `intents-all`, `metagraph` and `wallet`; shared clients keyed by canonical endpoint (`:129-150`)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "re-exports only"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/codec.py"
+rs = ["`rtao_runtime::RuntimeHandle` over core `runtime::Runtime` + `rtao_client::RuntimeCache`; staged `ops::metadata`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "the codec engine is the core (§1.4-1.5); `RuntimeHandle` lives in `rtao-runtime` (§3.7); `strip_option_opaque_metadata` matches §3.4 fetch step 1"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/const.py"
+rs = ["core `DEFAULT_SS58_FORMAT` (`CORE/keys/mod.rs:31`)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "`SS58_FORMAT = 42`; connect asserts format 42 (§3.3 step 3)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/contract.py"
+rs = ["`rtao_runtime::CallBytes`; `rtao_client::{UnsignedExtrinsic, ExtrinsicReport}`; `rtao_signer::{SigningContext, SignerPayloadJson}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M7"
+notes = "`UnsignedExtrinsic` JSON `:67-134` (§3.14, M5); `SignerPayloadJSON` quirks `:87-132` (§6.3, extension signer M7)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/errors.py"
+rs = ["`rtao_rpc::{RpcError, PolicyRefusal}`; `rtao_client` read errors"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "§3.2.3; `RpcPolicyRejection`, `StateDiscardedError`, `MaxRetriesExceeded`"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/extrinsics.py"
+rs = ["`rtao_client::{NonceManager, NonceLease}`; `rtao_signer` dispatch"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "nonce cache `:55-84` (§3.9.1); `account_nextIndex` `:69-77`; payload JSON `:87-132`; signer capability order `:321-347` (§6.3)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/interface.py"
+rs = ["`rtao_client::Client` internals"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M5"
+notes = "finalized hash cache `:187-230`, page size `:304`, pinned `query_map` `:347-351` (M1); era `:485-499`, submit `:501-663`, fee probe `:714-731` → staged `ops::fee` (M2); prepare `:589-590`, spec check `:617-623` (M5)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/lru.py"
+rs = ["`rtao_client` runtime cache (LRU of 4 runtimes, 512 block→spec entries, §3.4)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "generic LRU helper"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/protocols.py"
+rs = ["`rtao_signer::SignerCaps`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M7"
+notes = "`Keypair`, `ExtensionPayloadSigner`, `MetadataVerifyingSigner`, `UnsignedExtrinsicSigner` become the `Signer` trait plus capability bits `RAW_PAYLOAD`, `PAYLOAD_JSON`, `METADATA_HASH`, `UNSIGNED_TX` (§6.3)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/rpc.py"
+rs = ["`rtao_rpc::Session` + generated `py_rpc.rs`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "classifier `:84-135, 190-241`; non-idempotent set `:66`; resend `:686-725`; no frame whose caller is gone is transmitted `:495-504, 549, 713-717` (§3.2.1); URL sanitizing `:136-187`; constants `:52-66` extracted (§3.2)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/runtime.py"
+rs = ["`rtao_client::RuntimeCache`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "V15 fetch and needle `:34, 292-312`; disk cache `:36-121`; parent-runtime resolution `:178-207`; version poll `:142-176`; `transactionVersion` `:42-54` (§3.4)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/runtime_api.py"
+rs = ["staged `rtao_core_ext::ops::runtime_api`; `rtao_client` legacy table"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M6"
+notes = "encoding (§1.6 G1); `LEGACY_RUNTIME_APIS` `:95-171` and `_is_legacy_method` `:167` (§3.4; legacy table in M6)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/storage.py"
+rs = ["`rtao_client` reads; staged `ops::storage`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "miss semantics `:8-27` (§3.6)"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/utils/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "JSON library selection"
+
+[[file]]
+py = "sdk/python/bittensor/_transport/utils/receipt.py"
+rs = ["staged `rtao_core_ext::ops::receipt` (PR-U2)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "6 nested wrappers `:8-16`, MevShield failures, fee fallback `:75-96` (§1.6 G3, §3.9.4)"
+
+[[file]]
+py = "sdk/python/bittensor/balance.py"
+rs = ["`rtao_primitives::{DynBalance, Balance<U>, pyfmt}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "`str(Balance)` byte for byte (`:113-149`, §5.3); pinned by 10,000 oracle vectors (§11.5)"
+
+[[file]]
+py = "sdk/python/bittensor/basket_index.py"
+rs = ["`rtao-cli` `root_helpers::basket_index`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "CLI-only display pricing for basket funds, and the fallback for nodes without `BetaBasketRuntimeApi.get_all_beta_pricing` (API v3) and for historical blocks; `root list --json` emits `basket_index` through `index_level()` (`cli/commands/root.py:23, 156, 240`) and `cli/root_helpers.py:18` uses `staker_yield`, so it cannot be dropped; not in `rtao-catalog`, which every neuron build compiles"
+
+[[file]]
+py = "sdk/python/bittensor/basket_index_data.py"
+rs = ["`rtao-cli/src/generated/basket_index_data.rs`, generated by `xtask regen` from the extracted literal tuples (`vendor/upstream/extracted/basket_index_data.json`)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "frozen index series and per-fund baselines, regenerated upstream by `scripts/build_basket_index.py`; pure literal tuples (6/6 tables pass the §4.9 subset)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = ""
+
+[[file]]
+py = "sdk/python/bittensor/cli/call.py"
+rs = ["`rtao-cli` `call`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "raw call; the CLI builds its executor without a `Policy`, as btcli does (`cli/context.py:1990-1994`), so there is no `--allow-raw` flag; same wrapper nesting as intents (§10.1)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/call_names.py"
+rs = ["`rtao-cli` name resolution inside JSON arguments [I]"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "address-book, proxy-book, multisig and wallet names inside `call --args` and nested intent specs; used by `cli/call.py`, `cli/tx.py`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "empty"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/addresses.py"
+rs = ["`rtao-cli` `addr` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "§10.5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/axon.py"
+rs = ["`rtao-cli` `axon` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "§10.5; under `misc`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/collateral.py"
+rs = ["`rtao-cli` `collateral` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "§10.5; under `misc`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/config.py"
+rs = ["`rtao-cli` `config` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "§10.5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/crowd.py"
+rs = ["`rtao-cli` `crowd` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "§10.5; under `misc`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/__init__.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "group root, `claim-deposit` alias `:51`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/_shared.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "shared helpers, `key`/`stake` subapps"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/address.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`mirror`, `pubkey`, `deposit-address`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/association.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`associate`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/contracts_cmd.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`deploy`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/keys.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`key new/import/export/list/show`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/money.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`balance`, `fund`, `send`, `send-to-ss58`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`precompiles`, `abi`, `call`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/setup.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`networks`, `config`, `doctor`, `setup-localnet`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/evm/stake.py"
+rs = ["`rtao-cli` `evm` group (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`stake add/remove/show`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/extension.py"
+rs = ["`rtao-cli` `extension` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "§10.5; under `misc`; feature `extension`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/lock.py"
+rs = ["`rtao-cli` `conviction` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "§10.5; alias `lock`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/misc.py"
+rs = ["`rtao-cli` `misc` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "§10.5; also mounts the operator groups `:42-51`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/multisig.py"
+rs = ["`rtao-cli` `multisig` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "§10.5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/proxy.py"
+rs = ["`rtao-cli` `proxy` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5–M8"
+notes = "§10.5; `book` subgroup in M8"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/root.py"
+rs = ["`rtao-cli` `root` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "§10.5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/root_move.py"
+rs = ["`rtao-cli` `root` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "§10.5; `root move` command, mounted at `root.py:682`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/root_swap.py"
+rs = ["`rtao-cli` `root` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "§10.5; `root swap` command, mounted at `root.py:684`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/stake.py"
+rs = ["`rtao-cli` `stake` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5–M8"
+notes = "§10.5; aliases M5, the rest M8"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/subnets.py"
+rs = ["`rtao-cli` `subnets` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "§10.5; `register`, `create`, `metagraph` in M4"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/sudo.py"
+rs = ["`rtao-cli` `hparams` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M5"
+notes = "§10.5; `set-take`, `stake-burn` in M5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/timelock.py"
+rs = ["`rtao-cli` `timelock` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "§10.5; under `misc`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/upgrade.py"
+rs = ["`rtao-cli` `upgrade` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "§10.5; under `misc`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/wallet.py"
+rs = ["`rtao-cli` `wallet` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M8"
+notes = "§10.5; keychain M7"
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/weights.py"
+rs = ["`rtao-cli` `weights` group"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "§10.5; under `misc`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/context.py"
+rs = ["`rtao-cli` application context"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "`address_cli_name` (§10.1); MEV precedence `:260-292`, downgrade `:1047-1080` (§3.11); re-prompt `:1900-1935` (§6.2); non-interactive discipline `:2088-2103` (§10.3)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/globals.py"
+rs = ["`rtao-cli` global flags"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "§10.2"
+
+[[file]]
+py = "sdk/python/bittensor/cli/help_theme.py"
+rs = ["`rtao-cli` clap styles"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "Rich/Typer colours; human output is not byte-identical by design (§10.3)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/helpers.py"
+rs = ["`rtao-cli` shared helpers"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M8"
+notes = "`wallet balance`/`inspect` rows (M4); overview and registration rows (M8); its read calls set several read milestones ([parity-inventory.md section 2.4](parity-inventory.md#24-read-milestones))"
+
+[[file]]
+py = "sdk/python/bittensor/cli/hyperparams_view.py"
+rs = ["`rtao-cli` `hparams get`, `subnets hyperparameters`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "§10.5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/intent_prompts.py"
+rs = ["`rtao-cli` generated-`tx` prompt policies [I]"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "imported by `cli/tx.py`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/logs.py"
+rs = ["`rtao-cli` logging (`tracing-subscriber`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "verbosity ladder and `BITTENSOR_LOG` (§10.3)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/main.py"
+rs = ["`rtao-cli` entry point and command tree"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "groups `:99-144`; hidden aliases `:116-135`; snake_case aliases `:449-477`; `tools` `:321`, `explain` `:405` (§10.1-10.2)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/metagraph_view.py"
+rs = ["`rtao-cli` `subnets metagraph`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "§10.5"
+
+[[file]]
+py = "sdk/python/bittensor/cli/multisig_helpers.py"
+rs = ["`rtao-cli` `multisig`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "saved multisigs, approvals, pending operations (§10.5)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/null_pruning.py"
+rs = ["`rtao-cli` `hparams trim-null`; `rtao_neuron::OwnerOps::trim_null`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "resumable ≤ 64-uid batches (§9.7)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/output.py"
+rs = ["`rtao-cli` output (tables via `comfy-table`, JSON)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M8"
+notes = "JSON value-equal from M4; `PyJsonFormatter` for `print_json` `:562` in M8 (§10.3)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/prompt.py"
+rs = ["`rtao-cli` prompts and pickers"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "prompts and flags match, not terminal rendering (§10.3)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/query.py"
+rs = ["`rtao-cli` generated `query`; `_jsonable` semantics in `rtao_reads` `Serialize` models"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "`build_query_app` `:258`; `_jsonable` `:104-116` defines read JSON (§4.8, §10.1)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/root_helpers.py"
+rs = ["`rtao-cli` `root`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "§10.5; imports `basket_index`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/secrets.py"
+rs = ["`rtao-cli` secret handling [I]"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "argv-secret warnings and clipboard copy; used by `wallet regen-*` (`cli/commands/wallet.py:57, 461, 530`)"
+
+[[file]]
+py = "sdk/python/bittensor/cli/stake_exit.py"
+rs = ["`rtao-cli` `stake unstake-all`, `unstake-all-alpha`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "`mount_stake_exit_commands` `:212-222`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/stake_picker.py"
+rs = ["`rtao-cli` `stake wizard` and pickers"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "§10.6 M8"
+
+[[file]]
+py = "sdk/python/bittensor/cli/tx.py"
+rs = ["`rtao-cli` generated `tx`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M5"
+notes = "clap builder from `rtao_catalog::INTENTS` (§10.1; `:1-11, 486-498`); list parsing `:62-82`; help panels `:470-484`"
+
+[[file]]
+py = "sdk/python/bittensor/cli/upgrade_helpers.py"
+rs = ["`rtao-cli` `upgrade`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = ""
+
+[[file]]
+py = "sdk/python/bittensor/client.py"
+rs = ["`rtao_client::Client` (incl. `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`; `BlockHeader`, `BlockInfo`, `EpochEvent`); `rtao_tx::Executor::{execute_tool, multisig}`; `rtao_intents::pow::PowSolver`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M5"
+notes = "`wait_for_*` `:376-444` (§3.13); token symbols at connect `:613-633` (§3.3 step 6); `execute_tool` `:483-488` (§4.6); `decode_scale` `:264-271`, `estimate_shielded_carrier_fee` `:464-466`, `estimate_weight` `:554-572`, `multisig` `:564-590` (§3.10, §4.6; M4); `block_info` `:349` (M5, `multisig pending`); dataclasses `:74-115` (§3.13); `mine_pow_registration` → `PowSolver` (§9.6)"
+
+[[file]]
+py = "sdk/python/bittensor/config.py"
+rs = ["`rtao_client::config` (M1): the seven btcli files with their environment overrides, `SETTABLE`, `btcli.json` load and save, the token-symbol and subnet-name caches; `rtao-cli` `books` (readers M4; the multisig book and call-cache writers M5; the proxy and address books M8)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M8"
+notes = "paths `:12-18`; overrides `:59, 139, 212, 274, 327, 355, 416`; TTLs `:22-27`; `SETTABLE` `:30-56`, extracted with the builtin type tags of §4.9 layer 4; multisig call cache `:326-352, 470-480` (§10.2); `NeuronConfig` precedence (§9.9)"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/__init__.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "merged `DESCRIPTIONS` equals `CAT/errors.json` `chain_errors[*].description` (390/390, verified)"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/admin_utils.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/balances.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/commitments.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/contracts.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/crowdloan.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/drand.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/ethereum.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/evm.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/grandpa.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/limit_orders.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/mev_shield.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/multisig.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/preimage.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/proxy.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/safe_mode.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/scheduler.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/subtensor.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/sudo.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/swap.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/system.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_descriptions/utility.py"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "per-pallet slice of the 390 descriptions"
+
+[[file]]
+py = "sdk/python/bittensor/error_map.py"
+rs = ["`rtao_catalog::{ErrorCode, CHAIN_ERRORS}` (generated) + `rtao_catalog::py` (extracted); `rtao_tx::classify`"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "`ErrorCode` `:23-41` and `NAME_TO_CODE` `:46` (390) equal the catalog; `CUSTOM_TRANSACTION_ERRORS` `:488`, `INVALID_TRANSACTION_ERRORS` `:524`, `DISPATCH_ERRORS` `:555` extracted (§4.1, §4.7)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/__init__.py"
+rs = ["`rtao_evm` crate root"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "re-exports"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/addressMapping.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/alpha.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/balance.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/balanceTransfer.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/crowdloan.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/drand.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/ed25519Verify.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/leasing.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/metagraph.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/neuron.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/proxy.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/registry.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/runtimeConfiguration.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/scheduler.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/sr25519Verify.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/staking.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/stakingV2.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/subnet.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/timestamp.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/uidLookup.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/abi/votingPower.json"
+rs = ["`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` (§1.2, §6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/addresses.py"
+rs = ["`rtao_primitives::evm` (`h160_to_ss58`, `ss58_to_h160_truncated`); `rtao_evm`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5–M7"
+notes = "in primitives so EVM intents (M5) need no `rtao-evm` (§6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/contracts.py"
+rs = ["`rtao_evm` contract artifacts"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "deploy and call encoding"
+
+[[file]]
+py = "sdk/python/bittensor/evm/keys.py"
+rs = ["`rtao_evm::EvmKeystore`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "keystore-V3 next to the wallet (§6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/networks.py"
+rs = ["`rtao_evm::EvmNetwork`"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "chain ids 964 and 945 (§6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/precompiles.py"
+rs = ["`rtao_evm::Precompiles`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "catalog of addresses + ABIs (§6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/evm/rpc.py"
+rs = ["`rtao_evm::EvmRpc`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "minimal eth JSON-RPC over reqwest; wei/rao conversions"
+
+[[file]]
+py = "sdk/python/bittensor/evm/transactions.py"
+rs = ["`rtao_evm` transactions and `association_proof`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "EIP-191 proof (§6.6)"
+
+[[file]]
+py = "sdk/python/bittensor/executor.py"
+rs = ["`rtao_tx::{Executor, Plan, ExecuteOptions}`; `rtao_client::{shield, compose}`; completion follower"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M5"
+notes = "defaults `:782-788`; `nest_origin_wrappers` `:99-121, 175-219` (§3.12); shield `:897-1214` (§3.11, M4); `_complete_subnet_registration` `:333-568` (§3.13, M4); constants `:45-66` extracted"
+
+[[file]]
+py = "sdk/python/bittensor/extension/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "re-exports"
+
+[[file]]
+py = "sdk/python/bittensor/extension/bridge.py"
+rs = ["`rtao_signer::extension::{BridgeServer, run_bridge}` (feature `extension`): axum page plus a WebSocket upgrade through hyper and tokio-tungstenite 0.30"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "HTTP + WebSocket bridge on 127.0.0.1:39295 serving `bridge.html` (`:14, 17-40, 235`, §6.5); library API (`PY/__init__.py:198-206`); `rtao-cli` `extension bridge` runs it (§2.3 rule 2)"
+
+[[file]]
+py = "sdk/python/bittensor/extension/browser.py"
+rs = ["`rtao-cli` (`--extension-browser`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "opens the bridge page"
+
+[[file]]
+py = "sdk/python/bittensor/extension/client.py"
+rs = ["`rtao_signer::extension::{BridgeClient, connect_extension_signer}` (feature `extension`, tokio-tungstenite)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "WebSocket client (`websockets.asyncio.client`, `:11`; §6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/extension/daemon.py"
+rs = ["`rtao-cli` `extension bridge --daemon`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "the background bridge process; `ensure_bridge` spawns `rtao extension bridge --daemon` instead of `python -m bittensor.extension.daemon` (§6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/extension/picker.py"
+rs = ["`rtao-cli` account picker"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = ""
+
+[[file]]
+py = "sdk/python/bittensor/extension/session.py"
+rs = ["`rtao_signer::extension::{ensure_bridge, stop_bridge_daemon}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "pid file (`BITTENSOR_EXTENSION_BRIDGE_PID`, `:24`), readiness, restart; the spawn at `:121-140` becomes `rtao extension bridge --daemon` (§6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/extension/signer.py"
+rs = ["`rtao_signer::ExtensionSigner`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`PAYLOAD_JSON` capability (§6.3)"
+
+[[file]]
+py = "sdk/python/bittensor/extension/static/bridge.html"
+rs = ["embedded with `include_bytes!` from `vendor/`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "served verbatim, wire-compatible with the Python daemon (§6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/extension/tokens.py"
+rs = ["`rtao_signer::extension` (bridge token file)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "`~/.bittensor/extension_bridge.token`, override `BITTENSOR_EXTENSION_BRIDGE_TOKEN` (`:14`; §6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/fee_filters.py"
+rs = ["`rtao_catalog::rt` (coldkey-pays-fee set) + `rtao_tx` plan step 6"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "mirror of `UP/runtime/src/fee_filters.rs:15-34`, which `syn` extracts as the authority; CI asserts this mirror equals it (§3.10, §4.1)"
+
+[[file]]
+py = "sdk/python/bittensor/http_auth.py"
+rs = ["`rtao_btauth` (core; `server`, `client` features)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0–M3"
+notes = "btauth/1 byte for byte (§7); messages `:274-341` are the wire contract; retention check moves to `Verifier::new` (D-009)"
+
+[[file]]
+py = "sdk/python/bittensor/hyperparams.py"
+rs = ["`rtao_primitives::ratio::{ratio_fraction, RATIO_TYPE_DENOMINATORS}` (derived from the §5.4 ratio types; a catalog-layer test asserts equality with the extracted `RATIO_TYPE_DENOMINATORS` `:32-37`) and `rtao_primitives::hyperparams::proportion_to_raw` (`:581-621`) (M1); `rtao_primitives::hyperparams::{Hyperparam, HyperparamTable}`, with `metadata_kind`, `kind_of`, `doc_of`, `short_of`, `normalized`, `annotate`, `value_forms`, `codec_of`, `raw_bounds` and `to_raw` as methods on `&HyperparamTable` (`:474-769`) (M4); data generated into `rtao_catalog::hyperparams::TABLE` from `HYPERPARAMS` `:110-408`, `STORAGE_ITEMS` `:416-461` (each item resolved at extraction to its value type ident and cross-checked against the pinned metadata), `_IDENT_KINDS` `:467-471`, `_IDENT_CODEC` `:626-643`, `_KIND_CODEC` `:646-657` and `_FRACTION_DENOMINATOR` `:83`; `rtao_intents::hyperparameters::to_raw` delegates to `TABLE` (§5.5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M4"
+notes = "metadata-primary `kind_of`/`codec_of` precedence kept (`:474-500, 663-680`); consumers before M4: `metagraph.py:346` (M1), `reads/weights.py:73` (M2), `reads/delegation.py:25-28`, `intents/children.py:29, 80` (M5)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/__init__.py"
+rs = ["`rtao_intents` crate root"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "imports register every intent; rtao's `AnyIntent` (generated) is the registry"
+
+[[file]]
+py = "sdk/python/bittensor/intents/_money.py"
+rs = ["`rtao_intents::money`; `rtao_primitives::{Money, Amount, Spend}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = '`"all"` sentinel `:34`, `Spend` `:37-48`, schema `:29-69`; `call_amount`/`tao_amount`/`alpha_amount` `:51-165` → the per-field resolution of §5.2 (unit from the call argument, netuid from a sibling field, netuid 0 tagged as TAO `:85-98`); `_FALLBACK_AMOUNT_UNITS` `:89-111` extracted'
+
+[[file]]
+py = "sdk/python/bittensor/intents/_root_claim_fee.py"
+rs = ["`rtao_intents::root_claim_fee`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "771-line fee model, preview only (§4.3); v466→v467 changed it with the catalog unchanged (§12.1)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/association.py"
+rs = ["`rtao_intents::association` (feature `association`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "2 intents (2 generated `build()`, 0 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); docstring `:44-95` fixes the EIP-191 proof format (§6.6); `evm/transactions.py` `association_proof` builds it"
+
+[[file]]
+py = "sdk/python/bittensor/intents/base.py"
+rs = ["`rtao_tx::{IntentInterface, Intent, DynIntent, IntentPreflight, Built, BuildCx, PreflightCx}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = 'hooks `:138-399`, `IntentPreflight` `:109-134`, `BuiltCall` `:414-422`; `to_dict` `:357-364` → `IntentInterface::to_json` (`"op"` first); `from_args` `:366-372` ignores `"op"` and rejects other unknown keys → `AnyIntent::from_tool` strips `"op"`, then `deny_unknown_fields` (§4.2, §4.5)'
+
+[[file]]
+py = "sdk/python/bittensor/intents/batch.py"
+rs = ["`rtao_intents::batch` (feature `batch`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "1 intent (0 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/children.py"
+rs = ["`rtao_intents::children` (feature `children`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "5 intents (4 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/coldkey.py"
+rs = ["`rtao_intents::coldkey` (feature `coldkey`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "4 intents (3 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/collateral.py"
+rs = ["`rtao_intents::collateral` (feature `collateral`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "2 intents (0 generated `build()`, 2 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/crowdloan.py"
+rs = ["`rtao_intents::crowdloan` (feature `crowdloan`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "10 intents (9 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/evm.py"
+rs = ["`rtao_intents::evm` (feature `evm`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = '2 intents (0 generated `build()`, 2 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); mirror address `blake2_256("evm:" ++ h160)` documented at `:26-33`; `h160_to_ss58` lives in `rtao_primitives::evm` (§6.6)'
+
+[[file]]
+py = "sdk/python/bittensor/intents/governance.py"
+rs = ["`rtao_intents::governance` (feature `governance`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M5"
+notes = "5 intents (4 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/hyperparameters.py"
+rs = ["`rtao_intents::hyperparameters` (feature `hyperparameters`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "1 intent (0 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `OWNER_HYPERPARAMETERS` `:31-66` extracted (34 names, 33 setters)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/identity.py"
+rs = ["`rtao_intents::identity` (feature `identity`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M5"
+notes = "2 intents (2 generated `build()`, 0 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/leasing.py"
+rs = ["`rtao_intents::leasing` (feature `leasing`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "2 intents (2 generated `build()`, 0 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/lock.py"
+rs = ["`rtao_intents::lock` (feature `lock`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "4 intents (4 generated `build()`, 0 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/multisig.py"
+rs = ["`rtao_intents::multisig` (feature `multisig`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "4 intents (0 generated `build()`, 4 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); adapters `:276-398` → `MultisigAdapter`, `MultisigThreshold1Adapter` (§4.2)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/plan.py"
+rs = ["`rtao_tx::{Policy, Plan}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "`Policy` `:21-85`, `Plan` `:89-135` (§4.6)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/proxy.py"
+rs = ["`rtao_intents::proxy` (feature `proxy`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "6 intents (5 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `PROXY_TYPES` `:21-41` extracted; CI checks it against the metadata `ProxyType` enum (§3.12)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/registration.py"
+rs = ["`rtao_intents::registration` (feature `registration`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M5"
+notes = "8 intents (7 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `neuron_registration_split` `:24-44` (burn/lock preview, §9.6)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/registry.py"
+rs = ["`rtao_catalog::INTENTS`; `rtao_intents::AnyIntent`; `rtao_tx::Executor::tools`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "`list_tools` `:43-66`"
+
+[[file]]
+py = "sdk/python/bittensor/intents/root.py"
+rs = ["`rtao_intents::root` (feature `root`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "2 intents (0 generated `build()`, 2 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/serving.py"
+rs = ["`rtao_intents::serving` (feature `serving`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "4 intents (0 generated `build()`, 4 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/staking.py"
+rs = ["`rtao_intents::staking` (feature `staking`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M5"
+notes = "14 intents (3 generated `build()`, 11 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/transfer.py"
+rs = ["`rtao_intents::transfer` (feature `transfer`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "2 intents (1 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+
+[[file]]
+py = "sdk/python/bittensor/intents/weights.py"
+rs = ["`rtao_intents::weights` (feature `weights`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "3 intents (0 generated `build()`, 3 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `normalize`/`clip_to_max_weight` `:54-114`, `_conform` `:218-258` → `rtao_intents::weights::conform` (§9.3); `DEFAULT_COMMIT_REVEAL_VERSION` `:33`"
+
+[[file]]
+py = "sdk/python/bittensor/keyfiles.py"
+rs = ["`rtao_wallet::{HotkeyFile, ColdkeyFile}` over core `keyfiles` and staged `keyfile_json`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "`BT_PW_…` name rule (§6.2); 0o600 atomic writes `:128-163` (§6.1); TTY prompt rule `:42-62` applies to the CLI only (D-003)"
+
+[[file]]
+py = "sdk/python/bittensor/ledger.py"
+rs = ["`rtao_signer::LedgerSigner` (feature `ledger`) over core `signers::ledger::LedgerDevice`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "§6.5; proof from `digest::generate_extrinsic_proof`"
+
+[[file]]
+py = "sdk/python/bittensor/macos_password.py"
+rs = ["`rtao_wallet` feature `keychain`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "shells out to `/usr/bin/security` exactly as `:58-80` (§6.2), and the `osascript` dialog: password-chain steps 5-6 behind `--keychain-password`/`--macos-password` in CLI v0, with the Keychain test in the macos-14 `check` job (§11.6 lane 3); the `wallet keychain` commands over it land in M7"
+
+[[file]]
+py = "sdk/python/bittensor/masked_input.py"
+rs = ["`rtao-cli` prompt module (`rpassword` hidden entry under `PromptPolicy::IfTty`; PLAN §12.6)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "re-asks on empty or mismatched input as `keyfiles.py:42-62`; the per-character `*` echo is rendering and not gated; rtao's library never prompts (D-003)"
+
+[[file]]
+py = "sdk/python/bittensor/metagraph.py"
+rs = ["`rtao_metagraph::{Metagraph, MetagraphNeuron, MetagraphView, SubnetsMetagraphExt}`; the commitment parts → `rtao_reads::commitments`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "`fetch` `:238-291` (curated `client.subnets().metagraph(..)` through `SubnetsMetagraphExt`, §8.2); `_build` `:297-403` → `from_dynamic` reference path; `NeuronCommitment`, the commitment map, status machine and decoders `:37-125, 406-560` and `fetch_commitments`/`_fetch_commitment_map` `:258-291` → `rtao_reads::commitments` (§4.8), whose `reveals_at` uses `rtao_primitives::drand::reveal_time` (`:25, 120-124`); axon URL `:563-573` → `rtao_primitives::axon::axon_base_url` (§7.3)"
+
+[[file]]
+py = "sdk/python/bittensor/multisig.py"
+rs = ["`rtao_tx::multisig::{Multisig, ApproveOptions}` and the funds preflight; `rtao_client::compose::{as_multi, approve_as_multi}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4"
+notes = "`Multisig.approve` `:166-313` (§4.6; `rtao call --multisig` is CLI v0); `MultisigFundingError` `:32-49` → `ChainError { code: InsufficientBalance }` with `fund_help` remediation; deposit and `_FEE_ALLOWANCE_RAO` `:121-162` extracted (§3.12); the M5 multisig intents reuse the preflight; tests port `PYT/unit/test_multisig_safety.py`"
+
+[[file]]
+py = "sdk/python/bittensor/namespaces.py"
+rs = ["`rtao_reads` namespace types (14) and curated extras"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M6"
+notes = "one accessor per catalog `category` (§4.8); curated `:99-213` hand-written; curated `Subnets::commitments` in `rtao_reads::commitments`, curated `Subnets::metagraph` as `rtao_metagraph::SubnetsMetagraphExt` in the prelude (no inherent `Subnets::metagraph` is generated, `:161-188`); the catalog `metagraph` read stays the raw `get_metagraph` dict (`PY/reads/subnets.py:170-190`); the generated `Subnets` accessor lands in M1"
+
+[[file]]
+py = "sdk/python/bittensor/namespaces.pyi"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "type stub generated by `python -m codegen.emit_namespaces` (`namespaces.py:14-16`); Rust's typed namespace methods carry the same information"
+
+[[file]]
+py = "sdk/python/bittensor/pow_registration.py"
+rs = ["`rtao_intents::pow::PowSolver` (feature `pow`; `pow-gpu`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M7"
+notes = "`:18-253` (§9.6); seal and mining from core `pow`; prefix and seal are pure-oracle functions (§11.5); GPU in M7"
+
+[[file]]
+py = "sdk/python/bittensor/py.typed"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "PEP 561 marker (empty)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/__init__.py"
+rs = ["`rtao_reads` crate root"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "imports register every read"
+
+[[file]]
+py = "sdk/python/bittensor/reads/accounts.py"
+rs = ["`rtao_reads::reads::accounts`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "6 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/base.py"
+rs = ["`rtao_reads` generated `ReadSpec`, `ReadName`, `dispatch`; `utf8_text`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "render hints `:33-54`; `scalar_read` `:156-166` generated whole (§4.8); `_coercing` address rule"
+
+[[file]]
+py = "sdk/python/bittensor/reads/chain.py"
+rs = ["`rtao_reads::reads::chain`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M6"
+notes = "6 reads (1 scalar, generated whole); see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/collateral.py"
+rs = ["`rtao_reads::reads::collateral`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "3 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/delegation.py"
+rs = ["`rtao_reads::reads::delegation`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "9 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/epochs.py"
+rs = ["`rtao_reads::reads::epochs`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M4"
+notes = "5 reads (1 scalar, generated whole); see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/hyperparameters.py"
+rs = ["`rtao_reads::reads::hyperparameters`"]
+kind = "generated"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M4"
+notes = "7 reads (7 scalar, generated whole); see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/identity.py"
+rs = ["`rtao_reads::reads::identity`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "5 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102); `commitments` calls `metagraph.fetch_commitments`, which lives in `rtao_reads::commitments` (§4.8)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/leasing.py"
+rs = ["`rtao_reads::reads::leasing`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "5 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/locks.py"
+rs = ["`rtao_reads::reads::locks`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "7 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102); `subnet_convictions` float math ported exactly (`:188-286`, §4.8)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/neurons.py"
+rs = ["`rtao_reads::reads::neurons`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M6"
+notes = "6 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/prices.py"
+rs = ["`rtao_reads::reads::prices`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "4 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/root.py"
+rs = ["`rtao_reads::reads::root`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "11 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102); its reads belong to the `Staking` namespace"
+
+[[file]]
+py = "sdk/python/bittensor/reads/staking.py"
+rs = ["`rtao_reads::reads::staking`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M4–M6"
+notes = "11 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/subnets.py"
+rs = ["`rtao_reads::reads::subnets`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1–M6"
+notes = "14 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/reads/weights.py"
+rs = ["`rtao_reads::reads::weights`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M6"
+notes = "3 reads; see [parity-inventory.md section 5](parity-inventory.md#5-reads-102)"
+
+[[file]]
+py = "sdk/python/bittensor/result.py"
+rs = ["`rtao_tx::{ExtrinsicResult, ChainError, TxError, PolicyError, classify}`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "`:697-749`, `:501-562`, `:45-73`, precedence `:483-498`, substrate-request parsing `:574-634` (§4.7); `REMEDIATION` `:78-111` equals the catalog; `EXPLANATIONS` `:116-287` and regexes `:27-36` extracted; nested module errors `:636-656` resolve through the block's runtime in rtao (D-028); `_CATALOG_DOCS_BY_NAME` `:35` is derived from `MODULE_ERRORS` (§4.7)"
+
+[[file]]
+py = "sdk/python/bittensor/settings.py"
+rs = ["`rtao_catalog::py` + `rtao-rpc/src/generated/py_rpc.rs`"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = """network pools (§3.2.4), era default `:22`, shield period `:29`, `GLOBAL_MAX_SUBNET_COUNT` `:31`, `RAO_PER_TAO` `:15`, docs and explorer templates; "no Python constant is hand-copied" (§4.1); `RAO_PER_TAO = 10**9` and the `os.getenv(…) or …` endpoints resolve through §4.9 layer 4's resolved forms"""
+
+[[file]]
+py = "sdk/python/bittensor/signing.py"
+rs = ["`rtao_signer::{Signer, SignerRole, KeyView, DynKeySource}`; lazy unlock in `rtao_wallet`; address coercion in `rtao_tx`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "`resolve_signer` `:227-263`, `public_view` `:266-283` (§6.4); `WalletSigner` `:143-224` (§6.1)"
+
+[[file]]
+py = "sdk/python/bittensor/snapshot.py"
+rs = ["`rtao_client::Snapshot`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "§3.5; constants follow the snapshot runtime, not `:66-68` (D-007)"
+
+[[file]]
+py = "sdk/python/bittensor/sp_core.py"
+rs = ["`rtao_core::keys` (re-exports)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "thin binding over the core; `verify` reaches `CORE/keys/mod.rs:457-469` (§7.1)"
+
+[[file]]
+py = "sdk/python/bittensor/sync.py"
+rs = ["`rtao::blocking::{SyncClient, SyncSnapshot}` (facade, feature `blocking`) over `rtao_client::blocking::BlockingRuntime`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M6"
+notes = "private loop `_Loop` `:64-98` → `BlockingRuntime` (§3.1); wraps reads, `plan`/`execute`/`execute_tool`/`submit_shielded`/`submit_call`/`tools`/`multisig` and `mine_pow_registration` (`:401-476`; the last under feature `pow`); all 14 namespaces where Python's `SyncClient` has 13 (D-027)"
+
+[[file]]
+py = "sdk/python/bittensor/timelock.py"
+rs = ["`rtao_tx::timelock::{seal, open, Timelocked, Reveal, OpenOptions, TimelockError, DrandClient}` over core `timelock`; the pure helpers `current_round`, `round_at`, `reveal_time`, `parse_duration`, `format_duration` → `rtao_primitives::drand`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1 (helpers), M7"
+notes = "the whole `__all__` `:380-392` (§9.8); `NeuronCommitment.reveals_at` needs `reveal_time` in M1; `Reveal::InBlocks` is an rtao addition (D-033); weight commits use `TimelockCommitter` (M2), not this module"
+
+[[file]]
+py = "sdk/python/bittensor/vault/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "re-exports"
+
+[[file]]
+py = "sdk/python/bittensor/vault/qr.py"
+rs = ["`rtao_signer::VaultSigner` (feature `vault`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "UOS frames as SVG QR data URIs: byte mode without mode optimization, error correction M, 4-module quiet zone (`:15-28`); a QR crate chosen at M7 [I], tested by decoding the symbol back to the frame (§2.7)"
+
+[[file]]
+py = "sdk/python/bittensor/vault/scan.py"
+rs = ["`rtao_signer::vault::scan_vault_address`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "imports an address by scanning the phone's QR; parses `substrate:<ss58>:<genesis>` or a bare ss58 (`:21-49`)"
+
+[[file]]
+py = "sdk/python/bittensor/vault/server.py"
+rs = ["`rtao_signer::vault::VaultSessionServer` (feature `vault`)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "one-shot loopback HTTP and WebSocket server on an ephemeral port (`websockets` server, `:26, 69-80`): serves `vault.html` and the chain-specs PNG, and speaks the page's JSON protocol over `/ws` (`:181-242`); in rtao on axum with a hyper WebSocket upgrade, which dependency rule 2 allows under feature `vault` (§2.3, §6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/vault/signer.py"
+rs = ["`rtao_signer::VaultSigner`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = '`UNSIGNED_TX \| OUT_OF_BAND`; shield needs two scans inside the 8-block era (§6.5)'
+
+[[file]]
+py = "sdk/python/bittensor/vault/static/bittensor-chain-specs.png"
+rs = ["embedded with `include_bytes!` from `vendor/`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "binary, 5,631 bytes"
+
+[[file]]
+py = "sdk/python/bittensor/vault/static/vault.html"
+rs = ["embedded with `include_bytes!` from `vendor/`"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = "served verbatim (§6.5)"
+
+[[file]]
+py = "sdk/python/bittensor/vault/uos.py"
+rs = ["`rtao_signer::VaultSigner` (UOS framing)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M7"
+notes = '"port of `PY/vault/uos.py`" (§6.5)'
+
+[[file]]
+py = "sdk/python/bittensor/wallet.py"
+rs = ["`rtao_wallet::Wallet`"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "layout `:63-68`; `DEFAULT_WALLET_PATH` `:11`; reads no environment variable (`BT_WALLET_PATH` is the CLI's `--wallet-path` option, `PY/cli/main.py:203-206`; §6.1); `cold/hot` parsing `:29-70`"
+
+[[file]]
+py = "sdk/python/bittensor/wallets.py"
+rs = ["`rtao_wallet` (passwords, create/regen, listing)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2–M8"
+notes = "`resolve_wallet_password` `:62-118` (§6.2); hotkeys written without a password `:239-245`; message sign/verify/encrypt serve CLI commands of M8"
+
+[[file]]
+py = "sdk/python/codegen/__init__.py"
+rs = ["replaced by `xtask regen` (§3.7)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/codegen/{__init__,__main__,emit_python,emit_namespaces,metadata}.py`: replaced by `xtask regen` (§3.7)"
+
+[[file]]
+py = "sdk/python/codegen/__main__.py"
+rs = ["replaced by `xtask regen` (§3.7)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/codegen/{__init__,__main__,emit_python,emit_namespaces,metadata}.py`: replaced by `xtask regen` (§3.7)"
+
+[[file]]
+py = "sdk/python/codegen/check.py"
+rs = ["`rtao_catalog::py::{COVERED_PALLETS, RAW_ONLY}` (the coverage gate, §4.9 layer 6) and `tests/hyperparam_units.rs` (§5.5)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/codegen/check.py`: `rtao_catalog::py::{COVERED_PALLETS, RAW_ONLY}` (the coverage gate, §4.9 layer 6) and `tests/hyperparam_units.rs` (§5.5)"
+
+[[file]]
+py = "sdk/python/codegen/emit_namespaces.py"
+rs = ["replaced by `xtask regen` (§3.7)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/codegen/{__init__,__main__,emit_python,emit_namespaces,metadata}.py`: replaced by `xtask regen` (§3.7)"
+
+[[file]]
+py = "sdk/python/codegen/emit_python.py"
+rs = ["replaced by `xtask regen` (§3.7)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/codegen/{__init__,__main__,emit_python,emit_namespaces,metadata}.py`: replaced by `xtask regen` (§3.7)"
+
+[[file]]
+py = "sdk/python/codegen/metadata.py"
+rs = ["replaced by `xtask regen` (§3.7)"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/codegen/{__init__,__main__,emit_python,emit_namespaces,metadata}.py`: replaced by `xtask regen` (§3.7)"
+
+[[file]]
+py = "sdk/python/completions/_btcli"
+rs = ["`rtao-cli` generates its own with `clap_complete`"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "Documented group `sdk/python/completions/**`: `rtao-cli` generates its own with `clap_complete`"
+
+[[file]]
+py = "sdk/python/completions/btcli.bash"
+rs = ["`rtao-cli` generates its own with `clap_complete`"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "Documented group `sdk/python/completions/**`: `rtao-cli` generates its own with `clap_complete`"
+
+[[file]]
+py = "sdk/python/completions/btcli.fish"
+rs = ["`rtao-cli` generates its own with `clap_complete`"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M8"
+notes = "Documented group `sdk/python/completions/**`: `rtao-cli` generates its own with `clap_complete`"
+
+[[file]]
+py = "sdk/python/pyproject.toml"
+rs = ["the package version (`python_package_version`) and `[project.scripts]` (the `btcli` entry point)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/python/pyproject.toml`: the package version (`python_package_version`) and `[project.scripts]` (the `btcli` entry point)"
+
+[[file]]
+py = "sdk/python/scripts/build_basket_index.py"
+rs = ["run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2, M6"
+notes = "Documented group `sdk/python/scripts/{record_golden,record_shape_corpus,build_basket_index}.py`: run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"
+
+[[file]]
+py = "sdk/python/scripts/record_golden.py"
+rs = ["run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2, M6"
+notes = "Documented group `sdk/python/scripts/{record_golden,record_shape_corpus,build_basket_index}.py`: run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"
+
+[[file]]
+py = "sdk/python/scripts/record_shape_corpus.py"
+rs = ["run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2, M6"
+notes = "Documented group `sdk/python/scripts/{record_golden,record_shape_corpus,build_basket_index}.py`: run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"
+
+[[file]]
+py = "sdk/python/tests/e2e/test_null_consensus.py"
+rs = ["mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M7"
+notes = "Documented group `sdk/python/tests/e2e/*.py`: mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"
+
+[[file]]
+py = "sdk/python/tests/e2e/test_pow_registration.py"
+rs = ["mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M7"
+notes = "Documented group `sdk/python/tests/e2e/*.py`: mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"
+
+[[file]]
+py = "sdk/python/tests/e2e/test_timelock_commitment.py"
+rs = ["mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2-M7"
+notes = "Documented group `sdk/python/tests/e2e/*.py`: mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"
+
+[[file]]
+py = "sdk/python/tests/fixtures/golden.json"
+rs = ["`vendor/upstream/` (§11.2)"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/python/tests/fixtures/golden.json`, `shape_corpus/corpus.json`: `vendor/upstream/` (§11.2)"
+
+[[file]]
+py = "sdk/python/tests/fixtures/shape_corpus/corpus.json"
+rs = ["`vendor/upstream/` (§11.2)"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `sdk/python/tests/fixtures/golden.json`, `shape_corpus/corpus.json`: `vendor/upstream/` (§11.2)"
+
+[[file]]
+py = "sdk/python/tests/harness/__init__.py"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "—"
+notes = "Documented group `sdk/python/tests/harness/__init__.py`: "
+
+[[file]]
+py = "sdk/python/tests/harness/fake_node.py"
+rs = ["`rtao-testkit::FakeNode` (§11.3)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M1"
+notes = "Documented group `sdk/python/tests/harness/fake_node.py`: `rtao-testkit::FakeNode` (§11.3)"
+
+[[file]]
+py = "sdk/python/tests/harness/fake_substrate.py"
+rs = ["oracle inputs and `FakeChain` defaults (§4.1, §11.3)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/tests/harness/{samples,fake_substrate}.py`: oracle inputs and `FakeChain` defaults (§4.1, §11.3)"
+
+[[file]]
+py = "sdk/python/tests/harness/samples.py"
+rs = ["oracle inputs and `FakeChain` defaults (§4.1, §11.3)"]
+kind = "extracted"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M2"
+notes = "Documented group `sdk/python/tests/harness/{samples,fake_substrate}.py`: oracle inputs and `FakeChain` defaults (§4.1, §11.3)"
+
+[[file]]
+py = "sdk/python/tests/unit/__init__.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_balance_properties.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_cli.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_cli_commands.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_cli_intent_prompts.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_cli_null_pruning.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_codec_golden.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_codec_properties.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_evm.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_extension_bridge.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_extension_signer.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_facades.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_fee_filters.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_http_auth.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_hyperparams_units.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_intents_table.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_keyfiles_golden.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_ledger_signer.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_lock_ownership_gate.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_multisig_safety.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_natural_name_key.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_null_weights.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_pow_registration.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_prepare_attach.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_reads_table.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_root_claim_fee.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_rpc.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_shape_corpus.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_slippage_protection.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_sp_core_keypair.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_sp_core_parity.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_storage_golden.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "oracle-only"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_v446_accounting_and_commitments.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "sdk/python/tests/unit/test_wallet_compat.py"
+rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+kind = "ported"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "the milestone of the code each tests"
+notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+
+[[file]]
+py = "website/apps/bittensor-website/public/catalog/errors.json"
+rs = ["`rtao-catalog` (§4.1)"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `website/apps/bittensor-website/public/catalog/{intents,reads,errors}.json`: `rtao-catalog` (§4.1)"
+
+[[file]]
+py = "website/apps/bittensor-website/public/catalog/intents.json"
+rs = ["`rtao-catalog` (§4.1)"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `website/apps/bittensor-website/public/catalog/{intents,reads,errors}.json`: `rtao-catalog` (§4.1)"
+
+[[file]]
+py = "website/apps/bittensor-website/public/catalog/reads.json"
+rs = ["`rtao-catalog` (§4.1)"]
+kind = "vendored"
+synced_blob = "pending"
+synced_tag = "v478"
+milestone = "M0"
+notes = "Documented group `website/apps/bittensor-website/public/catalog/{intents,reads,errors}.json`: `rtao-catalog` (§4.1)"

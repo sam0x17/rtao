@@ -1,0 +1,46 @@
+[package]
+name = "rtao-metagraph"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Bittensor metagraph projections and synchronization."
+
+[lints]
+workspace = true
+
+[features]
+persist = ["dep:parity-scale-codec"]
+
+[dependencies]
+rtao-reads = { workspace = true }
+rtao-runtime = { workspace = true }
+rtao-core.workspace = true
+rtao-primitives = { workspace = true, features = ["serde"] }
+rtao-client.workspace = true
+bytes.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+scale-decode.workspace = true
+scale-info.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+futures.workspace = true
+arc-swap.workspace = true
+parity-scale-codec = { workspace = true, optional = true }
+
+[dev-dependencies]
+blake2 = "0.10"
+tokio = { workspace = true, features = ["test-util"] }
+criterion = "0.7"
+proptest.workspace = true
+parity-scale-codec.workspace = true
+rtao-testkit.workspace = true
+
+[[bench]]
+name = "metagraph"
+harness = false
+

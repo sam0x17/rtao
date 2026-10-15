@@ -1,0 +1,59 @@
+[package]
+name = "rtao-btauth"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Btauth/1 signed HTTP authentication."
+
+[lints]
+workspace = true
+
+[features]
+server = ["dep:axum", "dep:tower", "dep:http-body-util", "dep:serde", "dep:serde_json", "dep:mime"]
+client = ["dep:reqwest", "dep:serde", "dep:serde_json", "dep:futures", "dep:tokio", "dep:rustls", "dep:rustls-native-certs", "dep:rustls-pki-types"]
+redis = ["dep:redis", "dep:tokio"]
+metagraph-policy = ["server", "dep:rtao-metagraph"]
+legacy-v10 = []
+
+[dependencies]
+rtao-signer = { workspace = true }
+rtao-core = { workspace = true }
+rtao-primitives = { workspace = true }
+rtao-metagraph = { workspace = true, optional = true }
+http = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+num-bigint = { workspace = true }
+unicode-general-category = { workspace = true }
+reqwest = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+rustls-native-certs = { workspace = true, optional = true }
+rustls-pki-types = { workspace = true, optional = true }
+axum = { workspace = true, optional = true, features = ["original-uri"] }
+tower = { workspace = true, optional = true }
+http-body-util = { workspace = true, optional = true }
+mime = { workspace = true, optional = true }
+redis = { workspace = true, optional = true }
+
+[dev-dependencies]
+criterion = "0.7"
+futures = { workspace = true }
+serde_json = { workspace = true }
+rcgen = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+url = { workspace = true }
+tokio = { workspace = true }
+bytes = { workspace = true }
+
+[[bench]]
+name = "btauth"
+harness = false
+

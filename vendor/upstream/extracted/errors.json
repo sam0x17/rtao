@@ -1,0 +1,170 @@
+{
+  "catalog": {
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "path": "website/apps/bittensor-website/public/catalog/errors.json",
+    "sha256": "044300bd6cf871a451b7de774231b2145ef0163239530b7759300b703cefcf7d",
+    "tag": "v478"
+  },
+  "classification_rules": {
+    "end_line": 498,
+    "line": 483,
+    "rate_limit_contains": "RateLimit",
+    "rate_limit_suffix": "RateLimitExceeded",
+    "validated_bindings": {
+      "ErrorCode": {
+        "matches_name": "ErrorCode",
+        "matches_path": "sdk/python/bittensor/error_map.py"
+      },
+      "_CUSTOM_TRANSACTION_ERRORS": {
+        "matches_name": "CUSTOM_TRANSACTION_ERRORS",
+        "matches_path": "sdk/python/bittensor/error_map.py"
+      },
+      "_DISPATCH_ERRORS": {
+        "matches_name": "DISPATCH_ERRORS",
+        "matches_path": "sdk/python/bittensor/error_map.py"
+      },
+      "_INVALID_TRANSACTION_ERRORS": {
+        "matches_name": "INVALID_TRANSACTION_ERRORS",
+        "matches_path": "sdk/python/bittensor/error_map.py"
+      },
+      "_NAME_TO_CODE": {
+        "matches_name": "NAME_TO_CODE",
+        "matches_path": "sdk/python/bittensor/error_map.py"
+      }
+    }
+  },
+  "classification_sources": [
+    {
+      "blob": "d326d758a6c2921208d96a96ac31a0a1a939bf16",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/error_map.py",
+      "tag": "v478"
+    },
+    {
+      "blob": "2f62ffa3c47304ffd8e450fe23fcefa39806d24d",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/result.py",
+      "tag": "v478"
+    }
+  ],
+  "enum": {
+    "format": 1,
+    "provenance": {
+      "blob": "d326d758a6c2921208d96a96ac31a0a1a939bf16",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "sdk/python/bittensor/error_map.py",
+      "tag": "v478"
+    },
+    "values": {
+      "ALREADY_EXISTS": {
+        "end_line": 29,
+        "line": 29,
+        "rust_variant": "AlreadyExists",
+        "value": "already_exists"
+      },
+      "DISABLED": {
+        "end_line": 33,
+        "line": 33,
+        "rust_variant": "Disabled",
+        "value": "disabled"
+      },
+      "EXPIRED": {
+        "end_line": 35,
+        "line": 35,
+        "rust_variant": "Expired",
+        "value": "expired"
+      },
+      "INSUFFICIENT_BALANCE": {
+        "end_line": 24,
+        "line": 24,
+        "rust_variant": "InsufficientBalance",
+        "value": "insufficient_balance"
+      },
+      "INSUFFICIENT_LIQUIDITY": {
+        "end_line": 25,
+        "line": 25,
+        "rust_variant": "InsufficientLiquidity",
+        "value": "insufficient_liquidity"
+      },
+      "INTERNAL": {
+        "end_line": 40,
+        "line": 40,
+        "rust_variant": "Internal",
+        "value": "internal"
+      },
+      "INVALID_ARGUMENT": {
+        "end_line": 38,
+        "line": 38,
+        "rust_variant": "InvalidArgument",
+        "value": "invalid_argument"
+      },
+      "LIMIT_EXCEEDED": {
+        "end_line": 36,
+        "line": 36,
+        "rust_variant": "LimitExceeded",
+        "value": "limit_exceeded"
+      },
+      "NOT_AUTHORIZED": {
+        "end_line": 28,
+        "line": 28,
+        "rust_variant": "NotAuthorized",
+        "value": "not_authorized"
+      },
+      "NOT_FOUND": {
+        "end_line": 30,
+        "line": 30,
+        "rust_variant": "NotFound",
+        "value": "not_found"
+      },
+      "NOT_REGISTERED": {
+        "end_line": 27,
+        "line": 27,
+        "rust_variant": "NotRegistered",
+        "value": "not_registered"
+      },
+      "POLICY_VIOLATION": {
+        "end_line": 39,
+        "line": 39,
+        "rust_variant": "PolicyViolation",
+        "value": "policy_violation"
+      },
+      "RATE_LIMITED": {
+        "end_line": 26,
+        "line": 26,
+        "rust_variant": "RateLimited",
+        "value": "rate_limited"
+      },
+      "SUBNET_NOT_EXISTS": {
+        "end_line": 31,
+        "line": 31,
+        "rust_variant": "SubnetNotExists",
+        "value": "subnet_not_exists"
+      },
+      "SUBTOKEN_DISABLED": {
+        "end_line": 32,
+        "line": 32,
+        "rust_variant": "SubtokenDisabled",
+        "value": "subtoken_disabled"
+      },
+      "TOO_EARLY": {
+        "end_line": 34,
+        "line": 34,
+        "rust_variant": "TooEarly",
+        "value": "too_early"
+      },
+      "UNIT_MISMATCH": {
+        "end_line": 37,
+        "line": 37,
+        "rust_variant": "UnitMismatch",
+        "value": "unit_mismatch"
+      },
+      "UNKNOWN": {
+        "end_line": 41,
+        "line": 41,
+        "rust_variant": "Unknown",
+        "value": "unknown"
+      }
+    }
+  },
+  "format": 1
+}

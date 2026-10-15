@@ -1,0 +1,87 @@
+# Hand models decoded by named field projections.
+[mappings]
+Metagraph = "crate::models::MetagraphWire"
+SelectiveMetagraph = "crate::models::SelectiveMetagraphWire"
+AxonInfo = "crate::models::AxonInfo"
+ChainIdentityV2 = "crate::models::ChainIdentityV2"
+SubnetIdentityV3 = "crate::models::SubnetIdentityV3"
+NeuronInfoLite = "crate::models::NeuronInfoLite"
+NeuronInfo = "crate::models::NeuronInfo"
+DynamicInfo = "crate::models::DynamicInfo"
+SubnetInfov2 = "crate::models::SubnetInfoV2"
+SubnetState = "crate::models::SubnetState"
+SimSwapResult = "crate::models::SimSwapResult"
+SubnetPrice = "crate::models::SubnetPrice"
+StakeInfo = "crate::models::StakeInfo"
+StakeAvailability = "crate::models::StakeAvailability"
+DelegateInfo = "crate::models::DelegateInfo"
+PrometheusInfo = "crate::models::PrometheusInfo"
+NeuronCertificate = "crate::models::NeuronCertificate"
+LockState = "crate::models::LockState"
+MinerCollateralState = "crate::models::MinerCollateralState"
+CommitmentInfo = "crate::models::CommitmentInfo"
+Registration = "crate::models::CommitmentRegistration"
+SubnetLease = "crate::models::SubnetLease"
+CrowdloanInfo = "crate::models::CrowdloanInfo"
+ProxyDefinition = "crate::models::ProxyDefinition"
+Timepoint = "crate::models::MultisigTimepoint"
+Multisig = "crate::models::MultisigInfo"
+BasketHolding = "crate::models::BasketHolding"
+BasketSummary = "crate::models::BasketSummary"
+BasketPosition = "crate::models::BasketPosition"
+BetaPricing = "crate::models::BetaPricing"
+HyperparamEntry = "crate::models::HyperparamEntry"
+
+[projections]
+Metagraph = ["netuid", "name", "symbol", "identity", "network_registered_at", "owner_hotkey", "owner_coldkey", "block", "tempo", "last_step", "blocks_since_last_step", "subnet_emission", "alpha_in", "alpha_out", "tao_in", "alpha_out_emission", "alpha_in_emission", "tao_in_emission", "pending_alpha_emission", "pending_root_emission", "subnet_volume", "moving_price", "rho", "kappa", "min_allowed_weights", "max_weights_limit", "weights_version", "weights_rate_limit", "activity_cutoff", "max_validators", "num_uids", "max_uids", "burn", "difficulty", "registration_allowed", "pow_registration_allowed", "immunity_period", "min_difficulty", "max_difficulty", "min_burn", "max_burn", "adjustment_alpha", "adjustment_interval", "target_regs_per_interval", "max_regs_per_block", "serving_rate_limit", "commit_reveal_weights_enabled", "commit_reveal_period", "liquid_alpha_enabled", "alpha_high", "alpha_low", "bonds_moving_avg", "hotkeys", "coldkeys", "identities", "axons", "active", "validator_permit", "pruning_score", "last_update", "emission", "dividends", "incentives", "consensus", "trust", "rank", "block_at_registration", "alpha_stake", "tao_stake", "total_stake", "tao_dividends_per_hotkey", "alpha_dividends_per_hotkey", "collateral_locked", "collateral_min", "collateral_earned"]
+SelectiveMetagraph = ["netuid", "name", "symbol", "identity", "network_registered_at", "owner_hotkey", "owner_coldkey", "block", "tempo", "last_step", "blocks_since_last_step", "subnet_emission", "alpha_in", "alpha_out", "tao_in", "alpha_out_emission", "alpha_in_emission", "tao_in_emission", "pending_alpha_emission", "pending_root_emission", "subnet_volume", "moving_price", "rho", "kappa", "min_allowed_weights", "max_weights_limit", "weights_version", "weights_rate_limit", "activity_cutoff", "max_validators", "num_uids", "max_uids", "burn", "difficulty", "registration_allowed", "pow_registration_allowed", "immunity_period", "min_difficulty", "max_difficulty", "min_burn", "max_burn", "adjustment_alpha", "adjustment_interval", "target_regs_per_interval", "max_regs_per_block", "serving_rate_limit", "commit_reveal_weights_enabled", "commit_reveal_period", "liquid_alpha_enabled", "alpha_high", "alpha_low", "bonds_moving_avg", "hotkeys", "coldkeys", "identities", "axons", "active", "validator_permit", "pruning_score", "last_update", "emission", "dividends", "incentives", "consensus", "trust", "rank", "block_at_registration", "alpha_stake", "tao_stake", "total_stake", "tao_dividends_per_hotkey", "alpha_dividends_per_hotkey", "validators", "commitments", "collateral_locked", "collateral_min", "collateral_earned"]
+AxonInfo = ["block", "version", "ip", "port", "ip_type", "protocol", "placeholder1", "placeholder2"]
+ChainIdentityV2 = ["name", "url", "github_repo", "image", "discord", "description", "additional"]
+SubnetIdentityV3 = ["subnet_name", "github_repo", "subnet_contact", "subnet_url", "discord", "description", "logo_url", "additional"]
+NeuronInfoLite = ["hotkey", "coldkey", "uid", "netuid", "active", "axon_info", "prometheus_info", "stake", "rank", "emission", "incentive", "consensus", "trust", "validator_trust", "dividends", "last_update", "validator_permit", "pruning_score"]
+NeuronInfo = ["hotkey", "coldkey", "uid", "netuid", "active", "axon_info", "prometheus_info", "stake", "rank", "emission", "incentive", "consensus", "trust", "validator_trust", "dividends", "last_update", "validator_permit", "weights", "bonds", "pruning_score"]
+DynamicInfo = ["netuid", "owner_hotkey", "owner_coldkey", "subnet_name", "token_symbol", "tempo", "last_step", "blocks_since_last_step", "emission", "alpha_in", "alpha_out", "tao_in", "alpha_out_emission", "alpha_in_emission", "tao_in_emission", "pending_alpha_emission", "pending_root_emission", "subnet_volume", "network_registered_at", "subnet_identity", "moving_price"]
+SubnetInfov2 = ["netuid", "rho", "kappa", "difficulty", "immunity_period", "max_allowed_validators", "min_allowed_weights", "max_weights_limit", "scaling_law_power", "subnetwork_n", "max_allowed_uids", "blocks_since_last_step", "tempo", "network_modality", "network_connect", "emission_value", "burn", "owner", "identity"]
+SubnetState = ["netuid", "hotkeys", "coldkeys", "active", "validator_permit", "pruning_score", "last_update", "emission", "dividends", "incentives", "consensus", "trust", "rank", "block_at_registration", "alpha_stake", "tao_stake", "total_stake", "emission_history"]
+SimSwapResult = ["tao_amount", "alpha_amount", "tao_fee", "alpha_fee", "tao_slippage", "alpha_slippage"]
+SubnetPrice = ["netuid", "price"]
+StakeInfo = ["hotkey", "coldkey", "netuid", "stake", "locked", "emission", "tao_emission", "drain", "is_registered"]
+StakeAvailability = ["total", "locked", "available"]
+DelegateInfo = ["delegate_ss58", "take", "nominators", "owner_ss58", "registrations", "validator_permits", "return_per_1000", "total_daily_return"]
+PrometheusInfo = ["block", "version", "ip", "port", "ip_type"]
+NeuronCertificate = ["public_key", "algorithm"]
+LockState = ["locked_mass", "conviction", "last_update"]
+MinerCollateralState = ["locked", "drain_ratio", "min_locked", "earned"]
+CommitmentInfo = ["fields"]
+Registration = ["deposit", "block", "info"]
+SubnetLease = ["beneficiary", "coldkey", "hotkey", "emissions_share", "end_block", "netuid", "cost"]
+CrowdloanInfo = ["creator", "deposit", "min_contribution", "end", "cap", "funds_account", "raised", "target_address", "call", "finalized", "contributors_count"]
+ProxyDefinition = ["delegate", "proxy_type", "delay"]
+Timepoint = ["height", "index"]
+Multisig = ["when", "deposit", "depositor", "approvals"]
+BasketHolding = ["netuid", "alpha", "spot_tao", "realizable_tao"]
+BasketSummary = ["hotkey", "nav_tao", "spot_nav_tao", "shares", "deposited_tao", "redeemed_tao", "holdings"]
+BasketPosition = ["hotkey", "beta", "beta_total", "nav_tao", "value_tao", "spot_value_tao"]
+BetaPricing = ["hotkey", "spot_price", "display_price", "stake_price", "staker_yield", "staker_twr", "bag_index", "stake_index", "first_block", "provisional", "spot_nav_tao", "shares", "display_shares"]
+HyperparamEntry = ["name", "value"]
+
+[[enums]]
+metadata = "Data"
+rust_type = "crate::models::Data"
+variants = ["None", "Raw", "BlakeTwo256", "Sha256", "Keccak256", "ShaThree256", "TimelockEncrypted", "ResetBondsFlag", "BigRaw", "TimelockRevealFailed"]
+custom = "commitment-raw-0-128"
+
+[[enums]]
+metadata = "HyperparamValue"
+rust_type = "crate::models::HyperparamValue"
+variants = ["Bool", "U16", "U32", "U64", "U128", "TaoBalance", "I32F32", "U64F64"]
+
+[[enums]]
+metadata = "ProxyType"
+rust_type = "crate::models::ProxyType"
+variants = ["Any", "Owner", "NonCritical", "NonTransfer", "Senate", "NonFungible", "Triumvirate", "Governance", "Staking", "Registration", "Transfer", "SmallTransfer", "RootWeights", "ChildKeys", "SudoUncheckedSetCode", "SwapHotkey", "SubnetLeaseBeneficiary", "RootClaim", "BasketTrading"]
+
+[[enums]]
+metadata = "Bounded"
+rust_type = "crate::models::CrowdloanCall"
+variants = ["Legacy", "Inline", "Lookup"]
