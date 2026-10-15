@@ -111,6 +111,106 @@ fn m5_families_and_hidden_aliases_are_registered_by_the_real_binary()
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }
+
+#[test]
+fn m6_families_and_historical_aliases_reach_real_leaf_help()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Root::new()?;
+    for (args, expected) in [
+        (
+            vec!["root", "--help"],
+            vec!["list", "claim", "allocate", "move", "swap", "register"],
+        ),
+        (
+            vec!["rt", "swap", "--help"],
+            vec!["--from", "--to", "--max-slippage", "--dry-run"],
+        ),
+        (
+            vec!["subnet", "hyperparameters", "--help"],
+            vec!["<netuid>", "--name", "--json"],
+        ),
+        (
+            vec!["conviction", "--help"],
+            vec!["list", "targeting", "show", "add", "mode", "accept", "move"],
+        ),
+        (
+            vec!["lock", "add", "--help"],
+            vec!["--perpetual", "--amount-alpha", "--hotkey"],
+        ),
+        (
+            vec!["misc", "collateral", "show", "--help"],
+            vec!["--netuid", "--hotkey", "--coldkey", "--json"],
+        ),
+        (
+            vec!["utils", "collateral", "show", "--help"],
+            vec!["--netuid", "--hotkey", "--coldkey", "--json"],
+        ),
+        (
+            vec!["collateral", "set_min", "--help"],
+            vec!["--netuid", "--min-alpha", "--hotkey"],
+        ),
+        (
+            vec!["query", "--help"],
+            vec![
+                "subnet-convictions",
+                "root-baskets",
+                "leases",
+                "stake-availability",
+            ],
+        ),
+    ] {
+        let output = root.command().args(&args).output()?;
+        assert!(
+            output.status.success(),
+            "{args:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let text = String::from_utf8(output.stdout)?;
+        for fragment in expected {
+            assert!(text.contains(fragment), "{args:?} lacks {fragment}: {text}");
+        }
+    }
+    let output = root.command().args(["--help"]).output()?;
+    assert!(output.status.success());
+    let help = String::from_utf8(output.stdout)?;
+    // Historical group clones remain callable without appearing beside the
+    // canonical misc group in the public command list.
+    assert!(
+        !help
+            .lines()
+            .any(|line| line.trim_start().starts_with("collateral "))
+    );
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
+    Ok(())
+}
+
+#[test]
+fn historical_misc_alias_dispatches_and_rejects_bad_accounts_before_connection()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Root::new()?;
+    let output = root
+        .command()
+        .args([
+            "utils",
+            "collateral",
+            "show",
+            "--netuid",
+            "1",
+            "--hotkey",
+            "missing-hotkey",
+            "--json",
+            "--wallet-path",
+        ])
+        .arg(&root.0)
+        .output()?;
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    let error = String::from_utf8(output.stderr)?;
+    assert!(!error.contains("unknown command"), "{error}");
+    assert!(error.contains("wallet public key"), "{error}");
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
+    Ok(())
+}
 #[test]
 fn invalid_raw_role_is_a_framework_diagnostic_and_never_connects()
 -> Result<(), Box<dyn std::error::Error>> {

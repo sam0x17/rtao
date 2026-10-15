@@ -7,11 +7,12 @@ mod doctor;
 use rtao_cli::{
     application,
     commands::{
-        axon, catalog, config, generated, hparams, multisig, proxy, stake, subnets, wallet, weights,
+        axon, catalog, collateral, config, conviction, generated, hparams, multisig, proxy, root,
+        stake, subnets, wallet, weights,
     },
     context::AppContext,
     error::CliError,
-    output::DiagnosticContext,
+    output::{DiagnosticContext, terminal_text},
     prompt::{LiveTerminal, PromptContext, SharedTerminal},
 };
 use std::{
@@ -50,11 +51,11 @@ fn run_doctor(mut args: impl Iterator<Item = OsString>) -> Result<(), CliError> 
     };
     let check = doctor::check(&manifest).map_err(CliError::failure)?;
     if let Some(warning) = check.warning {
-        eprintln!("rtao: warning: {warning}");
+        eprintln!("rtao: warning: {}", terminal_text(&warning));
     }
     println!(
         "Core pin and downstream BLS patch verified for {}",
-        check.manifest.display()
+        terminal_text(&check.manifest.display().to_string())
     );
     Ok(())
 }
@@ -89,7 +90,14 @@ async fn run() -> Result<(), CliError> {
         proxy::command()?,
         multisig::command(),
         wallet::command(),
+        root::command()?,
+        conviction::command()?,
         subnets::command()?,
+        clap::Command::new("misc")
+            .about("Additional chain operations.")
+            .subcommand_required(true)
+            .arg_required_else_help(true)
+            .subcommand(collateral::command()?),
     ]);
     if argv.len() == 1 || argv.get(1).is_some_and(|arg| arg == "help") {
         print!("{}", command.render_long_help());
@@ -112,6 +120,13 @@ async fn run() -> Result<(), CliError> {
     let mut invocation = application::parse_with_prompts(command, argv, &context, &mut prompting)?;
     let Some((name, matches)) = invocation.matches.subcommand() else {
         return Err(CliError::input("missing command"));
+    };
+    let (name, matches) = if matches!(name, "misc" | "utils") {
+        matches
+            .subcommand()
+            .ok_or_else(|| CliError::input("missing misc command"))?
+    } else {
+        (name, matches)
     };
     if name == "doctor" {
         // Builder allows root globals before the offline doctor.
@@ -153,6 +168,9 @@ async fn run() -> Result<(), CliError> {
         ),
         "hparams" => hparams::reserved(matches)?,
         "subnets" => subnets::reserved(matches)?,
+        "root" => root::reserved(matches)?,
+        "conviction" => conviction::reserved(matches)?,
+        "collateral" => collateral::reserved(matches)?,
         _ => Vec::new(),
     };
     let mut app = AppContext::from_store(
@@ -230,6 +248,109 @@ async fn run() -> Result<(), CliError> {
                         )
                         .await
                         .map(|_| ())
+                    })
+                    .await
+            }
+            "root" => {
+                let request =
+                    root::Request::from_matches(&mut app, matches, &mut invocation.history)?;
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        if matches!(&request, root::Request::List { .. }) {
+                            return root::execute(
+                                app_ref,
+                                &client,
+                                &request,
+                                Default::default(),
+                                None,
+                                history,
+                            )
+                            .await
+                            .map(|_| ());
+                        }
+                        let Some(request) =
+                            root::prepare_transaction(app_ref, &client, &request, history).await?
+                        else {
+                            return Ok(());
+                        };
+                        let replay = history.replay_command(&replay_args);
+                        generated::execute_tx(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
+            "conviction" | "collateral" => {
+                enum ReadRequest {
+                    Conviction(conviction::ReadRequest),
+                    Collateral(collateral::ReadRequest),
+                }
+                let requests = if name == "conviction" {
+                    conviction::tx_requests(&mut app, matches, &mut invocation.history)?
+                } else {
+                    collateral::tx_requests(&mut app, matches, &mut invocation.history)?
+                };
+                let read = if requests.is_empty() {
+                    Some(if name == "conviction" {
+                        ReadRequest::Conviction(conviction::prepare_read(
+                            &mut app,
+                            matches,
+                            &mut invocation.history,
+                        )?)
+                    } else {
+                        ReadRequest::Collateral(collateral::prepare_read(
+                            &mut app,
+                            matches,
+                            &mut invocation.history,
+                        )?)
+                    })
+                } else {
+                    None
+                };
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        if let Some(read) = read {
+                            return match read {
+                                ReadRequest::Conviction(read) => {
+                                    conviction::execute_prepared_read(app_ref, &client, &read).await
+                                }
+                                ReadRequest::Collateral(read) => {
+                                    collateral::execute_prepared_read(app_ref, &client, &read).await
+                                }
+                            };
+                        }
+                        let replay = history.replay_command(&replay_args);
+                        for request in requests {
+                            generated::execute_tx(
+                                app_ref,
+                                &client,
+                                &request,
+                                rtao_cli::context::SubmissionOptions {
+                                    replay: Some(&replay),
+                                    ..Default::default()
+                                },
+                                None,
+                                history,
+                            )
+                            .await?;
+                        }
+                        Ok(())
                     })
                     .await
             }
@@ -419,7 +540,7 @@ async fn main() -> ExitCode {
                 if error.code == 0 {
                     print!("{}", error.message);
                 } else {
-                    eprintln!("rtao: {}", error.message);
+                    eprintln!("rtao: {}", terminal_text(&error.message));
                 }
             }
             ExitCode::from(error.code)
