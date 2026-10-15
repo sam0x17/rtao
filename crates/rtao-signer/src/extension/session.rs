@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/session.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/tokens.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional source at the same commit/license: sdk/python/bittensor/extension/browser.py.
 use std::{
     fs::{self, File, OpenOptions},
@@ -128,13 +129,18 @@ impl BridgePaths {
                 .map_err(|_| error("bridge token is not UTF-8"))?
                 .to_owned(),
         );
-        if token.trim().is_empty() {
+        // Python's str.strip includes the ASCII information separators in
+        // addition to Rust's Unicode whitespace set.
+        let stripped = token.trim_matches(|character: char| {
+            character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
+        });
+        if stripped.is_empty() {
             return Ok(None);
         }
-        if token.trim().chars().any(char::is_control) {
+        if stripped.chars().any(char::is_control) {
             return Err(error("invalid bridge token file"));
         }
-        Ok(Some(Zeroizing::new(token.trim().to_owned())))
+        Ok(Some(Zeroizing::new(stripped.to_owned())))
     }
 }
 
@@ -865,6 +871,27 @@ pub(super) fn private_file_regressions() -> Result<(), Box<dyn std::error::Error
         token_file: token.clone(),
         pid_file: pid,
     };
+    assert!(paths.read_token()?.is_none());
+    for (contents, expected) in [
+        ("", None),
+        (" \t\r\n\u{85}\u{a0}\u{3000}", None),
+        ("\u{1c}\u{1d}\u{1e}\u{1f}", None),
+        ("\u{1c} \tprivate-token\r\n\u{1f}", Some("private-token")),
+        (
+            "\u{1d}\u{1e}private-token\u{1e}\u{1d}",
+            Some("private-token"),
+        ),
+    ] {
+        write_private(&token, contents.as_bytes())?;
+        assert_eq!(
+            paths.read_token()?.as_deref().map(|value| value.as_str()),
+            expected
+        );
+    }
+    for contents in ["private\u{1c}token", "private\ttoken", "private\r\ntoken"] {
+        write_private(&token, contents.as_bytes())?;
+        assert!(paths.read_token().is_err());
+    }
     write_private(&token, b"a-private-token")?;
     assert_eq!(fs::metadata(&token)?.permissions().mode() & 0o777, 0o600);
     assert_eq!(

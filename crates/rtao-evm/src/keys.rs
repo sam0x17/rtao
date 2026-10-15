@@ -506,7 +506,7 @@ fn apply_aes_ctr(key: &[u8], iv: [u8; 16], bytes: &mut [u8; 32]) -> Result<()> {
 }
 
 fn account_from_private_key(value: &str) -> Result<EvmAccount> {
-    let value = value.trim();
+    let value = crate::precompiles::python_strip(value);
     let value = value.strip_prefix("0x").unwrap_or(value);
     let mut bytes = Zeroizing::new([0u8; 32]);
     hex::decode_to_slice(value, bytes.as_mut())
@@ -517,6 +517,7 @@ fn account_from_mnemonic(phrase: &str, path: &str) -> Result<EvmAccount> {
     if phrase.len() > 4096 || path.len() > 1024 || path.split('/').count() > 64 {
         return Err(validation("mnemonic or derivation path exceeds limit"));
     }
+    let phrase = crate::precompiles::python_strip(phrase);
     // Coins accepts already-hardened integer values and adds 2^31 for a
     // hardened suffix. Validate indices before that arithmetic can overflow
     // or an unmarked child can alias a hardened child.

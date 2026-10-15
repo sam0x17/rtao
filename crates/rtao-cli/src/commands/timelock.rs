@@ -29,6 +29,10 @@ pub const MAX_CIPHERTEXT_BYTES: usize = (MAX_JSON_FILE_BYTES - 2) / 2;
 /// Maximum CLI plaintext size (just under 8 MiB).
 pub const MAX_PLAINTEXT_BYTES: usize = MAX_CIPHERTEXT_BYTES - 1024;
 const INLINE_DECODE_BYTES: usize = 64 * 1024;
+const PAYLOAD_HELP: &str = "Text to seal, or a path to a file whose contents to seal.";
+const CIPHERTEXT_HELP: &str = "Ciphertext hex (from encrypt), or a path to a ciphertext file.";
+const DURATION_HELP: &str =
+    "Duration until the reveal: '30s', '15m', '1h30m', '2d', or plain seconds.";
 
 /// An injected crypto operation; no beacon or cryptography is needed by CLI fixtures.
 pub type TimelockFuture<'a, T> =
@@ -60,47 +64,76 @@ impl TimelockBackend for NativeTimelock {
     }
 }
 
-fn source(command: Command) -> Command {
-    command
-        .arg(Arg::new("data").help("Text, ciphertext hex, or a path to a regular file."))
-        .arg(
-            Arg::new("file").long("file").conflicts_with("data").help(
-                "Read a bounded regular file (plaintext just under 8 MiB; ciphertext 16 MiB).",
-            ),
+fn source(command: Command, encrypt: bool) -> Command {
+    let (data_help, file_help, limit_help) = if encrypt {
+        (
+            PAYLOAD_HELP,
+            "Read the payload from this file instead of the argument.",
+            "Regular files only; plaintext must be just under 8 MiB.",
         )
+    } else {
+        (
+            CIPHERTEXT_HELP,
+            "Read the ciphertext from this file (raw bytes or hex).",
+            "Regular files only; ciphertext input is limited to 16 MiB.",
+        )
+    };
+    command.arg(Arg::new("data").help(data_help)).arg(
+        Arg::new("file")
+            .long("file")
+            .conflicts_with("data")
+            .help(file_help)
+            .long_help(format!("{file_help}\n\n{limit_help}")),
+    )
 }
-fn destination(command: Command) -> Command {
-    command.arg(Arg::new("out").long("out").help("Write raw bytes here."))
+fn destination(command: Command, encrypt: bool) -> Command {
+    command.arg(Arg::new("out").long("out").help(if encrypt {
+        "Write raw ciphertext bytes here instead of printing hex."
+    } else {
+        "Write the decrypted bytes here instead of printing."
+    }))
 }
 
 /// Build the three `misc timelock` commands; old top-level aliases are added by the application.
 pub fn command() -> Command {
     Command::new("timelock")
-        .about("Seal data anyone can open at a set future time.")
+        .about("Timelock encryption: seal data anyone can open at a set future time.")
+        .long_about(format!(
+            "Timelock encryption: seal data anyone can open at a set future time.\n\nGuide: {}/guides/timelock",
+            rtao_catalog::py::DOCS_URL
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(with_globals(
-            destination(source(
-                Command::new("encrypt").about("Seal text or a file."),
-            ))
+            destination(
+                source(
+                    Command::new("encrypt")
+                        .about("Seal text or a file until a future moment; prints the ciphertext hex.")
+                        .long_about(
+                            "Seal text or a file until a future moment; prints the ciphertext hex.\n\nThe reveal round is embedded in the ciphertext, so the hex is all anyone needs to decrypt later -- no key, no metadata, no account.",
+                        ),
+                    true,
+                ),
+                true,
+            )
             .arg(
                 Arg::new("reveal_in")
                     .long("in")
                     .conflicts_with_all(["reveal_at", "reveal_round", "reveal_blocks"])
-                    .help("Duration until reveal, such as 1h30m."),
+                    .help(DURATION_HELP),
             )
             .arg(
                 Arg::new("reveal_at")
                     .long("at")
                     .conflicts_with_all(["reveal_in", "reveal_round", "reveal_blocks"])
-                    .help("Absolute ISO-8601 reveal time; no offset means UTC."),
+                    .help("Absolute reveal moment, ISO-8601: '2026-07-08T12:00Z' (no offset = UTC)."),
             )
             .arg(
                 Arg::new("reveal_round")
                     .long("round")
                     .value_parser(clap::value_parser!(u64))
                     .conflicts_with_all(["reveal_in", "reveal_at", "reveal_blocks"])
-                    .help("Explicit Quicknet round."),
+                    .help("Explicit drand quicknet round number to encrypt to."),
             )
             .arg(
                 Arg::new("reveal_blocks")
@@ -112,25 +145,36 @@ pub fn command() -> Command {
             Tier::Read,
         ))
         .subcommand(with_globals(
-            destination(source(
-                Command::new("decrypt").about("Open a ciphertext after reveal."),
-            ))
+            destination(
+                source(
+                    Command::new("decrypt")
+                        .about("Open a timelocked ciphertext once its reveal moment has passed."),
+                    false,
+                ),
+                false,
+            )
             .arg(
                 Arg::new("wait")
                     .long("wait")
                     .action(ArgAction::SetTrue)
-                    .help("Wait until the reveal moment."),
+                    .help("Sleep until the reveal moment instead of failing early."),
             )
             .arg(
                 Arg::new("timeout")
                     .long("timeout")
                     .allow_hyphen_values(true)
-                    .help("Total decryption deadline in seconds."),
+                    .help("Give up after this many seconds (with --wait).")
+                    .long_help(
+                        "Give up after this many seconds (with --wait).\n\nTotal decryption deadline, including beacon access and crypto. Must be finite and non-negative.",
+                    ),
             ),
             Tier::Read,
         ))
         .subcommand(with_globals(
-            source(Command::new("show").about("Inspect a ciphertext without decrypting it.")),
+            source(
+                Command::new("show").about("Show when a ciphertext unlocks, without decrypting it."),
+                false,
+            ),
             Tier::Read,
         ))
 }
@@ -190,6 +234,14 @@ async fn prompt_missing(
     let data = if missing_data {
         let mut spec = PromptSpec::new("data", if encrypt { "data" } else { "ciphertext" });
         spec.positional = true;
+        spec.help = Some(
+            if encrypt {
+                PAYLOAD_HELP
+            } else {
+                CIPHERTEXT_HELP
+            }
+            .into(),
+        );
         let raw = loop {
             let (_, raw) = ask_with(&context, &mut terminal, &spec, |raw| {
                 checked_input(raw).map_err(|error| PromptValidation::Message(error.message))?;
@@ -221,7 +273,8 @@ async fn prompt_missing(
         None
     };
     let duration = if missing_reveal {
-        let spec = PromptSpec::new("reveal_in", "--in");
+        let mut spec = PromptSpec::new("reveal_in", "--in");
+        spec.help = Some(DURATION_HELP.into());
         let (_, raw) = ask_with(&context, &mut terminal, &spec, |raw| {
             Reveal::after(raw)
                 .map(|_| ())

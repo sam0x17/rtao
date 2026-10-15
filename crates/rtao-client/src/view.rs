@@ -127,6 +127,39 @@ impl Snapshot {
         &self.client
     }
 
+    /// Clone this snapshot, or resolve a sibling using the same connection.
+    ///
+    /// An omitted reference or this snapshot's height/hash performs no RPC.
+    /// A sibling retains the read observer and owns its resolved immutable hash.
+    /// Resolving a new sibling requires an open connection, unlike Python's
+    /// lazy height-only sibling construction.
+    pub async fn at(&self, block: Option<BlockRef>) -> Result<Self, ClientError> {
+        match block {
+            None => Ok(self.clone()),
+            Some(BlockRef::Hash(hash)) if hash == self.block.hash => Ok(self.clone()),
+            Some(BlockRef::Number(number)) if number == self.block.number => Ok(self.clone()),
+            Some(block) => {
+                let mut sibling = self.client.at(block).await?;
+                sibling.observer = self.observer.clone();
+                Ok(sibling)
+            }
+        }
+    }
+
+    /// Copy this connection's cached display symbols without requesting chain state.
+    pub async fn token_symbols(&self) -> BTreeMap<rtao_primitives::NetUid, String> {
+        self.client.token_symbols().await
+    }
+
+    /// Tag a chain-native amount with this connection's cached display symbol.
+    pub async fn balance(
+        &self,
+        rao: u64,
+        netuid: rtao_primitives::NetUid,
+    ) -> rtao_primitives::DynBalance {
+        self.client.balance(rao, netuid).await
+    }
+
     /// Describe this block, or resolve a requested height while retaining observers.
     pub async fn block_info(
         &self,

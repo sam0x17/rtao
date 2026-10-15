@@ -117,11 +117,10 @@ impl<R: ProcessRunner> MacosPasswords<R> {
             }
             return Err(MacosPasswordError::DialogFailed);
         }
-        let text =
-            std::str::from_utf8(&result.stdout).map_err(|_| MacosPasswordError::InvalidEncoding)?;
+        let text = process_text(&result.stdout)?;
         let text = text
             .split_once("text returned:")
-            .map_or(text, |(_, tail)| tail);
+            .map_or(text.as_str(), |(_, tail)| tail);
         let password = python_strip(text);
         if password.is_empty() {
             return Err(MacosPasswordError::Empty);
@@ -153,9 +152,8 @@ impl<R: ProcessRunner> MacosPasswords<R> {
         if !result.success {
             return Ok(None);
         }
-        let text =
-            std::str::from_utf8(&result.stdout).map_err(|_| MacosPasswordError::InvalidEncoding)?;
-        let password = python_strip(text);
+        let text = process_text(&result.stdout)?;
+        let password = python_strip(&text);
         Ok((!password.is_empty()).then(|| SecretString::new(password.to_owned())))
     }
 
@@ -363,6 +361,26 @@ fn escape_applescript(text: &str) -> String {
     text.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
+// subprocess.run(text=True) applies universal newlines before Python's strip
+// and dialog-prefix parsing. Keep the normalized copy in erased storage, with
+// enough initial capacity that normalization never reallocates secret bytes.
+fn process_text(stdout: &[u8]) -> Result<Zeroizing<String>, MacosPasswordError> {
+    let text = std::str::from_utf8(stdout).map_err(|_| MacosPasswordError::InvalidEncoding)?;
+    let mut normalized = Zeroizing::new(String::with_capacity(text.len()));
+    let mut characters = text.chars().peekable();
+    while let Some(character) = characters.next() {
+        if character == '\r' {
+            if characters.peek() == Some(&'\n') {
+                let _ = characters.next();
+            }
+            normalized.push('\n');
+        } else {
+            normalized.push(character);
+        }
+    }
+    Ok(normalized)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -502,6 +520,50 @@ mod tests {
                 "set dlg to display dialog \"m\\\"\\\\\" with title \"t\\\"\\\\\" default answer \"\" with hidden answer buttons {\"Cancel\", \"OK\"} default button \"OK\"\nreturn text returned of dlg"
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn successful_password_output_normalizes_internal_cr_and_crlf_before_strip() {
+        let runner = Runner {
+            results: VecDeque::from([
+                output(true, b"  a\rb\r\nc\n  ", b""),
+                output(
+                    true,
+                    "button returned:OK\r\ntext returned:\r\n \u{1c}caf\u{e9}\rline\r\nend\u{1f} \r\n"
+                        .as_bytes(),
+                    b"",
+                ),
+                output(true, b"unprefixed\rpassword\r\nvalue\n", b""),
+            ]),
+            ..Default::default()
+        };
+        let mut native = MacosPasswords::with_platform(runner, true);
+        assert_eq!(
+            native
+                .keychain_load("w")
+                .await
+                .unwrap()
+                .unwrap()
+                .expose_secret(),
+            "a\nb\nc"
+        );
+        assert_eq!(
+            native
+                .prompt_password("title", "message")
+                .await
+                .unwrap()
+                .expose_secret(),
+            "caf\u{e9}\nline\nend"
+        );
+        assert_eq!(
+            native
+                .prompt_password("title", "message")
+                .await
+                .unwrap()
+                .expose_secret(),
+            "unprefixed\npassword\nvalue"
+        );
+        assert!(native.into_runner().results.is_empty());
     }
 
     #[tokio::test]

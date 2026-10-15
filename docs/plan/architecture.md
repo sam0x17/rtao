@@ -1507,7 +1507,10 @@ impl ClientError {
   RPC of a read used one block hash (§11.3).
 - **Constants come from the view's own runtime**, the snapshot's spec, never an RPC. Python reads them from the head
   codec even under a snapshot (`PY/snapshot.py:66-68`). rtao's choice is more correct across upgrades and registered as
-  D-007 [J-CF graft 12].
+  D-007 [J-CF graft 12]. Derived slot-time and fast-block reads also retain that runtime; Python's snapshot delegates
+  these helpers to the connection's block time. `Snapshot::at(None)` and an equal height/hash clone without I/O.
+  A new sibling resolves its immutable hash/runtime immediately and therefore requires an open client, whereas
+  Python constructs a lazy height-only sibling. Cached display symbols and balance construction need no RPC.
 
 ### 3.6 Reading state
 
@@ -5717,7 +5720,7 @@ divergences. Classes:
 | D-004 | connect | no genesis check | signing refused on a genesis mismatch for named networks | stricter | `rtao_client::connect::genesis_mismatch_keeps_reads_and_refuses_signing_with_both_hashes` | Active source; hosted validation pending; no new filing |
 | D-005 | http_auth.NonceStore | synchronous `check_and_store` | async (`BoxFuture`) | addition | `rtao_btauth::redis::tests::redis_store_does_not_block` | Active source; hosted validation pending; no new filing |
 | D-006 | `timelock.get_encrypted_commit_v2` → core `epoch_schedule` | safety net `> MAX_TEMPO` | pallet predicate `> tempo`, with the counter cap | improved | `epoch_schedule_agrees_except_safety_net` | PR-U5 |
-| D-007 | `snapshot.Snapshot.constant` | read from the head codec | read from the snapshot's runtime | improved | `rtao_client::view::tests::typed_golden_constants_use_snapshot_runtime_without_rpc` | Active source; hosted validation pending; no new filing |
+| D-007 | `snapshot.Snapshot.constant/block_time/is_fast_blocks` | unpinned client constants and connection slot time | constants and derived timing from the retained snapshot runtime | improved | `rtao_client::view::tests::typed_golden_constants_use_snapshot_runtime_without_rpc` | Active source; hosted validation pending; no new filing |
 | D-008 | `_transport.interface.attach_signature` | refuses on a `spec_version` change only | also refuses on a `transaction_version` change | stricter | `rtao_client::submission::prepared_signature_refuses_same_spec_transaction_version_change` | Active source; hosted validation pending; no new filing |
 | D-009 | `http_auth.verify retention check` | `ValueError` after a verified signature | `ConfigError` at `Verifier::new` | stricter | `rtao_btauth::conformance::test_window_wider_than_store_retention_refused` | Active source; hosted validation pending; no new filing |
 | D-010 | `_transport.runtime V14 path` | signs with V14 metadata if ever selected | V14 runtimes are read-only (runtime APIs via the legacy table only) | stricter | `rtao_runtime::handle::tests::v14_is_readable_but_signing_and_digest_are_refused`; `rtao_client::view::tests::v14_archive_calls_use_only_frozen_double_encoded_api_definitions` | Active source; hosted validation pending; no new filing |
