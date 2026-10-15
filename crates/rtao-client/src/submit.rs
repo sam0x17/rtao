@@ -304,6 +304,9 @@ pub enum PoolRejection {
     InvalidTransaction(String),
     /// Terminal watch status diagnostic.
     Watch(String),
+    /// A matched custom-code integer could not be normalized using Python's
+    /// integer rules. Retains the original diagnostic without another fallback.
+    InvalidCustomCode(String),
     /// Unrecognized pool rejection diagnostic.
     Unknown(String),
 }
@@ -316,9 +319,10 @@ impl fmt::Display for PoolRejection {
             Self::PriorityTooLow => f.write_str("Priority is too low"),
             Self::AlreadyImported => f.write_str("Already imported"),
             Self::TemporarilyBanned => f.write_str("Transaction is temporarily banned"),
-            Self::InvalidTransaction(name) | Self::Watch(name) | Self::Unknown(name) => {
-                f.write_str(name)
-            }
+            Self::InvalidTransaction(name)
+            | Self::Watch(name)
+            | Self::InvalidCustomCode(name)
+            | Self::Unknown(name) => f.write_str(name),
         }
     }
 }
@@ -1428,10 +1432,14 @@ fn author_ack_error(
         }) = &error
         {
             let refusal = PoolRejection::from_rpc(*code, message, data.as_ref());
-            if !matches!(refusal, PoolRejection::Unknown(_))
-                || rtao_catalog::rt::POOL_RPC_ALL_CODES
-                    .iter()
-                    .any(|(known, _)| known == code)
+            // Failed normalization does not prove that an unknown server code
+            // refused the transaction. Known author codes retain that meaning.
+            if !matches!(
+                refusal,
+                PoolRejection::Unknown(_) | PoolRejection::InvalidCustomCode(_)
+            ) || rtao_catalog::rt::POOL_RPC_ALL_CODES
+                .iter()
+                .any(|(known, _)| known == code)
             {
                 attempt.refused.store(true, Ordering::Release);
                 return SubmitFailure::Pool(refusal);
@@ -1457,24 +1465,34 @@ impl PoolRejection {
     /// Resolve structured custom codes, exact node codes, then Python needles.
     pub fn from_rpc(code: i64, message: &str, data: Option<&serde_json::Value>) -> Self {
         use num_traits::ToPrimitive;
-        let custom = data
-            .and_then(|data| {
+        let payload_custom = match data {
+            Some(data) => {
                 if let Some(value) = data.get("Custom") {
-                    python_custom_integer(value)
+                    Ok(python_custom_integer(value))
                 } else {
                     match data {
-                        serde_json::Value::Bool(_) => python_custom_integer(data),
+                        serde_json::Value::Bool(_) => Ok(python_custom_integer(data)),
                         serde_json::Value::Number(value)
                             if !value.as_str().contains(['.', 'e', 'E']) =>
                         {
-                            python_custom_integer(data)
+                            Ok(python_custom_integer(data))
                         }
                         serde_json::Value::String(value) => custom_text(value),
-                        _ => None,
+                        _ => Ok(None),
                     }
                 }
-            })
-            .or_else(|| custom_text(message));
+            }
+            None => Ok(None),
+        };
+        let custom = match payload_custom.and_then(|custom| match custom {
+            Some(custom) => Ok(Some(custom)),
+            None => custom_text(message),
+        }) {
+            Ok(custom) => custom,
+            Err(InvalidCustomInteger) => {
+                return Self::InvalidCustomCode(pool_diagnostic(message, data));
+            }
+        };
         if let Some(custom) = custom.as_ref().and_then(ToPrimitive::to_u8)
             && rtao_catalog::errors::custom_transaction_name(custom).is_some()
         {
@@ -1494,16 +1512,7 @@ impl PoolRejection {
                 _ => {}
             }
         }
-        let message = if message.is_empty() {
-            "Request failed"
-        } else {
-            message
-        };
-        let text = match data.filter(|data| !data.is_null()) {
-            Some(serde_json::Value::String(data)) => format!("{message}: {data}"),
-            Some(data) => format!("{message}: {}", crate::config::python_repr(data)),
-            _ => message.into(),
-        };
+        let text = pool_diagnostic(message, data);
         if watch_name(&text).is_some() {
             return Self::Watch(text);
         }
@@ -1527,23 +1536,48 @@ impl PoolRejection {
             Self::TemporarilyBanned => Some("TemporarilyBanned"),
             Self::InvalidTransaction(name) => Some(name),
             Self::Watch(message) => watch_name(message),
-            Self::Unknown(_) => None,
+            Self::InvalidCustomCode(_) | Self::Unknown(_) => None,
         }
     }
 }
 
-fn custom_text(text: &str) -> Option<num_bigint::BigInt> {
+fn pool_diagnostic(message: &str, data: Option<&serde_json::Value>) -> String {
+    let message = if message.is_empty() {
+        "Request failed"
+    } else {
+        message
+    };
+    match data.filter(|data| !data.is_null()) {
+        Some(serde_json::Value::String(data)) => format!("{message}: {data}"),
+        Some(data) => format!("{message}: {}", crate::config::python_repr(data)),
+        _ => message.into(),
+    }
+}
+
+struct InvalidCustomInteger;
+
+fn custom_text(text: &str) -> Result<Option<num_bigint::BigInt>, InvalidCustomInteger> {
     static PATTERN: std::sync::OnceLock<Result<regex::Regex, regex::Error>> =
         std::sync::OnceLock::new();
-    let pattern = PATTERN
+    let Some(pattern) = PATTERN
         .get_or_init(|| {
             regex::RegexBuilder::new(rtao_catalog::py::CUSTOM_ERROR_RE)
                 .case_insensitive(true)
                 .build()
         })
         .as_ref()
-        .ok()?;
-    crate::config::parse_cache_key(pattern.captures(text)?.get(1)?.as_str())
+        .ok()
+    else {
+        return Ok(None);
+    };
+    let Some(capture) = pattern.captures(text).and_then(|captures| captures.get(1)) else {
+        return Ok(None);
+    };
+    // Python catches conversion failure for a structured {"Custom": value},
+    // but lets it escape for a regex capture in either data or message text.
+    crate::config::parse_cache_key(capture.as_str())
+        .map(Some)
+        .ok_or(InvalidCustomInteger)
 }
 
 fn python_custom_integer(value: &serde_json::Value) -> Option<num_bigint::BigInt> {
