@@ -16,6 +16,15 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run `38719470543` at `6a88621` fails before tests. Check/no-host reject a
+manual ASCII-digit range; MSRV finds root swap display treating its successful
+status as optional without wrapping it; supply finds fuzz's client lock entry
+missing the already-locked chrono dependency. The parser now uses
+`is_ascii_digit()`, the optional display context is explicit, and a bounded
+offline workspace lock update adds only that edge with zero package changes.
+Formatting/whitespace checks pass; no local build or test ran. Another hosted
+run must validate these corrections. Features was still running at inspection.
+
 Source adds the remaining 62 reads and the blocking facade. All five read
 groups have fixture source and independent source reviews. Generation run
 [38715060741](https://github.com/sam0x17/rtao/actions/runs/38715060741) at

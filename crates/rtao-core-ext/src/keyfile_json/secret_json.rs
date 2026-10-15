@@ -290,7 +290,7 @@ impl<'a> Parser<'a> {
     }
 
     fn digits(&mut self) -> Result<(), ParseError> {
-        if !matches!(self.next()?, b'0'..=b'9') {
+        if !self.next()?.is_ascii_digit() {
             return Err(ParseError);
         }
         while matches!(self.peek(), Some(b'0'..=b'9')) {
