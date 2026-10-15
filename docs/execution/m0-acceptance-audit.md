@@ -39,7 +39,16 @@ identity. These source relationships do not prove runtime conformance.
 
 ## Remaining acceptance work
 
-Latest normal run
+Latest inspected normal run
+[38710157011](https://github.com/sam0x17/rtao/actions/runs/38710157011)
+at `c6bd593` passes MSRV/no-host/supply/semver. Check compilation reaches
+strict Clippy, which rejects a synchronous test lock held in the same scope
+as client.close().await. The correction ends the lock and borrowed request
+in a lexical block before the await; original assertions and gates remain.
+Features is running at inspection; tests, doctests and docs were not reached.
+No acceptance is established by these passing subsets.
+
+Earlier normal run
 [38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
 at `bad95c0` passes compilation, strict Clippy and the five other jobs. The
 lock fixture now qualifies; parity next requires an explicit AddStake class

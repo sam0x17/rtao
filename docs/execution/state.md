@@ -56,6 +56,16 @@ later milestones still require implementation and acceptance. The full intent
 source and M5 CLI integration still require combined hosted acceptance.
 
 Latest inspected normal hosted run
+[38710157011](https://github.com/sam0x17/rtao/actions/runs/38710157011)
+at `c6bd593` passes MSRV, no-host, supply and semver. The check job compiles
+the three corrected sites, then strict Clippy rejects a test MutexGuard whose
+borrowed request remains in scope across client.close().await. A lexical
+block now ends the guard and request borrows before that await, retaining the
+RPC hash assertions. Features remains running at inspection. Tests, doctests
+and docs builds were not reached. Another ordinary hosted check is required;
+no local build was run.
+
+Earlier normal hosted run
 [38709461377](https://github.com/sam0x17/rtao/actions/runs/38709461377)
 at `5cba852` fails check/MSRV compilation. Multisig reference collection needs
 one named borrow lifetime; the new policy fixture compares NetUid to u16,
