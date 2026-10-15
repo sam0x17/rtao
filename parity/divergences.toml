@@ -16,11 +16,10 @@ pinning_tests = [
   "rtao_signer::extension::tests::connection_targets_never_send_tokens_off_host",
   "rtao_signer::extension::tests::library_defaults_require_explicit_process_launch_permissions",
   "rtao_signer::extension::tests::request_deadline_includes_waiting_behind_an_approval",
-  "rtao_signer::extension::tests::publication_rejects_path_aliases_and_reserves_live_state",
-  "rtao_signer::extension::tests::fresh_ensure_reuses_authenticated_foreground_without_signalling",
+  "rtao_signer::extension::tests::expired_startup_refuses_spawn_without_touching_state",
   "rtao_signer::extension::tests::signatures_are_bounded_and_never_change_negotiated_crypto",
 ]
-upstream_report = "Existing native policy and fixture bodies reviewed in source; current hosted execution and real browser/device/platform coverage unverified. Device work remains deferred; no new filing."
+upstream_report = "Existing native policy and unconditional pinning fixtures reviewed in source. Conditional Unix publication/foreground-reuse fixtures remain in the test suite as supplementary platform coverage; the portable divergence gate does not admit them as pinning identities. Current hosted and real browser/device/platform execution unverified. Device work remains deferred; no new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/extension/session.py"
 
 [[divergences]]
