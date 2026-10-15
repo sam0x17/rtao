@@ -16,6 +16,18 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Generation38776671979 atd7b4a27 compiles and extracts, then regeneration
+finds the generic money selector incorrectly requiring a Python helper-table
+entry before a custom Crowdloan resolver. Preserve custom resolvers first;
+for ordinary constructors keep authenticated identity/fallback precedence,
+then use a metadata-mapped native balance unit when a compact wrapper hides
+its annotation. Untyped unknown u64 remains a refusal. A real pinned-metadata
+fixture covers Crowdloan contribution/cap/minimum arguments and unknown-u64
+refusals. Log50,999bytes SHA256
+`25153a7a1381b10724723066a49845ba5de5a03b34eb8e55c00e7b332f5eeb28`;
+proof `check-38776671979.json`. No adopted artifact or new test success.
+
+
 Root follow-up aligns decimal ABI integer strings with Python's default
 4,300-digit limit, including leading zeroes; hexadecimal remains exempt.
 Public coercion fixture source covers both sides, signs, Unicode digits and
