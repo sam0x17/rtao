@@ -100,3 +100,38 @@ and integration finish. Finished owned builds must undergo exact dependency
 audits before removal. The durable prepared
 wallet/recovery root is excluded from disposable cleanup. No remote Studio
 task directory, wallet copy or service was created.
+
+## Client-only continuation, 2026-10-15
+
+Q30 retires the local validation campaign described above. Source checkpoint
+`450c914335daa6a5da76a6c30908186e84f05e6e` is pushed; its first hosted run is
+https://github.com/sam0x17/rtao/actions/runs/38680556857. No current hosted
+success or milestone exit is inferred from starting it.
+
+Restored the M4-08 owner API and M4-17 owner example from the private source
+recovery archive. Every patch matched the recovery manifest and applied to
+the canonical checkpoint without a conflict:
+
+| Patch | SHA-256 |
+|---|---|
+| M4-08 base | `a65d26f9a499232e538675464e492ef1c6ebc98382ee7616b4a9d13269b6d1ca` |
+| Executor retry ownership | `b5a6e24a648d33c821b90d16ea0cdeca951255dbe4b8fd18187bf51da272b01f` |
+| Final owner proxy routing | `5910aea3c02e1991f5cf34405234ff35ca764a493032c3be655d9ef6779f28c2` |
+| Owner example | `d2b83a3bc1dbd6552ae8ecebd10e6ab113cb382e8102c88e563766a96b4ed1fd` |
+
+The composition preserves the original signer for proxy routing, checks the
+represented owner's state, validates live proxy grants before unlocking,
+and gives owner orchestration control over its bounded paid retry. Null
+pruning retains its recovery journal through ambiguous outcomes. The example
+previews public plans and requires `--execute` before submitting.
+
+Current formatting and patch/source checks pass. The recovered fixture tests
+and example have not been compiled or executed during this continuation;
+hosted CI must establish current acceptance. CLI/offline candidates remain
+unadopted. No local build, node, container or device operation was started.
+
+The owner feature manifest and example registration change the authenticated
+compatibility report inputs. Refresh the derived build-weight/compatibility
+records in hosted CI before claiming acceptance; do not edit their hashes
+by hand. The source-only integration scratch was audited and removed after
+adoption; the private recovery archive retains the original candidates.

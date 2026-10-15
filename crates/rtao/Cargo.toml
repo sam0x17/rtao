@@ -71,3 +71,7 @@ required-features = ["validator"]
 [[example]]
 name = "miner"
 required-features = ["miner"]
+
+[[example]]
+name = "owner"
+required-features = ["owner"]

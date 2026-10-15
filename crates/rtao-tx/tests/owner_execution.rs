@@ -616,3 +616,103 @@ async fn subnet_registration_executor_populates_the_immediate_typed_result() {
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
     ex.client().close().await;
 }
+
+#[tokio::test]
+async fn clear_owner_rate_replan_opt_out_returns_first_included_failure() {
+    let (ex, fake, keys) = fixture().await;
+    fake.mutate_state(|state| {
+        state.queue_submit(SubmitScript::InBlockThenFinalized {
+            events: json!([rate_failure(0)]),
+        })
+    });
+    let result = ex
+        .execute(
+            &alpha(),
+            &keys,
+            &ExecuteOptions {
+                retries: 4,
+                replan_owner_rate_limit: false,
+                ..included()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(!result.success);
+    assert_eq!(
+        result.error.unwrap().name.as_deref(),
+        Some("TxRateLimitExceeded")
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(keys.signer.requests.lock().unwrap().len(), 1);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    ex.client().close().await;
+}
+
+#[tokio::test]
+async fn shield_owner_rate_replan_opt_out_signs_and_submits_only_one_pair() {
+    let (ex, fake, mut keys) = fixture().await;
+    let runtime = ex.client().refresh_runtime().await.unwrap();
+    let bytes = Arc::new(Mutex::new(Vec::<Vec<u8>>::new()));
+    keys.signer.inner = Some(InnerCapture {
+        client: ex.client().clone(),
+        bytes: Arc::clone(&bytes),
+        calls: vec![
+            admin_utils::sudo_set_alpha_values(NET, 2000, 60000)
+                .compose(&runtime)
+                .unwrap(),
+        ],
+    });
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", move |state, request| {
+            let mut reply = state.dispatch(request);
+            if let Some(Ok(raw)) = &mut reply.outcome {
+                let height = raw["block"]["header"]["number"]
+                    .as_str()
+                    .and_then(|number| {
+                        u64::from_str_radix(number.trim_start_matches("0x"), 16).ok()
+                    });
+                if height == Some(101)
+                    && let Some(inner) = bytes.lock().unwrap().first()
+                {
+                    raw["block"]["extrinsics"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!(format!("0x{}", hex::encode(inner))));
+                    state
+                        .seed_events(
+                            request.params[0].as_str().unwrap(),
+                            json!([success(0), rate_failure(1)]),
+                        )
+                        .unwrap();
+                }
+            }
+            reply
+        })
+    });
+    let result = ex
+        .submit_shielded(
+            &alpha(),
+            &keys,
+            &ShieldOptions {
+                execute: ExecuteOptions {
+                    replan_owner_rate_limit: false,
+                    ..included()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(!result.success);
+    assert_eq!(
+        result.error.unwrap().name.as_deref(),
+        Some("TxRateLimitExceeded")
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    let requests = keys.signer.requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].0, SignPurpose::ShieldInner);
+    assert_eq!(requests[1].0, SignPurpose::ShieldCarrier);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    ex.client().close().await;
+}
