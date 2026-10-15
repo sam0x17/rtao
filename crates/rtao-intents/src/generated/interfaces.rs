@@ -796,7 +796,13 @@ impl rtao_tx::IntentInterface for MultisigApprove {
         &rtao_runtime::calls::multisig::APPROVE_AS_MULTI,
     ];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("multisig_approve", self)
+        crate::multisig::intent_json(
+            "multisig_approve",
+            self,
+            &self.other_signatories,
+            &self.call,
+            self.timepoint.as_ref(),
+        )
     }
 }
 #[cfg(feature = "multisig")]
@@ -823,7 +829,13 @@ impl rtao_tx::IntentInterface for MultisigCancel {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::multisig::CANCEL_AS_MULTI];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("multisig_cancel", self)
+        crate::multisig::intent_json(
+            "multisig_cancel",
+            self,
+            &self.other_signatories,
+            &self.call,
+            Some(&self.timepoint),
+        )
     }
 }
 #[cfg(feature = "multisig")]
@@ -851,7 +863,13 @@ impl rtao_tx::IntentInterface for MultisigExecute {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::multisig::AS_MULTI];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("multisig_execute", self)
+        crate::multisig::intent_json(
+            "multisig_execute",
+            self,
+            &self.other_signatories,
+            &self.call,
+            self.timepoint.as_ref(),
+        )
     }
 }
 #[cfg(feature = "multisig")]
@@ -874,7 +892,13 @@ impl rtao_tx::IntentInterface for MultisigThreshold1 {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::multisig::AS_MULTI_THRESHOLD_1];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("multisig_threshold_1", self)
+        crate::multisig::intent_json(
+            "multisig_threshold_1",
+            self,
+            &self.other_signatories,
+            &self.call,
+            None,
+        )
     }
 }
 #[cfg(feature = "registration")]
