@@ -310,6 +310,18 @@ fn render(source: &Path, clippy: &str, commit: &str) -> Result<String> {
             .and_then(toml_edit::Value::as_str)
             .context("guard has no path")?;
         ensure!(seen.insert(path), "duplicate Clippy guard {path}");
+        if path == "bittensor_core::signers::ledger::LedgerDevice::with_transport" {
+            // PR-U17 is intentionally absent from the release surface. The
+            // core-patch verifier owns its positive/negative API probes.
+            ensure!(
+                table
+                    .get("allow-invalid")
+                    .and_then(toml_edit::Value::as_bool)
+                    == Some(true),
+                "the test-only Ledger transport ban must permit unpatched core builds"
+            );
+            continue;
+        }
         let (signature, expression) = guard_signature(path)?;
         if table
             .get("allow-invalid")
