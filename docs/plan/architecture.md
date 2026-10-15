@@ -19,7 +19,7 @@ User decisions that are fixed and not re-argued here:
 4. The answers of 2026-10-13 to the open questions (§15.2): a dual `MIT OR Apache-2.0` license; Python only in CI
    lanes; the binary `rtao` only; btauth/1 verification that accepts plain and `<Bytes>`-wrapped signatures by default;
    the repository `github.com/sam0x17/rtao`; hardware acceptance deferred by Q30, with optional hosted emulator
-   evidence (§11.9); each upstream PR and issue filed as soon as its evidence exists; per-milestone
+   evidence (§11.9); current work audits existing upstream filings and retains additional proposals locally; per-milestone
    security passes by local cold readers; no time estimates. Three later answers of the same day (§15.2 Q20-Q22):
    until PR-U17 ships, rtao's own workspace builds `bittensor-core` through a Cargo patch that adds it (§1.11); an AI
    coding agent develops M0 to M9 as one goal loop, committing to `main` without PRs (PLAN.md "Executing this plan");
@@ -5135,7 +5135,8 @@ vectors from the previous tag stay authoritative until the image builds [J-PD co
 - **Ledger emulator.** The lane adds no crate: it uses the plain `docker` CLI and the workspace's tokio and reqwest
   (built as §2.7 requires). Speculos (LGPL-3.0) is pulled by digest and the app (Apache-2.0) is built from a pinned tag
   in CI; neither is vendored or linked, so `deny.toml` and `NOTICE` do not change. Their pins live in
-  `ci/ledger/pins.toml` and move only in a change that re-records the transcripts (Renovate excludes the file) (§11.9).
+  `ci/ledger/pins.toml` (Renovate excludes the file). Move them only for a needed reviewed client change; record
+  stale/absent transcripts, or refresh them in an explicitly selected bounded hosted check (§11.9, Q30).
 
 ### 12.5 Drift classification
 
@@ -5238,7 +5239,7 @@ optional targeted hosted jobs. Automatic monitoring/PRs/upkeep and deployment re
 | third-party breaking release (tungstenite, axum, reqwest) | reviewed dependency diff or hosted failure | adapt the one affected crate |
 | a pin bump moves `core_tag` while the core patch exists | `xtask core-patch rebase` cherry-picks PR-U17 onto the new tag (§1.11) | on `core-patch-conflict`, resolve the conflict like any upstream change and log it |
 | PR-U17 ships in `core_tag` | `xtask pin --check` fails with "PR-U17 shipped: drop the core patch" (§1.11) | delete both core-patch tables and `[core.patch]`; adapt `rtao-testkit::ledger_emu` to the API as merged |
-| Ledger Live ships a new Polkadot app, or Speculos a new release | review app/core source changes; optional bounded hosted emulator comparison | bump `ci/ledger/pins.toml` in a change that re-records the transcripts |
+| Ledger Live ships a new Polkadot app, or Speculos a new release | review changes relevant to current client work | update pins only for a needed reviewed change; record stale/absent transcripts, or refresh them in an explicitly selected bounded hosted check |
 
 Track changes relevant to implemented client behavior from M2 onward. Record stale or missing refresh evidence; no milestone-driven pipeline run or bot handover is required.
 
@@ -5388,10 +5389,9 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 - **Q17. Ledger in CI.** The original device checklist and emulator research remain historical context. Q30
   defers device acceptance and permits optional targeted hosted emulator checks. Existing transcripts and injected
   signer tests run as ordinary Rust tests; no local hardware or Docker requirement remains.
-- **Q18. Upstream engagement.** Each upstream PR and issue is filed as soon as its evidence exists, not held for M9
-  (Appendix D names the step); PR-U5 and PR-U7 fix live defects for the core's other users. Filing in the monorepo is
-  pre-authorized; the one item outside it, for the Ledger app, was filed with Zondax on 2026-10-13 at the user's request
-  (Q22, Appendix D).
+- **Q18. Upstream engagement.** The original authorization permitted filings as evidence became available. Current
+  work audits the existing PRs/issues and keeps additional proposals local (Appendix D and PLAN.md rule 7). The
+  Ledger app item was filed with Zondax on 2026-10-13 at the user's request (Q22, Appendix D).
 - **Q19. Security passes.** Local cold readers (§14): a fresh-context reviewer that took no part in the implementation
   receives only the repository, the milestone diff and a security checklist (PLAN.md §12.1), and writes
   `docs/security/m<k>.md`; every finding is fixed or explicitly accepted before the milestone exits.
@@ -5435,7 +5435,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 
 6. Real public-endpoint quotas, to tune the default token bucket (§3.2.5).
 7. Will RaoFoundation accept PR-U1…U17, especially U4 (`w3f-bls` manifest), U5 (epoch predicate) and U6 (`host`
-   split)? Each is filed as soon as its evidence exists (Q18).
+   split)? Audit existing filings; keep additional proposals local (Q18, current task scope).
 8. Does a crates.io `w3f-bls 0.1.3` std build produce ciphertexts that pallet-drand decrypts (§11.4 test 16)? This is
    PR-U4's precondition. `ci/pr-u4-probe/` answers it; the four-file source diff (§1.3) predicts yes, because neither
    `tle` nor the core's timelock code touches the one behavioral change (`SecretKey::check`).
@@ -5522,7 +5522,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 | 58 | The extension bridge server and client live in `rtao-signer` (feature `extension`); the WebSocket upgrade goes through hyper and tokio-tungstenite 0.30; `ensure_bridge` spawns `rtao extension bridge` | the bridge in `rtao-cli`; axum's `ws` feature | Python exports the bridge as library API; axum 0.8.9's `ws` requires tokio-tungstenite 0.29, a second `tungstenite` that `deny.toml` bans | `PY/__init__.py:47-57, 198-206`; §2.3 rule 2; §6.5 |
 | 59 | Bounded hosted client CI, optional targeted infrastructure checks (Q30) | every-push node/container campaigns | units, fixtures, FakeNode and FakeChain provide ordinary development acceptance | §12.2; Appendix E |
 | 60 | Binary `rtao` only (decided by the user, §15.2 Q3) | an opt-in `btcli` shim | btcli and rtao share configuration files (§10.2), so a shim could surprise users who have both | §10 |
-| 61 | File each upstream PR and issue as soon as its evidence exists (decided by the user, §15.2 Q18) | file all of them in M9 | PR-U5 and PR-U7 fix live defects for the core's other users, and evidence exists from M0 on (PR-U17) | Appendix D |
+| 61 | Audit existing upstream PRs/issues and retain additional proposals locally (current task scope) | automatically file every evidenced proposal | original Q18 authorization remains historical; client completion requires accurate existing filings, not more submissions | Appendix D |
 | 62 | Per-milestone security passes by local cold readers (decided by the user, §15.2 Q19) | a review by the author, by the user, or by an external reviewer | a fresh context sees what the author's context hides, and a local pass needs no outside reviewer | §14; PLAN.md §12.1 |
 | 63 | Device acceptance deferred by Q30 | per-release local hardware rehearsal | record missing HID/firmware/screen evidence without blocking client development | §12.8; §11.9 |
 | 64 | No time estimates in the plan (decided by the user, §15.2) | engineer-week budgets, calendars and staffing timelines | an AI coding agent executes the plan step by step; order, dependencies and objective exit checks decide progress | §14; PLAN.md "Executing this plan" |
@@ -5765,8 +5765,9 @@ PR-U8 retire nothing in rtao: rtao never calls `submit_shielded`, and PR-U8's re
 which already builds the core with `host` as a dev-dependency. PR-U17 retires no staged module either: it retires the
 core patch that rtao's workspace carries until PR-U17 ships (G16, §1.11).
 
-Each PR and issue is filed as soon as its evidence exists (§15.2 Q18): the last column names the PLAN.md §12 step whose
-output completes the evidence, and PLAN.md §15 records each filed link.
+Q18 records the original filing authorization. Current work audits existing filings and keeps additional proposals
+local. The last column names the supporting PLAN.md §12 evidence step; completing it does not trigger a submission.
+PLAN.md §15 records existing filed links.
 
 | PR | Target | Scope | rtao-side effect when merged | Evidence at step |
 |---|---|---|---|---|

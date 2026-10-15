@@ -806,6 +806,26 @@ fn client_e2e_profile(source: &str) -> Result<()> {
     Ok(())
 }
 
+fn reviewed_ordinary_e2e_target(name: &str, target: &str) -> Result<()> {
+    let expected = CLIENT_E2E_FIXTURES
+        .iter()
+        .find(|fixture| fixture.key == name)
+        .map(|fixture| fixture.target)
+        .or_else(|| {
+            READ_E2E_FIXTURES
+                .iter()
+                .find(|(key, _, _)| *key == name)
+                .map(|(_, target, _)| *target)
+        });
+    if let Some(expected) = expected {
+        ensure!(
+            target == expected,
+            "ordinary e2e {name} requires its exact reviewed fixture {expected}"
+        );
+    }
+    Ok(())
+}
+
 // Shared by validation and matrix generation. A mapped source function never
 // establishes runtime execution; new fake scenarios must state their limits.
 pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
@@ -817,6 +837,9 @@ pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
     ensure!(states.len() == 1, "e2e row requires one disposition");
     let state = states[0];
     let target = row[state].as_str().context("e2e state must be string")?;
+    if state == "rtao" {
+        reviewed_ordinary_e2e_target(name, target)?;
+    }
     let fixture = CLIENT_E2E_FIXTURES
         .iter()
         .find(|fixture| fixture.key == name && fixture.target == target);
@@ -882,6 +905,7 @@ pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
 }
 
 fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
+    reviewed_ordinary_e2e_target(name, value)?;
     let target = if value.starts_with("e2e::") || value.starts_with("interop::") {
         format!("rtao_testkit::{value}")
     } else {
@@ -1500,6 +1524,42 @@ mod tests {
             }
             index.feature_tests.remove(*test);
             assert!(e2e_target(key, test, &index).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn ordinary_bindings_refuse_hosted_target_even_after_evidence_fields_are_removed() -> Result<()>
+    {
+        let target = "e2e::test_block_number";
+        let mut index = Index::default();
+        index
+            .feature_tests
+            .insert(format!("rtao_testkit::{target}"));
+        let document: DocumentMut = format!("[fixture]\nrtao = {target:?}\n").parse()?;
+        assert_eq!(
+            e2e_target("test_block_number", target, &index)?,
+            format!("rtao_testkit::{target}")
+        );
+        assert_eq!(
+            e2e_evidence("test_block_number", &document["fixture"])?["scope"],
+            "hosted-scenario-source"
+        );
+        for key in CLIENT_E2E_FIXTURES
+            .iter()
+            .map(|fixture| fixture.key)
+            .chain(READ_E2E_FIXTURES.iter().map(|(key, _, _)| *key))
+        {
+            assert!(e2e_target(key, target, &index).is_err(), "target: {key}");
+            assert!(
+                e2e_evidence(key, &document["fixture"]).is_err(),
+                "evidence: {key}"
+            );
+            for disposition in ["pending", "na"] {
+                let document: DocumentMut =
+                    format!("[fixture]\n{disposition} = \"review remains required\"\n").parse()?;
+                assert!(e2e_evidence(key, &document["fixture"]).is_ok());
+            }
         }
         Ok(())
     }
