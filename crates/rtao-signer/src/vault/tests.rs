@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/vault/server.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/vault/qr.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Scripted loopback peers and offline vectors; no browser, camera or phone runs.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -252,6 +253,10 @@ fn era_deadlines_follow_normalized_and_scale_encoded_periods() {
 }
 
 fn decode_svg(data_uri: &str) -> Vec<u8> {
+    decode_svg_with_metadata(data_uri).0
+}
+
+fn decode_svg_with_metadata(data_uri: &str) -> (Vec<u8>, rqrr::MetaData) {
     let encoded = data_uri.strip_prefix("data:image/svg+xml;base64,").unwrap();
     let svg = String::from_utf8(
         base64::engine::general_purpose::STANDARD
@@ -300,8 +305,10 @@ fn decode_svg(data_uri: &str) -> Vec<u8> {
     let mut grids = image.detect_grids();
     assert_eq!(grids.len(), 1);
     let mut decoded = Vec::new();
-    grids.remove(0).decode_to(&mut decoded).unwrap();
-    decoded
+    let metadata = grids.remove(0).decode_to(&mut decoded).unwrap();
+    assert_eq!(metadata.ecc_level, 0); // QR format bits 00 mean M, without boosting.
+    assert_eq!(metadata.version.to_size() + 8, size);
+    (decoded, metadata)
 }
 
 #[test]
@@ -310,13 +317,67 @@ fn rendered_svg_decodes_exact_binary_and_text_like_bytes() {
         vec![],
         b"0123456789012345".to_vec(),
         b"ABCDEF123456".to_vec(),
+        b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:".to_vec(),
+        b"lowercase\n\r\t_@".to_vec(),
+        "123\u{ff11}\u{ff12}\u{ff13}".as_bytes().to_vec(),
         vec![0, 0, 1, 0, 0, 0x53, 1, 6, 0xff, 0x80],
         (0..1029).map(|index| index as u8).collect(),
     ] {
         let uri = svg_data_uri(&frame).unwrap();
         assert_eq!(decode_svg(&uri), frame);
     }
-    assert!(svg_data_uri(&vec![0; 2332]).is_err());
+}
+
+#[test]
+fn rendered_svg_selects_one_mode_without_error_correction_boosting() {
+    // Version 1/M holds 34 digits, 20 alphanumerics or 14 bytes. These sizes
+    // distinguish each mode through the independently decoded symbol version.
+    for (frame, version) in [
+        (vec![b'1'; 34], 1),
+        (vec![b'1'; 35], 2),
+        (vec![b'A'; 20], 1),
+        (vec![b'A'; 21], 2),
+        (b" $%*+-./:ABCDEF01234".to_vec(), 1),
+        (vec![b'a'; 14], 1),
+        (vec![b'a'; 15], 2),
+        (
+            "\u{ff11}\u{ff12}\u{ff13}\u{ff14}\u{ff15}\u{ff16}"
+                .as_bytes()
+                .to_vec(),
+            2,
+        ),
+    ] {
+        let uri = svg_data_uri(&frame).unwrap();
+        let (decoded, metadata) = decode_svg_with_metadata(&uri);
+        assert_eq!(decoded, frame);
+        assert_eq!(metadata.version.0, version);
+    }
+}
+
+#[test]
+fn rendered_svg_preserves_single_segment_mode_capacity_boundaries() {
+    // Numeric/alphanumeric inputs exceeding byte capacity must remain accepted.
+    // Check each Version 40/M capacity with the emitted SVG and independent decoder.
+    for frame in [
+        vec![b'1'; 2332],
+        vec![b'A'; 2332],
+        vec![b'9'; 5596],
+        vec![b'A'; 3391],
+        vec![0; 2331],
+    ] {
+        let uri = svg_data_uri(&frame).unwrap();
+        assert_eq!(decode_svg(&uri), frame);
+    }
+    for frame in [vec![b'9'; 5597], vec![b'A'; 3392], vec![0; 2332]] {
+        assert!(svg_data_uri(&frame).is_err());
+    }
+    // One byte outside the text alphabets forces the entire frame into byte
+    // mode, even when a split into numeric and byte segments would fit.
+    for last in [0, b'a', b'\n', 0xff] {
+        let mut frame = vec![b'1'; 2332];
+        frame[2331] = last;
+        assert!(svg_data_uri(&frame).is_err());
+    }
 }
 
 #[tokio::test]

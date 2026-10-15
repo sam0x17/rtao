@@ -1,6 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/session.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/tokens.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional source at the same commit/license: sdk/python/bittensor/extension/browser.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/daemon.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
@@ -919,139 +919,31 @@ pub(super) fn private_file_regressions() -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
-#[cfg(any(unix, test))]
-#[derive(Debug, PartialEq, Eq)]
-struct BrowserCommand {
-    program: PathBuf,
-    arguments: Vec<String>,
-}
-
-#[cfg(any(unix, test))]
-fn browser_command_with(
-    url: &str,
-    browser: Option<&str>,
-    environment: impl FnOnce() -> Option<String>,
-    macos: bool,
-    mut which: impl FnMut(&str) -> Option<PathBuf>,
-) -> BrowserCommand {
-    let system = || BrowserCommand {
-        program: if macos { "/usr/bin/open" } else { "xdg-open" }.into(),
-        arguments: vec![url.into()],
-    };
-    // Python uses `explicit or getenv`: an empty explicit choice falls through
-    // to the environment, while a custom command retains its original bytes.
-    let choice = browser
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned)
-        .or_else(environment);
-    let Some(choice) = choice.filter(|value| !value.is_empty()) else {
-        return system();
-    };
-    let normalized = choice
-        .trim_matches(|character: char| {
-            character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
-        })
-        .to_lowercase();
-    if matches!(normalized.as_str(), "default" | "system") {
-        return system();
-    }
-    if macos {
-        let app = match normalized.as_str() {
-            "firefox" | "ff" => "Firefox",
-            "chrome" | "google-chrome" => "Google Chrome",
-            "chromium" => "Chromium",
-            "brave" => "Brave Browser",
-            "edge" => "Microsoft Edge",
-            "safari" => "Safari",
-            _ => &choice,
-        };
-        return BrowserCommand {
-            program: "/usr/bin/open".into(),
-            arguments: vec!["-a".into(), app.into(), url.into()],
-        };
-    }
-    let candidates: &[&str] = match normalized.as_str() {
-        "firefox" | "ff" => &["firefox", "firefox-esr"],
-        "chrome" | "google-chrome" => &[
-            "google-chrome",
-            "google-chrome-stable",
-            "chromium",
-            "chromium-browser",
-        ],
-        "brave" => &["brave-browser", "brave"],
-        "edge" => &["microsoft-edge", "microsoft-edge-stable"],
-        _ => &[&choice],
-    };
-    for candidate in candidates {
-        if let Some(program) = which(candidate) {
-            return BrowserCommand {
-                program,
-                arguments: vec![url.into()],
-            };
-        }
-    }
-    system()
-}
-
-#[cfg(unix)]
-fn browser_executable(name: &str) -> Option<PathBuf> {
-    use nix::unistd::{AccessFlags, access};
-    let executable = |path: &Path| path.is_file() && access(path, AccessFlags::X_OK).is_ok();
-    if name.contains('/') {
-        let path = Path::new(name);
-        return executable(path).then(|| path.to_owned());
-    }
-    let path = std::env::var_os("PATH").unwrap_or_else(|| "/bin:/usr/bin".into());
-    if path.is_empty() {
-        return None;
-    }
-    std::env::split_paths(&path)
-        .map(|directory| directory.join(name))
-        .find(|path| executable(path))
-}
-
 pub(crate) async fn open_bridge_page(url: &str, browser: Option<&str>) -> Result<(), BridgeError> {
-    #[cfg(not(unix))]
-    {
-        let _ = (url, browser);
-        return Err(error(
-            "explicit browser opening is unsupported on this platform",
-        ));
-    }
-    #[cfg(unix)]
-    {
-        let url = url.to_owned();
-        let browser = browser.map(str::to_owned);
-        // Executable discovery may inspect several PATH directories. Keep
-        // those reads off the async bridge's reactor, along with selection.
-        let selected = tokio::task::spawn_blocking(move || {
-            browser_command_with(
-                &url,
-                browser.as_deref(),
-                || std::env::var("BT_EXTENSION_BROWSER").ok(),
-                cfg!(target_os = "macos"),
-                browser_executable,
-            )
-        })
+    crate::browser::open_page(url, browser)
         .await
-        .map_err(|_| error("cannot select the bridge browser; open the session URL manually"))?;
-        let mut command = Command::new(selected.program);
-        command
-            .args(selected.arguments)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .kill_on_drop(false);
-        command
-            .spawn()
-            .map_err(|_| error("cannot open the bridge page; open the session URL manually"))?;
-        Ok(())
-    }
+        .map_err(|failure| {
+            error(match failure {
+                #[cfg(not(unix))]
+                crate::browser::OpenError::Unsupported => {
+                    "explicit browser opening is unsupported on this platform"
+                }
+                #[cfg(unix)]
+                crate::browser::OpenError::Selection => {
+                    "cannot select the bridge browser; open the session URL manually"
+                }
+                #[cfg(unix)]
+                crate::browser::OpenError::Spawn => {
+                    "cannot open the bridge page; open the session URL manually"
+                }
+            })
+        })
 }
 
 #[cfg(test)]
 mod environment_tests {
     use super::*;
+    use crate::browser::browser_command_with;
 
     const URL: &str = "http://127.0.0.1:8090/?session=fixture";
 
