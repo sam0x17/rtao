@@ -10,6 +10,10 @@ use std::{borrow::Cow, collections::BTreeMap};
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt, JsonAbiExt, Specifier};
 use alloy_json_abi::{AbiItem, Function, JsonAbi, Param};
 use alloy_primitives::{B256, U256};
+use serde::{
+    Deserialize, Deserializer,
+    de::{DeserializeSeed, SeqAccess, Visitor},
+};
 use serde_json::Value;
 
 use crate::{Error, Result, addresses};
@@ -338,8 +342,9 @@ pub fn caller_role(precompile_name: &str, function_name: &str) -> Option<&'stati
 
 /// Parse a CLI-shaped JSON value into one typed ABI argument.
 ///
-/// Arrays accept JSON arrays, JSON array strings, or comma-separated strings;
-/// tuples accept JSON arrays. Byte parameters additionally accept ss58 keys.
+/// Arrays accept JSON arrays, JSON array strings, or comma-separated strings.
+/// Other JSON inputs use bounded Python-style text before comma splitting.
+/// Tuples accept JSON arrays. Byte parameters additionally accept ss58 keys.
 /// Integer input is exact decimal or `0x` hexadecimal, without float rounding.
 pub fn coerce_argument(abi_type: &str, raw: &Value) -> Result<DynSolValue> {
     check_type_text(abi_type)?;
@@ -575,6 +580,9 @@ fn coerce_value(
             })
         }
         DynSolType::Tuple(types) => {
+            if !matches!(raw, Value::Array(_) | Value::String(_)) {
+                return Err(invalid("expected an ABI array or tuple"));
+            }
             let parts = argument_parts(raw)?;
             if parts.len() != types.len() {
                 return Err(invalid(format!(
@@ -638,7 +646,7 @@ fn coerce_value(
     }
 }
 
-fn python_strip(value: &str) -> &str {
+pub(crate) fn python_strip(value: &str) -> &str {
     value.trim_matches(|character: char| {
         character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
     })
@@ -832,34 +840,90 @@ fn argument_text(raw: &Value) -> Result<String> {
 }
 
 fn argument_parts(raw: &Value) -> Result<Cow<'_, [Value]>> {
-    match raw {
+    argument_parts_with_limit(raw, MAX_ABI_ITEMS)
+}
+
+fn argument_parts_with_limit(raw: &Value, max_items: usize) -> Result<Cow<'_, [Value]>> {
+    let text = match raw {
         Value::Array(parts) => {
-            if parts.len() > MAX_ABI_ITEMS {
+            if parts.len() > max_items {
                 return Err(invalid("ABI array exceeds item limit"));
             }
-            Ok(Cow::Borrowed(parts))
+            return Ok(Cow::Borrowed(parts));
         }
-        Value::String(text) => {
-            check_byte_length(text.len())?;
-            let text = python_strip(text);
-            if text.starts_with('[') {
-                let parts = serde_json::from_str::<Vec<Value>>(text).map_err(Error::Json)?;
-                if parts.len() > MAX_ABI_ITEMS {
-                    return Err(invalid("ABI array exceeds item limit"));
-                }
-                Ok(Cow::Owned(parts))
-            } else {
-                let parts = text
-                    .split(',')
-                    .map(|part| Value::String(python_strip(part).to_owned()))
-                    .collect::<Vec<_>>();
-                if parts.len() > MAX_ABI_ITEMS {
-                    return Err(invalid("ABI array exceeds item limit"));
-                }
-                Ok(Cow::Owned(parts))
-            }
+        Value::String(text) => Cow::Borrowed(text.as_str()),
+        _ => Cow::Owned(argument_text(raw)?),
+    };
+    check_byte_length(text.len())?;
+    let text = python_strip(&text);
+    let parts = if text.starts_with('[') {
+        let mut deserializer = serde_json::Deserializer::from_str(text);
+        let parts = ArgumentArraySeed { max_items }
+            .deserialize(&mut deserializer)
+            .map_err(Error::Json)?;
+        deserializer.end().map_err(Error::Json)?;
+        parts
+    } else {
+        // Check before collection: even a bounded string can contain millions
+        // of empty comma-separated elements.
+        if text.bytes().filter(|byte| *byte == b',').count() >= max_items {
+            return Err(invalid("ABI array exceeds item limit"));
         }
-        _ => Err(invalid("expected an ABI array or tuple")),
+        text.split(',')
+            .map(|part| Value::String(python_strip(part).to_owned()))
+            .collect::<Vec<_>>()
+    };
+    Ok(Cow::Owned(parts))
+}
+
+struct ArgumentArraySeed {
+    max_items: usize,
+}
+
+impl<'de> DeserializeSeed<'de> for ArgumentArraySeed {
+    type Value = Vec<Value>;
+
+    fn deserialize<D: Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> std::result::Result<Vec<Value>, D::Error> {
+        deserializer.deserialize_seq(self)
+    }
+}
+
+impl<'de> Visitor<'de> for ArgumentArraySeed {
+    type Value = Vec<Value>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("an ABI argument array within its item limit")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(
+        self,
+        mut sequence: A,
+    ) -> std::result::Result<Vec<Value>, A::Error> {
+        let mut remaining = self.max_items;
+        let mut values = Vec::new();
+        while let Some(value) = sequence.next_element_seed(ArgumentElementSeed(&mut remaining))? {
+            values.push(value);
+        }
+        Ok(values)
+    }
+}
+
+struct ArgumentElementSeed<'a>(&'a mut usize);
+
+impl<'de> DeserializeSeed<'de> for ArgumentElementSeed<'_> {
+    type Value = Value;
+
+    fn deserialize<D: Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> std::result::Result<Value, D::Error> {
+        *self.0 = self.0.checked_sub(1).ok_or_else(|| {
+            <D::Error as serde::de::Error>::custom("ABI array exceeds item limit")
+        })?;
+        Value::deserialize(deserializer)
     }
 }
 
@@ -1682,6 +1746,27 @@ mod tests {
             )
             .is_err()
         );
+        for raw in [json!("1,2"), json!("[1,2]"), json!([1, 2])] {
+            assert_eq!(argument_parts_with_limit(&raw, 2).unwrap().len(), 2);
+        }
+        for raw in [json!("1,2,3"), json!("[1,2,3]"), json!([1, 2, 3])] {
+            assert!(
+                argument_parts_with_limit(&raw, 2)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("ABI array exceeds item limit")
+            );
+        }
+        // The third JSON element is malformed. The limit must refuse before
+        // trying to deserialize it, rather than constructing an extra value.
+        let malformed_third = json!("[1,2,{\"bad\":]");
+        assert!(
+            argument_parts_with_limit(&malformed_third, 2)
+                .unwrap_err()
+                .to_string()
+                .contains("ABI array exceeds item limit")
+        );
+        assert!(argument_parts_with_limit(&json!("[1,2] trailing"), 2).is_err());
     }
 
     #[test]
@@ -1787,11 +1872,47 @@ mod tests {
             coerce_argument("bool", &json!("\u{1c}YES\u{1f}")).unwrap(),
             DynSolValue::Bool(true)
         );
+        for (raw, expected) in [
+            (json!(7), "7"),
+            (json!(true), "True"),
+            (Value::Null, "None"),
+            (json!({"flag":true}), "{'flag': True}"),
+            (json!(1e20), "1e+20"),
+        ] {
+            assert_eq!(
+                coerce_argument("string[]", &raw).unwrap(),
+                DynSolValue::Array(vec![DynSolValue::String(expected.into())])
+            );
+        }
+        for (raw, expected) in [
+            (json!(true), true),
+            (json!(false), false),
+            (Value::Null, false),
+        ] {
+            assert_eq!(
+                coerce_argument("bool[]", &raw).unwrap(),
+                DynSolValue::Array(vec![DynSolValue::Bool(expected)])
+            );
+        }
+        let function = Function::parse("f(uint8[])").unwrap();
+        let encoded = encode_call(&function, &[json!(7)]).unwrap();
+        // Dynamic-array offset 32, length 1, value 7, each a full ABI word.
+        assert_eq!(&encoded[10..], format!("{:064x}{:064x}{:064x}", 32, 1, 7));
+        assert!(coerce_argument("uint8[]", &json!(256)).is_err());
+        assert!(coerce_argument("uint8[]", &json!(1.5)).is_err());
+        let tuple = DynSolValue::Tuple(vec![DynSolValue::Uint(U256::from(7u8), 8)]);
+        for raw in [json!([7]), json!("7")] {
+            assert_eq!(coerce_argument("(uint8)", &raw).unwrap(), tuple);
+        }
+        for raw in [json!(7), json!(true), Value::Null, json!({"flag":true})] {
+            assert!(coerce_argument("(uint8)", &raw).is_err());
+        }
         let mut deep = json!("x");
         for _ in 0..=MAX_ABI_DEPTH {
             deep = json!([deep]);
         }
         assert!(coerce_argument("string", &deep).is_err());
+        assert!(coerce_argument("string[]", &json!({"deep":deep})).is_err());
     }
 
     #[test]

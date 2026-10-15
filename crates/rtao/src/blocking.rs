@@ -1,4 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py and _subtensor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_subtensor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Blocking access to the single asynchronous SDK implementation.
 //!
 //! Construction is cold. The first chain operation creates a private runtime

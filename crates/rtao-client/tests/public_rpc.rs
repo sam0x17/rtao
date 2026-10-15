@@ -7,7 +7,10 @@ use futures::StreamExt;
 use rtao_client::{Client, ClientConfig, Finality, Network};
 use rtao_primitives::H256;
 use rtao_rpc::{RpcError, policy::classify_rpc_error};
-use rtao_testkit::fakes::{FakeChain, FakeState};
+use rtao_testkit::{
+    Reply,
+    fakes::{FakeChain, FakeState},
+};
 use serde_json::json;
 use subxt_rpcs::RpcClient;
 
@@ -29,14 +32,44 @@ fn policy(message: &str, retry: &str) -> subxt_rpcs::Error {
 #[tokio::test]
 async fn rpc_substrate_exposes_public_policy_error() {
     let raw = FakeChain::from_state(FakeState::default());
-    raw.queue_transport_error(
-        "chain_getBlockHash",
-        policy("RPC endpoint rate limited this source", "60"),
-    );
+    let message = "RPC endpoint rate limited this source";
+    let data = json!({
+        "retry_after": "60",
+        "policy": "public\0gateway",
+        "reason": "source\u{1b}quota",
+        "gateway_ticket": {
+            "opaque": [null, true, 18446744073709551616u128],
+            "raw": "ticket\0\u{1b}bytes",
+            "details": "x".repeat(600),
+        },
+    });
+    raw.mutate_state(|state| {
+        state.queue_reply(
+            "chain_getBlockHash",
+            Reply::error(-32005, message, Some(data.clone())),
+        );
+    });
     let error = Client::from_rpc(RpcClient::new(raw), config())
         .await
         .unwrap_err();
-    assert_eq!(error.policy().unwrap().retry_after.as_deref(), Some("60"));
+    let refusal = error.policy().unwrap();
+    assert_eq!(refusal.retry_after.as_deref(), Some("60"));
+    assert_eq!(
+        refusal.retry_after_duration(),
+        Some(std::time::Duration::from_secs(60))
+    );
+    assert_eq!(refusal.policy.as_deref(), Some("public gateway"));
+    assert_eq!(refusal.reason.as_deref(), Some("source quota"));
+    assert_eq!(
+        refusal.payload.as_deref(),
+        Some(&json!({
+            "error": {"code": -32005, "message": message, "data": data},
+        }))
+    );
+    let display = error.to_string();
+    assert!(display.starts_with("RPC endpoint refused the request under its traffic policy: "));
+    assert!(!display.contains(['\0', '\u{1b}']));
+    assert!(!display.contains(&"x".repeat(600)));
 }
 
 #[tokio::test]
@@ -72,6 +105,14 @@ async fn rpc_substrate_stream_preserves_public_policy_metadata() {
         Ok(_) => panic!("expected refusal"),
     };
     assert_eq!(error.policy().unwrap().retry_after.as_deref(), Some("12"));
+    assert_eq!(
+        error.policy().unwrap().payload.as_deref(),
+        Some(&json!({"error": {
+            "code": -32005,
+            "message": "stream rate exceeded",
+            "data": {"retry_after": "12"},
+        }}))
+    );
     // A following valid stream proves the failure did not corrupt its wrapper.
     let mut stream = client.blocks_strict(Finality::Best).await.unwrap();
     raw.advance(1).unwrap();

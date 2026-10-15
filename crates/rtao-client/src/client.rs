@@ -289,6 +289,25 @@ impl Client {
         self.inner.token_symbols.read().await.clone()
     }
 
+    /// Tag a chain-native balance with this connection's cached display symbol.
+    ///
+    /// This only reads connection-local memory and remains available after close.
+    /// Root TAO always uses its canonical symbol.
+    pub async fn balance(
+        &self,
+        rao: u64,
+        netuid: rtao_primitives::NetUid,
+    ) -> rtao_primitives::DynBalance {
+        let balance = rtao_primitives::DynBalance::from_rao(rao, netuid);
+        if netuid == rtao_primitives::NetUid::ROOT {
+            return balance;
+        }
+        match self.inner.token_symbols.read().await.get(&netuid) {
+            Some(symbol) => balance.with_symbol(symbol.clone()),
+            None => balance,
+        }
+    }
+
     async fn load_token_symbols(&self) {
         let network = self.network().label();
         if let Some(store) = &self.inner.config.config_store

@@ -1,8 +1,10 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/errors.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Terminal gateway refusals and bounded upstream diagnostics.
 
 use std::{
     fmt,
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 
@@ -44,6 +46,11 @@ pub struct PolicyRefusal {
     pub policy: Option<String>,
     /// The sanitized gateway refusal reason, when supplied.
     pub reason: Option<String>,
+    /// Exact JSON-RPC error in Python's `{"error": <original error object>}`
+    /// wrapper, shared across error clones. Handshake and close refusals have
+    /// no JSON-RPC payload. Display and the individual metadata fields remain
+    /// sanitized; this payload preserves the original values.
+    pub payload: Option<Arc<Value>>,
     // Python recognizes these keys but does not expose them as retry_after.
     retry_after_ms: Option<String>,
 }
@@ -151,6 +158,10 @@ pub fn classify_rpc_error(error: &Value) -> Option<PolicyRefusal> {
         retry_after: sanitized(retry_after),
         policy: sanitized(field("policy")),
         reason: sanitized(field("reason")),
+        payload: Some(Arc::new(Value::Object(serde_json::Map::from_iter([(
+            "error".into(),
+            error.clone(),
+        )])))),
         retry_after_ms: sanitized(retry_after_ms),
     })
 }
@@ -194,6 +205,7 @@ pub fn classify_handshake(
         retry_after,
         policy,
         reason,
+        payload: None,
         retry_after_ms: None,
     })
 }
@@ -217,6 +229,7 @@ pub fn classify_close(code: u16, reason: &str) -> Option<PolicyRefusal> {
         retry_after: None,
         policy: None,
         reason: (!detail.is_empty()).then_some(detail),
+        payload: None,
         retry_after_ms: None,
     })
 }
@@ -540,7 +553,9 @@ mod tests {
     // pyt: sdk/python/tests/unit/test_rpc.py::test_json_rpc_policy_diagnostics_strip_terminal_controls
     #[test]
     fn json_rpc_policy_diagnostics_strip_terminal_controls() {
-        let error = classify_rpc_error(&json!({"code": -32004, "message": "slow\u{1b}[2Jdown", "data": {"policy": "public\u{1b}]8;;https://evil.example\u{7}rpc", "reason": "weighted\0rate"}})).expect("policy is recognized");
+        let payload = json!({"code": -32004, "message": "slow\u{1b}[2Jdown", "data": {"policy": "public\u{1b}]8;;https://evil.example\u{7}rpc", "reason": "weighted\0rate", "gateway_ticket": {"opaque": [null, true, 18446744073709551616u128], "bytes": "raw\0\u{1b}ticket"}}, "provider_extension": {"unrecognized": [1, "two"]}});
+        let error = classify_rpc_error(&payload).expect("policy is recognized");
+        assert_eq!(error.payload.as_deref(), Some(&json!({"error": payload})));
         assert!(!error.message.contains('\u{1b}'));
         assert!(!error.policy.expect("policy retained").contains('\u{1b}'));
         assert!(!error.reason.expect("reason retained").contains('\0'));

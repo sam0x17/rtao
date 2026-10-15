@@ -841,12 +841,12 @@ notes = "`UnsignedExtrinsic` JSON `:67-134` (§3.14, M5); `SignerPayloadJSON` qu
 
 [[file]]
 py = "sdk/python/bittensor/_transport/errors.py"
-rs = ["`rtao_rpc::{RpcError, PolicyRefusal}`; `rtao_client` read errors"]
+rs = ["rtao_rpc::{RpcError,PolicyRefusal,policy::format_rpc_error}","rtao_client::ClientError"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "d48b44e8d8edb184c51005137a2de2f3a99198b2"
 synced_tag = "v478"
 milestone = "M1"
-notes = "§3.2.3; `RpcPolicyRejection`, `StateDiscardedError`, `MaxRetriesExceeded`"
+notes = "Source reconciliation 2026-10-15: complete authenticated exception/formatter module, actual classification/translation/archive/lookup paths and substantive fixtures reviewed. Rust Result/Option and typed error variants replace Python exception inheritance and arbitrary Any payloads. PolicyRefusal now shares exact classifier JSON in an error wrapper, including opaque provider data; public Subxt adapters retain their typed code/message/data fields. Display and policy/retry/reason metadata remain sanitized. Native missing blocks can be optional aggregate reads, and receipt/storage failures use typed protocol/core errors. Current hosted tests and fresh oracle execution remain unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/extrinsics.py"
@@ -877,12 +877,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/_transport/protocols.py"
-rs = ["`rtao_signer::SignerCaps`"]
+rs = ["rtao_signer::{Signer,SignerCaps,SigningRequest,SigningContext,MultiSignature,KeypairSigner}","rtao_client::submit capability-selected public preparation"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "caf179b51ddedd2758fc865e76168cf5cac32064"
 synced_tag = "v478"
 milestone = "M2–M7"
-notes = "`Keypair`, `ExtensionPayloadSigner`, `MetadataVerifyingSigner`, `UnsignedExtrinsicSigner` become the `Signer` trait plus capability bits `RAW_PAYLOAD`, `PAYLOAD_JSON`, `METADATA_HASH`, `UNSIGNED_TX` (§6.3)"
+notes = "Source reconciliation 2026-10-15: complete authenticated four-protocol file and concrete signer/preparation/extension/Ledger bodies reviewed, including meaningful capability/proof/payload fixtures. Rust object-safe async Signer and validated MultiSignature replace optional dynamic properties and sync-or-awaitable returns. PAYLOAD_JSON, METADATA_HASH and UNSIGNED_TX select owned native request/context data; metadata digests come from the pinned core rather than a signer-supplied Python callback. Hardware and fresh oracle execution remain unverified; hosted source/test acceptance is separate."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/rpc.py"
@@ -1921,21 +1921,21 @@ notes = "catalog of addresses + ABIs (§6.6)"
 
 [[file]]
 py = "sdk/python/bittensor/evm/rpc.py"
-rs = ["`rtao_evm::EvmRpc`"]
+rs = ["rtao_evm::rpc::EvmRpc","rtao_evm::{money,error}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "375378c36cd4dc7b9c94921a23df27abeefae6aa"
 synced_tag = "v478"
 milestone = "M7"
-notes = "minimal eth JSON-RPC over reqwest; wei/rao conversions"
+notes = "Source reconciliation 2026-10-15: complete authenticated module, every typed RPC/polling/conversion path and substantive exact-parameter, refusal, deadline, body-budget and no-retry fixtures reviewed. Native asynchronous typed addresses/U256 quantities, validated JSON-RPC envelopes and receipts, request-hash correlation, bounded acquisition/total deadlines and exact hash-bearing unresolved errors are explicit API/security adaptations. Latest selectors and supported wire values remain preserved; native u64 rao limits follow Q25/D-035. No live-chain, fresh Python oracle or current hosted pass is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/evm/transactions.py"
-rs = ["`rtao_evm` transactions and `association_proof`"]
+rs = ["rtao_evm::transactions::{EvmTxPreview,prepare_transaction,sign_transaction,send_transaction,send_transaction_with_timeout,EvmTxResult,association_message,association_proof,recover_association_owner}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "56c63bdd5f3f5c1af1537e416f4a5f2f238ff321"
 synced_tag = "v478"
 milestone = "M7"
-notes = "EIP-191 proof (§6.6)"
+notes = "Source reconciliation 2026-10-15: complete authenticated file, preparation ordering/early failure, legacy EIP-155 signing, one-shot submission/receipt flow and 64-byte EIP-191 association domain reviewed. Independent official signed-RLP vector, exact preview, sender/chain checks, block0/42/u64::MAX proof recovery and changed-input negatives have concrete fixture bodies. Native typed addresses/calldata, checked u64 rao and bounded fee math, Alloy u128 legacy gas price, typed validated receipts and hash-bearing unresolved failures are explicit adaptations. No live-chain, independent Python signing oracle or current hosted execution is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/executor.py"
@@ -2029,12 +2029,12 @@ notes = "served verbatim, wire-compatible with the Python daemon (§6.5) Source 
 
 [[file]]
 py = "sdk/python/bittensor/extension/tokens.py"
-rs = ["`rtao_signer::extension` (bridge token file)"]
+rs = ["rtao_signer::extension::BridgePaths::{from_environment,read_token,publish} and private token publication/cleanup","crates/rtao-signer/src/extension/session.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "2738077e1d7d2d85f88e7550d6bdad980b8ac7d3"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`~/.bittensor/extension_bridge.token`, override `BITTENSOR_EXTENSION_BRIDGE_TOKEN` (`:14`; §6.5)"
+notes = "Source reconciliation 2026-10-15: complete authenticated path/write/read/clear helper and production daemon/client consumers reviewed. Native BridgePaths applies explicit path options/env/defaults; edge whitespace includes Python information separators and empty/missing content returns None. Owner-only atomic publication, symlink/special-file refusal, regular-file/input bounds, secret zeroization and interior-control refusal are deliberate native security policies. Existing private-file fixture covers missing/empty/Python-trimmed tokens, interior controls and publication modes. Full session/browser/picker behavior retains separate pending source rows; current hosted execution is unclaimed."
 
 [[file]]
 py = "sdk/python/bittensor/fee_filters.py"
@@ -2227,12 +2227,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated Python Policy/
 
 [[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
-rs = ["`rtao_intents::proxy` (feature `proxy`)"]
+rs = ["rtao_intents::proxy::{PROXY_TYPES,check_proxy_type,AddProxy,RemoveProxy,RemoveProxies,CreatePureProxy,KillPureProxy,ExecuteProxyAnnounced}","rtao_intents::generated::{interfaces,defaults,passthrough,any_intent}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "e19113d503ef0b2f488af38bec57cadb934e1f56"
 synced_tag = "v478"
 milestone = "M5"
-notes = "6 intents (5 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `PROXY_TYPES` `:21-41` extracted; CI checks it against the metadata `ProxyType` enum (§3.12)"
+notes = "Source reconciliation 2026-10-15: complete authenticated six-intent module and actual generated/native bodies, defaults, type choices/help, warnings, nested-build error order and substantive independent literal encoding/policy fixtures reviewed. Native typed SS58/widths and compile-time choice arrays replace Python dictionaries/dynamic fields. D-020 preserves caller-wallet defaults for nested announced execution; D-046 bounds nested inputs and D-059 carries child policy/shielding. Source coverage is separate from current hosted tests, fresh oracle or runtime admission."
 
 [[file]]
 py = "sdk/python/bittensor/intents/registration.py"
@@ -2317,12 +2317,12 @@ notes = "§6.5; proof from `digest::generate_extrinsic_proof`"
 
 [[file]]
 py = "sdk/python/bittensor/macos_password.py"
-rs = ["`rtao_wallet` feature `keychain`"]
+rs = ["rtao_cli::macos_password::{MacosPasswords,NativePasswordAdapter,ProcessRunner}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "46960bae3da3416b27b0cd4671840bde6cc535b2"
 synced_tag = "v478"
 milestone = "M4"
-notes = "shells out to `/usr/bin/security` exactly as `:58-80` (§6.2), and the `osascript` dialog: password-chain steps 5-6 behind `--keychain-password`/`--macos-password` in CLI v0, with the Keychain test in the macos-14 `check` job (§11.6 lane 3); the `wallet keychain` commands over it land in M7"
+notes = "Source reconciliation 2026-10-15: complete authenticated platform/escaping/dialog and Keychain load/save/delete file and native adapter reviewed. Injected process fixtures preserve exact argv, password-on-stdin twice, newline-save refusal, prompt prefix/strip/cancel and load/delete outcomes. Successful UTF-8 stdout applies Python universal newline conversion in preallocated zeroizing storage before parsing. Native typed redacted failure diagnostics, bounded process I/O/deadlines, offloaded process execution and caller-owned retry/prompt composition are explicit security/API adaptations. Only injected hosted tests are required under Q30; real macOS/Keychain execution remains deferred and no current test result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/masked_input.py"
@@ -2569,12 +2569,12 @@ notes = "`resolve_signer` `:227-263`, `public_view` `:266-283` (§6.4); `WalletS
 
 [[file]]
 py = "sdk/python/bittensor/snapshot.py"
-rs = ["`rtao_client::Snapshot`"]
+rs = ["rtao_client::view::{Snapshot,View,ViewExt}","crates/rtao-client/tests/snapshot.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "3fba1f5a9cf2b3c19aa6e5974384dc0c82a73a7f"
 synced_tag = "v478"
 milestone = "M1"
-notes = "§3.5; constants follow the snapshot runtime, not `:66-68` (D-007)"
+notes = "Source reconciliation 2026-10-15: complete authenticated Snapshot file and actual generic/registry/namespace, time/block-info, symbol/balance and sibling paths reviewed. Native traits/catalog dispatch replace dynamic methods; SystemTime/Duration and checked u64 balances replace Python datetime/float/int. Snapshots own immutable hashes and parent-selected runtimes. D-007 applies to constants and derived slot-time/fast-block reads, while Python delegates them to head. Same-reference at clones and symbol/balance helpers need no RPC and remain usable after close; new siblings eagerly resolve hash/runtime and require an open connection, unlike Python lazy height-only construction. Sibling observers, pinning, block decoding and cache metadata have independent fixture bodies; no current hosted or fresh oracle pass is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/sp_core.py"
