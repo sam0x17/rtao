@@ -16,6 +16,14 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Generation run38776446102 at8112797 fails before producing reports: the new
+cancellation-aware hash request needs an explicit JSON Value type before its
+null check. Add that annotation, preserving the same request and cancellation
+path. Raw log51,419bytes SHA256
+`b7fba301dd5137e054148f0eb0b567f7549004ee42a998fc8d96b8f9186dfeb4`;
+proof `check-38776446102.json`. No generated artifact or new test result.
+Retry hosted generation on the corrected clean source before ordinary CI.
+
 Normal [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
 at `237d189` is terminal: all five supporting jobs, main compilation,
 strict Clippy and ordinary parity pass. Nextest runs 2,831 tests: 2,784 pass,
