@@ -280,7 +280,8 @@ async fn ciphertext(data: Option<&str>, file: Option<&str>) -> Result<Timelocked
                 let compact: String = raw
                     .iter()
                     .copied()
-                    .filter(|byte| !byte.is_ascii_whitespace())
+                    // Python str.split includes vertical tab and information separators.
+                    .filter(|&byte| !matches!(byte, b'\t'..=b'\r' | b' ' | 0x1c..=0x1f))
                     .map(char::from)
                     .collect();
                 let hex = compact.strip_prefix("0x").unwrap_or(&compact);
@@ -403,7 +404,7 @@ pub async fn run_with_backend(
                 "reveal_round":sealed.reveal_round(), "reveal_at":sealed.reveal_at().map_err(failure)?.to_rfc3339(),
                 "reveal_in_seconds":sealed.remaining().map_err(failure)?.as_secs(), "bytes":sealed.ciphertext().len(),
             });
-            if let Some(path) = text(leaf, "out") {
+            if let Some(path) = text(leaf, "out").filter(|path| !path.is_empty()) {
                 let bytes = sealed.ciphertext().to_vec();
                 let path_owned = PathBuf::from(path);
                 rtao::core::offload(move || std::fs::write(path_owned, bytes))
@@ -505,7 +506,7 @@ pub async fn run_with_backend(
                     }
                 })?);
             let plaintext_len = plaintext.len();
-            if let Some(path) = text(leaf, "out") {
+            if let Some(path) = text(leaf, "out").filter(|path| !path.is_empty()) {
                 let path_owned = PathBuf::from(path);
                 rtao::core::offload(move || std::fs::write(path_owned, plaintext.as_slice()))
                     .await

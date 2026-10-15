@@ -2,7 +2,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use rtao_client::{BlockRef, Client, ClientConfig, ClientError, Finality, Network, View};
+use rtao_client::{BlockRef, Client, ClientConfig, ClientError, Finality, Network, View, ViewExt};
 use rtao_testkit::fakes::{FakeChain, FakeNode, FakeState, Reply};
 use serde_json::json;
 use subxt_rpcs::RpcClient;
@@ -20,6 +20,59 @@ fn assert_closed<T>(result: Result<T, ClientError>) {
         result,
         Err(ClientError::Rpc(rtao_rpc::RpcError::Closed))
     ));
+}
+
+// pyt: bittensor/_substrate.py::Substrate.query_batch returns before metadata
+// lookup or transport access when param_sets is empty.
+// Native snapshots already own their hash. Python snapshots first re-resolve
+// their height, so their empty-batch path can still fail during that lookup.
+#[tokio::test]
+async fn empty_named_query_batches_skip_metadata_and_rpc_even_after_close() {
+    let raw = FakeChain::from_state(FakeState::default());
+    let mut cfg = config("local");
+    cfg.track_heads = false;
+    let client = Client::from_rpc(RpcClient::new(raw.clone()), cfg)
+        .await
+        .unwrap();
+    let snapshot = client.at(BlockRef::Best).await.unwrap();
+    let before = raw.requests();
+    assert!(
+        client
+            .query_batch_dyn("UnknownPallet", "UnknownStorage", vec![])
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        snapshot
+            .query_batch_dyn("UnknownPallet", "UnknownStorage", vec![])
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(raw.requests(), before);
+    client.close().await;
+    let before = raw.requests();
+    assert!(
+        client
+            .query_batch_dyn("UnknownPallet", "UnknownStorage", vec![])
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        snapshot
+            .query_batch_dyn("UnknownPallet", "UnknownStorage", vec![])
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_closed(
+        client
+            .query_batch_dyn("System", "Account", vec![vec![]])
+            .await,
+    );
+    assert_eq!(raw.requests(), before);
 }
 
 #[tokio::test]
