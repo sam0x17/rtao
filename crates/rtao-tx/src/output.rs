@@ -112,7 +112,10 @@ pub struct ExtrinsicResult<O = ()> {
     pub explorer_url: Option<String>,
     /// Actual fee in checked native TAO.
     pub fee: Option<Balance<Tao>>,
-    /// Triggered events for successful results; failed facade results omit them.
+    /// Decoded receipt events, including failed dispatch and nested execution.
+    ///
+    /// Native multisig/recovery checks retain these diagnostics where Python's
+    /// failed-result constructor omits them (D-023). JSON output omits events.
     pub events: Vec<EventRecord>,
     /// Python-shaped classified chain failure.
     pub error: Option<ChainError>,
@@ -152,11 +155,7 @@ impl ExtrinsicResult {
                 .then_some(report.fee)
                 .flatten()
                 .map(|fee| Balance::<Tao>::from_rao(fee.0)),
-            events: if report.success {
-                report.events
-            } else {
-                Vec::new()
-            },
+            events: report.events,
             error,
             data: if report.success { data } else { Map::new() },
             output: (),

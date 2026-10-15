@@ -931,7 +931,8 @@ fn render_convictions_named(
     if hidden != 0 {
         output
             .message(&format!(
-                "{hidden} negligible locks hidden (pass --all to show)"
+                "{hidden} negligible lock{} hidden (pass `--all` to show)",
+                if hidden > 1 { "s" } else { "" }
             ))
             .map_err(failure)?;
     }

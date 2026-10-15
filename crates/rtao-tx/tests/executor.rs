@@ -462,7 +462,12 @@ async fn dispatch_failure_is_returned_without_retry_or_success_extras() {
         .await
         .unwrap();
     assert!(!result.success);
-    assert!(result.events.is_empty());
+    assert!(
+        result
+            .events
+            .iter()
+            .any(|event| event.matches("System", "ExtrinsicFailed"))
+    );
     assert!(result.fee.is_none());
     assert_eq!(result.error.unwrap().name.as_deref(), Some("BadOrigin"));
     assert!(result.data.is_empty());
