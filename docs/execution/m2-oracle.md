@@ -1,9 +1,22 @@
 # M2 oracle preparation
 
 The image, dumpers, Rust verifier and current-spec recorder wrapper are authored.
-No Python ran locally, no oracle image was built, and no vectors or current-spec
-recordings were produced. M2-05 remains incomplete until designated hosted
-execution and the required Rust behavioral replays pass.
+Under Q30, a fresh M2-05 oracle refresh is optional targeted hosted work. The
+committed `vendor/oracle` directory contains generation inputs only: no first
+manifest, vectors or current-spec recordings have been produced. Ordinary parity
+therefore reports the oracle as **pending**, never verified. Strict parity still
+rejects the absent corpus; M2-14's oracle behavioral parity remains unverified.
+
+The staging guard accepts Q30's explicit optional M2-05 declaration and requires
+M2-14 to remain unchecked. It rejects checked or duplicate milestone rows,
+missing plan status, incomplete Git history and any previously committed oracle
+artifact. Existing partial or corrupt outputs always invoke the real verifier
+and fail rather than becoming an initial-pending state. A regression reads the
+actual current plan, so this contract is checked alongside synthetic fixtures.
+
+The implementation and validation notes below are historical. Q30 retired the
+local rehearsal campaign and its temporary directories. They do not authorize
+new local builds, containers, Python execution or infrastructure setup.
 
 The interpreter is exactly CPython **3.12.11**, asserted during image construction
 and execution. `vendor/oracle/runtime-lock.json` records the interpreter, UV
@@ -119,8 +132,11 @@ launchd, configuration, symlink and virtualenv dependencies and removed.
 caches and the sibling-owned actionlint tool remain live; no wallets or private
 state were created or removed.
 
-The native replay follow-up created no disposable directories. Its builds and
-temporary files use the existing shared `target/execute-plan.6Ro0PC/build` and
-`tmp` directories, which remain live for the root task and sibling checks.
-No Python interpreter or local container ran, no expected vectors were
-fabricated, and no commit or push was made.
+The native replay follow-up created no separate disposable directories. Its
+historical shared `target/execute-plan.6Ro0PC` build and temporary directories
+were deleted during Q30 cleanup and must not be recreated. No Python interpreter
+or local container ran, and no expected vectors were fabricated.
+
+The Q30 staging correction changes only source, documentation and regressions.
+Installed rustfmt and source checks are the local validation; execution of the
+Rust regression remains a hosted CI check. No temporary directory was needed.

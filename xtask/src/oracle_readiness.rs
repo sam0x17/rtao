@@ -23,7 +23,7 @@ impl CommittedStatus {
                 json!({"status":"checked","details":{"integrity_pure_intent_read_behavior":"checked","native_replay":"passed"}})
             }
             Self::InitialPending => {
-                json!({"status":"pending","milestone":"M2-05","reason":"First hosted oracle manifest has not been produced; M2-05 and M2-14 remain incomplete. No current or previously committed oracle output is omitted."})
+                json!({"status":"pending","milestone":"M2-05","reason":"First hosted oracle manifest has not been produced; M2-05 refresh has not run and M2-14 oracle behavioral parity remains unverified. No current or previously committed oracle output is omitted."})
             }
         }
     }
@@ -74,16 +74,25 @@ fn readiness_with_history(
     for step in ["M2-05", "M2-14"] {
         let unchecked = format!("- [ ] **{step}**");
         let checked = format!("- [x] **{step}**");
+        // Q30 made the hosted refresh optional, without declaring any oracle
+        // output verified. Keep that explicit plan state distinct from a
+        // completed checkbox; M2-14 must still be unchecked.
+        let optional = (step == "M2-05").then_some("- **M2-05 optional hosted refresh.**");
         let rows = plan
             .lines()
-            .filter(|line| line.starts_with(&unchecked) || line.starts_with(&checked))
+            .filter(|line| {
+                line.starts_with(&unchecked)
+                    || line.starts_with(&checked)
+                    || optional.is_some_and(|prefix| line.starts_with(prefix))
+            })
             .collect::<Vec<_>>();
         ensure!(
             rows.len() == 1,
-            "initial oracle staging requires one documented {step} completion row"
+            "initial oracle staging requires one documented {step} status row"
         );
         ensure!(
-            rows[0].starts_with(&unchecked),
+            rows[0].starts_with(&unchecked)
+                || optional.is_some_and(|prefix| rows[0].starts_with(prefix)),
             "{step} is complete but committed oracle manifest/vectors are absent"
         );
     }
@@ -264,6 +273,37 @@ mod tests {
             "- [ ] **M2-05** pending\n- [ ] **M2-05** duplicate\n- [ ] **M2-14** pending\n",
         ] {
             fs::write(fixture.0.join("PLAN.md"), plan)?;
+            assert!(fixture.readiness(false, None).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn q30_plan_optional_refresh_keeps_absent_oracle_pending() -> Result<()> {
+        let fixture = Fixture::new()?;
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let plan = fs::read_to_string(workspace.join("PLAN.md"))?;
+        ensure!(
+            plan.contains("- **M2-05 optional hosted refresh.**"),
+            "fixture must exercise the current optional hosted refresh declaration"
+        );
+        fs::write(fixture.0.join("PLAN.md"), &plan)?;
+        assert_eq!(
+            fixture.check(false, None, |_, _| {
+                anyhow::bail!("optional refresh cannot invent oracle evidence")
+            })?,
+            CommittedStatus::InitialPending
+        );
+        assert!(fixture.readiness(true, None).is_err());
+        for invalid in [
+            plan.replace("- [ ] **M2-14**", "- [x] **M2-14**"),
+            format!("{plan}\n- [x] **M2-05** completed\n"),
+            format!("{plan}\n- [ ] **M2-05** duplicate\n"),
+            plan.replace("- **M2-05 optional hosted refresh.**", "- [x] **M2-05**"),
+        ] {
+            fs::write(fixture.0.join("PLAN.md"), invalid)?;
             assert!(fixture.readiness(false, None).is_err());
         }
         Ok(())
