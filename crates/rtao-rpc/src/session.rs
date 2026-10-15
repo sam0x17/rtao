@@ -26,6 +26,7 @@ use tokio::{
     time::{Instant, sleep, sleep_until, timeout},
 };
 use tokio_tungstenite::tungstenite::Message;
+#[cfg(any(test, feature = "fuzzing"))]
 use url::Url;
 mod handshake;
 use handshake::{Socket, connect_socket};
