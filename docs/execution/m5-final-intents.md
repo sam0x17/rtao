@@ -90,3 +90,15 @@ Tests, doctests and documentation builds were not reached. The next hosted
 run must verify these fixes; source review and rustfmt alone do not establish
 compilation or fixture success. Bounded failure evidence is retained privately
 as `check-38709461377.json`.
+
+Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
+at `06a3598` passes compilation, strict Clippy, parity and the other five jobs.
+Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. The all-83
+plan fixture passes. Fixes correct fixture expectations using pinned sources:
+ordinary u32 multisig timepoints, setup versus business RPCs, typed storage
+batches, decoded UTF-8, implemented command availability, distinct destination
+addresses, last-allocated nonce state and valid subnet4095. New policy cases
+explicitly refuse4096/65535, retaining the separate u16 wire checks. No production
+behavior, assertions or gates are relaxed. Doctests and documentation builds
+are not reached; another ordinary hosted run must verify the corrections.
+Bounded private evidence is `check-38710720744.json`.

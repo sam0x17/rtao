@@ -971,10 +971,15 @@ mod tests {
                 "get_validator_basket",
                 "get_validator_basket",
                 "get_validator_basket",
+                // Map scans observe both the key page and its value batch.
+                "NetworksAdded",
                 "NetworksAdded"
             ]
         );
-        assert_eq!(recording.block_hashes().len(), 1);
+        assert_eq!(
+            recording.block_hashes(),
+            BTreeSet::from([snapshot.block().hash])
+        );
         assert!(
             !chain
                 .requests()

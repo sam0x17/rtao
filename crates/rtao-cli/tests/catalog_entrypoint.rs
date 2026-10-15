@@ -179,7 +179,7 @@ fn tools_binary_emits_complete_json_with_unavailable_commands_unadvertised() -> 
 }
 
 #[test]
-fn generated_binary_registers_implemented_operations_and_rejects_pending_commands() -> TestResult {
+fn generated_binary_registers_operations_from_actual_availability() -> TestResult {
     let root = Root::new()?;
     for (family, present) in [
         ("tx", "set-weights"),
@@ -193,13 +193,31 @@ fn generated_binary_registers_implemented_operations_and_rejects_pending_command
         assert!(output.stderr.is_empty());
         assert!(String::from_utf8(output.stdout)?.contains(present));
     }
-    let unavailable = root
+    let metadata = rtao_intents::interface_metadata();
+    assert_eq!(metadata.len(), rtao_catalog::INTENTS.len());
+    for operation in metadata {
+        let name = operation.name.replace('_', "-");
+        let output = root.command().args(["tx", &name, "--help"]).output()?;
+        if operation.compiled && operation.implemented {
+            assert_eq!(output.status.code(), Some(0), "{name}");
+            assert!(output.stderr.is_empty(), "{name}");
+            assert!(
+                String::from_utf8(output.stdout)?.contains(&format!("rtao tx {name}")),
+                "{name}"
+            );
+        } else {
+            assert_eq!(output.status.code(), Some(2), "{name}");
+            assert!(output.stdout.is_empty(), "{name}");
+            assert!(String::from_utf8(output.stderr)?.contains(&name), "{name}");
+        }
+    }
+    let unknown = root
         .command()
-        .args(["tx", "add-stake", "--help"])
+        .args(["tx", "not-a-catalog-operation", "--help"])
         .output()?;
-    assert_eq!(unavailable.status.code(), Some(2));
-    assert!(unavailable.stdout.is_empty());
-    assert!(String::from_utf8(unavailable.stderr)?.contains("add-stake"));
+    assert_eq!(unknown.status.code(), Some(2));
+    assert!(unknown.stdout.is_empty());
+    assert!(String::from_utf8(unknown.stderr)?.contains("not-a-catalog-operation"));
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }

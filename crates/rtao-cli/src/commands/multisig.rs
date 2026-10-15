@@ -1831,7 +1831,13 @@ mod tests {
                 .contains("--call-data")
         );
         assert_eq!(rows[1]["target"], "System.remark");
-        assert_eq!(rows[1]["params"]["remark"], "0x0102");
+        // The pinned core decoder renders valid UTF-8 byte vectors as text,
+        // including these control characters. The encoded call remains hex.
+        assert_eq!(rows[1]["params"]["remark"], "\u{1}\u{2}");
+        assert_eq!(
+            rows[1]["call_data"],
+            format!("0x{}", hex::encode(known.as_bytes()))
+        );
         assert_eq!(
             rows[1]["approval_labels"],
             json!([format!("alice ({})", accounts()[0])])

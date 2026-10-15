@@ -241,6 +241,15 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             }
         }
         let supplied: std::collections::BTreeSet<_> = args.keys().cloned().collect();
+        // Some constructors require distinct accounts (MoveSwapStake above).
+        // Retain each supplied spelling rather than assuming all address
+        // fields use the common fixture account.
+        let address_spellings: std::collections::BTreeMap<_, _> = spec
+            .fields
+            .iter()
+            .filter(|field| field.required && field.name.ends_with("_ss58"))
+            .map(|field| (field.name, args[field.name].clone()))
+            .collect();
         let constructed = AnyIntent::from_tool(spec.name, Value::Object(args));
         assert!(
             constructed.is_ok(),
@@ -256,15 +265,11 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
         assert_eq!(intent.spec(), spec);
         let json = intent.to_json();
         assert_eq!(json["op"], spec.name);
-        for field in spec
-            .fields
-            .iter()
-            .filter(|field| field.required && field.name.ends_with("_ss58"))
-        {
+        for (field, spelling) in address_spellings {
             assert_eq!(
-                json[field.name], address,
-                "{}.{} address spelling",
-                spec.name, field.name
+                json[field], spelling,
+                "{}.{field} address spelling",
+                spec.name
             );
         }
         let actual: std::collections::BTreeSet<_> = json

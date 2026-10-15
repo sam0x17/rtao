@@ -623,10 +623,30 @@ mod tests {
                         "deploys the entire free balance (minus the existential deposit and fee headroom)"
                     ]
                 );
-                assert!(
-                    chain.requests()[before..]
-                        .iter()
-                        .any(|request| request.method == "state_getStorage")
+                let account = snapshot
+                    .block()
+                    .runtime
+                    .storage_entry("System", "Account")
+                    .ok_or_else(|| anyhow::anyhow!("System.Account is absent"))?;
+                let origin_key = snapshot
+                    .block()
+                    .runtime
+                    .core()
+                    .storage_key(account, &[rtao_core::codec::Value::Str(ORIGIN.to_string())])
+                    .map_err(rtao_core::CoreError::from)?;
+                let requests = chain.requests();
+                let reads = &requests[before..];
+                // Typed storage uses the pinned batch RPC even for one key.
+                // Assert the effective origin's account, distinct from the
+                // preview's fee payer, rather than only the transport method.
+                assert_eq!(reads.len(), 1);
+                assert_eq!(reads[0].method, "state_queryStorageAt");
+                assert_eq!(
+                    reads[0].params,
+                    json!([
+                        [format!("0x{}", hex::encode(origin_key))],
+                        format!("0x{}", hex::encode(snapshot.block().hash.0))
+                    ])
                 );
                 assert_eq!(
                     intent.summary(),
