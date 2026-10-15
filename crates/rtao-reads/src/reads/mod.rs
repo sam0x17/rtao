@@ -8,6 +8,17 @@ pub mod epochs;
 pub mod hyperparameters;
 /// Epoch, weight and chain reads ported in the submission milestone.
 pub mod m2;
+/// Account, chain, commitment and neuron behavior from the read parity milestone.
+pub mod m6_accounts;
+/// Delegation relationships, subnet leases and crowdloan state.
+pub mod m6_delegation;
+/// Conviction locks, ownership projections and miner collateral accounting.
+pub mod m6_locks;
+/// Root basket accounting, subnet listings and mechanism state.
+pub mod m6_root;
+/// Native stake positions, availability, prices and swap quotes.
+pub mod m6_staking;
+mod namespaces;
 /// Neuron registration reads.
 pub mod neurons;
 /// Owner-loop reads, balances, identities, delegations and spot stake valuations.

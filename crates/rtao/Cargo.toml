@@ -36,7 +36,7 @@ vault = ["rtao-signer/vault"]
 extension = ["rtao-signer/extension"]
 keychain = ["rtao-wallet/keychain"]
 evm = ["dep:rtao-evm"]
-blocking = ["intents-all","metagraph","wallet","rtao-client/blocking"]
+blocking = ["intents-all","metagraph","wallet","rtao-client/blocking","dep:rtao-runtime","dep:rtao-catalog","dep:bytes","dep:futures","dep:serde_json","dep:tokio"]
 prometheus = ["rtao-neuron?/prometheus","rtao-rpc/metrics"]
 subxt = ["rtao-client/subxt"]
 full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus"]
@@ -55,8 +55,15 @@ rtao-wallet = { workspace = true, optional = true }
 rtao-btauth = { workspace = true, optional = true }
 rtao-neuron = { workspace = true, optional = true }
 rtao-evm = { workspace = true, optional = true }
+rtao-runtime = { workspace = true, optional = true }
+rtao-catalog = { workspace = true, optional = true }
+bytes = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
+rtao-testkit.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 clap.workspace = true

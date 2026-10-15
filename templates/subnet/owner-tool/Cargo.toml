@@ -1,0 +1,15 @@
+[package]
+name = "subnet-owner-tool"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+rtao = { workspace = true, features = ["owner"] }
+anyhow.workspace = true
+clap.workspace = true
+rustls.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

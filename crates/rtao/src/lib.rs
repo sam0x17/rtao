@@ -5,6 +5,10 @@
 pub use rtao_core as core;
 pub use rtao_primitives as primitives;
 
+/// Blocking clients backed by a lazy private runtime thread.
+#[cfg(feature = "blocking")]
+pub mod blocking;
+
 #[cfg(feature = "tx")]
 mod executor;
 #[cfg(feature = "tx")]

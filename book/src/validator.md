@@ -4,16 +4,18 @@ A validator owns a hotkey, keeps scores by hotkey identity, and proposes weights
 The framework pins chain reads, checks weight gates, supervises scoring failures,
 persists state, and watches the commit's actual reveal epoch.
 
-Build the example with `cargo build -p rtao --example validator --no-default-features
---features validator`. The example sends a signed JSON echo challenge to `/echo`
-and scores exact replies; replace its `step` with your subnet's query and
-scoring rules before operating a subnet.
+The source example is `crates/rtao/examples/validator.rs`, enabled by the
+`validator` feature. It sends a signed JSON echo challenge to `/echo` and
+scores exact replies; replace its `step` with your subnet's query and scoring
+rules before operating a subnet. Substantial example builds belong in hosted
+CI under the current development policy.
 
-Run it with `cargo run -p rtao --example validator --no-default-features --features
-validator -- --netuid 123 --network test --wallet validator --wallet-hotkey default
---metrics-addr 127.0.0.1:9090`. The hotkey must already be funded and registered in
-the subnet. Keep the wallet mount read-only and persist the state directory across
-container or host restarts.
+For an operator's existing build, the example accepts arguments such as
+`--netuid 123 --network test --wallet validator --wallet-hotkey default
+--metrics-addr 127.0.0.1:9090`. It connects to the selected endpoint; it does
+not start a node. The hotkey must already be funded and registered in the
+subnet. Keep wallet files read-only and persist the state directory across
+restarts. Running a testnet validator is not a development prerequisite.
 
 Configuration resolves flags, then environment variables, then the shared btcli
 file, then defaults. `BTCLI_CONFIG` selects another shared file. Network and wallet
@@ -95,7 +97,11 @@ destinations. Without this flag, the demonstration binary holds weights until
 an application supplies scores. Use your subnet's scoring implementation for
 normal operation.
 
-Local checks do not complete the deployment exits. The no-host image must build
-on Linux and pass the TLS fake-node test. Automated localnet runs must observe
-commits and reveals and verify validator restart behavior. PLAN.md Q29 waives
-the twenty-four-hour testnet soak; no soak result is claimed.
+The hosted client checks exercise scheduling, signed requests, state recovery,
+runtime refusals and transport behavior with committed fixtures and fake
+transports. Use the exact commit's CI result when assessing those checks.
+Live-chain commit/reveal timing, real endpoint reachability and host shutdown
+behavior need separate operational evidence. Localnet and Python
+interoperability checks are optional targeted hosted work under PLAN.md Q30;
+they are not required local campaigns. The twenty-four-hour testnet soak is
+waived, and no passing soak or deployment result is claimed.
