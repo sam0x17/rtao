@@ -224,6 +224,8 @@ jobs:
             'crates/rtao-intents/src/generated/metadata.rs',
             'crates/rtao-intents/src/generated/mod.rs', 'crates/rtao-reads/src/generated/names.rs',
             'crates/rtao-reads/src/generated/mod.rs',
+            'crates/rtao-reads/src/generated/interfaces.rs',
+            'crates/rtao-reads/src/generated/namespace_methods.rs',
           ];
           const allowed = new Set([...reports, ...(process.env.REFRESH_CODEGEN === 'true' ? interfaces : [])]);
           for (const path of allowed) {
@@ -257,5 +259,7 @@ jobs:
             crates/rtao-intents/src/generated/mod.rs
             crates/rtao-reads/src/generated/names.rs
             crates/rtao-reads/src/generated/mod.rs
+            crates/rtao-reads/src/generated/interfaces.rs
+            crates/rtao-reads/src/generated/namespace_methods.rs
           if-no-files-found: error
           retention-days: 3
