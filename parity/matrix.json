@@ -2249,9 +2249,9 @@
       {
         "id": "D-027",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`sync_client_has_all_namespaces`"
+          "rtao::blocking::tests::sync_client_has_all_namespaces"
         ]
       },
       {
@@ -10113,32 +10113,32 @@
       {
         "name": "accepts_locked_alpha",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "alpha_price",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "alpha_prices",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "associated_evm_key",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "auto_stake",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "auto_stake_all",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "balance",
@@ -10153,17 +10153,17 @@
       {
         "name": "basket_position",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "basket_trading_status",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "block_info",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "block_time",
@@ -10188,7 +10188,7 @@
       {
         "name": "bonds",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "burn",
@@ -10198,27 +10198,27 @@
       {
         "name": "childkey_threshold_suspended",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "children",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "coldkey_lock",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "coldkey_swap_announcement",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "collateral_policy",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "commit_reveal_enabled",
@@ -10228,32 +10228,32 @@
       {
         "name": "commitment",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "commitments",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "crowdloan",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "crowdloan_contributors",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "crowdloans",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "delegate",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "delegate_take",
@@ -10268,7 +10268,7 @@
       {
         "name": "delegates",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "difficulty",
@@ -10283,12 +10283,12 @@
       {
         "name": "existential_deposit",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "hotkey_conviction",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "hotkey_identities",
@@ -10298,7 +10298,7 @@
       {
         "name": "hotkey_owner",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "identity",
@@ -10313,32 +10313,32 @@
       {
         "name": "is_delegate",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "is_fast_blocks",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "lease",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "leases",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "locks_for_coldkey",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "locks_for_hotkey",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "max_weight_limit",
@@ -10373,7 +10373,7 @@
       {
         "name": "miner_collateral",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "most_convicted_hotkey",
@@ -10383,17 +10383,17 @@
       {
         "name": "multisig",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "netuids_for_hotkey",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "neurons",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "next_epoch_start_block",
@@ -10403,17 +10403,17 @@
       {
         "name": "owned_hotkeys",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "parents",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "pending_children",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "proxies",
@@ -10423,12 +10423,12 @@
       {
         "name": "quote_stake",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "quote_unstake",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "reveal_period",
@@ -10438,7 +10438,7 @@
       {
         "name": "revealed_commitment",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "root_basket_owed",
@@ -10448,22 +10448,22 @@
       {
         "name": "root_basket_owed_breakdown",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "root_basket_portfolio",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "root_basket_total_nav",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "root_baskets",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "root_claim_threshold",
@@ -10473,27 +10473,27 @@
       {
         "name": "stake",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_availability",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_availability_for_coldkey",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_for_coldkey",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_for_coldkeys",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_value_for_coldkey",
@@ -10508,22 +10508,22 @@
       {
         "name": "staking_hotkeys",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnet",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnet_collateral",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnet_convictions",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnet_emission_enabled",
@@ -10548,7 +10548,7 @@
       {
         "name": "subnet_registration_cost",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnet_start_schedule",
@@ -10558,17 +10558,17 @@
       {
         "name": "subnet_tao_flows",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnets",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "timelocked_weight_commits",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "timestamp",
@@ -10583,12 +10583,12 @@
       {
         "name": "total_alpha_staked",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "tx_rate_limit",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "uid",
@@ -10598,12 +10598,12 @@
       {
         "name": "validator_basket",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "validator_basket_nav",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "validator_basket_summary",

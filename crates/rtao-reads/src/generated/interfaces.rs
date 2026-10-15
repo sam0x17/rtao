@@ -10,12 +10,10 @@ pub struct AcceptsLockedAlphaParams {
 #[doc = "Whether a coldkey accepts incoming locked alpha transfers.\n\nColdkeys reject locked alpha by default; the pallet's\n`set_reject_locked_alpha(false)` sets bit 0 of the coldkey's\n`AccountFlags` to opt in."]
 #[doc(alias = "bittensor.reads.accepts_locked_alpha")]
 pub async fn accepts_locked_alpha<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::AcceptsLockedAlpha,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<bool, crate::ReadError> {
+    crate::reads::m6_locks::accepts_locked_alpha(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `alpha_price`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -27,12 +25,10 @@ pub struct AlphaPriceParams {
 #[doc = "Current spot alpha price for a subnet, as TAO per alpha."]
 #[doc(alias = "bittensor.reads.alpha_price")]
 pub async fn alpha_price<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::AlphaPrice,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_staking::AlphaPrice, crate::ReadError> {
+    crate::reads::m6_staking::alpha_price(view, netuid).await
 }
 #[doc = "Typed parameters for `alpha_prices`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -41,11 +37,9 @@ pub struct AlphaPricesParams {}
 #[doc = "Spot alpha price for every subnet, as TAO per alpha keyed by netuid."]
 #[doc(alias = "bittensor.reads.alpha_prices")]
 pub async fn alpha_prices<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::AlphaPrices,
-    ))
+    view: &V,
+) -> Result<std::collections::BTreeMap<rtao_primitives::NetUid, f64>, crate::ReadError> {
+    crate::reads::m6_staking::alpha_prices(view).await
 }
 #[doc = "Typed parameters for `associated_evm_key`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -59,13 +53,11 @@ pub struct AssociatedEvmKeyParams {
 #[doc = "The EVM address associated with a neuron (by netuid + uid) and the block it was set."]
 #[doc(alias = "bittensor.reads.associated_evm_key")]
 pub async fn associated_evm_key<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _uid: rtao_primitives::Uid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::AssociatedEvmKey,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    uid: rtao_primitives::Uid,
+) -> Result<Option<crate::reads::m6_accounts::AssociatedEvmKey>, crate::ReadError> {
+    crate::reads::m6_accounts::associated_evm_key(view, netuid, uid).await
 }
 #[doc = "Typed parameters for `auto_stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -79,13 +71,11 @@ pub struct AutoStakeParams {
 #[doc = "The hotkey a coldkey auto-stakes its rewards to on a subnet, or None if unset."]
 #[doc(alias = "bittensor.reads.auto_stake")]
 pub async fn auto_stake<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::AutoStake,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Option<rtao_primitives::AccountId>, crate::ReadError> {
+    crate::reads::m6_staking::auto_stake(view, coldkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `auto_stake_all`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -97,12 +87,10 @@ pub struct AutoStakeAllParams {
 #[doc = "Every auto-stake destination configured for a coldkey.\n\nOne entry per subnet where a destination hotkey is set; subnets with no\nentry have auto-stake unset."]
 #[doc(alias = "bittensor.reads.auto_stake_all")]
 pub async fn auto_stake_all<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::AutoStakeAll,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::m6_staking::AutoStakeDestination>, crate::ReadError> {
+    crate::reads::m6_staking::auto_stake_all(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `balance`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -149,13 +137,11 @@ pub struct BasketPositionParams {
 #[doc = "A staker's beta token position in one validator's basket.\n\n`beta` is the staker's beta token balance — the product-facing number:\nit never moves with market prices, only grows as root dividends accrue\nand shrinks when you claim. One beta is 10^9 raw chain units and had a\npar value of τ1 at fund inception, so `beta_price_tao` (fund NAV over\noutstanding beta) tracks the fund's performance from 1.0. `value_tao`\nis the realizable TAO a claim would pay right now — exactly what\n`claim_root_with_hotkey` would redeem; `spot_value_tao` marks the\nsame slice at spot prices (display only). Returns `None` when the\nstaker holds no beta there."]
 #[doc(alias = "bittensor.reads.basket_position")]
 pub async fn basket_position<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::BasketPosition,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Option<crate::reads::m6_root::BasketPosition>, crate::ReadError> {
+    crate::reads::m6_root::basket_position(view, hotkey_ss58, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `basket_trading_status`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -167,12 +153,10 @@ pub struct BasketTradingStatusParams {
 #[doc = "A validator's `swap_basket` trading status: gates and the turnover bucket.\n\n`enabled` is the network-wide gate, `frozen` the per-hotkey governance freeze.\nThe turnover budget is a token bucket: `budget_tao` is its capacity\n(`BasketDailyTurnoverCap` share of the fund's guarded NAV — each holding at\nthe lower of its realizable value and its slow-moving-price value, so a\npumped pool cannot enlarge it), `remaining_tao` what a trade right\nnow could push through the fund, `used_tao` the difference, and the bucket\nrefills by `refill_per_block_tao` every block (`budget_tao / refill_blocks`,\na full refill over `refill_blocks` = 7200 blocks)."]
 #[doc(alias = "bittensor.reads.basket_trading_status")]
 pub async fn basket_trading_status<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::BasketTradingStatus,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<crate::reads::m6_root::BasketTradingStatus, crate::ReadError> {
+    crate::reads::m6_root::basket_trading_status(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `block_info`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -184,12 +168,10 @@ pub struct BlockInfoParams {
 #[doc = "A block's hash, timestamp, and extrinsics (as module.function summaries).\n\nProgrammatic callers wanting the fully decoded extrinsics and raw header\nshould use `client.block_info()` instead."]
 #[doc(alias = "bittensor.reads.block_info")]
 pub async fn block_info<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _block: i64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::BlockInfo,
-    ))
+    view: &V,
+    block: i64,
+) -> Result<Option<crate::reads::m6_accounts::BlockSummary>, crate::ReadError> {
+    crate::reads::m6_accounts::block_info(view, block).await
 }
 #[doc = "Typed parameters for `block_time`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -270,13 +252,11 @@ pub struct BondsParams {
 #[doc = "Validator bond rows as `{validator_uid: {miner_uid: bond}}`, scaled to 0..1.\n\nBonds are the slow EMA of a validator's stake-weighted weights that pays\nits dividends; unlike weights their magnitude is meaningful, so values are\nscaled by the u16 maximum (1.0 = the largest bond the chain can store)\nrather than row-normalized."]
 #[doc(alias = "bittensor.reads.bonds")]
 pub async fn bonds<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Bonds,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+) -> Result<crate::reads::m6_root::BondMatrix, crate::ReadError> {
+    crate::reads::m6_root::bonds(view, netuid, mechid).await
 }
 #[doc = "Typed parameters for `burn`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -303,12 +283,10 @@ pub struct ChildkeyThresholdSuspendedParams {
 #[doc = "Whether a parent hotkey's child relations are currently inert.\n\nThe chain re-checks a parent's total stake against the childkey stake\nthreshold (`StakeThreshold`) whenever that stake changes. A parent that\nhas dropped below it is flagged here: its `children` and `parents` rows\nstay stored, but stake inheritance and dividend routing ignore them on\nevery subnet the parent does not own. The flag clears on its own once the\nparent's stake meets the threshold again."]
 #[doc(alias = "bittensor.reads.childkey_threshold_suspended")]
 pub async fn childkey_threshold_suspended<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ChildkeyThresholdSuspended,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<bool, crate::ReadError> {
+    crate::reads::m6_delegation::childkey_threshold_suspended(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `children`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -322,13 +300,11 @@ pub struct ChildrenParams {
 #[doc = "Child hotkeys of a parent on a subnet, as (proportion, child_ss58) pairs.\n\nProportions are u64-normalized fractions of the parent's stake, where\nu64::MAX means 100%. This is the stored relation set; while the parent is\nbelow the childkey stake threshold (see `childkey_threshold_suspended`)\nthe chain treats these edges as inert on every subnet the parent does\nnot own."]
 #[doc(alias = "bittensor.reads.children")]
 pub async fn children<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Children,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Vec<(u64, rtao_primitives::AccountId)>, crate::ReadError> {
+    crate::reads::m6_delegation::children(view, hotkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `coldkey_lock`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -342,13 +318,11 @@ pub struct ColdkeyLockParams {
 #[doc = "Lock state for a coldkey on a subnet, or None if no lock exists.\n\n`locked_alpha` is denominated in the subnet's alpha and rolled forward\n(decayed) to the current block; `is_perpetual` locks do not decay."]
 #[doc(alias = "bittensor.reads.coldkey_lock")]
 pub async fn coldkey_lock<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ColdkeyLock,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Option<crate::reads::m6_locks::ColdkeyLock>, crate::ReadError> {
+    crate::reads::m6_locks::coldkey_lock(view, coldkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `coldkey_swap_announcement`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -360,12 +334,10 @@ pub struct ColdkeySwapAnnouncementParams {
 #[doc = "A coldkey's pending swap announcement (execute block, new-key hash, disputed), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to."]
 #[doc(alias = "bittensor.reads.coldkey_swap_announcement")]
 pub async fn coldkey_swap_announcement<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ColdkeySwapAnnouncement,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Option<crate::reads::m6_accounts::ColdkeySwapAnnouncement>, crate::ReadError> {
+    crate::reads::m6_accounts::coldkey_swap_announcement(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `collateral_policy`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -377,12 +349,10 @@ pub struct CollateralPolicyParams {
 #[doc = "A subnet's collateral configuration.\n\n`lock_share` is the fraction of the registration price locked as\ncollateral instead of burned (0 disables collateral); `drain_ratio` is\nthe alpha released per alpha of hotkey emission earned, snapshot per\nminer at registration."]
 #[doc(alias = "bittensor.reads.collateral_policy")]
 pub async fn collateral_policy<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::CollateralPolicy,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_locks::CollateralPolicy, crate::ReadError> {
+    crate::reads::m6_locks::collateral_policy(view, netuid).await
 }
 #[doc = "Typed parameters for `commit_reveal_enabled`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -411,13 +381,11 @@ pub struct CommitmentParams {
 #[doc = "The commitment a hotkey has published on a subnet, or None."]
 #[doc(alias = "bittensor.reads.commitment")]
 pub async fn commitment<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Commitment,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<Option<crate::reads::m6_accounts::Commitment>, crate::ReadError> {
+    crate::reads::m6_accounts::commitment(view, netuid, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `commitments`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -429,46 +397,40 @@ pub struct CommitmentsParams {
 #[doc = "Every commitment on a subnet, newest first: hotkey, uid, content, block, age, reveal state.\n\nOne row per hotkey that has (or had) a commitment — including sealed\ntimelocked payloads waiting on drand (`status` `sealed`), terminal\non-chain reveal failures retained for audit (`status` `failed`), and\nfully-revealed ones whose live storage entry the chain already dropped.\n`commitment` is the currently visible content: the plaintext, or the\nlatest chain-decrypted payload; null while sealed or failed."]
 #[doc(alias = "bittensor.reads.commitments")]
 pub async fn commitments<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Commitments,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Vec<serde_json::Value>, crate::ReadError> {
+    crate::reads::m6_accounts::commitments(view, netuid).await
 }
 #[doc = "Typed parameters for `crowdloan`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CrowdloanParams {
     #[doc = "Id of the crowdloan to look up."]
-    pub crowdloan_id: i64,
+    pub crowdloan_id: u32,
 }
 #[doc = "A crowdloan's state (creator, deposit, raised, cap, end, target/call), or None.\n\nAmounts are TAO; `end` is the block number at which contributions close."]
 #[doc(alias = "bittensor.reads.crowdloan")]
 pub async fn crowdloan<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _crowdloan_id: i64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Crowdloan,
-    ))
+    view: &V,
+    crowdloan_id: u32,
+) -> Result<Option<crate::reads::m6_delegation::Crowdloan>, crate::ReadError> {
+    crate::reads::m6_delegation::crowdloan(view, crowdloan_id).await
 }
 #[doc = "Typed parameters for `crowdloan_contributors`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CrowdloanContributorsParams {
     #[doc = "Id of the crowdloan whose contributors to list."]
-    pub crowdloan_id: i64,
+    pub crowdloan_id: u32,
 }
 #[doc = "Contributors and amounts for a crowdloan, with amounts in TAO."]
 #[doc(alias = "bittensor.reads.crowdloan_contributors")]
 pub async fn crowdloan_contributors<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _crowdloan_id: i64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::CrowdloanContributors,
-    ))
+    view: &V,
+    crowdloan_id: u32,
+) -> Result<Vec<crate::reads::m6_delegation::CrowdloanContributor>, crate::ReadError> {
+    crate::reads::m6_delegation::crowdloan_contributors(view, crowdloan_id).await
 }
 #[doc = "Typed parameters for `crowdloans`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -477,11 +439,9 @@ pub struct CrowdloansParams {}
 #[doc = "All crowdloans on chain (id and summary fields)."]
 #[doc(alias = "bittensor.reads.crowdloans")]
 pub async fn crowdloans<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Crowdloans,
-    ))
+    view: &V,
+) -> Result<Vec<crate::reads::m6_delegation::CrowdloanSummary>, crate::ReadError> {
+    crate::reads::m6_delegation::crowdloans(view).await
 }
 #[doc = "Typed parameters for `delegate`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -493,12 +453,10 @@ pub struct DelegateParams {
 #[doc = "Delegate info for one hotkey, or None if it is not a delegate."]
 #[doc(alias = "bittensor.reads.delegate")]
 pub async fn delegate<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Delegate,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<Option<crate::reads::owner::DelegateInfo>, crate::ReadError> {
+    crate::reads::m6_delegation::delegate(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `delegate_take`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -537,11 +495,9 @@ pub struct DelegatesParams {}
 #[doc = "Every delegate hotkey on the network, with take and registrations."]
 #[doc(alias = "bittensor.reads.delegates")]
 pub async fn delegates<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Delegates,
-    ))
+    view: &V,
+) -> Result<Vec<crate::reads::owner::DelegateInfo>, crate::ReadError> {
+    crate::reads::m6_delegation::delegates(view).await
 }
 #[doc = "Typed parameters for `difficulty`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -588,11 +544,9 @@ pub struct ExistentialDepositParams {}
 #[doc = "Minimum balance an account must keep to stay alive."]
 #[doc(alias = "bittensor.reads.existential_deposit")]
 pub async fn existential_deposit<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ExistentialDeposit,
-    ))
+    view: &V,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::m6_accounts::existential_deposit(view).await
 }
 #[doc = "Typed parameters for `hotkey_conviction`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -606,13 +560,11 @@ pub struct HotkeyConvictionParams {
 #[doc = "Conviction metrics for a hotkey on a subnet.\n\nReturns `conviction_alpha` denominated in the subnet's alpha, rolled\nforward to the current block."]
 #[doc(alias = "bittensor.reads.hotkey_conviction")]
 pub async fn hotkey_conviction<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::HotkeyConviction,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_locks::HotkeyConviction, crate::ReadError> {
+    crate::reads::m6_locks::hotkey_conviction(view, hotkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `hotkey_identities`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -642,12 +594,10 @@ pub struct HotkeyOwnerParams {
 #[doc = "The coldkey that owns a hotkey, or None if unowned."]
 #[doc(alias = "bittensor.reads.hotkey_owner")]
 pub async fn hotkey_owner<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::HotkeyOwner,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<rtao_primitives::DefaultAccount, crate::ReadError> {
+    crate::reads::m6_accounts::hotkey_owner(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `identity`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -698,12 +648,10 @@ pub struct IsDelegateParams {
 #[doc = "Whether a hotkey is a delegate."]
 #[doc(alias = "bittensor.reads.is_delegate")]
 pub async fn is_delegate<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::IsDelegate,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<bool, crate::ReadError> {
+    crate::reads::m6_delegation::is_delegate(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `is_fast_blocks`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -712,28 +660,24 @@ pub struct IsFastBlocksParams {}
 #[doc = "Whether the chain runs fast blocks (0.25s slots, local/e2e testing mode)."]
 #[doc(alias = "bittensor.reads.is_fast_blocks")]
 pub async fn is_fast_blocks<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::IsFastBlocks,
-    ))
+    view: &V,
+) -> Result<bool, crate::ReadError> {
+    crate::reads::m6_accounts::is_fast_blocks(view).await
 }
 #[doc = "Typed parameters for `lease`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LeaseParams {
     #[doc = "Id of the subnet lease to look up."]
-    pub lease_id: i64,
+    pub lease_id: u32,
 }
 #[doc = "A subnet lease by id (beneficiary, emissions share, end block, netuid, cost), or None.\n\n`emissions_share` is a percentage from 0 to 100; `end_block` is None for a\nperpetual lease."]
 #[doc(alias = "bittensor.reads.lease")]
 pub async fn lease<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _lease_id: i64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Lease,
-    ))
+    view: &V,
+    lease_id: u32,
+) -> Result<Option<crate::reads::m6_delegation::Lease>, crate::ReadError> {
+    crate::reads::m6_delegation::lease(view, lease_id).await
 }
 #[doc = "Typed parameters for `leases`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -742,11 +686,9 @@ pub struct LeasesParams {}
 #[doc = "Every subnet lease on the network."]
 #[doc(alias = "bittensor.reads.leases")]
 pub async fn leases<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Leases,
-    ))
+    view: &V,
+) -> Result<Vec<crate::reads::m6_delegation::Lease>, crate::ReadError> {
+    crate::reads::m6_delegation::leases(view).await
 }
 #[doc = "Typed parameters for `locks_for_coldkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -758,12 +700,10 @@ pub struct LocksForColdkeyParams {
 #[doc = "Every lock a coldkey holds (one per subnet), rolled forward to now."]
 #[doc(alias = "bittensor.reads.locks_for_coldkey")]
 pub async fn locks_for_coldkey<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::LocksForColdkey,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::m6_locks::ColdkeyLock>, crate::ReadError> {
+    crate::reads::m6_locks::locks_for_coldkey(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `locks_for_hotkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -777,13 +717,11 @@ pub struct LocksForHotkeyParams {
 #[doc = "Every coldkey's lock targeting a hotkey on a subnet, rolled forward to now.\n\nThe reverse of `locks_for_coldkey`: scans the `LockingColdkeys`\nreverse index for the coldkeys with a non-zero lock pointed at the\nhotkey, then loads each lock record. This is the target-side view — a\nsubnet owner can see which coldkeys are building conviction toward a\nhotkey, not just the locks their own coldkey created."]
 #[doc(alias = "bittensor.reads.locks_for_hotkey")]
 pub async fn locks_for_hotkey<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::LocksForHotkey,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Vec<crate::reads::m6_locks::HotkeyLock>, crate::ReadError> {
+    crate::reads::m6_locks::locks_for_hotkey(view, hotkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `max_weight_limit`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -904,14 +842,12 @@ pub struct MinerCollateralParams {
 #[doc = "A `(hotkey, coldkey)` stake position's standing collateral, or None.\n\nCollateral is keyed by hotkey + coldkey so nominators on the same hotkey are\nnever charged for the owner's bond. When `coldkey_ss58` is omitted, the\nhotkey owner is used.\n\n`locked_alpha` is non-withdrawable stake released through earned emission\n(miner incentive and validator dividends) at `drain_ratio` alpha per alpha\nearned; `min_locked_alpha` is the miner-set floor the lock self-maintains\naround (the drain stops at it and emission fills any shortfall);\n`earned_alpha` is lifetime emission since the collateral entry existed.\nDerived: `headroom_alpha` (draining portion above the floor),\n`shortfall_alpha` (capture in progress below the floor), and\n`releasable_work_alpha` (emission still needed to release the headroom).\nThe lock survives deregistration and is credited on re-registration."]
 #[doc(alias = "bittensor.reads.miner_collateral")]
 pub async fn miner_collateral<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _coldkey_ss58: Option<rtao_primitives::AccountId>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::MinerCollateral,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    hotkey_ss58: rtao_primitives::AccountId,
+    coldkey_ss58: Option<rtao_primitives::AccountId>,
+) -> Result<Option<crate::reads::m6_locks::MinerCollateral>, crate::ReadError> {
+    crate::reads::m6_locks::miner_collateral(view, netuid, hotkey_ss58, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `most_convicted_hotkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -940,13 +876,11 @@ pub struct MultisigParams {
 #[doc = "A pending multisig operation (opening timepoint, approvals, depositor), or None."]
 #[doc(alias = "bittensor.reads.multisig")]
 pub async fn multisig<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _account_ss58: rtao_primitives::AccountId,
-    _call_hash: String,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Multisig,
-    ))
+    view: &V,
+    account_ss58: rtao_primitives::AccountId,
+    call_hash: String,
+) -> Result<Option<crate::reads::m6_accounts::MultisigOperation>, crate::ReadError> {
+    crate::reads::m6_accounts::multisig(view, account_ss58, call_hash).await
 }
 #[doc = "Typed parameters for `netuids_for_hotkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -958,12 +892,10 @@ pub struct NetuidsForHotkeyParams {
 #[doc = "Every subnet a hotkey is registered on, as a sorted list of netuids."]
 #[doc(alias = "bittensor.reads.netuids_for_hotkey")]
 pub async fn netuids_for_hotkey<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::NetuidsForHotkey,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<rtao_primitives::NetUid>, crate::ReadError> {
+    crate::reads::m6_accounts::netuids_for_hotkey(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `neurons`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -978,13 +910,11 @@ pub struct NeuronsParams {
 #[doc = "Every neuron on a subnet in ONE runtime-API call (the metagraph fast path).\n\n`lite=true` (the default) omits per-neuron weights/bonds, which is far\nsmaller and what almost every caller wants."]
 #[doc(alias = "bittensor.reads.neurons")]
 pub async fn neurons<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _lite: bool,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Neurons,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    lite: bool,
+) -> Result<Vec<crate::reads::m6_accounts::Neuron>, crate::ReadError> {
+    crate::reads::m6_accounts::neurons(view, netuid, lite).await
 }
 #[doc = "Typed parameters for `next_epoch_start_block`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1011,12 +941,10 @@ pub struct OwnedHotkeysParams {
 #[doc = "Every hotkey owned by a coldkey (the reverse of `hotkey_owner`)."]
 #[doc(alias = "bittensor.reads.owned_hotkeys")]
 pub async fn owned_hotkeys<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::OwnedHotkeys,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<rtao_primitives::AccountId>, crate::ReadError> {
+    crate::reads::m6_accounts::owned_hotkeys(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `parents`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1030,13 +958,11 @@ pub struct ParentsParams {
 #[doc = "Parent hotkeys of a child on a subnet, as (proportion, parent_ss58) pairs.\n\nProportions are u64-normalized fractions of the parent's stake, where\nu64::MAX means 100%. This is the stored relation set; a parent that is\nbelow the childkey stake threshold (see `childkey_threshold_suspended`)\ncontributes nothing to the child until it qualifies again, unless it\nowns the subnet."]
 #[doc(alias = "bittensor.reads.parents")]
 pub async fn parents<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Parents,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Vec<(u64, rtao_primitives::AccountId)>, crate::ReadError> {
+    crate::reads::m6_delegation::parents(view, hotkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `pending_children`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1050,13 +976,11 @@ pub struct PendingChildrenParams {
 #[doc = "Proposed child hotkeys of a parent still in cooldown, and when they apply.\n\n`set_children` normally does not take effect immediately: the proposal is\nparked here until `cooldown_block`, then promoted to the finalized set\nthat the `children` read returns. On subnets whose subtoken is not yet\nenabled the cooldown is skipped and children apply immediately, so\nnothing lingers here. `children` is (proportion, child_ss58) pairs with\nu64-normalized proportions, matching the `children` read."]
 #[doc(alias = "bittensor.reads.pending_children")]
 pub async fn pending_children<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::PendingChildren,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_delegation::PendingChildren, crate::ReadError> {
+    crate::reads::m6_delegation::pending_children(view, hotkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `proxies`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1085,13 +1009,11 @@ pub struct QuoteStakeParams {
 #[doc = "Simulate staking `amount_tao` TAO into a subnet: alpha out, fee, and slippage.\n\nUse this to compute a safe `limit_price_rao` for the `add_stake_limit` intent."]
 #[doc(alias = "bittensor.reads.quote_stake")]
 pub async fn quote_stake<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _amount_tao: f64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::QuoteStake,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    amount_tao: f64,
+) -> Result<crate::reads::m6_staking::SwapQuote, crate::ReadError> {
+    crate::reads::m6_staking::quote_stake(view, netuid, amount_tao).await
 }
 #[doc = "Typed parameters for `quote_unstake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1105,13 +1027,11 @@ pub struct QuoteUnstakeParams {
 #[doc = "Simulate unstaking `amount_alpha` alpha from a subnet: TAO out, fee, and slippage."]
 #[doc(alias = "bittensor.reads.quote_unstake")]
 pub async fn quote_unstake<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _amount_alpha: f64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::QuoteUnstake,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    amount_alpha: f64,
+) -> Result<crate::reads::m6_staking::SwapQuote, crate::ReadError> {
+    crate::reads::m6_staking::quote_unstake(view, netuid, amount_alpha).await
 }
 #[doc = "Typed parameters for `reveal_period`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1149,13 +1069,11 @@ pub struct RevealedCommitmentParams {
 #[doc = "The revealed (timelock-decrypted) commitment for a hotkey on a subnet, or None."]
 #[doc(alias = "bittensor.reads.revealed_commitment")]
 pub async fn revealed_commitment<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::RevealedCommitment,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<Option<Vec<(String, u64)>>, crate::ReadError> {
+    crate::reads::m6_accounts::revealed_commitment(view, netuid, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `root_basket_owed`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1182,12 +1100,10 @@ pub struct RootBasketOwedBreakdownParams {
 #[doc = "A coldkey's pending root dividends, itemized per validator hotkey.\n\nFor each hotkey the coldkey stakes to: the TAO its accrued entitlement\nwould realize if claimed now with `claim_root_with_hotkey`. Zero-owed\nvalidators are omitted. Use this to pick a validator before claiming."]
 #[doc(alias = "bittensor.reads.root_basket_owed_breakdown")]
 pub async fn root_basket_owed_breakdown<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::RootBasketOwedBreakdown,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::m6_root::BasketOwed>, crate::ReadError> {
+    crate::reads::m6_root::root_basket_owed_breakdown(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `root_basket_portfolio`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1199,12 +1115,10 @@ pub struct RootBasketPortfolioParams {
 #[doc = "A coldkey's basket portfolio: beta tokens held per validator, with values.\n\nOne `basket_position` record per validator on which the coldkey holds\nbeta, sorted by `value_tao` descending. `beta` is the stable holding\ncount (grows with accruals, shrinks with claims), and `value_tao` is\nwhat claiming would realize right now at current pool depth. Multiply\n`value_tao` by an off-chain TAO/USD price for fiat value — the chain\nhas no USD oracle."]
 #[doc(alias = "bittensor.reads.root_basket_portfolio")]
 pub async fn root_basket_portfolio<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::RootBasketPortfolio,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::m6_root::BasketPosition>, crate::ReadError> {
+    crate::reads::m6_root::root_basket_portfolio(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `root_basket_total_nav`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1213,11 +1127,9 @@ pub struct RootBasketTotalNavParams {}
 #[doc = "Network-wide total basket NAV across all validators, in TAO.\n\nSampling this over time yields the TAO/day flowing to root stakers."]
 #[doc(alias = "bittensor.reads.root_basket_total_nav")]
 pub async fn root_basket_total_nav<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::RootBasketTotalNav,
-    ))
+    view: &V,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::m6_root::root_basket_total_nav(view).await
 }
 #[doc = "Typed parameters for `root_baskets`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1226,11 +1138,9 @@ pub struct RootBasketsParams {}
 #[doc = "Basket summaries for every validator with an active basket.\n\nThe network-wide leaderboard: one `validator_basket_summary` record per\nvalidator with an active fund, sorted by NAV descending, each including\nits `basket_rate` (the cumulative entitlement accumulator: β raw units\nminted per rao of root stake, migration-seeded history included).\nCompare `lifetime_return` across validators to rank basket performance;\nfor staker returns use `chain_pricing` (`staker_twr` / `stake_price`)."]
 #[doc(alias = "bittensor.reads.root_baskets")]
 pub async fn root_baskets<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::RootBaskets,
-    ))
+    view: &V,
+) -> Result<Vec<crate::reads::owner::ValidatorBasketSummary>, crate::ReadError> {
+    crate::reads::m6_root::root_baskets(view).await
 }
 #[doc = "Typed parameters for `root_claim_threshold`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1257,14 +1167,12 @@ pub struct StakeParams {
 #[doc = "Alpha staked by a coldkey to a hotkey on a subnet (TAO when netuid is 0)."]
 #[doc(alias = "bittensor.reads.stake")]
 pub async fn stake<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-    _hotkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Stake,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+    hotkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::m6_staking::stake(view, coldkey_ss58, hotkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `stake_availability`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1278,13 +1186,11 @@ pub struct StakeAvailabilityParams {
 #[doc = "Free vs locked stake for a coldkey on one subnet.\n\n`locked` is conviction-locked mass (plus any miner collateral reserved\nagainst the coldkey on that subnet). `available` is what can still be\nunstaked or transferred without moving lock mass. Both are denominated in\nthe subnet's own currency (TAO on netuid 0)."]
 #[doc(alias = "bittensor.reads.stake_availability")]
 pub async fn stake_availability<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::StakeAvailability,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_staking::StakeAvailability, crate::ReadError> {
+    crate::reads::m6_staking::stake_availability(view, coldkey_ss58, netuid).await
 }
 #[doc = "Typed parameters for `stake_availability_for_coldkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1293,18 +1199,16 @@ pub struct StakeAvailabilityForColdkeyParams {
     #[doc = "Coldkey whose free/locked stake to read."]
     pub coldkey_ss58: rtao_primitives::AccountId,
     #[doc = "Subnets to query (empty list returns no rows)."]
-    pub netuids: Vec<i64>,
+    pub netuids: Vec<rtao_primitives::NetUid>,
 }
 #[doc = "Free vs locked stake for a coldkey across many subnets (one runtime call)."]
 #[doc(alias = "bittensor.reads.stake_availability_for_coldkey")]
 pub async fn stake_availability_for_coldkey<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-    _netuids: Vec<i64>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::StakeAvailabilityForColdkey,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+    netuids: Vec<rtao_primitives::NetUid>,
+) -> Result<Vec<crate::reads::m6_staking::StakeAvailability>, crate::ReadError> {
+    crate::reads::m6_staking::stake_availability_for_coldkey(view, coldkey_ss58, netuids).await
 }
 #[doc = "Typed parameters for `stake_for_coldkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1316,12 +1220,10 @@ pub struct StakeForColdkeyParams {
 #[doc = "Every stake position held by a coldkey, across all hotkeys and subnets.\n\nEach position's `stake` is denominated in the subnet's own currency: subnet\nalpha, or TAO when netuid is 0. Use `stake_value_for_coldkey` to mark alpha\npositions to TAO."]
 #[doc(alias = "bittensor.reads.stake_for_coldkey")]
 pub async fn stake_for_coldkey<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::StakeForColdkey,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::owner::StakePosition>, crate::ReadError> {
+    crate::reads::m6_staking::stake_for_coldkey(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `stake_for_coldkeys`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1333,12 +1235,13 @@ pub struct StakeForColdkeysParams {
 #[doc = "Every stake position for several coldkeys at once, in one runtime call.\n\nEach position's `stake` is denominated in the subnet's own currency: subnet\nalpha, or TAO when netuid is 0."]
 #[doc(alias = "bittensor.reads.stake_for_coldkeys")]
 pub async fn stake_for_coldkeys<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58s: Vec<rtao_primitives::AccountId>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::StakeForColdkeys,
-    ))
+    view: &V,
+    coldkey_ss58s: Vec<rtao_primitives::AccountId>,
+) -> Result<
+    std::collections::BTreeMap<rtao_primitives::AccountId, Vec<crate::reads::owner::StakePosition>>,
+    crate::ReadError,
+> {
+    crate::reads::m6_staking::stake_for_coldkeys(view, coldkey_ss58s).await
 }
 #[doc = "Typed parameters for `stake_value_for_coldkey`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1383,12 +1286,10 @@ pub struct StakingHotkeysParams {
 #[doc = "Every hotkey associated with a coldkey's staking or root-basket state.\n\nUnlike `owned_hotkeys` this includes delegates the coldkey has nominated.\nA hotkey may remain listed with no current stake when a root-basket claim\nwatermark still requires the relationship to be discoverable. During the\nv448 bounded cleanup, unrelated stale relationships may also remain until\nthe cleanup cursor reaches them. Use `stake_for_coldkey` for the\nper-subnet amounts behind each entry."]
 #[doc(alias = "bittensor.reads.staking_hotkeys")]
 pub async fn staking_hotkeys<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::StakingHotkeys,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<rtao_primitives::AccountId>, crate::ReadError> {
+    crate::reads::m6_staking::staking_hotkeys(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `subnet`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1400,12 +1301,10 @@ pub struct SubnetParams {
 #[doc = "Tempo, burn, and neuron count for one subnet (the three reads run concurrently)."]
 #[doc(alias = "bittensor.reads.subnet")]
 pub async fn subnet<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Subnet,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_root::SubnetInfo, crate::ReadError> {
+    crate::reads::m6_root::subnet(view, netuid).await
 }
 #[doc = "Typed parameters for `subnet_collateral`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1417,12 +1316,10 @@ pub struct SubnetCollateralParams {
 #[doc = "Every `(hotkey, coldkey)` position with standing collateral on a subnet.\n\nThe list validator code reads to enforce a per-machine collateral\nrequirement: each record carries the locked amount, the miner's\nself-maintained floor, the drain-ratio snapshot, and the hotkey's current\n`uid` (None when the hotkey is deregistered but its collateral persists) —\nready to join against the metagraph when scoring."]
 #[doc(alias = "bittensor.reads.subnet_collateral")]
 pub async fn subnet_collateral<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::SubnetCollateral,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Vec<crate::reads::m6_locks::SubnetCollateral>, crate::ReadError> {
+    crate::reads::m6_locks::subnet_collateral(view, netuid).await
 }
 #[doc = "Typed parameters for `subnet_convictions`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1434,12 +1331,10 @@ pub struct SubnetConvictionsParams {
 #[doc = "Every hotkey with locked stake on a subnet, rolled forward to now.\n\nPer hotkey: locked mass, conviction, and the estimated blocks until its\nown conviction strictly exceeds 18% of the subnet's eligible alpha.\nEligible alpha is `SubnetAlphaOut - SubnetProtocolAlpha - AlphaBurned`\n(saturating at zero). `change_subnet_owner_if_needed` reassigns\nownership when the subnet is at least ~1 year old (2,629,800 blocks) and\nthe highest-conviction hotkey holds more than 18% of eligible alpha on\nits own, at which point that hotkey's coldkey becomes the subnet owner.\nThe gate measures a single hotkey — exactly 18% is not enough — so\n`leader_hotkey` and `leader_blocks_to_threshold` describe the current\nconviction leader's standing against the gate, while the subnet-wide\n`total_conviction_alpha` is reported for context only and never gates\nthe takeover. Projections assume the lock rates and alpha accounting\nstay constant."]
 #[doc(alias = "bittensor.reads.subnet_convictions")]
 pub async fn subnet_convictions<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::SubnetConvictions,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<crate::reads::m6_locks::SubnetConvictions, crate::ReadError> {
+    crate::reads::m6_locks::subnet_convictions(view, netuid).await
 }
 #[doc = "Typed parameters for `subnet_emission_enabled`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1512,11 +1407,9 @@ pub struct SubnetRegistrationCostParams {}
 #[doc = "Current cost to register a new subnet.\n\nDenominated in TAO. The cost is dynamic: it rises when subnets register\nand decays back down over time."]
 #[doc(alias = "bittensor.reads.subnet_registration_cost")]
 pub async fn subnet_registration_cost<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::SubnetRegistrationCost,
-    ))
+    view: &V,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::m6_root::subnet_registration_cost(view).await
 }
 #[doc = "Typed parameters for `subnet_start_schedule`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1540,11 +1433,9 @@ pub struct SubnetTaoFlowsParams {}
 #[doc = "Per-subnet EMA of net TAO flow, in rao per block.\n\nTAO flow is the chain's running measure of user stake activity on a\nsubnet: every stake adds to the accumulator and every unstake subtracts,\nso a positive value means TAO is (on average) flowing into the subnet\nand a negative value means it is flowing out. The chain smooths the\nper-block accumulator (`SubnetTaoFlow`) into an exponential moving\naverage (`SubnetEmaTaoFlow`); this read returns that EMA per netuid.\nSubnets with no recorded flow are omitted."]
 #[doc(alias = "bittensor.reads.subnet_tao_flows")]
 pub async fn subnet_tao_flows<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::SubnetTaoFlows,
-    ))
+    view: &V,
+) -> Result<std::collections::BTreeMap<rtao_primitives::NetUid, f64>, crate::ReadError> {
+    crate::reads::m6_root::subnet_tao_flows(view).await
 }
 #[doc = "Typed parameters for `subnets`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1553,11 +1444,9 @@ pub struct SubnetsParams {}
 #[doc = "Info for every subnet, fetched in four batched map queries rather than\none-query-per-subnet. This is what listing should use."]
 #[doc(alias = "bittensor.reads.subnets")]
 pub async fn subnets<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Subnets,
-    ))
+    view: &V,
+) -> Result<Vec<crate::reads::m6_root::SubnetInfo>, crate::ReadError> {
+    crate::reads::m6_root::subnets(view).await
 }
 #[doc = "Typed parameters for `timelocked_weight_commits`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1572,13 +1461,14 @@ pub struct TimelockedWeightCommitsParams {
 #[doc = "Pending (still-encrypted) commit-reveal weight commits, grouped by epoch.\n\nEach entry carries the committing `hotkey`, the `commit_block`, the drand\n`reveal_round` at which the chain auto-decrypts and applies it, `reveals_at`\n(that round's UTC time, computed locally), and the `ciphertext`. Entries\ndisappear from this map once revealed — revealed weights show up in the\n`weights` read."]
 #[doc(alias = "bittensor.reads.timelocked_weight_commits")]
 pub async fn timelocked_weight_commits<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::TimelockedWeightCommits,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+) -> Result<
+    std::collections::BTreeMap<u64, Vec<crate::reads::m6_root::TimelockedWeightCommit>>,
+    crate::ReadError,
+> {
+    crate::reads::m6_root::timelocked_weight_commits(view, netuid, mechid).await
 }
 #[doc = "Typed parameters for `timestamp`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1612,12 +1502,10 @@ pub struct TotalAlphaStakedParams {
 #[doc = "Total alpha currently staked on a subnet, across all hotkeys (TAO when netuid is 0).\n\nThis is the chain-maintained O(1) aggregate: it equals the sum of\n`TotalHotkeyAlpha` for the subnet. Use this instead of walking every\nposition. After the v448 upgrade, the historical total is backfilled over\notherwise-idle blocks. Until the bounded migration finishes, keys ahead of\nits cursor are omitted; concurrent stake changes are reconciled by\ncompletion but are not necessarily visible in this aggregate immediately."]
 #[doc(alias = "bittensor.reads.total_alpha_staked")]
 pub async fn total_alpha_staked<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::TotalAlphaStaked,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::m6_staking::total_alpha_staked(view, netuid).await
 }
 #[doc = "Typed parameters for `tx_rate_limit`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1626,11 +1514,9 @@ pub struct TxRateLimitParams {}
 #[doc = "Global transaction rate limit in blocks."]
 #[doc(alias = "bittensor.reads.tx_rate_limit")]
 pub async fn tx_rate_limit<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::TxRateLimit,
-    ))
+    view: &V,
+) -> Result<u64, crate::ReadError> {
+    crate::reads::m6_accounts::tx_rate_limit(view).await
 }
 #[doc = "Typed parameters for `uid`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1660,12 +1546,10 @@ pub struct ValidatorBasketParams {
 #[doc = "A validator's basket holdings: per subnet, the alpha held and its TAO value.\n\nThe netuid-0 entry is the basket's TAO cash slot (held as root stake, so\nalpha and value coincide). Values are realizable quotes — what selling\nthe holding would actually fetch at current pool depth — not spot marks."]
 #[doc(alias = "bittensor.reads.validator_basket")]
 pub async fn validator_basket<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ValidatorBasket,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::m6_root::ValidatorBasketHolding>, crate::ReadError> {
+    crate::reads::m6_root::validator_basket(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `validator_basket_nav`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1677,12 +1561,10 @@ pub struct ValidatorBasketNavParams {
 #[doc = "A validator's basket net asset value in TAO (realizable quote)."]
 #[doc(alias = "bittensor.reads.validator_basket_nav")]
 pub async fn validator_basket_nav<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ValidatorBasketNav,
-    ))
+    view: &V,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::m6_root::validator_basket_nav(view, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `validator_basket_summary`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

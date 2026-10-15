@@ -16,16 +16,25 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Working source adds the remaining 62 reads and the blocking facade. All five
-read groups have fixture source and independent source reviews. Shared wiring,
-public block lookup, strict decoding, curated aliases and generated blocking
-adapters are prepared; hosted generation and combined execution remain pending.
-Generated availability still records 40/102 reads until the reviewed hosted
-artifact is adopted. See [m6-read-source.md](m6-read-source.md).
+Source adds the remaining 62 reads and the blocking facade. All five read
+groups have fixture source and independent source reviews. Generation run
+[38715060741](https://github.com/sam0x17/rtao/actions/runs/38715060741) at
+`7953bea` succeeds and its outputs are verified and adopted: fifteen exact
+archive members, all 23 dependency hashes, unchanged role package inventories,
+62 read availability/output/body changes, four input overrides and D-027's
+exact fixture mapping. All 83 intents and 102 reads now have generated
+integration. Blocking output has 14 namespaces and 101 catalog methods, with
+the curated typed metagraph adapter supplied by hand-written source. Ordinary
+combined compilation and execution remain pending. See [m6-read-source.md](m6-read-source.md).
 
 Normal run [38714093697](https://github.com/sam0x17/rtao/actions/runs/38714093697)
-at `745f3f3` passes features, semver, no-host, MSRV and supply; the main check
-job is still running at inspection. These results exclude the newer M6 source.
+at `745f3f3` passes features, semver, no-host, MSRV and supply. Main check passes
+compilation, strict Clippy, source/parity guards, all 2,022 executed nextest
+tests and nine doctests; four nextest tests are skipped. It then fails strict
+rustdoc because six generated parameter descriptions contain unescaped HTML
+placeholders. The generator must render those placeholders literally before
+the docs check can pass. These results exclude the newer M6 source and parser
+repair. Bounded evidence is private `check-38714093697.json`.
 Generation run [38714402721](https://github.com/sam0x17/rtao/actions/runs/38714402721)
 at `afd989a` fails before regeneration because the new blocking-accessor format
 string has an unmatched closing brace. The generator source now escapes each

@@ -3,9 +3,9 @@
 The remaining 62 catalog reads are authored in five modules: accounts/chain/
 identity/neurons (14), delegation/leasing (12), locks/collateral (9), root/
 subnets/weights (14) and staking/prices (13). All 102 reads now have source
-implementations and reviewed output mappings. Generated availability remains
-40/102 until hosted generation is reviewed and adopted. No M6 step or milestone
-is accepted by this source checkpoint.
+implementations and reviewed output mappings. Hosted generation at `7953bea`
+is verified and adopted: all 102 reads now have generated availability and
+dispatch. No M6 step or milestone is accepted by generation alone.
 
 The read fixtures use authenticated runtime metadata, real SCALE state and
 fake transports. They check exact declared descriptor sets, immutable hashes,
@@ -54,8 +54,16 @@ toolchain installation ran. Target output remains 534 MB and private recovery
 146 MB. All archives and logs are handled in memory, with bounded evidence
 retained under the existing recovery directory.
 
-Hosted generation must verify the exact source commit and input hashes before
-adoption. Ordinary CI must then compile and execute the combined fixtures,
+Run `38715060741` is verified against its exact source commit, all 23 dependency
+hashes, both archive digests and fifteen regular allowlisted members. Role
+package inventories are unchanged. Review checks all 62 implementation bodies,
+output metadata and namespace methods, four input overrides, 14 blocking
+namespace structs, 28 accessors and 101 typed blocking forwarders. The intent
+interfaces and existing 40 read bodies are unchanged. Matrix changes are only
+the 62 read rows and D-027. Private adoption evidence is
+`.local/recovery/2026-10-14/m6-reads-adoption.json`.
+
+Ordinary CI must now compile and execute the combined fixtures,
 doctests, docs and feature/profile checks. Fresh oracle, interoperability,
 chain, native-platform and hardware execution remain absent. Existing goldens
 and corpus are separate real fixtures; there is no committed Python oracle
