@@ -212,6 +212,24 @@ impl CallMoneyUnits {
                 format!("no unit declared for {pallet}.{call} parameter {parameter:?}")
             })
     }
+
+    fn resolve_native(
+        &self,
+        pallet: &str,
+        call: &str,
+        parameter: &str,
+        type_ident: &str,
+        native_type: &str,
+    ) -> Result<MoneyUnit> {
+        self.resolve(pallet, call, parameter, type_ident)
+            .or_else(|error| match native_type {
+                // Compact/newtype wrappers can hide the identity in a call
+                // annotation. The mapped native balance still names its unit.
+                "rtao_primitives::TaoBalance" => Ok(MoneyUnit::Tao),
+                "rtao_primitives::AlphaBalance" => Ok(MoneyUnit::Alpha),
+                _ => Err(error),
+            })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -792,14 +810,6 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
                         || target_ty == "rtao_primitives::AlphaBalance"
                         || target_ty == "u64")
                 {
-                    let source_field = spec
-                        .fields
-                        .iter()
-                        .find(|source| source.name == field)
-                        .context("money constructor field missing")?;
-                    let unit =
-                        money_units.resolve(pallet, call, &argument.name, &argument.type_ident)?;
-                    let source = money_source(spec, source_field, &config, ir, mapper, unit)?;
                     let resolver = mapping
                         .get("resolvers")
                         .and_then(|v| v.get(&field))
@@ -807,6 +817,19 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
                     if let Some(resolver) = resolver {
                         format!("crate::{}::{resolver}(intent,cx).await?", feature)
                     } else {
+                        let source_field = spec
+                            .fields
+                            .iter()
+                            .find(|source| source.name == field)
+                            .context("money constructor field missing")?;
+                        let unit = money_units.resolve_native(
+                            pallet,
+                            call,
+                            &argument.name,
+                            &argument.type_ident,
+                            &target_ty,
+                        )?;
+                        let source = money_source(spec, source_field, &config, ir, mapper, unit)?;
                         ensure!(
                             !spec.all_amount_fields.contains(&source_field.name),
                             "all-enabled money property {}.{field} requires a custom resolver",
@@ -1183,6 +1206,48 @@ mod tests {
                     .unwrap()
                     .to_string()
                     .contains("unknown money unit")
+            );
+        }
+    }
+
+    #[test]
+    fn compact_crowdloan_money_keeps_its_native_tao_unit_without_a_python_fallback() {
+        let (runtime, ir, _) = fixture();
+        let mapper = mapper(&runtime);
+        let units = CallMoneyUnits::load().unwrap();
+        let pallet = ir
+            .pallets
+            .iter()
+            .find(|pallet| pallet.name == "Crowdloan")
+            .unwrap();
+        for (name, parameter) in [
+            ("contribute", "amount"),
+            ("update_cap", "new_cap"),
+            ("update_min_contribution", "new_min_contribution"),
+        ] {
+            let call = pallet.calls.iter().find(|call| call.name == name).unwrap();
+            let argument = call
+                .args
+                .iter()
+                .find(|argument| argument.name == parameter)
+                .unwrap();
+            let native = mapper.argument("Crowdloan", name, argument).unwrap();
+            assert_eq!(native, "rtao_primitives::TaoBalance");
+            assert!(
+                units
+                    .resolve("Crowdloan", name, parameter, &argument.type_ident)
+                    .is_err()
+            );
+            assert_eq!(
+                units
+                    .resolve_native("Crowdloan", name, parameter, &argument.type_ident, &native)
+                    .unwrap(),
+                MoneyUnit::Tao
+            );
+            assert!(
+                units
+                    .resolve_native("Crowdloan", name, parameter, "u64", "u64")
+                    .is_err()
             );
         }
     }
