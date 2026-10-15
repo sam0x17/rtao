@@ -322,6 +322,122 @@ async fn proxy_uses_real_dispatch_identity_and_outer_fee_payer() {
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
 }
 
+struct DriftingCall {
+    builds: AtomicUsize,
+    wrapper: bool,
+}
+impl IntentInterface for DriftingCall {
+    const SPEC: &'static rtao_catalog::IntentSpec = Remark::SPEC;
+    type Role = Coldkey;
+    type Origin = Signed;
+    type Output = ();
+    const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] = Remark::WRAPS;
+    fn to_json(&self) -> Value {
+        json!({"op":"transfer"})
+    }
+}
+impl Intent for DriftingCall {
+    fn summary(&self) -> String {
+        "changing reviewed call".into()
+    }
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let value = if self.wrapper {
+            0
+        } else {
+            self.builds.fetch_add(1, Ordering::SeqCst)
+        };
+        let value = u8::try_from(value)
+            .map_err(|_| IntentError::validation("fixture build counter overflow"))?;
+        Ok(rtao_runtime::calls::system::remark(vec![value])
+            .compose(cx.runtime)?
+            .into())
+    }
+    async fn wrap_call<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+        call: rtao_client::CallBytes,
+    ) -> Result<Built, IntentError> {
+        if !self.wrapper {
+            return Ok(call.into());
+        }
+        let value = u8::try_from(self.builds.fetch_add(1, Ordering::SeqCst))
+            .map_err(|_| IntentError::validation("fixture wrapper counter overflow"))?;
+        let marker = rtao_runtime::calls::system::remark(vec![value]).compose(cx.runtime)?;
+        Ok(rtao_runtime::calls::utility::batch_all(vec![call, marker])
+            .compose(cx.runtime)?
+            .into())
+    }
+}
+
+#[tokio::test]
+async fn reviewed_call_guard_refuses_builder_and_wrapper_drift_before_unlock() {
+    for wrapper in [false, true] {
+        let (executor, fake, keys) = fixture().await;
+        let intent = DriftingCall {
+            builds: AtomicUsize::new(0),
+            wrapper,
+        };
+        let plan = executor
+            .plan(&intent, &keys, &PlanOptions::default())
+            .await
+            .unwrap();
+        let error = executor
+            .execute(
+                &intent,
+                &keys,
+                &ExecuteOptions {
+                    expected_call: Some(plan.call().clone()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("differs from the reviewed call"));
+        assert_eq!(intent.builds.load(Ordering::SeqCst), 2);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn reviewed_call_guard_accepts_an_unchanged_semantic_call() {
+    let (executor, fake, keys) = fixture().await;
+    let intent = Remark::default();
+    let plan = executor
+        .plan(&intent, &keys, &PlanOptions::default())
+        .await
+        .unwrap();
+    let result = executor
+        .execute(
+            &intent,
+            &keys,
+            &ExecuteOptions {
+                expected_call: Some(plan.call().clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(result.success);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    let submitted = fake.state().lock().unwrap().submissions.clone();
+    assert_eq!(submitted.len(), 1);
+    let runtime = executor.client().refresh_runtime().await.unwrap();
+    let decoded = runtime
+        .core()
+        .decode_extrinsic(&submitted[0], true)
+        .unwrap();
+    let reviewed = runtime
+        .core()
+        .decode_spec(
+            &rtao_core::runtime::TypeSpec::Call,
+            plan.call().as_bytes(),
+            true,
+        )
+        .unwrap();
+    assert_eq!(decoded.field("call"), Some(&reviewed));
+}
+
 #[tokio::test]
 async fn dispatch_failure_is_returned_without_retry_or_success_extras() {
     let (executor, fake, keys) = fixture().await;

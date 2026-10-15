@@ -199,6 +199,51 @@ async fn proxy_sudo_and_multisig_calls_keep_exact_bytes_account_and_resolved_rec
 }
 
 #[tokio::test]
+async fn external_submission_honors_the_reviewed_call_constraint() -> TestResult {
+    let (executor, fake, signer) = fixture().await?;
+    let unsigned = prepared(&executor, &signer).await?;
+    let signature = signer
+        .sign(&unsigned.signing_request(SignPurpose::Extrinsic))
+        .await?;
+    let runtime = executor.client().refresh_runtime().await?;
+    let different = rtao_runtime::calls::system::remark(vec![9]).compose(&runtime)?;
+    executor.client().nonces().pin(&signer.account(), 80);
+    let refused = executor
+        .submit_signature(
+            &unsigned,
+            signature,
+            &ExecuteOptions {
+                expected_call: Some(different),
+                ..pool_options()
+            },
+        )
+        .await;
+    assert!(matches!(refused, Err(TxError::Intent(_))));
+    no_author(&fake);
+    assert_eq!(
+        executor
+            .client()
+            .nonces()
+            .cached(&signer.account().to_string())
+            .await,
+        Some(80)
+    );
+    let receipt = executor
+        .submit_signature(
+            &unsigned,
+            signature,
+            &ExecuteOptions {
+                expected_call: Some(unsigned.call().clone()),
+                ..pool_options()
+            },
+        )
+        .await?;
+    assert!(receipt.success);
+    executor.client().close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn post_signature_proxy_and_shield_options_refuse_without_author_or_nonce_mutation()
 -> TestResult {
     let (executor, fake, signer) = fixture().await?;

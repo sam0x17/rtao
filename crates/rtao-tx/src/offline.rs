@@ -106,6 +106,7 @@ impl Executor {
         opts: &ExecuteOptions,
     ) -> Result<ExtrinsicResult, TxError> {
         self.enforce_raw_call(opts)?;
+        opts.check_expected_call(unsigned.call())?;
         if opts.shielded || opts.proxy_for.is_some() || opts.force_proxy_type.is_some() {
             return Err(IntentError::InvalidArgument(
                 "external signatures require wrappers to be composed before preparation".into(),

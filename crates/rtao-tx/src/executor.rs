@@ -65,6 +65,9 @@ pub struct PlanOptions {
 /// Python execution defaults plus bounded waiting and fate reconciliation.
 #[derive(Clone, Debug)]
 pub struct ExecuteOptions {
+    /// Require the rebuilt outer call to match these reviewed bytes and both
+    /// runtime stamps before resolving a private signer. No wrapper is added.
+    pub expected_call: Option<CallBytes>,
     /// Mortal era period; None means immortal.
     pub period: Option<u32>,
     /// Resolve an inclusion block when finalization is not requested.
@@ -102,6 +105,7 @@ pub struct ExecuteOptions {
 impl Default for ExecuteOptions {
     fn default() -> Self {
         Self {
+            expected_call: None,
             period: Some(128),
             wait_for_inclusion: true,
             wait_for_finalization: true,
@@ -121,6 +125,20 @@ impl Default for ExecuteOptions {
     }
 }
 impl ExecuteOptions {
+    pub(crate) fn check_expected_call(&self, call: &CallBytes) -> Result<(), TxError> {
+        if let Some(expected) = &self.expected_call
+            && (expected.stamp() != call.stamp()
+                || expected.hash() != call.hash()
+                || expected.as_bytes() != call.as_bytes())
+        {
+            return Err(IntentError::InvalidArgument(
+                "rebuilt call differs from the reviewed call; review the new call before signing"
+                    .into(),
+            )
+            .into());
+        }
+        Ok(())
+    }
     fn plan_options(&self) -> PlanOptions {
         PlanOptions {
             policy: self.policy.clone(),
@@ -710,6 +728,7 @@ impl Executor {
                 admission.run(&self.client, async {
                     call.ensure_runtime(&self.client.refresh_runtime().await?)
                         .map_err(rtao_client::ClientError::from)?;
+                    opts.check_expected_call(&call)?;
                     Ok(())
                 }),
             )
@@ -794,6 +813,7 @@ impl Executor {
             if !violations.is_empty() {
                 return Err(TxError::Policy(PolicyError { violations }));
             }
+            opts.execute.check_expected_call(&reviewed.built.call)?;
             let admission = TimeBudget::new(opts.execute.submit_deadline)?;
             let signer = match &resolved_signer {
                 Some(signer) => Arc::clone(signer),
@@ -1023,6 +1043,7 @@ impl Executor {
                     violations: plan.violations,
                 }));
             }
+            opts.check_expected_call(plan.call())?;
             let admission = TimeBudget::new(opts.submit_deadline)?;
             let signer = match resolved_signer.as_ref() {
                 Some(signer) => Arc::clone(signer),
