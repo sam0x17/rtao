@@ -636,7 +636,7 @@ impl Client {
         if finalized && let Some(hash) = cache.hashes.get(&number) {
             return Ok(*hash);
         }
-        let value = self.request("chain_getBlockHash", json!([number])).await?;
+        let value: Value = self.request("chain_getBlockHash", json!([number])).await?;
         if value.is_null() {
             return Err(ClientError::Protocol(format!(
                 "Block not found for height {number}"
