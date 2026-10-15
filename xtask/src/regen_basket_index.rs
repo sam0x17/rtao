@@ -172,11 +172,13 @@ pub(super) fn run(root: &Path, pins: &DocumentMut, check: bool) -> Result<()> {
         fs::symlink_metadata(directory)?.file_type().is_dir(),
         "basket output parent must be a regular directory"
     );
-    if path.exists() {
-        ensure!(
-            fs::symlink_metadata(&path)?.file_type().is_file(),
+    match fs::symlink_metadata(&path) {
+        Ok(metadata) => ensure!(
+            metadata.file_type().is_file(),
             "basket output must be regular"
-        );
+        ),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
     }
     if fs::read_to_string(&path).ok().as_deref() != Some(output.as_str()) {
         ensure!(!check, "{OUTPUT} is stale; run cargo xtask regen");

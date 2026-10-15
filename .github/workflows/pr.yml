@@ -226,7 +226,9 @@ jobs:
         run: cargo run --locked -p xtask -- compat --measure-build-weight --build-target aarch64-apple-darwin
       - name: Regenerate catalog interfaces
         if: inputs.refresh_codegen
-        run: cargo run --locked -p xtask -- regen
+        run: |
+          cargo run --locked -p xtask -- extract
+          cargo run --locked -p xtask -- regen
       - name: Refresh the declared parity inventory
         run: cargo run --locked -p xtask -- parity matrix
       - name: Verify generated output paths
@@ -252,6 +254,7 @@ jobs:
             'crates/rtao-reads/src/generated/namespace_methods.rs',
             'crates/rtao/src/generated/blocking_namespaces.rs',
             'crates/rtao-cli/src/root_helpers/basket_index_data.rs',
+            'crates/rtao-catalog/src/py.rs',
           ];
           const allowed = new Set([...reports, ...(process.env.REFRESH_CODEGEN === 'true' ? interfaces : [])]);
           for (const path of allowed) {
@@ -293,5 +296,6 @@ jobs:
             crates/rtao-reads/src/generated/namespace_methods.rs
             crates/rtao/src/generated/blocking_namespaces.rs
             crates/rtao-cli/src/root_helpers/basket_index_data.rs
+            crates/rtao-catalog/src/py.rs
           if-no-files-found: error
           retention-days: 3

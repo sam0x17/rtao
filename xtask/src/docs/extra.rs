@@ -104,7 +104,7 @@ pub(super) fn pages() -> Result<BTreeMap<String, String>> {
         let token = spec.code.as_str();
         identifier(token)?;
         let mut text = format!(
-            "# {token}\n\n{}\n\n**Remediation:** {}\n\n[Upstream raw page]({})\n\n## Rust\n\nThe semantic token is {}. Parse it with {}; a {} carries the classified code, message, optional chain name and remediation.\n\n- [ErrorCode](../api/rtao_catalog/enum.ErrorCode.html)\n- [ChainError](../api/rtao_tx/struct.ChainError.html)\n\n## Sources\n\n",
+            "# {token}\n\n{}\n\n**Remediation:** {}\n\n[Upstream raw page]({})\n\n## Rust\n\nThe semantic token is {}. Parse it with {}; a {} carries the classified code, message, optional chain name and remediation.\n\n- [ErrorCode](../api/rtao_catalog/errors/enum.ErrorCode.html)\n- [ChainError](../api/rtao_tx/struct.ChainError.html)\n\n## Sources\n\n",
             spec.explanation,
             spec.remediation,
             raw_page(spec.markdown_url)?,
@@ -131,7 +131,7 @@ pub(super) fn pages() -> Result<BTreeMap<String, String>> {
             .collect::<Vec<_>>()
             .join(", ");
         let mut text = format!(
-            "# {}\n\n{}\n\n**Semantic code:** [{}](../{token}.md)\n\n**Pallets:** {}\n\n[Upstream raw page]({})\n\n## Rust\n\nThe exact chain name is {}. {} retains this name in its {} field and exposes the semantic code through {}. Use {} for the catalog description and {} for the applicable remedy; the remedy can depend on the message and exact name.\n\n- [ChainError](../../api/rtao_tx/struct.ChainError.html)\n- [Chain error catalog](../../api/rtao_catalog/static.CHAIN_ERRORS.html)\n\n## Sources\n\n",
+            "# {}\n\n{}\n\n**Semantic code:** [{}](../{token}.md)\n\n**Pallets:** {}\n\n[Upstream raw page]({})\n\n## Rust\n\nThe exact chain name is {}. {} retains this name in its {} field and exposes the semantic code through {}. Use {} for the catalog description and {} for the applicable remedy; the remedy can depend on the message and exact name.\n\n- [ChainError](../../api/rtao_tx/struct.ChainError.html)\n- [Chain error catalog](../../api/rtao_catalog/errors/static.CHAIN_ERRORS.html)\n\n## Sources\n\n",
             spec.name,
             spec.description,
             code(token),

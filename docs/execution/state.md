@@ -27,13 +27,33 @@ integration. Blocking output has 14 namespaces and 101 catalog methods, with
 the curated typed metagraph adapter supplied by hand-written source. Ordinary
 combined compilation and execution remain pending. See [m6-read-source.md](m6-read-source.md).
 
+M6's 24 CLI commands and complete 102-query tree now have authored source,
+parser/entrypoint/FakeChain fixtures and independent source reviews. The root
+basket generator puts its 45 frozen samples and 171 fund baselines in the CLI
+only. Run `38716924750` at `c281803` succeeds; its reviewed artifacts supply that
+exact table and six rustdoc corrections, with other interfaces unchanged.
+Reports from this run are not adopted because parity source advanced after
+its commit. Catalog exclusion and the matrix need the next hosted generation.
+
+The keyfile parser repair is committed in `f16e97c` after independent source
+review. A fresh M4 review records four findings and source repairs in
+[m4.md](../security/m4.md): preserve unresolved submission hashes/causes,
+escape terminal data, bound public file acquisition and avoid owned secret
+output copies. Hosted compilation/regression evidence is missing for these
+repairs. Upstream Ed25519/KDF zeroization limits remain unresolved.
+
+M7 has pure UOS framing source and fourteen hand-derived fixtures, independently
+reviewed, without new dependencies. Vault signing/server/QR, Ledger, extension,
+EVM and timelock UX remain later work; no fresh Python, device or interoperability
+execution is claimed.
+
 Normal run [38714093697](https://github.com/sam0x17/rtao/actions/runs/38714093697)
 at `745f3f3` passes features, semver, no-host, MSRV and supply. Main check passes
 compilation, strict Clippy, source/parity guards, all 2,022 executed nextest
 tests and nine doctests; four nextest tests are skipped. It then fails strict
 rustdoc because six generated parameter descriptions contain unescaped HTML
-placeholders. The generator must render those placeholders literally before
-the docs check can pass. These results exclude the newer M6 source and parser
+placeholders. The generator and adopted hosted output now render them literally;
+the docs check must be rerun. These results exclude the newer M6 source and parser
 repair. Bounded evidence is private `check-38714093697.json`.
 Generation run [38714402721](https://github.com/sam0x17/rtao/actions/runs/38714402721)
 at `afd989a` fails before regeneration because the new blocking-accessor format

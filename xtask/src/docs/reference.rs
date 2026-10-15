@@ -166,7 +166,12 @@ fn error_catalog(root: &Path) -> Result<String> {
         );
         for (name, ty) in items {
             let entry = rows.get_mut(name).context("catalog error entry")?;
-            entry["rust"] = json!({"type":ty,"source":"crates/rtao-catalog/src/errors.rs","classification":"rtao_tx::ChainError::code"});
+            let source = if group == "chain_errors" {
+                "crates/rtao-tx/src/error.rs"
+            } else {
+                "crates/rtao-catalog/src/errors.rs"
+            };
+            entry["rust"] = json!({"type":ty,"source":source,"catalog_source":"crates/rtao-catalog/src/errors.rs","classification":"rtao_tx::ChainError::code"});
         }
     }
     Ok(format!("{}\n", serde_json::to_string_pretty(&catalog)?))
@@ -484,7 +489,7 @@ pub(super) fn add_indexes(root: &Path, pages: &mut BTreeMap<String, String>) -> 
     let mut reference = format!(
         "{GENERATED}# Reference\n\nThese pages preserve authenticated upstream descriptions and record Rust mappings from this checkout. Source implementation and feature metadata do not establish successful hosted acceptance or live-chain coverage.\n\n"
     );
-    let mut summary = String::new();
+    let mut summary = String::from("  - [Compatibility](compat.md)\n");
     for (directory, title) in groups {
         let entries: Vec<_> = pages
             .keys()
@@ -620,6 +625,31 @@ pub(super) fn write_outputs(
     mut outputs: BTreeMap<String, String>,
     check: bool,
 ) -> Result<()> {
+    let previous_manifest = out.join("reference-manifest.json");
+    match fs::symlink_metadata(&previous_manifest) {
+        Ok(metadata) => {
+            ensure!(metadata.is_file(), "reference manifest must be regular");
+            let previous: Vec<String> = serde_json::from_slice(&fs::read(&previous_manifest)?)?;
+            for name in previous {
+                let relative = Path::new(&name);
+                ensure!(
+                    relative
+                        .components()
+                        .all(|part| matches!(part, Component::Normal(_))),
+                    "invalid previous reference path"
+                );
+                if relative.components().count() == 1 && !outputs.contains_key(&name) {
+                    ensure!(
+                        fs::symlink_metadata(out.join(&name))
+                            .is_err_and(|error| { error.kind() == std::io::ErrorKind::NotFound }),
+                        "obsolete generated documentation remains: {name}"
+                    );
+                }
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
     let manifest = format!(
         "{}\n",
         serde_json::to_string_pretty(&outputs.keys().collect::<Vec<_>>())?
