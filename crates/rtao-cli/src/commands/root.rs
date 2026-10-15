@@ -1165,7 +1165,10 @@ pub async fn prepare_transaction(
                 Ok::<_, CliError>((holdings, status, expected))
             }
             .await;
-            let (holdings, status, expected) = context.unwrap_or_default();
+            let (holdings, status, expected) = match context {
+                Ok((holdings, status, expected)) => (holdings, Some(status), expected),
+                Err(_) => (Vec::new(), None, None),
+            };
             let floor = expected
                 .as_ref()
                 .map(|expected| minimum_out(expected.rao, *max_slippage))
