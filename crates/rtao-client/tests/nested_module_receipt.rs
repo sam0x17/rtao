@@ -34,7 +34,7 @@ fn renamed_runtime(base: &Runtime, spec: u32, name: &str, docs: &str) -> Arc<Run
         .iter()
         .find(|pallet| pallet.name == "Balances")
         .unwrap()
-        .errors
+        .error
         .as_ref()
         .unwrap()
         .ty
