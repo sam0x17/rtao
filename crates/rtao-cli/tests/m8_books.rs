@@ -36,6 +36,7 @@ use std::{
 };
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
+type FixtureContext = (AppContext, ArgMatches, MemorySink, Arc<AtomicUsize>);
 const ALICE: AccountId = AccountId([3; 32]);
 const BOB: AccountId = AccountId([4; 32]);
 
@@ -121,7 +122,7 @@ fn context(
     argv: &[&str],
     tty: bool,
     replies: &[&str],
-) -> Result<(AppContext, ArgMatches, MemorySink, Arc<AtomicUsize>), Box<dyn std::error::Error>> {
+) -> Result<FixtureContext, Box<dyn std::error::Error>> {
     let root = command_tree([addresses::command(), proxy::command()?]);
     let parsed = root.try_get_matches_from(argv)?;
     let (name, group) = parsed.subcommand().ok_or("family")?;
@@ -437,7 +438,7 @@ async fn file_modes_survive_replacement_readers_follow_regular_links_writers_ref
     assert_eq!(fs::read(&actual)?, bytes);
     fs::remove_file(book.path())?;
     fs::rename(actual, book.path())?;
-    fs::set_permissions(book.path(), fs::Permissions::from_mode(0))?;
+    fs::set_permissions(book.path(), fs::Permissions::from_mode(0o0))?;
     // Hosted Ubuntu's ordinary non-root user has no access. Do not turn an
     // acquisition refusal into corrupt recovery or publish over the file.
     let result = book.remove("new").await;

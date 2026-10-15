@@ -16,6 +16,17 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+The latest completed normal run
+[38742652282](https://github.com/sam0x17/rtao/actions/runs/38742652282) at
+`d7143f7` passes features (including unpatched shipped-crate and generic-keyfile
+checks), MSRV, no-host and semver. Main check stops before tests on CLI fixture
+qualification and Clippy errors; those sources are now corrected. Supply stops
+on unsafe-libyaml's informational maintenance notice. The exact reviewed policy
+and upstream feature constraints are recorded in
+[supply-unsafe-libyaml.md](supply-unsafe-libyaml.md). These corrections need a
+fresh normal hosted run. No current full test pass or milestone acceptance is
+claimed. M9 security/read-map changes remain a separate uncommitted batch.
+
 Normal run [38723619536](https://github.com/sam0x17/rtao/actions/runs/38723619536)
 at `e82937c` passes all five supporting jobs, main compilation and strict
 Clippy. Parity now passes the corrected catalog, pending-read and e2e checks,

@@ -102,7 +102,7 @@ impl Fixture {
             .subcommand()
             .and_then(|(_, group)| group.subcommand())
             .ok_or_else(|| CliError::input("missing route"))?;
-        let network = evm::evm_network_with_env(&self.ctx.globals.network, |_| None)
+        let network = evm::networks::evm_network_with_env(&self.ctx.globals.network, |_| None)
             .map_err(|e| CliError::failure(e.to_string()))?;
         setup::run_with(
             &mut self.ctx,
@@ -336,7 +336,7 @@ async fn configs_preserve_machine_shapes_and_escape_hardhat_endpoint() -> TestRe
         f.run(&Fake::default()).await?;
         assert_eq!(
             f.json()?,
-            json!({"network_name":display,"rpc_url":evm::evm_network_with_env(network, |_| None)?.rpc_url,"chain_id":chain,"currency_symbol":"TAO"})
+            json!({"network_name":display,"rpc_url":evm::networks::evm_network_with_env(network, |_| None)?.rpc_url,"chain_id":chain,"currency_symbol":"TAO"})
         );
     }
     let mut remix = Fixture::new(&["rtao", "evm", "config", "--format", "remix", "--json"])?;
@@ -986,7 +986,7 @@ async fn default_native_submission_preserves_reviewed_calls_and_hooks_for_both_s
         .subcommand()
         .and_then(|(_, group)| group.subcommand())
         .ok_or("setup route")?;
-    let network = evm::evm_network_with_env("local", |_| None)?;
+    let network = evm::networks::evm_network_with_env("local", |_| None)?;
     setup::run_with(
         &mut f.ctx,
         name,
