@@ -77,6 +77,28 @@ pub async fn balances<V: View + ?Sized>(
         .collect()
 }
 
+/// Proxy delegations in chain order and the reserved TAO deposit.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProxyDelegations {
+    /// Accounts allowed to act for the queried account, in runtime order.
+    pub proxies: Vec<models::ProxyDefinition>,
+    /// Reserved proxy deposit in native rao, denominated in TAO.
+    pub deposit: DynBalance,
+}
+
+/// Proxy delegations of one account, using the metadata's empty default.
+// py: sdk/python/bittensor/reads/accounts.py:56-70
+pub async fn proxies<V: View + ?Sized>(
+    view: &V,
+    coldkey_ss58: AccountId,
+) -> Result<ProxyDelegations, ReadError> {
+    let (proxies, deposit) = view.storage(&st::proxy::PROXIES, (coldkey_ss58,)).await?;
+    Ok(ProxyDelegations {
+        proxies,
+        deposit: DynBalance::from_rao(deposit.rao(), NetUid::ROOT),
+    })
+}
+
 /// Next MEV-shield public key as 0x hex; absent or empty keys yield `None`.
 // py: sdk/python/bittensor/reads/chain.py:63-67
 pub async fn mev_shield_next_key<V: View + ?Sized>(view: &V) -> Result<Option<String>, ReadError> {
@@ -389,6 +411,29 @@ pub async fn root_basket_owed<V: View + ?Sized>(
                 "owed TAO is not a native u64 balance",
             )
         })?;
+    Ok(contextual_balance(
+        rao,
+        NetUid::ROOT,
+        &snapshot.client().token_symbols().await,
+    ))
+}
+
+/// Minimum TAO payout for a root dividend claim, discarding fractional rao.
+// py: sdk/python/bittensor/reads/root.py:442-451, _i96f32_rao:54-59
+pub async fn root_claim_threshold<V: View + ?Sized>(view: &V) -> Result<DynBalance, ReadError> {
+    let snapshot = view.pin().await?;
+    let threshold = snapshot
+        .storage(
+            &st::subtensor_module::ROOT_CLAIMABLE_THRESHOLD,
+            (NetUid::ROOT,),
+        )
+        .await?;
+    let rao = u64::try_from(threshold.int_part()).map_err(|_| {
+        surface(
+            "SubtensorModule.RootClaimableThreshold",
+            "claim threshold is not a native u64 balance",
+        )
+    })?;
     Ok(contextual_balance(
         rao,
         NetUid::ROOT,
