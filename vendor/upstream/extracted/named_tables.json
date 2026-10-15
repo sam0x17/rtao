@@ -11430,6 +11430,30 @@
               ]
             ]
           }
+        },
+        "_WS_TO_LABEL": {
+          "end_line": 53,
+          "line": 48,
+          "value": {
+            "dict": [
+              [
+                "wss://entrypoint-finney.opentensor.ai:443",
+                "finney"
+              ],
+              [
+                "wss://lite.chain.opentensor.ai:443",
+                "finney"
+              ],
+              [
+                "wss://test.finney.opentensor.ai:443",
+                "test"
+              ],
+              [
+                "ws://127.0.0.1:9944",
+                "local"
+              ]
+            ]
+          }
         }
       }
     },

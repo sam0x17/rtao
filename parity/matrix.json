@@ -1,10 +1,10 @@
 {
   "e2e_evidence_classes": {
-    "client-contract": 8,
+    "client-contract": 9,
     "hosted-scenario-source": 6,
     "intent-plan": 72,
     "not-required": 2,
-    "pending": 21,
+    "pending": 20,
     "read-fixture": 6
   },
   "families": {
@@ -3968,13 +3968,18 @@
       {
         "evidence": {
           "runtime": "unverified",
-          "runtime_limits": [],
-          "scope": "pending"
+          "runtime_limits": [
+            "controlled-success-receipts",
+            "runtime-serving-admission-unverified",
+            "endpoint-certificate-state-unverified",
+            "tls-reachability-unverified"
+          ],
+          "scope": "client-contract"
         },
         "name": "test_serving_endpoints",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::client_serving_lifecycles::client_tls_axon_and_prometheus_submit_exact_upstream_calls"
       },
       {
         "evidence": {
@@ -7671,11 +7676,12 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_subtensor.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao::blocking::{Subtensor, set_weights, close_shared_clients}` (facade, feature `blocking`, §2.2, §2.4)"
+          "rtao::blocking::{Subtensor,SyncClient,set_weights,set_weights_with_retries,WeightsWallet,WeightsKeySource,close_shared_clients}",
+          "rtao_client::blocking::BlockingRuntime; rtao_intents::SetWeights"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1aa56cf3d1174b060cf3242e5904ec0c52926475"
       },
       {
         "kind": "n/a",
@@ -7971,11 +7977,12 @@
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/crowd.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `crowd` group"
+          "rtao_cli::commands::crowd::{command,run}",
+          "rtao_cli::m8_crowd_commands; rtao_reads::reads::m6_delegation"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "51b8d87d51e884b61cfaea7d1a2a38f0e6b256e9"
       },
       {
         "kind": "ported",
@@ -8491,11 +8498,13 @@
         "milestone": "M1–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/config.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_client::config` (M1): the seven btcli files with their environment overrides, `SETTABLE`, `btcli.json` load and save, the token-symbol and subnet-name caches; `rtao-cli` `books` (readers M4; the multisig book and call-cache writers M5; the proxy and address books M8)"
+          "rtao_client::config::{Paths,Store,CacheMap}; rtao_catalog::config",
+          "rtao_cli::books::{Books,AddressBook,ProxyBook,MultisigBook}",
+          "rtao_cli::call::{FsRawCallCache,RawCallCache}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2958b5d1b8036388354204f0a718f809756cf23a"
       },
       {
         "kind": "generated",
@@ -9942,11 +9951,13 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/sync.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao::blocking::{SyncClient, SyncSnapshot}` (facade, feature `blocking`) over `rtao_client::blocking::BlockingRuntime`"
+          "rtao::blocking::{SyncClient,SyncSnapshot,SyncView,Blocks,SyncMultisig}",
+          "crates/rtao/src/generated/blocking_namespaces.rs; rtao_client::blocking::BlockingRuntime",
+          "rtao_client::ViewExt::query_batch_dyn"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "016c553c25af0acd871346968934cf0bc1a535c6"
       },
       {
         "kind": "ported",
