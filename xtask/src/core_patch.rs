@@ -255,6 +255,7 @@ fn verify_clippy(root: &Path) -> Result<()> {
             .with_context(|| format!("missing Clippy {list}"))?;
         let matches: Vec<_> = entries
             .iter()
+            .filter_map(Value::as_inline_table)
             .filter(|entry| entry.get("path").and_then(Value::as_str) == Some(path))
             .collect();
         ensure!(
