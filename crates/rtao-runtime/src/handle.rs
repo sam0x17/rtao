@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/bittensor-core/src/codec/decode.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Shared, immutable runtime metadata and spec-stamped call bytes.
 
 use std::collections::BTreeMap;
@@ -487,7 +488,8 @@ pub struct RuntimeStamp {
 
 /// A composed call carrying the runtime versions under which it was encoded.
 ///
-/// Bytes are created only by the core encoder after descriptor verification.
+/// Bytes are created by the core encoder after descriptor verification, or by
+/// strict complete import with metadata-directed core decoding and re-encoding.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CallBytes {
     bytes: Bytes,
@@ -497,6 +499,43 @@ pub struct CallBytes {
 }
 
 impl CallBytes {
+    /// Import a complete SCALE call under this runtime's signing contract.
+    ///
+    /// Decoding consumes all bytes. Core re-encoding must reproduce them exactly,
+    /// including every nested call, before either runtime stamp is attached.
+    pub fn decode(bytes: &[u8], runtime: &RuntimeHandle) -> Result<Self, ComposeError> {
+        if runtime.metadata_level() != MetadataLevel::V15 {
+            return Err(ComposeError::MetadataDegraded);
+        }
+        runtime
+            .signing_status()
+            .map_err(ComposeError::SigningDisabled)?;
+        let spec = rtao_core::runtime::TypeSpec::Call;
+        runtime
+            .core()
+            .decode_spec(&spec, bytes, true)
+            .map_err(CoreError::from)?;
+        let call_type = runtime
+            .core()
+            .extrinsic
+            .call_type
+            .ok_or_else(|| CoreError::Codec("runtime has no outer call type".into()))?;
+        let mut cursor = rtao_core::codec::decode::Cursor::new(bytes);
+        cursor.strict = true;
+        let mut budget = CallBridgeBudget::new(bytes.len());
+        let value = canonical_scale_value(runtime.core(), call_type, &mut cursor, &mut budget)?;
+        if cursor.remaining() != 0 {
+            return Err(call_bridge_error().into());
+        }
+        let encoded = call_import_encoder(runtime.core())?
+            .encode_spec(&spec, &value)
+            .map_err(CoreError::from)?;
+        if encoded != bytes {
+            return Err(CoreError::Codec("imported call is not canonically encoded".into()).into());
+        }
+        Ok(Self::from_encoded(encoded, runtime))
+    }
+
     pub(crate) fn from_encoded(bytes: Vec<u8>, runtime: &RuntimeHandle) -> Self {
         let hash = Blake2b::<U32>::digest(&bytes).into();
         Self {
@@ -553,6 +592,316 @@ impl CallBytes {
         Ok(Value::Bytes(self.bytes.to_vec()))
     }
 }
+
+// The first strict core decode validates the complete call. This independently
+// bounded metadata-directed second pass preserves byte spans whose
+// inspection strings are ambiguous (literal UTF-8 "0x41" versus hex bytes).
+// Numeric, compact and special scalar decoding remains in the core. Only typed
+// byte leaves become raw Bytes; whole calls always become encoder enum inputs.
+struct CallBridgeBudget {
+    depth: usize,
+    elements_remaining: u64,
+}
+impl CallBridgeBudget {
+    fn new(input_bytes: usize) -> Self {
+        Self {
+            depth: 0,
+            // Match the core's collection budget, without resetting it for
+            // special scalar carriers decoded through fresh local cursors.
+            elements_remaining: u64::try_from(input_bytes)
+                .unwrap_or(u64::MAX)
+                .saturating_mul(256)
+                .max(1 << 20),
+        }
+    }
+    fn enter(&mut self) -> Result<(), CoreError> {
+        if self.depth >= 256 {
+            return Err(CoreError::Codec(
+                "call import recursion exceeds 256 levels".into(),
+            ));
+        }
+        self.depth += 1;
+        Ok(())
+    }
+    fn charge(&mut self, elements: usize) -> Result<(), CoreError> {
+        self.elements_remaining = self
+            .elements_remaining
+            .checked_sub(u64::try_from(elements).map_err(|_| call_bridge_error())?)
+            .ok_or_else(|| CoreError::Codec("call import exceeds its element budget".into()))?;
+        Ok(())
+    }
+}
+
+// Core's ordinary Option input carrier collapses Some(None) into None. A
+// private encoding view changes only the presentation path that selects that
+// coercion. Variant names, indices, fields and type IDs remain unchanged, so
+// the core's ordinary enum encoder can represent both cases exactly. This
+// view never participates in runtime identity, metadata digests or signing.
+fn call_import_encoder(core: &Runtime) -> Result<Runtime, CoreError> {
+    let mut encoder = Runtime::parse(
+        &core.metadata_bytes,
+        core.spec_version,
+        core.transaction_version,
+        core.ss58_format,
+    )
+    .map_err(CoreError::from)?;
+    // Preserve RuntimeHandle::new's public core inputs as well as parsed runtimes.
+    encoder.types = core.types.clone();
+    encoder.extrinsic = core.extrinsic.clone();
+    for ty in &mut encoder.types.types {
+        if ty.ty.path.segments.as_slice() == ["Option"] {
+            ty.ty.path.segments.insert(0, "rtao_call_import".into());
+        }
+    }
+    Ok(encoder)
+}
+
+fn canonical_scale_value(
+    core: &Runtime,
+    id: u32,
+    cursor: &mut rtao_core::codec::decode::Cursor<'_>,
+    budget: &mut CallBridgeBudget,
+) -> Result<Value, CoreError> {
+    budget.enter()?;
+    let result = canonical_scale_value_inner(core, id, cursor, budget);
+    budget.depth -= 1;
+    result
+}
+fn canonical_scale_value_inner(
+    core: &Runtime,
+    id: u32,
+    cursor: &mut rtao_core::codec::decode::Cursor<'_>,
+    budget: &mut CallBridgeBudget,
+) -> Result<Value, CoreError> {
+    if core.extrinsic.call_type == Some(id) {
+        return canonical_scale_call(core, cursor, budget);
+    }
+    let ty = core.resolve(id).map_err(CoreError::from)?;
+    let last = ty.path.segments.last().map(String::as_str);
+    if ty
+        .path
+        .segments
+        .iter()
+        .map(String::as_str)
+        .eq(["sp_core", "crypto", "AccountId32"])
+    {
+        return core.decode_id(id, cursor).map_err(CoreError::from);
+    }
+    if last == Some("Era") && ty.path.segments.first().map(String::as_str) == Some("sp_runtime") {
+        return match core.decode_id(id, cursor).map_err(CoreError::from)? {
+            Value::Str(era) if era == "00" => Ok(Value::Str(era)),
+            Value::Tuple(fields) if fields.len() == 2 => Ok(Value::record(vec![
+                ("period".into(), fields[0].clone()),
+                ("phase".into(), fields[1].clone()),
+            ])),
+            _ => Err(call_bridge_error()),
+        };
+    }
+    if ty
+        .path
+        .segments
+        .iter()
+        .map(String::as_str)
+        .eq(["primitive_types", "U256"])
+        && let scale_info::TypeDef::Composite(composite) = &ty.type_def
+    {
+        let Value::U256(le) = core.decode_id(id, cursor).map_err(CoreError::from)? else {
+            return Err(call_bridge_error());
+        };
+        let [field] = composite.fields.as_slice() else {
+            return Err(call_bridge_error());
+        };
+        let spec = rtao_core::runtime::TypeSpec::Id(field.ty.id);
+        // Validate this special decoder carrier against its declared limb
+        // layout through the core, including its existing recursion guard.
+        core.decode_spec(&spec, &le, true)
+            .map_err(CoreError::from)?;
+        let mut limbs = rtao_core::codec::decode::Cursor::new(&le);
+        limbs.strict = true;
+        let value = canonical_scale_fields(core, &composite.fields, &mut limbs, budget)?;
+        if limbs.remaining() != 0 {
+            return Err(call_bridge_error());
+        }
+        return Ok(value);
+    }
+    if last == Some("BTreeMap") {
+        let scale_info::TypeDef::Composite(composite) = &ty.type_def else {
+            return Err(call_bridge_error());
+        };
+        let field = composite.fields.first().ok_or_else(call_bridge_error)?;
+        let scale_info::TypeDef::Sequence(sequence) =
+            &core.resolve(field.ty.id).map_err(CoreError::from)?.type_def
+        else {
+            return Err(call_bridge_error());
+        };
+        let scale_info::TypeDef::Tuple(tuple) = &core
+            .resolve(sequence.type_param.id)
+            .map_err(CoreError::from)?
+            .type_def
+        else {
+            return Err(call_bridge_error());
+        };
+        let [key, value] = tuple.fields.as_slice() else {
+            return Err(call_bridge_error());
+        };
+        let count = rtao_core::codec::decode::compact_len(cursor).map_err(CoreError::from)?;
+        budget.charge(count)?;
+        let mut entries = Vec::with_capacity(count.min(4096));
+        for _ in 0..count {
+            entries.push((
+                canonical_scale_value(core, key.id, cursor, budget)?,
+                canonical_scale_value(core, value.id, cursor, budget)?,
+            ));
+        }
+        return Ok(Value::Dict(entries));
+    }
+    match &ty.type_def {
+        scale_info::TypeDef::Composite(composite) => {
+            canonical_scale_fields(core, &composite.fields, cursor, budget)
+        }
+        scale_info::TypeDef::Variant(variants) => {
+            let index = cursor.byte().map_err(CoreError::from)?;
+            let chosen = variants
+                .variants
+                .iter()
+                .find(|v| v.index == index)
+                .ok_or_else(call_bridge_error)?;
+            let payload = canonical_scale_fields(core, &chosen.fields, cursor, budget)?;
+            if chosen.fields.is_empty() {
+                Ok(Value::Str(chosen.name.clone()))
+            } else {
+                Ok(Value::record(vec![(chosen.name.clone(), payload)]))
+            }
+        }
+        scale_info::TypeDef::Sequence(sequence) => {
+            let count = rtao_core::codec::decode::compact_len(cursor).map_err(CoreError::from)?;
+            canonical_scale_sequence(core, sequence.type_param.id, count, cursor, budget)
+        }
+        scale_info::TypeDef::Array(array) => canonical_scale_sequence(
+            core,
+            array.type_param.id,
+            array.len as usize,
+            cursor,
+            budget,
+        ),
+        scale_info::TypeDef::Tuple(tuple) => tuple
+            .fields
+            .iter()
+            .map(|field| canonical_scale_value(core, field.id, cursor, budget))
+            .collect::<Result<Vec<_>, _>>()
+            .map(Value::Tuple),
+        _ => core.decode_id(id, cursor).map_err(CoreError::from),
+    }
+}
+fn canonical_scale_sequence(
+    core: &Runtime,
+    item_type: u32,
+    count: usize,
+    cursor: &mut rtao_core::codec::decode::Cursor<'_>,
+    budget: &mut CallBridgeBudget,
+) -> Result<Value, CoreError> {
+    if matches!(
+        &core.resolve(item_type).map_err(CoreError::from)?.type_def,
+        scale_info::TypeDef::Primitive(scale_info::TypeDefPrimitive::U8)
+    ) {
+        return cursor
+            .take(count)
+            .map(|bytes| Value::Bytes(bytes.to_vec()))
+            .map_err(CoreError::from);
+    }
+    budget.charge(count)?;
+    let mut values = Vec::with_capacity(count.min(4096));
+    for _ in 0..count {
+        values.push(canonical_scale_value(core, item_type, cursor, budget)?);
+    }
+    Ok(Value::List(values))
+}
+fn canonical_scale_fields(
+    core: &Runtime,
+    fields: &[Field<PortableForm>],
+    cursor: &mut rtao_core::codec::decode::Cursor<'_>,
+    budget: &mut CallBridgeBudget,
+) -> Result<Value, CoreError> {
+    if fields.is_empty() {
+        return Ok(Value::Dict(Vec::new()));
+    }
+    if fields.iter().all(|f| f.name.is_some()) {
+        return fields
+            .iter()
+            .map(|field| {
+                Ok((
+                    field.name.clone().ok_or_else(call_bridge_error)?,
+                    canonical_scale_value(core, field.ty.id, cursor, budget)?,
+                ))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Value::record);
+    }
+    if let [field] = fields {
+        let value = canonical_scale_value(core, field.ty.id, cursor, budget)?;
+        // Core's legacy single-field sequence encoder removes one list level.
+        // Supply that level explicitly so a one-element nested sequence keeps
+        // its cardinality. Byte leaves use Bytes and bypass this list coercion.
+        if matches!(value, Value::List(_))
+            && matches!(
+                &core.resolve(field.ty.id).map_err(CoreError::from)?.type_def,
+                scale_info::TypeDef::Sequence(_)
+            )
+        {
+            return Ok(Value::List(vec![value]));
+        }
+        return Ok(value);
+    }
+    fields
+        .iter()
+        .map(|field| canonical_scale_value(core, field.ty.id, cursor, budget))
+        .collect::<Result<Vec<_>, _>>()
+        .map(Value::Tuple)
+}
+fn canonical_scale_call(
+    core: &Runtime,
+    cursor: &mut rtao_core::codec::decode::Cursor<'_>,
+    budget: &mut CallBridgeBudget,
+) -> Result<Value, CoreError> {
+    let pallet_index = cursor.byte().map_err(CoreError::from)?;
+    let call_index = cursor.byte().map_err(CoreError::from)?;
+    let pallet = core.pallet_at(pallet_index).ok_or_else(call_bridge_error)?;
+    let call_type = pallet.calls_type.ok_or_else(call_bridge_error)?;
+    let scale_info::TypeDef::Variant(calls) =
+        &core.resolve(call_type).map_err(CoreError::from)?.type_def
+    else {
+        return Err(call_bridge_error());
+    };
+    let call = calls
+        .variants
+        .iter()
+        .find(|v| v.index == call_index)
+        .ok_or_else(call_bridge_error)?;
+    let fields = canonical_scale_fields(core, &call.fields, cursor, budget)?;
+    let outer = core.extrinsic.call_type.ok_or_else(call_bridge_error)?;
+    let scale_info::TypeDef::Variant(variants) =
+        &core.resolve(outer).map_err(CoreError::from)?.type_def
+    else {
+        return Err(call_bridge_error());
+    };
+    let outer_name = &variants
+        .variants
+        .iter()
+        .find(|v| v.index == pallet.index)
+        .ok_or_else(call_bridge_error)?
+        .name;
+    Ok(Value::record(vec![(
+        outer_name.clone(),
+        Value::record(vec![(call.name.clone(), fields)]),
+    )]))
+}
+fn call_bridge_error() -> CoreError {
+    CoreError::Codec("decoded call does not match its authenticated metadata type".into())
+}
+
+#[cfg(test)]
+#[path = "call_import_tests.rs"]
+mod call_import_tests;
 
 impl AsRef<[u8]> for CallBytes {
     fn as_ref(&self) -> &[u8] {
@@ -739,6 +1088,10 @@ mod tests {
         let error = runtime.signing_status().unwrap_err();
         assert!(error.to_string().contains("UnknownNonce"));
         assert!(runtime.storage_entry("System", "Account").is_some());
+        assert!(matches!(
+            CallBytes::decode(&[0, 0, 0], &runtime),
+            Err(ComposeError::SigningDisabled(_))
+        ));
     }
 
     #[test]
@@ -889,6 +1242,10 @@ mod tests {
                 .encode();
         let runtime = RuntimeHandle::parse(&bytes, 400, 1, 42).unwrap();
         assert_eq!(runtime.metadata_level(), MetadataLevel::V14Degraded);
+        assert!(matches!(
+            CallBytes::decode(&[0, 0, 0], &runtime),
+            Err(ComposeError::MetadataDegraded)
+        ));
         assert!(runtime.storage_entry("System", "Account").is_some());
         assert!(runtime.signing_status().is_err());
         assert!(runtime.metadata_digest(&info(400)).is_err());
@@ -897,5 +1254,301 @@ mod tests {
                 .runtime_api("AccountNonceApi", "account_nonce")
                 .is_none()
         );
+    }
+
+    #[test]
+    fn imported_calls_require_complete_canonical_core_roundtrips() {
+        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        let inner = crate::calls::system::remark(vec![1, 2, 3])
+            .compose(&runtime)
+            .unwrap();
+        let nested = crate::calls::sudo::sudo(inner.clone())
+            .compose(&runtime)
+            .unwrap();
+        let batch = crate::calls::utility::batch_all(vec![inner.clone(), nested.clone()])
+            .compose(&runtime)
+            .unwrap();
+        let proxy = crate::calls::proxy::proxy(
+            rtao_core::DynValue::new(Value::Bytes(vec![7; 32])),
+            Some(crate::models::ProxyType::Any),
+            nested.clone(),
+        )
+        .compose(&runtime)
+        .unwrap();
+        for original in [inner.clone(), nested, batch, proxy] {
+            assert_eq!(
+                CallBytes::decode(original.as_bytes(), &runtime).unwrap(),
+                original
+            );
+            let mut trailing = original.as_bytes().to_vec();
+            trailing.push(0);
+            assert!(CallBytes::decode(&trailing, &runtime).is_err());
+            assert!(
+                CallBytes::decode(
+                    &original.as_bytes()[..original.as_bytes().len() - 1],
+                    &runtime
+                )
+                .is_err()
+            );
+        }
+        for malformed in [&[][..], &[255, 255][..], &[0][..]] {
+            assert!(CallBytes::decode(malformed, &runtime).is_err());
+        }
+        // Replace the remark Vec length with an overlong compact encoding of 3.
+        let mut noncanonical = inner.as_bytes()[..2].to_vec();
+        noncanonical.extend_from_slice(&[13, 0, 1, 2, 3]);
+        assert!(CallBytes::decode(&noncanonical, &runtime).is_err());
+    }
+
+    #[test]
+    fn imported_nested_calls_reach_the_existing_core_depth_guard() {
+        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        let mut nested = crate::calls::system::remark(vec![])
+            .compose(&runtime)
+            .unwrap();
+        let mut boundary = None;
+        for depth in 1..=257 {
+            nested = crate::calls::sudo::sudo(nested).compose(&runtime).unwrap();
+            match CallBytes::decode(nested.as_bytes(), &runtime) {
+                Ok(imported) => assert_eq!(imported, nested),
+                Err(error) => {
+                    assert!(error.to_string().contains("recursion exceeds"));
+                    boundary = Some(depth);
+                    break;
+                }
+            }
+        }
+        assert!(boundary.is_some_and(|depth| depth > 1));
+    }
+
+    #[test]
+    fn decoded_era_and_multiaddress_special_values_roundtrip_through_core() {
+        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        let core = runtime.core();
+        let era_type = core
+            .types
+            .types
+            .iter()
+            .find(|ty| {
+                ty.ty
+                    .path
+                    .segments
+                    .first()
+                    .is_some_and(|s| s == "sp_runtime")
+                    && ty.ty.path.segments.last().is_some_and(|s| s == "Era")
+            })
+            .unwrap()
+            .id;
+        for era in [
+            Value::Str("00".into()),
+            Value::record(vec![
+                ("period".into(), Value::Uint(128)),
+                ("phase".into(), Value::Uint(100)),
+            ]),
+        ] {
+            let spec = rtao_core::runtime::TypeSpec::Id(era_type);
+            let encoded = core.encode_spec(&spec, &era).unwrap();
+            core.decode_spec(&spec, &encoded, true).unwrap();
+            let mut cursor = rtao_core::codec::decode::Cursor::new(&encoded);
+            cursor.strict = true;
+            let canonical = canonical_scale_value(
+                core,
+                era_type,
+                &mut cursor,
+                &mut CallBridgeBudget::new(encoded.len()),
+            )
+            .unwrap();
+            assert_eq!(cursor.remaining(), 0);
+            assert_eq!(core.encode_spec(&spec, &canonical).unwrap(), encoded);
+        }
+        let call = core
+            .compose_call(
+                "Balances",
+                "transfer_keep_alive",
+                &Value::record(vec![
+                    (
+                        "dest".into(),
+                        Value::record(vec![("Index".into(), Value::Uint(3))]),
+                    ),
+                    ("value".into(), Value::Uint(1)),
+                ]),
+            )
+            .unwrap();
+        assert_eq!(CallBytes::decode(&call, &runtime).unwrap().as_bytes(), call);
+    }
+
+    #[test]
+    fn decoded_u256_carrier_roundtrips_the_pinned_metadata_limb_shape() {
+        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        let core = runtime.core();
+        let id = core
+            .types
+            .types
+            .iter()
+            .find(|ty| {
+                ty.ty
+                    .path
+                    .segments
+                    .iter()
+                    .map(String::as_str)
+                    .eq(["primitive_types", "U256"])
+            })
+            .unwrap()
+            .id;
+        for le in [[0; 32], [7; 32], [255; 32]] {
+            let encoded = core
+                .encode_spec(
+                    &rtao_core::runtime::TypeSpec::Primitive(rtao_core::runtime::Primitive::U256),
+                    &Value::U256(le),
+                )
+                .unwrap();
+            core.decode_spec(&rtao_core::runtime::TypeSpec::Id(id), &encoded, true)
+                .unwrap();
+            let mut cursor = rtao_core::codec::decode::Cursor::new(&encoded);
+            cursor.strict = true;
+            let canonical = canonical_scale_value(
+                core,
+                id,
+                &mut cursor,
+                &mut CallBridgeBudget::new(encoded.len()),
+            )
+            .unwrap();
+            assert_eq!(cursor.remaining(), 0);
+            assert_eq!(
+                core.encode_spec(&rtao_core::runtime::TypeSpec::Id(id), &canonical)
+                    .unwrap(),
+                encoded
+            );
+        }
+    }
+
+    #[test]
+    fn ordinary_call_shaped_argument_structs_keep_their_declared_fields() {
+        #[derive(scale_info::TypeInfo)]
+        #[allow(dead_code)]
+        struct CallShapedData {
+            call_index: String,
+            call_function: String,
+            call_module: String,
+            call_args: Vec<u8>,
+            call_hash: [u8; 32],
+        }
+        let mut registry = scale_info::Registry::new();
+        let id = registry
+            .register_type(&scale_info::meta_type::<CallShapedData>())
+            .id;
+        let mut core = Runtime::parse(METADATA, 478, 1, 42).unwrap();
+        core.types = registry.into();
+        core.extrinsic.call_type = None;
+        core.outer_event_type = None;
+        let value = Value::record(vec![
+            ("call_index".into(), Value::Str("ordinary index".into())),
+            (
+                "call_function".into(),
+                Value::Str("ordinary function".into()),
+            ),
+            ("call_module".into(), Value::Str("ordinary module".into())),
+            ("call_args".into(), Value::Bytes(b"0x41".to_vec())),
+            ("call_hash".into(), Value::Bytes(vec![7; 32])),
+        ]);
+        let spec = rtao_core::runtime::TypeSpec::Id(id);
+        let encoded = core.encode_spec(&spec, &value).unwrap();
+        core.decode_spec(&spec, &encoded, true).unwrap();
+        let mut cursor = rtao_core::codec::decode::Cursor::new(&encoded);
+        cursor.strict = true;
+        let canonical = canonical_scale_value(
+            &core,
+            id,
+            &mut cursor,
+            &mut CallBridgeBudget::new(encoded.len()),
+        )
+        .unwrap();
+        assert_eq!(cursor.remaining(), 0);
+        assert_eq!(canonical, value);
+        assert_eq!(core.encode_spec(&spec, &canonical).unwrap(), encoded);
+    }
+
+    #[test]
+    fn literal_hex_text_and_non_utf8_byte_leaves_keep_their_original_spans() {
+        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        for payload in [
+            b"0x41".to_vec(),
+            b"0x".to_vec(),
+            b"0x1".to_vec(),
+            b"0x0xff".to_vec(),
+            b"ordinary UTF-8".to_vec(),
+            vec![0xff, 0xfe, 0x80],
+        ] {
+            let call = crate::calls::system::remark(payload)
+                .compose(&runtime)
+                .unwrap();
+            let nested = crate::calls::sudo::sudo(call.clone())
+                .compose(&runtime)
+                .unwrap();
+            for original in [call, nested] {
+                assert_eq!(
+                    CallBytes::decode(original.as_bytes(), &runtime).unwrap(),
+                    original
+                );
+            }
+        }
+        #[derive(scale_info::TypeInfo)]
+        #[allow(dead_code)]
+        struct NestedBytes(Vec<Vec<u8>>);
+        let mut registry = scale_info::Registry::new();
+        let id = registry
+            .register_type(&scale_info::meta_type::<NestedBytes>())
+            .id;
+        let mut core = Runtime::parse(METADATA, 478, 1, 42).unwrap();
+        core.types = registry.into();
+        core.extrinsic.call_type = None;
+        core.outer_event_type = None;
+        let value = Value::List(vec![
+            Value::Bytes(b"0x41".to_vec()),
+            Value::Bytes(vec![255]),
+            Value::Bytes(b"0x".to_vec()),
+        ]);
+        let spec = rtao_core::runtime::TypeSpec::Id(id);
+        let encoded = core.encode_spec(&spec, &value).unwrap();
+        core.decode_spec(&spec, &encoded, true).unwrap();
+        let mut cursor = rtao_core::codec::decode::Cursor::new(&encoded);
+        cursor.strict = true;
+        let canonical = canonical_scale_value(
+            &core,
+            id,
+            &mut cursor,
+            &mut CallBridgeBudget::new(encoded.len()),
+        )
+        .unwrap();
+        assert_eq!(cursor.remaining(), 0);
+        assert_eq!(core.encode_spec(&spec, &canonical).unwrap(), encoded);
+    }
+
+    #[test]
+    fn evm_some_full_width_u256_fields_and_literal_input_roundtrip() {
+        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        let limbs = || {
+            rtao_core::DynValue::new(Value::List(vec![
+                Value::Uint(u64::MAX.into()),
+                Value::Uint(7),
+                Value::Uint(9),
+                Value::Uint(11),
+            ]))
+        };
+        let call = crate::calls::evm::call(
+            rtao_core::DynValue::new(Value::Bytes(vec![7; 20])),
+            rtao_core::DynValue::new(Value::Bytes(vec![8; 20])),
+            b"0x41".to_vec(),
+            limbs(),
+            21000,
+            limbs(),
+            Some(limbs()),
+            Some(limbs()),
+            Vec::new(),
+            Vec::new(),
+        )
+        .compose(&runtime)
+        .unwrap();
+        assert_eq!(CallBytes::decode(call.as_bytes(), &runtime).unwrap(), call);
     }
 }
