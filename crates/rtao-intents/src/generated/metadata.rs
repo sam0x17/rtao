@@ -77,13 +77,13 @@ InterfaceMetadata{name:"commit_weights",feature:"weights",compiled:true,implemen
 #[cfg(not(feature="weights"))]
 InterfaceMetadata{name:"commit_weights",feature:"weights",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"contribute_crowdloan",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::ContributeCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::ContributeCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ContributeCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"contribute_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ContributeCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::ContributeCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ContributeCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"contribute_crowdloan",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"contribute_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"create_crowdloan",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::CreateCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::CreateCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CreateCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"create_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CreateCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::CreateCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CreateCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"create_crowdloan",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"create_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
 InterfaceMetadata{name:"create_pure_proxy",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::CreatePureProxy>()),role:Some(std::any::type_name::<<super::interfaces::CreatePureProxy as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CreatePureProxy as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
@@ -97,9 +97,9 @@ InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:true,im
 #[cfg(not(feature="coldkey"))]
 InterfaceMetadata{name:"dispute_coldkey_swap",feature:"coldkey",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"dissolve_crowdloan",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::DissolveCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::DissolveCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DissolveCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"dissolve_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::DissolveCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::DissolveCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::DissolveCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"dissolve_crowdloan",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"dissolve_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "evm")]
 InterfaceMetadata{name:"evm_withdraw",feature:"evm",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::EvmWithdraw>()),role:Some(std::any::type_name::<<super::interfaces::EvmWithdraw as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::EvmWithdraw as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="evm"))]
@@ -109,9 +109,9 @@ InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:true,i
 #[cfg(not(feature="proxy"))]
 InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"finalize_crowdloan",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::FinalizeCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::FinalizeCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::FinalizeCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"finalize_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::FinalizeCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::FinalizeCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::FinalizeCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"finalize_crowdloan",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"finalize_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "evm")]
 InterfaceMetadata{name:"fund_evm_key",feature:"evm",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::FundEvmKey>()),role:Some(std::any::type_name::<<super::interfaces::FundEvmKey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::FundEvmKey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="evm"))]
@@ -161,9 +161,9 @@ InterfaceMetadata{name:"pow_register",feature:"registration",compiled:true,imple
 #[cfg(not(feature="registration"))]
 InterfaceMetadata{name:"pow_register",feature:"registration",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&["mining_timeout"]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"refund_crowdloan",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RefundCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::RefundCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RefundCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"refund_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::RefundCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::RefundCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RefundCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"refund_crowdloan",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"refund_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "leasing")]
 InterfaceMetadata{name:"register_leased_network",feature:"leasing",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RegisterLeasedNetwork>()),role:Some(std::any::type_name::<<super::interfaces::RegisterLeasedNetwork as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RegisterLeasedNetwork as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="leasing"))]
@@ -225,9 +225,9 @@ InterfaceMetadata{name:"set_children",feature:"children",compiled:true,implement
 #[cfg(not(feature="children"))]
 InterfaceMetadata{name:"set_children",feature:"children",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetCrowdloanMaxContribution>()),role:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetCrowdloanMaxContribution>()),role:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "hyperparameters")]
 InterfaceMetadata{name:"set_hyperparameter",feature:"hyperparameters",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetHyperparameter>()),role:Some(std::any::type_name::<<super::interfaces::SetHyperparameter as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetHyperparameter as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="hyperparameters"))]
@@ -253,13 +253,13 @@ InterfaceMetadata{name:"set_reject_locked_alpha",feature:"lock",compiled:true,im
 #[cfg(not(feature="lock"))]
 InterfaceMetadata{name:"set_reject_locked_alpha",feature:"lock",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "root")]
-InterfaceMetadata{name:"set_root_claim_threshold",feature:"root",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetRootClaimThreshold>()),role:Some(std::any::type_name::<<super::interfaces::SetRootClaimThreshold as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetRootClaimThreshold as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_root_claim_threshold",feature:"root",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetRootClaimThreshold>()),role:Some(std::any::type_name::<<super::interfaces::SetRootClaimThreshold as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetRootClaimThreshold as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="root"))]
-InterfaceMetadata{name:"set_root_claim_threshold",feature:"root",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_root_claim_threshold",feature:"root",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "root")]
-InterfaceMetadata{name:"set_subnet_emission_enabled",feature:"root",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetEmissionEnabled>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetEmissionEnabled as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetEmissionEnabled as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_subnet_emission_enabled",feature:"root",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetEmissionEnabled>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetEmissionEnabled as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetEmissionEnabled as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="root"))]
-InterfaceMetadata{name:"set_subnet_emission_enabled",feature:"root",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_subnet_emission_enabled",feature:"root",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "identity")]
 InterfaceMetadata{name:"set_subnet_identity",feature:"identity",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetIdentity>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetIdentity as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetIdentity as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="identity"))]
@@ -337,24 +337,24 @@ InterfaceMetadata{name:"unstake_all_alpha",feature:"staking",compiled:true,imple
 #[cfg(not(feature="staking"))]
 InterfaceMetadata{name:"unstake_all_alpha",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"update_crowdloan_cap",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::UpdateCrowdloanCap>()),role:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanCap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanCap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"update_crowdloan_cap",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::UpdateCrowdloanCap>()),role:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanCap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanCap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"update_crowdloan_cap",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"update_crowdloan_cap",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"update_crowdloan_end",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::UpdateCrowdloanEnd>()),role:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanEnd as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanEnd as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"update_crowdloan_end",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::UpdateCrowdloanEnd>()),role:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanEnd as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanEnd as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"update_crowdloan_end",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"update_crowdloan_end",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"update_crowdloan_min_contribution",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::UpdateCrowdloanMinContribution>()),role:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanMinContribution as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanMinContribution as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"update_crowdloan_min_contribution",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::UpdateCrowdloanMinContribution>()),role:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanMinContribution as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateCrowdloanMinContribution as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"update_crowdloan_min_contribution",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"update_crowdloan_min_contribution",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "governance")]
 InterfaceMetadata{name:"update_symbol",feature:"governance",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::UpdateSymbol>()),role:Some(std::any::type_name::<<super::interfaces::UpdateSymbol as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::UpdateSymbol as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="governance"))]
 InterfaceMetadata{name:"update_symbol",feature:"governance",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
-InterfaceMetadata{name:"withdraw_crowdloan",feature:"crowdloan",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::WithdrawCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::WithdrawCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::WithdrawCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"withdraw_crowdloan",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::WithdrawCrowdloan>()),role:Some(std::any::type_name::<<super::interfaces::WithdrawCrowdloan as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::WithdrawCrowdloan as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]
-InterfaceMetadata{name:"withdraw_crowdloan",feature:"crowdloan",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"withdraw_crowdloan",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 ]
 }

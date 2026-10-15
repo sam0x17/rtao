@@ -20,6 +20,53 @@ pub(crate) async fn burned_register<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn contribute_crowdloan<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::ContributeCrowdloan,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::contribute(
+        intent.crowdloan_id,
+        crate::crowdloan::stakeable_amount(intent, cx).await?,
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn dissolve_crowdloan<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::DissolveCrowdloan,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::dissolve(intent.crowdloan_id);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn finalize_crowdloan<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::FinalizeCrowdloan,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::finalize(intent.crowdloan_id);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn refund_crowdloan<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::RefundCrowdloan,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::refund(intent.crowdloan_id);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "registration")]
 pub(crate) async fn register_subnet<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::RegisterSubnet,
@@ -50,6 +97,25 @@ pub(crate) async fn root_register<V: rtao_client::View + ?Sized>(
                 .as_ref()
                 .map(rtao_primitives::Ss58Address::account),
         )?,
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn set_crowdloan_max_contribution<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::SetCrowdloanMaxContribution,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::set_max_contribution(
+        intent.crowdloan_id,
+        intent
+            .new_max_contribution_tao
+            .as_ref()
+            .map(crate::arguments::tao_amount)
+            .transpose()?
+            .map(|amount| amount.to_wire()),
     );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
@@ -142,6 +208,45 @@ pub(crate) async fn trim_subnet<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn update_crowdloan_cap<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::UpdateCrowdloanCap,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::update_cap(
+        intent.crowdloan_id,
+        crate::arguments::tao_amount(&intent.new_cap_tao)?.to_wire(),
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn update_crowdloan_end<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::UpdateCrowdloanEnd,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::update_end(intent.crowdloan_id, intent.new_end);
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn update_crowdloan_min_contribution<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::UpdateCrowdloanMinContribution,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::update_min_contribution(
+        intent.crowdloan_id,
+        crate::arguments::tao_amount(&intent.new_min_contribution_tao)?.to_wire(),
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "governance")]
 pub(crate) async fn update_symbol<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::UpdateSymbol,
@@ -151,6 +256,17 @@ pub(crate) async fn update_symbol<V: rtao_client::View + ?Sized>(
         intent.netuid,
         intent.symbol.as_bytes().to_vec(),
     );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "crowdloan")]
+pub(crate) async fn withdraw_crowdloan<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::WithdrawCrowdloan,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::crowdloan::withdraw(intent.crowdloan_id);
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),

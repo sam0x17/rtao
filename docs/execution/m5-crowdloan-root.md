@@ -1,9 +1,10 @@
 # M5-02 crowdloan and root intent source
 
 The source ports all ten crowdloan operations and both root operations.
-Generated dispatch, pending stubs and availability metadata must be refreshed
-in hosted CI before combined compilation. Source review and formatting do not
-establish execution or milestone acceptance.
+Generated dispatch, pending stubs and availability metadata were refreshed
+in hosted CI and adopted unchanged. Combined compilation and fixture execution
+remain pending. Source review and formatting do not establish execution or
+milestone acceptance.
 
 The reference is the immutable Python source at parity commit
 `850f2755bb05a3851f948489f0ab27b0645cebce`. Both files were authenticated
@@ -48,3 +49,22 @@ The borrowed-view fixture checks exact requests, ordering, misses and cursors
 through both concrete and dynamic references without repinning the head.
 All use in-memory FakeChain transports; none starts a node or submits a real
 transaction. No local build, test, Python process or temporary root was used.
+
+Hosted generation
+[38694967521](https://github.com/sam0x17/rtao/actions/runs/38694967521)
+at source commit `70fca297b390a169c238b4ddb8a13eb2a5ca15ca` succeeded.
+The generated archive is 54,260 bytes, SHA-256
+`e57ce2393a61f1296f2008c1a5b215dc0a7b3bd1f8c5a2ad0972bcabec2133ed`.
+The report archive is 40,190 bytes, SHA-256
+`c238d1f5e9855e7ab6b3314bc209f5909b4914ac11d5bd4ce4f6da5dcf6bcd7a`.
+Review checked exactly thirteen regular-file members, clean source identity,
+all 23 dependency hashes, unchanged role package sets and counts
+225/361/365/416, twelve pending-body removals, nine generated pass-through
+additions and the single pre-serde constructor guard. The matrix changes only
+the twelve intent statuses, renamed D-045 fixture reference and D-046 addition.
+Unchanged read interfaces and other matrix families were checked byte for byte.
+The private bounded proof is
+`.local/recovery/2026-10-14/m5-crowdloan-root-adoption.json`.
+Runtime validation remains empty, and the Apple-target dependency graph was
+measured on Linux. These artifacts do not establish native Mac, oracle, hardware
+or chain interoperability coverage.

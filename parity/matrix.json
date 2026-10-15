@@ -1955,6 +1955,16 @@
     ],
     "divergences": [
       {
+        "id": "D-046",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_intents::crowdloan::tests::programmatic_nested_json_has_depth_node_and_encoded_byte_budgets",
+          "rtao_intents::crowdloan::tests::tool_constructor_bounds_nested_call_before_serde_conversion",
+          "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits"
+        ]
+      },
+      {
         "id": "D-039",
         "oracle": "unverified",
         "rtao": "active",
@@ -2347,7 +2357,7 @@
           "rtao_cli::book_cache_contract::rejected_book_input_preserves_source_and_creates_no_replacement_artifacts",
           "rtao_cli::book_cache_contract::corrupt_inputs_survive_and_rejected_output_creates_no_backups",
           "rtao_cli::book_cache_contract::cache_rejects_hash_or_data_substitution_before_modifying_any_file",
-          "rtao_cli::book_cache_contract::writers_keep_restrictive_modes_and_refuse_symlink_and_fifo_destinations",
+          "rtao_cli::book_cache_contract::writers_refuse_nonregular_destinations_and_keep_platform_file_guards",
           "rtao_cli::book_cache_contract::cache_lookup_decodes_exact_bytes_and_ignores_untrusted_presentation_fields"
         ]
       }
@@ -9661,13 +9671,13 @@
         "name": "contribute_crowdloan",
         "oracle": "missing",
         "python_class": "ContributeCrowdloan",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "create_crowdloan",
         "oracle": "missing",
         "python_class": "CreateCrowdloan",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "create_pure_proxy",
@@ -9691,7 +9701,7 @@
         "name": "dissolve_crowdloan",
         "oracle": "missing",
         "python_class": "DissolveCrowdloan",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "evm_withdraw",
@@ -9709,7 +9719,7 @@
         "name": "finalize_crowdloan",
         "oracle": "missing",
         "python_class": "FinalizeCrowdloan",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "fund_evm_key",
@@ -9787,7 +9797,7 @@
         "name": "refund_crowdloan",
         "oracle": "missing",
         "python_class": "RefundCrowdloan",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "register_leased_network",
@@ -9883,7 +9893,7 @@
         "name": "set_crowdloan_max_contribution",
         "oracle": "missing",
         "python_class": "SetCrowdloanMaxContribution",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_hyperparameter",
@@ -9925,13 +9935,13 @@
         "name": "set_root_claim_threshold",
         "oracle": "missing",
         "python_class": "SetRootClaimThreshold",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_subnet_emission_enabled",
         "oracle": "missing",
         "python_class": "SetSubnetEmissionEnabled",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_subnet_identity",
@@ -10051,19 +10061,19 @@
         "name": "update_crowdloan_cap",
         "oracle": "missing",
         "python_class": "UpdateCrowdloanCap",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "update_crowdloan_end",
         "oracle": "missing",
         "python_class": "UpdateCrowdloanEnd",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "update_crowdloan_min_contribution",
         "oracle": "missing",
         "python_class": "UpdateCrowdloanMinContribution",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "update_symbol",
@@ -10075,7 +10085,7 @@
         "name": "withdraw_crowdloan",
         "oracle": "missing",
         "python_class": "WithdrawCrowdloan",
-        "rtao": "pending"
+        "rtao": "implemented"
       }
     ],
     "reads": [
