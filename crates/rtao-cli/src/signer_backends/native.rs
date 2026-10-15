@@ -1,3 +1,5 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/call.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 use std::sync::Arc;
 
 use rtao::{primitives::AccountId, signer::BoxFuture};
@@ -105,6 +107,9 @@ impl SigningBackend for NativeBackend {
                         },
                     )
                     .map_err(failure)?;
+                    signer
+                        .set_summary(request.summary.clone())
+                        .map_err(failure)?;
                     let signer = Arc::new(signer);
                     // Prepare the camera before the client starts a mortal era.
                     // Cancellation drops this owned signer and stops its page.
@@ -434,6 +439,7 @@ mod tests {
             default_address: None,
             open_browser: false,
             interactive: false,
+            summary: None,
         };
         let context = AppContext::new(
             globals,

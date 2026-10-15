@@ -3,6 +3,25 @@
 schema = 1
 
 [[divergences]]
+id = "D-067"
+upstream_symbol = "bittensor.vault.server.VaultSessionServer"
+python_behavior = "Allows a configured non-loopback host, opens a browser by default, accepts either signature or scanned replies for a pending request, and lacks the native request/connection/message limits."
+rtao_behavior = "Binds numeric loopback only and validates Host, Origin, session and current browser generation. Library browser opening is opt-in; CLI enables it for visible terminals. Requests are serialized and require the matching reply kind; cancelled unfinished tabs are retired before another request. Connections, messages, request size and handshake/send/shutdown waits are bounded; page error text is bounded and sanitized."
+rationale = "Preserve the reviewed native local-session admission and lifecycle policy while explicitly distinguishing it from Python's permissive server. These are client I/O and display protections; no upstream exploit or signing authorization claim is made."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; complete pinned Vault server and native consumer source reviewed on 2026-10-15"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_signer::vault::tests::page_serves_exact_pinned_assets_and_refuses_foreign_origin",
+  "rtao_signer::vault::tests::stale_session_is_closed_with_policy_code",
+  "rtao_signer::vault::tests::sequential_requests_result_and_reload_use_the_pinned_page_messages",
+  "rtao_signer::vault::tests::timeout_cancellation_page_errors_and_stop_clear_the_pending_request",
+]
+upstream_report = "Existing policy and fixtures reviewed in source. Current combined hosted execution remains pending; no browser/camera/device run or new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/vault/server.py"
+
+[[divergences]]
 id = "D-066"
 upstream_symbol = "bittensor.timelock.decrypt/decrypt_async and cli.commands.timelock.decrypt_cmd"
 python_behavior = "Accepts float timeout values without finite/nonnegative validation. For an already revealed envelope, synchronous decrypt attempts core decryption before checking its retry deadline; decrypt_async gives the threaded fetch at least one second. A blocking core attempt may outlast that budget."

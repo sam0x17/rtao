@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_slippage_protection.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Native staking and protected subnet swaps, composed at one pinned state.
 
 use rtao_client::{View, ViewExt};
@@ -676,6 +677,193 @@ mod tests {
             bytes.push(0);
         }
         bytes
+    }
+
+    fn move_bytes(
+        destination_hotkey: AccountId,
+        destination: NetUid,
+        limit: Option<u64>,
+    ) -> Vec<u8> {
+        let mut bytes = vec![7, if limit.is_some() { 149 } else { 85 }];
+        bytes.extend_from_slice(HOTKEY.as_bytes());
+        bytes.extend_from_slice(destination_hotkey.as_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&destination.0.to_le_bytes());
+        bytes.extend_from_slice(&1_000_000_000u64.to_le_bytes());
+        if let Some(price) = limit {
+            bytes.extend_from_slice(&price.to_le_bytes());
+            bytes.push(0);
+        }
+        bytes
+    }
+
+    // Native account roles replace the source's development keypairs. Amounts,
+    // subnets and omitted defaults are the exact ADD/REMOVE/SWAP/MOVE inputs.
+    fn source_staking_arguments() -> [(&'static str, Value); 5] {
+        [
+            (
+                "add_stake",
+                json!({"hotkey_ss58":HOTKEY.to_string(),"netuid":1,"amount_tao":1.0}),
+            ),
+            (
+                "remove_stake",
+                json!({"hotkey_ss58":HOTKEY.to_string(),"netuid":1,"amount_alpha":1.0}),
+            ),
+            (
+                "swap_stake",
+                json!({"hotkey_ss58":HOTKEY.to_string(),"origin_netuid":1,"dest_netuid":2,"amount_alpha":1.0}),
+            ),
+            (
+                "move_stake",
+                json!({"origin_hotkey_ss58":HOTKEY.to_string(),"origin_netuid":1,"dest_hotkey_ss58":HOTKEY.to_string(),"dest_netuid":2,"amount_alpha":1.0}),
+            ),
+            (
+                "move_swap_stake",
+                json!({"origin_hotkey_ss58":HOTKEY.to_string(),"origin_netuid":1,"dest_hotkey_ss58":DESTINATION.to_string(),"dest_netuid":2,"amount_alpha":1.0}),
+            ),
+        ]
+    }
+
+    // pyt: unit/test_slippage_protection.py::TestFailureModes::test_out_of_range_tolerance_rejected_at_construction
+    #[test]
+    fn all_fifteen_source_tolerances_refuse_at_the_actual_registry_constructor()
+    -> anyhow::Result<()> {
+        let mut cases = 0;
+        for (op, args) in source_staking_arguments() {
+            for bad in [json!(-0.1), json!(1.0), json!(5)] {
+                let mut args = args.clone();
+                args["rate_tolerance"] = bad.clone();
+                let Err(IntentError::Validation(message)) = crate::AnyIntent::from_tool(op, args)
+                else {
+                    anyhow::bail!(
+                        "{op} with tolerance {bad} did not return constructor validation"
+                    );
+                };
+                assert!(
+                    message.contains("rate_tolerance"),
+                    "{op} with {bad}: {message}"
+                );
+                cases += 1;
+            }
+        }
+        assert_eq!(cases, 15);
+        // No Client, transport or signer exists at this constructor boundary.
+        Ok(())
+    }
+
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_same_subnet_move_stays_plain_move
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_cross_subnet_move_composes_limit_call
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_cross_subnet_new_hotkey_move_uses_limit_call
+    #[tokio::test]
+    async fn source_moves_keep_same_subnet_plain_and_both_cross_subnet_hotkeys()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        for (destination_hotkey, destination, expected_limit) in [
+            (DESTINATION, NetUid(1), None),
+            (HOTKEY, NetUid(2), Some(1_900_000_000)),
+            (DESTINATION, NetUid(2), Some(1_900_000_000)),
+        ] {
+            let args = json!({
+                "origin_hotkey_ss58":HOTKEY.to_string(),"origin_netuid":1,
+                "dest_hotkey_ss58":destination_hotkey.to_string(),"dest_netuid":destination.0,
+                "amount_alpha":1.0
+            });
+            let constructed = crate::AnyIntent::from_tool("move_stake", args)?;
+            assert_eq!(constructed.to_json()["slippage_protection"], json!(true));
+            assert_eq!(constructed.to_json()["rate_tolerance"], json!(0.05));
+            let intent = constructed.into_dyn();
+            let before = chain.requests().len();
+            let built = build(intent.as_ref(), &snapshot).await?;
+            let expected = move_bytes(destination_hotkey, destination, expected_limit);
+            assert_eq!(built.call.as_bytes(), expected);
+            assert_eq!(
+                CallBytes::decode(&expected, &snapshot.block().runtime)?,
+                built.call
+            );
+            if destination == NetUid(1) {
+                assert_eq!(chain.requests().len(), before);
+            }
+        }
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    // pyt: unit/test_slippage_protection.py::TestOptOut::test_disabled_composes_plain_call
+    // pyt: unit/test_slippage_protection.py::TestOptOut::test_unprotected_cross_hotkey_move_uses_bare_move_stake
+    #[tokio::test]
+    async fn all_four_source_opt_outs_and_cross_hotkey_move_encode_complete_plain_calls()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        let expected = [
+            add_bytes(2, NetUid(1), 1_000_000_000, None),
+            add_bytes(3, NetUid(1), 1_000_000_000, None),
+            swap_bytes(HOTKEY, NetUid(1), NetUid(2), 1_000_000_000, None),
+            move_bytes(HOTKEY, NetUid(2), None),
+        ];
+        let mut cases = source_staking_arguments()
+            .into_iter()
+            .take(4)
+            .zip(expected)
+            .map(|((op, mut args), bytes)| {
+                args["slippage_protection"] = json!(false);
+                (op, args, bytes)
+            })
+            .collect::<Vec<_>>();
+        cases.push((
+            "move_stake",
+            json!({
+                "origin_hotkey_ss58":HOTKEY.to_string(),"origin_netuid":1,
+                "dest_hotkey_ss58":DESTINATION.to_string(),"dest_netuid":2,
+                "amount_alpha":1.0,"slippage_protection":false
+            }),
+            move_bytes(DESTINATION, NetUid(2), None),
+        ));
+        assert_eq!(cases.len(), 5);
+        for (op, args, expected) in cases {
+            let intent = crate::AnyIntent::from_tool(op, args)?.into_dyn();
+            let before = chain.requests().len();
+            let built = build(intent.as_ref(), &snapshot).await?;
+            assert_eq!(built.call.as_bytes(), expected, "{op}");
+            let decoded = decode(&built.call, &snapshot.block().runtime)?;
+            assert_eq!(decoded["call_function"], json!(op));
+            let fields = decoded["call_args"]
+                .as_array()
+                .ok_or_else(|| anyhow::anyhow!("{op} decoded arguments are missing"))?;
+            assert!(fields.iter().all(|field| field["name"] != "limit_price"));
+            assert_eq!(
+                chain.requests().len(),
+                before,
+                "{op}: unprotected build reads state"
+            );
+        }
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_summary_names_the_tolerance
+    #[test]
+    fn source_add_stake_summaries_independently_pin_default_and_disabled_protection()
+    -> anyhow::Result<()> {
+        for (protection, expected) in [
+            (
+                None,
+                format!("stake τ1.000000000 to {HOTKEY} on netuid 1 (fails if price moves >5.00%)"),
+            ),
+            (
+                Some(false),
+                format!("stake τ1.000000000 to {HOTKEY} on netuid 1 (no slippage protection)"),
+            ),
+        ] {
+            let mut args = json!({"hotkey_ss58":HOTKEY.to_string(),"netuid":1,"amount_tao":1.0});
+            if let Some(protection) = protection {
+                args["slippage_protection"] = json!(protection);
+            }
+            let intent = crate::AnyIntent::from_tool("add_stake", args)?.into_dyn();
+            assert_eq!(intent.summary_dyn(), expected);
+        }
+        Ok(())
     }
 
     fn add(amount: Amount, netuid: NetUid, protected: bool) -> anyhow::Result<AddStake> {

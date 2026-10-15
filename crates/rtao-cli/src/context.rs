@@ -400,6 +400,7 @@ impl AppContext {
                     period: options.period,
                     execution: options.execution,
                     factory: None,
+                    external: None,
                 },
             )
             .await?;
@@ -637,6 +638,20 @@ impl AppContext {
             None => None,
         };
         let signing = acquired.as_deref().unwrap_or(keys);
+        let mut signing_summary = review_summary;
+        if let Some(proxy) = proxy_for {
+            signing_summary.push_str(&format!(" [as {proxy} via proxy]"));
+        }
+        if choice.enabled {
+            signing_summary.push_str(" [MEV-shielded]");
+        }
+        if let Some(binding) = &control.factory {
+            binding
+                .factory
+                .set_summary(binding.selection, signing, &signing_summary);
+        } else if let Some(factory) = control.external {
+            factory.set_summary(signing, &signing_summary);
+        }
         let opts = ExecuteOptions {
             expected_call: control.bind_reviewed_call.then(|| plan.call().clone()),
             period: control.period.or(ExecuteOptions::default().period),
@@ -735,6 +750,7 @@ struct SubmissionControl<'a> {
     replay: Option<&'a str>,
     hooks: Option<&'a dyn SubmissionHooks>,
     factory: Option<ApprovalFactory<'a>>,
+    external: Option<&'a dyn ExternalSignerFactory>,
 }
 struct SubmissionOutcome {
     receipt: rtao::tx::ExtrinsicResult,
@@ -1362,6 +1378,8 @@ mod tests {
 /// families when they ship. A missing backend always refuses instead of using
 /// a local wallet key under a different signing identity.
 pub trait ExternalSignerFactory: Send + Sync {
+    /// Attach reviewed display-only text before the lazy source acquires its UI.
+    fn set_summary(&self, _keys: &dyn DynKeySource, _summary: &str) {}
     /// Prepare public identity and a lazy source for the selected backend.
     /// This may discover an external account for an ordinary invocation but
     /// must not unlock a private key, sign, or submit: `signer_for` runs only
@@ -1860,6 +1878,11 @@ impl AppContext {
                     replay: options.replay,
                     hooks: options.hooks,
                     factory: None,
+                    external: self
+                        .globals
+                        .uses_external_signer()
+                        .then_some(external)
+                        .flatten(),
                 },
             )
             .await;
@@ -2008,6 +2031,18 @@ fn member_globals(ctx: &AppContext, selection: &crate::call::SigningSelection) -
     globals
 }
 impl crate::call::RawSignerFactory for ExternalRoundFactory<'_> {
+    fn set_summary(
+        &self,
+        selection: &crate::call::SigningSelection,
+        keys: &dyn DynKeySource,
+        summary: &str,
+    ) {
+        if selection.backend != "wallet"
+            && let Some(factory) = self.external
+        {
+            factory.set_summary(keys, summary);
+        }
+    }
     fn source<'a>(
         &'a self,
         ctx: &'a AppContext,
@@ -2186,6 +2221,7 @@ impl AppContext {
                             replay: options.replay,
                             hooks: options.hooks,
                             factory: Some(ApprovalFactory { factory, selection }),
+                            external: None,
                         },
                     )
                     .await?;

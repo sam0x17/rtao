@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_hyperparams_units.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Hyperparameter units from authenticated resolved Python declarations.
 
 use std::{cmp::Ordering, collections::BTreeSet};
@@ -249,9 +250,12 @@ fn render(document: &Value, settings: &Value) -> Result<String> {
                 .iter()
                 .find(|(ident, _)| *ident == metadata_ident)
             {
+                let metadata_kind = metadata_kind
+                    .as_str()
+                    .context("unit kind must be a string")?;
                 ensure!(
-                    metadata_kind.as_str() == Some(kind),
-                    "{name}: hand kind {kind} disagrees with metadata identity {metadata_ident}"
+                    metadata_kind == kind,
+                    "{name}: hand kind '{kind}' disagrees with metadata identity '{metadata_ident}' (kind '{metadata_kind}')"
                 );
             }
         }
@@ -371,6 +375,21 @@ mod tests {
         Ok(&mut entry[1]["fields"])
     }
 
+    fn storage_item<'a>(document: &'a mut Value, name: &str) -> Result<&'a mut Value> {
+        let entries = document["values"]["STORAGE_ITEMS"]["value"]["dict"]
+            .as_array_mut()
+            .context("fixture STORAGE_ITEMS missing")?;
+        let entry = entries
+            .iter_mut()
+            .find(|entry| entry[0].as_str() == Some(name))
+            .context("fixture storage item missing")?;
+        Ok(&mut entry[1])
+    }
+
+    // pyt: unit/test_hyperparams_units.py::test_units_gate_passes_on_committed_metadata
+    // The native tool returns Result and generated text instead of Python's
+    // exit code and informational stdout. Successful rendering validates the
+    // complete committed units table before emitting any generated output.
     #[test]
     fn hyperparams_generator_preserves_authenticated_identities_and_exact_u128() -> Result<()> {
         let (document, settings) = fixtures()?;
@@ -444,6 +463,45 @@ mod tests {
         document["values"]["STORAGE_ITEMS"]["value"]["dict"][0][1]["value_type_ident"] =
             json!("TaoBalance");
         assert!(render(&document, &settings).is_err());
+        Ok(())
+    }
+
+    // pyt: unit/test_hyperparams_units.py::test_units_gate_flags_disagreement
+    #[test]
+    fn hyperparams_units_gate_reports_exact_tempo_metadata_disagreement() -> Result<()> {
+        let (mut document, settings) = fixtures()?;
+        storage_item(&mut document, "tempo")?["value_type_ident"] = json!("PerU16");
+        // A typed native-tool error replaces Python's status 1 and printed
+        // diagnostic while retaining the parameter, both unit kinds and identity.
+        assert_eq!(
+            render(&document, &settings).map_err(|error| error.to_string()),
+            Err(
+                "tempo: hand kind 'blocks' disagrees with metadata identity 'PerU16' (kind 'u16')"
+                    .into()
+            )
+        );
+        Ok(())
+    }
+
+    // pyt: unit/test_hyperparams_units.py::test_units_gate_accepts_agreement
+    #[test]
+    fn hyperparams_units_gate_accepts_all_three_agreeing_descriptors_together() -> Result<()> {
+        let (mut document, settings) = fixtures()?;
+        for (name, ident) in [
+            ("kappa", "PerU16"),
+            ("min_burn", "TaoBalance"),
+            ("bonds_moving_avg", "Permill"),
+        ] {
+            storage_item(&mut document, name)?["value_type_ident"] = json!(ident);
+        }
+        let generated = render(&document, &settings)?;
+        for descriptor in [
+            "parameter:\"kappa\",container:\"SubtensorModule\",name:\"Kappa\",source_ident:\"u16\",metadata_ident:\"PerU16\"",
+            "parameter:\"min_burn\",container:\"SubtensorModule\",name:\"MinBurn\",source_ident:\"TaoBalance\",metadata_ident:\"TaoBalance\"",
+            "parameter:\"bonds_moving_avg\",container:\"SubtensorModule\",name:\"BondsMovingAverage\",source_ident:\"u64\",metadata_ident:\"Permill\"",
+        ] {
+            assert!(generated.contains(descriptor), "{descriptor}");
+        }
         Ok(())
     }
 
