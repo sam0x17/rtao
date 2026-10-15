@@ -915,7 +915,7 @@ async fn query_batch<V: View + ?Sized>(
                 .map_err(ClientError::from)
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let values = snapshot.storage_raw_many(&keys).await?;
+    let values = View::storage_raw_many(&snapshot, &keys).await?;
     let offload = values.iter().fold(0usize, |total, value| {
         total.saturating_add(value.as_ref().map_or(entry.default_bytes.len(), Bytes::len))
     }) > 64 * 1024;
