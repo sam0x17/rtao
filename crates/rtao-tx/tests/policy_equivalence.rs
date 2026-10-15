@@ -1712,7 +1712,12 @@ async fn all_twenty_one_real_core_constructors_match_native_policy_categories_an
         );
         assert_eq!(pair.pair.intent.spend_dyn(), pair.spend);
         assert_eq!(
-            pair.pair.intent.touches_netuids_dyn().as_slice(),
+            pair.pair
+                .intent
+                .touches_netuids_dyn()
+                .into_iter()
+                .map(|netuid| netuid.0)
+                .collect::<Vec<_>>(),
             pair.scope
         );
         assert_eq!(pair.pair.intent.affects_all_subnets_dyn(), pair.global);

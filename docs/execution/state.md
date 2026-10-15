@@ -55,7 +55,20 @@ no fuzz campaign ran. The remaining 62 reads, other command families and
 later milestones still require implementation and acceptance. The full intent
 source and M5 CLI integration still require combined hosted acceptance.
 
-Latest normal hosted run
+Latest inspected normal hosted run
+[38709461377](https://github.com/sam0x17/rtao/actions/runs/38709461377)
+at `5cba852` fails check/MSRV compilation. Multisig reference collection needs
+one named borrow lifetime; the new policy fixture compares NetUid to u16,
+and the plan fixture assumes an unavailable H256 FromStr implementation.
+Source corrections share the actual ArgMatches borrow, project subnet IDs
+without changing order or duplicates, and strictly decode the fixed-width
+public PoW hash. No assertion or gate is removed. No-host, supply and semver
+pass; features remains running at inspection. Tests, doctests and docs builds
+were not reached. The next ordinary hosted run must validate the corrections.
+Bounded private evidence is `check-38709461377.json`. Local output remains
+534 MB in target and 146 MB in recovery; no local build or scratch root.
+
+Earlier normal hosted run
 [38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
 at `bad95c0` passes compilation, strict Clippy and all five other normal jobs.
 Parity now qualifies the lock fixture, then rejects AddStake's helper-based
