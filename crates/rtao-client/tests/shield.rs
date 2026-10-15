@@ -151,15 +151,26 @@ fn install_inner(fake: &FakeChain, bytes: Bytes, included: u64, failed: bool) {
         });
     });
 }
-fn assert_unknown(result: Result<rtao_client::ExtrinsicReport, SubmitFailure>, fake: &FakeChain) {
+fn assert_unknown(
+    result: Result<rtao_client::ExtrinsicReport, SubmitFailure>,
+    fake: &FakeChain,
+) -> SubmitFailure {
     use blake2::{Blake2b, Digest, digest::consts::U32};
     let state = fake.state();
     let state = state.lock().unwrap();
     assert_eq!(state.submissions.len(), 1);
-    let expected = rtao_rpc::H256(Blake2b::<U32>::digest(&state.submissions[0]).into());
-    assert!(
-        matches!(result,Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {hash})) if hash==expected)
+    let expected = H256(Blake2b::<U32>::digest(&state.submissions[0]).into());
+    let error = result.unwrap_err();
+    assert_eq!(error.unknown_fate_hash(), Some(expected));
+    drop(state);
+    assert_eq!(
+        fake.requests()
+            .iter()
+            .filter(|request| request.method.starts_with("author_submit"))
+            .count(),
+        1
     );
+    error
 }
 
 #[test]
@@ -576,9 +587,10 @@ async fn finality_rpc_failure_retries_four_then_refuses_without_resubmitting() {
         ..Default::default()
     };
     let result = client.submit_shielded(inner_call, &signer, &opts).await;
-    assert!(
-        matches!(result,Err(SubmitFailure::Client(ClientError::Protocol(ref msg))) if msg.contains("4 consecutive finalized-head RPC attempts"))
-    );
+    let error = assert_unknown(result, &fake);
+    assert!(matches!(error, SubmitFailure::Unresolved { ref cause, .. }
+        if matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Protocol(msg))
+            if msg.contains("4 consecutive finalized-head RPC attempts"))));
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
     assert_eq!(
         client.nonces().cached(&signer.account().to_string()).await,
@@ -776,6 +788,128 @@ async fn unknown_carrier_fate_reconciles_history_without_retransmission() {
         .unwrap();
     assert_eq!(report.hash, inner_hash);
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn shield_receipt_watch_and_inner_receipt_errors_retain_the_attempted_carrier_and_cause() {
+    for fault in 0..4 {
+        let (client, fake, signer) = fixture().await;
+        let mut block_reads = 0usize;
+        fake.mutate_state(|state| match fault {
+            0 => state.set_handler("chain_getBlock", |_, _| {
+                Reply::error(-32603, "carrier receipt RPC sentinel", None)
+            }),
+            1 => state.set_handler("chain_getBlock", |_, _| {
+                Reply::result(json!({"block":{"header":{},"extrinsics":[]}}))
+            }),
+            2 => state.queue_submit(SubmitScript::Statuses(vec![json!({
+                "finalized":"malformed-block-hash"
+            })])),
+            _ => state.set_handler("chain_getBlock", move |state, request| {
+                block_reads += 1;
+                if block_reads == 1 {
+                    state.dispatch(request)
+                } else {
+                    // The carrier receipt is resolved; this fails the search
+                    // for the decrypted inner while its nonce is unsettled.
+                    Reply::error(-32603, "inner receipt RPC sentinel", None)
+                }
+            }),
+        });
+        let error = assert_unknown(
+            client
+                .submit_shielded(
+                    call(&client, 1).await,
+                    &signer,
+                    &ShieldOptions {
+                        wait: Wait::Inclusion,
+                        submit: SubmitOptions {
+                            deadline: Some(Duration::from_secs(2)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                )
+                .await,
+            &fake,
+        );
+        let SubmitFailure::Unresolved { cause, .. } = error else {
+            panic!("shield receipt failure lost its original cause");
+        };
+        assert!(matches!(cause.as_ref(), SubmitFailure::Client(_)));
+        if fault == 0 {
+            assert!(cause.to_string().contains("carrier receipt RPC sentinel"));
+        } else if fault == 3 {
+            assert!(cause.to_string().contains("inner receipt RPC sentinel"));
+        }
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+        let next = client.nonces().lease(&signer.account()).await.unwrap();
+        // A fresh pool-aware query supplies this value; neither n nor n+1
+        // remains reserved by the failed shield operation.
+        let fresh = client.nonces().fresh(&signer.account()).await.unwrap();
+        assert_eq!(next.value(), fresh);
+        next.settle();
+    }
+}
+
+#[tokio::test]
+async fn shield_reconciliation_failure_keeps_both_receipt_and_scan_causes() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", |_, _| {
+            Reply::error(-32603, "original shield receipt sentinel", None)
+        });
+        state.set_handler("chain_getFinalizedHead", |state, request| {
+            if state.submissions.is_empty() {
+                state.dispatch(request)
+            } else {
+                Reply::error(-32603, "shield reconciliation RPC sentinel", None)
+            }
+        });
+    });
+    let error = assert_unknown(
+        client
+            .submit_shielded(
+                call(&client, 1).await,
+                &signer,
+                &ShieldOptions {
+                    wait: Wait::Inclusion,
+                    submit: SubmitOptions {
+                        reconcile: true,
+                        deadline: Some(Duration::from_secs(2)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .await,
+        &fake,
+    );
+    let SubmitFailure::Unresolved {
+        cause,
+        reconciliation: Some(reconciliation),
+        ..
+    } = error
+    else {
+        panic!("shield reconciliation discarded one of its causes");
+    };
+    assert!(
+        cause
+            .to_string()
+            .contains("original shield receipt sentinel")
+    );
+    assert!(
+        reconciliation
+            .to_string()
+            .contains("shield reconciliation RPC sentinel")
+    );
     assert_eq!(
         client.nonces().cached(&signer.account().to_string()).await,
         None

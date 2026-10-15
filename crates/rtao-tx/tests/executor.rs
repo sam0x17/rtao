@@ -565,6 +565,75 @@ async fn unknown_transmitted_fate_is_retained_as_a_typed_result() {
 }
 
 #[tokio::test]
+async fn receipt_rpc_failure_keeps_recovery_identity_without_retry_for_every_executor_entry() {
+    for entry in 0..4 {
+        let (executor, fake, keys) = fixture().await;
+        let executor = executor.with_registry(Arc::new(rtao_intents::Registry));
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getBlock", |_, _| {
+                Reply::error(-32603, "public receipt failure sentinel", None)
+            });
+        });
+        let args = json!({
+            "dest_ss58": AccountId([12; 32]).to_string(),
+            "amount_tao": "0.000000003",
+            "keep_alive": true,
+        });
+        let intent: rtao_intents::Transfer = serde_json::from_value(args.clone()).unwrap();
+        let dynamic = rtao_intents::AnyIntent::from_tool("transfer", args.clone()).unwrap();
+        let opts = ExecuteOptions {
+            retries: 4,
+            reconcile: false,
+            ..Default::default()
+        };
+        let result = match entry {
+            0 => executor.execute(&intent, &keys, &opts).await.unwrap(),
+            1 => executor
+                .execute_dyn(dynamic.as_dyn(), &keys.signer, &opts)
+                .await
+                .unwrap(),
+            2 => executor
+                .execute_tool("transfer", args, &keys.signer, &opts)
+                .await
+                .unwrap(),
+            _ => {
+                let call = rtao_runtime::calls::system::remark(vec![3, 4, 5])
+                    .compose(&executor.client().refresh_runtime().await.unwrap())
+                    .unwrap();
+                executor
+                    .submit_call::<Coldkey, _>(call, &keys, &opts)
+                    .await
+                    .unwrap()
+            }
+        };
+        assert!(!result.success);
+        assert_eq!(result.inclusion, Inclusion::Unobserved);
+        assert!(result.message.contains("public receipt failure sentinel"));
+        let hash = result
+            .fate_unknown
+            .expect("recovery identity was discarded");
+        let submissions = fake.state().lock().unwrap().submissions.clone();
+        assert_eq!(submissions.len(), 1, "entry {entry} was rebroadcast");
+        assert_eq!(
+            rtao_core::ops::extrinsic_lookup::find(
+                &json!({"block":{"extrinsics":[format!("0x{}", hex::encode(&submissions[0]))]}}),
+                hash.0,
+            )
+            .unwrap(),
+            Some(0),
+        );
+        assert_eq!(
+            executor
+                .client()
+                .nonces()
+                .cached(&keys.signer.account().to_string())
+                .await,
+            None,
+        );
+    }
+}
+
+#[tokio::test]
 async fn executor_deadlines_preserve_submitted_hash_across_all_entry_points() {
     for entry in 0..3 {
         for reconcile in [false, true] {

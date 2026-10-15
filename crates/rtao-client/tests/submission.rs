@@ -1,5 +1,5 @@
 //! Production transaction preparation, lease settlement and watch semantics.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use rtao_client::{
     BlockRef, Client, ClientConfig, Inclusion, Mortality, Network, NoncePolicy, Period,
@@ -71,17 +71,24 @@ async fn submit_entry(
 fn assert_exact_unknown_fate(
     result: Result<rtao_client::ExtrinsicReport, SubmitFailure>,
     fake: &FakeChain,
-) {
+) -> SubmitFailure {
     use blake2::{Blake2b, Digest, digest::consts::U32};
 
     let state = fake.state();
     let state = state.lock().unwrap();
     assert_eq!(state.submissions.len(), 1);
-    let expected = rtao_rpc::H256(Blake2b::<U32>::digest(&state.submissions[0]).into());
-    assert!(matches!(
-        result,
-        Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown { hash })) if hash == expected
-    ));
+    let expected = rtao_primitives::H256(Blake2b::<U32>::digest(&state.submissions[0]).into());
+    let error = result.unwrap_err();
+    assert_eq!(error.unknown_fate_hash(), Some(expected));
+    drop(state);
+    assert_eq!(
+        fake.requests()
+            .iter()
+            .filter(|request| request.method.starts_with("author_submit"))
+            .count(),
+        1
+    );
+    error
 }
 
 #[tokio::test]
@@ -660,12 +667,7 @@ async fn admission_deadline_bounds_pool_and_watch_acknowledgment_for_external_si
             } else {
                 client.submit(call, &signer, &opts).await
             };
-            assert!(matches!(
-                result,
-                Err(SubmitFailure::Submit(
-                    rtao_rpc::SubmitError::FateUnknown { .. }
-                ))
-            ));
+            assert_exact_unknown_fate(result, &fake);
             assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
             assert_eq!(
                 client.nonces().cached(&signer.account().to_string()).await,
@@ -989,6 +991,304 @@ async fn full_timeout_during_report_resolution_keeps_hash_without_rebroadcast() 
         .await;
         assert_exact_unknown_fate(result, &fake);
         assert_eq!(reports.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+    }
+}
+
+#[tokio::test]
+async fn receipt_rpc_protocol_and_event_decode_failures_keep_hash_and_cause_for_all_entries() {
+    for entry in 0..3 {
+        for fault in 0..3 {
+            let (client, fake, signer) = fixture().await;
+            let call = call(&client, vec![]).await;
+            let runtime = client.refresh_runtime().await.unwrap();
+            let events_key = json!(format!(
+                "0x{}",
+                hex::encode(
+                    runtime
+                        .core()
+                        .storage_key(runtime.storage_entry("System", "Events").unwrap(), &[])
+                        .unwrap()
+                )
+            ));
+            fake.mutate_state(|state| match fault {
+                0 => state.set_handler("chain_getBlock", |_, _| {
+                    Reply::error(-32603, "receipt RPC sentinel", None)
+                }),
+                1 => state.set_handler("chain_getBlock", |_, _| {
+                    Reply::result(json!({"block":{"header":{},"extrinsics":[]}}))
+                }),
+                _ => state.set_handler("state_getStorage", move |state, request| {
+                    if state.submissions.is_empty() || request.params[0] != events_key {
+                        state.dispatch(request)
+                    } else {
+                        // SCALE count=1 followed by a missing EventRecord.
+                        Reply::result(json!("0x04"))
+                    }
+                }),
+            });
+            let error = assert_exact_unknown_fate(
+                submit_entry(&client, call, &signer, &SubmitOptions::default(), entry).await,
+                &fake,
+            );
+            let SubmitFailure::Unresolved {
+                cause,
+                reconciliation,
+                ..
+            } = error
+            else {
+                panic!("receipt failure lost its cause");
+            };
+            assert!(matches!(cause.as_ref(), SubmitFailure::Client(_)));
+            assert!(reconciliation.is_none());
+            if fault == 0 {
+                assert!(cause.to_string().contains("receipt RPC sentinel"));
+            } else if fault == 2 {
+                assert!(matches!(cause.as_ref(), SubmitFailure::Client(
+                    rtao_client::ClientError::Decode { what, .. }
+                ) if what.contains("System.Events")));
+            }
+            assert_eq!(
+                client.nonces().cached(&signer.account().to_string()).await,
+                None
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn malformed_watch_and_wrong_pool_acknowledgement_keep_attempted_identity() {
+    for entry in 0..3 {
+        for status in [
+            json!({"ready":null,"finalized":null}),
+            json!({"finalized":"not-a-block-hash"}),
+            json!({"unrecognized":null}),
+        ] {
+            let (client, fake, signer) = fixture().await;
+            fake.mutate_state(|state| state.queue_submit(SubmitScript::Statuses(vec![status])));
+            let error = assert_exact_unknown_fate(
+                submit_entry(
+                    &client,
+                    call(&client, vec![]).await,
+                    &signer,
+                    &SubmitOptions::default(),
+                    entry,
+                )
+                .await,
+                &fake,
+            );
+            assert!(matches!(error, SubmitFailure::Unresolved { ref cause, .. }
+                if matches!(cause.as_ref(), SubmitFailure::Client(rtao_client::ClientError::Protocol(_)))));
+            assert_eq!(
+                client.nonces().cached(&signer.account().to_string()).await,
+                None
+            );
+        }
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| {
+            state.set_handler("author_submitExtrinsic", |state, request| {
+                let _accepted = state.dispatch(request);
+                Reply::result(json!(format!("0x{}", "77".repeat(32))))
+            });
+        });
+        let error = assert_exact_unknown_fate(
+            submit_entry(
+                &client,
+                call(&client, vec![]).await,
+                &signer,
+                &SubmitOptions {
+                    wait: Wait::Pool,
+                    ..Default::default()
+                },
+                entry,
+            )
+            .await,
+            &fake,
+        );
+        assert!(error.to_string().contains("different extrinsic hash"));
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+    }
+}
+
+#[tokio::test]
+async fn transient_receipt_rpc_failure_reconciles_without_rebroadcast_or_a_reserved_nonce() {
+    use futures::FutureExt;
+
+    for entry in 0..3 {
+        let (client, fake, signer) = fixture().await;
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let account = signer.account().to_string();
+        let mut nonces = Some(client.nonces().clone());
+        fake.mutate_state(|state| {
+            let attempts = attempts.clone();
+            state.set_handler("chain_getBlock", move |state, request| {
+                if attempts.fetch_add(1, Ordering::SeqCst) == 0 {
+                    return Reply::error(-32603, "transient receipt RPC sentinel", None);
+                }
+                if let Some(nonces) = nonces.take() {
+                    assert_eq!(nonces.cached(&account).now_or_never(), Some(None));
+                }
+                state.dispatch(request)
+            });
+        });
+        let report = submit_entry(
+            &client,
+            call(&client, vec![]).await,
+            &signer,
+            &SubmitOptions {
+                reconcile: true,
+                deadline: Some(Duration::from_secs(1)),
+                ..Default::default()
+            },
+            entry,
+        )
+        .await
+        .unwrap();
+        assert!(report.success);
+        assert_eq!(report.inclusion, Inclusion::Finalized);
+        assert!(attempts.load(Ordering::SeqCst) >= 3);
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        assert_eq!(
+            fake.requests()
+                .iter()
+                .filter(|request| request.method.starts_with("author_submit"))
+                .count(),
+            1
+        );
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+    }
+}
+
+#[tokio::test]
+async fn reconciliation_rpc_failure_or_deadline_retains_the_original_receipt_failure() {
+    for entry in 0..3 {
+        for silent in [false, true] {
+            let (client, fake, signer) = fixture().await;
+            fake.mutate_state(|state| {
+                state.set_handler("chain_getBlock", |_, _| {
+                    Reply::error(-32603, "original receipt sentinel", None)
+                });
+                state.set_handler("chain_getFinalizedHead", move |state, request| {
+                    if state.submissions.is_empty() {
+                        state.dispatch(request)
+                    } else if silent {
+                        Reply::silent()
+                    } else {
+                        Reply::error(-32603, "reconciliation RPC sentinel", None)
+                    }
+                });
+            });
+            let error = assert_exact_unknown_fate(
+                submit_entry(
+                    &client,
+                    call(&client, vec![]).await,
+                    &signer,
+                    &SubmitOptions {
+                        reconcile: true,
+                        deadline: Some(Duration::from_millis(200)),
+                        ..Default::default()
+                    },
+                    entry,
+                )
+                .await,
+                &fake,
+            );
+            let SubmitFailure::Unresolved {
+                cause,
+                reconciliation: Some(reconciliation),
+                ..
+            } = error
+            else {
+                panic!("reconciliation discarded one of its causes");
+            };
+            assert!(cause.to_string().contains("original receipt sentinel"));
+            if silent {
+                assert!(matches!(
+                    reconciliation.as_ref(),
+                    SubmitFailure::Client(rtao_client::ClientError::Rpc(
+                        rtao_rpc::RpcError::Timeout { .. }
+                    ))
+                ));
+            } else {
+                assert!(
+                    reconciliation
+                        .to_string()
+                        .contains("reconciliation RPC sentinel")
+                );
+            }
+            assert_eq!(
+                client.nonces().cached(&signer.account().to_string()).await,
+                None
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn author_internal_error_is_unresolved_but_exact_pool_refusal_remains_definite() {
+    for entry in 0..3 {
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| {
+            state.set_handler("author_submitAndWatchExtrinsic", |state, request| {
+                let _accepted = state.dispatch(request);
+                Reply::error(-32603, "author response failed after acceptance", None)
+            });
+        });
+        let error = assert_exact_unknown_fate(
+            submit_entry(
+                &client,
+                call(&client, vec![]).await,
+                &signer,
+                &SubmitOptions::default(),
+                entry,
+            )
+            .await,
+            &fake,
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("author response failed after acceptance")
+        );
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| {
+            state.queue_reply(
+                "author_submitAndWatchExtrinsic",
+                Reply::error(1010, "opaque invalid-transaction refusal", None),
+            );
+        });
+        let error = submit_entry(
+            &client,
+            call(&client, vec![]).await,
+            &signer,
+            &SubmitOptions {
+                reconcile: true,
+                ..Default::default()
+            },
+            entry,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(
+            error,
+            SubmitFailure::Pool(PoolRejection::Unknown(_))
+        ));
+        assert!(error.unknown_fate_hash().is_none());
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
         assert_eq!(
             client.nonces().cached(&signer.account().to_string()).await,
             None

@@ -12,7 +12,14 @@ use rtao_signer::{
     SigningRequest,
 };
 use serde_json::json;
-use std::{fmt, sync::OnceLock, time::Duration};
+use std::{
+    fmt,
+    sync::{
+        OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 /// Normalized power-of-two era period in 4..=65536 blocks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -316,7 +323,7 @@ impl fmt::Display for PoolRejection {
     }
 }
 /// Submission failure, distinguishing client errors, pool refusal and fate.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum SubmitFailure {
     /// Ordinary metadata, encoding, signer or client failure.
@@ -325,6 +332,15 @@ pub enum SubmitFailure {
     Submit(rtao_rpc::SubmitError),
     /// Pool or terminal watch rejection.
     Pool(PoolRejection),
+    /// A transmitted transaction remains unresolved after a client failure.
+    Unresolved {
+        /// Exact identity of the bytes whose submission was attempted.
+        hash: H256,
+        /// Original submission, watch, or receipt failure.
+        cause: Box<SubmitFailure>,
+        /// A later failure while trying to reconcile the original outcome.
+        reconciliation: Option<Box<SubmitFailure>>,
+    },
     /// Finality lag leaves no valid shield carrier/inner inclusion window.
     ShieldEraExpired {
         /// Selected shield era in blocks.
@@ -351,6 +367,21 @@ impl fmt::Display for SubmitFailure {
             Self::Client(error) => error.fmt(f),
             Self::Submit(error) => error.fmt(f),
             Self::Pool(error) => error.fmt(f),
+            Self::Unresolved {
+                hash,
+                cause,
+                reconciliation,
+            } => {
+                write!(
+                    f,
+                    "extrinsic {} has unknown fate: {cause}. Verify chain state before retrying",
+                    crate::hash_hex(*hash)
+                )?;
+                if let Some(error) = reconciliation {
+                    write!(f, "; reconciliation failed: {error}")?;
+                }
+                Ok(())
+            }
             Self::ShieldEraExpired {
                 period,
                 finality_lag,
@@ -371,7 +402,42 @@ impl fmt::Display for SubmitFailure {
         }
     }
 }
-impl std::error::Error for SubmitFailure {}
+impl std::error::Error for SubmitFailure {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Client(error) => Some(error),
+            Self::Submit(error) => Some(error),
+            Self::Unresolved { cause, .. } => Some(cause.as_ref()),
+            _ => None,
+        }
+    }
+}
+
+impl SubmitFailure {
+    /// Submitted identity whose outcome must be resolved before retrying.
+    pub fn unknown_fate_hash(&self) -> Option<H256> {
+        match self {
+            Self::Unresolved { hash, .. } | Self::Retracted { hash } => Some(*hash),
+            Self::Submit(rtao_rpc::SubmitError::FateUnknown { hash }) => Some(H256(hash.0)),
+            _ => None,
+        }
+    }
+}
+
+/// State retained outside deadline-cancelled futures, including reconciliation.
+#[derive(Default)]
+pub(crate) struct SubmissionAttempt {
+    hash: OnceLock<H256>,
+    cause: OnceLock<SubmitFailure>,
+    refused: AtomicBool,
+    retracted: AtomicBool,
+}
+
+impl SubmissionAttempt {
+    pub(crate) fn was_retracted(&self) -> bool {
+        self.retracted.load(Ordering::Acquire)
+    }
+}
 impl From<ClientError> for SubmitFailure {
     fn from(error: ClientError) -> Self {
         Self::Client(error)
@@ -421,7 +487,7 @@ impl Client {
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         let limits = SubmissionLimits::new(opts)?;
-        let attempted_hash = OnceLock::new();
+        let attempted_hash = SubmissionAttempt::default();
         let operation = async {
             let lease = limits
                 .admission
@@ -438,7 +504,7 @@ impl Client {
                 .await
         };
         limits.full.run(self, operation).await.map_err(|error| {
-            submission_timeout_error(self, signer.account(), error, &attempted_hash)
+            submission_attempt_error(self, signer.account(), error, &attempted_hash)
         })
     }
 
@@ -451,7 +517,7 @@ impl Client {
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         let limits = SubmissionLimits::new(opts)?;
-        let attempted_hash = OnceLock::new();
+        let attempted_hash = SubmissionAttempt::default();
         limits
             .full
             .run(
@@ -460,7 +526,7 @@ impl Client {
             )
             .await
             .map_err(|error| {
-                submission_timeout_error(self, signer.account(), error, &attempted_hash)
+                submission_attempt_error(self, signer.account(), error, &attempted_hash)
             })
     }
 
@@ -471,7 +537,7 @@ impl Client {
         lease: NonceLease,
         opts: &SubmitOptions,
         limits: SubmissionLimits,
-        attempted_hash: &OnceLock<H256>,
+        attempted_hash: &SubmissionAttempt,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         if lease.account() != signer.account() {
             return Err(ClientError::Protocol(
@@ -510,9 +576,9 @@ impl Client {
                 // Python clears immediately on unknown fate. Reconciliation
                 // answers whether it landed without keeping a nonce reserved.
                 drop(lease);
-                let error = submission_timeout_error(self, signer.account(), error, attempted_hash);
+                let error = submission_attempt_error(self, signer.account(), error, attempted_hash);
                 if (opts.reconcile && unknown_fate(&error))
-                    || matches!(error, SubmitFailure::Retracted { .. })
+                    || attempted_hash.retracted.load(Ordering::Acquire)
                 {
                     limits.full.check(self)?;
                     self.reconcile(hash, unsigned.submission_head, unsigned.expiry)
@@ -530,7 +596,7 @@ impl Client {
         hash: H256,
         opts: &SubmitOptions,
         limit: OperationLimit,
-        attempted_hash: &OnceLock<H256>,
+        attempted_hash: &SubmissionAttempt,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         limit.check(self)?;
         let wait = opts.wait;
@@ -540,11 +606,11 @@ impl Client {
             let response: serde_json::Value = limit
                 .run(self, async {
                     attempted = true;
-                    let _ = attempted_hash.set(hash);
+                    let _ = attempted_hash.hash.set(hash);
                     self.request("author_submitExtrinsic", params).await
                 })
                 .await
-                .map_err(|error| author_ack_error(error, hash, attempted))?;
+                .map_err(|error| author_ack_error(error, attempted, attempted_hash))?;
             if crate::parse_hash(&response)? != hash {
                 return Err(ClientError::Protocol(
                     "pool returned a different extrinsic hash".into(),
@@ -572,7 +638,7 @@ impl Client {
         let mut subscription = limit
             .run(self, async {
                 attempted = true;
-                let _ = attempted_hash.set(hash);
+                let _ = attempted_hash.hash.set(hash);
                 self.rpc()
                     .subscribe_raw(
                         "author_submitAndWatchExtrinsic",
@@ -583,7 +649,7 @@ impl Client {
                     .map_err(ClientError::from)
             })
             .await
-            .map_err(|error| author_ack_error(error, hash, attempted))?;
+            .map_err(|error| author_ack_error(error, attempted, attempted_hash))?;
         let mut retracted = false;
         loop {
             let item = tokio::select! {
@@ -594,14 +660,11 @@ impl Client {
                 if retracted {
                     return Err(SubmitFailure::Retracted { hash });
                 }
-                return Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {
-                    hash: rtao_rpc::H256(hash.0),
-                }));
+                return Err(ClientError::from(rtao_rpc::RpcError::SubscriptionLost).into());
             };
             let raw = match item {
                 Ok(raw) => raw,
-                Err(_) if retracted => return Err(SubmitFailure::Retracted { hash }),
-                Err(error) => return Err(submission_error(error.into(), hash)),
+                Err(error) => return Err(SubmitFailure::Client(error.into())),
             };
             let status: serde_json::Value = serde_json::from_str(raw.get())
                 .map_err(|error| ClientError::Protocol(error.to_string()))?;
@@ -627,6 +690,7 @@ impl Client {
                 "future" | "ready" | "broadcast" => {}
                 "retracted" => {
                     retracted = true;
+                    attempted_hash.retracted.store(true, Ordering::Release);
                 }
                 "usurped" | "invalid" => {
                     return Err(SubmitFailure::Pool(PoolRejection::Watch(format!(
@@ -640,9 +704,11 @@ impl Client {
                         return Err(SubmitFailure::Retracted { hash });
                     }
                     if opts.reconcile {
-                        return Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {
-                            hash: rtao_rpc::H256(hash.0),
-                        }));
+                        return Err(ClientError::Protocol(format!(
+                            "transaction watch dropped before its outcome was resolved: {}",
+                            watch_status_repr(&status)
+                        ))
+                        .into());
                     }
                     return Err(SubmitFailure::Pool(PoolRejection::Watch(format!(
                         "Extrinsic dropped: {}",
@@ -694,7 +760,9 @@ impl Client {
         block: H256,
         finalized: bool,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
-        self.resolve_report(hash, block, finalized).await
+        self.resolve_report(hash, block, finalized)
+            .await
+            .map_err(|error| unresolved_error(hash, error, None))
     }
 
     async fn resolve_report(
@@ -767,12 +835,17 @@ impl Client {
         loop {
             let finalized = self.at(BlockRef::Finalized).await?;
             if finalized.block().number >= number {
-                if self.at(BlockRef::Number(number)).await?.block().hash == hash {
+                let canonical = self.at(BlockRef::Number(number)).await?.block().hash;
+                if canonical == hash {
                     return Ok(());
                 }
-                return Err(SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {
-                    hash: rtao_rpc::H256(extrinsic_hash.0),
-                }));
+                return Err(ClientError::Protocol(format!(
+                    "extrinsic {} was observed in block {}, but finalized height {number} belongs to {}",
+                    crate::hash_hex(extrinsic_hash),
+                    crate::hash_hex(hash),
+                    crate::hash_hex(canonical)
+                ))
+                .into());
             }
             self.next_finalized(finalized.block().number).await?;
         }
@@ -844,7 +917,7 @@ impl Client {
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         let limits = SubmissionLimits::new(opts)?;
-        let attempted_hash = OnceLock::new();
+        let attempted_hash = SubmissionAttempt::default();
         let operation = async {
             unsigned.verify_signature(signature)?;
             let (bytes, hash) = limits
@@ -866,9 +939,9 @@ impl Client {
                 Err(error) => {
                     drop(lease);
                     let error =
-                        submission_timeout_error(self, unsigned.address, error, &attempted_hash);
+                        submission_attempt_error(self, unsigned.address, error, &attempted_hash);
                     if (opts.reconcile && unknown_fate(&error))
-                        || matches!(error, SubmitFailure::Retracted { .. })
+                        || attempted_hash.retracted.load(Ordering::Acquire)
                     {
                         limits.full.check(self)?;
                         self.reconcile(hash, unsigned.submission_head, unsigned.expiry)
@@ -880,7 +953,7 @@ impl Client {
             }
         };
         limits.full.run(self, operation).await.map_err(|error| {
-            submission_timeout_error(self, unsigned.address, error, &attempted_hash)
+            submission_attempt_error(self, unsigned.address, error, &attempted_hash)
         })
     }
     async fn prepare_at_nonce(
@@ -1263,72 +1336,109 @@ impl OperationLimit {
                 .map_err(|_| E::from(Self::timeout()))?,
             None => operation.await,
         };
-        self.check(client)?;
-        result
+        // An error can prove refusal or expiry. A deadline check must not
+        // replace that evidence after the operation has already returned it.
+        match result {
+            Ok(value) => {
+                self.check(client)?;
+                Ok(value)
+            }
+            Err(error) => Err(error),
+        }
     }
 }
 
 pub(crate) fn unknown_fate(error: &SubmitFailure) -> bool {
-    matches!(
-        error,
-        SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown { .. })
-    )
+    error.unknown_fate_hash().is_some()
 }
 
-pub(crate) fn submission_timeout_error(
+pub(crate) fn submission_attempt_error(
     client: &Client,
     account: AccountId,
     error: SubmitFailure,
-    attempted_hash: &OnceLock<H256>,
+    attempted_hash: &SubmissionAttempt,
 ) -> SubmitFailure {
-    match (&error, attempted_hash.get()) {
-        (
-            SubmitFailure::Client(ClientError::Rpc(rtao_rpc::RpcError::Timeout { .. })),
-            Some(hash),
-        ) => {
-            // Keep broadcast identity outside the cancelled operation, including
-            // while watching, resolving a report or reconciling finalized history.
-            // Also invalidate if the final budget check raced with lease settlement.
-            client.nonces().clear_account(&account);
-            SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {
-                hash: rtao_rpc::H256(hash.0),
-            })
-        }
-        _ => error,
+    let Some(hash) = attempted_hash.hash.get() else {
+        return error;
+    };
+    if attempted_hash.refused.load(Ordering::Acquire) || definite_failure(&error) {
+        return error;
+    }
+    // Keep the identity and first cause outside every cancellable future.
+    // Clear even if a final budget check raced with lease settlement.
+    client.nonces().clear_account(&account);
+    if matches!(&error, SubmitFailure::Unresolved { hash: actual, .. } if actual == hash) {
+        let _ = attempted_hash.cause.set(error.clone());
+        return error;
+    }
+    let original = attempted_hash.cause.get().cloned();
+    if original.is_none() {
+        let _ = attempted_hash.cause.set(error.clone());
+    }
+    unresolved_error(*hash, error, original)
+}
+
+fn definite_failure(error: &SubmitFailure) -> bool {
+    matches!(
+        error,
+        SubmitFailure::Pool(_)
+            | SubmitFailure::Expired { .. }
+            | SubmitFailure::ShieldEraExpired { .. }
+    )
+}
+
+fn unresolved_error(
+    hash: H256,
+    error: SubmitFailure,
+    original: Option<SubmitFailure>,
+) -> SubmitFailure {
+    if definite_failure(&error) {
+        return error;
+    }
+    match original {
+        Some(cause) => SubmitFailure::Unresolved {
+            hash,
+            cause: Box::new(cause),
+            reconciliation: Some(Box::new(error)),
+        },
+        None => SubmitFailure::Unresolved {
+            hash,
+            cause: Box::new(error),
+            reconciliation: None,
+        },
     }
 }
 
-fn author_ack_error(error: ClientError, hash: H256, attempted: bool) -> SubmitFailure {
-    if attempted && matches!(error, ClientError::Rpc(rtao_rpc::RpcError::Timeout { .. })) {
-        // The node may have admitted the transaction before its acknowledgment
-        // timed out. Clear the lease and optionally reconcile under the full
-        // operation budget rather than treating this as a pre-broadcast timeout.
-        SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {
-            hash: rtao_rpc::H256(hash.0),
-        })
-    } else {
-        submission_error(error, hash)
-    }
-}
-
-fn submission_error(error: ClientError, hash: H256) -> SubmitFailure {
-    match error {
-        ClientError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
-            SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown { hash })
-        }
-        ClientError::Rpc(
-            rtao_rpc::RpcError::ConnectionLost { .. } | rtao_rpc::RpcError::SubscriptionLost,
-        ) => SubmitFailure::Submit(rtao_rpc::SubmitError::FateUnknown {
-            hash: rtao_rpc::H256(hash.0),
-        }),
-        ClientError::Rpc(rtao_rpc::RpcError::JsonRpc {
+fn author_ack_error(
+    error: ClientError,
+    attempted: bool,
+    attempt: &SubmissionAttempt,
+) -> SubmitFailure {
+    // A receipt RPC error is never a pool rejection. Only the author method's
+    // explicit refusal may be classified this way.
+    if attempted {
+        if let ClientError::Rpc(rtao_rpc::RpcError::JsonRpc {
             code,
             message,
             data,
             ..
-        }) => SubmitFailure::Pool(PoolRejection::from_rpc(code, &message, data.as_ref())),
-        error => SubmitFailure::Client(error),
+        }) = &error
+        {
+            let refusal = PoolRejection::from_rpc(*code, message, data.as_ref());
+            if !matches!(refusal, PoolRejection::Unknown(_))
+                || rtao_catalog::rt::POOL_RPC_ALL_CODES
+                    .iter()
+                    .any(|(known, _)| known == code)
+            {
+                attempt.refused.store(true, Ordering::Release);
+                return SubmitFailure::Pool(refusal);
+            }
+        }
+        if matches!(&error, ClientError::Rpc(rtao_rpc::RpcError::Policy(_))) {
+            attempt.refused.store(true, Ordering::Release);
+        }
     }
+    SubmitFailure::Client(error)
 }
 
 fn watch_status_repr(status: &serde_json::Value) -> String {
