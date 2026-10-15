@@ -2634,21 +2634,21 @@ notes = "Source reconciliation 2026-10-15: complete authenticated helper, native
 
 [[file]]
 py = "sdk/python/bittensor/vault/server.py"
-rs = ["`rtao_signer::vault::VaultSessionServer` (feature `vault`)"]
+rs = ["rtao_signer::vault::{VaultSessionServer,VaultServerOptions,VaultRequestTimeouts,VaultPageError}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "269cbc1b5dd1503b891ac4c1c807d5d225c20bfb"
 synced_tag = "v478"
 milestone = "M7"
-notes = "one-shot loopback HTTP and WebSocket server on an ephemeral port (`websockets` server, `:26, 69-80`): serves `vault.html` and the chain-specs PNG, and speaks the page's JSON protocol over `/ws` (`:181-242`); in rtao on axum with a hyper WebSocket upgrade, which dependency rule 2 allows under feature `vault` (§2.3, §6.5)"
+notes = "Source reconciliation 2026-10-15: complete 242-line module authenticated; assets/routes, exact hello/sign/scan/warm-up/result schemas, pending replay, replacement connection identity, deadlines, cancellation and cleanup reviewed with actual consumers. Native session capability is random rather than UUID-v4; explicit async lifecycle replaces Python thread/context management. D-067 records numeric loopback/Host/Origin/current-generation admission, expected reply kind, retired cancelled tabs, bounded I/O/error diagnostics and opt-in library browser policy. Unix launcher adaptations remain separately documented. Source reconciliation only; hosted execution is pending, independent Python/browser/camera/device coverage is unverified and device work deferred."
 
 [[file]]
 py = "sdk/python/bittensor/vault/signer.py"
-rs = ["`rtao_signer::VaultSigner`"]
+rs = ["rtao_signer::vault::{VaultSigner,VaultOptions}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "a253b1c654887a3be70be9d41d995a40ac14cf80"
 synced_tag = "v478"
 milestone = "M7"
-notes = '`UNSIGNED_TX \| OUT_OF_BAND`; shield needs two scans inside the 8-block era (§6.5)'
+notes = "Source reconciliation 2026-10-15: complete 286-line module and actual client/CLI consumers authenticated and reviewed. Offline construction, proof/legacy framing, metadata digest/constants, original address, signature verification and scheme carriers, sequential requests, purpose/manual stage labels, reporting and cleanup have explicit native homes. Request context replaces mutable Python context caching; typed options/errors replace dynamic coercions and exact malformed exception parity is not claimed. Production CLI now forwards reviewed semantic/raw/per-round labels through scoped lazy sources before Vault warm-up; source-isolation, parsed raw Sudo, proof-page text and purpose/manual-stage fixtures retain actual display output. Client attachment still enforces negotiated scheme and strict signature identity after compatibility-level Vault verification. D-067 server policy is separate. Source-only reviews and fixtures do not establish current green tests, independent Python oracle or device/browser/camera execution; those coverage limits remain explicit."
 
 [[file]]
 py = "sdk/python/bittensor/vault/static/bittensor-chain-specs.png"
@@ -2670,12 +2670,12 @@ notes = "served verbatim (§6.5) Source reconciliation 2026-10-15: exact git blo
 
 [[file]]
 py = "sdk/python/bittensor/vault/uos.py"
-rs = ["`rtao_signer::VaultSigner` (UOS framing)"]
+rs = ["rtao_signer::vault::uos::{Transaction,sign_tx_payload,sign_frame,multipart_frames,transaction_frames,transaction_frames_with_proof}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "5038708cd6df0a8432de1fa571831235e4be6adb"
 synced_tag = "v478"
 milestone = "M7"
-notes = '"port of `PY/vault/uos.py`" (§6.5)'
+notes = "Source reconciliation 2026-10-15: complete 148-line module authenticated and every helper/branch reviewed against actual signer consumers and hand-derived byte fixtures. Compact boundaries, 2499/2500 legacy threshold, original call length/extensions, exact32-byte prepared hash, opaque unprefixed proof, frame identifiers, 1024-byte multipart chunks and big-endian count/index are retained. Typed fixed public-key/genesis/algorithm/command inputs and bounded allocation errors replace Python malformed-input conversions. Fixtures/source checks do not establish Python differential execution, M7-01 oracle parity or device behavior; current hosted execution remains pending."
 
 [[file]]
 py = "sdk/python/bittensor/wallet.py"
@@ -3021,12 +3021,12 @@ notes = "Source reconciliation 2026-10-15: all twenty authenticated upstream tes
 
 [[file]]
 py = "sdk/python/tests/unit/test_hyperparams_units.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["crates/rtao-primitives/src/ratio.rs","crates/rtao-catalog/tests/hyperparam_units.rs","crates/rtao-catalog/tests/hyperparam_conversion.rs","xtask/src/extract_hyperparams.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "97e11173bc2e8d274d3fa70871dccf6892b51074"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: all 15 complete source functions and exact raw/float/text/bool/error vectors reviewed. Existing exact ratio cases are retained; committed resolved kind equality, metadata precedence, exact tempo PerU16 disagreement and simultaneous three-descriptor agreement now have direct fixtures. Native typed HyperparamError/Result and generated text replace Python ValueError/exit/stdout; the rejection diagnostic retains parameter, identity and both resolved unit kinds. Canonical origins and independent source review retained. Approved D-035 u64 chain bounds remain; current hosted execution and Python pytest are unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_intents_table.py"
@@ -3147,12 +3147,12 @@ notes = "Source reconciliation 2026-10-15: both complete source tests reviewed. 
 
 [[file]]
 py = "sdk/python/tests/unit/test_slippage_protection.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["crates/rtao-intents/src/staking_trades.rs","crates/rtao-intents/src/staking_claims.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "9013b028c218288b877afce3558dd61aa3f623ec"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: all 19 functions/36 pytest cases mapped, including complete five-operation tolerance and four-operation opt-out groups. Actual registry/build fixtures now pin same/cross-subnet hotkey relations, custom RemoveStake tolerance, protected nonclaim All principal and independent AddStake summaries with complete expected SCALE. Existing atomic dust, named remediation and schema/default consumers remain supporting evidence. Python returned-None price comes from permissive FakeSubstrate; actual Python transport and native nonoptional u64 descriptor propagate RPC/decode failures. This has an explicit typed API disposition, without converting errors or inventing optional native prices. Native account/finite amount adaptations disclosed; independent source review only, current hosted/Python execution unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_sp_core_keypair.py"

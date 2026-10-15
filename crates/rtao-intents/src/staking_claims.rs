@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_slippage_protection.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Position exits and transfers, including atomic root claims and their preview.
 
 use futures::TryStreamExt;
@@ -965,6 +966,47 @@ mod tests {
         bytes.extend_from_slice(HOTKEY.as_bytes());
         bytes.extend_from_slice(follow_up);
         bytes
+    }
+
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_remove_stake_composes_limit_call
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_custom_tolerance_moves_the_limit
+    // pyt: unit/test_slippage_protection.py::TestDefaultProtection::test_remove_all_resolves_stake_and_keeps_protection
+    #[tokio::test]
+    async fn source_removal_limits_keep_default_custom_and_all_principal() -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(|state| {
+            state.seed_runtime(
+                "StakeInfoRuntimeApi",
+                "get_stake_info_for_hotkey_coldkey_netuid",
+                json!({"stake":5_000_000_000u64}),
+            )?;
+            Ok(())
+        })
+        .await?;
+        for (amount, tolerance, expected_amount, expected_limit) in [
+            (json!(1.0), None, 1_000_000_000, 1_900_000_000),
+            (json!(1.0), Some(0.1), 1_000_000_000, 1_800_000_000),
+            (json!("all"), None, 5_000_000_000u64, 1_900_000_000),
+        ] {
+            let mut args =
+                json!({"hotkey_ss58":HOTKEY.to_string(),"netuid":1,"amount_alpha":amount});
+            if let Some(tolerance) = tolerance {
+                args["rate_tolerance"] = json!(tolerance);
+            }
+            let constructed = crate::AnyIntent::from_tool("remove_stake", args)?;
+            assert_eq!(constructed.to_json()["slippage_protection"], json!(true));
+            assert_eq!(constructed.to_json()["claim"], json!(false));
+            let intent = constructed.into_dyn();
+            let built = build(intent.as_ref(), &snapshot).await?;
+            let expected = plain_remove(NetUid(1), expected_amount, Some((expected_limit, false)));
+            assert_eq!(built.call.as_bytes(), expected);
+            assert_eq!(
+                CallBytes::decode(&expected, &snapshot.block().runtime)?,
+                built.call
+            );
+        }
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
     }
 
     // pyt: unit/test_intents_table.py::TestRootClaimOnUnstake::test_claim_batches_claim_then_unstake

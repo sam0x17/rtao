@@ -368,7 +368,7 @@ async fn confirmation_and_durable_plan_precede_acquisition_receipt_precedes_rele
         &trace,
     )?;
     let backend = Arc::new(TestBackend::new(&trace, 19)?);
-    let factory = NativeSignerFactory::with_backend(&ctx, backend);
+    let factory = NativeSignerFactory::with_backend(&ctx, backend.clone());
     let hooks = Hooks {
         trace: trace.clone(),
         fail: false,
@@ -407,6 +407,107 @@ async fn confirmation_and_durable_plan_precede_acquisition_receipt_precedes_rele
         1
     );
     assert_eq!(chain.state().lock().expect("chain").submissions.len(), 1);
+    {
+        let requests = backend.requests.lock().expect("requests");
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].summary.as_deref(), Some("M7 reviewed remark"));
+    }
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn vault_display_summary_is_scoped_to_each_reviewed_source() -> Result {
+    let trace = Trace::default();
+    let account = key(19)?.account().to_string();
+    let (ctx, _) = context(&["--signer", "vault", "--signer-address", &account], &trace)?;
+    let backend = Arc::new(TestBackend::new(&trace, 19)?);
+    let factory = NativeSignerFactory::with_backend(&ctx, backend.clone());
+    let first = factory.keys(&ctx.globals, SignerRole::Coldkey).await?;
+    let second = factory.keys(&ctx.globals, SignerRole::Coldkey).await?;
+    ExternalSignerFactory::set_summary(&factory, first.as_ref(), "first reviewed transaction");
+    ExternalSignerFactory::set_summary(&factory, second.as_ref(), "second reviewed transaction");
+    assert!(phases(&trace).is_empty());
+    // Reverse acquisition exposes a factory-global label being reused.
+    second.signer_for(SignerRole::Coldkey).await?;
+    first.signer_for(SignerRole::Coldkey).await?;
+    {
+        let requests = backend.requests.lock().expect("requests");
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests[0].summary.as_deref(),
+            Some("second reviewed transaction")
+        );
+        assert_eq!(
+            requests[1].summary.as_deref(),
+            Some("first reviewed transaction")
+        );
+    }
+    ExternalSignerFactory::release(&factory, &ctx.globals, first.as_ref(), false).await?;
+    ExternalSignerFactory::release(&factory, &ctx.globals, second.as_ref(), false).await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn raw_vault_submission_forwards_the_reviewed_wrapper_label() -> Result {
+    struct NoCache;
+    impl rtao_cli::call::RawCallCache for NoCache {
+        fn save(&self, _: String, _: Value) -> BoxFuture<'_, std::result::Result<(), CliError>> {
+            Box::pin(async {
+                Err(CliError::failure(
+                    "single raw submission must not save a multisig spec",
+                ))
+            })
+        }
+    }
+    let (client, chain) = chain_fixture().await?;
+    let trace = Trace::default();
+    let account = key(19)?.account().to_string();
+    let root = command_tree([rtao_cli::call::command()]).try_get_matches_from([
+        "rtao",
+        "call",
+        "System.remark",
+        "--args",
+        "{\"remark\":\"0x07\"}",
+        "--sudo",
+        "--no-mev-shield",
+        "--signer",
+        "vault",
+        "--signer-address",
+        &account,
+    ])?;
+    let leaf = root.subcommand().ok_or("raw call")?.1;
+    let (mut ctx, _) = context(&["--signer", "vault", "--signer-address", &account], &trace)?;
+    ctx.globals = Globals::resolve(
+        &root,
+        &Default::default(),
+        Path::new("/isolated/m7/home"),
+        |_| None,
+    )?;
+    ctx.globals.apply(leaf, &["signer_backend"])?;
+    let request = rtao_cli::call::RawCallRequest::from_matches(&ctx, leaf)?;
+    let backend = Arc::new(TestBackend::new(&trace, 19)?);
+    let factory = NativeSignerFactory::with_backend(&ctx, backend.clone());
+    let result = rtao_cli::call::execute_rounds_with(
+        &ctx,
+        &client,
+        &request,
+        "raw replay",
+        &factory,
+        &NoCache,
+    )
+    .await?;
+    assert!(result.is_some_and(|result| result.success));
+    {
+        let requests = backend.requests.lock().expect("requests");
+        assert_eq!(requests.len(), 1);
+        assert_eq!(
+            requests[0].summary.as_deref(),
+            Some("System.remark via Sudo.sudo")
+        );
+    }
+    assert_eq!(chain.state().lock().expect("chain").submissions.len(), 1);
+    assert!(!phases(&trace).contains(&"discover-public"));
     client.close().await;
     Ok(())
 }
