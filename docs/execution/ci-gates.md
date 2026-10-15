@@ -182,6 +182,53 @@ adoption in `71f28d2`. Later CLI dependency changes need another hosted refresh.
 The parity inventory was added to the refresh after this run; it declares
 source status and does not certify test or oracle success.
 
+The optional `refresh_codegen=true` input uses the same single 20-minute free
+`ubuntu-latest` job and skips the six normal check jobs, whether or not
+`refresh_compat` is also set:
+
+```sh
+gh workflow run pr.yml --ref main -f refresh_codegen=true
+```
+
+It first measures compatibility from the clean committed checkout, then runs
+`cargo run --locked -p xtask -- regen` and refreshes the parity inventory.
+The existing `compat-<head-sha>` artifact retains the four reports above. A
+separate `generated-<head-sha>` artifact retains these four generated source
+files for three days:
+
+| Repository path | ZIP member |
+|---|---|
+| `crates/rtao-intents/src/generated/metadata.rs` | `rtao-intents/src/generated/metadata.rs` |
+| `crates/rtao-intents/src/generated/mod.rs` | `rtao-intents/src/generated/mod.rs` |
+| `crates/rtao-reads/src/generated/names.rs` | `rtao-reads/src/generated/names.rs` |
+| `crates/rtao-reads/src/generated/mod.rs` | `rtao-reads/src/generated/mod.rs` |
+
+The upload action uses the common `crates/` directory as its archive root.
+After regeneration and parity reporting, a shared guard requires every expected
+output to be a regular file and rejects changed or untracked source outside the
+selected output paths. It uploads source only; it cannot commit or
+push, and a successful refresh does not establish that normal checks pass.
+
+Bootstrap this change by pushing the generator and workflow first, while the
+committed generated API still compiles. `xtask` depends on `rtao-reads`, so a
+root `ReadInterfaceMetadata` reexport added before the generated definition
+exists prevents the generator itself from building. Adopt the verified
+generated files before adding that root reexport and integrating callers.
+
+Before adopting either artifact, require a successful run whose head matches
+the intended generator commit and whose generation and upload steps passed.
+Check each ZIP's SHA-256 against the artifact API's `digest`, reject extra,
+missing, duplicate or nonregular members, and inspect the exact file set
+before writing anything. Restore the generated ZIP's four members only at
+their corresponding repository paths. Check the generated attribution and
+declarations against that commit's generator and pinned catalog, then adopt
+the bytes without hand edits. Verify the compatibility report's clean source
+identity, Linux host, Apple graph target and current dependency-input hashes;
+review parity declarations without treating them as test evidence. The
+subsequent normal hosted checks must compile the public metadata APIs, test
+feature availability and pending behavior, and pass `regen --check` against
+the adopted output.
+
 The CLI refresh [38683267312](https://github.com/sam0x17/rtao/actions/runs/38683267312)
 succeeded on `642623b`. Four-file artifact `11949225713` (39,662 bytes)
 matched SHA-256 `6ceb152f7febcc4ce40bf56eec777a4e2fc8a8351d5dc849fbe03cc0b37d7e22`.

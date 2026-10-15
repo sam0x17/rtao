@@ -345,8 +345,16 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
         .collect();
     ensure!(pending.is_subset(&known), "unknown pending read");
     let mut names = String::from(
-        "//! Complete pinned catalog of read names.\n/// A read selected from the pinned Python catalog.\n#[derive(Clone,Copy,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]\npub enum ReadName {\n",
+        "//! Complete pinned catalog of read names.\n\
+/// Actual generated interface types and implementation availability for a read.\n\
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub struct ReadInterfaceMetadata {\n\
+/// Whether dispatch has real behavior rather than a pending stub.\npub implemented:bool,\n\
+/// Actual generated parameter record type.\npub params_type_name:&'static str,\n\
+/// Actual generated read output type.\npub output_type_name:&'static str,\n}\n\
+/// A read selected from the pinned Python catalog.\n#[derive(Clone,Copy,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]\npub enum ReadName {\n",
     );
+    let mut availability = String::new();
+    let mut type_metadata = String::new();
     let mut interfaces = String::from("//! Typed inputs and entry points for all catalog reads.\n");
     let mut defaults =
         String::from("//! Defaults extracted from authenticated Python signatures.\n");
@@ -371,6 +379,9 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
             "read implementation/pending mismatch: {}",
             spec.name
         );
+        let implemented = implementation.is_some() || scalar.is_some();
+        availability.push_str(&format!("Self::{class}=>{implemented},\n"));
+        type_metadata.push_str(&format!("Self::{class}=>ReadInterfaceMetadata{{implemented:{implemented},params_type_name:std::any::type_name::<super::interfaces::{class}Params>(),output_type_name:std::any::type_name::<{output}>()}},\n"));
         interfaces.push_str(&format!("#[doc={:?}]\n#[derive(Clone,Debug,PartialEq,serde::Serialize,serde::Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct {class}Params {{\n",format!("Typed parameters for `{}`.",spec.name)));
         defaults.push_str(&format!(
             "/// Extracted defaults for `{}`.\npub mod {} {{\n",
@@ -494,6 +505,10 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
             pascal(spec.name)
         ));
     }
+    names.push_str("}}\n/// Whether this read's actual generated dispatch has implemented behavior.\npub const fn implemented(self)->bool{match self{\n");
+    names.push_str(&availability);
+    names.push_str("}}\n/// Actual generated input/output types and behavior availability.\npub fn interface_metadata(self)->ReadInterfaceMetadata{match self{\n");
+    names.push_str(&type_metadata);
     names.push_str("}}\n}\nimpl std::fmt::Display for ReadName{fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result{f.write_str(self.as_str())}}\nimpl std::str::FromStr for ReadName{type Err=crate::ReadError;fn from_str(name:&str)->Result<Self,Self::Err>{match name{\n");
     for spec in rtao_catalog::READS {
         names.push_str(&format!(
@@ -504,7 +519,7 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
     }
     names.push_str("_=>Err(crate::ReadError::InvalidParam{name:\"read\".into(),reason:format!(\"unknown read: {name}\")}),}}}\n");
     dispatch.push_str("}}\n");
-    let modules = "//! Complete catalog-derived read interfaces.\n/// Client and snapshot namespace accessors.\npub mod namespaces;\n/// Catalog names and stable metadata identities.\npub mod names;\n/// Typed parameters and behavior entry points.\npub mod interfaces;\n/// Authenticated signature defaults.\npub mod defaults;\n/// Complete rendering, pinning and descriptor coverage contracts.\npub mod specs;\nmod namespace_methods;\n/// Dynamic dispatch and default filling.\npub mod dispatch;\npub use names::ReadName;\npub use dispatch::{dispatch,fill_defaults};\npub use specs::{Category,Hit,HitKind,JsonType,ParamSpec,Pinning,ReadSpec,RenderHint,ReadHitReplacement,READ_HIT_REPLACEMENTS,READ_SPECS};\n";
+    let modules = "//! Complete catalog-derived read interfaces.\n/// Client and snapshot namespace accessors.\npub mod namespaces;\n/// Catalog names and stable metadata identities.\npub mod names;\n/// Typed parameters and behavior entry points.\npub mod interfaces;\n/// Authenticated signature defaults.\npub mod defaults;\n/// Complete rendering, pinning and descriptor coverage contracts.\npub mod specs;\nmod namespace_methods;\n/// Dynamic dispatch and default filling.\npub mod dispatch;\npub use names::{ReadInterfaceMetadata,ReadName};\npub use dispatch::{dispatch,fill_defaults};\npub use specs::{Category,Hit,HitKind,JsonType,ParamSpec,Pinning,ReadSpec,RenderHint,ReadHitReplacement,READ_HIT_REPLACEMENTS,READ_SPECS};\n";
     let dir = root.join("crates/rtao-reads/src/generated");
     if !check {
         fs::create_dir_all(&dir)?;

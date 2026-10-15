@@ -303,6 +303,21 @@ pub(super) fn run(
     );
     let mut groups = BTreeMap::<String, Vec<String>>::new();
     let mut passthrough = String::from("//! Generated builds for reviewed pass-through intents.\n");
+    let mut metadata = String::from(
+        "//! Interface capabilities derived from the actual feature and behavior inputs.\n\
+/// Availability and compiled Rust type information for one catalog intent.\n\
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub struct InterfaceMetadata {\n\
+/// Authenticated operation name.\npub name:&'static str,\n\
+/// Cargo feature containing the interface.\npub feature:&'static str,\n\
+/// Whether this binary includes the interface's feature.\npub compiled:bool,\n\
+/// Whether the generated build uses implemented behavior instead of a pending stub.\npub implemented:bool,\n\
+/// Actual compiled interface type, absent when its feature is disabled.\npub type_name:Option<&'static str>,\n\
+/// Actual IntentInterface signing-role associated type.\npub role:Option<&'static str>,\n\
+/// Actual IntentInterface result associated type.\npub output:Option<&'static str>,\n\
+/// Fields whose configured native type requires a JSON number.\npub json_number_fields:&'static [&'static str],\n}\n\
+/// Complete catalog metadata; only compiled and implemented rows can run commands.\n\
+pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
+    );
     for (index, spec) in rtao_catalog::INTENTS.iter().enumerate() {
         let feature = group(spec)?;
         groups
@@ -369,6 +384,18 @@ pub(super) fn run(
         }
         interfaces.push_str("}\n");
         defaults.push_str("}\n");
+        let implemented = !pending.contains(spec.name);
+        let number_fields = spec
+            .fields
+            .iter()
+            .filter(|field| field_types[field.name] == "serde_json::Number")
+            .map(|field| format!("{:?}", field.name))
+            .collect::<Vec<_>>()
+            .join(",");
+        metadata.push_str(&format!(
+            "{enabled}InterfaceMetadata{{name:{:?},feature:{feature:?},compiled:true,implemented:{implemented},type_name:Some(std::any::type_name::<super::interfaces::{class}>()),role:Some(std::any::type_name::<<super::interfaces::{class} as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::{class} as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[{number_fields}]}},\n#[cfg(not(feature={feature:?}))]\nInterfaceMetadata{{name:{:?},feature:{feature:?},compiled:false,implemented:{implemented},type_name:None,role:None,output:None,json_number_fields:&[{number_fields}]}},\n",
+            spec.name, spec.name,
+        ));
         let role = match spec.signer {
             "coldkey" => "Coldkey",
             "hotkey" => "Hotkey",
@@ -613,13 +640,14 @@ pub(super) fn run(
     }
     any.push_str("}}\n");
     any.push_str("}\n");
+    metadata.push_str("]\n}\n");
     let enabled_features = groups
         .keys()
         .map(|feature| format!("feature = {feature:?}"))
         .collect::<Vec<_>>()
         .join(",");
     let mut modules = format!(
-        "//! Generated transaction interfaces and dispatch.\nmod interfaces;\nmod any_intent;\npub(crate) mod defaults;\npub(crate) mod passthrough;\nmod pending;\n#[cfg(any({enabled_features}))]\npub use interfaces::*;\npub use any_intent::AnyIntent;\n"
+        "//! Generated transaction interfaces and dispatch.\nmod interfaces;\nmod any_intent;\npub mod metadata;\npub use metadata::{{InterfaceMetadata,interface_metadata}};\npub(crate) mod defaults;\npub(crate) mod passthrough;\nmod pending;\n#[cfg(any({enabled_features}))]\npub use interfaces::*;\npub use any_intent::AnyIntent;\n"
     );
     for (feature, classes) in groups {
         modules.push_str(&format!("{}/// Intent types in the `{feature}` Python module.\npub mod {feature} {{pub use super::interfaces::{{{}}};}}\n", cfg(&feature), classes.join(",")));
@@ -630,6 +658,7 @@ pub(super) fn run(
         ("pending", stubs),
         ("any_intent", any),
         ("passthrough", passthrough),
+        ("metadata", metadata),
         ("mod", modules),
     ];
     let dir = root.join("crates/rtao-intents/src/generated");
