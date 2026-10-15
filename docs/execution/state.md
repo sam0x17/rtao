@@ -16,6 +16,16 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Ordinary [38824416747](https://github.com/sam0x17/rtao/actions/runs/38824416747)
+is running at `d9ae66842d0cdb261b353ea0284b1f5936c324b4`. Supply, MSRV and
+semver jobs passed; no-host failed strict Clippy on session.rs's Url import,
+which the handshake refactor left needed only by tests and frame fuzzing.
+Gate that import with the existing test/fuzzing condition; do not suppress
+linting. The terminal no-host log is 184,651 bytes, SHA256
+`9254c2e86e6d7a6fc83d9ad914780d14822329ec028150f3987a91e8f68a2355`.
+Bounded proofs are `check-no-host-38824416747.json` and its authenticated detail
+follow-up. Main/feature results and execution of this correction remain pending.
+
 Hosted report refresh
 [38823630645](https://github.com/sam0x17/rtao/actions/runs/38823630645) passed
 at clean `7cc750178a17d89424b0c95616d493adab16b52c`. Its 57,584-byte artifact was
