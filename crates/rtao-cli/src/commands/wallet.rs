@@ -336,7 +336,7 @@ fn checked_hex(value: &str, bytes: usize, private: bool) -> Result<Zeroizing<Vec
         }));
     }
     let mut decoded = Zeroizing::new(vec![0; bytes]);
-    hex::decode_to_slice(encoded, &mut *decoded).map_err(|_| input("invalid recovery key hex"))?;
+    hex::decode_to_slice(encoded, &mut decoded).map_err(|_| input("invalid recovery key hex"))?;
     Ok(decoded)
 }
 fn recovery_secret(
@@ -1147,13 +1147,13 @@ mod chain {
     fn compact(value: &DynBalance) -> String {
         let mut milli = value.rao / 1_000_000;
         let remainder = value.rao % 1_000_000;
-        if remainder > 500_000 || (remainder == 500_000 && milli % 2 != 0) {
+        if remainder > 500_000 || (remainder == 500_000 && !milli.is_multiple_of(2)) {
             milli += 1;
         }
         let digits = (milli / 1_000).to_string();
         let mut grouped = String::new();
         for (index, digit) in digits.chars().enumerate() {
-            if index != 0 && (digits.len() - index) % 3 == 0 {
+            if index != 0 && (digits.len() - index).is_multiple_of(3) {
                 grouped.push(',');
             }
             grouped.push(digit);
@@ -1797,10 +1797,9 @@ mod chain {
                     if let (Some(address), Some(name)) = (
                         hotkey.get("ss58").and_then(Value::as_str),
                         hotkey.get("name").and_then(Value::as_str),
-                    ) {
-                        if let Ok(address) = address.parse() {
-                            names.entry(address).or_insert_with(|| name.into());
-                        }
+                    ) && let Ok(address) = address.parse()
+                    {
+                        names.entry(address).or_insert_with(|| name.into());
                     }
                 }
             }
@@ -1809,12 +1808,10 @@ mod chain {
             if let (Some(address), Some(name)) = (
                 entry.get("address").and_then(Value::as_str),
                 entry.get("name").and_then(Value::as_str),
-            ) {
-                if !name.is_empty() {
-                    if let Ok(address) = address.parse() {
-                        names.entry(address).or_insert_with(|| name.into());
-                    }
-                }
+            ) && !name.is_empty()
+                && let Ok(address) = address.parse()
+            {
+                names.entry(address).or_insert_with(|| name.into());
             }
         }
         Ok(names)
@@ -1866,7 +1863,7 @@ mod chain {
                 hidden_value += value.amount();
                 continue;
             }
-            positions.sort_by(|left, right| right.stake.rao.cmp(&left.stake.rao));
+            positions.sort_by_key(|position| std::cmp::Reverse(position.stake.rao));
             for position in positions {
                 let value = spot(&position.stake, &row.valuation)?;
                 if !dust && value.rao < DUST_RAO {

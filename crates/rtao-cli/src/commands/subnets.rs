@@ -562,7 +562,7 @@ pub fn render_metagraph(
             ],
         ));
     }
-    neurons.sort_by(|left, right| right.0.cmp(&left.0));
+    neurons.sort_by_key(|neuron| std::cmp::Reverse(neuron.0));
     let num_uids = record
         .get("num_uids")
         .and_then(Value::as_u64)

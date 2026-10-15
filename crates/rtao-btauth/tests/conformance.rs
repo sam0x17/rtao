@@ -127,6 +127,7 @@ fn fixture_str<'a>(fixture: &'a Value, pointer: &str) -> Result<&'a str, Box<dyn
         .ok_or_else(|| io::Error::other(format!("missing string fixture {pointer}")).into())
 }
 
+// pyt: unit/test_http_auth.py::test_golden_payload_bytes
 #[test]
 fn test_golden_payload_bytes() -> TestResult {
     let fixture = fixture()?;
@@ -172,6 +173,7 @@ fn test_golden_payload_bytes() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_golden_ed25519_signature
 #[test]
 fn test_golden_ed25519_signature() -> TestResult {
     let fixture = fixture()?;
@@ -210,6 +212,7 @@ fn test_golden_ed25519_signature() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_golden_addresses
 #[test]
 fn test_golden_addresses() -> TestResult {
     assert_eq!(alice(CryptoType::Sr25519)?.account().to_string(), ALICE_SR);
@@ -218,6 +221,7 @@ fn test_golden_addresses() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_sr25519_crypto_header_omitted
 #[test]
 fn test_sr25519_crypto_header_omitted() -> TestResult {
     let sender = alice(CryptoType::Sr25519)?;
@@ -228,6 +232,7 @@ fn test_sr25519_crypto_header_omitted() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_round_trip
 #[test]
 fn test_round_trip() -> TestResult {
     let receiver = bob()?;
@@ -276,6 +281,7 @@ fn test_round_trip() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_round_trip_live_nonce_get_empty_body
 #[test]
 fn test_round_trip_live_nonce_get_empty_body() -> TestResult {
     let receiver = bob()?;
@@ -348,6 +354,7 @@ fn retry_signing_obtains_a_fresh_monotonic_nonce() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_headers_survive_lowercasing
 #[test]
 fn test_headers_survive_lowercasing() -> TestResult {
     let sender = alice(CryptoType::Sr25519)?;
@@ -364,6 +371,7 @@ fn test_headers_survive_lowercasing() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_non_canonical_scheme_spellings
 #[test]
 fn test_non_canonical_scheme_spellings() -> TestResult {
     let receiver = bob()?;
@@ -475,6 +483,7 @@ fn method_normalization_signs_uppercase_and_accepts_lowercase_at_verification() 
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_stale_and_future_nonces
 #[test]
 fn test_stale_and_future_nonces() -> TestResult {
     let sender = alice(CryptoType::Sr25519)?;
@@ -874,6 +883,7 @@ fn unicode_decimal_crypto_aliases_choose_only_the_declared_algorithm() -> TestRe
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_replay_rejected
 #[test]
 fn test_replay_rejected() -> TestResult {
     let receiver = bob()?;
@@ -940,6 +950,7 @@ fn concurrent_authenticated_requests_have_exactly_one_replay_commit_winner() -> 
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_window_wider_than_store_retention_refused
 #[test]
 fn test_window_wider_than_store_retention_refused() -> TestResult {
     let receiver = bob()?;
@@ -1043,6 +1054,7 @@ fn fractional_freshness_boundaries_and_messages_match_python_general_format() ->
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_nonce_store_expires_entries
 #[test]
 fn test_nonce_store_expires_entries() -> TestResult {
     let store = InMemoryNonceStore::with_config(NonceStoreConfig {
@@ -1055,6 +1067,7 @@ fn test_nonce_store_expires_entries() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_tampered_nonce_rejected
 #[test]
 fn test_tampered_nonce_rejected() -> TestResult {
     let receiver = bob()?;
@@ -1076,6 +1089,7 @@ fn test_tampered_nonce_rejected() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_tampered_body_method_path_rejected
 #[test]
 fn test_tampered_body_method_path_rejected() -> TestResult {
     let receiver = bob()?;
@@ -1094,6 +1108,7 @@ fn test_tampered_body_method_path_rejected() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_scheme_confusion_rejected
 #[test]
 fn test_scheme_confusion_rejected() -> TestResult {
     let receiver = bob()?;
@@ -1119,6 +1134,7 @@ fn test_scheme_confusion_rejected() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_wrong_receiver_rejected
 #[test]
 fn test_wrong_receiver_rejected() -> TestResult {
     let receiver = bob()?;
@@ -1139,6 +1155,7 @@ fn test_wrong_receiver_rejected() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_unbound_request_requires_opt_out
 #[test]
 fn test_unbound_request_requires_opt_out() -> TestResult {
     let receiver = bob()?;
@@ -1190,6 +1207,7 @@ fn test_unbound_request_requires_opt_out() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_missing_header_rejected
 #[test]
 fn test_missing_header_rejected() -> TestResult {
     let sender = alice(CryptoType::Sr25519)?;
@@ -1219,6 +1237,7 @@ fn test_missing_header_rejected() -> TestResult {
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_unparseable_header_rejected
 #[test]
 fn test_unparseable_header_rejected() -> TestResult {
     let sender = alice(CryptoType::Sr25519)?;
@@ -1685,6 +1704,7 @@ fn non_text_header_values_are_malformed_before_crypto_or_store_access() -> TestR
     Ok(())
 }
 
+// pyt: unit/test_http_auth.py::test_auth_errors_root_in_bittensor_error
 #[test]
 fn test_auth_errors_root_in_bittensor_error() {
     // Rust's shared error contract replaces Python's BittensorError hierarchy.

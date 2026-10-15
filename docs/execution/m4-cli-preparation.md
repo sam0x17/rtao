@@ -33,10 +33,12 @@ Plural name resolution is registered as additive D-043 and its declared matrix
 row is adopted from hosted generation. The prepared
 human review includes preflight facts from the same snapshot and call as its plan.
 External backend factories and rich staking pickers remain incomplete; see
-[m4-generated-review.md](m4-generated-review.md). Wallet and subnet source is
-being prepared without local builds; the separate M5 offline candidate remains
-provisional. Prepared source and historical isolated results do not establish
-acceptance of the combined code.
+[m4-generated-review.md](m4-generated-review.md). Wallet and subnet commands
+are committed in `a56d518`, with strict M5 call import in `0812681` and the
+two M5 reads in `2331a32`/`e79b6ac`. Read dispatch needs hosted regeneration;
+the broader offline API and sequential trim-null session remain in progress.
+Prepared source and historical isolated results do not establish acceptance
+of the combined code.
 
 Q30 supersedes the old local validation campaign. Applicable client tests and
 builds run on free hosted `ubuntu-latest` CI. Do not restore the retired
