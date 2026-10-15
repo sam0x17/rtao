@@ -787,10 +787,10 @@ upstream_report = "Authored regression source was independently reviewed; hosted
 
 [[divergences]]
 id = "D-023"
-upstream_symbol = "ExtrinsicResult"
-python_behavior = "no inclusion level; fate unknown visible only in the message"
-rtao_behavior = "adds `inclusion` and `fate_unknown` fields; `to_json()` unchanged"
-rationale = "Public results retain typed inclusion and unknown-fate identity while to_json preserves Python field presence. Included and unresolved fixtures construct populated public results, preserve the native fields through with_output, and compare complete independently expected Python dictionaries. Included results contain metadata-decoded events that remain absent from JSON; the failure uses Python's default Unknown remediation. Production creation of recovery state is covered separately by executor fixtures. Source and independent review only; hosted compilation and execution remain pending."
+upstream_symbol = "ExtrinsicResult / RpcSubstrate._result_from_report"
+python_behavior = "no inclusion level; fate unknown visible only in the message; _substrate.py:804-811 constructs failed results without triggered events"
+rtao_behavior = "adds inclusion/fate_unknown and retains decoded failed-receipt events for native consumers; to_json preserves Python field presence and omits events"
+rationale = "Public results retain typed inclusion and unknown-fate identity while to_json preserves Python field presence. Native multisig_executed and Null-pruning recovery inspect receipt events even when an inner dispatch failed, to distinguish consumed execution from a remaining approval; suppressing those events would erase required evidence. The real-executor dispatch-failure fixture checks retained System.ExtrinsicFailed, absent success fee/extras and one submission/build. The failed-batch client transcript compares the complete retained event vector with an actual pinned event read. Included and unresolved serialization fixtures preserve native fields through with_output and compare independent complete Python dictionaries, without event JSON. This extends the existing native diagnostic addition; it does not claim Python failed construction behaves identically. Current hosted execution and final disposition remain pending."
 status = "active"
 class = "addition"
 milestone = "M8"
@@ -798,9 +798,11 @@ pinning_tests = [
   "rtao_tx::output::tests::rejected_result_has_only_python_failure_fields_and_retains_native_fate",
   "rtao_tx::result_json::included_results_keep_complete_python_json_without_native_tracking_fields",
   "rtao_tx::result_json::fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_hash",
+  "rtao_tx::executor::dispatch_failure_is_returned_without_retry_or_success_extras",
+  "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state",
 ]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/result.py#L733-L751"
-upstream_report = "Authored populated-result serialization fixtures were independently source-reviewed after correcting the failure remediation expectation. Hosted compilation and execution remain pending. No new upstream filing."
+upstream_report = "Existing serialization sources were independently reviewed. Failed-event retention is an explicit native addition required by current multisig/recovery consumers, with real-executor and pinned-receipt regression assertions authored. Current hosted execution and final independent rereview remain pending. No new upstream filing under Q30."
 
 [[divergences]]
 id = "D-024"
