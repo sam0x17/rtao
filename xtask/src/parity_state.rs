@@ -1024,7 +1024,8 @@ mod tests {
         tested_read_functions(&public, &reads, &index, &mut implemented)?;
         assert_eq!(implemented, reads);
         let duplicate = tested_read_functions(&public, &reads, &index, &mut implemented)
-            .expect_err("duplicate public async read must still fail");
+            .err()
+            .context("duplicate public async read must still fail")?;
         assert!(duplicate.to_string().contains("read balance has duplicate"));
         implemented.clear();
         index.feature_test_bodies.clear();
