@@ -2427,7 +2427,9 @@
         "tests": [
           "rtao_tx::output::tests::rejected_result_has_only_python_failure_fields_and_retains_native_fate",
           "rtao_tx::result_json::included_results_keep_complete_python_json_without_native_tracking_fields",
-          "rtao_tx::result_json::fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_hash"
+          "rtao_tx::result_json::fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_hash",
+          "rtao_tx::executor::dispatch_failure_is_returned_without_retry_or_success_extras",
+          "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state"
         ]
       },
       {
