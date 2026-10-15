@@ -6222,132 +6222,156 @@
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/Cargo.toml",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4c67d9b75aeb0267d3816bb07d67d657583db46e"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/README.md",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "474631e2fb442181f69ff942ea30236cb30261d4"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/pyproject.toml",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f74371f1940e852295fce71bbb1f2eba35dad324"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/digest.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "dac91ba10f7547e309204d45e8c7cbbca0fc9807"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/errors.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f140f53b6b754b484359258160012c0515696244"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/keys.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d2f9fa02eda6f300ea09af5d1d925a37dbebca2a"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/ledger.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "852c7efa1fce8a6066bc1990fbc518102e3d4498"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/lib.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "dbbb2dc1dcb8d4880cd9f230cbe5fe61be8b0e02"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/pow.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7515a39f92bfa24f5db40dcbebb0d22d51c31faf"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/runtime.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a81737591f49b75d5f1ecc194a9cfd0ac132d979"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/timelock.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8d439a214b8f35f9a2d71551bd1b87423dfed60a"
       },
       {
         "kind": "oracle-only",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/bittensor-core-py/src/values.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
+          "ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)",
+          "ci/oracle/image_identity.py (source, binding and lock identity)",
+          "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e660c12c3445faeb89c950cbbae3563fde094108"
       },
       {
         "kind": "n/a",

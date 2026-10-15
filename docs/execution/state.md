@@ -16,6 +16,25 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Compatibility refresh
+[38757888373](https://github.com/sam0x17/rtao/actions/runs/38757888373)
+succeeds at clean `303e631`. Verify/adopt exactly four regular report files,
+the archive identity/digest and all 23 unchanged dependency inputs. Role counts
+and host selection stay fixed. The matrix changes only the twelve reviewed
+core-py source rows, retaining oracle-only/unverified classifications; source
+counts are 192 reconciled/165 pending, with 29 e2e mappings pending. Compatibility
+and runtime claims are unchanged. Proof is `303-generation-adoption.json`.
+No archive, extraction directory or local build was created.
+
+The previous normal run `38756773737` is terminal: supply, MSRV, no-host,
+semver and features all pass. Main Clippy's two fixture warnings are corrected.
+Independent parser rereview closes the earlier parameter/impl binding findings
+and finds one remaining omitted `where` clause check. Require no added impl
+constraints and add a source-mutant rejection fixture. This changes no current
+pinned projection output. Full chain rows and runtime coverage remain pending.
+The combined source and reports require the next normal hosted validation;
+no current full test pass or milestone acceptance is established.
+
 Source audit reconciles the twelve `oracle-only` core-py files after reviewing
 all 1,956 lines, exact watched blobs/artifact SHA256 pins, and the Dockerfile's
 tag/commit/frozen-uv build plus image-identity consumer chain. These are optional
