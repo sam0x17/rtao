@@ -6,6 +6,13 @@ coverage under Q30. No new fuzz campaign, local build, node or corpus replay
 was run for this review. Earlier campaign reports describe their own source
 snapshots and do not validate the current code.
 
+A follow-up source review at `2f9a30d` read all nine target files, the complete
+driver, committed seeds, actual production entry points and selected failure
+regressions. The manifest, driver and target inventories agree. It identified
+the unsigned seed gap and the historical mnemonic-KDF wording corrected below.
+The proposed seed and guard changes received a separate independent source
+review; their execution and standalone fuzz-build coverage remain unverified.
+
 ## Existing targets
 
 The standalone `fuzz/Cargo.toml` declares nine targets. None needs a live chain,
@@ -60,9 +67,17 @@ hosted run must succeed before milestone acceptance.
 
 The fuzz workspace is separate from ordinary nextest. A green workspace suite
 does not establish a current fuzz build, sanitizer run or mutation coverage.
-The unsigned JSON seed directory currently contains only empty-object and
-overflow seeds, so the harness alone does not demonstrate reachability of its
-successful reconstruction branch. Ordinary offline tests supply valid-context
-coverage. The keyfile harness's 64 KiB input cap also does not exercise the
-wallet's 16 MiB file boundary; dedicated wallet fixtures cover that boundary.
-No new campaign is required by the revised plan.
+The unsigned JSON seed directory includes a hand-authored public immortal
+remark candidate alongside the rejecting empty-object and overflow seeds. The
+target initialization now requires that candidate to reconstruct under its
+unchanged trusted runtime, context and anchor. An ordinary client regression
+imports the same bytes, signs and attaches them, decodes the remark, and checks
+tampering refusal, unchanged nonce cache and zero submissions. The candidate
+and these new guards are unexecuted source proposals: hosted compilation and
+validation remain required before claiming acceptance or positive-route
+coverage. No Python or interoperability result is implied.
+
+The keyfile harness's 64 KiB input cap does not exercise the wallet's 16 MiB
+file boundary; dedicated wallet fixtures cover that boundary. Public mnemonic
+fixtures can run PBKDF2 seed derivation; no wallet-envelope decryption is
+performed. No new campaign is required by the revised plan.

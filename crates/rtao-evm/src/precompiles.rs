@@ -100,186 +100,7 @@ macro_rules! precompile {
     };
 }
 
-/// All 21 native precompiles, in the pinned Python catalog's order.
-pub const PRECOMPILES: &[Precompile] = &[
-    precompile!(
-        "balance-transfer",
-        2048,
-        "balanceTransfer.json",
-        "Transfer TAO from an EVM account to an ss58 account.",
-        false
-    ),
-    precompile!(
-        "staking",
-        2049,
-        "staking.json",
-        "Staking V1 — deprecated; amounts ride msg.value. Use staking-v2.",
-        true
-    ),
-    precompile!(
-        "metagraph",
-        2050,
-        "metagraph.json",
-        "Read-only neuron/subnet state: stake, ranks, trust, axons, keys by (netuid, uid).",
-        false
-    ),
-    precompile!(
-        "subnet",
-        2051,
-        "subnet.json",
-        "Subnet registration and owner hyperparameter get/set pairs.",
-        false
-    ),
-    precompile!(
-        "neuron",
-        2052,
-        "neuron.json",
-        "Neuron lifecycle: burned registration, weights (direct and commit-reveal), serving.",
-        false
-    ),
-    precompile!(
-        "staking-v2",
-        2053,
-        "stakingV2.json",
-        "Staking V2: add/remove/move/transfer stake with explicit rao amounts.",
-        false
-    ),
-    precompile!(
-        "uid-lookup",
-        2054,
-        "uidLookup.json",
-        "Look up the uid(s) associated with an EVM address on a subnet.",
-        false
-    ),
-    precompile!(
-        "alpha",
-        2056,
-        "alpha.json",
-        "Subnet Alpha pools, prices, issuance, emissions, and owner configuration.",
-        false
-    ),
-    precompile!(
-        "crowdloan",
-        2057,
-        "crowdloan.json",
-        "Crowdloan operations from EVM.",
-        false
-    ),
-    precompile!(
-        "leasing",
-        2058,
-        "leasing.json",
-        "Subnet leasing operations from EVM.",
-        false
-    ),
-    precompile!(
-        "proxy",
-        2059,
-        "proxy.json",
-        "Manage proxy delegations and delayed proxy announcements from EVM.",
-        false
-    ),
-    precompile!(
-        "address-mapping",
-        2060,
-        "addressMapping.json",
-        "The chain's own h160 -> ss58-mirror mapping (addressMapping(address) -> bytes32).",
-        false
-    ),
-    precompile!(
-        "voting-power",
-        2061,
-        "votingPower.json",
-        "Validator voting power (stake EMA) per subnet: per-hotkey, totals, tracking state.",
-        false
-    ),
-    precompile!(
-        "balance",
-        2062,
-        "balance.json",
-        "Read free TAO balances and dispatch signed Balances operations.",
-        false
-    ),
-    precompile!(
-        "scheduler",
-        2063,
-        "scheduler.json",
-        "Read stable metadata for scheduled runtime calls.",
-        false
-    ),
-    precompile!(
-        "drand",
-        2064,
-        "drand.json",
-        "Read stored Drand beacon configuration and pulse data.",
-        false
-    ),
-    precompile!(
-        "timestamp",
-        2065,
-        "timestamp.json",
-        "Read the runtime timestamp and its per-block update state.",
-        false
-    ),
-    precompile!(
-        "runtime-configuration",
-        2066,
-        "runtimeConfiguration.json",
-        "Read stable global runtime configuration.",
-        false
-    ),
-    precompile!(
-        "precompile-registry",
-        2067,
-        "registry.json",
-        "Inspect precompile lifecycle and operational availability.",
-        false
-    ),
-    precompile!(
-        "ed25519-verify",
-        1026,
-        "ed25519Verify.json",
-        "Verify an ed25519 signature on-chain (prove ss58 key ownership from EVM).",
-        false
-    ),
-    precompile!(
-        "sr25519-verify",
-        1027,
-        "sr25519Verify.json",
-        "Verify an sr25519 signature on-chain.",
-        false
-    ),
-];
-
-/// Standard Ethereum precompiles present on the pinned Bittensor runtime.
-///
-/// These indices follow the pinned runtime, including its BN128 ordering.
-pub const STANDARD_PRECOMPILES: &[(&str, u16)] = &[
-    ("ecrecover", 1),
-    ("sha256", 2),
-    ("ripemd160", 3),
-    ("identity", 4),
-    ("modexp", 5),
-    ("dispatch", 6),
-    ("bn128-mul", 7),
-    ("bn128-pairing", 8),
-    ("bn128-add", 9),
-    ("sha3-fips256", 1024),
-    ("ecrecover-publickey", 1025),
-];
-
-/// Named unsigned ABI inputs denominated in native rao rather than EVM wei.
-pub const RAO_PARAM_NAMES: &[&str] = &[
-    "amount",
-    "limit_price",
-    "limitPrice",
-    "absoluteAmount",
-    "increaseAmount",
-    "decreaseAmount",
-    "tao",
-    "alpha",
-    "amountRao",
-];
+include!("precompile_catalog.rs");
 
 /// Find a precompile by its exact catalog name.
 pub fn get_precompile(name: &str) -> Result<&'static Precompile> {
@@ -298,46 +119,20 @@ pub fn get_precompile(name: &str) -> Result<&'static Precompile> {
 
 /// The pinned warning for an individually deprecated function, if present.
 pub fn function_deprecation(precompile_name: &str, function_name: &str) -> Option<&'static str> {
-    match (precompile_name, function_name) {
-        ("metagraph", "getRank") => {
-            Some("always returns 0 on chain; derive standing from getIncentive")
-        }
-        ("metagraph", "getTrust") => Some("always returns 0 on chain; trust is no longer computed"),
-        _ => None,
-    }
+    PRECOMPILE_FUNCTION_DEPRECATIONS
+        .iter()
+        .find_map(|&(precompile, function, note)| {
+            (precompile == precompile_name && function == function_name).then_some(note)
+        })
 }
 
 /// The substrate role played by the caller's ss58 mirror, when documented.
 pub fn caller_role(precompile_name: &str, function_name: &str) -> Option<&'static str> {
-    match (precompile_name, function_name) {
-        ("balance-transfer", "transfer") => Some("sending account (must hold the funds)"),
-        ("staking-v2", "addStake" | "addStakeLimit") => Some("coldkey (owns the resulting stake)"),
-        (
-            "staking-v2",
-            "removeStake"
-            | "removeStakeLimit"
-            | "removeStakeFull"
-            | "removeStakeFullLimit"
-            | "moveStake"
-            | "moveStakeLimit"
-            | "transferStake"
-            | "burnAlpha",
-        ) => Some("coldkey (must own the stake)"),
-        ("staking-v2", "addProxy" | "removeProxy") => Some("delegating coldkey"),
-        ("staking-v2", "approve" | "increaseAllowance" | "decreaseAllowance") => {
-            Some("approving coldkey")
-        }
-        ("staking-v2", "transferStakeFrom") => Some("approved spender"),
-        ("neuron", "burnedRegister") => Some("coldkey (pays the burn, owns the neuron)"),
-        (
-            "neuron",
-            "setWeights" | "commitWeights" | "revealWeights" | "serveAxon" | "serveAxonTls"
-            | "servePrometheus",
-        ) => Some("hotkey (must be the registered hotkey)"),
-        ("subnet", "registerNetwork") => Some("subnet owner coldkey (becomes the owner)"),
-        ("proxy", "addProxy" | "removeProxy") => Some("delegating account"),
-        _ => None,
-    }
+    PRECOMPILE_CALLER_ROLES
+        .iter()
+        .find_map(|&(precompile, function, role)| {
+            (precompile == precompile_name && function == function_name).then_some(role)
+        })
 }
 
 /// Parse a CLI-shaped JSON value into one typed ABI argument.
@@ -1255,6 +1050,113 @@ fn scan_value(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn production_catalog_and_all_hints_match_authenticated_python_declarations() {
+        let tables: Value = serde_json::from_str(include_str!(
+            "../../../vendor/upstream/extracted/named_tables.json"
+        ))
+        .unwrap();
+        let table = &tables["tables"]["sdk/python/bittensor/evm/precompiles.py"];
+        assert_eq!(
+            table["provenance"]["blob"],
+            "ce5b43be2cb6c1477b970858bb9992bff348855e"
+        );
+        let values = &table["values"];
+        let records = values["PRECOMPILES"]["value"]["dict"].as_array().unwrap();
+        assert_eq!(records.len(), PRECOMPILES.len());
+        for (record, native) in records.iter().zip(PRECOMPILES) {
+            assert_eq!(record[0], native.name);
+            assert_eq!(record[1]["constructor"], "Precompile");
+            assert_eq!(
+                record[1]["fields"],
+                json!({
+                    "name": native.name, "index": native.index, "abi_file": native.abi_file,
+                    "description": native.description, "deprecated": native.deprecated
+                })
+            );
+            assert_eq!(
+                native.address(),
+                format!("0x{:040x}", record[1]["fields"]["index"].as_u64().unwrap())
+            );
+        }
+        assert_eq!(
+            json!(STANDARD_PRECOMPILES),
+            values["STANDARD_PRECOMPILES"]["value"]["dict"]
+        );
+        let expected_rao = values["_RAO_PARAM_NAMES"]["value"]["frozenset"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<std::collections::BTreeSet<_>>();
+        let actual_rao = RAO_PARAM_NAMES
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(RAO_PARAM_NAMES.len(), actual_rao.len());
+        assert_eq!(actual_rao, expected_rao);
+        for (name, native) in [
+            ("DEPRECATED_FUNCTIONS", PRECOMPILE_FUNCTION_DEPRECATIONS),
+            ("CALLER_ROLES", PRECOMPILE_CALLER_ROLES),
+        ] {
+            let expected = values[name]["value"]["dict"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|pair| {
+                    pair[1]["dict"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(move |entry| {
+                            (
+                                pair[0].as_str().unwrap(),
+                                entry[0].as_str().unwrap(),
+                                entry[1].as_str().unwrap(),
+                            )
+                        })
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(native, expected.as_slice());
+            for (precompile, function, note) in native {
+                let actual = if name == "CALLER_ROLES" {
+                    caller_role(precompile, function)
+                } else {
+                    function_deprecation(precompile, function)
+                };
+                assert_eq!(actual, Some(*note));
+            }
+        }
+        for precompile in PRECOMPILES {
+            for function in precompile.functions().unwrap() {
+                let source_hint = |name: &str| {
+                    values[name]["value"]["dict"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .find(|pair| pair[0] == precompile.name)
+                        .and_then(|pair| {
+                            pair[1]["dict"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .find(|entry| entry[0] == function.name)
+                                .and_then(|entry| entry[1].as_str())
+                        })
+                };
+                let expected_role = source_hint("CALLER_ROLES");
+                let expected_note = source_hint("DEPRECATED_FUNCTIONS");
+                assert_eq!(caller_role(precompile.name, &function.name), expected_role);
+                assert_eq!(
+                    function_deprecation(precompile.name, &function.name),
+                    expected_note
+                );
+            }
+        }
+        assert_eq!(caller_role("unknown", "unknown"), None);
+        assert_eq!(function_deprecation("unknown", "unknown"), None);
+    }
 
     #[test]
     fn catalog_embeds_every_registered_abi_and_runtime_index() {

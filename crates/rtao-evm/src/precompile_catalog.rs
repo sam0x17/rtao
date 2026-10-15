@@ -1,0 +1,292 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/precompiles.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// BOOTSTRAP ONLY: copied from reviewed native tables and source-data comparison.
+// This has NOT been emitted by the Rust extractor. Hosted cargo xtask extract
+// must replace it and produce named_tables.json/PYTHON_TABLES before acceptance.
+
+/// All 21 native precompiles, in the pinned Python catalog's order.
+pub const PRECOMPILES: &[Precompile] = &[
+    precompile!(
+        "balance-transfer",
+        2048,
+        "balanceTransfer.json",
+        "Transfer TAO from an EVM account to an ss58 account.",
+        false
+    ),
+    precompile!(
+        "staking",
+        2049,
+        "staking.json",
+        "Staking V1 — deprecated; amounts ride msg.value. Use staking-v2.",
+        true
+    ),
+    precompile!(
+        "metagraph",
+        2050,
+        "metagraph.json",
+        "Read-only neuron/subnet state: stake, ranks, trust, axons, keys by (netuid, uid).",
+        false
+    ),
+    precompile!(
+        "subnet",
+        2051,
+        "subnet.json",
+        "Subnet registration and owner hyperparameter get/set pairs.",
+        false
+    ),
+    precompile!(
+        "neuron",
+        2052,
+        "neuron.json",
+        "Neuron lifecycle: burned registration, weights (direct and commit-reveal), serving.",
+        false
+    ),
+    precompile!(
+        "staking-v2",
+        2053,
+        "stakingV2.json",
+        "Staking V2: add/remove/move/transfer stake with explicit rao amounts.",
+        false
+    ),
+    precompile!(
+        "uid-lookup",
+        2054,
+        "uidLookup.json",
+        "Look up the uid(s) associated with an EVM address on a subnet.",
+        false
+    ),
+    precompile!(
+        "alpha",
+        2056,
+        "alpha.json",
+        "Subnet Alpha pools, prices, issuance, emissions, and owner configuration.",
+        false
+    ),
+    precompile!(
+        "crowdloan",
+        2057,
+        "crowdloan.json",
+        "Crowdloan operations from EVM.",
+        false
+    ),
+    precompile!(
+        "leasing",
+        2058,
+        "leasing.json",
+        "Subnet leasing operations from EVM.",
+        false
+    ),
+    precompile!(
+        "proxy",
+        2059,
+        "proxy.json",
+        "Manage proxy delegations and delayed proxy announcements from EVM.",
+        false
+    ),
+    precompile!(
+        "address-mapping",
+        2060,
+        "addressMapping.json",
+        "The chain's own h160 -> ss58-mirror mapping (addressMapping(address) -> bytes32).",
+        false
+    ),
+    precompile!(
+        "voting-power",
+        2061,
+        "votingPower.json",
+        "Validator voting power (stake EMA) per subnet: per-hotkey, totals, tracking state.",
+        false
+    ),
+    precompile!(
+        "balance",
+        2062,
+        "balance.json",
+        "Read free TAO balances and dispatch signed Balances operations.",
+        false
+    ),
+    precompile!(
+        "scheduler",
+        2063,
+        "scheduler.json",
+        "Read stable metadata for scheduled runtime calls.",
+        false
+    ),
+    precompile!(
+        "drand",
+        2064,
+        "drand.json",
+        "Read stored Drand beacon configuration and pulse data.",
+        false
+    ),
+    precompile!(
+        "timestamp",
+        2065,
+        "timestamp.json",
+        "Read the runtime timestamp and its per-block update state.",
+        false
+    ),
+    precompile!(
+        "runtime-configuration",
+        2066,
+        "runtimeConfiguration.json",
+        "Read stable global runtime configuration.",
+        false
+    ),
+    precompile!(
+        "precompile-registry",
+        2067,
+        "registry.json",
+        "Inspect precompile lifecycle and operational availability.",
+        false
+    ),
+    precompile!(
+        "ed25519-verify",
+        1026,
+        "ed25519Verify.json",
+        "Verify an ed25519 signature on-chain (prove ss58 key ownership from EVM).",
+        false
+    ),
+    precompile!(
+        "sr25519-verify",
+        1027,
+        "sr25519Verify.json",
+        "Verify an sr25519 signature on-chain.",
+        false
+    ),
+];
+
+/// Standard Ethereum precompiles present on the pinned Bittensor runtime.
+///
+/// These indices follow the pinned runtime, including its BN128 ordering.
+pub const STANDARD_PRECOMPILES: &[(&str, u16)] = &[
+    ("ecrecover", 1),
+    ("sha256", 2),
+    ("ripemd160", 3),
+    ("identity", 4),
+    ("modexp", 5),
+    ("dispatch", 6),
+    ("bn128-mul", 7),
+    ("bn128-pairing", 8),
+    ("bn128-add", 9),
+    ("sha3-fips256", 1024),
+    ("ecrecover-publickey", 1025),
+];
+
+/// Named unsigned ABI inputs denominated in native rao rather than EVM wei.
+pub const RAO_PARAM_NAMES: &[&str] = &[
+    "amount",
+    "limit_price",
+    "limitPrice",
+    "absoluteAmount",
+    "increaseAmount",
+    "decreaseAmount",
+    "tao",
+    "alpha",
+    "amountRao",
+];
+
+const PRECOMPILE_FUNCTION_DEPRECATIONS: &[(&str, &str, &str)] = &[
+    (
+        "metagraph",
+        "getRank",
+        "always returns 0 on chain; derive standing from getIncentive",
+    ),
+    (
+        "metagraph",
+        "getTrust",
+        "always returns 0 on chain; trust is no longer computed",
+    ),
+];
+
+const PRECOMPILE_CALLER_ROLES: &[(&str, &str, &str)] = &[
+    (
+        "balance-transfer",
+        "transfer",
+        "sending account (must hold the funds)",
+    ),
+    (
+        "staking-v2",
+        "addStake",
+        "coldkey (owns the resulting stake)",
+    ),
+    (
+        "staking-v2",
+        "addStakeLimit",
+        "coldkey (owns the resulting stake)",
+    ),
+    ("staking-v2", "removeStake", "coldkey (must own the stake)"),
+    (
+        "staking-v2",
+        "removeStakeLimit",
+        "coldkey (must own the stake)",
+    ),
+    (
+        "staking-v2",
+        "removeStakeFull",
+        "coldkey (must own the stake)",
+    ),
+    (
+        "staking-v2",
+        "removeStakeFullLimit",
+        "coldkey (must own the stake)",
+    ),
+    ("staking-v2", "moveStake", "coldkey (must own the stake)"),
+    (
+        "staking-v2",
+        "moveStakeLimit",
+        "coldkey (must own the stake)",
+    ),
+    (
+        "staking-v2",
+        "transferStake",
+        "coldkey (must own the stake)",
+    ),
+    ("staking-v2", "burnAlpha", "coldkey (must own the stake)"),
+    ("staking-v2", "addProxy", "delegating coldkey"),
+    ("staking-v2", "removeProxy", "delegating coldkey"),
+    ("staking-v2", "approve", "approving coldkey"),
+    ("staking-v2", "increaseAllowance", "approving coldkey"),
+    ("staking-v2", "decreaseAllowance", "approving coldkey"),
+    ("staking-v2", "transferStakeFrom", "approved spender"),
+    (
+        "neuron",
+        "burnedRegister",
+        "coldkey (pays the burn, owns the neuron)",
+    ),
+    (
+        "neuron",
+        "setWeights",
+        "hotkey (must be the registered hotkey)",
+    ),
+    (
+        "neuron",
+        "commitWeights",
+        "hotkey (must be the registered hotkey)",
+    ),
+    (
+        "neuron",
+        "revealWeights",
+        "hotkey (must be the registered hotkey)",
+    ),
+    (
+        "neuron",
+        "serveAxon",
+        "hotkey (must be the registered hotkey)",
+    ),
+    (
+        "neuron",
+        "serveAxonTls",
+        "hotkey (must be the registered hotkey)",
+    ),
+    (
+        "neuron",
+        "servePrometheus",
+        "hotkey (must be the registered hotkey)",
+    ),
+    (
+        "subnet",
+        "registerNetwork",
+        "subnet owner coldkey (becomes the owner)",
+    ),
+    ("proxy", "addProxy", "delegating account"),
+    ("proxy", "removeProxy", "delegating account"),
+];

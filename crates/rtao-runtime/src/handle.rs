@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/bittensor-core/src/codec/decode.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/contract.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/codec.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Shared, immutable runtime metadata and spec-stamped call bytes.
 
 use std::collections::BTreeMap;
