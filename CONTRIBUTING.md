@@ -92,12 +92,20 @@ with this header (substitute the exact path and full commit):
 ```
 
 Keep existing copyright and attribution notices. Packages containing derived
-files declare `license = "(MIT OR Apache-2.0) AND Apache-2.0"`; other packages
-inherit `MIT OR Apache-2.0`. The parity gate verifies this against source
-headers and `parity/map.toml`.
+files use `license = "(MIT OR Apache-2.0) AND Apache-2.0"` as their base
+expression; other packages inherit `MIT OR Apache-2.0`. Retained third-party
+material adds the obligations below. The parity gate verifies the exact
+expressions against source headers and `parity/map.toml`.
 
 The CPython ISO parser in `rtao-primitives` also retains `LICENSE-PSF`, its
-source notice, and `AND PSF-2.0` in that package's license expression.
+source notice, and `AND PSF-2.0` in that package's license expression. The
+CPython name-suggestion port in `rtao-cli` retains its own `LICENSE-PSF`,
+source notice and `AND PSF-2.0` clause.
+
+The pinned Unicode 15 printable table in `rtao-core-ext` retains
+`LICENSE-UNICODE`, its source notice and `AND Unicode-DFS-2016` in that
+package's license expression. The full Unicode notice is also retained in
+`docs/licenses/Unicode-DFS-2016.txt` and NOTICE.
 
 Vendored assets stay byte for byte, retain their notices and are listed in
 NOTICE. LICENSE-APACHE supplies the upstream license text. Commit Cargo.lock;
