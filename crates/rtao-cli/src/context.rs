@@ -19,6 +19,7 @@ use serde_json::{Map, Value};
 use std::{
     future::Future,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 /// The resolved shield choice and whether it can be downgraded.
@@ -365,6 +366,7 @@ impl AppContext {
                 hooks,
                 period: None,
                 execution: None,
+                ..Default::default()
             },
         )
         .await
@@ -384,7 +386,9 @@ impl AppContext {
                 keys,
                 SubmissionControl {
                     wait_for_finalization: options.wait_for_finalization,
-                    replan_owner_rate_limit: true,
+                    replan_owner_rate_limit: options.replan_owner_rate_limit.unwrap_or(true),
+                    bind_reviewed_call: options.bind_reviewed_call,
+                    deadline: options.deadline,
                     replay: options.replay,
                     hooks: options.hooks,
                     period: options.period,
@@ -393,21 +397,17 @@ impl AppContext {
                 },
             )
             .await?;
-        self.finish_submission(intent, outcome, options.hooks).await
+        self.finish_submission(intent, outcome).await
     }
     async fn finish_submission(
         &self,
         intent: &dyn DynIntent,
         outcome: Option<SubmissionOutcome>,
-        hooks: Option<&dyn SubmissionHooks>,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
         let Some(outcome) = outcome else {
             return Ok(None);
         };
         let result = outcome.into_receipt()?;
-        if let Some(hooks) = hooks {
-            hooks.on_result(&result).await?;
-        }
         if !self
             .output
             .result(&result, &format!("submitted {}", intent.spec().name))
@@ -474,6 +474,7 @@ impl AppContext {
         let plan_options = PlanOptions {
             proxy_for,
             force_proxy_type,
+            deadline: control.deadline,
             ..Default::default()
         };
         // Strict SDK planning validates PoW freshness. Actual direct requests
@@ -592,17 +593,25 @@ impl AppContext {
             ])
             .map_err(|error| CliError::failure(error.to_string()))?;
         self.confirm(&format!("{}?", intent.summary_dyn()))?;
+        if let Some(hooks) = control.hooks {
+            hooks.before_submit_with_plan(&plan).await?;
+        }
         let acquired = match &control.factory {
             Some(binding) => Some(binding.factory.source(self, binding.selection).await?),
             None => None,
         };
         let signing = acquired.as_deref().unwrap_or(keys);
         let opts = ExecuteOptions {
+            expected_call: control.bind_reviewed_call.then(|| plan.call().clone()),
             period: control.period.or(ExecuteOptions::default().period),
             proxy_for,
             force_proxy_type,
             wait_for_finalization: control.wait_for_finalization,
             replan_owner_rate_limit: control.replan_owner_rate_limit,
+            deadline: control.deadline,
+            // Durable callers own any replay decision. No additional pool
+            // attempts are introduced by the CLI execution wrapper.
+            retries: 0,
             shielded: choice.enabled,
             ..Default::default()
         };
@@ -619,9 +628,6 @@ impl AppContext {
                         "selected signing source does not match the reviewed approval member",
                     ));
                 }
-            }
-            if let Some(hooks) = control.hooks {
-                hooks.before_submit().await?;
             }
             if choice.enabled {
                 executor
@@ -647,6 +653,13 @@ impl AppContext {
             .map_err(|e| CliError::failure(e.to_string()))
         }
         .await;
+        // The raw receipt must reach durable storage before releasing an
+        // external signer or performing fallible follow-up work. A failed
+        // journal write still releases the source and retains the receipt.
+        let hook_error = match (&result, control.hooks) {
+            (Ok(receipt), Some(hooks)) => hooks.on_result(receipt).await.err(),
+            _ => None,
+        };
         let release_error = if let (Some(binding), Some(acquired)) = (&control.factory, &acquired) {
             binding
                 .factory
@@ -666,6 +679,7 @@ impl AppContext {
         Ok(Some(SubmissionOutcome {
             receipt: result,
             release_error,
+            hook_error,
         }))
     }
 }
@@ -675,7 +689,9 @@ struct ApprovalFactory<'a> {
     selection: &'a crate::call::SigningSelection,
 }
 struct SubmissionControl<'a> {
+    bind_reviewed_call: bool,
     replan_owner_rate_limit: bool,
+    deadline: Option<Duration>,
     period: Option<u32>,
     execution: Option<&'a dyn SubmissionExecution>,
     wait_for_finalization: bool,
@@ -686,29 +702,75 @@ struct SubmissionControl<'a> {
 struct SubmissionOutcome {
     receipt: rtao::tx::ExtrinsicResult,
     release_error: Option<CliError>,
+    hook_error: Option<CliError>,
 }
 impl SubmissionOutcome {
     fn into_receipt(self) -> Result<rtao::tx::ExtrinsicResult, CliError> {
-        if let Some(error) = self.release_error {
-            return Err(error);
+        if let Some(error) = self.hook_error {
+            return Err(known_receipt_error(error, &self.receipt));
+        }
+        if self.receipt.success
+            && let Some(error) = self.release_error
+        {
+            return Err(known_receipt_error(error, &self.receipt));
         }
         Ok(self.receipt)
     }
+}
+
+fn known_receipt_error(mut error: CliError, receipt: &rtao::tx::ExtrinsicResult) -> CliError {
+    let recovery = format!(
+        "the transaction was already submitted{}; inspect that result before retrying",
+        receipt
+            .extrinsic_id
+            .as_ref()
+            .map(|id| format!(" as {id}"))
+            .unwrap_or_default(),
+    );
+    error.help = Some(match error.help.take() {
+        Some(help) => format!("{help}; {recovery}"),
+        None => recovery,
+    });
+    error
 }
 
 /// Recovery callbacks owned by commands with sequential or durable workflows.
 pub trait SubmissionHooks: Send + Sync {
     /// Persist intent/recovery state after confirmation, before signing.
     fn before_submit(&self) -> rtao::signer::BoxFuture<'_, Result<(), CliError>>;
-    /// Persist the actual chain outcome before rendering can return exit 1.
+    /// Persist the reviewed outer call after confirmation, before acquiring an
+    /// approval source or private signer. The default retains legacy hooks.
+    fn before_submit_with_plan<'a>(
+        &'a self,
+        _plan: &'a rtao::tx::Plan,
+    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>> {
+        self.before_submit()
+    }
+    /// Persist each known raw outcome exactly once, before source release,
+    /// follow-up lookup or rendering can fail. It has no follow-up annotation.
     fn on_result<'a>(
         &'a self,
         result: &'a rtao::tx::ExtrinsicResult,
     ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>>;
+    /// Update durable recovery details after saved-multisig enrichment. This
+    /// never replaces the earlier raw-receipt callback and must be idempotent.
+    fn after_followup<'a>(
+        &'a self,
+        _result: &'a rtao::tx::ExtrinsicResult,
+    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>> {
+        Box::pin(async { Ok(()) })
+    }
 }
 /// Shared command submission settings, including durable recovery callbacks.
 #[derive(Clone, Copy, Default)]
 pub struct SubmissionOptions<'a> {
+    /// Refuse rebuilt outer bytes or runtime stamps that differ from the
+    /// reviewed plan. Durable workflows opt in; proof-refresh routes do not.
+    pub bind_reviewed_call: bool,
+    /// Override the direct owner retry; saved approvals always disable it.
+    pub replan_owner_rate_limit: Option<bool>,
+    /// Bound each preview and execution, including inclusion waiting.
+    pub deadline: Option<Duration>,
     /// Optional explicit D030 mortal era; absent retains the existing defaults.
     pub period: Option<u32>,
     /// Optional public preparation and semantic execution strategy.
@@ -956,7 +1018,10 @@ mod tests {
 /// families when they ship. A missing backend always refuses instead of using
 /// a local wallet key under a different signing identity.
 pub trait ExternalSignerFactory: Send + Sync {
-    /// Resolve an explicitly selected external backend without changing routes.
+    /// Prepare public identity and a lazy source for the selected backend.
+    /// This may resolve an account but must not unlock or acquire a private
+    /// signer, sign, or submit: `signer_for` runs only after the durable plan
+    /// hook. Shipped M7 backends must preserve this contract.
     fn keys<'a>(
         &'a self,
         globals: &'a Globals,
@@ -1350,6 +1415,7 @@ impl AppContext {
                 wait_for_finalization,
                 replay,
                 hooks: None,
+                ..Default::default()
             },
             external,
             history,
@@ -1424,7 +1490,9 @@ impl AppContext {
                     period: options.period,
                     execution: options.execution,
                     wait_for_finalization: options.wait_for_finalization,
-                    replan_owner_rate_limit: true,
+                    replan_owner_rate_limit: options.replan_owner_rate_limit.unwrap_or(true),
+                    bind_reviewed_call: options.bind_reviewed_call,
+                    deadline: options.deadline,
                     replay: options.replay,
                     hooks: options.hooks,
                     factory: None,
@@ -1449,30 +1517,14 @@ impl AppContext {
             Ok(())
         };
         // Release on refusal and preview too, preserving any submission error.
-        let outcome = result?;
-        // A classified chain failure remains primary if closing also failed.
-        // Render it after cleanup, as with an ordinary external submission.
-        if outcome
-            .as_ref()
-            .is_some_and(|outcome| !outcome.receipt.success)
-        {
-            return self.finish_submission(intent, outcome, options.hooks).await;
-        }
-        if let Err(mut error) = release {
-            if let Some(outcome) = &outcome {
-                error.help = Some(format!(
-                    "the transaction was already submitted{}; inspect that result before retrying",
-                    outcome
-                        .receipt
-                        .extrinsic_id
-                        .as_ref()
-                        .map(|id| format!(" as {id}"))
-                        .unwrap_or_default(),
-                ));
+        let mut outcome = result?;
+        if let Err(error) = release {
+            match &mut outcome {
+                Some(outcome) => outcome.release_error = Some(error),
+                None => return Err(error),
             }
-            return Err(error);
         }
-        self.finish_submission(intent, outcome, options.hooks).await
+        self.finish_submission(intent, outcome).await
     }
 }
 
@@ -1660,6 +1712,7 @@ impl AppContext {
                 wait_for_finalization,
                 replay,
                 hooks: None,
+                ..Default::default()
             },
             factory,
             cache,
@@ -1756,6 +1809,8 @@ impl AppContext {
                             // A failed inner call can consume the pending operation.
                             // Retrying this approval could open a new one (D-041).
                             replan_owner_rate_limit: false,
+                            bind_reviewed_call: options.bind_reviewed_call,
+                            deadline: options.deadline,
                             replay: options.replay,
                             hooks: options.hooks,
                             factory: Some(ApprovalFactory { factory, selection }),
@@ -1769,6 +1824,9 @@ impl AppContext {
                 // Retain every known on-chain result before any fallible local
                 // post-processing, including an external signer's close failure.
                 last = Some(receipt.clone());
+                if let Some(error) = outcome.hook_error {
+                    return Err(known_receipt_error(error, &receipt));
+                }
                 let actual = adapter
                     .reviewed_inner_call()
                     .map_err(|error| CliError::failure(error.to_string()))?
@@ -1806,12 +1864,15 @@ impl AppContext {
                 }
                 let executed = crate::call::multisig_executed(&receipt);
                 let succeeded = receipt.success;
+                // The enriched form is an optional update after the raw
+                // result has already been persisted, even if closing failed.
+                last = Some(receipt.clone());
+                if let Some(hooks) = options.hooks {
+                    hooks.after_followup(&receipt).await?;
+                }
                 if succeeded && let Some(error) = outcome.release_error {
                     last = Some(receipt);
                     return Err(error);
-                }
-                if let Some(hooks) = options.hooks {
-                    hooks.on_result(&receipt).await?;
                 }
                 last = Some(receipt);
                 if !succeeded {
@@ -1848,7 +1909,14 @@ impl AppContext {
                 if let Some(receipt) = &last {
                     let hash = inner
                         .as_ref()
-                        .map(|call| format!("0x{}", hex::encode(call.hash())));
+                        .map(|call| format!("0x{}", hex::encode(call.hash())))
+                        .or_else(|| {
+                            receipt
+                                .data
+                                .get("multisig_call_hash")
+                                .and_then(Value::as_str)
+                                .map(str::to_owned)
+                        });
                     let state = if crate::call::multisig_executed(receipt) {
                         "the call already executed; do not submit it again"
                     } else if receipt.success {

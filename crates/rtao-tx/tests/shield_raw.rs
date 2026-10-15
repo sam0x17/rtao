@@ -241,6 +241,134 @@ async fn typed_and_dynamic_raw_roles_sign_the_exact_call() {
 }
 
 #[tokio::test]
+async fn raw_review_guard_checks_bytes_and_both_runtime_stamps_before_unlock() {
+    for dynamic in [false, true] {
+        for drift in ["none", "bytes", "spec", "transaction"] {
+            let (ex, fake, keys) = fixture().await;
+            let call = remark(&ex).await;
+            let runtime = ex.client().refresh_runtime().await.unwrap();
+            let expected = match drift {
+                "bytes" => rtao_runtime::calls::system::remark(vec![99])
+                    .compose(&runtime)
+                    .unwrap(),
+                "spec" | "transaction" => {
+                    let changed = rtao_runtime::RuntimeHandle::parse(
+                        &runtime.core().metadata_bytes,
+                        runtime.spec_version() + u32::from(drift == "spec"),
+                        runtime.transaction_version() + u32::from(drift == "transaction"),
+                        42,
+                    )
+                    .unwrap();
+                    let expected = rtao_runtime::calls::system::remark(vec![42])
+                        .compose(&changed)
+                        .unwrap();
+                    assert_eq!(expected.as_bytes(), call.as_bytes());
+                    assert_eq!(expected.hash(), call.hash());
+                    assert_ne!(expected.stamp(), call.stamp());
+                    expected
+                }
+                _ => call.clone(),
+            };
+            let opts = ExecuteOptions {
+                expected_call: Some(expected),
+                ..pool()
+            };
+            let result = if dynamic {
+                ex.submit_call_dyn(call.clone(), &keys, SignerRole::Coldkey, &opts)
+                    .await
+            } else {
+                ex.submit_call::<Coldkey, _>(call.clone(), &keys, &opts)
+                    .await
+            };
+            if drift == "none" {
+                assert!(result.unwrap().success);
+                assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+                assert_eq!(keys.signer.requests.lock().unwrap()[0].1, call.as_bytes());
+                assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+            } else {
+                assert!(
+                    result
+                        .unwrap_err()
+                        .to_string()
+                        .contains("differs from the reviewed call")
+                );
+                assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+                assert!(keys.signer.requests.lock().unwrap().is_empty());
+                assert!(fake.state().lock().unwrap().submissions.is_empty());
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn matching_raw_review_does_not_bypass_the_raw_policy() {
+    let (ex, fake, keys) = fixture().await;
+    let call = remark(&ex).await;
+    let ex = ex.with_policy(Policy::default());
+    let error = ex
+        .submit_call_dyn(
+            call.clone(),
+            &keys,
+            SignerRole::Coldkey,
+            &ExecuteOptions {
+                expected_call: Some(call),
+                ..pool()
+            },
+        )
+        .await
+        .unwrap_err();
+    assert!(matches!(error, TxError::Policy(_)));
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+}
+
+#[tokio::test]
+async fn shielded_review_guard_checks_the_rebuilt_call_before_private_signing() {
+    for changed in [false, true] {
+        let (ex, fake, keys) = fixture().await;
+        let intent = Required::default();
+        let plan = ex.plan(&intent, &keys, &Default::default()).await.unwrap();
+        let expected = if changed {
+            remark(&ex).await
+        } else {
+            plan.call().clone()
+        };
+        let result = ex
+            .submit_shielded_dyn(
+                &intent,
+                &keys,
+                &ShieldOptions {
+                    execute: ExecuteOptions {
+                        expected_call: Some(expected),
+                        ..pool()
+                    },
+                    ..Default::default()
+                },
+            )
+            .await;
+        if changed {
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("differs from the reviewed call")
+            );
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+            assert!(keys.signer.requests.lock().unwrap().is_empty());
+            assert!(fake.state().lock().unwrap().submissions.is_empty());
+        } else {
+            assert!(result.unwrap().success);
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+            let requests = keys.signer.requests.lock().unwrap();
+            assert_eq!(requests.len(), 2);
+            assert_eq!(requests[0].0, SignPurpose::ShieldInner);
+            assert_eq!(requests[0].1, plan.call().as_bytes());
+            assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        }
+    }
+}
+
+#[tokio::test]
 async fn raw_opt_in_is_checked_before_unlock_or_fee_probe() {
     let (ex, fake, keys) = fixture().await;
     let call = remark(&ex).await;
