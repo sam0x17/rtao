@@ -16,6 +16,17 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+The source batch is committed in `4c9473c`. Generation run
+[38749149983](https://github.com/sam0x17/rtao/actions/runs/38749149983) succeeds;
+its eighteen exact regular members and both archive digests are verified, along
+with all 23 dependency-input hashes. Role inventories and host selections are
+unchanged. All thirteen generated Rust files and environment data are identical.
+Only reviewed file/divergence matrix rows and measurement provenance change;
+no runtime/oracle success is added. The private proof is
+`4c-generation-adoption.json`. Reports are adopted for the next normal CI run;
+combined compilation, regression execution and final security disposition remain
+pending. No local build or extraction directory was created.
+
 Run [38746145922](https://github.com/sam0x17/rtao/actions/runs/38746145922)
 at `5125fb9` finishes with all five supporting jobs passing, including supply.
 Main compilation and strict Clippy also pass. Parity then stops before tests
