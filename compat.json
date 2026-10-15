@@ -10,8 +10,8 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "machine": "AMD EPYC 9V74 80-Core Processor",
-        "measured_unix_seconds": 1792066404,
+        "machine": "Intel(R) Xeon(R) 6973P-C",
+        "measured_unix_seconds": 1792069634,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -261,7 +261,7 @@
             "features": [
               "validator"
             ],
-            "normal_build_packages": 361,
+            "normal_build_packages": 362,
             "package": "rtao",
             "package_identities": [
               "Inflector v0.11.4",
@@ -504,6 +504,7 @@
               "rtao-wallet v0.1.0 ($WORKSPACE/crates/rtao-wallet)",
               "rustc-hex v2.1.0",
               "rustc_version v0.4.1",
+              "rustix v1.1.5",
               "rustls v0.23.46",
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
@@ -635,7 +636,7 @@
             "features": [
               "miner"
             ],
-            "normal_build_packages": 365,
+            "normal_build_packages": 366,
             "package": "rtao",
             "package_identities": [
               "Inflector v0.11.4",
@@ -881,6 +882,7 @@
               "rtao-wallet v0.1.0 ($WORKSPACE/crates/rtao-wallet)",
               "rustc-hex v2.1.0",
               "rustc_version v0.4.1",
+              "rustix v1.1.5",
               "rustls v0.23.46",
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
@@ -1013,7 +1015,7 @@
             "features": [
               "owner"
             ],
-            "normal_build_packages": 416,
+            "normal_build_packages": 417,
             "package": "rtao",
             "package_identities": [
               "Inflector v0.11.4",
@@ -1296,6 +1298,7 @@
               "rtao-wallet v0.1.0 ($WORKSPACE/crates/rtao-wallet)",
               "rustc-hex v2.1.0",
               "rustc_version v0.4.1",
+              "rustix v1.1.5",
               "rustls v0.23.46",
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
@@ -1440,16 +1443,16 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "aa8a9ce80dd9988900591c67b04f7d5940e97dd1df337e8fb4a70a11d7fb582b",
+            "Cargo.lock": "e05aa93c12c83fe8ebfe34faab5007e15c85a457c6fb434ae6df8a00775b11cf",
             "Cargo.toml": "2ec5ed6f32e56c44fecde7540a32ee0a61a83c2fe344c269dc92fbeeb1e80e7a",
             "crates/rtao-btauth/Cargo.toml": "00a6700118a48836e1e313bf83863c7b9c7ea2519df98d83ef62dcea3f8c8d9b",
             "crates/rtao-catalog/Cargo.toml": "60ba030686f56ec52efc3200004081de72e9a1a3a98133c994e0346fec0f99dc",
-            "crates/rtao-cli/Cargo.toml": "588f0b6d5a753a31aeb06f2cb689cc81ea132b29fddeae1a29c14289f1d201bf",
+            "crates/rtao-cli/Cargo.toml": "590c7a7149c07a6204697b42870475ae32dd8aede0ba86bd6f5bd638a9833a70",
             "crates/rtao-client/Cargo.toml": "c281c8e68ad4cc67621f759def76b07ceaec2a419b08355b33fb6dde2f079b8f",
             "crates/rtao-core-ext/Cargo.toml": "3373f7dfb7e74a4a7c9c8948395091fbc811074fc1039f00a18e84bae3641b4e",
             "crates/rtao-core/Cargo.toml": "394fb9f9dfa323aff06f4e369575edd96126c397b30822943f47b641541fe383",
-            "crates/rtao-evm/Cargo.toml": "41cf7ddda89650011013b4c312a7d7cfedf3a6bfbba29a3213b8b6dfa7efb9d5",
-            "crates/rtao-intents/Cargo.toml": "4ca1d3463c1fafcc6219447d686d7356b6d767f5ac5cd84151f268d1185ee3c6",
+            "crates/rtao-evm/Cargo.toml": "d4902401a508356ebd572fa8ad38547a053629b5441eb3b994a04a510d1e2794",
+            "crates/rtao-intents/Cargo.toml": "dac345313e4152afb01e722ca575ceceaa7ce42fdc583f3f1f326ead603f187c",
             "crates/rtao-metagraph/Cargo.toml": "3058dac929ff13cff7984935854130aaf3c855529f0bef1b6c6846002903b2c5",
             "crates/rtao-neuron/Cargo.toml": "b6e8ab6c89a5a7d11e62b24a8587ef765e24e42167686e917cd7a96ab7a8a304",
             "crates/rtao-primitives/Cargo.toml": "83d3d3e02f545fb7bc21aff32426a6c67532604d0d0979016ba3eabb1a029d52",
@@ -1459,18 +1462,18 @@
             "crates/rtao-signer/Cargo.toml": "3bb5fdc41cf24399761037891a07eafad5e9877e70a00db5f7d6d66e79e5661f",
             "crates/rtao-testkit/Cargo.toml": "d1a3fe3b2331fbf90ab1e1d3b737a26ff881ebdc314f7176253f94e643519a5c",
             "crates/rtao-tx/Cargo.toml": "ef564c791c4fd1bc56741bb3a75f34989e7adc7a0e503457fea943991ede1142",
-            "crates/rtao-wallet/Cargo.toml": "69baa446ac0450dd82360e54923783da0b74bd22fe6330952f084f5d14e73153",
+            "crates/rtao-wallet/Cargo.toml": "6fbfc1da361ecf3a21f839ee7751efc3a08832dfb8c8f529553497be0f36be8f",
             "crates/rtao/Cargo.toml": "972334fd5146ab36208a744a6db42e1d147e141e641502fe27a806055f70280a",
             "upstream.toml": "13e561191675f9b3fe5eb8b5defb8c4bf2b84bbcbd5b9130d3470b236e73f261",
             "xtask/Cargo.toml": "35432d81fa57601a519afb304f541b4c6d1ef9e9134ef25d582dfdad1160a0e2"
           },
-          "dependency_inputs_sha256": "036b145a341a4d8568d648256e8b322581159e364efd1a5df580109fe7f68d01",
+          "dependency_inputs_sha256": "f3e79dcaa6145b34312a4004638895521b912cd4bc74e8be2c873273d482bda9",
           "dirty": false,
-          "head_commit": "a0359077d91fb9ed280d236911ce37697e90010d"
+          "head_commit": "e4322e6ca2ecdae25ec68a294c56b38550b4c063"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "ba8d1bf5b08c4f81e4b84d799939c337dcba685419c5c892d365c162ce9b5025"
+      "sha256": "0e31c70a50d14b5c0eb7fdbc87994586513e4533a5c3ed753eb1fd4d78176726"
     }
   ],
   "core": {
