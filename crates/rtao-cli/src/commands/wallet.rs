@@ -109,7 +109,7 @@ fn recovery(mut command: Command, cold: bool) -> Command {
     key_options(command, false, cold)
 }
 
-/// Build the M4 wallet commands, including the rtao password-export helper.
+/// Build wallet commands, including the rtao password-export helper.
 pub fn command() -> Command {
     let mut create = key_options(
         Command::new("create").about("Create a coldkey and hotkey."),
@@ -221,6 +221,26 @@ pub fn command() -> Command {
                     .after_help("The encoded value is reversible and contains the password. Store it as a secret. The wallet path must produce a valid shell variable name."),
                 Tier::Read,
             ),
+            Command::new("keychain")
+                .about("Manage the wallet coldkey password in macOS Keychain.")
+                .subcommand_required(true)
+                .arg_required_else_help(true)
+                .subcommands([
+                    with_globals(
+                        Command::new("save")
+                            .about("Save a password entered through the native macOS dialog.")
+                            .after_help("Anyone with access to your logged-in macOS session can use the stored password."),
+                        Tier::Read,
+                    ),
+                    with_globals(
+                        Command::new("show").about("Check whether a password is stored."),
+                        Tier::Read,
+                    ),
+                    with_globals(
+                        Command::new("delete").about("Remove the stored password."),
+                        Tier::Read,
+                    ),
+                ]),
         ])
 }
 
@@ -440,6 +460,16 @@ async fn run_local(
     }
     if name == "save-password-env" {
         return save_password_env(ctx).await;
+    }
+    if name == "keychain" {
+        return run_keychain_with(
+            ctx,
+            matches,
+            history,
+            crate::process::SystemProcessRunner::default(),
+            cfg!(target_os = "macos"),
+        )
+        .await;
     }
     let hot = matches!(name, "new-hotkey" | "regen-hotkey" | "regen-hotkeypub");
     let both = name == "create";
@@ -676,6 +706,97 @@ async fn run_local(
         ctx.output.message("once stored, wipe the mnemonic from this terminal: run `clear && printf '\\e[3J'` (or clear terminal scrollback)").map_err(failure)?;
     }
     Ok(())
+}
+
+/// Run a Keychain leaf with an injectable subprocess runner and platform.
+/// Only public entry metadata reaches output; password pipes stay zeroizing.
+pub async fn run_keychain_with<R: crate::process::ProcessRunner>(
+    ctx: &mut AppContext,
+    group: &ArgMatches,
+    history: &mut PromptHistory,
+    runner: R,
+    macos: bool,
+) -> Result<(), CliError> {
+    use crate::macos_password::{KEYCHAIN_SERVICE, MacosPasswords};
+
+    let (name, _) = group
+        .subcommand()
+        .ok_or_else(|| input("missing wallet keychain command"))?;
+    let help = match name {
+        "save" => "Wallet whose coldkey password to save.",
+        "show" => "Wallet whose keychain entry to check.",
+        "delete" => "Wallet whose keychain entry to remove.",
+        _ => return Err(input("unknown wallet keychain command")),
+    };
+    ctx.confirm_wallet(
+        &WalletConfirmation {
+            help: help.into(),
+            require_coldkey: false,
+            allow_multisig: false,
+            ..Default::default()
+        },
+        history,
+    )?;
+    if !macos {
+        return Err(failure("macOS Keychain is only available on darwin"));
+    }
+    let mut passwords = MacosPasswords::with_platform(runner, macos);
+    let wallet = &ctx.globals.wallet_name;
+    let (title, fields) = match name {
+        "save" => {
+            let password = passwords
+                .prompt_password(
+                    &format!("Save {wallet} coldkey password"),
+                    &format!(
+                        "Enter the password for wallet {}. It will be stored in your macOS Keychain.",
+                        rtao::primitives::pyfmt::string_repr(wallet),
+                    ),
+                )
+                .await
+                .map_err(failure)?;
+            passwords
+                .keychain_save(wallet, &password)
+                .await
+                .map_err(failure)?;
+            (
+                "saved keychain password",
+                vec![
+                    ("wallet".into(), json!(wallet)),
+                    ("service".into(), json!(KEYCHAIN_SERVICE)),
+                    ("account".into(), json!(wallet)),
+                ],
+            )
+        }
+        "show" => {
+            let stored = passwords
+                .keychain_load(wallet)
+                .await
+                .map_err(failure)?
+                .is_some();
+            (
+                "keychain",
+                vec![
+                    ("wallet".into(), json!(wallet)),
+                    ("service".into(), json!(KEYCHAIN_SERVICE)),
+                    ("stored".into(), json!(stored)),
+                ],
+            )
+        }
+        "delete" => {
+            let existed = passwords.keychain_delete(wallet).await.map_err(failure)?;
+            (
+                "deleted keychain password",
+                vec![
+                    ("wallet".into(), json!(wallet)),
+                    ("existed".into(), json!(existed)),
+                ],
+            )
+        }
+        _ => unreachable!("validated Keychain leaf"),
+    };
+    ctx.output
+        .detail(Some(title), &fields, None)
+        .map_err(failure)
 }
 
 async fn save_password_env(ctx: &AppContext) -> Result<(), CliError> {

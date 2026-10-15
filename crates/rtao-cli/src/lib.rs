@@ -31,6 +31,8 @@ pub mod prompt;
 pub mod root_helpers;
 /// Argv-secret warnings and clipboard handling.
 pub mod secrets;
+/// Lazy external signing backends and public account discovery.
+pub mod signer_backends;
 
 /// Raw metadata-checked calls and multisig approval workflows.
 pub mod call;

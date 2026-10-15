@@ -721,6 +721,15 @@ fn decimal_u256(digits: &str) -> Result<[u8; 32], CliError> {
 
 /// Sources for per-round local/external signing, acquired only after confirmation.
 pub trait RawSignerFactory: Send + Sync {
+    /// Resolve public identity for review without acquiring a signing session.
+    /// Ordinary previews bypass this hook; pinned accounts need no backend I/O.
+    fn public_selection<'a>(
+        &'a self,
+        _ctx: &'a AppContext,
+        selection: &'a SigningSelection,
+    ) -> BoxFuture<'a, Result<SigningSelection, CliError>> {
+        Box::pin(async move { Ok(selection.clone()) })
+    }
     /// Resolve a public source for this selected member, without unlocking it.
     fn source<'a>(
         &'a self,
@@ -770,7 +779,7 @@ impl RawSignerFactory for WalletSignerFactory {
     }
 }
 
-/// Run the actual raw command with local wallet signing and shared cache paths.
+/// Run the actual raw command with the selected lazy backend and shared cache.
 pub async fn run(ctx: &mut AppContext, matches: &ArgMatches, replay: &str) -> Result<(), CliError> {
     let request = RawCallRequest::from_matches(ctx, matches)?;
     let cache = ctx
@@ -779,7 +788,8 @@ pub async fn run(ctx: &mut AppContext, matches: &ArgMatches, replay: &str) -> Re
         .map(|store| FsRawCallCache::new(store.paths()))
         .map(Ok)
         .unwrap_or_else(FsRawCallCache::from_process)?;
-    run_with(ctx, &request, replay, &WalletSignerFactory, &cache).await
+    let factory = crate::signer_backends::NativeSignerFactory::new(ctx);
+    run_with(ctx, &request, replay, &factory, &cache).await
 }
 
 /// Run with injectable signing backends and cache persistence.
@@ -890,6 +900,14 @@ pub async fn execute_rounds_with(
     if request.rounds.is_empty() {
         return Err(CliError::input("no selected signing member"));
     }
+    let mut reviewed = request.clone();
+    reviewed.rounds.clear();
+    for selection in &request.rounds {
+        reviewed
+            .rounds
+            .push(factory.public_selection(ctx, selection).await?);
+    }
+    let request = &reviewed;
     show_raw_review(ctx, request, shield.enabled)?;
     ctx.confirm(&confirmation(request, shield.enabled))?;
     let mut last: Option<ExtrinsicResult> = None;
@@ -1272,6 +1290,18 @@ fn show_raw_review(
     }
     call.push(("summary".into(), json!(raw_label(request, shield))));
     let mut signer = vec![("signer".into(), json!(ctx.globals.wallet_name))];
+    for (index, selection) in request.rounds.iter().enumerate() {
+        if let Some(account) = selection.address {
+            signer.push((
+                if request.rounds.len() == 1 {
+                    "account".into()
+                } else {
+                    format!("approval {} account", index + 1)
+                },
+                json!(account),
+            ));
+        }
+    }
     if let Some(group) = &request.multisig {
         signer.push((
             "multisig".into(),
@@ -1488,7 +1518,18 @@ fn signing_rounds(
         .unwrap_or("wallet");
     let explicit = &ctx.globals.signatories;
     let Some(group) = group else {
-        let address = if backend != "wallet" {
+        let address = if backend.trim().eq_ignore_ascii_case("extension")
+            && ctx
+                .globals
+                .signer_address
+                .as_deref()
+                .is_none_or(str::is_empty)
+            && explicit.is_empty()
+        {
+            // A saved extension account is a preference for the public picker,
+            // not an explicit member pin that bypasses source filtering.
+            None
+        } else if backend != "wallet" {
             signer_address_for_backend(ctx, backend)?
         } else {
             ctx.globals
@@ -1766,7 +1807,19 @@ fn signer_address_for_backend(
         passwords: ctx.passwords.clone(),
         terminal: ctx.terminal.clone(),
     };
-    selected.external_signer_address()
+    let resolved = selected.external_signer_address()?;
+    if selected
+        .globals
+        .signer_address
+        .as_deref()
+        .is_some_and(|address| !address.is_empty())
+        && resolved.is_none()
+    {
+        return Err(CliError::input(
+            "--signer-address is not a valid SS58 address or known account reference",
+        ));
+    }
+    Ok(resolved)
 }
 
 fn prompt_member_backend(

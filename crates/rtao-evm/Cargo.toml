@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor EVM wallets and helpers."
 
@@ -14,4 +14,35 @@ workspace = true
 [dependencies]
 rtao-client = { workspace = true }
 rtao-wallet = { workspace = true }
+rtao-core = { workspace = true }
+rtao-primitives = { workspace = true }
+alloy-primitives.workspace = true
+alloy-json-abi.workspace = true
+alloy-dyn-abi.workspace = true
+alloy-sol-types.workspace = true
+alloy-signer-local.workspace = true
+alloy-signer.workspace = true
+alloy-consensus.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+zeroize.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true
+url.workspace = true
+tokio.workspace = true
+sha2.workspace = true
+getrandom.workspace = true
+subtle.workspace = true
+aes.workspace = true
+ctr.workspace = true
+pbkdf2.workspace = true
+scrypt.workspace = true
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+rcgen.workspace = true
+tokio-rustls.workspace = true
 

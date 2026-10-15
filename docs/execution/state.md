@@ -16,6 +16,14 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Normal run [38723619536](https://github.com/sam0x17/rtao/actions/runs/38723619536)
+at `e82937c` passes all five supporting jobs, main compilation and strict
+Clippy. Parity now passes the corrected catalog, pending-read and e2e checks,
+but detects the facade's inherited license missing the Apache obligation from
+its derived blocking adapters. Its manifest now uses the required combined
+expression. Nextest/doctests were not reached. The changed manifest requires
+a fresh hosted dependency report before ordinary validation.
+
 Normal run [38722567841](https://github.com/sam0x17/rtao/actions/runs/38722567841)
 at `f129eb1` passes features, MSRV, no-host, supply and semver. Main compilation
 then strict Clippy finds `expect_err` in the new duplicate-read regression.
@@ -82,10 +90,25 @@ regression fixtures cover stalled-chain recovery, RPC/malformed hashes,
 finalized absence and reorg recovery. Two independent source reviews find no
 remaining concrete defect in that repair; execution remains pending.
 
-M7 has pure UOS framing source and fourteen hand-derived fixtures, independently
-reviewed, without new dependencies. Vault signing/server/QR, Ledger, extension,
-EVM and timelock UX remain later work; no fresh Python, device or interoperability
-execution is claimed.
+M7 source now integrates Ledger, Vault/UOS/QR, the extension bridge and native
+CLI factory, EVM keys/ABIs/RPC/transactions, timelocks, the Subxt legacy adapter
+and opt-in GPU PoW. All 34 M7 CLI routes are wired. Native balance boundaries
+remain checked u64 rao; wider EVM ABI counters retain their own widths. Shared
+EVM address helpers are in primitives and reused by intents and EVM. Public
+external discovery remains separate from signing acquisition and confirmation.
+Authored fixtures and independent source reviews cover these paths; none of
+the new M7 fixture execution is established yet. The source review in
+`docs/security/m7.md` records repaired plaintext ownership and Vault QR offload,
+with scoped coverage and explicit upstream/browser-copy erasure limits.
+
+M7 registers D-033's nominal block-time reveal, D-042's bounded timelock inputs,
+and D-051's EVM proof consent/effective-account binding. Thirty-six resolved
+signer/timelock export decisions now have exact public aliases. The new QR,
+EVM and optional Subxt dependency edges were resolved without builds; hosted
+generation, supply/MSRV checks and combined execution remain pending. Ledger
+core-patch/replay work, final transport checklist fixtures and later M8/M9
+acceptance still remain. Device/HID, emulator, browser/camera, native Keychain,
+fresh Python oracle and live-chain interoperability execution are unverified.
 
 Normal run [38714093697](https://github.com/sam0x17/rtao/actions/runs/38714093697)
 at `745f3f3` passes features, semver, no-host, MSRV and supply. Main check passes

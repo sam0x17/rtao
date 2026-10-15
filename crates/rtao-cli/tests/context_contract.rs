@@ -485,6 +485,7 @@ async fn late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock
             ("work_hex".into(), json!(hex::encode(work))),
             ("mining_workers".into(), json!(1)),
             ("mining_timeout".into(), json!(10)),
+            ("mining_backend".into(), json!("cpu")),
         ]),
         period: None,
     };

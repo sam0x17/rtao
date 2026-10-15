@@ -24,6 +24,13 @@ Docker services, Python oracles, soaks, fuzz campaigns or release rehearsals
 on the laptop or Mac Studio. Use recorded fixtures and fake transports for
 client behavior tests. Hardware and infrastructure acceptance are deferred.
 
+Ledger development uses injected backends and existing proof fixtures in the
+ordinary hosted checks. No emulator workflow is currently active. A future
+targeted emulator dispatch must use free `ubuntu-latest`, pinned app/Speculos
+inputs, an explicit timeout and disposable runner storage. It must not trigger
+a local app build, device rehearsal or node. Unrun emulator/HID coverage stays
+explicit in the signer guide and execution state.
+
 If a focused local Rust check is useful, use one existing target directory
 and at most two build jobs, disable incremental output and debug information,
 and avoid concurrent Cargo commands. A cold or expanding build belongs in CI.

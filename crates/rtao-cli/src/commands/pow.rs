@@ -1,6 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional source at the same commit/license: sdk/python/bittensor/pow_registration.py.
-//! Public and late CPU work refresh preserve the registration target and signer.
+//! Public and late work refresh preserve the registration target and signer.
 
 use crate::{context::SubmissionExecution, error::CliError, output::Output};
 use rtao::{
@@ -226,11 +226,7 @@ async fn mine(
         Some(address) => address.account(),
         None => public.hotkey_address().map_err(failure)?,
     };
-    if !matches!(pow.mining_backend.as_str(), "auto" | "cpu") {
-        return Err(CliError::input(
-            "this CLI build supports CPU PoW refresh; use --mining-backend cpu or auto",
-        ));
-    }
+    validate_backend(&pow.mining_backend, pow.mining_device_ids.as_deref())?;
     let workers = u8::try_from(pow.mining_workers)
         .map_err(|_| CliError::input("PoW workers must be 1..32"))?;
     let seconds = pow
@@ -242,20 +238,94 @@ async fn mine(
         Duration::try_from_secs_f64(seconds).map_err(|e| CliError::input(e.to_string()))?;
     let solver = PowSolver::new(PowConfig { workers, timeout })
         .map_err(|e| CliError::input(e.to_string()))?;
-    let proof = solver
-        .solve(
-            client,
-            pow.netuid,
-            hotkey,
-            coldkey,
-            &CancellationToken::new(),
-        )
-        .await
-        .map_err(failure)?;
+    let proof = solve_public(
+        &solver,
+        client,
+        pow.netuid,
+        hotkey,
+        coldkey,
+        &pow.mining_backend,
+        pow.mining_device_ids.as_deref(),
+    )
+    .await?;
     pow.work_block = proof.work_block;
     pow.nonce = proof.nonce;
     pow.work_hex = format!("0x{}", hex::encode(proof.work));
     Ok(pow)
+}
+
+pub(super) fn validate_backend(backend: &str, devices: Option<&[u64]>) -> Result<(), CliError> {
+    if !matches!(backend, "auto" | "cpu" | "gpu") {
+        return Err(CliError::input("PoW backend must be auto, cpu or gpu"));
+    }
+    if let Some(devices) = devices {
+        let unique = devices.iter().collect::<std::collections::BTreeSet<_>>();
+        if backend == "cpu"
+            || devices.is_empty()
+            || devices.len() > 32
+            || unique.len() != devices.len()
+        {
+            return Err(CliError::input(
+                "select 1..=32 unique GPU devices with auto or gpu",
+            ));
+        }
+        for device in devices {
+            usize::try_from(*device)
+                .map_err(|_| CliError::input("GPU device id exceeds platform usize"))?;
+        }
+    }
+    if !cfg!(feature = "pow-gpu") && (backend == "gpu" || devices.is_some()) {
+        return Err(CliError::input("GPU PoW requires the CLI pow-gpu feature"));
+    }
+    Ok(())
+}
+
+pub(super) async fn solve_public(
+    solver: &PowSolver,
+    client: &Client,
+    netuid: rtao::primitives::NetUid,
+    hotkey: rtao::primitives::AccountId,
+    coldkey: rtao::primitives::AccountId,
+    backend: &str,
+    devices: Option<&[u64]>,
+) -> Result<rtao_intents::pow::PowProof, CliError> {
+    validate_backend(backend, devices)?;
+    #[cfg(feature = "pow-gpu")]
+    {
+        use rtao_intents::pow::{GpuOptions, PowBackend};
+        let options = GpuOptions {
+            backend: match backend {
+                "cpu" => PowBackend::Cpu,
+                "gpu" => PowBackend::Gpu,
+                _ => PowBackend::Auto,
+            },
+            device_ids: devices
+                .map(|ids| {
+                    ids.iter()
+                        .map(|id| usize::try_from(*id))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()
+                .map_err(failure)?,
+            ..Default::default()
+        };
+        solver
+            .solve_with_backend(
+                client,
+                netuid,
+                hotkey,
+                coldkey,
+                &CancellationToken::new(),
+                &options,
+            )
+            .await
+            .map_err(failure)
+    }
+    #[cfg(not(feature = "pow-gpu"))]
+    solver
+        .solve(client, netuid, hotkey, coldkey, &CancellationToken::new())
+        .await
+        .map_err(failure)
 }
 
 #[cfg(test)]

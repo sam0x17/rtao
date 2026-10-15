@@ -1406,6 +1406,7 @@ async fn pow_request(
             ("work_hex".into(), json!(hex::encode(work))),
             ("mining_workers".into(), json!(1)),
             ("mining_timeout".into(), json!(10)),
+            ("mining_backend".into(), json!("cpu")),
         ]),
         period: None,
     })

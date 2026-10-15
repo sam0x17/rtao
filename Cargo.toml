@@ -71,6 +71,7 @@ bytes = "1"
 # at the oracle's data version, independently of the Rust compiler's Unicode.
 unicode-general-category = "=0.6.0"
 subxt-rpcs = { version = "0.51.1", default-features = false, features = ["native"] }
+subxt = { version = "0.51.1", default-features = false, features = ["native"] }
 tokio-tungstenite = { version = "0.30", default-features = false, features = ["connect", "handshake", "rustls-tls-native-roots"] }
 rustls-native-certs = "0.8"
 rustls-pki-types = "1"
@@ -92,6 +93,27 @@ regex = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
 axum = { version = "0.8", default-features = false, features = ["json", "http1", "tokio"] }
+hyper = { version = "1", default-features = false, features = ["server", "http1"] }
+hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
+getrandom = "0.4"
+base64 = "0.22"
+subtle = "2.6"
+nix = { version = "0.30", default-features = false, features = ["signal", "process", "user", "fs"] }
+qrcodegen = "1.8.0"
+rqrr = { version = "0.11.0", default-features = false }
+alloy-primitives = { version = "=1.7.3", default-features = false, features = ["std", "serde", "k256"] }
+alloy-json-abi = { version = "=1.7.3", default-features = false, features = ["std"] }
+alloy-dyn-abi = { version = "=1.7.3", default-features = false, features = ["std"] }
+alloy-sol-types = { version = "=1.7.3", default-features = false, features = ["std"] }
+alloy-signer-local = { version = "=1.6.3", default-features = false, features = ["mnemonic-all-languages"] }
+alloy-signer = { version = "=1.6.3", default-features = false }
+alloy-consensus = { version = "=1.6.3", default-features = false, features = ["std"] }
+aes = { version = "0.8", features = ["zeroize"] }
+ctr = { version = "0.9", features = ["zeroize"] }
+pbkdf2 = "0.12"
+scrypt = { version = "0.12", default-features = false }
+unicode-normalization = "0.1"
+tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
 mime = "0.3"

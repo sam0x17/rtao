@@ -36,6 +36,9 @@ mod rpc;
 pub mod shield;
 /// Transaction preparation, nonce leases, submission, and inclusion receipts.
 pub mod submit;
+/// Optional Subxt legacy client sharing this client's authenticated RPC session.
+#[cfg(feature = "subxt")]
+pub mod subxt;
 /// Typed and dynamic read views pinned to immutable chain state.
 pub mod view;
 
