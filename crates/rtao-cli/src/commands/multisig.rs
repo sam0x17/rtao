@@ -1685,19 +1685,20 @@ mod tests {
         )
         .await;
         assert_eq!(recovered, Some(inner));
-        let state = chain.state();
-        let locked = state.lock().map_err(|_| "state")?;
-        let call = locked
-            .requests
-            .iter()
-            .find(|request| request.method == "chain_getBlock")
-            .ok_or("block RPC")?;
-        let hash = call.params[0]
-            .as_str()
-            .ok_or("block hash must be an RPC hex string")?;
-        assert!(hash.starts_with("0x"));
-        assert_eq!(hash.len(), 66);
-        drop(locked);
+        {
+            let state = chain.state();
+            let locked = state.lock().map_err(|_| "state")?;
+            let call = locked
+                .requests
+                .iter()
+                .find(|request| request.method == "chain_getBlock")
+                .ok_or("block RPC")?;
+            let hash = call.params[0]
+                .as_str()
+                .ok_or("block hash must be an RPC hex string")?;
+            assert!(hash.starts_with("0x"));
+            assert_eq!(hash.len(), 66);
+        }
         client.close().await;
         Ok(())
     }
