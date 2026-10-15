@@ -219,7 +219,8 @@ async fn run() -> Result<(), CliError> {
             "upgrade" => upgrade::run(&mut app, matches, &mut invocation.history).await,
             "crowd" => {
                 crowd::validate_before_connect(matches)?;
-                app.run(|client| async { crowd::execute(&app, &client, matches).await })
+                let context = &app;
+                app.run(|client| async move { crowd::execute(context, &client, matches).await })
                     .await
             }
             "timelock" => timelock::run(&app, matches, &mut invocation.history).await,

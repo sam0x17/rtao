@@ -175,6 +175,9 @@ impl EvmRpc {
         if method.is_empty() || method.len() > 128 || method.chars().any(char::is_control) {
             return Err(Error::Validation("invalid EVM RPC method name".into()));
         }
+        // Rust 1.99 renamed this API to try_update; retain the Rust 1.89
+        // operation so stable and MSRV builds share the same checked counter.
+        #[allow(deprecated)]
         let id = self
             .next_id
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
