@@ -12,8 +12,8 @@ Source review led to these corrections:
   hotkey kind before dispatch. Fixtures cover balances, hotkey identities and
   coldkey stake values, including order, duplicates and invalid-entry refusal.
   Pinned Python leaves these CSV account arrays unresolved; this additive
-  behavior is registered as D-043 in the working tree. Its generated parity
-  matrix entry awaits hosted generation and adoption.
+  behavior is registered as D-043. Hosted generation supplied its declared
+  parity matrix entry, with execution and oracle status still unverified.
 - Availability fixtures distinguish pending behavior from feature compilation,
   including workspace `--all-features`. Pending operations remain hidden.
 - Late PoW refresh uses the reviewed effective origin, including the real
