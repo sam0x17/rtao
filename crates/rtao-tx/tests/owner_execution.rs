@@ -2,18 +2,23 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use rtao_client::{
-    Client, ClientConfig, Inclusion, Mortality, Network, NoncePolicy, Period, SubmitOptions,
+    Client, ClientConfig, Inclusion, Mortality, Network, NoncePolicy, Period, SubmitOptions, View,
 };
 use rtao_intents::hyperparameters::owner_rate_key;
 use rtao_intents::{BurnedRegister, RegisterSubnet, SetHyperparameter};
-use rtao_primitives::{AccountId, Balance, CryptoType, DefaultAccount, NetUid, TaoBalance};
+use rtao_primitives::{
+    AccountId, Balance, CryptoType, DefaultAccount, IntoCoreValue, NetUid, TaoBalance,
+};
 use rtao_runtime::{CallBytes, calls::admin_utils, storage::subtensor_module as st};
 use rtao_signer::{
     BoxFuture, Coldkey, KeySource, KeyView, KeypairSigner, MultiSignature, SignPurpose, Signer,
     SignerError, SigningRequest,
 };
 use rtao_testkit::{FakeChain, FakeState, SubmitScript, rpc::RpcClient};
-use rtao_tx::{ExecuteOptions, Executor, Policy, ShieldOptions, TxError};
+use rtao_tx::{
+    BuildCx, Built, DynIntent, ExecuteOptions, Executor, Intent, IntentError, IntentInterface,
+    IntentPreflight, Multisig, OriginView, Policy, PreflightCx, ShieldOptions, Signed, TxError,
+};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
@@ -244,6 +249,69 @@ fn changed_alpha(fake: FakeChain) -> AfterSign {
     })
 }
 
+// Model the public execution-adapter boundary used by saved multisig intents.
+// The approval has its own signed-operation spec while policy and owner
+// preflight continue to use the inner semantic intent.
+struct OwnerApproval {
+    semantic: SetHyperparameter,
+    client: Client,
+    group: Multisig,
+    member: AccountId,
+}
+impl IntentInterface for OwnerApproval {
+    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[31];
+    type Role = Coldkey;
+    type Origin = Signed;
+    type Output = ();
+    const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
+        &[&rtao_runtime::calls::multisig::AS_MULTI];
+    fn to_json(&self) -> Value {
+        json!({"op": Self::SPEC.name, "call": self.semantic.to_json()})
+    }
+}
+impl Intent for OwnerApproval {
+    fn summary(&self) -> String {
+        self.semantic.summary()
+    }
+    fn semantic_intent(&self) -> &dyn DynIntent {
+        &self.semantic
+    }
+    fn origin_view<'a>(&'a self, _keys: &'a dyn KeyView) -> OriginView<'a> {
+        OriginView::Account(self.group.address)
+    }
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let built = self.semantic.build(cx).await?;
+        self.wrap_call(cx, built.call).await
+    }
+    async fn preflight<V: View + ?Sized>(
+        &self,
+        cx: &PreflightCx<'_, V>,
+    ) -> Result<IntentPreflight, IntentError> {
+        self.semantic.preflight(cx).await
+    }
+    async fn wrap_call<V: View + ?Sized>(
+        &self,
+        cx: &BuildCx<'_, V>,
+        call: CallBytes,
+    ) -> Result<Built, IntentError> {
+        let estimate = self
+            .client
+            .estimate_weight(call.clone(), self.member, CryptoType::Ed25519)
+            .await?;
+        Ok(Built::new(
+            rtao_client::compose::as_multi(
+                cx.view,
+                self.member,
+                &self.group.signatories,
+                self.group.threshold,
+                call,
+                &estimate,
+            )
+            .await?,
+        ))
+    }
+}
+
 #[tokio::test]
 async fn burned_registration_requires_the_shield_even_when_disabled_in_options() {
     let (ex, fake, keys) = fixture().await;
@@ -418,6 +486,143 @@ async fn owner_rate_failure_rebuilds_the_real_alpha_call_once_from_fresh_state()
             .as_bytes()
     );
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    ex.client().close().await;
+}
+
+#[tokio::test]
+async fn completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval() {
+    let (ex, fake, keys) = fixture().await;
+    assert_eq!(OwnerApproval::SPEC.name, "multisig_execute");
+    let member = keys.signer.account();
+    let approved = AccountId([9; 32]);
+    let group = ex.multisig(&[member, approved], 2).await.unwrap();
+    let runtime = ex.client().refresh_runtime().await.unwrap();
+    let inner = admin_utils::sudo_set_alpha_values(NET, 2000, 60000)
+        .compose(&runtime)
+        .unwrap();
+    let timepoint = rtao_runtime::models::MultisigTimepoint {
+        height: 90,
+        index: 1,
+    };
+    let pending_key = runtime
+        .core()
+        .storage_key(
+            runtime
+                .core()
+                .storage_entry("Multisig", "Multisigs")
+                .unwrap(),
+            &[
+                group.address.into_core_value(),
+                inner.hash().into_core_value(),
+            ],
+        )
+        .unwrap();
+    fake.mutate_state(|state| {
+        state
+            .seed(&st::SUBNET_OWNER, (NET,), DefaultAccount::from(group.address))
+            .unwrap();
+        state
+            .seed_python(
+                "Multisig",
+                "Multisigs",
+                &[
+                    json!(group.address),
+                    json!(format!("0x{}", hex::encode(inner.hash()))),
+                ],
+                json!({"when":timepoint,"deposit":280_800_000,"depositor":approved,"approvals":[approved]}),
+            )
+            .unwrap();
+        state.queue_submit(SubmitScript::InBlockThenFinalized {
+            events: json!([
+                {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"Multisig","event_id":"MultisigExecuted","attributes":{
+                    "approving":member,"timepoint":timepoint,"multisig":group.address,
+                    "call_hash":format!("0x{}",hex::encode(inner.hash())),
+                    "result":{"Err":rate_failure(0)["attributes"]["dispatch_error"].clone()}
+                },"topics":[]},
+                success(0)
+            ]),
+        });
+    });
+    assert_eq!(
+        ex.client()
+            .storage(
+                &rtao_runtime::storage::multisig::MULTISIGS,
+                (group.address, inner.hash()),
+            )
+            .await
+            .unwrap()
+            .unwrap()
+            .when,
+        timepoint
+    );
+    let estimate = ex
+        .client()
+        .estimate_weight(inner.clone(), member, CryptoType::Ed25519)
+        .await
+        .unwrap();
+    let expected = rtao_client::compose::as_multi(
+        ex.client(),
+        member,
+        &group.signatories,
+        group.threshold,
+        inner.clone(),
+        &estimate,
+    )
+    .await
+    .unwrap();
+    let after = fake.clone();
+    *keys.signer.after_first_sign.lock().unwrap() = Some(Box::new(move || {
+        // Final approval consumes the pending operation even when its inner
+        // dispatch fails. Rebuilding now would encode a new opening approval.
+        after.mutate_state(|state| state.seed_encoded(pending_key, None));
+    }));
+    let result = ex
+        .execute(
+            &OwnerApproval {
+                semantic: alpha(),
+                client: ex.client().clone(),
+                group: group.clone(),
+                member,
+            },
+            &keys,
+            &ExecuteOptions {
+                retries: 4,
+                ..included()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(!result.success);
+    assert_eq!(
+        result.error.as_ref().unwrap().name.as_deref(),
+        Some("TxRateLimitExceeded")
+    );
+    assert_eq!(result.inclusion, Inclusion::InBlock);
+    assert_eq!(result.extrinsic_id.as_deref(), Some("101-0000"));
+    assert!(result.block_hash.is_some());
+    assert!(result.fate_unknown.is_none());
+    assert!(
+        result
+            .events
+            .iter()
+            .any(|event| event.matches("Multisig", "MultisigExecuted"))
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert_eq!(
+        keys.signer.requests.lock().unwrap().as_slice(),
+        &[(SignPurpose::Extrinsic, expected.as_bytes().to_vec())]
+    );
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    assert!(
+        ex.client()
+            .storage(
+                &rtao_runtime::storage::multisig::MULTISIGS,
+                (group.address, inner.hash()),
+            )
+            .await
+            .unwrap()
+            .is_none()
+    );
     ex.client().close().await;
 }
 

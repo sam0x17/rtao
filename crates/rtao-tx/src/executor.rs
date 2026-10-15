@@ -73,8 +73,9 @@ pub struct ExecuteOptions {
     pub wait_for_finalization: bool,
     /// Additional transient pool attempts; separate from the controlled owner replan.
     pub retries: u32,
-    /// Replan once for an exact owner TxRateLimitExceeded dispatch failure.
+    /// Replan a direct owner operation once for TxRateLimitExceeded.
     ///
+    /// Multisig approvals do not inherit eligibility from their inner intent.
     /// Owner orchestration disables this when it owns the same bounded retry.
     pub replan_owner_rate_limit: bool,
     /// Inner proxy dispatch account.
@@ -1300,7 +1301,11 @@ fn public_address(intent: &dyn DynIntent, keys: &dyn KeyView) -> Result<AccountI
 }
 
 fn owner_rate_replan(intent: &dyn DynIntent, result: &ExtrinsicResult) -> bool {
-    intent.semantic_intent_dyn().spec().origin == "subnet_owner"
+    // A failed inner owner call does not make its execution adapter safe to
+    // replay: a completed multisig approval has already consumed its pending
+    // operation even when MultisigExecuted reports an inner dispatch error.
+    intent.spec().origin == "subnet_owner"
+        && intent.semantic_intent_dyn().spec().origin == "subnet_owner"
         && !result.success
         && result.fate_unknown.is_none()
         && result
