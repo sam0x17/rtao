@@ -537,7 +537,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
     pub async fn proxies(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::owner::ProxyDelegations, crate::ReadError> {
         super::interfaces::proxies(self.view, coldkey_ss58).await
     }
 }
@@ -621,7 +621,9 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     #[doc = "The minimum TAO payout for a root dividend claim.\n\n`claim_root` and `claim_root_with_hotkey` silently skip any per-validator\nbasket redemption whose estimated payout falls below this threshold; the\nentitlement keeps accruing and pays out once it clears. Set by root via\n`set_root_claim_threshold`."]
-    pub async fn root_claim_threshold(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn root_claim_threshold(
+        &self,
+    ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
         super::interfaces::root_claim_threshold(self.view).await
     }
 }

@@ -1068,12 +1068,10 @@ pub struct ProxiesParams {
 #[doc = "Proxy delegations of an account: who may sign on its behalf, and the reserved deposit."]
 #[doc(alias = "bittensor.reads.proxies")]
 pub async fn proxies<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Proxies,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<crate::reads::owner::ProxyDelegations, crate::ReadError> {
+    crate::reads::owner::proxies(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `quote_stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1241,11 +1239,9 @@ pub struct RootClaimThresholdParams {}
 #[doc = "The minimum TAO payout for a root dividend claim.\n\n`claim_root` and `claim_root_with_hotkey` silently skip any per-validator\nbasket redemption whose estimated payout falls below this threshold; the\nentitlement keeps accruing and pays out once it clears. Set by root via\n`set_root_claim_threshold`."]
 #[doc(alias = "bittensor.reads.root_claim_threshold")]
 pub async fn root_claim_threshold<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::RootClaimThreshold,
-    ))
+    view: &V,
+) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
+    crate::reads::owner::root_claim_threshold(view).await
 }
 #[doc = "Typed parameters for `stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
