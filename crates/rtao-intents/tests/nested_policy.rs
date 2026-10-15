@@ -11,7 +11,7 @@ use rtao_primitives::{AccountId, Balance, CryptoType, NetUid, Spend, Tao, TaoBal
 use rtao_runtime::{
     CallBytes, calls,
     models::{CrowdloanCall, CrowdloanInfo},
-    storage::{crowdloan::CROWDLOANS, subtensor_module as st},
+    storage::subtensor_module as st,
 };
 use rtao_signer::{
     BoxFuture, DynKeySource, KeyView, KeypairSigner, MultiSignature, SignPurpose, Signer,
@@ -198,8 +198,9 @@ fn seed_callback(chain: &FakeChain, keys: &Keys, id: u32, call: &CallBytes) -> R
 fn seed_loan(chain: &FakeChain, keys: &Keys, id: u32, call: Option<CrowdloanCall>) -> Result<()> {
     let target_address = call.is_none().then_some(DEST);
     chain.mutate_state(|state| {
-        state.seed(
-            &CROWDLOANS,
+        state.seed_typed(
+            "Crowdloan",
+            "Crowdloans",
             (id,),
             CrowdloanInfo {
                 creator: keys.signer.account(),
