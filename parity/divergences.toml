@@ -167,7 +167,7 @@ pinning_tests = [
   "rtao_btauth::client::both_fanout_apis_accept_fixed_length_json_at_the_exact_response_budget",
   "rtao_btauth::client::both_fanout_apis_stop_chunked_overflow_before_eof_decoding_or_retry",
   "rtao_btauth::client::both_fanout_apis_accept_chunked_json_at_the_exact_response_budget",
-  "rtao_btauth::client::tests::completed_oversize_rejection_remains_permanent_across_timing_boundaries",
+  "rtao_btauth::client::attempt_budget_tests::completed_oversize_rejection_remains_permanent_across_timing_boundaries",
 ]
 upstream_report = "Independent source review caught and verified the timeout reclassification correction. Hosted compilation and tests remain pending. No new upstream filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/docs/guides/signed-requests.mdx"
