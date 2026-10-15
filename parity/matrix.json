@@ -2290,6 +2290,33 @@
           "rtao_reads::owner::d040_start_schedule_saturates_u64_eligibility_bound",
           "rtao_reads::owner::d040_start_schedule_descriptor_coverage_is_exact_at_pinned_hashes"
         ]
+      },
+      {
+        "id": "D-041",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::compose::tests::existing_multisig_approval_encodes_exact_timepoint_and_retains_it_after_removal",
+          "rtao_client::compose::tests::existing_multisig_refuses_absent_replaced_and_noncontinuation_inputs",
+          "rtao_cli::raw_call_contract::chained_approval_encodes_the_authenticated_opening_in_the_actual_second_extrinsic",
+          "rtao_cli::raw_call_contract::unknown_disappeared_or_replaced_opening_refuses_before_the_next_source_or_signature",
+          "rtao_cli::multisig::tests::guarded_later_round_refuses_absent_or_replaced_opening_before_funds_or_unlock",
+          "rtao_cli::multisig::tests::operation_changed_after_composition_keeps_stale_some_in_the_actual_signed_call",
+          "rtao_cli::context_contract::saved_semantic_replaced_opening_refuses_before_second_source",
+          "rtao_cli::context_contract::saved_semantic_missing_opening_identity_refuses_automatic_continuation",
+          "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval"
+        ]
+      },
+      {
+        "id": "D-042",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::books::tests::oversized_books_refuse_instead_of_redirecting_names_to_wallet_fallback",
+          "rtao_cli::books::tests::acyclic_multisig_chains_have_a_bounded_refusal_and_repeated_branches_are_valid",
+          "rtao_cli::call_names::tests::programmatic_json_nesting_refuses_before_clone_or_name_lookup",
+          "rtao_cli::raw_call_contract::programmatic_raw_call_json_depth_refuses_before_runtime_encoding"
+        ]
       }
     ],
     "e2e": [

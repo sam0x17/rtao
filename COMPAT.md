@@ -43,6 +43,6 @@ Distinct package identities reached through normal and build edges, excluding de
 | `aarch64-apple-darwin` | `miner` | 365 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 | `aarch64-apple-darwin` | `owner` | 416 | true | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 
-Measured on `x86_64-unknown-linux-gnu` (AMD EPYC 7763 64-Core Processor) with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `b57e8515b02f4af53850a8a76033f045f0ea8937`; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
+Measured on `x86_64-unknown-linux-gnu` (AMD EPYC 9V74 80-Core Processor) with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `642623b7c2e537c6eb89649f8c203333a1fa0eb3`; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
 
-Regenerate with `cargo xtask compat`; verify offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).
+Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).

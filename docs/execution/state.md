@@ -17,39 +17,49 @@ this cleanup, and no current hosted success is claimed.
 ## Current client checkpoint, 2026-10-15
 
 Canonical source implements 20 of 83 intents and 38 of 102 reads. Owner
-orchestration/proxy routing and its example are pushed. Recovered CLI machinery, config/tools/explain handlers and their binary
-routing are in the worktree for source review; hosted acceptance and the
-remaining command families are still in progress. Offline and other command candidates remain in
-the private source recovery archive. No milestone exit is claimed.
+orchestration/proxy routing and its example are pushed. Recovered CLI machinery,
+config/tools/explain handlers and their binary routing are pushed in `642623b`.
+The remaining command families and offline SDK remain incomplete; their source
+candidates are in private recovery. The tx/query candidate has three proven
+source defects and missing generated APIs; see
+[m4-generated-review.md](m4-generated-review.md). No milestone exit is claimed.
 
-The latest pushed source is `1e672ac`. It includes a library-level correction
-preventing a completed multisig approval from inheriting its inner owner's
-rate-limit retry, plus a fixture asserting the failed receipt and exactly one
-signing/submission. It also corrects oracle staging for Q30's optional hosted
-refresh while preserving strict and historical-evidence guards. Normal checks
-are at https://github.com/sam0x17/rtao/actions/runs/38682666347. MSRV, supply, no-host and
-pre-baseline semver passed. The check job caught a missing ViewExt test import;
-that source correction is ready, and features is still live. No current
-all-job success is claimed.
+`1e672ac` prevents completed multisig approvals from inheriting inner owner
+rate-limit retries and corrects initial oracle staging for Q30's optional hosted
+refresh. Its five non-check jobs passed. Check caught a missing ViewExt import
+in a test fixture, corrected in `642623b`. The latter's checks are at
+https://github.com/sam0x17/rtao/actions/runs/38683260786: MSRV, supply, no-host and
+semver passed; check and features remain live. Its generated reports were stale
+pending the adoption below. No current all-job success is claimed.
 
-The corrected compatibility source artifact from hosted run
-https://github.com/sam0x17/rtao/actions/runs/38682108313 was verified and adopted
-byte for byte in `71f28d2`. All 23 input hashes, clean source identity,
-unchanged package sets/counts (225/361/365/416) and empty runtime-validation
-claims were checked. The earlier colored-output artifact was rejected.
-This measures Apple-target dependency graphs from a Linux host, with no native
-Mac build or test claim. CLI manifest/lock changes need another hosted refresh.
+Hosted report generation
+https://github.com/sam0x17/rtao/actions/runs/38683267312 succeeded on `642623b`.
+Artifact `11949225713` (39,662 bytes) matched API SHA-256
+`6ceb152f7febcc4ce40bf56eec777a4e2fc8a8351d5dc849fbe03cc0b37d7e22`.
+Review checked exactly four regular files, all 23 dependency-input hashes,
+clean source identity and unchanged package sets/counts (225/361/365/416).
+The 1,535-row parity matrix adds only D-041/D-042 and their regression references.
+All other parity families are unchanged. Adopted the four generated files byte
+for byte; no generated hashes or counts were edited. Runtime validation remains
+null/empty. The reports measure Apple-target dependency graphs on Linux, without
+native Mac coverage. Earlier `71f28d2` reports were also verified; the original
+colored-output artifact was rejected.
 
-The CLI lockfile was resolved offline without compilation: eight packages
-were added and no existing package was upgraded. All substantive builds/tests
-remain hosted. The license wording includes Q1's already required PSF and
-Unicode obligations; the approved BLS and dormant advisory guards remain intact.
+The CLI lockfile was resolved offline with eight additions and no existing
+package upgrades. No local compilation or test ran. License wording includes
+Q1's required PSF/Unicode obligations; approved BLS and dormant advisory guards
+remain intact. Source formatting and whitespace checks pass. Combined source
+acceptance still needs normal hosted checks after report adoption.
 
-The only current temporary root is `target/client-ci-20261015`, holding small
-source-report artifacts and the bounded CLI adoption record. No local build,
-node, container, device, Python or test process was started. The retired source
-integration root was audited and removed. Final scratch cleanup is part of this
-continuation; preserve the private recovery archive and wallet state.
+No active temporary root remains. Audited and removed
+`target/client-ci-20261015`: 14 regular JSON/Markdown/ZIP files, 868,469 bytes.
+Process, open-file, launchd/configuration and symlink/dependency checks found no
+live use. Generated source is retained in Git and the bounded CLI adoption
+record is private at `.local/recovery/2026-10-14/cli-adoption.json`.
+There were no virtual environments, installed services or remote scratch.
+The unrelated remote CFG process was left alone. Target returned to 547,192 KiB
+(534 MiB), its preserved pre-existing debug output. Wallets, shared caches and
+Time Machine snapshots remain untouched.
 
 ## Disk cleanup completed
 
