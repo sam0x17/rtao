@@ -628,6 +628,7 @@ mod null_pruning {
         source_records: Mutex<Vec<Value>>,
     }
 
+    #[allow(clippy::expect_used)]
     impl SavedPruning {
         async fn sign(
             &self,
@@ -725,6 +726,7 @@ mod null_pruning {
         keys: Vec<Arc<Keys>>,
         shared: Arc<SavedPruning>,
     }
+    #[allow(clippy::expect_used)]
     impl ExternalSignerFactory for SavedFactory {
         fn keys<'a>(
             &'a self,
