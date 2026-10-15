@@ -90,6 +90,58 @@ fn all_keyfile_fields_precedence_crypto_retry_and_historical_text_match_core() {
 }
 
 #[test]
+fn escaped_duplicate_fields_keep_host_recovery_precedence_and_scheme_retry() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    for crypto in [0, 1] {
+        let expected = Keypair::from_mnemonic(phrase, crypto, None).unwrap();
+        let escaped_phrase = phrase.replace(' ', "\\u0020");
+        let phrase_json = format!(
+            r#"{{"secretPhrase":"invalid first phrase","secret\u0050hrase":"{escaped_phrase}","secretSeed":"unused invalid seed","privateKey":"unused invalid key","cryptoType":{},"ss58Address":"{}","unknown":{{"escaped\u0020key":["public\u0020disposable",123456789012345678901234567890]}}}}"#,
+            1 - crypto,
+            expected.ss58_address(),
+        );
+        compare(phrase_json.as_bytes());
+
+        // A non-string duplicate replaces a formerly present recovery field;
+        // the next branch must use the final, escaped seed instead.
+        let seed_pair = Keypair::from_seed(&[7; 32], crypto).unwrap();
+        let escaped_seed = "07".repeat(32).replace('0', "\\u0030");
+        let seed_json = format!(
+            r#"{{"secretPhrase":"unused invalid phrase","secretPhrase":null,"secretSeed":"invalid first seed","secret\u0053eed":"0x{escaped_seed}","privateKey":"unused invalid key","cryptoType":"\u0020{}\u0020","ss58Address":"{}"}}"#,
+            1 - crypto,
+            seed_pair.ss58_address(),
+        );
+        compare(seed_json.as_bytes());
+
+        let private_key = expected
+            .private_key_bytes()
+            .unwrap()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        let private_json = format!(
+            r#"{{"secretPhrase":false,"secretSeed":[],"privateKey":"invalid first key","private\u004bey":"0x{private_key}","cryptoType":{crypto},"ss58Address":"{}"," ss58Address":"ignored legacy alias"}}"#,
+            expected.ss58_address(),
+        );
+        compare(private_json.as_bytes());
+    }
+}
+
+#[test]
+fn partial_trailing_and_invalid_unicode_json_keep_host_error_category_and_message() {
+    for input in [
+        r#"{"secretPhrase":"public\u0020disposable","rest":["#,
+        r#"{"secretPhrase":"public\u0020disposable"} trailing"#,
+        r#"{"secretPhrase":"public\u0020disposable","next":"incomplete\u0020"#,
+        r#"{"secretPhrase":"public\u0020disposable","invalid":"\ud800"}"#,
+        r#"{"secretPhrase":"public\u0020disposable","invalid":"\udc00"}"#,
+        r#"{"secretPhrase":"public\u0020disposable","invalid":"\ud800\u0041"}"#,
+    ] {
+        compare(input.as_bytes());
+    }
+}
+
+#[test]
 fn secret_keyfile_errors_have_exact_documented_host_differences() {
     // D-036 redacts derivation diagnostics at the owned SDK boundary. Each
     // differing branch stays explicit; all other errors use compare() above.

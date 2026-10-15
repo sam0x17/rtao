@@ -12,7 +12,25 @@ distinction.
 
 The staged codec owns wipe guards for its deserialized string leaves and object keys, serialization Values, extracted private-key Vec, decoded seed Vec and secret hex temporaries. Seed decoding writes into an already guarded buffer, including partial hex failures. Serialization counts bytes first and then allocates its guarded output exactly, avoiding freed secret chunks from Vec growth while retaining the same HashMap iteration and JSON bytes. A completed JSON tree receives its guard before trailing-character validation, so that error path also wipes. Missing-field diagnostics expose reserved static field labels and a fixed marker for unknown input key names.
 
-These guards do not wipe caller-borrowed input, returned output buffers after ownership transfers, or dependency internals. Serde's private parser scratch and partially constructed error-path values remain unwiped; arbitrary-precision Number backing strings also lack wipe access. Supported keyfile secrets are String fields, which the completed-tree guard covers. The pinned core separately zeroizes retained mnemonic and seed buffers. Rtao cannot wipe the opaque signing pair, and the pinned ed25519 Pair is Copy/Clone without a guaranteed secret wipe on Drop. Signer rustdoc, the execution evidence and the architecture ownership statement now disclose that limit.
+The 2026-10-15 source repair replaces serde parsing in the codec and wallet
+public inspection with a private JSON projection. Unescaped strings and
+numeric tokens borrow the input; escaped strings use one preallocated wiping
+buffer. Keys and values retain their guards during duplicate replacement,
+partial parses and trailing validation. The shared public-field callback
+validates the full document before exposing borrowed public fields. An
+independent source review found no concrete defect. Twelve new regression
+functions are authored; hosted compilation and execution remain pending.
+
+The direct codec now enforces the wallet reader's 16 MiB limit, including
+historical raw forms, with an exact-boundary fixture. Serde's private carrier
+keys are ordinary JSON object keys here, following Python's semantics.
+
+These guards do not wipe caller-borrowed input, transferred output buffers,
+third-party KDF internals or chunks freed by earlier wallet-reader buffer
+growth. The pinned core separately zeroizes retained mnemonic and seed
+buffers. Rtao cannot wipe the opaque signing pair: the pinned Ed25519 Pair is
+Copy/Clone without a guaranteed secret wipe on Drop. M2-S02 remains open.
+Historical test results below predate the parser repair.
 
 The serving boundary also enforces approved D-017: decoded certificates over 65 bytes fail after IP validation and complete hex parsing. Ten serving tests pass on current Rust and Rust 1.89. The length error has lower priority than Python's IP and fromhex errors.
 
