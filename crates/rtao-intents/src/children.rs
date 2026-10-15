@@ -671,6 +671,35 @@ mod tests {
         assert!(children(&values).is_err());
         let object_only = vec![json!({"0.5": false, address.clone(): null})];
         assert_eq!(children(&object_only)?, vec![(1u64 << 63, CHILD)]);
+        // Python iterates dictionaries by insertion order, including when
+        // the resulting first key is an invalid proportion. Parsing from text
+        // pins the public JSON boundary rather than an already sorted map.
+        let forward =
+            serde_json::from_str::<Value>(&format!(r#"{{"0.5":false,"{address}":null}}"#))?;
+        assert_eq!(children(&[forward.clone()])?, vec![(1u64 << 63, CHILD)]);
+        assert_eq!(
+            crate::AnyIntent::from_tool("set_children", json!({"netuid":3,"children":[forward]}),)?
+                .to_json()["children"],
+            json!([[1u64 << 63, address]])
+        );
+        let reversed =
+            serde_json::from_str::<Value>(&format!(r#"{{"{address}":null,"0.5":false}}"#))?;
+        let expected = proportion(&json!(address), u64::MAX, "child proportion")
+            .err()
+            .ok_or_else(|| anyhow::anyhow!("account parsed as a child proportion"))?
+            .to_string();
+        assert_eq!(
+            normalized_proportions(&[reversed.clone()])
+                .err()
+                .map(|error| error.to_string()),
+            Some(expected.clone())
+        );
+        assert_eq!(
+            crate::AnyIntent::from_tool("set_children", json!({"netuid":3,"children":[reversed]}),)
+                .err()
+                .map(|error| error.to_string()),
+            Some(expected)
+        );
         for entry in [
             json!(""),
             json!("1"),

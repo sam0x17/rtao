@@ -13,12 +13,12 @@
 
 [[file]]
 py = "common/src/proxy.rs"
-rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+rs = ["vendor/upstream/extracted/chain_rules.json (proxy_contract source/metadata/Python codec reconciliation)"]
 kind = "extracted"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Source audit 2026-10-15: Current models::ProxyType and Python/metadata gate cover the 19 variant names, but no source enum/discriminant conversion parser authenticates this chain file. Keep pending until exact source-to-metadata reconciliation exists; do not claim extract_chain consumes it."
+notes = "Source implementation 2026-10-15: extract_proxy_contract.rs authenticates this exact source through Resolver, parses the implicit unit enum and both exhaustive u8 codec conversions (including rejecting unknown indices), and compares ordered names and indices to authenticated V15 metadata plus freshly extracted Python PROXY_TYPES. Output is the proxy_contract section of chain_rules.json. Negative fixtures mutate order, numeric conversion, fallback and conditional arms. Keep pending until hosted generation/adoption and checks run. This producer covers ProxyType codec identity only: Default/is_deprecated, call-filter metadata model layouts and call_info_by_name are not claimed reconciled by this parser."
 
 [[file]]
 py = "common/src/transaction_error.rs"
@@ -112,12 +112,12 @@ notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet
 
 [[file]]
 py = "pallets/subtensor/src/coinbase/reveal_commits.rs"
-rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+rs = ["vendor/upstream/extracted/chain_rules.json (reveal_contract payload and epoch-prefix projection; remaining reveal control flow pending)"]
 kind = "extracted"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Source audit 2026-10-15: No extraction producer for this source was identified. Core scheduling/reveal code and client fixtures exist, but do not authenticate all source reveal rules/payload layouts promised by this row. Keep pending."
+notes = "Source implementation 2026-10-15: extract_reveal_contract.rs authenticates chain/core source, extracts modern/legacy payload field order, types and freeze_struct labels, compares the modern layout with core WeightsTlockPayload used by commit_payload, and checks current_epoch_with_lookahead minus reveal period with saturating subtraction. Negative fixtures change field type/order, core layout and epoch expressions. Output is reveal_contract in chain_rules.json; hosted generation/tests remain unexecuted. Keep pending: queue expiry, missing-pulse retention, ciphertext/signature parsing, hotkey/legacy fallback, dispatch failure and success-event rules are not yet source-to-consumer reconciled."
 
 [[file]]
 py = "pallets/subtensor/src/coinbase/run_coinbase.rs"
@@ -283,12 +283,12 @@ notes = "Source reconciliation 2026-10-15: xtask/src/extract_chain.rs parses the
 
 [[file]]
 py = "runtime/src/transaction_payment_wrapper.rs"
-rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+rs = ["runtime-authoritative fee-payer/discount/priority policy; source-to-client contract guard pending"]
 kind = "extracted"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Source audit 2026-10-15: Executor fee traversal exists, but no source parser/producer currently authenticates this runtime wrapper payer logic. Keep pending for an exact source-backed policy comparison."
+notes = "Complete authenticated source review 2026-10-15: direct Proxy.proxy opt-in precedes allowlisted hotkey-owner payment; nested opt-ins extend at most two proxy layers or a nonempty homogeneous Utility batch/batch_all/force_batch; proxy_announced is excluded. Redirected payers lose signer-chosen tips, self-paying signers retain them, and dispatch origin is preserved. validate/prepare/post_dispatch apply discounted pricing with bounded refunds and fixed class-based priority. The client estimates fees through the node; executor::coldkey_pays is a Python-compatible warning heuristic, not this runtime payer resolver. No exact source parser or payer-policy equivalence fixture currently exists. Keep pending; neither fee_filters extraction nor the heuristic proves this broader wrapper contract."
 
 [[file]]
 py = "sdk/bittensor-core-py/Cargo.toml"
@@ -1278,7 +1278,7 @@ kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M4"
-notes = "Source audit 2026-10-15: live burned/root registration now uses context::registration to add the exact burn/lock suffix, transaction cost row and root recycling notes before confirmation/unlock; dry-run SDK summary and machine fields remain unchanged. Authored context_contract fixtures: live_registration_review_discloses_exact_burn_lock_and_root_recycling_before_unlock and dry_run_registration_keeps_the_sdk_summary_and_machine_schema. Keep pending: register_subnet still lacks the live creation-price/queue-flow disclosure from upstream context.py:1090-1128, and the full application-context source surface remains under review. No execution or acceptance is claimed."
+notes = "Source audit 2026-10-15: live burned/root registration uses context::registration for the exact burn/lock suffix, cost row and root recycling notes before confirmation/unlock. Direct register_subnet now discloses the exact grouped nine-digit creation quote, cost card and all four pinned queue/prune flows; --yes retains the quote/card and omits disclosure-only queue reads. Independent source review found no remaining implementation issue. Authored context_contract fixtures: live_registration_review_discloses_exact_burn_lock_and_root_recycling_before_unlock, dry_run_registration_keeps_the_sdk_summary_and_machine_schema, subnet_creation_review_quotes_exact_cost_and_all_queue_flows_before_unlock, subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_reads and subnet_creation_unreadable_quote_refuses_before_confirmation_or_signing. Keep pending for the full application-context surface audit and this read/error difference: Python fetches a subnet preview during dry-run then discards it; native preserves the dry-run SDK summary/machine schema without those unused disclosure reads. No execution or acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/globals.py"
@@ -1311,10 +1311,10 @@ notes = "`wallet balance`/`inspect` rows (M4); overview and registration rows (M
 py = "sdk/python/bittensor/cli/hyperparams_view.py"
 rs = ["rtao_cli::commands::hparams::{fetch_hyperparameters, render_hyperparameters}", "rtao_cli::commands::{hparams, subnets} route dispatch"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "c778b47718b99085def53920fb3e21b3bd31a6c5"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "Source audit 2026-10-15: authenticated blob c778b47718b99085def53920fb3e21b3bd31a6c5. Native pinned fetch supplements missing owner storage and unwraps a sole bits field. Human views now use 6-digit normalized readings, 4-digit fraction examples, exact-before-rounding 6-digit TAO/fixed128 examples, decimal markers and lowercase boolean examples; listing selects kappa/first/tempo and setter flow overrides the hint. Raw JSON values remain exact. Authored hparams_commands fixtures: parameter_listing_keeps_runtime_values_and_augments_missing_fixed128_storage, single_parameter_machine_record_is_exact_and_missing_names_refuse, parameter_examples_use_human_units_and_preserve_raw_machine_values and parameter_listing_hint_selects_a_present_name_or_the_empty_default. Keep pending for independent review and an explicit disposition of the existing native epoch_consensus example adaptation: symbolic Yuma/Null remains a valid setter command, while the Python view prints the integer rejected by its own setter. No execution or acceptance is claimed."
+notes = "Source reconciliation 2026-10-15: authenticated blob c778b47718b99085def53920fb3e21b3bd31a6c5 and canonical secondary attribution headers. Native pinned fetch supplements missing owner storage and unwraps a sole bits field. Human views use 6-digit normalized readings, 4-digit fraction examples, exact-before-rounding 6-digit TAO/fixed128 examples including bool-as-int inputs, decimal markers and lowercase boolean examples; listing selects kappa/first/tempo and setter flow overrides the hint. Raw JSON values remain exact. Independent source review found no remaining implementation issue. Authored hparams_commands fixtures: parameter_listing_keeps_runtime_values_and_augments_missing_fixed128_storage, single_parameter_machine_record_is_exact_and_missing_names_refuse, parameter_examples_use_human_units_and_preserve_raw_machine_values, parameter_listing_hint_selects_a_present_name_or_the_empty_default and epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json. D-061 records the accepted rule5 contradiction at hyperparams_view.py:135-145 versus sudo.py:88-95, intents/hyperparameters.py:126-128 and the runtime enum: native examples preserve accepted 0/Yuma and 1/Null symbolic spellings while raw display/JSON and setter validation are unchanged. No upstream filing, execution or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/intent_prompts.py"
@@ -2103,46 +2103,46 @@ notes = "Source reconciliation 2026-10-15: both intents compared with the exact 
 py = "sdk/python/bittensor/intents/base.py"
 rs = ["`rtao_tx::{IntentInterface, Intent, DynIntent, IntentPreflight, Built, BuildCx, PreflightCx}`"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "89e2008189d424d4a9fcb31cc201815acabf10bc"
 synced_tag = "v478"
 milestone = "M2"
-notes = 'hooks `:138-399`, `IntentPreflight` `:109-134`, `BuiltCall` `:414-422`; `to_dict` `:357-364` → `IntentInterface::to_json` (`"op"` first); `from_args` `:366-372` ignores `"op"` and rejects other unknown keys → `AnyIntent::from_tool` strips `"op"`, then `deny_unknown_fields` (§4.2, §4.5)'
+notes = "Source reconciliation 2026-10-15: exact source blob and pinned SHA256 verified. The attributed intent contract ports summary/build, ordered effects-warnings-blocks preflight, empty reserve/facts defaults and Fees title, default identity wrapper/origin/semantic hooks, no-spend and own-netuid scope, and build extras. Public key defaults use IntentKeyView with explicit/attached/matching-role precedence and Python refusal text; roles::{cross_role_defaults_and_diagnostics_match_python, wallet_public_views_and_intent_defaults_never_unlock, explicit_override_skips_public_io_and_attached_errors_propagate} cover the boundary. Runtime Python annotation/schema and dataclass introspection are represented by the authenticated fixed 83-intent catalog, extracted inherited class vars/field defaults and generated docs/schema/typed interfaces, rather than interpreter reflection. AnyIntent::from_tool discards op, rejects other unknown fields and normalizes constructors; exact money JSON follows D-035. Evidence sources include all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip, tool_arguments_require_an_object_and_keep_unknown_op_precedence, tools_project_all_authenticated_schemas_into_python_manifest_fields, extract_specs::intent_defaults_and_inherited_class_vars_cover_every_catalog_property, and batch/leaf preflight fixtures. Recursive safety is the intentional D-059 extension. This records reviewed source contracts and authored fixtures, not a new passing test/oracle run."
 
 [[file]]
 py = "sdk/python/bittensor/intents/batch.py"
 rs = ["`rtao_intents::batch` (feature `batch`)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "efbab058438eba1017daecfd906a623d715f441c"
 synced_tag = "v478"
 milestone = "M5"
-notes = "1 intent (0 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: exact source blob, pinned SHA256 and canonical primary attribution verified. Nonempty registered JSON children normalize through the enabled registry; direct Batch children and mixed signing roles refuse, while a hotkey-only batch inherits its dynamic role. Ordered semantic builds compose Utility.batch_all without executor adapters and prefix extras as index:op.key. Preview hooks prefix child lines; preflight forwards the complete outer call/origin/payer and retains the reserve/available/fee triple from the first strict maximum without duplicating fees or child facts. Spend distinguishes no spend from bounded zero, sums checked native balances and becomes unbounded on overflow; subnet union is sorted/deduplicated and global effects propagate. Independent native-byte and hook-trace fixtures are real_batch_normalizes_children_encodes_order_and_aggregates_exact_policy, child_root_calls_remain_semantic_and_global_policy_propagates, batch_preflight_uses_strict_maximum_with_correlated_reserve_triple_and_full_parent_call, direct_hooks_do_not_invoke_other_child_hooks_or_full_preflight, batch_build_prefixes_child_extras_and_stops_at_first_refusal, plus constructor/role/spend tests in batch::tests. rtao-client unconditionally enables serde_json/preserve_order; constructor_rejects_empty_nested_missing_op_and_non_dictionary_children pins nonsorted dict refusal spelling. Python-only arbitrary subclass objects have no JSON carrier. D-035/D-046/D-059 cover native arithmetic, bounded nesting and recursive safety. Source reconciliation only; current hosted execution and oracle acceptance remain separate."
 
 [[file]]
 py = "sdk/python/bittensor/intents/children.py"
 rs = ["`rtao_intents::children` (feature `children`)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0dd6874119b12211ee566b5a53bab05e9128c8e9"
 synced_tag = "v478"
 milestone = "M5"
-notes = "5 intents (4 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: exact source blob, pinned SHA256 and canonical primary attribution verified. All five intents share Python raw-integer versus float/decimal-string proportion rules, constructor-normalized JSON and u16/u64 bounds; child entries unpack two-item arrays, strings and ordered object keys before deferred account validation, preserve duplicates/order and reject oversums using rounded raw shares. rtao-client unconditionally enables serde_json/preserve_order; child_constructor_unpacks_strings_and_object_keys_before_account_validation pins both key orders through text and tool parsing. Generated child/take calls and SetTake's Delegates read retain exact native field order, hotkey fallback and decrease/increase/equality behavior. Global take calls remain unscoped as Python; SetChildren/SetChildkeyTake touch only their own netuid. Eight children::tests fixtures cover numeric spellings/refusals, share boundaries, iterable constructor behavior, native hex versus JSON list accounts, independent SCALE layouts, current-take routing/default and every preflight/signer default. Chain child-count, uniqueness, root, cooldown and stake checks remain chain-owned as upstream. This is source and authored-fixture reconciliation, not a new hosted test/oracle result."
 
 [[file]]
 py = "sdk/python/bittensor/intents/coldkey.py"
 rs = ["`rtao_intents::coldkey` (feature `coldkey`)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "2afbd304453223a3f3c4719cdcd13c85d41f98d3"
 synced_tag = "v478"
 milestone = "M5"
-notes = "4 intents (3 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: exact source blob, pinned SHA256 and canonical primary attribution verified. All four intents preserve summary and warning text, coldkey/signed metadata, read-free default preflight and no-spend/no-netuid scope; only announced swap marks global subnet effects. coldkey_hash hashes the decoded 32-byte account with BLAKE2b-256 independently of SS58 format; inputs preserve their spelling in JSON/summary and encode one account/hash. Independent zero-key hash and exact call-byte fixtures cover announcement, reveal, clear and dispute: coldkey_hash_matches_independent_blake2b256_vector, coldkey_swaps_keep_ss58_spelling_but_encode_one_account_across_prefixes, coldkey_clear_and_dispute_encode_exact_zero_argument_calls, coldkey_preflights_keep_exact_warnings_and_inherited_policy_facts, coldkey_tool_inputs_reject_unknown_missing_and_malformed_fields. Chain delay, dispute and ownership enforcement remain chain-owned as in Python. This is source/fixture reconciliation, not execution or milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/intents/collateral.py"
 rs = ["`rtao_intents::collateral` (feature `collateral`)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "93f4a53ec22db5cebd2723626b6096646f170ba3"
 synced_tag = "v478"
 milestone = "M5"
-notes = "2 intents (0 generated `build()`, 2 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: exact source blob, pinned SHA256 and canonical primary attribution verified. AddCollateral normalizes subnet money before tolerance, permits all, resolves the public effective coldkey/hotkey and subtracts MinerCollateral.locked from stake in the paired pinned reads; empty/overlocked positions refuse before pricing. Exact amounts skip those reads, then both paths derive the fill-or-kill price by Python binary64 multiplication/truncation with checked native overflow. SetMinCollateral rejects all, permits zero and builds without reads. Both preserve defaults, summary/preflight/warnings, exact amount JSON, coldkey role and own-netuid scope; AddCollateral stays unbounded spend and requires shielding. Eight collateral::tests fixtures independently pin amount/unit/boundary normalization, float limits, exact SCALE bytes, all-position runtime/storage parameters and one block hash, refusal read order, hotkey fallbacks, preflight and tool errors. D-035 covers native u64 amounts. Chain ownership/purchase logic remains chain-owned; these reviewed sources do not claim new executed tests or live collateral validation."
 
 [[file]]
 py = "sdk/python/bittensor/intents/crowdloan.py"
@@ -2214,16 +2214,16 @@ kind = "ported"
 synced_blob = "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
 synced_tag = "v478"
 milestone = "M5"
-notes = "Source reconciliation 2026-10-15: four registered multisig intents and both owned typed adapters are implemented under feature multisig. Exact source blob matches tree.txt. Canonical attribution covers registered behavior and adapter source; executor/FakeChain fixtures pin semantic previews, member/group/deposit/runtime checks, origin and sudo/proxy layer order, fixed call bytes, opening continuity, typed output and policy/shield forwarding. D060 replaces independent pinned bytes with executor-issued bound continuation proofs; real hotkey Batch continuation uses dynamic role under both thresholds. Independent reviews informed the proof provenance and dynamic-role corrections; final corrected-source rereads and hosted compilation/execution remain pending, and no device or oracle execution is claimed."
+notes = "Source reconciliation 2026-10-15: four registered multisig intents and both owned typed adapters are implemented under feature multisig. Exact source blob matches tree.txt. Canonical attribution covers registered behavior and adapter source; executor/FakeChain fixtures pin semantic previews, member/group/deposit/runtime checks, origin and sudo/proxy layer order, fixed call bytes, opening continuity, typed output and policy/shield forwarding. D060 replaces independent pinned bytes with executor-issued bound continuation proofs; real hotkey Batch continuation uses dynamic role under both thresholds. Independent reviews informed the proof provenance and dynamic-role corrections; final corrected-source rereads found no remaining defect. Hosted regression execution remains pending, and no device or oracle execution is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/intents/plan.py"
-rs = ["`rtao_tx::{Policy, Plan}`"]
+rs = ["rtao_tx::{Policy, PolicySubject, Plan}", "rtao_tx::Executor::{plan, plan_dyn}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0cbdf4018fef1932c78168042650d21f7156d4ae"
 synced_tag = "v478"
 milestone = "M2"
-notes = "`Policy` `:21-85`, `Plan` `:89-135` (§4.6)"
+notes = "Source reconciliation 2026-10-15: complete authenticated Python Policy/Plan source reviewed against integer-rao fee/spend limits, semantic/global/subnet/raw-call checks, retained call bytes and all thirteen approval JSON fields. Rust uses checked native amounts and canonical subnet sets; recursively inspected compositions additionally enforce D059. Build extras and call bytes stay outside the approval JSON. Canonical attribution is in policy.rs/plan.rs; executor assembly retains semantic args and violation order. Authored fixtures: rtao_tx::plan::tests::{approval_json_keeps_complete_python_fields_and_excludes_call_and_extras, approval_json_distinguishes_absent_zero_and_unbounded_spend}; rtao_tx::executor::{plan_and_preflight_do_not_unlock_or_change_cached_nonce, native_policy_and_hard_blocks_refuse_before_unlocking}; rtao_tx::policy_equivalence::{all_twenty_one_real_core_constructors_match_native_policy_categories_and_scope_sets, raw_call_submission_requires_explicit_policy_opt_in}. Independent source review passed; hosted compilation/execution of the new JSON fixtures remain pending."
 
 [[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
@@ -2245,12 +2245,12 @@ notes = "8 intents (7 generated `build()`, 1 ported); see [parity-inventory.md s
 
 [[file]]
 py = "sdk/python/bittensor/intents/registry.py"
-rs = ["`rtao_catalog::INTENTS`; `rtao_intents::AnyIntent`; `rtao_tx::Executor::tools`"]
+rs = ["rtao_intents::{Registry, AnyIntent, executor}", "rtao_tx::Executor::{tools, execute_tool}"]
 kind = "generated"
-synced_blob = "pending"
+synced_blob = "03340afe236412cd3c29935e1d9a43e5157efc0f"
 synced_tag = "v478"
 milestone = "M2"
-notes = "`list_tools` `:43-66`"
+notes = "Source reconciliation 2026-10-15: complete authenticated registry source reviewed. Native compile-time dispatch replaces mutable decorators; extraction rejects duplicate op names and mismatched catalog/source declarations before generation. Feature-enabled AnyIntent parsing ignores op, normalizes constructors and rejects unknown arguments/operations before key access. Unknown-op diagnostics preserve Python repr and the sorted callable registry; feature-disabled operations are absent from that binary registry. Executor::tools projects all nine Python list_tools fields in sorted order, using absolute docs URLs; native feature availability remains separate from the complete discovery manifest. Exact canonical attribution is in registry.rs, lib.rs and executor.rs. Authored fixtures: rtao_intents::registry::tests::{owned_tools_keep_constructor_normalization_and_role, unknown_tools_fail_before_any_client_or_key_is_available, unknown_tools_keep_python_quoted_input_and_complete_sorted_registry}; rtao_tx::executor::{tools_project_all_authenticated_schemas_into_python_manifest_fields, tool_dispatch_runs_the_feature_enabled_production_intent}; xtask::extract_specs::tests::intent_catalog_mismatches_fail_instead_of_generating_partial_specs. Independent source review passed; hosted regeneration/adoption of AnyIntent and execution of the strengthened manifest/diagnostic fixtures remain pending."
 
 [[file]]
 py = "sdk/python/bittensor/intents/root.py"

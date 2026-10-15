@@ -733,7 +733,7 @@ mod tests {
                 .await
                 .expect_err("unknown inner")
                 .to_string(),
-            "Unknown or disabled intent: missing-intent"
+            crate::registry::unknown_op("missing-intent").to_string()
         );
         intent.inner_op = "remove_proxies".into();
         assert!(
@@ -759,7 +759,7 @@ mod tests {
                     .await
                     .expect_err("unknown inner first")
                     .to_string(),
-                "Unknown or disabled intent: missing-intent"
+                crate::registry::unknown_op("missing-intent").to_string()
             );
             intent.inner_op = "remove_proxies".into();
         }

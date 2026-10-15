@@ -3,6 +3,22 @@
 schema = 1
 
 [[divergences]]
+id = "D-061"
+upstream_symbol = "bittensor.cli.hyperparams_view._example_value(epoch_consensus)"
+python_behavior = "The view suggests numeric 0/1 setter values, although the interactive parser and SetHyperparameter accept only Yuma/Null."
+rtao_behavior = "The ready-to-paste setter example uses Yuma for native 0 and Null for native 1. Raw displayed and machine values, setter validation and chain encoding retain their existing contracts."
+rationale = "The pinned setter and runtime enum establish the accepted spelling and discriminants. A generated example must pass that setter's validation."
+decision = "PLAN.md execution rule 5; pinned view/setter contradiction independently reviewed on 2026-10-15"
+status = "active"
+class = "improved"
+milestone = "M9"
+pinning_tests = [
+  "rtao_cli::hparams_commands::epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json",
+]
+upstream_report = "Independent source review and both-mode CLI round-trip fixture authored; hosted compilation/execution remain pending. No new filing under the user's instruction."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/hyperparams_view.py#L135-L145"
+
+[[divergences]]
 id = "D-059"
 upstream_symbol = "bittensor nested intent policy and deferred crowdloan dispatch"
 python_behavior = "Outer wrappers can hide nested spend, subnet and mandatory-shield requirements; finalization identifies a stored callback by ID."
@@ -19,7 +35,7 @@ pinning_tests = [
   "rtao_intents::nested_policy::stored_callbacks_propagate_spend_subnets_and_global_policy_through_tools",
   "rtao_intents::nested_policy::deferred_required_shield_callbacks_refuse_even_explicit_shield_submission",
 ]
-upstream_report = "Nested and deferred source fixes and regression sources remain under final review; hosted compilation and execution are pending. No new upstream filing."
+upstream_report = "Final independent source reread found no remaining defect in the pinned-only shielding guard; deferred callback contracts and regression sources were reviewed. Hosted regression execution and final disposition are pending. No new upstream filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/crowdloan.py"
 
 [[divergences]]
@@ -39,7 +55,7 @@ pinning_tests = [
   "rtao_intents::multisig_adapter::hotkey_batch_continuations_preserve_dynamic_origin_and_exact_bytes_at_both_thresholds",
   "rtao_cli::multisig::tests::continuation_proof_cannot_relabel_transfer_all_as_bounded_or_change_its_destination",
 ]
-upstream_report = "Independent review checked opaque proof provenance and identified a dynamic-role continuation edge; its correction and new fixtures require final reread and hosted validation. No new filing."
+upstream_report = "Final independent source reread found no remaining defect in opaque proof provenance, dynamic-role origin binding or the correction's continuation fixtures. Hosted regression execution and final disposition remain pending. No new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/multisig.py"
 
 [[divergences]]

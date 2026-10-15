@@ -676,7 +676,7 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         };
         any.push_str(&format!("{}{:?} => {{ if !args.is_object() {{return Err(rtao_tx::IntentError::Validation(\"Intent arguments must be a JSON object.\".into()));}} {construct} rtao_tx::Intent::validate(&intent)?; Ok(Self::{class}(intent)) }},\n", cfg(&feature), spec.name));
     }
-    any.push_str("_ => Err(rtao_tx::IntentError::Validation(format!(\"Unknown or disabled intent: {op}\"))),\n}}\n");
+    any.push_str("_ => Err(crate::registry::unknown_op(op)),\n}}\n");
     for (name, result, body) in [
         (
             "to_json",

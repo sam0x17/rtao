@@ -133,32 +133,304 @@ async fn live_registration_review_discloses_exact_burn_lock_and_root_recycling_b
 
 #[tokio::test]
 async fn dry_run_registration_keeps_the_sdk_summary_and_machine_schema() -> TestResult {
+    for op in ["root_register", "register_subnet"] {
+        let (client, chain, keys) = fixture(u64::MAX).await?;
+        chain.mutate_state(|state| {
+            state.seed_python(
+                "SubtensorModule",
+                "Burn",
+                &[json!(0)],
+                json!(2_000_000_000u64),
+            )
+        })?;
+        let intent =
+            rtao_intents::AnyIntent::from_tool(op, json!({"hotkey_ss58": keys.key.account()}))?;
+        let (ctx, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
+        assert!(
+            ctx.submit_with(&client, intent.as_dyn(), &keys, false, None)
+                .await?
+                .is_none()
+        );
+        let payload: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        assert_eq!(payload["summary"], intent.as_dyn().summary_dyn());
+        assert!(payload.get("cost").is_none());
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(
+            !chain
+                .requests()
+                .iter()
+                .any(|request| request.method == "state_call"
+                    && request.params[0]
+                        == "SubnetRegistrationRuntimeApi_get_network_registration_cost")
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn subnet_creation_review_quotes_exact_cost_and_all_queue_flows_before_unlock() -> TestResult
+{
+    for (limit, cleanup, registration_waiting, prune, flow, probes_prune) in [
+        (
+            2,
+            vec![],
+            false,
+            Some(7),
+            "immediate · no deregistration needed",
+            false,
+        ),
+        (
+            2,
+            vec![9],
+            false,
+            Some(7),
+            "queued · waits for deregistration cleanup of subnet 9",
+            false,
+        ),
+        (
+            2,
+            vec![9],
+            true,
+            Some(7),
+            "queued · deregisters subnet 7 before registration",
+            true,
+        ),
+        (
+            1,
+            vec![],
+            false,
+            None,
+            "blocked · no subnet is eligible for deregistration",
+            true,
+        ),
+    ] {
+        let (client, chain, keys) = fixture(u64::MAX).await?;
+        chain.mutate_state(|state| -> TestResult {
+            state.seed_runtime(
+                "SubnetRegistrationRuntimeApi",
+                "get_network_registration_cost",
+                json!(1_234_567_890_123u64),
+            )?;
+            state.seed_runtime("SubnetInfoRuntimeApi", "get_subnet_to_prune", json!(prune))?;
+            for (netuid, added) in [(0, true), (1, true), (2, false)] {
+                state.seed_python(
+                    "SubtensorModule",
+                    "NetworksAdded",
+                    &[json!(netuid)],
+                    json!(added),
+                )?;
+            }
+            state.seed_python("SubtensorModule", "SubnetLimit", &[], json!(limit))?;
+            state.seed_python(
+                "SubtensorModule",
+                "DissolveCleanupQueue",
+                &[],
+                json!(cleanup),
+            )?;
+            state.seed_python(
+                "SubtensorModule",
+                "NetworkRegistrationQueue",
+                &[],
+                if registration_waiting {
+                    json!([{"coldkey":keys.key.account(), "hotkey":keys.key.account()}])
+                } else {
+                    json!([])
+                },
+            )?;
+            Ok(())
+        })?;
+        let intent = rtao_intents::RegisterSubnet { hotkey_ss58: None };
+        let (mut ctx, sink, _) = context(&["--no-mev-shield"])?;
+        let questions = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation {
+            questions: questions.clone(),
+        })));
+        let request_start = chain.requests().len();
+        let error = ctx
+            .submit_with(&client, &intent, &keys, false, None)
+            .await
+            .err()
+            .ok_or("confirmation must refuse")?;
+        assert_eq!(error.message, "aborted.");
+        assert_eq!(
+            questions.lock().map_err(|_| "questions")?.as_slice(),
+            ["register a new subnet for 1,234.567890123 TAO? [y/N]: "],
+        );
+        let card = sink.text(Stream::Stdout)?;
+        assert!(card.contains("register a new subnet for 1,234.567890123 TAO"));
+        assert!(card.contains("τ1,234.567890123"));
+        assert!(sink.text(Stream::Stderr)?.contains(flow));
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        let requests = chain
+            .requests()
+            .into_iter()
+            .skip(request_start)
+            .collect::<Vec<_>>();
+        let quote = requests
+            .iter()
+            .find(|request| {
+                request.method == "state_call"
+                    && request.params[0]
+                        == "SubnetRegistrationRuntimeApi_get_network_registration_cost"
+            })
+            .ok_or("quote request")?;
+        let pinned = &quote.params[2];
+        assert!(!pinned.is_null());
+        let prunes = requests
+            .iter()
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "SubnetInfoRuntimeApi_get_subnet_to_prune"
+            })
+            .count();
+        assert_eq!(prunes, usize::from(probes_prune));
+        for request in &requests {
+            let state_hash = match request.method.as_str() {
+                "state_getStorage" | "state_queryStorageAt" => request.params.get(1),
+                "state_getKeysPaged" => request.params.get(3),
+                "state_call" => request.params.get(2),
+                _ => None,
+            };
+            if let Some(hash) = state_hash {
+                assert_eq!(hash, pinned, "{}", request.method);
+            }
+        }
+        client.close().await;
+    }
+    Ok(())
+}
+
+struct StopRegistrationBeforeSigning;
+impl rtao_cli::context::SubmissionHooks for StopRegistrationBeforeSigning {
+    fn before_submit(&self) -> BoxFuture<'_, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async {
+            Err(rtao_cli::error::CliError::failure(
+                "review finished sentinel",
+            ))
+        })
+    }
+    fn on_result<'a>(
+        &'a self,
+        _: &'a rtao::tx::ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async { Err(rtao_cli::error::CliError::failure("unexpected receipt")) })
+    }
+}
+
+#[tokio::test]
+async fn subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_reads() -> TestResult
+{
     let (client, chain, keys) = fixture(u64::MAX).await?;
-    chain.mutate_state(|state| {
-        state.seed_python(
-            "SubtensorModule",
-            "Burn",
-            &[json!(0)],
-            json!(2_000_000_000u64),
+    let omitted_keys =
+        chain.mutate_state(|state| -> Result<Vec<String>, Box<dyn std::error::Error>> {
+            state.seed_runtime(
+                "SubnetRegistrationRuntimeApi",
+                "get_network_registration_cost",
+                json!(u64::MAX),
+            )?;
+            [
+                "SubnetLimit",
+                "DissolveCleanupQueue",
+                "NetworkRegistrationQueue",
+            ]
+            .into_iter()
+            .map(|name| {
+                let info = state
+                    .runtime
+                    .storage_entry("SubtensorModule", name)
+                    .ok_or("preview storage")?;
+                Ok(format!(
+                    "0x{}",
+                    hex::encode(state.runtime.storage_key(info, &[])?)
+                ))
+            })
+            .collect()
+        })?;
+    let intent = rtao_intents::RegisterSubnet { hotkey_ss58: None };
+    let (ctx, sink, reads) = context(&["--yes", "--no-mev-shield"])?;
+    let error = ctx
+        .submit_with_hooks(
+            &client,
+            &intent,
+            &keys,
+            false,
+            None,
+            Some(&StopRegistrationBeforeSigning),
         )
-    })?;
-    let intent = rtao_intents::RootRegister {
-        hotkey_ss58: Some(keys.key.account().to_string().parse()?),
-    };
-    let (ctx, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
-    assert!(
-        ctx.submit_with(&client, &intent, &keys, false, None)
-            .await?
-            .is_none()
-    );
-    let payload: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
-    assert_eq!(payload["summary"], intent.summary());
-    assert!(payload.get("cost").is_none());
+        .await
+        .err()
+        .ok_or("review sentinel")?;
+    assert_eq!(error.message, "review finished sentinel");
+    let card = sink.text(Stream::Stdout)?;
+    assert!(card.contains("register a new subnet for 18,446,744,073.709551615 TAO"));
+    assert!(card.contains("cost"));
     assert!(sink.text(Stream::Stderr)?.is_empty());
     assert_eq!(reads.load(Ordering::SeqCst), 0);
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    let requests = chain.requests();
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|request| request.method == "state_call"
+                && request.params[0]
+                    == "SubnetRegistrationRuntimeApi_get_network_registration_cost")
+            .count(),
+        1
+    );
+    assert!(
+        !requests
+            .iter()
+            .any(|request| request.method == "state_getKeysPaged"
+                || (request.method == "state_call"
+                    && request.params[0] == "SubnetInfoRuntimeApi_get_subnet_to_prune"))
+    );
+    for key in omitted_keys {
+        assert!(!requests.iter().any(|request| {
+            match request.method.as_str() {
+                "state_getStorage" => request.params[0] == key,
+                "state_queryStorageAt" => request.params[0]
+                    .as_array()
+                    .is_some_and(|keys| keys.iter().any(|item| item == &key)),
+                _ => false,
+            }
+        }));
+    }
     client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn subnet_creation_unreadable_quote_refuses_before_confirmation_or_signing() -> TestResult {
+    for flags in [vec!["--no-mev-shield"], vec!["--yes", "--no-mev-shield"]] {
+        let (client, chain, keys) = fixture(u64::MAX).await?;
+        chain.mutate_state(|state| {
+            state.seed_runtime_encoded(
+                "SubnetRegistrationRuntimeApi_get_network_registration_cost",
+                vec![],
+                vec![],
+            );
+        });
+        let intent = rtao_intents::RegisterSubnet { hotkey_ss58: None };
+        let (ctx, sink, reads) = context(&flags)?;
+        let error = ctx
+            .submit_with(&client, &intent, &keys, false, None)
+            .await
+            .err()
+            .ok_or("unreadable quote must refuse")?;
+        assert_eq!(error.code, 1);
+        assert_ne!(error.message, "aborted.");
+        assert!(!sink.text(Stream::Stdout)?.contains("Transaction"));
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+    }
     Ok(())
 }
 

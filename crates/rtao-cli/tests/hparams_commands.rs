@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/sudo.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional source at the same commit/license: sdk/python/bittensor/cli/hyperparams_view.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/hyperparams_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Curated owner commands preserve real SDK arguments and lossless read output.
 
 use rtao::{
@@ -467,6 +467,66 @@ fn parameter_listing_hint_selects_a_present_name_or_the_empty_default() -> TestR
         assert!(sink.text(Stream::Stdout)?.contains(&format!(
             "`--name {name}` explains one parameter and how to set it"
         )));
+    }
+    Ok(())
+}
+
+#[test]
+fn epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json() -> TestResult
+{
+    for (raw, mode) in [(0, "Yuma"), (1, "Null")] {
+        let params = Some(serde_json::Map::from_iter([(
+            "epoch_consensus".into(),
+            json!(raw),
+        )]));
+        let sink = MemorySink::default();
+        let output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+        hparams::render_hyperparameters(&output, NetUid(1), &params, Some("epoch_consensus"))?;
+        let human = sink.text(Stream::Stdout)?;
+        let command = human
+            .lines()
+            .find_map(|line| line.find("rtao hparams set").map(|start| &line[start..]))
+            .ok_or("setter example")?;
+        assert!(command.ends_with(&format!("--value {mode}")));
+        let mut args = command.split_ascii_whitespace().collect::<Vec<_>>();
+        args.push("--yes");
+        let parsed = parse(&args)?;
+        let (mut ctx, _) = context(&parsed)?;
+        let Request::Transaction(request) = Request::from_matches(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?
+        else {
+            return Err("expected setter transaction".into());
+        };
+        assert_eq!(request.intent()?.to_json()["value"], mode);
+        for rejected in [json!(raw), json!(raw.to_string())] {
+            let error = rtao_intents::AnyIntent::from_tool(
+                "set_hyperparameter",
+                json!({"netuid":1, "name":"epoch_consensus", "value": rejected}),
+            )
+            .err()
+            .ok_or("numeric consensus spelling must refuse")?;
+            assert!(
+                error
+                    .to_string()
+                    .contains("epoch_consensus must be Yuma or Null")
+            );
+        }
+        let sink = MemorySink::default();
+        let output = Output::new(
+            OutputOptions {
+                json_mode: true,
+                ..Default::default()
+            },
+            Arc::new(sink.clone()),
+        );
+        hparams::render_hyperparameters(&output, NetUid(1), &params, Some("epoch_consensus"))?;
+        let payload: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        assert_eq!(payload["value"], raw);
+        assert_eq!(payload["kind"], "int");
+        assert!(payload.get("set it").is_none());
     }
     Ok(())
 }
