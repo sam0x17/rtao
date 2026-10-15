@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/result.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Typed views of Python result data and JSON-compatible submission results.
 
 use crate::{ChainError, IntentError};
@@ -111,7 +112,7 @@ pub struct ExtrinsicResult<O = ()> {
     pub explorer_url: Option<String>,
     /// Actual fee in checked native TAO.
     pub fee: Option<Balance<Tao>>,
-    /// Events triggered by this extrinsic.
+    /// Triggered events for successful results; failed facade results omit them.
     pub events: Vec<EventRecord>,
     /// Python-shaped classified chain failure.
     pub error: Option<ChainError>,
@@ -151,7 +152,11 @@ impl ExtrinsicResult {
                 .then_some(report.fee)
                 .flatten()
                 .map(|fee| Balance::<Tao>::from_rao(fee.0)),
-            events: report.events,
+            events: if report.success {
+                report.events
+            } else {
+                Vec::new()
+            },
             error,
             data: if report.success { data } else { Map::new() },
             output: (),
