@@ -1955,6 +1955,19 @@
     ],
     "divergences": [
       {
+        "id": "D-053",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::prompt::masked_input::tests::unicode_entry_echoes_one_star_per_decoded_character_and_no_plaintext",
+          "rtao_cli::prompt::masked_input::tests::cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes",
+          "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_is_hidden_and_uses_owned_editing_and_restoration",
+          "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_cancellation_restores_and_never_retries_plain_input",
+          "rtao_cli::prompt::masked_input::tests::controlling_terminal_failures_attempt_restoration_without_plain_input_retry",
+          "rtao_cli::prompt::masked_input::tests::unavailable_controlling_terminal_selects_the_warned_plain_line_fallback"
+        ]
+      },
+      {
         "id": "D-052",
         "oracle": "unverified",
         "rtao": "active",
@@ -2208,9 +2221,10 @@
       {
         "id": "D-017",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`tls_certificate_length_checked`"
+          "rtao_intents::serving::tests::certificate_length_counts_decoded_bytes_at_the_chain_boundary",
+          "rtao_intents::serving::tests::tls_validation_orders_ip_then_hex_syntax_then_certificate_length"
         ]
       },
       {
@@ -2346,9 +2360,13 @@
       {
         "id": "D-034",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`approve_at_threshold_warns`"
+          "rtao_intents::multisig::tests::approve_at_threshold_warns_without_executing_or_changing_the_hash_only_call",
+          "rtao_intents::multisig::tests::approval_count_read_failure_preserves_the_explicit_hash_only_approval",
+          "rtao_intents::multisig::tests::approval_warning_uses_exact_reviewed_hash_through_wrappers_without_child_rpc",
+          "rtao_intents::multisig::tests::stalled_approval_count_returns_a_warning_within_two_seconds",
+          "rtao_intents::multisig::tests::null_timepoint_uses_opening_warnings_and_preserves_as_multi"
         ]
       },
       {
@@ -3130,25 +3148,25 @@
     ],
     "environment": [
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M7-BRIDGE",
+        "consumer": "rtao_signer::extension::BridgePaths::from_environment",
+        "divergence": null,
         "name": "BITTENSOR_EXTENSION_BRIDGE_PID",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M7-BRIDGE",
+        "consumer": "rtao_signer::extension::BridgePaths::from_environment",
+        "divergence": null,
         "name": "BITTENSOR_EXTENSION_BRIDGE_TOKEN",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-LOGGING",
+        "consumer": "rtao_cli::logs::setup_logging",
+        "divergence": null,
         "name": "BITTENSOR_LOG",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "consumer": "rtao_client::RuntimeCache::default_disk_dir",
@@ -3207,11 +3225,11 @@
         "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_ARCHIVE_ENDPOINTS",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "consumer": "rtao_client::Network::resolve",
@@ -3221,39 +3239,39 @@
         "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M7-EVM",
+        "consumer": "rtao_evm::evm_network",
+        "divergence": null,
         "name": "BT_EVM_ENDPOINT",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M7-BRIDGE",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_EXTENSION_BRIDGE",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M7-BRIDGE",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_EXTENSION_BROWSER",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_FALLBACK_ENDPOINTS",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_NETWORK",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "consumer": "rtao_wallet::resolve_wallet_password",
@@ -3263,32 +3281,32 @@
         "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_RETRY_FOREVER",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M7-SIGNER-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_SIGNER_ADDRESS",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_WALLET",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_WALLET_HOTKEY",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "consumer": "rtao_wallet::resolve_wallet_password",
@@ -3305,25 +3323,25 @@
         "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M4-GLOBALS",
+        "consumer": "rtao_cli::globals::Globals::resolve",
+        "divergence": null,
         "name": "BT_WALLET_PATH",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M8-UPGRADE",
+        "consumer": "rtao_cli::commands::multisig::execute",
+        "divergence": null,
         "name": "GH_TOKEN",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
-        "consumer": null,
-        "divergence": "ENV-PENDING-M8-UPGRADE",
+        "consumer": "rtao_cli::commands::multisig::execute",
+        "divergence": null,
         "name": "GITHUB_TOKEN",
         "oracle": "unverified",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "consumer": null,
@@ -4321,307 +4339,307 @@
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.EPOCH_BLOCK",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.GENERATED_BLOCK",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.DisplayPricing",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.age_days",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.fund_pricing",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.index_level",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.normalize_position",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.normalize_positions",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.spot_beta_price",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.stake_value",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.staker_yield",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.basket_index.tr_index_level",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/basket_index.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.error_descriptions.DESCRIPTIONS",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/error_descriptions/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.ETH_DERIVATION_PATH",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.EVM_NETWORKS",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.PRECOMPILES",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.STANDARD_PRECOMPILES",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.WEI_PER_TAO",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.ContractArtifact",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.EvmKeyInfo",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.EvmNetwork",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.EvmRpc",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.EvmRpcError",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.EvmTxPreview",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.Precompile",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.association_proof",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.balance_to_wei",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.caller_role",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.create_evm_key",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.decode_result",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.describe_arguments",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.encode_call",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.encode_deploy",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.evm_network",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.export_evm_key",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.function_deprecation",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.get_evm_key_info",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.get_precompile",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.h160_to_ss58",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.import_evm_key",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.is_h160",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.list_evm_keys",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.load_artifact",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.normalize_h160",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.prepare_transaction",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.pubkey_to_ss58",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.send_transaction",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.ss58_to_h160_truncated",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.ss58_to_pubkey",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.unlock_evm_key",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.evm.wei_to_balance",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {
@@ -4723,61 +4741,61 @@
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.DEFAULT_ALLOWED_SKEW",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.DEFAULT_MAX_AGE",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.HEADER_CRYPTO",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.HEADER_HOTKEY",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.HEADER_NONCE",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.HEADER_RECEIVER",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.HEADER_SIGNATURE",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.HEADER_VERSION",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.PROTOCOL",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.VERSION",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
@@ -4789,7 +4807,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.BadSignature",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
@@ -4807,7 +4825,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.MalformedAuth",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
@@ -4819,19 +4837,19 @@
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.ReplayedRequest",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.StaleRequest",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.WrongReceiver",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
@@ -4855,613 +4873,613 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ALL",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.OWNER_HYPERPARAMETERS",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.PROXY_TYPES",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.REGISTRY",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UNBOUNDED",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AddCollateral",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AddProxy",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AddStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AddStakeLimit",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AnnounceColdkeySwap",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AssociateEvmKey",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AssociateHotkey",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Batch",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.BurnedRegister",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ClaimRoot",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ClaimRootWithHotkey",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ClearColdkeySwapAnnouncement",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.CommitWeights",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ContributeCrowdloan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.CreateCrowdloan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.CreatePureProxy",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.DecreaseTake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.DisputeColdkeySwap",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.DissolveCrowdloan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.EvmWithdraw",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ExecuteProxyAnnounced",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.FinalizeCrowdloan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.FundEvmKey",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.IncreaseTake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Intent",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.KillPureProxy",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.LockStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Money",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MoveLock",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MoveStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MoveSwapStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MultisigApprove",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MultisigCancel",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MultisigExecute",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MultisigThreshold1",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Plan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Policy",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.PowRegister",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RefundCrowdloan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RegisterLeasedNetwork",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RegisterSubnet",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RemoveProxies",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RemoveProxy",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RemoveStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RemoveStakeLimit",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ResetAxon",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RevealWeights",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RootRegister",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ServeAxon",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ServeAxonTls",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ServePrometheus",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetAutoStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetChildkeyTake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetChildren",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetCrowdloanMaxContribution",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetHyperparameter",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetIdentity",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetMechanismCount",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetMinCollateral",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetPerpetualLock",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetRejectLockedAlpha",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetRootClaimThreshold",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetSubnetEmissionEnabled",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetSubnetIdentity",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetTake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetWeights",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Spend",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.StakeBurn",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.StakeIntoBasket",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.StartCall",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SwapBasket",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SwapBasketMany",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SwapColdkeyAnnounced",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SwapHotkey",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SwapStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.TerminateLease",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.Transfer",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.TransferAll",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.TransferStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.TrimNullSubnetBatch",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.TrimSubnet",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UnstakeAll",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UnstakeAllAlpha",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UpdateCrowdloanCap",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UpdateCrowdloanEnd",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UpdateCrowdloanMinContribution",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.UpdateSymbol",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.WithdrawCrowdloan",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.build",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.list_tools",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.normalize",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.register",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.keyfiles.Keyfile",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/keyfiles.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.keyfiles.KeyfileError",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/keyfiles.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.keyfiles.Keypair",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/keyfiles.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.keyfiles.WrongPasswordError",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/keyfiles.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.keyfiles.resolve_key_password",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/keyfiles.py"
       },
       {
@@ -5479,79 +5497,79 @@
       {
         "oracle": "unverified",
         "python": "bittensor.masked_input.masked_input",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/masked_input.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.REGISTRY",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.Commitment",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.DelegateInfo",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.DelegatedStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.Grouped",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.Matrix",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.Neuron",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.ReadSpec",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.StakePosition",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.StakeValuation",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.SubnetInfo",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.SwapQuote",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
@@ -5569,7 +5587,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.reads.dispatch",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
@@ -5581,13 +5599,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.reads.list_reads",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.reads.read",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
       },
       {
@@ -5719,13 +5737,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.wallet.DEFAULT_WALLET_PATH",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/wallet.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.wallet.Wallet",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/wallet.py"
       }
     ],
@@ -5746,99 +5764,100 @@
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "common/src/transaction_error.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "rtao_catalog::rt::CUSTOM_TRANSACTION_ERRORS"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0b735429b0e11a172e6079ca7ba561cd7d350cfb"
       },
       {
         "kind": "vendored",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "docs/guides/signed-requests.mdx",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the btauth/1 specification and vectors (§7)"
+          "vendor/upstream/signed-requests.mdx",
+          "rtao_btauth::legacy::verify_v10 implements the documented optional legacy signature recipe"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "be45ac18f9dca8e491f133665263f68a5ae2af44"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/Cargo.toml",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d485228e5ab6e64080fc68b554c21ec1964b5e18"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/src/helpers.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "de836a285792f302379c039915489176242a6ea2"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/src/lib.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4613d7dbe20ba2461391b19f5b0fafdd28d7241f"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/src/mock.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9c913295e51ed1108e365531fb3d718af9531280"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/src/tests.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6c4dc4d10f3d84876ad909d0d9fcd331664ba222"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/src/tests_mentat_indexer.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d416a4a372011e6afd0217d8e2d03f8a9b724091"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "eco-tests/src/tests_taocom_indexer.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b58c1591d75938fa60f5a44655fe525b1e2cf4c0"
       },
       {
         "kind": "ported",
@@ -5889,99 +5908,107 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/basket_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated basket_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "641531f8d791905a40f48d97b12d6b3b5c2f7109"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/delegate_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated delegate_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7656aaec6c144af360743d9e627835cce5868b53"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/dynamic_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated dynamic_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b1432954255343d9f68ede604e3fd2fb30a73a78"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/metagraph.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated metagraph freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a627a4eff3313ca64691c21d94540e6622ab7c49"
       },
       {
-        "kind": "extracted",
+        "kind": "n/a",
         "milestone": "M1",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "pallets/subtensor/src/rpc_info/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "none needed: namespace/package marker only"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "32f152d05661cb3fe5c216fb1bf591dd0e95b3c9"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/neuron_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated neuron_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "fe9f0f2e5285bd8d113cf5152ba92a0954795ab0"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/show_subnet.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated show_subnet freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "18adfe4bc4ec5252c28cfe506d2aab9b2ef6abb5"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/stake_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated stake_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2d3316f34d909cd21699fc53420ae2636216383e"
       },
       {
         "kind": "extracted",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/subnet_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`freeze_struct` hashes, `SelectiveMetagraphIndex` (§4.9 layer 5)"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (metadata projections and authenticated subnet_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8767adb6c0db9c8f0a96eb11be21ce583ca8445a"
       },
       {
         "kind": "ported",
@@ -6043,22 +6070,22 @@
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "runtime/src/check_mortality.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "rtao_catalog::rt::MAX_SHIELD_ERA_PERIOD"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2ec5233ed198d33132d1b9bc9cf352861fb5dd93"
       },
       {
         "kind": "extracted",
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "runtime/src/fee_filters.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "rtao_catalog::rt::COLDKEY_PAYS_FEE_CALLS"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ca9875b0ee1bbbd8d7bb4600f8a45625d7722f1b"
       },
       {
         "kind": "extracted",
@@ -6078,7 +6105,7 @@
         "python": "sdk/bittensor-core-py/Cargo.toml",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6089,7 +6116,7 @@
         "python": "sdk/bittensor-core-py/README.md",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6100,7 +6127,7 @@
         "python": "sdk/bittensor-core-py/pyproject.toml",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6111,7 +6138,7 @@
         "python": "sdk/bittensor-core-py/src/digest.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6122,7 +6149,7 @@
         "python": "sdk/bittensor-core-py/src/errors.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6133,8 +6160,7 @@
         "python": "sdk/bittensor-core-py/src/keys.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)",
-          "rtao_signer; rtao_core::keys"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6145,7 +6171,7 @@
         "python": "sdk/bittensor-core-py/src/ledger.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6156,7 +6182,7 @@
         "python": "sdk/bittensor-core-py/src/lib.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6167,7 +6193,7 @@
         "python": "sdk/bittensor-core-py/src/pow.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6178,8 +6204,7 @@
         "python": "sdk/bittensor-core-py/src/runtime.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)",
-          "rtao_runtime; rtao_core_ext::ir::MetadataIr"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6190,8 +6215,7 @@
         "python": "sdk/bittensor-core-py/src/timelock.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)",
-          "rtao_tx::timelock; rtao_primitives::drand"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6202,8 +6226,7 @@
         "python": "sdk/bittensor-core-py/src/values.rs",
         "rtao": "pending",
         "rust": [
-          "the 1,865-line PyO3 binding through which Python reaches the core; the rows for `values.rs`, `runtime.rs`, `timelock.rs` and `keys.rs` name the rtao code that mirrors their shapes (§4.9)",
-          "rtao_primitives::IntoCoreValue; rtao_core::DynValue"
+          "Optional CI-only oracle build dependency authenticated by ci/oracle/Dockerfile and xtask oracle image inputs; no manifested behavioral corpus yet"
         ],
         "synced_blob": "pending"
       },
@@ -6212,385 +6235,385 @@
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/Cargo.toml",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "556780e20985472c01974f536ad9417f9c7602d1"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/fixtures/ledger_proof_vector.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+          "vendor/upstream/ledger_proof_vector.json; rtao-signer Ledger and rtao-testkit ledger_replay fixtures"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5840e0bbfcebf8ce450d556f87e5bbd607239fc6"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/client.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "15af650c0a8e631df0953151a1d03ca9ed10045a"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/batch.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cbc9e080fdb2184d8271451a9b87f8bcf6e373d8"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/decode.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f65984d0c239d1ba70d20612ca42e153353f96ca"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/encode.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "57c6aa9b0f50fc7c9bed8a8b4dc088431a64d680"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/extrinsic.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2323274bca0786d608891b5d12008b9c880b3ecc"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2c6bd1cd9e1245b4460bb11705cfc2166e0126a5"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/storage.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a7dd8edb3434ee993df8ae491ac630ef379385c1"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/codec/value.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "224c6d912e6f09cfc57e7c7fde07549688cf7cf3"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/digest/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5a8353b923738432a672311d5b071ea95685457d"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/error.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0cd903138fadfb006f18cae265bb49b1e29420b2"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keyfiles/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "340ee8ae749118e7a506e620ac5b149c3efe4a9e"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/base58.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1b6369dbd9498ecbe2f3a79681e7598970f0f088"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/encrypted_json.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8f68dbdab11bb7033533ac3a07000046c7608c5d"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7e52a25bd1f91386632c75c0ffe266a78cef461a"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/lib.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c9be56a32861a2b426b3c784a1fd563c3630c5e2"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/mlkem/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8a265c4fd943ce6673da5ac54937f3ce884d3625"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/pow/kernel.cl",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4b077f7b6c06e877ee4e440771b25c8b8c4ae697"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/pow/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2b19a229338c19de920e05a6fdebf81717e0ac1a"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/pow/opencl.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5bc54a82f4b82aa5033086bf7a8a393b51c52902"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/runtime/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ba866e368c5ff2ea778b9a5c01662a5793e07d72"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/runtime/type_string.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "971fcdb010fb01d126a11c71c2649abba93b84df"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/signers/hid.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e3bed7e7da84d5883da8b32be679832b672c5207"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/signers/ledger.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9422720cc723b7b1b33fff1673ad441ef7215e26"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/signers/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "549cc2fdccb25b2652392548fc29b871380376d7"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/timelock/constants.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2f7a8f8a44a8ca8d2ca57b967ebdd2709c06971c"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/timelock/epoch_schedule.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1f0780d20a21fc845f843fd8c04c6023dd06dbd7"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/timelock/epoch_schedule_vectors.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "68847d9b422705ba46ae717b496313749d9da861"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/timelock/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "aec057443ad430fdc96db518cfea5aacdacf9a51"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/src/transaction.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ca7815e7009249f06cde663c80f3805085aa42a0"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/tests/Dockerfile.localnet-fast",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f7aa45151da199c1dcf9aa4a8c5c6a0fa742e2e4"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/tests/e2e-manifest.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9ab786b44eb0dc621b440b0756deae03f9893b2f"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/tests/e2e.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3a8b58727b538d94f6a90613c3535e8f2284fd24"
       },
       {
         "kind": "n/a",
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/bittensor-core/tests/e2e_support/mod.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "05c8136831c80627d16cb4463bb692db65ef64c5"
       },
       {
         "kind": "ported",
@@ -6608,77 +6631,77 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/_generated/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4dd46a1121cc680066a89cfb08b48cd8f88e1ede"
       },
       {
         "kind": "generated",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_generated/calls.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d820c112ef0d707a41ea67b59f39102afbcfbe65"
       },
       {
         "kind": "generated",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_generated/constants.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_runtime::generated::constants`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3dfe3790db0be6a6f9a7a503a6ef6b2abaeaa21c"
       },
       {
         "kind": "generated",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_generated/errors.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_runtime::generated::errors::MODULE_ERRORS`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "62d8b91bdbf01f7e2e088ac54d83171f09cdced1"
       },
       {
         "kind": "generated",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_generated/runtime_apis.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_runtime::generated::runtime_apis`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a1a9e335b789753144c2766c4510f9a540e3f664"
       },
       {
         "kind": "generated",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_generated/storage.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c31483c394ff89f3b1eddb5025ab09b92d7e67b0"
       },
       {
         "kind": "n/a",
         "milestone": "M4",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/_live.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao-cli` prompt module (PLAN §12.6)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9e206cd3ba0e2898d8e9be4bc51958ddc4ef859d"
       },
       {
         "kind": "ported",
@@ -6707,11 +6730,11 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/_transport/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5db328ecc4e8841698911a919df230b308eedb49"
       },
       {
         "kind": "ported",
@@ -6729,11 +6752,11 @@
         "milestone": "M1",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/_transport/const.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "core `DEFAULT_SS58_FORMAT` (`CORE/keys/mod.rs:31`)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "983f9e49ce9a37b431d720522d2ea8455b8e6a5e"
       },
       {
         "kind": "ported",
@@ -6784,11 +6807,11 @@
         "milestone": "M1",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/_transport/lru.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_client` runtime cache (LRU of 4 runtimes, 512 block→spec entries, §3.4)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9d8a619ff63a0d0df4b778147706a91dc15d7754"
       },
       {
         "kind": "ported",
@@ -6850,11 +6873,11 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/_transport/utils/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e832d28bc829a885fe9ae4334520cd8ac0bfa92f"
       },
       {
         "kind": "ported",
@@ -6894,22 +6917,22 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/basket_index_data.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli/src/generated/basket_index_data.rs`, generated by `xtask regen` from the extracted literal tuples (`vendor/upstream/extracted/basket_index_data.json`)"
+          "`rtao-cli/src/root_helpers/basket_index_data.rs`, generated by `xtask regen` from the six records for this module in `vendor/upstream/extracted/named_tables.json`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cf591495eef97141ca0ffc53155898b8e8f2cb4b"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/cli/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7bbafcd7ec23ff267bba204e6d1dea7743a96dd5"
       },
       {
         "kind": "ported",
@@ -6938,22 +6961,22 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/cli/commands/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
       },
       {
         "kind": "ported",
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/addresses.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `addr` group"
+          "`rtao-cli/src/commands/addresses.rs`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "62ce928b4b2b34e188a93255df6aa7fa5151e338"
       },
       {
         "kind": "ported",
@@ -7158,11 +7181,11 @@
         "milestone": "M5–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/proxy.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `proxy` group"
+          "`rtao-cli/src/commands/proxy.rs`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "20c4a074f006963b4a9a985e1bc68319905da786"
       },
       {
         "kind": "ported",
@@ -7301,11 +7324,11 @@
         "milestone": "M8",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/cli/help_theme.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` clap styles"
+          "`rtao-cli` application::clap_error and tests/m8_help_theme.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "80cef0daa7b7c4bb0a2aded4a6f7b09763c83b35"
       },
       {
         "kind": "ported",
@@ -7345,11 +7368,11 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/logs.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` logging (`tracing-subscriber`)"
+          "rtao_cli::logs::{LogPolicy, setup_logging, subscriber, LoggingController}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c9bdc15896815352daeeffc8248571f3bb0d1322"
       },
       {
         "kind": "ported",
@@ -7444,11 +7467,11 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/secrets.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` secret handling [I]"
+          "rtao_cli::secrets::{argv_secret_warning, copy_to_clipboard, copy_secret_to_clipboard}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "72726a07bdbf90f1ffec9901ea7df7f11727a5db"
       },
       {
         "kind": "ported",
@@ -7521,495 +7544,516 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0e92a20313a1f9503003c2042e0233f51a37e26f"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "626909399024f3aeac6d84907454f3436efe2906"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/balances.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a3a4736e499c382d43657fb95d5e00b1cc982700"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f0981187bed232497e11aa075d566264d544dc3f"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/drand.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/ethereum.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7c3549096b1719a227c1699c723e538aaf64c229"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/evm.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "269b692f74e380817c8f208aa28172394241b7dc"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5b2cacc4069e17bc24c57aed5407393eda410034"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8e231a462b41a2b1888961d8941a7218ea318405"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/mev_shield.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8380ca0873a1f136012e28d2272e63eb1f17a8ed"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "79862658070587d8e5a9a43de47d60c6a7fa34ed"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "385e534298b1584f09c1cf5d784dce705687a65f"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "97490ababbdfb9b6611b9e7fc6aabedc33979b47"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "69657026b6a07c7685d50109fe9232a13dfd0702"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/scheduler.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2550d37086ef7894513d87fd32a3ba7b5f29acc1"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "09ad840b1e0ab722d770f5410adc3e4628421014"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/sudo.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1d2422a2b08e19a21aa07b79b3de54e9a10a255f"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/swap.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/system.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "15b34dec595d5f93076414967326d30433b01ba1"
       },
       {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/utility.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2f51dcdec088fadb3a74df779a9cd5260003e11c"
       },
       {
         "kind": "extracted",
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_map.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_catalog::{ErrorCode, CHAIN_ERRORS}` (generated) + `rtao_catalog::py` (extracted); `rtao_tx::classify`"
+          "rtao_catalog::errors::{ErrorCode, CHAIN_ERRORS}; rtao_catalog::py"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d326d758a6c2921208d96a96ac31a0a1a939bf16"
       },
       {
         "kind": "n/a",
         "milestone": "M7",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/evm/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_evm` crate root"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/addressMapping.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/addressMapping.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "40773e9d7714aee4a88b1f65aa6789535a3ad266"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/alpha.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/alpha.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "aa37571e54cebb945e16625e46bbc0ecac81d0b5"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/balance.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/balance.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6f070e9bf39d58a2af7790013abbe0cd37143ea5"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/balanceTransfer.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/balanceTransfer.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b7b5041ab82c0ccd57639781457ba0a301e47de3"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/crowdloan.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/crowdloan.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3601e1fb1e61b252888d3a77f7be3d326e3a5183"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/drand.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/drand.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "691f53f05ba40c106c4653cec2c42ffdabd69ef6"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/ed25519Verify.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/ed25519Verify.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "05d75ae6cc96433c3673fd0a251fa93c8d3aaa04"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/leasing.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/leasing.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "541ad0cedf060beab69eae2a19b692f2e28b7484"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/metagraph.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/metagraph.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "eb4b9be6ab093a2603b405e0b52c22d42b8813e4"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/neuron.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/neuron.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ea58f43977bb139fbb52c8d9a9b24fc16468f78d"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/proxy.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/proxy.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cb7644a637e3d7c929eddf6627741068c7aa5f87"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/registry.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/registry.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b15d2cabd9cef73c13eaa409c52c3a7dd784f337"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/runtimeConfiguration.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/runtimeConfiguration.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "257bd472895f2bb66afbd600180c9cc2e442a113"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/scheduler.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/scheduler.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8bf7ecbe5c91537fc5d7d7c8d31a41fd7ee4c177"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/sr25519Verify.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/sr25519Verify.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "05d75ae6cc96433c3673fd0a251fa93c8d3aaa04"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/staking.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/staking.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f06dfb651b391ece167a2ed7f79974b06a37a07a"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/stakingV2.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/stakingV2.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "91d1516a9174e0459399e55c30e4d1cbf3544b18"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/subnet.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/subnet.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1505d7c7b1902a380fe918b6e36d26ca4c571abe"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/timestamp.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/timestamp.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "78d2ee9784384d74215fc90fea37f939177f1c72"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/uidLookup.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/uidLookup.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "dfe4f8ebfc23c0bf71cd1ac5fde8ac6a59c86482"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/abi/votingPower.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/evm/abi/` → embedded by `rtao_evm::Precompiles`"
+          "vendor/upstream/evm/abi/votingPower.json",
+          "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d825bcdfde8212f556b78d6b5c22ab439f34bf76"
       },
       {
         "kind": "ported",
@@ -8051,7 +8095,7 @@
         "python": "sdk/python/bittensor/evm/networks.py",
         "rtao": "pending",
         "rust": [
-          "`rtao_evm::EvmNetwork`"
+          "rtao_catalog::py::PYTHON_TABLES; rtao_evm::{EvmNetwork,evm_network}"
         ],
         "synced_blob": "pending"
       },
@@ -8104,11 +8148,11 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/extension/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c0bc3db0c6fb0b902735eb2f8110cd6561784a08"
       },
       {
         "kind": "ported",
@@ -8192,11 +8236,12 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/extension/static/bridge.html",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "embedded with `include_bytes!` from `vendor/`"
+          "vendor/upstream/extension/static/bridge.html",
+          "rtao_signer::extension::server embeds and serves this exact HTML"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b1af87599b12f966f8e9724f462bc02a04dfea5f"
       },
       {
         "kind": "ported",
@@ -8214,11 +8259,11 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/fee_filters.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_catalog::rt` (coldkey-pays-fee set) + `rtao_tx` plan step 6"
+          "rtao_catalog::py::PYTHON_TABLES"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e00c10d2a7e23f4e54d3336d5f3012b8ca121dfb"
       },
       {
         "kind": "ported",
@@ -8236,22 +8281,22 @@
         "milestone": "M1–M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/hyperparams.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_primitives::ratio::{ratio_fraction, RATIO_TYPE_DENOMINATORS}` (derived from the §5.4 ratio types; a catalog-layer test asserts equality with the extracted `RATIO_TYPE_DENOMINATORS` `:32-37`) and `rtao_primitives::hyperparams::proportion_to_raw` (`:581-621`) (M1); `rtao_primitives::hyperparams::{Hyperparam, HyperparamTable}`, with `metadata_kind`, `kind_of`, `doc_of`, `short_of`, `normalized`, `annotate`, `value_forms`, `codec_of`, `raw_bounds` and `to_raw` as methods on `&HyperparamTable` (`:474-769`) (M4); data generated into `rtao_catalog::hyperparams::TABLE` from `HYPERPARAMS` `:110-408`, `STORAGE_ITEMS` `:416-461` (each item resolved at extraction to its value type ident and cross-checked against the pinned metadata), `_IDENT_KINDS` `:467-471`, `_IDENT_CODEC` `:626-643`, `_KIND_CODEC` `:646-657` and `_FRACTION_DENOMINATOR` `:83`; `rtao_intents::hyperparameters::to_raw` delegates to `TABLE` (§5.5)"
+          "rtao_catalog::hyperparams::TABLE; rtao_primitives::{hyperparams,hyperparam_table,ratio}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "acd67c9910489c0d94a6b09a60dd763fb12e5ade"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/intents/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_intents` crate root"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a1588356c18c951de581966e0a12b5cbf200e619"
       },
       {
         "kind": "ported",
@@ -8280,11 +8325,12 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/association.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::association` (feature `association`)"
+          "rtao_intents::association::{AssociateHotkey, AssociateEvmKey} (feature association)",
+          "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "289fc369c7f702231460852af4b3a7f7ae348041"
       },
       {
         "kind": "ported",
@@ -8390,11 +8436,13 @@
         "milestone": "M4–M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/identity.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::identity` (feature `identity`)"
+          "rtao_intents::identity::{SetIdentity, SetSubnetIdentity} (feature identity)",
+          "rtao_intents::identity_account",
+          "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a4a2167fcbb2db93d649935c32705e5d6612b1e9"
       },
       {
         "kind": "ported",
@@ -8489,11 +8537,12 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/serving.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::serving` (feature `serving`)"
+          "rtao_intents::serving::{ServeAxon, ServeAxonTls, ServePrometheus, ResetAxon} (feature serving)",
+          "rtao_intents::generated::interfaces"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b2fdd4e42a329b495011878b1ae23771f37b02e3"
       },
       {
         "kind": "ported",
@@ -8533,11 +8582,11 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/keyfiles.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_wallet::{HotkeyFile, ColdkeyFile}` over core `keyfiles` and staged `keyfile_json`"
+          "`rtao_wallet::Keyfile` and resolve_key_password over core keyfile codecs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3f70e24657a3aa1003b71ef4692dc84f71a38271"
       },
       {
         "kind": "ported",
@@ -8562,15 +8611,15 @@
         "synced_blob": "pending"
       },
       {
-        "kind": "n/a",
+        "kind": "ported",
         "milestone": "M4",
-        "oracle": "not_required",
+        "oracle": "unverified",
         "python": "sdk/python/bittensor/masked_input.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` prompt module (`rpassword` hidden entry under `PromptPolicy::IfTty`; PLAN §12.6)"
+          "`rtao-cli` prompt::masked_input and prompt/masked_input.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2e606b047a9385087483d44d97ad253752b58d7b"
       },
       {
         "kind": "ported",
@@ -8610,11 +8659,11 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/namespaces.pyi",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3f4814eedd4be6507a2b5fbaaeb04deadbde58f9"
       },
       {
         "kind": "ported",
@@ -8632,22 +8681,22 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/py.typed",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/reads/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_reads` crate root"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ad6e1af3fa9b15d16683de5addd7d423bb739203"
       },
       {
         "kind": "ported",
@@ -8676,22 +8725,26 @@
         "milestone": "M2–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/chain.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::chain`"
+          "rtao_reads::reads::chain::{timestamp, block_time}",
+          "rtao_reads::reads::m6_accounts::{block_info, is_fast_blocks, tx_rate_limit}",
+          "rtao_reads::reads::owner::mev_shield_next_key",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5405a4aaed9898ebff389702fa0e6e9a614a7a00"
       },
       {
         "kind": "ported",
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/collateral.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::collateral`"
+          "rtao_reads::reads::m6_locks::{miner_collateral, subnet_collateral, collateral_policy}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f7a5449605500afba96822a45704397d06f90d5e"
       },
       {
         "kind": "ported",
@@ -8709,22 +8762,26 @@
         "milestone": "M2–M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/epochs.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::epochs`"
+          "rtao_reads::reads::epochs::{blocks_since_last_step, blocks_since_last_update, blocks_since_last_update_index, epoch_status}",
+          "rtao_reads::reads::owner::{next_epoch_start_block, blocks_until_next_epoch}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "125105e8d176ccee4aabbd6c74adfda43586868e"
       },
       {
-        "kind": "generated",
+        "kind": "ported",
         "milestone": "M2–M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/hyperparameters.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::hyperparameters`"
+          "rtao_reads::generated::interfaces::{weights_rate_limit, difficulty, min_allowed_weights, max_weight_limit, immunity_period, reveal_period, subnet_emission_enabled}",
+          "rtao_reads::reads::hyperparameters",
+          "rtao_reads::reads::owner::{difficulty, subnet_emission_enabled}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0"
       },
       {
         "kind": "ported",
@@ -8819,11 +8876,13 @@
         "milestone": "M2–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/weights.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::weights`"
+          "rtao_reads::reads::weights::weights",
+          "rtao_reads::reads::m6_root::{bonds, timelocked_weight_commits}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6080d5ae74845a5bbf044be7de2463448e31748b"
       },
       {
         "kind": "ported",
@@ -8841,11 +8900,11 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/settings.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_catalog::py` + `rtao-rpc/src/generated/py_rpc.rs`"
+          "rtao_catalog::py; rtao_catalog::hyperparams::TABLE; rtao_primitives::ids"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "418de02b74d6f6aaeba2ebef7679dbb2b40b992f"
       },
       {
         "kind": "ported",
@@ -8874,11 +8933,11 @@
         "milestone": "M0",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/sp_core.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_core::keys` (re-exports)"
+          "rtao_core::{keys,keyfiles,keyfile_env}; rtao_primitives::AccountId; signer/keypair API"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "85209ae8e5988622f31265786c78bf9be5b887da"
       },
       {
         "kind": "ported",
@@ -8907,11 +8966,11 @@
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/bittensor/vault/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "bb5e939f893fa4af26bf79005c8d958a0f747a76"
       },
       {
         "kind": "ported",
@@ -8962,22 +9021,24 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/vault/static/bittensor-chain-specs.png",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "embedded with `include_bytes!` from `vendor/`"
+          "vendor/upstream/vault/static/bittensor-chain-specs.png",
+          "rtao_signer::vault::server embeds and serves this exact asset"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "aaecf343f3337be5474350f26a233c8c87ee9188"
       },
       {
         "kind": "vendored",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/vault/static/vault.html",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "embedded with `include_bytes!` from `vendor/`"
+          "vendor/upstream/vault/static/vault.html",
+          "rtao_signer::vault::server embeds and serves this exact asset"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "08132b815803882188ca0f0817582a9c0f4a1613"
       },
       {
         "kind": "ported",
@@ -9017,22 +9078,22 @@
         "milestone": "M2",
         "oracle": "not_required",
         "python": "sdk/python/codegen/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "replaced by `xtask regen` (§3.7)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3ec86d7f4b877b6092b2c13bac865177f4602770"
       },
       {
         "kind": "n/a",
         "milestone": "M2",
         "oracle": "not_required",
         "python": "sdk/python/codegen/__main__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "replaced by `xtask regen` (§3.7)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d3e7b7b74bf57e95bb57a0c4f670c542769b3a3f"
       },
       {
         "kind": "extracted",
@@ -9041,7 +9102,7 @@
         "python": "sdk/python/codegen/check.py",
         "rtao": "pending",
         "rust": [
-          "`rtao_catalog::py::{COVERED_PALLETS, RAW_ONLY}` (the coverage gate, §4.9 layer 6) and `tests/hyperparam_units.rs` (§5.5)"
+          "rtao_catalog::py::PYTHON_TABLES"
         ],
         "synced_blob": "pending"
       },
@@ -9050,66 +9111,66 @@
         "milestone": "M2",
         "oracle": "not_required",
         "python": "sdk/python/codegen/emit_namespaces.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "replaced by `xtask regen` (§3.7)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8e476929ad0e6c90fb2f217a10e4f2000a636b6b"
       },
       {
         "kind": "n/a",
         "milestone": "M2",
         "oracle": "not_required",
         "python": "sdk/python/codegen/emit_python.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "replaced by `xtask regen` (§3.7)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "23835e9f012c06ba4e39575b8815877a162148b5"
       },
       {
         "kind": "n/a",
         "milestone": "M2",
         "oracle": "not_required",
         "python": "sdk/python/codegen/metadata.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "replaced by `xtask regen` (§3.7)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ec8a2b5382099cf649f42be5e942d1fc9524c1e6"
       },
       {
         "kind": "n/a",
         "milestone": "M8",
         "oracle": "not_required",
         "python": "sdk/python/completions/_btcli",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao-cli` generates its own with `clap_complete`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5c7ef8cc07b20ca41c51943c186dd6e91fe9b0ff"
       },
       {
         "kind": "n/a",
         "milestone": "M8",
         "oracle": "not_required",
         "python": "sdk/python/completions/btcli.bash",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao-cli` generates its own with `clap_complete`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8ccd2ce655ba403eb710dc4910efe6bf6616ed46"
       },
       {
         "kind": "n/a",
         "milestone": "M8",
         "oracle": "not_required",
         "python": "sdk/python/completions/btcli.fish",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao-cli` generates its own with `clap_complete`"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "04345b607febe07de68d5813449b11b43572b1b0"
       },
       {
         "kind": "extracted",
@@ -9129,7 +9190,7 @@
         "python": "sdk/python/scripts/build_basket_index.py",
         "rtao": "pending",
         "rust": [
-          "run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"
+          "Upstream frozen-basket producer; its checked-in basket_index_data.py output is extracted by native xtask and consumed by CLI root_helpers"
         ],
         "synced_blob": "pending"
       },
@@ -9140,7 +9201,7 @@
         "python": "sdk/python/scripts/record_golden.py",
         "rtao": "pending",
         "rust": [
-          "run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"
+          "Optional hosted xtask record through ci/oracle/record.py; committed fixture readers in rtao-testkit"
         ],
         "synced_blob": "pending"
       },
@@ -9151,7 +9212,7 @@
         "python": "sdk/python/scripts/record_shape_corpus.py",
         "rtao": "pending",
         "rust": [
-          "run by `xtask record` through `ci/oracle/record.py` (§11.2); `build_basket_index.py` regenerates `basket_index_data.py`"
+          "Optional hosted xtask record through ci/oracle/record.py; committed fixture readers in rtao-testkit"
         ],
         "synced_blob": "pending"
       },
@@ -9162,7 +9223,7 @@
         "python": "sdk/python/tests/e2e/test_null_consensus.py",
         "rtao": "pending",
         "rust": [
-          "mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"
+          "Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"
         ],
         "synced_blob": "pending"
       },
@@ -9173,7 +9234,7 @@
         "python": "sdk/python/tests/e2e/test_pow_registration.py",
         "rtao": "pending",
         "rust": [
-          "mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"
+          "Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"
         ],
         "synced_blob": "pending"
       },
@@ -9184,7 +9245,7 @@
         "python": "sdk/python/tests/e2e/test_timelock_commitment.py",
         "rtao": "pending",
         "rust": [
-          "mapped in `e2e_map.toml` as `pyt:e2e/<file>::<function>` → §11.4 scenarios 4, 14 and 19"
+          "Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"
         ],
         "synced_blob": "pending"
       },
@@ -9193,33 +9254,35 @@
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/python/tests/fixtures/golden.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/` (§11.2)"
+          "vendor/upstream/golden.json",
+          "rtao_testkit::fixtures::Golden and typed call/storage/signature replay"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7834fc602ce4bc74d8377ad5f7b758583b38bcba"
       },
       {
         "kind": "vendored",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/python/tests/fixtures/shape_corpus/corpus.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`vendor/upstream/` (§11.2)"
+          "vendor/upstream/corpus.json",
+          "rtao_testkit::fixtures::ShapeCorpus and metadata/primitive replay"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "51cb68df1074accd682b904bb338338c70d972c9"
       },
       {
         "kind": "n/a",
         "milestone": "—",
         "oracle": "not_required",
         "python": "sdk/python/tests/harness/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
       },
       {
         "kind": "ported",
@@ -9237,11 +9300,11 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/tests/harness/fake_substrate.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "oracle inputs and `FakeChain` defaults (§4.1, §11.3)"
+          "rtao_testkit::fakes::FakeState"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "33390704ec44e76236dede067ea1e3a52a418200"
       },
       {
         "kind": "extracted",
@@ -9250,20 +9313,20 @@
         "python": "sdk/python/tests/harness/samples.py",
         "rtao": "pending",
         "rust": [
-          "oracle inputs and `FakeChain` defaults (§4.1, §11.3)"
+          "rtao_catalog::py::PYTHON_TABLES"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "oracle-only",
+        "kind": "n/a",
         "milestone": "the milestone of the code each tests",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/python/tests/unit/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "none needed: namespace/package marker only"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
       },
       {
         "kind": "ported",
@@ -9283,7 +9346,7 @@
         "python": "sdk/python/tests/unit/test_cli.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9294,7 +9357,7 @@
         "python": "sdk/python/tests/unit/test_cli_commands.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9305,7 +9368,7 @@
         "python": "sdk/python/tests/unit/test_cli_intent_prompts.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9327,7 +9390,7 @@
         "python": "sdk/python/tests/unit/test_codec_golden.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9338,7 +9401,7 @@
         "python": "sdk/python/tests/unit/test_codec_properties.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9426,7 +9489,7 @@
         "python": "sdk/python/tests/unit/test_intents_table.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9437,7 +9500,7 @@
         "python": "sdk/python/tests/unit/test_keyfiles_golden.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9525,7 +9588,7 @@
         "python": "sdk/python/tests/unit/test_reads_table.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9558,7 +9621,7 @@
         "python": "sdk/python/tests/unit/test_shape_corpus.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9580,7 +9643,7 @@
         "python": "sdk/python/tests/unit/test_sp_core_keypair.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9591,7 +9654,7 @@
         "python": "sdk/python/tests/unit/test_sp_core_parity.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9602,7 +9665,7 @@
         "python": "sdk/python/tests/unit/test_storage_golden.py",
         "rtao": "pending",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
         ],
         "synced_blob": "pending"
       },
@@ -9633,33 +9696,36 @@
         "milestone": "M0",
         "oracle": "unverified",
         "python": "website/apps/bittensor-website/public/catalog/errors.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-catalog` (§4.1)"
+          "vendor/upstream/catalog/errors.json",
+          "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "802d8b738befc23a444ffbfadf466899ffebbee7"
       },
       {
         "kind": "vendored",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "website/apps/bittensor-website/public/catalog/intents.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-catalog` (§4.1)"
+          "vendor/upstream/catalog/intents.json",
+          "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "689f1823c70e710492293c23933b8a9d07404b31"
       },
       {
         "kind": "vendored",
         "milestone": "M0",
         "oracle": "unverified",
         "python": "website/apps/bittensor-website/public/catalog/reads.json",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-catalog` (§4.1)"
+          "vendor/upstream/catalog/reads.json",
+          "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "34f374f063431d882f92788fa33acc5a2c7b791c"
       }
     ],
     "intents": [

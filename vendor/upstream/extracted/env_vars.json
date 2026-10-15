@@ -1373,10 +1373,10 @@
     }
   ],
   "parity": {
-    "consumers": 12,
-    "divergences": 17,
+    "consumers": 28,
+    "divergences": 1,
     "path": "parity/env.toml",
-    "pending": 16,
+    "pending": 0,
     "status": "matches"
   },
   "provenance": {
