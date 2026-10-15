@@ -1955,6 +1955,89 @@
     ],
     "divergences": [
       {
+        "id": "D-059",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_intents::nested_policy::nested_tools_cannot_hide_unbounded_or_bounded_child_spend",
+          "rtao_intents::nested_policy::nested_tools_preserve_child_subnet_and_global_restrictions",
+          "rtao_intents::nested_policy::mandatory_child_shielding_survives_tools_and_preserves_reviewed_inner_bytes",
+          "rtao_intents::nested_policy::stored_callbacks_propagate_spend_subnets_and_global_policy_through_tools",
+          "rtao_intents::nested_policy::deferred_required_shield_callbacks_refuse_even_explicit_shield_submission"
+        ]
+      },
+      {
+        "id": "D-060",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_intents::multisig_adapter::directly_wrapping_an_unrelated_call_cannot_mint_a_semantic_continuation",
+          "rtao_intents::multisig_adapter::continuations_refuse_different_semantic_arguments_and_canonical_groups",
+          "rtao_intents::multisig_adapter::pinned_proxy_layers_require_the_original_effective_semantic_origin",
+          "rtao_intents::multisig_adapter::hotkey_batch_continuations_preserve_dynamic_origin_and_exact_bytes_at_both_thresholds",
+          "rtao_cli::multisig::tests::continuation_proof_cannot_relabel_transfer_all_as_bounded_or_change_its_destination"
+        ]
+      },
+      {
+        "id": "D-057",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::bounded_file::tests::fifos_without_writers_are_refused_without_blocking",
+          "rtao_client::bounded_file::tests::file_growth_after_descriptor_validation_stops_after_one_excess_byte",
+          "rtao_client::cache::tests::live_cache_treats_oversized_files_as_misses_and_fetches_bounded_replacements",
+          "rtao_metagraph::persist::oversized_and_nonregular_files_fail_before_decoding_or_metadata_lookup",
+          "rtao_neuron::state::tests::oversized_rotation_sources_preserve_current_and_remove_all_owned_temporaries",
+          "rtao_neuron::state::tests::broken_rotation_symlinks_are_errors_instead_of_missing_generations"
+        ]
+      },
+      {
+        "id": "D-058",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_neuron::weights::tests::raw_shared_preparation_enforces_chain_count_and_exact_share",
+          "rtao_neuron::weights::tests::raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs",
+          "rtao_neuron::weights::tests::raw_shared_preparation_rejects_structurally_invalid_rows_without_rewriting"
+        ]
+      },
+      {
+        "id": "D-054",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_btauth::tests::oversized_sender_never_reaches_the_native_signature_decoder",
+          "rtao_btauth::tests::numeric_crypto_and_signature_budgets_precede_parsing_and_preserve_bounded_spellings",
+          "rtao_btauth::header_limits::maximum_length_native_sender_addresses_verify_under_both_policies_and_algorithms",
+          "rtao_btauth::header_limits::legacy_sender_limits_preserve_maximum_native_addresses_and_reject_huge_inputs"
+        ]
+      },
+      {
+        "id": "D-055",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_btauth::client::both_fanout_apis_reject_oversized_declared_lengths_before_body_read_or_retry",
+          "rtao_btauth::client::both_fanout_apis_accept_fixed_length_json_at_the_exact_response_budget",
+          "rtao_btauth::client::both_fanout_apis_stop_chunked_overflow_before_eof_decoding_or_retry",
+          "rtao_btauth::client::both_fanout_apis_accept_chunked_json_at_the_exact_response_budget",
+          "rtao_btauth::client::tests::completed_oversize_rejection_remains_permanent_across_timing_boundaries"
+        ]
+      },
+      {
+        "id": "D-056",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_rpc::session::frame_fuzz::tests::early_byte_budget_evicts_oldest_globally_and_accounts_for_identity_bytes",
+          "rtao_rpc::session::frame_fuzz::tests::unsolicited_early_updates_require_a_live_transmitted_current_subscription_request",
+          "rtao_rpc::session::frame_fuzz::tests::reconnect_resets_early_storage_and_old_streams_share_the_active_byte_budget",
+          "rtao_rpc::subscription::tests::active_byte_budget_evicts_oldest_across_streams_and_poll_releases_charge",
+          "rtao_rpc::subscription::tests::drained_and_closed_queues_release_high_water_backing_allocations",
+          "rtao_rpc::session::frame_fuzz::tests::raw_receive_logs_escape_terminal_controls_while_protocol_values_stay_exact"
+        ]
+      },
+      {
         "id": "D-053",
         "oracle": "unverified",
         "rtao": "active",
@@ -2103,73 +2186,79 @@
       {
         "id": "D-001",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`zero_account_default_decodes_to_zero_bytes` (offline, vendored metadata), `default_account_json_parity` (e2e 15 is a sanity check)"
+          "rtao_runtime::generated::zero_account_default_decodes_to_zero_bytes",
+          "rtao_primitives::primitives::account_default_is_typed_optional_but_keeps_zero_account_ss58"
         ]
       },
       {
         "id": "D-002",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`RecordingView` single-block test"
+          "rtao_reads::owner::delegate_take_and_hotkey_identities_pin_their_batches_and_deduplicate",
+          "rtao_reads::m6_accounts::fourteen_reads_cover_exact_descriptors_at_head_and_pinned_history",
+          "rtao_reads::m6_locks::nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_blocks"
         ]
       },
       {
         "id": "D-003",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`library_never_prompts`"
+          "rtao_wallet::password::tests::library_never_prompts_and_explicit_cli_callback_runs_once",
+          "rtao_wallet::password::tests::if_tty_uses_the_callback_terminal_authority_and_never_stays_silent",
+          "rtao_cli::prompt::tests::every_noninteractive_mode_refuses_reads_and_collects_missing_flags"
         ]
       },
       {
         "id": "D-004",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`genesis_mismatch_disables_signing`"
+          "rtao_client::connect::genesis_mismatch_keeps_reads_and_refuses_signing_with_both_hashes"
         ]
       },
       {
         "id": "D-005",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`redis_store_does_not_block`"
+          "rtao_btauth::redis::tests::redis_store_does_not_block"
         ]
       },
       {
         "id": "D-007",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`constants_follow_snapshot_spec`"
+          "rtao_client::view::tests::typed_golden_constants_use_snapshot_runtime_without_rpc"
         ]
       },
       {
         "id": "D-008",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`submit_signature_refuses_tx_version_change`"
+          "rtao_client::submission::prepared_signature_refuses_same_spec_transaction_version_change"
         ]
       },
       {
         "id": "D-009",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`verifier_rejects_short_retention`"
+          "rtao_btauth::conformance::test_window_wider_than_store_retention_refused"
         ]
       },
       {
         "id": "D-010",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`v14_degraded_refuses_signing`"
+          "rtao_runtime::handle::tests::v14_is_readable_but_signing_and_digest_are_refused",
+          "rtao_client::view::tests::v14_archive_calls_use_only_frozen_double_encoded_api_definitions"
         ]
       },
       {
@@ -2181,41 +2270,45 @@
       {
         "id": "D-012",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`blocks_gap_free_across_reconnect`"
+          "rtao_client::head::tests::reconnect_resubscribes_and_backfills_without_duplicate_finalized_heights",
+          "rtao_client::head::tests::best_fork_reports_common_ancestor_then_each_replacement_once",
+          "rtao_client::head::tests::strict_stream_keeps_subscription_loss_terminal"
         ]
       },
       {
         "id": "D-013",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`execute_replans_on_spec_change`"
+          "rtao_tx::executor::spec_version_change_replans_once_and_refuses_a_second_change",
+          "rtao_tx::executor::transaction_version_change_replans_once_and_rechecks_policy"
         ]
       },
       {
         "id": "D-014",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`query_block_flag`"
+          "rtao_cli::generated_commands::block_query_pins_real_storage_and_does_not_read_the_current_head_value"
         ]
       },
       {
         "id": "D-015",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`ratelimit_paces_public_presets`"
+          "rtao_testkit::rpc::ratelimit_paces_public_presets",
+          "rtao_testkit::rpc::rate_bucket_prioritizes_submissions_and_drops_cancelled_queue_entries"
         ]
       },
       {
         "id": "D-016",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "e2e scenario 6"
+          "rtao_neuron::weights::tests::preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates"
         ]
       },
       {
@@ -2230,17 +2323,18 @@
       {
         "id": "D-018",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`hotkey_shield_not_refused`"
+          "rtao_tx::executor::tests::dynamic_shield_acquires_only_the_instance_hotkey_after_review"
         ]
       },
       {
         "id": "D-019",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`stake_weight_json_parity`"
+          "rtao_runtime::generated::semantic_model_fields_and_native_fixed_fraction_are_typed",
+          "rtao_metagraph::decode::stake_weight_accessors_preserve_alpha_tagged_total_stake_json"
         ]
       },
       {
@@ -2256,49 +2350,64 @@
       {
         "id": "D-021",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "oracle vector"
+          "rtao_tx::policy_equivalence::trusted_m2_constructors_have_identical_policy_violation_sets",
+          "rtao_intents::nested_policy::nested_tools_preserve_child_subnet_and_global_restrictions"
         ]
       },
       {
         "id": "D-022",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`limit_price_is_price`"
+          "xtask::regen::tests::price_gate_requires_every_semantic_override_and_refuses_unreviewed_additions",
+          "rtao_runtime::limit_prices::all_seven_public_limit_arguments_use_price_rao",
+          "rtao_runtime::limit_prices::required_price_arguments_preserve_exact_u64_wire_bytes",
+          "rtao_runtime::limit_prices::optional_price_arguments_preserve_some_and_none_wire_bytes"
         ]
       },
       {
         "id": "D-023",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`extrinsic_result_json_parity`"
+          "rtao_tx::output::tests::rejected_result_has_only_python_failure_fields_and_retains_native_fate",
+          "rtao_tx::result_json::included_results_keep_complete_python_json_without_native_tracking_fields",
+          "rtao_tx::result_json::fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_hash"
         ]
       },
       {
         "id": "D-024",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`retracted_then_finalized_is_success`, `finality_timeout_resolves_from_block`"
+          "rtao_client::submission::retracted_status_keeps_watching_for_later_finalized_inclusion",
+          "rtao_client::submission::dropped_after_retraction_reconciles_even_without_the_dropped_opt_in",
+          "rtao_client::submission::finality_timeout_resolves_actual_inclusion_and_confirms_finality",
+          "rtao_client::submission::finality_timeout_returns_inclusion_when_finality_was_not_requested",
+          "rtao_client::submission::dropped_watch_preserves_python_failure_without_reconcile_and_expiry_is_definite"
         ]
       },
       {
         "id": "D-025",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`shield_era_refused_at_lag` (`P8` at lags 5 and 6, `P4` at lags 1 and 2)"
+          "rtao_client::shield::ciphertext_and_period_bounds_are_closed",
+          "rtao_client::shield::finality_lag_refuses_exact_expiry_boundary_before_signing",
+          "rtao_tx::shield_raw::shield_era_failure_maps_to_typed_error"
         ]
       },
       {
         "id": "D-026",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`shielded_then_plain_uses_n_plus_2`, `shield_inner_missing_clears_nonce_cache`, `shield_wait_pool_keeps_n_plus_2`"
+          "rtao_client::shield::pool_transmits_only_signed_carrier_and_preserves_pair_nonce_and_anchor",
+          "rtao_client::shield::stalled_chain_keeps_carrier_unresolved_and_inner_can_still_execute_later",
+          "rtao_client::shield::author_ack_timeout_keeps_carrier_hash_and_clears_pair",
+          "rtao_client::nonces::adjacent_pair_is_atomic_and_any_unsettled_half_invalidates_account"
         ]
       },
       {
@@ -2312,41 +2421,43 @@
       {
         "id": "D-028",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`nested_module_error_follows_block_runtime`"
+          "rtao_client::nested_module_receipt::every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_upgrade"
         ]
       },
       {
         "id": "D-029",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`tools_json_equals_python_on_upstream_fields`"
+          "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_83_ops",
+          "rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata"
         ]
       },
       {
         "id": "D-030",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`tx_period_flag`"
+          "rtao_cli::generated_commands::generated_transfer_submits_real_semantic_bytes_hooks_and_requested_period",
+          "rtao_cli::generated_commands::invalid_period_refuses_before_unlock_and_any_submission"
         ]
       },
       {
         "id": "D-031",
         "oracle": "unverified",
         "rtao": "pending",
-        "tests": [
-          "`signer_remote_flag`"
-        ]
+        "tests": []
       },
       {
         "id": "D-032",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "active",
         "tests": [
-          "`policy_before_replay_check`"
+          "rtao_btauth::server::authentication_policy_commit_limit_order_protects_capacity_and_tokens",
+          "rtao_btauth::server::replay_does_not_spend_limiter_tokens",
+          "rtao_btauth::conformance::authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_replay_last"
         ]
       },
       {
@@ -2433,7 +2544,7 @@
           "rtao_cli::generated_commands::initially_expired_future_and_difficulty_invalid_pow_prepare_before_signing",
           "rtao_cli::generated_commands::expired_pow_dry_run_never_enters_public_mining_or_unlocks",
           "rtao_cli::context_contract::late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock",
-          "rtao_cli::subnets_commands::unsupported_pow_root_gpu_and_mining_preview_refuse_before_connection"
+          "rtao_cli::subnets_commands::pow_root_preview_and_feature_gated_gpu_are_validated_before_connection"
         ]
       },
       {
@@ -6950,11 +7061,13 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/call_names.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` name resolution inside JSON arguments [I]"
+          "rtao_cli::call_names::{resolve_builder_params, resolve_builder_params_with, resolve_intent_args, resolve_intent_args_with}",
+          "rtao_cli::call_names::report_resolved_account (crate-private)",
+          "rtao_cli::books::NameResolver::closest_name"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "729db3207778374a3f3d908a3ace48416569af24"
       },
       {
         "kind": "n/a",
@@ -7348,7 +7461,8 @@
         "python": "sdk/python/bittensor/cli/hyperparams_view.py",
         "rtao": "pending",
         "rust": [
-          "`rtao-cli` `hparams get`, `subnets hyperparameters`"
+          "rtao_cli::commands::hparams::{fetch_hyperparameters, render_hyperparameters}",
+          "rtao_cli::commands::{hparams, subnets} route dispatch"
         ],
         "synced_blob": "pending"
       },
@@ -8471,11 +8585,12 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/multisig.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::multisig` (feature `multisig`)"
+          "rtao_intents::multisig",
+          "rtao_intents::multisig_adapter::{MultisigAdapter, MultisigThreshold1Adapter, MultisigContinuation}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
       },
       {
         "kind": "ported",
@@ -8648,11 +8763,14 @@
         "milestone": "M1–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/namespaces.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads` namespace types (14) and curated extras"
+          "rtao_reads::generated::{namespaces, namespace_methods} and Namespaces",
+          "rtao_reads::reads::namespaces curated Balances/Staking/Subnets/Neurons aliases",
+          "rtao_reads::Subnets::commitments",
+          "rtao_metagraph::SubnetsMetagraphExt::{metagraph, metagraph_with}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "04a2c7110a402d59f20af52f705b4a5e65243ce1"
       },
       {
         "kind": "n/a",
@@ -8703,22 +8821,25 @@
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/accounts.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::accounts`"
+          "rtao_reads::reads::owner::{balance, balances, proxies}",
+          "rtao_reads::reads::m6_accounts::{existential_deposit, coldkey_swap_announcement, multisig}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5"
       },
       {
         "kind": "ported",
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/base.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads` generated `ReadSpec`, `ReadName`, `dispatch`; `utf8_text`"
+          "rtao_reads::generated::{ReadName, ReadSpec, ParamSpec, RenderHint, READ_SPECS, dispatch, fill_defaults, interfaces}",
+          "rtao_reads::reads::subnets::utf8_text (crate-private)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f74a29405503ad610431ceded37c31c23be73c40"
       },
       {
         "kind": "ported",
@@ -8751,11 +8872,13 @@
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/delegation.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::delegation`"
+          "rtao_reads::reads::m6_delegation::{delegates, delegate, is_delegate, children, parents, pending_children, childkey_threshold_suspended}",
+          "rtao_reads::reads::owner::{delegate_take, delegated, DelegateInfo, DelegatedStake}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c9550f760c774e6e2d32d0a7a944bc3a2d6cfc56"
       },
       {
         "kind": "ported",
@@ -8788,88 +8911,103 @@
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/identity.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::identity`"
+          "rtao_reads::reads::owner::{identity, hotkey_identities}",
+          "rtao_reads::reads::m6_accounts::{commitment, revealed_commitment, commitments}",
+          "rtao_reads::commitments::{fetch_commitments, NeuronCommitment::to_read_json}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "bc990ef15644d4278b3e5c4802288746199a41c1"
       },
       {
         "kind": "ported",
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/leasing.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::leasing`"
+          "rtao_reads::reads::m6_delegation::{lease, leases, crowdloan, crowdloans, crowdloan_contributors}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d7e536fe64be15f851d440bf29afcd447e7b73f7"
       },
       {
         "kind": "ported",
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/locks.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::locks`"
+          "rtao_reads::reads::m6_locks::{coldkey_lock, locks_for_coldkey, locks_for_hotkey, accepts_locked_alpha, hotkey_conviction, subnet_convictions}",
+          "rtao_reads::reads::owner::most_convicted_hotkey",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "40115bfe96fec8bda42351d18fbe3477e342ec25"
       },
       {
         "kind": "ported",
         "milestone": "M2–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/neurons.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::neurons`"
+          "rtao_reads::reads::m6_accounts::{neurons, hotkey_owner, owned_hotkeys, netuids_for_hotkey, associated_evm_key}",
+          "rtao_reads::reads::neurons::uid",
+          "rtao_reads::generated::{dispatch, interfaces, defaults}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ee4441181f73a1b2a8a57c49d3154fa49ce014de"
       },
       {
         "kind": "ported",
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/prices.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::prices`"
+          "rtao_reads::reads::m6_staking::{alpha_price, alpha_prices, quote_stake, quote_unstake, SwapQuote}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6378a57c520ce155b075830fd53e752bffe40eef"
       },
       {
         "kind": "ported",
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/root.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::root`"
+          "rtao_reads::reads::owner::{root_basket_owed, root_claim_threshold, validator_basket_summary}",
+          "rtao_reads::reads::m6_root::{basket_position, root_basket_portfolio, root_basket_owed_breakdown, validator_basket, validator_basket_nav, root_basket_total_nav, root_baskets, basket_trading_status}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0"
       },
       {
         "kind": "ported",
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/staking.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::staking`"
+          "rtao_reads::reads::m6_staking::{stake, stake_for_coldkey, stake_for_coldkeys, stake_availability, stake_availability_for_coldkey, total_alpha_staked, staking_hotkeys, auto_stake, auto_stake_all}",
+          "rtao_reads::reads::owner::{StakePosition, StakeValuation, stake_value_for_coldkey, stake_value_for_coldkeys}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9"
       },
       {
         "kind": "ported",
         "milestone": "M1–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/subnets.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_reads::reads::subnets`"
+          "rtao_reads::reads::subnets::{metagraph, token_symbols, commit_reveal_enabled, mechanism_count}",
+          "rtao_reads::reads::owner::{burn, subnet_hyperparameters, subnet_identity, subnet_names, subnet_start_schedule, mechanism_emission_split}",
+          "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
+          "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ad3143c03524a250fe99501ebd74888f5c69a684"
       },
       {
         "kind": "ported",
