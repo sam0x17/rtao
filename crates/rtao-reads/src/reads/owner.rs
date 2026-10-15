@@ -95,7 +95,7 @@ pub async fn proxies<V: View + ?Sized>(
     let (proxies, deposit) = view.storage(&st::proxy::PROXIES, (coldkey_ss58,)).await?;
     Ok(ProxyDelegations {
         proxies,
-        deposit: DynBalance::from_rao(deposit.rao(), NetUid::ROOT),
+        deposit: DynBalance::from_rao(deposit.0, NetUid::ROOT),
     })
 }
 
