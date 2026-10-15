@@ -27,6 +27,10 @@ fn address(id: &'static str, flag: &'static str) -> Arg {
 pub fn command() -> Result<Command, CliError> {
     Ok(Command::new("collateral")
         .about("Miner registration collateral.")
+        .long_about(format!(
+            "Miner registration collateral.\n\nGuide: {}/guides/mining/collateral",
+            rtao_catalog::py::DOCS_URL
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(with_globals(
@@ -34,7 +38,9 @@ pub fn command() -> Result<Command, CliError> {
                 .about("Show a position and the subnet collateral policy.")
                 .arg(netuid())
                 .arg(address("hotkey_ss58", "hotkey"))
-                .arg(address("coldkey_ss58", "coldkey")),
+                .arg(address("coldkey_ss58", "coldkey").help(
+                    "ss58 address, address-book or proxy-book name, saved multisig name, or a local wallet name (uses its coldkey). Defaults to the hotkey owner (collateral is keyed by hotkey + coldkey).",
+                )),
             Tier::Read,
         ))
         .subcommand(with_globals(
@@ -43,11 +49,16 @@ pub fn command() -> Result<Command, CliError> {
                 .arg(netuid()),
             Tier::Read,
         ))
-        .subcommand(generated::intent_command("add_collateral")?.name("add"))
+        .subcommand(
+            generated::intent_command("add_collateral")?
+                .name("add")
+                .mut_arg("netuid", |arg| arg.required(true)),
+        )
         .subcommand(
             generated::intent_command("set_min_collateral")?
                 .name("set-min")
-                .mut_arg("min_alpha", |a| a.visible_alias("amount")),
+                .mut_arg("netuid", |arg| arg.required(true))
+                .mut_arg("min_alpha", |arg| arg.required(true).visible_alias("amount")),
         ))
 }
 /// Reserve command fields from global wallet aliases.
@@ -146,6 +157,9 @@ pub async fn execute_prepared_read(
             json!({"collateral":collateral,"policy":policy})
         }
     };
+    // The subnet read returns an array. Keep it untouched in JSON, and wrap
+    // it for the detail renderer instead of Python's nonempty-list .items()
+    // failure in Output.detail.
     let fields: Vec<(String, Value)> = data
         .as_object()
         .map(|o| o.iter().map(|(k, v)| (k.clone(), v.clone())).collect())

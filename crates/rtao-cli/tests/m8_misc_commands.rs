@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/misc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Source-authored misc helper fixtures; endpoint probes use fake transports.
 
 use rtao::{
@@ -20,7 +21,10 @@ use std::{
     collections::BTreeMap,
     error::Error,
     path::Path,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
 
@@ -447,5 +451,92 @@ async fn production_probe_queries_current_header_once_and_closes_on_success_or_f
         assert_eq!(after[0].method, "chain_getHeader");
         assert_eq!(after[0].params, json!([]));
     }
+    Ok(())
+}
+
+#[derive(Default)]
+struct PendingConnector {
+    started: AtomicBool,
+    cancelled: AtomicBool,
+}
+struct CancelledOnDrop<'a>(&'a AtomicBool);
+impl Drop for CancelledOnDrop<'_> {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+}
+impl ConnectionFactory for PendingConnector {
+    fn connect<'a>(&'a self, _: ClientConfig) -> BoxFuture<'a, Result<Client, CliError>> {
+        Box::pin(async move {
+            self.started.store(true, Ordering::SeqCst);
+            let _cancelled = CancelledOnDrop(&self.cancelled);
+            futures::future::pending().await
+        })
+    }
+}
+
+#[tokio::test]
+async fn production_probe_connection_timeout_cancels_the_pending_factory_without_waiting()
+-> TestResult {
+    let connector = PendingConnector::default();
+    let backend = NetworkLatencyBackend {
+        connector: &connector,
+    };
+    let network = Network::resolve_with("local", |_| None)?;
+    let measurement = backend
+        .probe_with_timeouts(&network, Duration::ZERO, Duration::from_secs(30))
+        .await;
+    assert_eq!(
+        measurement
+            .outcome
+            .err()
+            .ok_or("connection timeout")?
+            .message,
+        "connection deadline expired after 0s"
+    );
+    assert!(connector.started.load(Ordering::SeqCst));
+    assert!(connector.cancelled.load(Ordering::SeqCst));
+    Ok(())
+}
+
+#[tokio::test]
+async fn production_probe_query_timeout_closes_the_open_client_without_waiting() -> TestResult {
+    let connector = FakeConnector {
+        chain: FakeChain::from_state(FakeState::try_default()?),
+        response: Some(Reply::silent()),
+        retained: Mutex::new(None),
+        before_query: Mutex::new(0),
+    };
+    let backend = NetworkLatencyBackend {
+        connector: &connector,
+    };
+    let network = Network::resolve_with("local", |_| None)?;
+    let measurement = backend
+        .probe_with_timeouts(&network, Duration::from_secs(30), Duration::ZERO)
+        .await;
+    assert_eq!(
+        measurement.outcome.err().ok_or("query timeout")?.message,
+        "block query deadline expired after 0s"
+    );
+    assert!(
+        connector
+            .retained
+            .lock()
+            .map_err(|_| "retained lock")?
+            .as_ref()
+            .ok_or("opened client")?
+            .is_closed()
+    );
+    let before = *connector.before_query.lock().map_err(|_| "request count")?;
+    let requests = connector.chain.requests();
+    let query = requests.get(before..).ok_or("query range")?;
+    assert_eq!(query.len(), 1);
+    assert_eq!(query[0].method, "chain_getHeader");
+    assert_eq!(query[0].params, json!([]));
+    assert!(
+        connector
+            .chain
+            .mutate_state(|state| state.submissions.is_empty())
+    );
     Ok(())
 }

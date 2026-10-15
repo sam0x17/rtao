@@ -3,6 +3,34 @@
 schema = 1
 
 [[divergences]]
+id = "D-065"
+upstream_symbol = "bittensor.cli.commands.misc.latency"
+python_behavior = "Adds no command-specific connection/header deadline; the ordinary transport timeout and retry policy governs the latency probe."
+rtao_behavior = "The CLI bounds connection and current-header query separately to 30 seconds each. Expiry becomes a failed probe row; pending connection work is cancelled and an opened client is closed after query expiry. Programmatic diagnostic callers can supply explicit phase budgets."
+rationale = "Retain the existing native diagnostic resource bounds while explicitly distinguishing them from Python timing. This changes no successful result fields or ordering and creates no live endpoint validation requirement."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; existing bounded native diagnostic behavior reviewed on 2026-10-15"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = ["rtao_cli::m8_misc_commands::production_probe_connection_timeout_cancels_the_pending_factory_without_waiting","rtao_cli::m8_misc_commands::production_probe_query_timeout_closes_the_open_client_without_waiting"]
+upstream_report = "Deliberate native timing policy, not an upstream defect. Same production timeout branches are exercised with zero injected budgets and finite fake transports. Hosted compilation/execution remains unverified. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/misc.py#L111-L118"
+
+[[divergences]]
+id = "D-064"
+upstream_symbol = "bittensor.cli.commands.collateral.list_collateral"
+python_behavior = "Passes the subnet_collateral list to Output.detail. A nonempty human list reaches fields.items() and raises AttributeError; machine JSON emits the list."
+rtao_behavior = "Renders human collateral positions under a detail field while preserving the complete ordered list as machine JSON. Empty lists render an empty positions field."
+rationale = "The command advertises listing standing collateral; the pinned human renderer requires mapping fields. Wrapping only the human view fixes that type mismatch without changing read records or JSON."
+decision = "PLAN.md execution rule 5 pinned-source contradiction; collateral.py and output.py inspected on 2026-10-15"
+status = "active"
+class = "improved"
+milestone = "M9"
+pinning_tests = ["rtao_cli::conviction_collateral_commands::collateral_list_preserves_order_full_json_and_renders_nonempty_and_empty_humans"]
+upstream_report = "Pinned source contradiction at collateral.py:87 and cli/output.py:787-790,843. Authored fixture checks full ordered JSON and nonempty/empty human output. Hosted compilation/execution remains unverified. No new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/collateral.py#L83-L87"
+
+[[divergences]]
 id = "D-063"
 upstream_symbol = "bittensor.http_auth.InMemoryNonceStore replay identity"
 python_behavior = "Replay entries use the literal sender SS58 string and parsed nonce as the key. Separately signed requests for the same account and nonce can occupy different prefix entries."

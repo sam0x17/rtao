@@ -243,7 +243,10 @@ pending = "M5"
 rtao = "rtao_reads::owner::balances_keep_u64_precision_and_batch_heterogeneous_duplicates"
 
 [tests."test_batch_applies_all_children_atomically"]
-pending = "M5"
+rtao = "rtao_intents::client_transfer_lifecycles::client_batch_reads_both_explicit_recipient_deltas_after_success"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["controlled-receipt-state", "runtime-batch-application-unverified", "runtime-batch-atomicity-unverified"]
 
 [tests."test_block_number"]
 rtao = "e2e::test_block_number"
@@ -264,7 +267,10 @@ pending = "M5"
 pending = "M5"
 
 [tests."test_failed_batch_reverts_everything"]
-pending = "M5"
+rtao = "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["controlled-receipt-state", "runtime-batch-rollback-unverified", "runtime-batch-atomicity-unverified"]
 
 [tests."test_generic_accessors_over_generated_descriptors"]
 rtao = "e2e::test_generic_accessors_over_generated_descriptors"
@@ -355,7 +361,10 @@ rtao = "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missin
 pending = "M7"
 
 [tests."test_transfer_moves_exactly_the_amount"]
-pending = "M2"
+rtao = "rtao_intents::client_transfer_lifecycles::client_transfer_reads_exact_three_tao_delta_from_explicit_receipt_state"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["controlled-receipt-state", "runtime-transfer-state-unverified"]
 
 [tests."test_typed_reads"]
 pending = "M4"

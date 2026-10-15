@@ -1021,12 +1021,12 @@ notes = "§10.5; under `misc`"
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/collateral.py"
-rs = ["`rtao-cli` `collateral` group"]
+rs = ["rtao_cli::commands::collateral"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "37cccb2e76f19ca6bfafe2ac0fbcf31564bb70da"
 synced_tag = "v478"
 milestone = "M6"
-notes = "§10.5; under `misc`"
+notes = "Source reconciliation 2026-10-15: Complete pinned source and native command/read/transaction boundaries reviewed. Required netuid/floor parsing, amount/all aliases, hotkey-owner default, guide help, exact amounts, mandatory shielding and full ordered list JSON have concrete source fixtures. Native reads/intents and shared schema machinery supply the called dependencies. D064 records successful human list rendering where Python passes a list to a mapping-only renderer; raw JSON is unchanged. Source review and authored fixtures do not establish current hosted execution."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/config.py"
@@ -1156,12 +1156,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated lock command m
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/misc.py"
-rs = ["`rtao-cli` `misc` group"]
+rs = ["rtao_cli::commands::misc"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "d1e70356c68e48b9ceb2ae559e1b2e473d4f125a"
 synced_tag = "v478"
 milestone = "M8"
-notes = "§10.5; also mounts the operator groups `:42-51`"
+notes = "Source reconciliation 2026-10-15: Complete pinned source and native conversion/latency plus installed routing fixtures reviewed. Preserve float coercion/truncation within Q25 native bounds, currency/symbol/result fields, sorted endpoint expansion, concurrent probes, duplicate/stable ties, failures, final table/footer and connection closure. Specialized groups and historical utils routing are wired by the command tree/application. Cosmetic progress animation/help panels are excluded by section8.1. D065 states native separate30-second connect/header deadlines; exact production timeout branches have cancellation/closure fixtures with injected zero budgets. Live endpoint, timing and hosted execution remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/multisig.py"
@@ -2074,21 +2074,21 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/intents/_money.py"
-rs = ["`rtao_intents::money`; `rtao_primitives::{Money, Amount, Spend}`"]
+rs = ["rtao_primitives::{Money, Amount, ResolvedAmount, Spend}","rtao_intents::arguments","rtao_intents::{staking_trades, staking_claims, staking_baskets, collateral, root, lock}","xtask::regen_intents"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "488ac94eb53fd272ae4618dd8ff22d4fedd49842"
 synced_tag = "v478"
 milestone = "M2"
-notes = '`"all"` sentinel `:34`, `Spend` `:37-48`, schema `:29-69`; `call_amount`/`tao_amount`/`alpha_amount` `:51-165` → the per-field resolution of §5.2 (unit from the call argument, netuid from a sibling field, netuid 0 tagged as TAO `:85-98`); `_FALLBACK_AMOUNT_UNITS` `:89-111` extracted'
+notes = "Source reconciliation 2026-10-15: Complete pinned helper and all eleven call_amount consumers reviewed under Q25/D035 native u64 semantics. Primitive exact/tagged amounts, root-as-TAO, wrong-currency refusal and opt-in All feed the handwritten staking/basket/collateral/lock/root paths. Generator now consumes authenticated identity/fallback tables in metadata-first order, validates configured sibling NetUid sources and emits exact alpha/newtype or bare-u64 conversion without guessing TAO. Six new source fixtures cover declaration/sibling mutations, origin/destination separation, root/native boundaries, currency mismatch and All refusal. Native errors and code-generation-time unit selection replace Python helper APIs. Hosted compilation/regeneration/execution and independent oracle coverage remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/intents/_root_claim_fee.py"
-rs = ["`rtao_intents::root_claim_fee`"]
+rs = ["rtao_intents::root_claim"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M5"
-notes = "771-line fee model, preview only (§4.3); v466→v467 changed it with the catalog unchanged (§12.1)"
+notes = "Pending authenticated table extraction/consumer coverage required by the plan. Complete source and native fee/admission/preflight behavior were reviewed; all31 unit assertions now have authored native counterparts. Real home is rtao_intents::root_claim, using private native quote records and IntentPreflight with checked u64 amounts. Callback composition and unused public dataclass/network-count APIs are represented differently. Current hosted execution remains unverified; no whole-file reconciliation is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/intents/association.py"
@@ -3001,12 +3001,12 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_fee_filters.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["rtao_tx::executor::tests","rtao_tx::executor (integration target)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0ff32ffa851eb23e5bdb8f712fe032114d6b6a95"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: All six pinned Python test functions have exact // pyt native counterparts. Preserve serve_axon/Commitments table membership and transfer exclusion, exact Proxy-wrapped serve_axon leaf, associate_evm_key classification, and production ServeAxon/Transfer/proxy planning warning behavior with exact independent SCALE bytes. Public-only wallet inputs prove zero acquisition/submission and unchanged nonce caches. The focused dev dependency explicitly enables serving. Current hosted compilation/execution and oracle coverage remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_http_auth.py"
@@ -3055,12 +3055,12 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_lock_ownership_gate.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["rtao_reads::reads::m6_locks::tests"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "91228d101f98e4835037fbf9a34832a993b8d67b"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: complete authenticated four-test file and all four exact // pyt native counterparts reviewed. Preserve strict 1799/1800/1801 ownership boundaries at eligible 10000, perpetual owner mass exactly at or above the boundary, first strict crossing for a maturing 3600-alpha bucket with both rates 1000, and zero-eligible refusal. Native crossing additionally pins block 694 and checks both adjacent states; exact u64 boundary arithmetic is tested separately. Helpers use native unsigned storage domains under Q25/D035; no new execution or oracle result is inferred. Current hosted tests remain required."
 
 [[file]]
 py = "sdk/python/tests/unit/test_multisig_safety.py"
@@ -3118,12 +3118,12 @@ notes = "Source audit 2026-10-15: The optional oracle imports read-fixture helpe
 
 [[file]]
 py = "sdk/python/tests/unit/test_root_claim_fee.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["rtao_intents::root_claim::tests"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Pending authenticated extraction of _NODE_QUOTES/admission tables. All31 exact // pyt names map to18 substantive native test bodies, including both reserve envelopes, exact fee model/rounding, selected/nonroot admission boundaries, real ClaimRoot shield refusal before private acquisition, threshold/missing positions, dust, consolidation, fallback and proxy claimant checks. Source/API review found no blocking defect. Direct literals are explicitly authored expectations; no extracted input or current hosted execution is claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_rpc.py"
