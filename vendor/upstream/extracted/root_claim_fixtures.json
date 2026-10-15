@@ -2,7 +2,7 @@
   "adaptations": [
     "Dev-key names identify native fixture roles, not identical account bytes.",
     "Native fees and account defaults remain adapted except where a projected case explicitly supplies them.",
-    "Inline arithmetic assertions and unprojected calls remain source-reviewed authored fixtures; this document does not claim all Python inputs were extracted."
+    "Independent expected arithmetic outputs remain authored assertions; native-only supplemental cases and proxy fixture identities are documented adaptations."
   ],
   "admission_hard_stop": {
     "source": {
@@ -56,6 +56,21 @@
         "hotkeys": 1,
         "networks": 1
       }
+    ]
+  },
+  "allowance_units": {
+    "source": {
+      "end_byte": 1637,
+      "end_line": 49,
+      "line": 49,
+      "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+      "start_byte": 1595,
+      "symbol": "test_reserved_fallback_charges_the_fee_allowance_not_the_envelope"
+    },
+    "value": [
+      256,
+      129,
+      2
     ]
   },
   "constants": {
@@ -203,6 +218,74 @@
       "value": 250000
     }
   },
+  "eligibility_cases": {
+    "test_coldkey_wide_admission_ignores_non_root_hotkeys": {
+      "source": {
+        "end_byte": 16159,
+        "end_line": 472,
+        "line": 465,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 15886,
+        "symbol": "test_coldkey_wide_admission_ignores_non_root_hotkeys"
+      },
+      "sources": [
+        {
+          "end_byte": 16159,
+          "end_line": 472,
+          "line": 465,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 15886
+        }
+      ],
+      "value": {
+        "stake_rows": [
+          {
+            "coldkey": "ALICE",
+            "hotkey": "ALICE_HOT",
+            "netuid": 0,
+            "stake": 1
+          },
+          {
+            "coldkey": "ALICE",
+            "hotkey": "BOB_HOT",
+            "netuid": 7,
+            "stake": 1
+          }
+        ],
+        "watermark": null
+      }
+    },
+    "test_coldkey_wide_admission_keeps_unstaked_basket_claimant": {
+      "source": {
+        "end_byte": 16684,
+        "end_line": 488,
+        "line": 488,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 16605,
+        "symbol": "test_coldkey_wide_admission_keeps_unstaked_basket_claimant"
+      },
+      "sources": [
+        {
+          "end_byte": 16684,
+          "end_line": 488,
+          "line": 488,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 16605
+        },
+        {
+          "end_byte": 16763,
+          "end_line": 489,
+          "line": 489,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 16689
+        }
+      ],
+      "value": {
+        "stake_rows": [],
+        "watermark": -1
+      }
+    }
+  },
   "extension_ref_time": {
     "source": {
       "end_byte": 2397,
@@ -215,6 +298,270 @@
     "value": 60000000
   },
   "format": 1,
+  "helper_threshold_bits": {
+    "source": {
+      "end_byte": 6182,
+      "end_line": 161,
+      "line": 161,
+      "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+      "start_byte": 6159,
+      "symbol": "_seed_claim_quote.RootClaimableThreshold"
+    },
+    "value": 2147483648000000
+  },
+  "model_cases": {
+    "test_coldkey_wide_empty_baskets_floor_to_hotkey_count": {
+      "source": {
+        "end_byte": 5324,
+        "end_line": 135,
+        "line": 132,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 5209,
+        "symbol": "test_coldkey_wide_empty_baskets_floor_to_hotkey_count"
+      },
+      "sources": [
+        {
+          "end_byte": 5324,
+          "end_line": 135,
+          "line": 132,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 5209
+        }
+      ],
+      "value": [
+        {
+          "base": 0,
+          "declared_work": 256,
+          "hotkeys": 3,
+          "redeem_holdings": 0,
+          "reserve_limit": 256,
+          "reserve_rao": null,
+          "scan_holdings": 0,
+          "selection_scans": 0
+        }
+      ]
+    },
+    "test_quote_prices_consolidated_rows_as_full_claim_units": {
+      "source": {
+        "end_byte": 26804,
+        "end_line": 777,
+        "line": 775,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 26693,
+        "symbol": "test_quote_prices_consolidated_rows_as_full_claim_units"
+      },
+      "sources": [
+        {
+          "end_byte": 26804,
+          "end_line": 777,
+          "line": 775,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 26693
+        },
+        {
+          "end_byte": 26933,
+          "end_line": 780,
+          "line": 778,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 26822
+        }
+      ],
+      "value": [
+        {
+          "base": 0,
+          "declared_work": 129,
+          "hotkeys": 1,
+          "redeem_holdings": 9,
+          "reserve_limit": 0,
+          "reserve_rao": 1000000000,
+          "scan_holdings": 0,
+          "selection_scans": 0
+        },
+        {
+          "base": 0,
+          "declared_work": 129,
+          "hotkeys": 1,
+          "redeem_holdings": 3,
+          "reserve_limit": 0,
+          "reserve_rao": 1000000000,
+          "scan_holdings": 5,
+          "selection_scans": 0
+        }
+      ]
+    },
+    "test_scan_only_uses_scan_ref_time": {
+      "source": {
+        "end_byte": 4858,
+        "end_line": 122,
+        "line": 119,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 4742,
+        "symbol": "test_scan_only_uses_scan_ref_time"
+      },
+      "sources": [
+        {
+          "end_byte": 4858,
+          "end_line": 122,
+          "line": 119,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 4742
+        }
+      ],
+      "value": [
+        {
+          "base": 0,
+          "declared_work": 256,
+          "hotkeys": 1,
+          "redeem_holdings": 0,
+          "reserve_limit": 256,
+          "reserve_rao": null,
+          "scan_holdings": 32,
+          "selection_scans": 0
+        }
+      ]
+    },
+    "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust": {
+      "source": {
+        "end_byte": 21446,
+        "end_line": 624,
+        "line": 622,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 21335,
+        "symbol": "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust"
+      },
+      "sources": [
+        {
+          "end_byte": 21446,
+          "end_line": 624,
+          "line": 622,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 21335
+        },
+        {
+          "end_byte": 21581,
+          "end_line": 627,
+          "line": 625,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 21470
+        }
+      ],
+      "value": [
+        {
+          "base": 0,
+          "declared_work": 129,
+          "hotkeys": 1,
+          "redeem_holdings": 3,
+          "reserve_limit": 0,
+          "reserve_rao": 1000000000,
+          "scan_holdings": 0,
+          "selection_scans": 0
+        },
+        {
+          "base": 0,
+          "declared_work": 129,
+          "hotkeys": 1,
+          "redeem_holdings": 2,
+          "reserve_limit": 0,
+          "reserve_rao": 1000000000,
+          "scan_holdings": 1,
+          "selection_scans": 0
+        }
+      ]
+    },
+    "test_single_hotkey_spent_caps_at_the_same_allowance": {
+      "source": {
+        "end_byte": 5807,
+        "end_line": 148,
+        "line": 144,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 5654,
+        "symbol": "test_single_hotkey_spent_caps_at_the_same_allowance"
+      },
+      "sources": [
+        {
+          "end_byte": 5807,
+          "end_line": 148,
+          "line": 144,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 5654
+        }
+      ],
+      "value": [
+        {
+          "base": 0,
+          "declared_work": 129,
+          "hotkeys": 1,
+          "redeem_holdings": 32,
+          "reserve_limit": 129,
+          "reserve_rao": null,
+          "scan_holdings": 0,
+          "selection_scans": 0
+        }
+      ]
+    },
+    "test_spent_caps_at_the_fee_allowance": {
+      "source": {
+        "end_byte": 4146,
+        "end_line": 101,
+        "line": 98,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 4030,
+        "symbol": "test_spent_caps_at_the_fee_allowance"
+      },
+      "sources": [
+        {
+          "end_byte": 4146,
+          "end_line": 101,
+          "line": 98,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 4030
+        }
+      ],
+      "value": [
+        {
+          "base": 0,
+          "declared_work": 256,
+          "hotkeys": 1,
+          "redeem_holdings": 32,
+          "reserve_limit": 256,
+          "reserve_rao": null,
+          "scan_holdings": 0,
+          "selection_scans": 0
+        }
+      ]
+    },
+    "test_spent_keeps_non_weight_base_fee": {
+      "source": {
+        "end_byte": 4464,
+        "end_line": 111,
+        "line": 108,
+        "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+        "start_byte": 4349,
+        "symbol": "test_spent_keeps_non_weight_base_fee"
+      },
+      "sources": [
+        {
+          "end_byte": 4464,
+          "end_line": 111,
+          "line": 108,
+          "path": "sdk/python/tests/unit/test_root_claim_fee.py",
+          "start_byte": 4349
+        }
+      ],
+      "value": [
+        {
+          "base": 12345,
+          "declared_work": 256,
+          "hotkeys": 1,
+          "redeem_holdings": 1,
+          "reserve_limit": 256,
+          "reserve_rao": null,
+          "scan_holdings": 0,
+          "selection_scans": 0
+        }
+      ]
+    }
+  },
   "network_population": {
     "source": {
       "end_byte": 17430,
