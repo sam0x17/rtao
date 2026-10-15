@@ -616,3 +616,24 @@ pinning_tests = [
 ]
 upstream_report = "Local validation policy; no upstream defect alleged and no issue or PR filed. Active records prepared source with regression bodies, not successful execution. Hosted build/test validation remains pending."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L1511-L1548"
+
+[[divergences]]
+id = "D-045"
+upstream_symbol = "bittensor.config multisig book and call-cache writers"
+python_behavior = "The shared list/object files are written directly; malformed input is treated as empty without retaining a corruption backup. Cache presentation fields are stored without authenticating call_data against the key."
+rtao_behavior = "Shared writers use bounded nonblocking regular-file reads and bounded serialization, exclusive same-directory temporary files, fsync and atomic rename. New Unix files/directories use 0600/0700; existing modes remain. Replacing malformed input retains its exact bytes in a unique corruption backup. Final symlinks and special files refuse. Cache save/load authenticate the call hash and bytes; load reconstructs canonical runtime-stamped calls without trusting cached params."
+rationale = "Implement architecture section 10.2's atomic shared-file and corruption-retention requirement. Refuse malformed identities and unbounded local inputs before modifying user files. Portable reference order, unknown fields, native thresholds and btcli list/object schemas remain."
+decision = "PLAN.md execution rule 5 design-gap resolution; M5-01 shared persistence source review (2026-10-15)"
+status = "active"
+class = "stricter"
+milestone = "M5"
+pinning_tests = [
+  "rtao_cli::book_cache_contract::multisig_mutations_preserve_order_extra_fields_and_require_exact_overwrite",
+  "rtao_cli::book_cache_contract::rejected_book_input_preserves_source_and_creates_no_replacement_artifacts",
+  "rtao_cli::book_cache_contract::corrupt_inputs_survive_and_rejected_output_creates_no_backups",
+  "rtao_cli::book_cache_contract::cache_rejects_hash_or_data_substitution_before_modifying_any_file",
+  "rtao_cli::book_cache_contract::writers_keep_restrictive_modes_and_refuse_symlink_and_fifo_destinations",
+  "rtao_cli::book_cache_contract::cache_lookup_decodes_exact_bytes_and_ignores_untrusted_presentation_fields",
+]
+upstream_report = "Local persistence and input policy, without an upstream defect allegation or new filing. Source and regression fixtures are prepared; hosted validation is pending. See docs/execution/m5-book-cache.md."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/config.py"
