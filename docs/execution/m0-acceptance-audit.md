@@ -43,8 +43,8 @@ Latest normal run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
 at `6470a11` passes supply, MSRV, features, no-host and semver. Strict Clippy
 rejects two generated leasing argument clones on Copy types. The generator
-source correction is prepared; it needs hosted generation and another normal
-check. Nextest and doctests were not reached. The private bounded failure
+source correction and verified generation from run 38704675475 are adopted;
+another normal check is required. Nextest and doctests were not reached. The private bounded failure
 inventory and log digest are `check-38703332560.json`.
 
 Earlier normal run

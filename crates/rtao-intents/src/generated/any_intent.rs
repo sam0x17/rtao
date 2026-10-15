@@ -346,7 +346,9 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::Batch = serde_json::from_value(args)?;
+                crate::batch::check_constructor_input(&args)?;
+                let mut intent: super::interfaces::Batch = serde_json::from_value(args)?;
+                crate::batch::canonicalize(&mut intent)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::Batch(intent))
             }

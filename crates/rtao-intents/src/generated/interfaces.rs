@@ -208,7 +208,7 @@ impl rtao_tx::IntentInterface for Batch {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::utility::BATCH_ALL];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("batch", self)
+        crate::batch::to_json(self)
     }
 }
 #[cfg(feature = "registration")]

@@ -1,9 +1,9 @@
 # M5-02 batch, staking trades and identity source
 
-Seven behavior ports are prepared: Batch, AddStake, AddStakeLimit, SwapStake,
-MoveSwapStake, SetIdentity and SwapHotkey. Hosted generation and ordinary
-compilation/tests remain pending. Integrated coverage stays 66/83 intents and
-40/102 reads until generated output is verified and adopted.
+Seven behavior ports have verified generated integration: Batch, AddStake,
+AddStakeLimit, SwapStake, MoveSwapStake, SetIdentity and SwapHotkey.
+Integrated coverage reaches 73/83 intents and 40/102 reads. Ordinary
+compilation/tests and milestone acceptance remain pending.
 
 The Python reference is `850f2755bb05a3851f948489f0ab27b0645cebce`.
 The authenticated Batch source blob is
@@ -53,3 +53,21 @@ of cloning them, correcting strict Clippy failures in normal run 38703332560.
 No generated file is edited manually. Source inspection, rustfmt and whitespace
 checks are local; substantial validation uses free hosted Ubuntu CI. No new
 upstream filing, local build, service or temporary root is created.
+
+Hosted generation
+[38704675475](https://github.com/sam0x17/rtao/actions/runs/38704675475)
+at `429f72787bd46d5304c3209f834c983cc65475aa` succeeded. Review verified
+fourteen exact regular-file archive members, all 23 dependency hashes and
+unchanged role package sets/counts 225/361/365/416. Output changes only seven
+availability/pending entries, the identity helper, two leasing Copy arguments,
+the guarded/canonical Batch constructor, normalized Batch JSON and the seven
+matching intent matrix statuses plus D-046's additional fixture reference.
+All other generated interfaces and matrix families remain unchanged.
+
+The generated archive is 91,607 bytes, SHA-256
+`7af5fb55b0d97a9db0063eceebbe645ddd652714434b03dd10cc36213bde73f3`.
+The reports archive is 40,321 bytes, SHA-256
+`5d05bc7d921266a569ec3c05e02a23656ce20f1acf693794fe34c8e58b0766ec`.
+The bounded private proof is
+`.local/recovery/2026-10-14/m5-batch-trades-identity-adoption.json`.
+This establishes generated integration without runtime or oracle claims.

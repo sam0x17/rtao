@@ -33,13 +33,13 @@ InterfaceMetadata{name:"add_proxy",feature:"proxy",compiled:true,implemented:tru
 #[cfg(not(feature="proxy"))]
 InterfaceMetadata{name:"add_proxy",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
-InterfaceMetadata{name:"add_stake",feature:"staking",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AddStake>()),role:Some(std::any::type_name::<<super::interfaces::AddStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"add_stake",feature:"staking",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AddStake>()),role:Some(std::any::type_name::<<super::interfaces::AddStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]
-InterfaceMetadata{name:"add_stake",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"add_stake",feature:"staking",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
-InterfaceMetadata{name:"add_stake_limit",feature:"staking",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AddStakeLimit>()),role:Some(std::any::type_name::<<super::interfaces::AddStakeLimit as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddStakeLimit as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"add_stake_limit",feature:"staking",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AddStakeLimit>()),role:Some(std::any::type_name::<<super::interfaces::AddStakeLimit as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AddStakeLimit as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]
-InterfaceMetadata{name:"add_stake_limit",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"add_stake_limit",feature:"staking",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
 InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AnnounceColdkeySwap>()),role:Some(std::any::type_name::<<super::interfaces::AnnounceColdkeySwap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AnnounceColdkeySwap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
@@ -53,9 +53,9 @@ InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:true,im
 #[cfg(not(feature="association"))]
 InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "batch")]
-InterfaceMetadata{name:"batch",feature:"batch",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::Batch>()),role:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"batch",feature:"batch",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::Batch>()),role:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="batch"))]
-InterfaceMetadata{name:"batch",feature:"batch",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"batch",feature:"batch",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "registration")]
 InterfaceMetadata{name:"burned_register",feature:"registration",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::BurnedRegister>()),role:Some(std::any::type_name::<<super::interfaces::BurnedRegister as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::BurnedRegister as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="registration"))]
@@ -137,9 +137,9 @@ InterfaceMetadata{name:"move_stake",feature:"staking",compiled:true,implemented:
 #[cfg(not(feature="staking"))]
 InterfaceMetadata{name:"move_stake",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
-InterfaceMetadata{name:"move_swap_stake",feature:"staking",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::MoveSwapStake>()),role:Some(std::any::type_name::<<super::interfaces::MoveSwapStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MoveSwapStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"move_swap_stake",feature:"staking",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::MoveSwapStake>()),role:Some(std::any::type_name::<<super::interfaces::MoveSwapStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MoveSwapStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]
-InterfaceMetadata{name:"move_swap_stake",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"move_swap_stake",feature:"staking",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "multisig")]
 InterfaceMetadata{name:"multisig_approve",feature:"multisig",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::MultisigApprove>()),role:Some(std::any::type_name::<<super::interfaces::MultisigApprove as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MultisigApprove as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="multisig"))]
@@ -233,9 +233,9 @@ InterfaceMetadata{name:"set_hyperparameter",feature:"hyperparameters",compiled:t
 #[cfg(not(feature="hyperparameters"))]
 InterfaceMetadata{name:"set_hyperparameter",feature:"hyperparameters",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "identity")]
-InterfaceMetadata{name:"set_identity",feature:"identity",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetIdentity>()),role:Some(std::any::type_name::<<super::interfaces::SetIdentity as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetIdentity as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_identity",feature:"identity",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetIdentity>()),role:Some(std::any::type_name::<<super::interfaces::SetIdentity as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetIdentity as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="identity"))]
-InterfaceMetadata{name:"set_identity",feature:"identity",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_identity",feature:"identity",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "governance")]
 InterfaceMetadata{name:"set_mechanism_count",feature:"governance",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetMechanismCount>()),role:Some(std::any::type_name::<<super::interfaces::SetMechanismCount as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetMechanismCount as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="governance"))]
@@ -297,13 +297,13 @@ InterfaceMetadata{name:"swap_coldkey_announced",feature:"coldkey",compiled:true,
 #[cfg(not(feature="coldkey"))]
 InterfaceMetadata{name:"swap_coldkey_announced",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "registration")]
-InterfaceMetadata{name:"swap_hotkey",feature:"registration",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SwapHotkey>()),role:Some(std::any::type_name::<<super::interfaces::SwapHotkey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapHotkey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"swap_hotkey",feature:"registration",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SwapHotkey>()),role:Some(std::any::type_name::<<super::interfaces::SwapHotkey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapHotkey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="registration"))]
-InterfaceMetadata{name:"swap_hotkey",feature:"registration",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"swap_hotkey",feature:"registration",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
-InterfaceMetadata{name:"swap_stake",feature:"staking",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SwapStake>()),role:Some(std::any::type_name::<<super::interfaces::SwapStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"swap_stake",feature:"staking",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SwapStake>()),role:Some(std::any::type_name::<<super::interfaces::SwapStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SwapStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]
-InterfaceMetadata{name:"swap_stake",feature:"staking",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"swap_stake",feature:"staking",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "leasing")]
 InterfaceMetadata{name:"terminate_lease",feature:"leasing",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::TerminateLease>()),role:Some(std::any::type_name::<<super::interfaces::TerminateLease as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::TerminateLease as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="leasing"))]

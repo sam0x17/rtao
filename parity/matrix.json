@@ -1962,7 +1962,8 @@
           "rtao_intents::crowdloan::tests::programmatic_nested_json_has_depth_node_and_encoded_byte_budgets",
           "rtao_intents::crowdloan::tests::tool_constructor_bounds_nested_call_before_serde_conversion",
           "rtao_intents::crowdloan::tests::recursive_work_budget_refuses_inputs_that_fit_literal_limits",
-          "rtao_intents::proxy::tests::announced_proxy_refusals_preserve_nested_error_order_and_never_read"
+          "rtao_intents::proxy::tests::announced_proxy_refusals_preserve_nested_error_order_and_never_read",
+          "rtao_intents::batch::tests::batch_constructor_and_programmatic_guards_reject_private_carriers_and_depth"
         ]
       },
       {
@@ -9608,13 +9609,13 @@
         "name": "add_stake",
         "oracle": "missing",
         "python_class": "AddStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "add_stake_limit",
         "oracle": "missing",
         "python_class": "AddStakeLimit",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "announce_coldkey_swap",
@@ -9638,7 +9639,7 @@
         "name": "batch",
         "oracle": "missing",
         "python_class": "Batch",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "burned_register",
@@ -9764,7 +9765,7 @@
         "name": "move_swap_stake",
         "oracle": "missing",
         "python_class": "MoveSwapStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "multisig_approve",
@@ -9908,7 +9909,7 @@
         "name": "set_identity",
         "oracle": "missing",
         "python_class": "SetIdentity",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_mechanism_count",
@@ -10004,13 +10005,13 @@
         "name": "swap_hotkey",
         "oracle": "missing",
         "python_class": "SwapHotkey",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "swap_stake",
         "oracle": "missing",
         "python_class": "SwapStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "terminate_lease",
