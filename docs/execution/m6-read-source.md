@@ -85,5 +85,8 @@ authored parser, entrypoint and FakeChain fixtures. All four M6 upstream e2e
 keys map to ordinary read fixtures; the neuron test compares typed records with
 raw runtime output. Hosted execution and acceptance remain pending. The root
 basket table is adopted from `c281803` generation: 45 samples and 171 baselines
-match the authenticated extraction. The shared catalog exclusion and latest
-matrix need the next hosted refresh. Later milestones still require work.
+match the authenticated extraction. Run `38718933791` at `e2e19b4` verifies and
+adopts the shared catalog exclusion and latest matrix: seventeen exact members,
+all 23 dependency hashes, unchanged role inventories, four M6 fixture mappings
+and exact divergence registrations. Other generated interfaces are unchanged.
+Ordinary combined compilation/tests remain pending. Later milestones require work.
