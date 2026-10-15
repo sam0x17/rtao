@@ -15,5 +15,9 @@ pub mod hparams;
 pub mod pow;
 /// Schema-derived argument coercion and defaults.
 pub mod schema;
+/// Subnet creation, registration and metagraph views.
+pub mod subnets;
+/// Local wallet management and public account views.
+pub mod wallet;
 /// Validator weight submission commands.
 pub mod weights;

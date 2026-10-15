@@ -6,7 +6,7 @@ mod doctor;
 
 use rtao_cli::{
     application,
-    commands::{axon, catalog, config, generated, hparams, weights},
+    commands::{axon, catalog, config, generated, hparams, subnets, wallet, weights},
     context::AppContext,
     error::CliError,
     output::DiagnosticContext,
@@ -83,6 +83,8 @@ async fn run() -> Result<(), CliError> {
         weights::command(),
         axon::command(),
         hparams::command()?,
+        wallet::command(),
+        subnets::command()?,
     ]);
     if argv.len() == 1 || argv.get(1).is_some_and(|arg| arg == "help") {
         print!("{}", command.render_long_help());
@@ -142,6 +144,7 @@ async fn run() -> Result<(), CliError> {
                 .map_err(|error| CliError::input(format!("{error}")))?,
         ),
         "hparams" => hparams::reserved(matches)?,
+        "subnets" => subnets::reserved(matches)?,
         _ => Vec::new(),
     };
     let mut app = AppContext::from_store(
@@ -168,6 +171,32 @@ async fn run() -> Result<(), CliError> {
             "config" => config::run(&store, &app.output, matches).await,
             "tools" => catalog::run_tools(&app.output, &generated::rust_tools()?),
             "explain" => catalog::run_explain(&app.output, matches),
+            "wallet" => wallet::run(&mut app, matches, &mut invocation.history).await,
+            "subnets" => {
+                let request =
+                    subnets::Request::from_matches(&mut app, matches, &mut invocation.history)?;
+                let runner = app.clone();
+                let app_ref = &mut app;
+                let history = &mut invocation.history;
+                runner
+                    .run(|client| async move {
+                        let replay = history.replay_command(&replay_args);
+                        subnets::execute(
+                            app_ref,
+                            &client,
+                            &request,
+                            rtao_cli::context::SubmissionOptions {
+                                replay: Some(&replay),
+                                ..Default::default()
+                            },
+                            None,
+                            history,
+                        )
+                        .await
+                        .map(|_| ())
+                    })
+                    .await
+            }
             "weights" | "axon" => {
                 let request = if name == "weights" {
                     weights::request(matches)?
