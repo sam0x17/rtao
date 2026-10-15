@@ -126,6 +126,7 @@ async fn extension_contact(ctx: &AppContext) -> Result<ImportedContact, CliError
     options.open_browser = visible_terminal(ctx)?;
     options.browser = ctx.globals.extension_browser.clone();
     options.fresh = true;
+    options.on_waiting = Some(super::extension::waiting_observer(&ctx.output));
     let url = ensure_bridge(&options).await.map_err(failure)?;
     let token = options
         .paths

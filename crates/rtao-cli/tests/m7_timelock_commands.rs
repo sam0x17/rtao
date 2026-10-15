@@ -489,14 +489,55 @@ async fn decrypt_text_is_escaped_for_humans_and_value_equal_in_json() -> TestRes
 #[tokio::test]
 async fn missing_inputs_and_invalid_deadlines_fail_before_crypto() -> TestResult {
     let backend = Fake::default();
-    let mut missing = Fixture::new(&["rtao", "timelock", "encrypt"], true, &[])?;
-    let error = missing
-        .run(&backend)
-        .await
-        .err()
-        .ok_or("missing input unexpectedly succeeded")?;
-    assert_eq!(error.code, 2);
-    assert!(error.message.contains("data") && error.message.contains("--in"));
+    let help = "pass the options explicitly, or run on a terminal to be prompted";
+    for json_mode in [false, true] {
+        for name in ["encrypt", "show", "decrypt"] {
+            // A JSON invocation with a TTY must still refuse without prompting.
+            let answers = if json_mode {
+                &["must not be prompted"][..]
+            } else {
+                &[][..]
+            };
+            let mut missing = Fixture::new(&["rtao", "timelock", name], json_mode, answers)?;
+            let error = missing
+                .run(&backend)
+                .await
+                .err()
+                .ok_or("missing input unexpectedly succeeded")?;
+            let message = if name == "encrypt" {
+                "missing required options: `data`, `--in`"
+            } else {
+                "missing required option: `ciphertext`"
+            };
+            assert_eq!(error.code, 2);
+            assert_eq!(error.message, message);
+            assert_eq!(error.help.as_deref(), Some(help));
+            assert!(
+                missing
+                    .prompt_messages
+                    .lock()
+                    .map_err(|_| "prompt messages")?
+                    .is_empty()
+            );
+            missing.ctx.output.error(
+                &error.message,
+                DiagnosticContext {
+                    help: error.help.as_deref(),
+                    ..Default::default()
+                },
+            )?;
+            assert!(missing.sink.bytes(Stream::Stdout)?.is_empty());
+            let rendered = missing.sink.text(Stream::Stderr)?;
+            if json_mode {
+                assert_eq!(
+                    serde_json::from_str::<Value>(&rendered)?,
+                    json!({"error":message,"help":help})
+                );
+            } else {
+                assert_eq!(rendered, format!("error: {message}\n  help: {help}\n"));
+            }
+        }
+    }
     let encoded = sealed(20, 1)?.hex();
     for timeout in ["NaN", "inf", "-1", "not-a-number"] {
         let mut fixture = Fixture::new(

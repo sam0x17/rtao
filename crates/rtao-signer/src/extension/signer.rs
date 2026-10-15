@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/signer.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -16,7 +17,13 @@ use crate::{
 /// Validate an extension's algorithm name using Python's normalization rules.
 #[doc(alias = "bittensor.extension.account_crypto_type")]
 pub fn account_crypto_type(account_type: &str) -> Result<CryptoType, BridgeError> {
-    match account_type.trim().to_lowercase().as_str() {
+    match account_type
+        .trim_matches(|character: char| {
+            character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
+        })
+        .to_lowercase()
+        .as_str()
+    {
         "sr25519" => Ok(CryptoType::Sr25519),
         "ed25519" => Ok(CryptoType::Ed25519),
         "ecdsa" | "ethereum" => Err(error(
@@ -84,7 +91,12 @@ pub(crate) fn select_from_accounts(
         accounts
             .iter()
             .find(|account| &account.address == address)
-            .ok_or_else(|| error("extension account was not found"))?
+            .ok_or_else(|| {
+                error(&format!(
+                    "extension account {} not found",
+                    rtao_primitives::pyfmt::string_repr(address)
+                ))
+            })?
     } else {
         let filtered: Vec<_> = accounts
             .iter()
@@ -100,7 +112,10 @@ pub(crate) fn select_from_accounts(
             })
             .collect();
         if filtered.is_empty() {
-            return Err(error("no extension account matched the given filters"));
+            return Err(error(&format!(
+                "no extension account matched the given filters; available: {}",
+                account_hint(accounts)
+            )));
         }
         if filtered.len() == 1 {
             filtered[0]
@@ -113,14 +128,16 @@ pub(crate) fn select_from_accounts(
             if saved.len() == 1 {
                 saved[0]
             } else {
-                return Err(error(
-                    "multiple extension accounts available; pass an explicit signer address",
-                ));
+                return Err(error(&format!(
+                    "multiple extension accounts available; pass --signer-address or run in a terminal: {}",
+                    account_hint(filtered.iter().copied())
+                )));
             }
         } else {
-            return Err(error(
-                "multiple extension accounts available; pass an explicit signer address",
-            ));
+            return Err(error(&format!(
+                "multiple extension accounts available; pass --signer-address or run in a terminal: {}",
+                account_hint(filtered.iter().copied())
+            )));
         }
     };
     let crypto_type = account_crypto_type(&selected.account_type)?;
@@ -132,6 +149,14 @@ pub(crate) fn select_from_accounts(
         crypto_type,
         ss58_format: 42,
     })
+}
+
+fn account_hint<'a>(accounts: impl IntoIterator<Item = &'a ExtensionAccount>) -> String {
+    accounts
+        .into_iter()
+        .map(|account| format!("{} ({}, {})", account.name, account.address, account.source))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Open a fresh authenticated connection for one selected signing session.

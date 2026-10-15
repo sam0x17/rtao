@@ -7,6 +7,7 @@ use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
     process::Stdio,
+    sync::Arc,
     time::Duration,
 };
 
@@ -144,8 +145,14 @@ impl BridgePaths {
     }
 }
 
+/// Observe the session page and last status while extension authorization is pending.
+///
+/// The page carries its browser session capability, never the private client token.
+/// The callback runs before an optional browser launch and at most every five seconds.
+pub type BridgeWaiting = Arc<dyn Fn(&str, &Value) + Send + Sync>;
+
 /// Explicit permission and deadlines for finding or starting a bridge.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct EnsureBridgeOptions {
     /// Numeric loopback HTTP base URL or WebSocket URL ending in `/ws`.
     pub url: String,
@@ -163,6 +170,24 @@ pub struct EnsureBridgeOptions {
     pub startup_timeout: Duration,
     /// Browser/extension readiness deadline, at most five minutes.
     pub extension_timeout: Duration,
+    /// Optional progress observer for manual browser authorization.
+    pub on_waiting: Option<BridgeWaiting>,
+}
+impl std::fmt::Debug for EnsureBridgeOptions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("EnsureBridgeOptions")
+            .field("url", &self.url)
+            .field("paths", &self.paths)
+            .field("allow_spawn", &self.allow_spawn)
+            .field("open_browser", &self.open_browser)
+            .field("browser", &self.browser)
+            .field("fresh", &self.fresh)
+            .field("startup_timeout", &self.startup_timeout)
+            .field("extension_timeout", &self.extension_timeout)
+            .field("on_waiting", &self.on_waiting.is_some())
+            .finish()
+    }
 }
 impl EnsureBridgeOptions {
     /// Resolve environment paths with all process-launch permissions disabled.
@@ -179,6 +204,7 @@ impl EnsureBridgeOptions {
             fresh: false,
             startup_timeout: Duration::from_secs(15),
             extension_timeout: Duration::from_secs(180),
+            on_waiting: None,
         })
     }
 }
@@ -299,16 +325,20 @@ pub async fn ensure_bridge(options: &EnsureBridgeOptions) -> Result<String, Brid
     if ready(&status) {
         return Ok(url.into());
     }
+    let mut notice = WaitingNotice::new(options.on_waiting.as_ref());
+    notice.notify(&page, &status, Instant::now());
     if options.open_browser {
-        open_bridge_page(&page, options.browser.as_deref()).await?;
+        open_bridge_page(&page, options.browser.as_deref())
+            .await
+            .map_err(|failure| launch_page_error(&page, failure))?;
     }
     let deadline = Instant::now() + options.extension_timeout;
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
-            return Err(error(
-                "extension not ready; open the session page and authorize your wallet extension",
-            ));
+            return Err(error(&format!(
+                "extension not ready; open the session page and authorize your wallet extension: {page}"
+            )));
         }
         if let Ok(Ok(next)) = timeout(remaining, bridge_status(url.as_str(), &options.paths)).await
         {
@@ -320,12 +350,40 @@ pub async fn ensure_bridge(options: &EnsureBridgeOptions) -> Result<String, Brid
             if ready(&status) {
                 return Ok(url.into());
             }
+            notice.notify(&page, &status, Instant::now());
+        } else {
+            notice.notify(&page, &json!({}), Instant::now());
         }
         tokio::time::sleep(
             Duration::from_millis(250).min(deadline.saturating_duration_since(Instant::now())),
         )
         .await;
     }
+}
+struct WaitingNotice<'a> {
+    observer: Option<&'a BridgeWaiting>,
+    last: Option<Instant>,
+}
+impl<'a> WaitingNotice<'a> {
+    fn new(observer: Option<&'a BridgeWaiting>) -> Self {
+        Self {
+            observer,
+            last: None,
+        }
+    }
+    fn notify(&mut self, page: &str, status: &Value, now: Instant) {
+        if let Some(observer) = self.observer
+            && self
+                .last
+                .is_none_or(|last| now.saturating_duration_since(last) >= Duration::from_secs(5))
+        {
+            observer(page, status);
+            self.last = Some(now);
+        }
+    }
+}
+fn launch_page_error(page: &str, failure: BridgeError) -> BridgeError {
+    error(&format!("{failure}; open {page} manually"))
 }
 fn ready(status: &Value) -> bool {
     status.get("browser_connected").and_then(Value::as_bool) == Some(true)
@@ -946,6 +1004,45 @@ mod environment_tests {
     use crate::browser::browser_command_with;
 
     const URL: &str = "http://127.0.0.1:8090/?session=fixture";
+
+    #[test]
+    fn waiting_notice_preserves_page_status_and_five_second_boundaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events = seen.clone();
+        let observer: BridgeWaiting = Arc::new(move |page, status| {
+            if let Ok(mut events) = events.lock() {
+                events.push((page.to_owned(), status.clone()));
+            }
+        });
+        let mut notice = WaitingNotice::new(Some(&observer));
+        let now = Instant::now();
+        let initial = json!({"browser_connected":false,"account_count":0,"session_id":"fixture"});
+        let waiting = json!({"browser_connected":true,"account_count":0,"session_id":"fixture"});
+        notice.notify(URL, &initial, now);
+        notice.notify(URL, &waiting, now + Duration::from_millis(4999));
+        notice.notify(URL, &waiting, now + Duration::from_secs(5));
+        notice.notify(URL, &json!({}), now + Duration::from_millis(9999));
+        notice.notify(URL, &json!({}), now + Duration::from_secs(10));
+        assert_eq!(
+            *seen.lock().map_err(|_| "observer lock")?,
+            [
+                (URL.to_owned(), initial),
+                (URL.to_owned(), waiting),
+                (URL.to_owned(), json!({}))
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn failed_browser_launch_retains_the_same_encoded_manual_page() {
+        let page = bridge_page_url(SocketAddr::from(([127, 0, 0, 1], 8090)), "a&b");
+        assert_eq!(
+            launch_page_error(&page, error("cannot open the bridge page")).to_string(),
+            "cannot open the bridge page; open http://127.0.0.1:8090/?session=a%26b manually"
+        );
+    }
 
     #[test]
     fn bridge_path_overrides_preserve_empty_relative_tilde_and_whitespace_semantics() {

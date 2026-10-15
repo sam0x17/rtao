@@ -9,9 +9,9 @@ use crate::{
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::signer::extension::{
-    BridgeClient, BridgeOptions, BridgePaths, DEFAULT_BRIDGE_HOST, DEFAULT_BRIDGE_PORT,
-    EnsureBridgeOptions, ExtensionAccount, bridge_ws_url, ensure_bridge, run_bridge,
-    run_bridge_daemon, stop_bridge_daemon,
+    BridgeClient, BridgeOptions, BridgePaths, BridgeWaiting, DEFAULT_BRIDGE_HOST,
+    DEFAULT_BRIDGE_PORT, EnsureBridgeOptions, ExtensionAccount, bridge_ws_url, ensure_bridge,
+    run_bridge, run_bridge_daemon, stop_bridge_daemon,
 };
 use serde_json::json;
 use std::{
@@ -19,6 +19,7 @@ use std::{
     net::{IpAddr, SocketAddr},
     path::PathBuf,
     pin::Pin,
+    sync::Arc,
     time::Duration,
 };
 
@@ -45,6 +46,14 @@ pub trait ExtensionBackend: Send + Sync {
 }
 
 struct NativeExtension;
+pub(crate) fn waiting_observer(output: &Output) -> BridgeWaiting {
+    let output = output.clone();
+    Arc::new(move |page, _status| {
+        let _ = output.message(&format!(
+            "waiting for extension authorization in browser… ({page})"
+        ));
+    })
+}
 fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
 }
@@ -265,6 +274,7 @@ pub async fn run_with_backend(
                 fresh: true,
                 startup_timeout: Duration::from_secs(15),
                 extension_timeout: Duration::from_secs(180),
+                on_waiting: Some(waiting_observer(&ctx.output)),
             };
             let rows = backend.accounts(options).await?;
             let records = serde_json::to_value(&rows).map_err(failure)?;
@@ -288,5 +298,41 @@ pub async fn run_with_backend(
             ctx.output.table(&table).map_err(failure)
         }
         _ => Err(CliError::input("unknown extension command")),
+    }
+}
+
+#[cfg(test)]
+mod waiting_tests {
+    use super::*;
+    use crate::output::{MemorySink, OutputOptions, Stream};
+
+    #[test]
+    fn authorization_progress_stays_on_stderr_and_respects_json_and_quiet()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let page = "http://127.0.0.1:39295/?session=fixture";
+        for (json_mode, quiet, expected) in [
+            (
+                false,
+                false,
+                format!("waiting for extension authorization in browser… ({page})\n"),
+            ),
+            (true, false, String::new()),
+            (false, true, String::new()),
+            (true, true, String::new()),
+        ] {
+            let sink = MemorySink::default();
+            let output = Output::new(
+                OutputOptions {
+                    json_mode,
+                    quiet,
+                    ..Default::default()
+                },
+                Arc::new(sink.clone()),
+            );
+            waiting_observer(&output)(page, &json!({"browser_connected":false,"account_count":0}));
+            assert_eq!(sink.text(Stream::Stderr)?, expected);
+            assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        }
+        Ok(())
     }
 }

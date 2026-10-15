@@ -158,6 +158,37 @@ async fn client_reports_transaction_result() -> TestResult {
     Ok(())
 }
 #[tokio::test]
+async fn extrinsic_stage_omits_empty_labels_and_preserves_nonempty_labels() -> TestResult {
+    let mut server = server().await?;
+    let mut browser = browser(&server).await?;
+    let client = Arc::new(client(&server)?);
+    for (stage, more_coming) in [
+        (None, false),
+        (Some(""), true),
+        (Some("approve 1 of 2"), true),
+    ] {
+        let c = client.clone();
+        let task = tokio::spawn(async move {
+            c.sign_extrinsic_payload(json!({"method":"0x01"}), stage, more_coming)
+                .await
+        });
+        let request = read(&mut browser).await?;
+        let expected = match stage {
+            Some("approve 1 of 2") => {
+                json!({"payload":{"method":"0x01"},"moreComing":true,"stage":"approve 1 of 2"})
+            }
+            _ => json!({"payload":{"method":"0x01"},"moreComing":more_coming}),
+        };
+        assert_eq!(request["method"], "extrinsic.sign");
+        assert_eq!(request["params"], expected);
+        answer(&mut browser, &request, json!({"signature":"0x00"})).await?;
+        assert_eq!(task.await??, json!({"signature":"0x00"}));
+    }
+    client.close().await;
+    server.stop().await?;
+    Ok(())
+}
+#[tokio::test]
 async fn bridge_serves_exact_pinned_page_without_token() -> TestResult {
     let mut server = server().await?;
     let mut socket = TcpStream::connect(server.address()).await?;
@@ -248,7 +279,9 @@ async fn replacing_browser_cancels_old_work_but_keeps_new_tab() -> TestResult {
     let closed = timeout(Duration::from_secs(2), old.next())
         .await?
         .ok_or("missing replacement close")??;
-    assert!(matches!(closed,Message::Close(Some(frame)) if frame.code==CloseCode::Restart));
+    assert!(
+        matches!(closed,Message::Close(Some(frame)) if frame.code==CloseCode::Restart && frame.reason=="replaced by new bridge tab")
+    );
     assert!(timeout(Duration::from_secs(2), pending).await??.is_err());
     let c = client.clone();
     let request = tokio::spawn(async move { c.request("accounts.list", json!({})).await });
@@ -336,6 +369,23 @@ fn account_crypto_type_ed25519() -> TestResult {
     assert_eq!(account_crypto_type("ed25519")?, CryptoType::Ed25519);
     Ok(())
 }
+#[test]
+fn account_crypto_type_matches_python_edge_whitespace_without_removing_interior_bytes() -> TestResult
+{
+    for separator in ['\u{1c}', '\u{1d}', '\u{1e}', '\u{1f}'] {
+        for (algorithm, expected) in [
+            ("SR25519", CryptoType::Sr25519),
+            ("ED25519", CryptoType::Ed25519),
+        ] {
+            assert_eq!(
+                account_crypto_type(&format!(" {separator}{algorithm}{separator}\u{3000}"))?,
+                expected
+            );
+        }
+        assert!(account_crypto_type(&format!("sr{separator}25519")).is_err());
+    }
+    Ok(())
+}
 // pyt: tests/unit/test_extension_signer.py::test_account_crypto_type_rejects_unsupported
 #[test]
 fn account_crypto_type_rejects_unsupported() {
@@ -346,6 +396,48 @@ fn account_crypto_type_rejects_unsupported() {
         }));
     }
     assert!(account_crypto_type("unknown").is_err());
+}
+#[test]
+fn selection_errors_preserve_filtered_hints_and_explicit_address() -> TestResult {
+    let accounts = [
+        account("Alice", "chosen", 1),
+        account("Bob", "other", 2),
+        account("Carol", "chosen", 3),
+    ];
+    let mut options = AccountSelectionOptions {
+        source: Some("chosen".into()),
+        ..Default::default()
+    };
+    let ambiguous = signer::select_from_accounts(&accounts, &options)
+        .err()
+        .ok_or("expected ambiguity")?;
+    assert_eq!(
+        ambiguous.to_string(),
+        format!(
+            "multiple extension accounts available; pass --signer-address or run in a terminal: Alice ({}, chosen), Carol ({}, chosen)",
+            accounts[0].address, accounts[2].address
+        )
+    );
+    options.source = Some("missing".into());
+    let missing = signer::select_from_accounts(&accounts, &options)
+        .err()
+        .ok_or("expected no matching filter")?;
+    assert_eq!(
+        missing.to_string(),
+        format!(
+            "no extension account matched the given filters; available: Alice ({}, chosen), Bob ({}, other), Carol ({}, chosen)",
+            accounts[0].address, accounts[1].address, accounts[2].address
+        )
+    );
+    options.address = Some("missing".into());
+    assert_eq!(
+        signer::select_from_accounts(&accounts, &options)
+            .err()
+            .ok_or("expected missing explicit address")?
+            .to_string(),
+        "extension account 'missing' not found"
+    );
+    Ok(())
 }
 #[test]
 fn account_selection_preserves_address_precedence_and_saved_uniqueness() -> TestResult {
@@ -630,6 +722,7 @@ async fn expired_startup_refuses_spawn_without_touching_state() -> TestResult {
         fresh: false,
         startup_timeout: Duration::ZERO,
         extension_timeout: Duration::ZERO,
+        on_waiting: None,
     };
     assert!(
         ensure_bridge(&options)
@@ -674,6 +767,7 @@ async fn fresh_ensure_reuses_authenticated_foreground_without_signalling() -> Te
             fresh: true,
             startup_timeout: Duration::from_secs(5),
             extension_timeout: Duration::from_secs(5),
+            on_waiting: None,
         })
         .await
     });
@@ -686,6 +780,103 @@ async fn fresh_ensure_reuses_authenticated_foreground_without_signalling() -> Te
     )
     .await?;
     assert_eq!(task.await??, expected);
+    drop(published);
+    server.stop().await?;
+    Ok(())
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn ensure_reports_the_manual_session_page_and_keeps_it_in_timeout() -> TestResult {
+    let mut server = server().await?;
+    let (paths, _cleanup) = session::foreground_fixture_paths()?;
+    let published = paths.publish(&server)?;
+    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let events = seen.clone();
+    let options = EnsureBridgeOptions {
+        url: server.ws_url(),
+        paths,
+        allow_spawn: false,
+        open_browser: false,
+        browser: None,
+        fresh: false,
+        startup_timeout: Duration::from_secs(2),
+        extension_timeout: Duration::from_millis(20),
+        on_waiting: Some(Arc::new(move |page, status| {
+            if let Ok(mut events) = events.lock() {
+                events.push((page.to_owned(), status.clone()));
+            }
+        })),
+    };
+    let failure = ensure_bridge(&options)
+        .await
+        .err()
+        .ok_or("expected readiness timeout")?;
+    let page = server.page_url().ok_or("session page")?;
+    assert_eq!(
+        failure.to_string(),
+        format!(
+            "extension not ready; open the session page and authorize your wallet extension: {page}"
+        )
+    );
+    assert_eq!(
+        *seen.lock().map_err(|_| "observer lock")?,
+        [(
+            page,
+            json!({"browser_connected":false,"account_count":0,"http_url":server.http_url(),"session_id":server.session_id()})
+        )]
+    );
+    assert!(format!("{options:?}").contains("on_waiting: true"));
+    drop(published);
+    server.stop().await?;
+    Ok(())
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn ensure_observer_sees_pending_status_then_authorization_completes() -> TestResult {
+    let mut server = server().await?;
+    let mut browser = browser(&server).await?;
+    let (paths, _cleanup) = session::foreground_fixture_paths()?;
+    let published = paths.publish(&server)?;
+    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let events = seen.clone();
+    let options = EnsureBridgeOptions {
+        url: server.ws_url(),
+        paths,
+        allow_spawn: false,
+        open_browser: false,
+        browser: None,
+        fresh: false,
+        startup_timeout: Duration::from_secs(2),
+        extension_timeout: Duration::from_secs(2),
+        on_waiting: Some(Arc::new(move |page, status| {
+            if let Ok(mut events) = events.lock() {
+                events.push((page.to_owned(), status.clone()));
+            }
+        })),
+    };
+    let expected = options.url.clone();
+    let task = tokio::spawn(async move { ensure_bridge(&options).await });
+    let first = read(&mut browser).await?;
+    assert_eq!(first["method"], "accounts.list");
+    answer(&mut browser, &first, json!({"accounts":[]})).await?;
+    let next = read(&mut browser).await?;
+    assert_eq!(next["method"], "accounts.list");
+    answer(
+        &mut browser,
+        &next,
+        json!({"accounts":[{"address":"public-account"}]}),
+    )
+    .await?;
+    assert_eq!(task.await??, expected);
+    assert_eq!(
+        *seen.lock().map_err(|_| "observer lock")?,
+        [(
+            server.page_url().ok_or("session page")?,
+            json!({"browser_connected":true,"account_count":0,"http_url":server.http_url(),"session_id":server.session_id()})
+        )]
+    );
     drop(published);
     server.stop().await?;
     Ok(())

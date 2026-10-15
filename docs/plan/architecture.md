@@ -4239,9 +4239,10 @@ The planner encodes the owner rules ([R] G §1.5, [R] C1 §5.2):
   and `encrypted()` (the inner TLE bytes that `Commitments.set_commitment` takes, `:229-237`).
 - **`open(&Timelocked, &DrandClient, OpenOptions { wait, timeout })`**, an async beacon fetch plus
   `decrypt_with_signature`. Before the reveal time it returns `TimelockError::NotReady { reveal_round, reveal_at,
-  remaining }`; after it, it retries the beacon fetch every 1 s for up to 30 s (`:307-358`). The async `open` defaults
-  to `wait: true`, like `decrypt_async` (`:361-377`); `rtao::blocking`'s `decrypt` defaults to `wait: false`, like the
-  sync `decrypt`. Native `Option<Duration>` bounds the whole operation; the CLI rejects nonfinite and negative
+  remaining }`; after it, it retries the beacon fetch every 1 s for up to 30 s (`:307-358`). Native `open` and
+  `Timelocked::decrypt` are asynchronous entry points. `OpenOptions::default()` selects `wait: true`, like Python's
+  `decrypt_async` (`:361-377`); the CLI selects `wait: false`, like Python's synchronous `decrypt`. Library callers
+  choose `wait` explicitly. Native `Option<Duration>` bounds the whole operation; the CLI rejects nonfinite and negative
   values, and zero starts no attempt. This stricter deadline policy is D-066. Dropping the waiter cancels waits
   and HTTP; an already running blocking crypto task finishes independently with its plaintext guarded.
 - **Pure helpers.** `current_round`, `round_at`, `reveal_time`, `parse_duration` and `format_duration` live in
@@ -5705,6 +5706,7 @@ divergences. Classes:
 
 | ID | Upstream symbol | Python behavior | rtao behavior | Class | Test | Upstream |
 |---|---|---|---|---|---|---|
+| D-068 | extension local I/O/session/signature policy | configurable targets, implicit launch, PID-based stop and permissive signature bytes | numeric loopback, explicit launch, bounded requests, verified state/process ownership and checked identity/signature admission; progress callbacks run inline | stricter | `connection_targets_never_send_tokens_off_host`, `request_deadline_includes_waiting_behind_an_approval`, `publication_rejects_path_aliases_and_reserves_live_state`, `signatures_are_bounded_and_never_change_negotiated_crypto` | Existing local client policy; source-reviewed, current hosted/browser/platform execution unverified and device work deferred |
 | D-067 | Vault page session admission/lifecycle | configurable host, automatic browser, permissive reply kinds and fewer resource limits | numeric loopback, authenticated current page, expected reply kind, retired cancelled tabs and bounded I/O; library browser opening opt-in | stricter | `page_serves_exact_pinned_assets_and_refuses_foreign_origin`, `sequential_requests_result_and_reload_use_the_pinned_page_messages`, `timeout_cancellation_page_errors_and_stop_clear_the_pending_request` | Existing local I/O policy; source-reviewed, hosted execution pending and device coverage deferred |
 | D-066 | timelock decryption deadline | accepts arbitrary floats and attempts an already revealed envelope before checking retry expiry; async fetch gets at least one second | checked nonnegative Duration bounds the whole operation; zero starts no attempt; running blocking crypto may finish independently | stricter | `zero_timeout_does_not_start_a_beacon_request`, `deadline_caps_reveal_wait_and_fetch_together`, `deadline_drops_an_in_flight_attempt_future` | Existing local I/O policy; source review only, hosted execution pending |
 | D-061 | epoch-consensus setter example | prints raw 0/1 although its setter requires Yuma/Null | suggests the accepted symbolic mode while retaining raw display/JSON and encoding | improved | `epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json` | Pinned source contradiction independently reviewed; no new filing, hosted execution pending |
