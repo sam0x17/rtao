@@ -579,7 +579,7 @@ impl rtao_tx::IntentInterface for FundEvmKey {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::balances::TRANSFER_KEEP_ALIVE];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("fund_evm_key", self)
+        crate::evm::fund_json(self)
     }
 }
 #[cfg(feature = "children")]
@@ -1848,7 +1848,7 @@ impl rtao_tx::IntentInterface for SwapBasketMany {
     const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] =
         &[&rtao_runtime::calls::subtensor_module::SWAP_BASKET_MANY];
     fn to_json(&self) -> serde_json::Value {
-        crate::args_with_op("swap_basket_many", self)
+        crate::staking_baskets::many_json(self)
     }
 }
 #[cfg(feature = "coldkey")]

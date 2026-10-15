@@ -16,7 +16,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Source through `c39fab3` implements 49 of 83 intents and 40 of 102 reads,
+Source through `7d842e9` implements 66 of 83 intents and 40 of 102 reads,
 with the corresponding hosted generated output verified and adopted.
 The newer crowdloan/root and coldkey intent ports have verified hosted generated
 dispatch and availability metadata, with combined validation still pending;
@@ -30,9 +30,9 @@ generated dispatch, constructor normalization and availability metadata.
 Ordinary hosted validation remains pending. See
 [m5-proxy-children-association.md](m5-proxy-children-association.md).
 
-The next seventeen source candidates cover lock, collateral, leasing, EVM,
-basket/configuration and root-claim operations. Their generated integration
-and hosted validation are pending; they are not included in 49/83. Review
+The seventeen operations covering lock, collateral, leasing, EVM,
+basket/configuration and root claims have verified generated integration.
+Their ordinary hosted compilation and fixture execution remain pending. Review
 also corrected exact money JSON to match Python's decimal serialization,
 with native u64 arithmetic preserved. See
 [m5-lock-basket-claim.md](m5-lock-basket-claim.md).
@@ -51,10 +51,22 @@ shared multisig book/cache writers are committed. The importer authenticates
 all signing views, refuses serde private carrier injection and preserves nonce
 cache state for invalid, stale, expired or foreign preparations. Cache lookup
 authenticates exact canonical call bytes. The M5 fuzz target is source only;
-no fuzz campaign ran. The remaining 34 intents, other command families and
+no fuzz campaign ran. The remaining 17 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
+[38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
+on `b0e0aa1` passed compilation, strict Clippy, parity and five other jobs.
+Nextest ran 1,872 tests: 1,871 passed, one failed and four were skipped.
+All eighteen earlier failures are resolved. The remaining new child-take
+fixture expected the metadata default while the Python fake supplied a blanket
+map value. The source fixture now seeds an explicit map miss so the actual
+ValueQuery default is exercised, retaining the equality-refusal assertions.
+Doctests were not reached. This run does not validate the later seventeen ports
+or money JSON correction. The bounded failure inventory and log digest are
+retained privately as `check-38701008514.json`.
+
+Earlier normal hosted run
 [38697413448](https://github.com/sam0x17/rtao/actions/runs/38697413448)
 on `60ccce5` passed compilation, strict Clippy, the parity gates and the five
 other normal jobs. Nextest ran 1,850 tests: 1,832 passed, 18 failed and four

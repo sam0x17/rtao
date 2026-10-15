@@ -40,6 +40,15 @@ identity. These source relationships do not prove runtime conformance.
 ## Remaining acceptance work
 
 Latest normal run
+[38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
+at `b0e0aa1` passes compilation, strict Clippy, parity and the five other jobs.
+Nextest ran 1,872 tests: 1,871 passed, one failed and four were skipped; all
+eighteen earlier failures are corrected. The remaining child-take fixture
+needs an explicit map miss to test the metadata default rather than the
+imported Python fake's blanket storage value. That source repair and the
+later seventeen ports need combined hosted acceptance. Doctests were not reached.
+
+Earlier normal run
 [38697413448](https://github.com/sam0x17/rtao/actions/runs/38697413448)
 at `60ccce5` passes compilation, strict Clippy, parity and the five other jobs.
 Nextest ran 1,850 tests: 1,832 passed, 18 failed and four were skipped. Doctests

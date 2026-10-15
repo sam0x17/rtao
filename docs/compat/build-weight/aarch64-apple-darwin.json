@@ -2,8 +2,8 @@
   "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
   "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
   "host": "x86_64-unknown-linux-gnu",
-  "machine": "Intel(R) Xeon(R) 6973P-C",
-  "measured_unix_seconds": 1792050232,
+  "machine": "AMD EPYC 9V74 80-Core Processor",
+  "measured_unix_seconds": 1792050979,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1441,7 +1441,7 @@
       "crates/rtao-core-ext/Cargo.toml": "3373f7dfb7e74a4a7c9c8948395091fbc811074fc1039f00a18e84bae3641b4e",
       "crates/rtao-core/Cargo.toml": "394fb9f9dfa323aff06f4e369575edd96126c397b30822943f47b641541fe383",
       "crates/rtao-evm/Cargo.toml": "8962b16891e371f3032cbb06373f5a07d771ce24abaad1c2a9b24a7905a1bb02",
-      "crates/rtao-intents/Cargo.toml": "53b392167ef7909e206e03e4b75e3038e00bdde3447a51e3a7796bc24b582422",
+      "crates/rtao-intents/Cargo.toml": "c7a92380cc6df8035756590e9dd684942183e7c4762d8d4cd8f83836a8cfb1a5",
       "crates/rtao-metagraph/Cargo.toml": "3058dac929ff13cff7984935854130aaf3c855529f0bef1b6c6846002903b2c5",
       "crates/rtao-neuron/Cargo.toml": "b6e8ab6c89a5a7d11e62b24a8587ef765e24e42167686e917cd7a96ab7a8a304",
       "crates/rtao-primitives/Cargo.toml": "83d3d3e02f545fb7bc21aff32426a6c67532604d0d0979016ba3eabb1a029d52",
@@ -1456,9 +1456,9 @@
       "upstream.toml": "b74e2a722183b8a5e23ae95c3d5cd5183f78ae16fd581e5aa13330ab7201424c",
       "xtask/Cargo.toml": "35432d81fa57601a519afb304f541b4c6d1ef9e9134ef25d582dfdad1160a0e2"
     },
-    "dependency_inputs_sha256": "a998459d3432f881a11b3f9911442a516913f6f149c177cfeee6615f35af0900",
+    "dependency_inputs_sha256": "b1c1539b057e6d2a9897badf50d0af2e09ad459148fb6b16f8d39603d659d558",
     "dirty": false,
-    "head_commit": "c39fab3db202edc8c416d9e0689cdb3d2abf3e6d"
+    "head_commit": "7d842e95945bab2d5fc0e537c4bd668a79abc6e6"
   },
   "target": "aarch64-apple-darwin"
 }

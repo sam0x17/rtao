@@ -399,6 +399,17 @@ mod tests {
         let mut state = FakeState::try_default()?;
         if let Some(current) = current {
             state.seed(&st::DELEGATES, (HOTKEY,), PerU16(current))?;
+        } else {
+            // A metadata-default case needs an explicit map miss: the imported
+            // Python fake otherwise supplies a blanket Delegates value.
+            let entry = state
+                .runtime
+                .storage_entry("SubtensorModule", "Delegates")
+                .ok_or_else(|| anyhow::anyhow!("Delegates storage missing"))?;
+            let key = state
+                .runtime
+                .storage_key(entry, &[rtao_core::codec::Value::Bytes(HOTKEY.0.to_vec())])?;
+            state.seed_encoded(key, None);
         }
         state.seed(&st::DELEGATES, (CHILD,), PerU16(1000))?;
         let chain = FakeChain::from_state(state);
