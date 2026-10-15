@@ -899,11 +899,15 @@ const SUPPORTED_CORE_CONSTRUCTORS: [&str; 21] = [
     "set_hyperparameter",
     "set_take",
 ];
+// Amount-bearing positions use the checked currency range. M4 retains the
+// separate u16 wire boundary for calls that do not construct subnet balances.
+const M5_MAX_NETUID: u16 = NetUid::LIMIT - 1;
+const M5_NETUIDS: [u16; 4] = [0, 1, 63, M5_MAX_NETUID];
 const M5_SPANS: [(u16, u16); 6] = [
     (0, 1),
     (1, 0),
-    (63, u16::MAX),
-    (u16::MAX, 63),
+    (63, M5_MAX_NETUID),
+    (M5_MAX_NETUID, 63),
     (63, 63),
     (0, 0),
 ];
@@ -942,6 +946,54 @@ fn position_amount(netuid: u16, rao: u64) -> Amount {
         Balance::<Tao>::from_rao(rao).into()
     } else {
         Balance::<Alpha>::new(NetUid(netuid), rao).unwrap().into()
+    }
+}
+
+#[test]
+fn position_intents_refuse_subnet_ids_outside_the_checked_currency_range() {
+    assert_eq!(M5_MAX_NETUID, 4095);
+    for raw in [NetUid::LIMIT, u16::MAX] {
+        let expected = UnitError::InvalidIdentifier {
+            kind: "netuid",
+            value: u64::from(raw),
+            limit: u64::from(NetUid::LIMIT),
+        };
+        assert_eq!(NetUid::new(raw), Err(expected.clone()));
+        assert_eq!(Balance::<Alpha>::new(NetUid(raw), 1), Err(expected.clone()));
+        let mut seen = BTreeSet::new();
+        for pair in m5_static_pairs().into_iter().filter(|pair| {
+            matches!(
+                pair.pair.constructor,
+                "remove_stake"
+                    | "remove_stake_limit"
+                    | "move_stake"
+                    | "move_stake_limit"
+                    | "swap_stake"
+                    | "transfer_stake"
+                    | "transfer_stake_and_hotkey"
+            )
+        }) {
+            if !seen.insert(pair.pair.constructor) {
+                continue;
+            }
+            let mut args = pair.pair.intent.to_json_dyn();
+            let field = if args.get("origin_netuid").is_some() {
+                "origin_netuid"
+            } else {
+                "netuid"
+            };
+            args[field] = json!(raw);
+            // A raw u16 still fits the wire carrier. Exact position amounts
+            // must refuse it at intent construction before a client is needed.
+            let error =
+                rtao_intents::AnyIntent::from_tool(pair.pair.intent.spec().name, args).unwrap_err();
+            assert!(
+                matches!(error, IntentError::UnitMismatch(actual) if actual == expected),
+                "{} accepted invalid {field} {raw}",
+                pair.pair.constructor
+            );
+        }
+        assert_eq!(seen.len(), 7);
     }
 }
 
@@ -1036,7 +1088,7 @@ fn m5_static_pairs() -> Vec<M5Pair> {
             Spend::Bounded(Balance::<Tao>::from_rao(amount)),
             false,
         ));
-        for netuid in M4_NETUIDS {
+        for netuid in M5_NETUIDS {
             pairs.push(m5_pair(
                 "add_stake",
                 IntentCall::add_stake(DESTINATION.to_string(), netuid, u128::from(amount)),
@@ -1700,7 +1752,7 @@ async fn all_twenty_one_real_core_constructors_match_native_policy_categories_an
         Some(BTreeSet::new()),
         Some(BTreeSet::from([NetUid::ROOT])),
         Some(BTreeSet::from([NetUid(1), NetUid(63)])),
-        Some(M4_NETUIDS.map(NetUid).into_iter().collect()),
+        Some(M5_NETUIDS.map(NetUid).into_iter().collect()),
     ];
     let mut comparisons = 0usize;
     for pair in &pairs {
@@ -1870,7 +1922,7 @@ fn two_subnet_diagnostic_tails_keep_python_order_and_core_canonicalization() {
     let pairs = m5_static_pairs();
     let transfer = pairs
         .iter()
-        .find(|pair| pair.pair.constructor == "transfer_stake" && pair.scope == [u16::MAX, 63])
+        .find(|pair| pair.pair.constructor == "transfer_stake" && pair.scope == [M5_MAX_NETUID, 63])
         .unwrap();
     let native = policy.check(
         transfer.pair.intent.semantic_intent_dyn(),
@@ -1882,7 +1934,7 @@ fn two_subnet_diagnostic_tails_keep_python_order_and_core_canonicalization() {
         [
             Violation::FeeExceeded,
             Violation::SpendUnbounded,
-            Violation::Netuid(u16::MAX),
+            Violation::Netuid(M5_MAX_NETUID),
             Violation::Netuid(63)
         ]
     );
@@ -1892,7 +1944,7 @@ fn two_subnet_diagnostic_tails_keep_python_order_and_core_canonicalization() {
             Violation::FeeExceeded,
             Violation::SpendUnbounded,
             Violation::Netuid(63),
-            Violation::Netuid(u16::MAX)
+            Violation::Netuid(M5_MAX_NETUID)
         ]
     );
     let repeated = pairs
@@ -1921,7 +1973,7 @@ async fn explicit_limit_prices_and_partial_flags_keep_native_boundaries() {
     let (client, fake) = m5_fixture().await;
     let snapshot = client.at(BlockRef::Finalized).await.unwrap();
     let keys = PublicKeys(OWNER);
-    for netuid in M4_NETUIDS {
+    for netuid in M5_NETUIDS {
         for amount in [0, 1, u64::MAX] {
             for limit in [0, 1, 9_007_199_254_740_993, u64::MAX] {
                 for partial in [false, true] {
@@ -2121,7 +2173,7 @@ async fn all_position_inputs_resolve_state_and_keep_constructor_policy_scope() {
             for allowed in [
                 None,
                 Some(BTreeSet::new()),
-                Some(M4_NETUIDS.map(NetUid).into_iter().collect()),
+                Some(M5_NETUIDS.map(NetUid).into_iter().collect()),
             ] {
                 compare_m5_policy(
                     &pair,
@@ -2145,7 +2197,7 @@ async fn all_free_tao_keeps_python_unbounded_spend_while_core_exact_constructor_
     let snapshot = client.at(BlockRef::Finalized).await.unwrap();
     let keys = PublicKeys(OWNER);
     let tolerance = Ratio::new(0.0).unwrap();
-    for netuid in M4_NETUIDS {
+    for netuid in M5_NETUIDS {
         let plain = m5_pair(
             "add_stake",
             IntentCall::add_stake(DESTINATION.to_string(), netuid, u128::from(STAKEABLE_RAO)),

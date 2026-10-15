@@ -1805,6 +1805,14 @@ mod tests {
     async fn dynamic_execution_acquires_only_the_instance_hotkey_after_review_and_signs_its_account()
     -> TestResult {
         let (executor, chain, keys, intent) = role_fixture().await?;
+        let hotkey = keys.hotkey.account();
+        // The cache retains the last allocated nonce, while the node returns
+        // its next available value. Distinct nonzero nonces make selecting
+        // the static catalog's coldkey observable in the signed bytes too.
+        chain.mutate_state(|state| {
+            state.set_nonce(hotkey.to_string(), 17);
+            state.set_nonce(keys.coldkey.account().to_string(), 41);
+        });
         let result = executor
             .execute_dyn(
                 &intent,
@@ -1834,6 +1842,7 @@ mod tests {
             decoded.field("address").and_then(ValueExt::as_str),
             Some(keys.hotkey.account().to_string().as_str())
         );
+        assert_eq!(decoded.field("nonce").and_then(ValueExt::as_u128), Some(17));
         assert_eq!(
             *intent.origins.lock().expect("origins"),
             [(keys.hotkey.account(), keys.hotkey.account())]
@@ -1844,7 +1853,13 @@ mod tests {
                 .nonces()
                 .cached(&keys.hotkey.account().to_string())
                 .await,
-            Some(1)
+            Some(17)
+        );
+        assert_eq!(executor.client().nonces().fresh(&hotkey).await?, 18);
+        assert_eq!(
+            executor.client().nonces().cached(&hotkey.to_string()).await,
+            Some(17),
+            "a public next-index probe must not allocate another nonce"
         );
         assert!(
             executor

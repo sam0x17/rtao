@@ -529,7 +529,7 @@ mod tests {
 
     #[cfg(feature = "transfer")]
     #[tokio::test]
-    async fn raw_multisig_operations_encode_full_openings_hash_approvals_and_compact_timepoints()
+    async fn raw_multisig_operations_encode_full_openings_hash_approvals_and_fixed_width_timepoints()
     -> anyhow::Result<()> {
         let (chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
@@ -588,12 +588,16 @@ mod tests {
             }
             expected.push(4);
             expected.extend_from_slice(&[8; 32]);
+            // Pinned pallet_multisig::Timepoint<u32> has two ordinary u32
+            // fields, unlike the compact WeightV2 fields below.
             if call_index == 3 {
-                expected.extend_from_slice(&[48, 12]);
+                expected.extend_from_slice(&12u32.to_le_bytes());
+                expected.extend_from_slice(&3u32.to_le_bytes());
             } else if call_index != 0 {
                 expected.push(u8::from(!opening));
                 if !opening {
-                    expected.extend_from_slice(&[48, 12]);
+                    expected.extend_from_slice(&12u32.to_le_bytes());
+                    expected.extend_from_slice(&3u32.to_le_bytes());
                 }
             }
             if hash_only {
@@ -1076,9 +1080,13 @@ mod tests {
             call: transfer(),
             timepoint: None,
         };
+        // Connection setup also calls Metadata_metadata_at_version. Count
+        // only this build's business probes, keeping their order observable.
+        let before = chain.requests().len();
+        let recorded = RecordingView::new(snapshot.clone());
         let built = intent
             .build(&BuildCx {
-                view: &snapshot,
+                view: &recorded,
                 origin: OriginView::Account(MEMBER),
                 runtime,
                 clock: &SystemClock,
@@ -1089,13 +1097,45 @@ mod tests {
             arg(&decode(&built.call, runtime)?, "max_weight")?,
             &json!({"ref_time":1,"proof_size":2})
         );
-        assert_eq!(
-            chain
-                .requests()
+        let requests = chain.requests();
+        let probes: Vec<_> = requests[before..]
+            .iter()
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "TransactionPaymentApi_query_info"
+            })
+            .collect();
+        assert_eq!(probes.len(), 2);
+        // Python first requires the inner call's dispatch weight, then makes
+        // a best-effort fee probe for the composed outer approval. Check both
+        // probe payloads, retaining independent SCALE length/call assertions.
+        let inner_bytes = transfer_bytes();
+        for (probe, call) in probes
+            .into_iter()
+            .zip([inner_bytes.as_slice(), built.call.as_bytes()])
+        {
+            let bytes = hex::decode(
+                probe.params[1]
+                    .as_str()
+                    .and_then(|value| value.strip_prefix("0x"))
+                    .ok_or_else(|| anyhow::anyhow!("fee probe omitted hexadecimal input"))?,
+            )?;
+            let length_at = bytes
+                .len()
+                .checked_sub(4)
+                .ok_or_else(|| anyhow::anyhow!("fee probe omitted extrinsic length"))?;
+            let (extrinsic, length) = bytes.split_at(length_at);
+            assert_eq!(length, u32::try_from(extrinsic.len())?.to_le_bytes());
+            assert!(extrinsic.ends_with(call));
+            assert_eq!(probe.params[2], Value::Null);
+        }
+        // The failed outer fee estimate skips the funding check even with
+        // an empty signatory balance; it must not query System.Account.
+        assert!(
+            recorded
+                .touches()
                 .iter()
-                .filter(|request| request.method == "state_call")
-                .count(),
-            2
+                .all(|touch| { touch.pallet_or_api != "System" || touch.item != "Account" })
         );
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
         client.close().await;
