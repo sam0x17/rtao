@@ -709,7 +709,7 @@ impl ReadName {
             Self::OwnedHotkeys => false,
             Self::Parents => false,
             Self::PendingChildren => false,
-            Self::Proxies => false,
+            Self::Proxies => true,
             Self::QuoteStake => false,
             Self::QuoteUnstake => false,
             Self::RevealPeriod => true,
@@ -719,7 +719,7 @@ impl ReadName {
             Self::RootBasketPortfolio => false,
             Self::RootBasketTotalNav => false,
             Self::RootBaskets => false,
-            Self::RootClaimThreshold => false,
+            Self::RootClaimThreshold => true,
             Self::Stake => false,
             Self::StakeAvailability => false,
             Self::StakeAvailabilityForColdkey => false,
@@ -1094,9 +1094,9 @@ impl ReadName {
                 output_type_name: std::any::type_name::<serde_json::Value>(),
             },
             Self::Proxies => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ProxiesParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::owner::ProxyDelegations>(),
             },
             Self::QuoteStake => ReadInterfaceMetadata {
                 implemented: false,
@@ -1149,10 +1149,10 @@ impl ReadName {
                 output_type_name: std::any::type_name::<serde_json::Value>(),
             },
             Self::RootClaimThreshold => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::RootClaimThresholdParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::Stake => ReadInterfaceMetadata {
                 implemented: false,
