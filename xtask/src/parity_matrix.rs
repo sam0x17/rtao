@@ -89,9 +89,29 @@ pub(super) fn generate(root: &Path, files: &[Row], index: &Index) -> Result<Valu
     let e2e = document(root, "parity/e2e_map.toml")?;
     let chain = document(root, "parity/chain_pending.toml")?;
     let chain_assertions=chain["assertion"].as_table_like().context("matrix chain assertion register absent")?.iter().map(|(name,row)|json!({"name":name,"rtao":"pending","milestone":row.get("milestone").and_then(Item::as_str),"plan":row.get("plan").and_then(Item::as_str),"oracle":"unverified"})).collect::<Vec<_>>();
-    let e2e=e2e["tests"].as_table_like().context("matrix e2e rows absent")?.iter().map(|(name,row)|json!({"name":name,"rtao":if row.get("rtao").is_some(){"mapped"}else if row.get("na").is_some(){"not_required"}else{"pending"},"test":row.get("rtao").and_then(Item::as_str),"oracle":"unverified"})).collect::<Vec<_>>();
+    let e2e = e2e["tests"]
+        .as_table_like()
+        .context("matrix e2e rows absent")?
+        .iter()
+        .map(|(name, row)| {
+            Ok(json!({
+                "name": name,
+                "rtao": if row.get("rtao").is_some() { "mapped" } else if row.get("na").is_some() { "not_required" } else { "pending" },
+                "test": row.get("rtao").and_then(Item::as_str),
+                "oracle": "unverified",
+                "evidence": super::state::e2e_evidence(name, row)?,
+            }))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let mut e2e_classes = std::collections::BTreeMap::<String, usize>::new();
+    for row in &e2e {
+        let scope = row["evidence"]["scope"]
+            .as_str()
+            .context("matrix e2e scope absent")?;
+        *e2e_classes.entry(scope.to_owned()).or_default() += 1;
+    }
     Ok(
-        json!({"schema":1,"pin":{"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str()},"status_semantics":{"rtao":"Declared implementation status; parity check independently validates evidence. Aliases/module-map decisions do not certify behavior.","oracle":"recorded means a named immutable vector exists; this inventory does not claim a successful replay."},"families":{"files":file_rows,"intents":intents,"reads":reads,"semantic_errors":rtao_catalog::SEMANTIC_ERRORS.iter().map(|spec|json!({"name":spec.code.as_str(),"rtao":"generated","oracle":"unverified"})).collect::<Vec<_>>(),"chain_errors":rtao_catalog::CHAIN_ERRORS.iter().map(|spec|json!({"name":spec.name,"rtao":"generated","oracle":"unverified"})).collect::<Vec<_>>(),"exports":exports,"divergences":divergences,"environment":environment,"e2e":e2e,"chain_assertions":chain_assertions}}),
+        json!({"schema":1,"pin":{"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str()},"status_semantics":{"rtao":"Declared implementation status; parity check independently validates evidence. Aliases/module-map decisions do not certify behavior.","oracle":"recorded means a named immutable vector exists; this inventory does not claim a successful replay.","runtime":"E2E evidence classifies source contracts. Runtime unverified does not claim execution, mutation, rollback or calibrated fees."},"e2e_evidence_classes":e2e_classes,"families":{"files":file_rows,"intents":intents,"reads":reads,"semantic_errors":rtao_catalog::SEMANTIC_ERRORS.iter().map(|spec|json!({"name":spec.code.as_str(),"rtao":"generated","oracle":"unverified"})).collect::<Vec<_>>(),"chain_errors":rtao_catalog::CHAIN_ERRORS.iter().map(|spec|json!({"name":spec.name,"rtao":"generated","oracle":"unverified"})).collect::<Vec<_>>(),"exports":exports,"divergences":divergences,"environment":environment,"e2e":e2e,"chain_assertions":chain_assertions}}),
     )
 }
 

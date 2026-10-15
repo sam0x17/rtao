@@ -710,6 +710,177 @@ const READ_E2E_FIXTURES: &[(&str, &str, &[&str])] = &[
     ),
 ];
 
+struct ClientE2eFixture {
+    key: &'static str,
+    target: &'static str,
+    identifiers: &'static [&'static str],
+}
+
+// These five scenarios only exercise public planning, fee decoding and policy
+// refusal. They do not dispatch a runtime call or calibrate a real chain fee.
+const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
+    ClientE2eFixture {
+        key: "test_plan_simulates_real_fee",
+        target: "rtao_intents::client_policy_scenarios::client_transfer_plan_decodes_positive_fee_for_the_exact_call",
+        identifiers: &[
+            "plan",
+            "transfer",
+            "fee",
+            "assert_fee_probe",
+            "assert_no_private_or_submit",
+            "assert_eq",
+        ],
+    },
+    ClientE2eFixture {
+        key: "test_policy_blocks_with_live_fee",
+        target: "rtao_intents::client_policy_scenarios::client_transfer_spend_refusal_keeps_fee_probe_public",
+        identifiers: &[
+            "plan",
+            "execute",
+            "transfer",
+            "max_spend",
+            "assert_policy",
+            "assert_fee_probe",
+            "assert_no_private_or_submit",
+            "assert_eq",
+        ],
+    },
+    ClientE2eFixture {
+        key: "test_policy_aggregates_spend_across_batch",
+        target: "rtao_intents::client_policy_scenarios::client_batch_aggregates_both_transfers_before_spend_refusal",
+        identifiers: &[
+            "Batch",
+            "batch_all",
+            "plan_dyn",
+            "execute_dyn",
+            "spend",
+            "assert_policy",
+            "assert_fee_probe",
+            "assert_no_private_or_submit",
+            "assert_eq",
+        ],
+    },
+    ClientE2eFixture {
+        key: "test_netuid_allowlist_blocks_live",
+        target: "rtao_intents::client_policy_scenarios::client_subnet_allowlist_refuses_destination_and_global_unstake",
+        identifiers: &[
+            "move_stake",
+            "unstake_all_alpha",
+            "allowed_netuids",
+            "plan_dyn",
+            "execute_dyn",
+            "assert_policy",
+            "assert_fee_probe",
+            "assert_no_private_or_submit",
+            "assert_eq",
+        ],
+    },
+    ClientE2eFixture {
+        key: "test_spend_cap_blocks_value_movers",
+        target: "rtao_intents::client_policy_scenarios::client_spend_cap_refuses_all_three_unbounded_value_movers",
+        identifiers: &[
+            "transfer_stake",
+            "register_network",
+            "burned_register",
+            "Spend",
+            "plan_dyn",
+            "execute_dyn",
+            "assert_policy",
+            "assert_fee_probe",
+            "assert_no_private_or_submit",
+            "assert_eq",
+        ],
+    },
+];
+
+const CLIENT_E2E_LIMIT: &str = "live-runtime-fee-query";
+const CI_TEST_FILTER: &str =
+    "not (binary(e2e) | binary(interop) | binary(core_oracle) | binary(ledger_emu))";
+
+fn client_e2e_profile(source: &str) -> Result<()> {
+    let config: DocumentMut = source.parse()?;
+    ensure!(
+        config["profile"]["ci"]["default-filter"].as_str() == Some(CI_TEST_FILTER),
+        "client e2e evidence requires the reviewed ordinary CI test filter"
+    );
+    Ok(())
+}
+
+// Shared by validation and matrix generation. A mapped source function never
+// establishes runtime execution; new fake scenarios must state their limits.
+pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
+    let table = row.as_table_like().context("e2e row must be a table")?;
+    let states = ["rtao", "pending", "na"]
+        .into_iter()
+        .filter(|key| row.get(key).is_some())
+        .collect::<Vec<_>>();
+    ensure!(states.len() == 1, "e2e row requires one disposition");
+    let state = states[0];
+    let target = row[state].as_str().context("e2e state must be string")?;
+    let fixture = CLIENT_E2E_FIXTURES
+        .iter()
+        .find(|fixture| fixture.key == name && fixture.target == target);
+    let client = state == "rtao" && fixture.is_some();
+    let allowed = if client {
+        &["rtao", "scope", "runtime", "runtime_limits"][..]
+    } else {
+        std::slice::from_ref(&state)
+    };
+    ensure!(
+        table.iter().all(|(key, _)| allowed.contains(&key)),
+        "e2e {name} has unsupported evidence fields"
+    );
+    if client {
+        ensure!(
+            row.get("scope").and_then(Item::as_str) == Some("client-contract")
+                && row.get("runtime").and_then(Item::as_str) == Some("unverified"),
+            "client e2e evidence must retain client-contract/unverified scope"
+        );
+        let limits = row
+            .get("runtime_limits")
+            .and_then(Item::as_array)
+            .context("client e2e evidence requires exact runtime limits")?;
+        ensure!(
+            limits.len() == 1
+                && limits.get(0).and_then(toml_edit::Value::as_str) == Some(CLIENT_E2E_LIMIT),
+            "client e2e runtime limits changed"
+        );
+    }
+    let (scope, runtime, limits) = if client {
+        ("client-contract", "unverified", vec![CLIENT_E2E_LIMIT])
+    } else if state == "pending" {
+        ("pending", "unverified", vec![])
+    } else if state == "na" {
+        ("not-required", "not-applicable", vec![])
+    } else if target.starts_with("e2e::") || target.starts_with("interop::") {
+        (
+            "hosted-scenario-source",
+            "unverified",
+            vec!["hosted-runtime-execution-not-recorded"],
+        )
+    } else if target == "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
+    {
+        (
+            "intent-plan",
+            "unverified",
+            vec!["runtime-dispatch-unverified"],
+        )
+    } else {
+        ensure!(
+            READ_E2E_FIXTURES
+                .iter()
+                .any(|(key, test, _)| *key == name && *test == target),
+            "unreviewed ordinary e2e evidence"
+        );
+        (
+            "read-fixture",
+            "unverified",
+            vec!["runtime-state-unverified"],
+        )
+    };
+    Ok(json!({"scope":scope,"runtime":runtime,"runtime_limits":limits}))
+}
+
 fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
     let target = if value.starts_with("e2e::") || value.starts_with("interop::") {
         format!("rtao_testkit::{value}")
@@ -719,6 +890,23 @@ fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
                 name.strip_prefix("intent_")
                     .is_some_and(|op| { rtao_catalog::INTENTS.iter().any(|spec| spec.name == op) }),
                 "only catalog intent-plan keys may map to the complete ordinary plan fixture"
+            );
+        } else if let Some(fixture) = CLIENT_E2E_FIXTURES
+            .iter()
+            .find(|fixture| fixture.key == name)
+        {
+            ensure!(
+                value == fixture.target,
+                "client e2e {name} requires its exact reviewed fixture"
+            );
+            divergence_test(index, value)?;
+            let body = &index.feature_test_bodies[value];
+            ensure!(
+                fixture
+                    .identifiers
+                    .iter()
+                    .all(|name| identifier(body, name)),
+                "client e2e fixture lacks reviewed operations or assertions"
             );
         } else {
             let (_, fixture, identifiers) = READ_E2E_FIXTURES
@@ -816,7 +1004,16 @@ pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
     let mut pending = 0;
     let mut mapped = 0;
     let mut na = 0;
+    let mut evidence_classes = BTreeMap::<String, usize>::new();
     for (name, row) in rows.iter() {
+        let evidence = e2e_evidence(name, row)?;
+        let scope = evidence["scope"]
+            .as_str()
+            .context("e2e evidence scope absent")?;
+        *evidence_classes.entry(scope.to_owned()).or_default() += 1;
+        if scope == "client-contract" {
+            client_e2e_profile(&fs::read_to_string(root.join(".config/nextest.toml"))?)?;
+        }
         let present = ["rtao", "pending", "na"]
             .iter()
             .filter(|key| row.get(key).is_some())
@@ -849,7 +1046,9 @@ pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
             _ => bail!("unknown e2e state"),
         }
     }
-    Ok(json!({"keys":expected.len(),"mapped":mapped,"pending":pending,"na":na}))
+    Ok(
+        json!({"keys":expected.len(),"mapped":mapped,"pending":pending,"na":na,"evidence_classes":evidence_classes}),
+    )
 }
 fn collect_manifest_names(value: &Value, names: &mut BTreeSet<String>) -> Result<()> {
     match value {
@@ -1122,6 +1321,145 @@ mod tests {
         index.feature_test_bodies.clear();
         tested_read_functions(&public, &reads, &index, &mut implemented)?;
         assert!(implemented.is_empty(), "untested entrypoint counted");
+        Ok(())
+    }
+
+    #[test]
+    fn client_e2e_mapping_requires_exact_ordinary_test_and_reviewed_body() -> Result<()> {
+        for fixture in CLIENT_E2E_FIXTURES {
+            let mut index = Index::default();
+            assert!(e2e_target(fixture.key, fixture.target, &index).is_err());
+            index.tests.insert(fixture.target.into());
+            index
+                .test_bodies
+                .insert(fixture.target.into(), "{ assert!(true); }".into());
+            assert!(
+                e2e_target(fixture.key, fixture.target, &index).is_err(),
+                "default-only evidence"
+            );
+            index.feature_tests.insert(fixture.target.into());
+            assert!(
+                e2e_target(fixture.key, fixture.target, &index).is_err(),
+                "body absent"
+            );
+            index.feature_test_bodies.insert(
+                fixture.target.into(),
+                format!(
+                    "{{ let source = {:?}; assert!(true); }}",
+                    fixture.identifiers
+                ),
+            );
+            assert!(
+                e2e_target(fixture.key, fixture.target, &index).is_err(),
+                "literal identifier spoof"
+            );
+            let body = format!("{{ let actual = ({}); }}", fixture.identifiers.join(", "));
+            index
+                .feature_test_bodies
+                .insert(fixture.target.into(), body);
+            assert_eq!(
+                e2e_target(fixture.key, fixture.target, &index)?,
+                fixture.target
+            );
+            for required in fixture.identifiers {
+                let body = format!(
+                    "{{ let actual = ({}); }}",
+                    fixture
+                        .identifiers
+                        .iter()
+                        .filter(|name| *name != required)
+                        .copied()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                index
+                    .feature_test_bodies
+                    .insert(fixture.target.into(), body);
+                assert!(
+                    e2e_target(fixture.key, fixture.target, &index).is_err(),
+                    "missing {required}"
+                );
+            }
+            for other in CLIENT_E2E_FIXTURES
+                .iter()
+                .filter(|other| other.key != fixture.key)
+            {
+                assert!(e2e_target(other.key, fixture.target, &index).is_err());
+            }
+            index.feature_tests.remove(fixture.target);
+            index.rejected_feature_tests.insert(
+                fixture.target.into(),
+                "ignored or non-harness target".into(),
+            );
+            assert!(e2e_target(fixture.key, fixture.target, &index).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn client_e2e_scope_cannot_claim_runtime_success_or_drop_limits() -> Result<()> {
+        for fixture in CLIENT_E2E_FIXTURES {
+            let source = format!(
+                "[fixture]\nrtao = {:?}\nscope = \"client-contract\"\nruntime = \"unverified\"\nruntime_limits = [\"live-runtime-fee-query\"]\n",
+                fixture.target
+            );
+            let document: DocumentMut = source.parse()?;
+            assert_eq!(
+                e2e_evidence(fixture.key, &document["fixture"])?,
+                json!({
+                    "scope":"client-contract", "runtime":"unverified", "runtime_limits":[CLIENT_E2E_LIMIT]
+                })
+            );
+            for changed in [
+                source.replace("runtime = \"unverified\"", "runtime = \"passed\""),
+                source.replace(
+                    "scope = \"client-contract\"",
+                    "scope = \"hosted-scenario-source\"",
+                ),
+                source.replace(
+                    "runtime_limits = [\"live-runtime-fee-query\"]",
+                    "runtime_limits = []",
+                ),
+                source.replace(
+                    "runtime_limits = [\"live-runtime-fee-query\"]",
+                    "runtime_limits = [\"live-runtime-fee-query\", \"unreviewed\"]",
+                ),
+                source.replace(
+                    "runtime_limits = [\"live-runtime-fee-query\"]",
+                    "runtime_limits = [\"different-limit\"]",
+                ),
+                source.replace("scope = \"client-contract\"\n", ""),
+                source.replace("runtime = \"unverified\"\n", ""),
+                source.replace("runtime_limits = [\"live-runtime-fee-query\"]\n", ""),
+                source.replace(
+                    fixture.target,
+                    "rtao_testkit::e2e::test_plan_simulates_real_fee",
+                ),
+                source.replace(fixture.target, "e2e::test_plan_simulates_real_fee"),
+                source.replace(
+                    fixture.target,
+                    "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain",
+                ),
+                format!("{source}extra = \"unsupported\"\n"),
+                format!("{source}pending = \"M5\"\n"),
+            ] {
+                assert_ne!(changed, source);
+                let changed: DocumentMut = changed.parse()?;
+                assert!(e2e_evidence(fixture.key, &changed["fixture"]).is_err());
+            }
+        }
+        client_e2e_profile(&format!(
+            "[profile.ci]\ndefault-filter = {:?}",
+            CI_TEST_FILTER
+        ))?;
+        for source in [
+            "[profile.ci]\ndefault-filter = 'binary(e2e)'",
+            "[profile.ci]\ndefault-filter = 'not binary(client_policy_scenarios)'",
+            "[profile.ci]",
+            "",
+        ] {
+            assert!(client_e2e_profile(source).is_err());
+        }
         Ok(())
     }
 

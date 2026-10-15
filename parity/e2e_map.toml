@@ -286,7 +286,10 @@ rtao = "rtao_reads::m6_accounts::neurons_sort_by_uid_retain_raw_modes_and_check_
 rtao = "rtao_reads::owner::owner_scalar_identity_epoch_and_hyperparameter_projections_match_python"
 
 [tests."test_netuid_allowlist_blocks_live"]
-pending = "M5"
+rtao = "rtao_intents::client_policy_scenarios::client_subnet_allowlist_refuses_destination_and_global_unstake"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_nonexistent_subnet_maps_to_semantic_code"]
 pending = "M4"
@@ -301,13 +304,22 @@ pending = "M4"
 pending = "M5"
 
 [tests."test_plan_simulates_real_fee"]
-pending = "M2"
+rtao = "rtao_intents::client_policy_scenarios::client_transfer_plan_decodes_positive_fee_for_the_exact_call"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_policy_aggregates_spend_across_batch"]
-pending = "M5"
+rtao = "rtao_intents::client_policy_scenarios::client_batch_aggregates_both_transfers_before_spend_refusal"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_policy_blocks_with_live_fee"]
-pending = "M2"
+rtao = "rtao_intents::client_policy_scenarios::client_transfer_spend_refusal_keeps_fee_probe_public"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_proxy_flow"]
 pending = "M5"
@@ -328,7 +340,10 @@ pending = "M2"
 rtao = "e2e::test_snapshot_pins_reads_to_one_block"
 
 [tests."test_spend_cap_blocks_value_movers"]
-pending = "M5"
+rtao = "rtao_intents::client_policy_scenarios::client_spend_cap_refuses_all_three_unbounded_value_movers"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_submit_shielded_runs_full_pipeline"]
 pending = "M4"

@@ -1147,12 +1147,12 @@ notes = "§10.5; under `misc`; feature `extension`"
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/lock.py"
-rs = ["`rtao-cli` `conviction` group"]
+rs = ["rtao_cli::commands::conviction","rtao_cli::commands::{generated, schema}","rtao_cli::application::compatibility_aliases","rtao_reads::reads::m6_locks"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "10cce2a5b71c33c946844f1b82da78993c9eda7a"
 synced_tag = "v478"
 milestone = "M6"
-notes = "§10.5; alias `lock`"
+notes = "Source reconciliation 2026-10-15: complete authenticated lock command module and native routes/helpers/fixtures independently reviewed. Seven commands retain lock/conviction aliasing, mode-before-lock preparation, bool inversion/exclusivity, field aliases and native amounts, full machine records, dust-only human filtering, pinned public reads and no read-side submission. Human table layout follows the permitted presentation adaptation. Corrected targeting labels preserve truthy contact JSON types and falsy chain fallback; duplicate wallet aliases follow stable natural wallet groups then hotkeys, including natural-key ties. Canonical shared fixture attribution is explicit. Authored fixtures: conviction_collateral_commands::{mode_and_accept_require_one_unambiguous_choice, perpetual_add_prepares_mode_before_lock_and_preserves_exact_amount, reads_have_required_subnet_and_optional_coldkey, public_reads_preserve_records_owner_default_and_never_submit, empty_human_lock_view_still_reports_acceptance_and_dust, targeting_keeps_truthy_contact_json_types_and_ignores_falsy_labels}; commands::conviction::tests::wallet_alias_collision_uses_python_natural_wallet_then_hotkey_order. Final independent rereview found no remaining concrete defect in the label repairs; current hosted regression/oracle execution remains separate."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/misc.py"
@@ -2047,12 +2047,12 @@ notes = "Source reconciliation 2026-10-15: The Python COLDKEY_PAYS_FEE_CALLS and
 
 [[file]]
 py = "sdk/python/bittensor/http_auth.py"
-rs = ["`rtao_btauth` (core; `server`, `client` features)"]
+rs = ["rtao_btauth::{build_payload, sign, Verifier, VerifyConfig, Caller, AuthError, WrappedPolicy}","rtao_btauth::{NonceStore, InMemoryNonceStore, NonceStoreConfig}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "d4b608768fa32f16618fcd8d9d468eaca79cedc1"
 synced_tag = "v478"
 milestone = "M0–M3"
-notes = "btauth/1 byte for byte (§7); messages `:274-341` are the wire contract; retention check moves to `Verifier::new` (D-009)"
+notes = "Source reconciliation 2026-10-15: complete pinned protocol and native lib/nonce implementations reviewed with all twenty direct test_http_auth counterparts and additional boundary/concurrency fixtures. Payload bytes, raw/wrapped signature behavior, both algorithms, header/receiver/freshness/error order and full signed-integer nonce identity retain authored evidence. Native APIs use typed accounts/methods and asynchronous sign/store ownership. D005/D009/D038/D054 cover async store, constructor/strict retention and header budgets. D063 explicitly records decoded-account replay identity across SS58 prefixes while preserving exact signed text. D032 applies only to server-adapter ordering. Existing golden values are Rust-extracted and authenticated. Current hosted execution/oracle acceptance remains separate; no new success is inferred."
 
 [[file]]
 py = "sdk/python/bittensor/hyperparams.py"
@@ -2155,30 +2155,30 @@ notes = "10 intents (9 generated `build()`, 1 ported); see [parity-inventory.md 
 
 [[file]]
 py = "sdk/python/bittensor/intents/evm.py"
-rs = ["`rtao_intents::evm` (feature `evm`)"]
+rs = ["rtao_intents::evm::{FundEvmKey, EvmWithdraw}","rtao_intents::generated::interfaces","rtao_primitives::evm"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "62274b85ee0d003ae650099b83bb1e73dba37533"
 synced_tag = "v478"
 milestone = "M5"
-notes = '2 intents (0 generated `build()`, 2 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); mirror address `blake2_256("evm:" ++ h160)` documented at `:26-33`; `h160_to_ss58` lives in `rtao_primitives::evm` (§6.6)'
+notes = "Source reconciliation 2026-10-15: complete authenticated source, native/generated implementation and meaningful fixture bodies independently reviewed. Address normalization precedes money validation; accepted pinned mirror vectors and Python interior-hex-whitespace behavior are preserved. Exact/all funding keeps alive; exact withdrawal avoids storage and all withdrawal uses the effective coldkey mirror free balance, refusing zero. Checked native amounts, normalized JSON, summaries/warnings and inherited policy/preflight remain. Authored evm::tests::{evm_funding_uses_pinned_python_mirror_vectors_and_normalizes_at_construction, evm_funding_preserves_address_validation_and_constructor_error_order, evm_funding_keeps_alive_and_encodes_native_compact_amounts_or_all, evm_withdraw_exact_never_reads_and_all_uses_effective_coldkey_mirror_free_balance, evm_withdraw_all_refuses_empty_mirrors_without_spending_origin_balance, evm_preflights_keep_exact_warnings_and_inherited_policy, evm_amounts_reject_wrong_currency_negative_and_out_of_native_range} pin literal wire bytes, native boundaries and exact reads. No current hosted regression/oracle success is inferred."
 
 [[file]]
 py = "sdk/python/bittensor/intents/governance.py"
-rs = ["`rtao_intents::governance` (feature `governance`)"]
+rs = ["rtao_intents::governance::{TrimSubnet, TrimNullSubnetBatch, SetMechanismCount, UpdateSymbol}","rtao_intents::staking_burn::StakeBurn","rtao_intents::generated::{interfaces, passthrough}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "9a8423befd567aeba394dbcbd694b5aa73210e7e"
 synced_tag = "v478"
 milestone = "M4–M5"
-notes = "5 intents (4 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: complete authenticated source and all five native classes/generated bindings independently reviewed. Symbol UTF-8, ordered arguments, Python repr summaries and base scope are preserved. StakeBurn preserves exact TAO spend, explicit-limit no-read path, hotkey-before-price resolution, binary64 multiply/truncate derived limit, Some(limit), constructor order and shield metadata; derived prices outside native bounds refuse. Canonical governance/staking attribution is explicit. D062 records the existing three additional effective-owner/freeze/cooldown blocks hooks, including Null-continuation semantics; independent rereview found the disposition accurate. Authored governance::tests::{generated_governance_builds_preserve_values_and_utf8_bytes, governance_summaries_and_base_policy_facts_match_python, owner_windows_use_dispatch_owner_and_keep_freeze_and_cooldown, matching_null_continuation_skips_only_cooldown, open_owner_windows_keep_python_summary_as_the_only_effect} and all six staking_burn::tests cover routing, literal burn wire values, native rounding/bounds, warnings and spend. Governance passthrough expectations reuse generated calls. No current hosted regression/oracle/runtime success is inferred."
 
 [[file]]
 py = "sdk/python/bittensor/intents/hyperparameters.py"
-rs = ["`rtao_intents::hyperparameters` (feature `hyperparameters`)"]
+rs = ["rtao_intents::hyperparameters::{SetHyperparameter, owner_parameter, owner_value, owner_call, HyperparamPlanner}","rtao_intents::generated::interfaces","rtao_catalog::owner_map::OWNER_HYPERPARAMETERS","rtao_primitives::hyperparams"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "809d9c6000e203b1f5f439defaf6eea2d27a4a63"
 synced_tag = "v478"
 milestone = "M4"
-notes = "1 intent (0 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `OWNER_HYPERPARAMETERS` `:31-66` extracted (34 names, 33 setters)"
+notes = "Source reconciliation 2026-10-15: complete authenticated Python intent, generated/native owner mapping and meaningful fixtures independently reviewed. All 34 names/33 setters retain allowlist diagnostics, raw normalization, Yuma/Null validation, alpha-partner reads and metadata-shaped boolean/integer/fixed-bit arguments, raw summaries and own-subnet scope. Exact leaf attribution is present. The diagnostic fixture now excludes recycle_or_burn only from the settable-list suffix while requiring the rejected name in the error. D062 discloses existing effective-owner/freeze/cooldown preflight, with independent corrected-source/disposition review. Authored hyperparameters::tests::{tools_normalize_values_and_preserve_native_fixed_widths, real_builds_keep_alpha_partner_and_shape_boolean_enum_and_fixed_calls, namespace_delegates_and_preserves_native_widths}; rtao_tx::owner_execution::{registration_policy_and_owner_preflight_refuse_before_unlock, owner_replan_rechecks_the_window_before_a_second_submission}. Fixed128 raw normalization is covered by tool/namespace tests; the named real-build fixture does not prove fixed128 setter encoding. No current hosted regression/oracle/runtime success is inferred."
 
 [[file]]
 py = "sdk/python/bittensor/intents/identity.py"
@@ -2191,21 +2191,21 @@ notes = "Source reconciliation 2026-10-15: both intents compared with the exact 
 
 [[file]]
 py = "sdk/python/bittensor/intents/leasing.py"
-rs = ["`rtao_intents::leasing` (feature `leasing`)"]
+rs = ["rtao_intents::leasing::{RegisterLeasedNetwork, TerminateLease}","rtao_intents::generated::{interfaces, passthrough}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "c1bf79b7bb6a5ebcec925010679de8b87f700115"
 synced_tag = "v478"
 milestone = "M5"
-notes = "2 intents (2 generated `build()`, 0 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: complete authenticated Python module, native implementation, generated bindings and meaningful fixture bodies independently reviewed. Registration preserves Percent<=100, optional native end-block horizon, exact summary and unbounded spend; termination preserves native lease ID, explicit/public-wallet hotkey priority and warning. Standalone planning remains allowed, with lease/crowdloan admission chain-owned. Both preserve coldkey/signed roles, empty extras, no declared subnet/global effects and read-free preflight defaults. Authored leasing::tests::{leased_registration_preserves_percent_horizon_and_native_scale, terminate_lease_uses_explicit_or_wallet_hotkey_without_state_guesses, leasing_preflight_keeps_python_warnings_and_spend_policy, lease_constructors_refuse_invalid_percent_native_bounds_and_unknown_fields} use independent literal SCALE, boundary/default/JSON and no-extra-read assertions. Hosted regression/oracle execution remains separate and no new success is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/intents/lock.py"
-rs = ["`rtao_intents::lock` (feature `lock`)"]
+rs = ["rtao_intents::lock::{LockStake, MoveLock, SetPerpetualLock, SetRejectLockedAlpha}","rtao_intents::generated::{interfaces, passthrough}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "f3ff3300f9029885fc1a82f1944f9c70cafbc82a"
 synced_tag = "v478"
 milestone = "M5"
-notes = "4 intents (4 generated `build()`, 0 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: complete authenticated lock module, staking availability helpers, native/generated behavior and all eight meaningful lock::tests bodies independently reviewed. Four operations retain typed fields/defaults, roles/scopes, exact summaries/warnings, no-spend preflight and empty extras. Lock ALL resolves hotkey before one effective-coldkey runtime availability read at the pinned block, with integer-key/string fallback and zero/missing refusal; exact/root/native-max amounts avoid that read. Wrong tagged units refuse. Independent literal SCALE, method/input/block identities, no-extra-read/submission checks, malformed data, settings/move calls and native overflow fixtures cover the contract. Chain lock admission and mutation remain unverified; source reconciliation adds no hosted regression/oracle/runtime success."
 
 [[file]]
 py = "sdk/python/bittensor/intents/multisig.py"
@@ -2254,12 +2254,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated registry sourc
 
 [[file]]
 py = "sdk/python/bittensor/intents/root.py"
-rs = ["`rtao_intents::root` (feature `root`)"]
+rs = ["rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}","rtao_intents::generated::interfaces","rtao_tx::Executor (outer Sudo wrapper)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "dc097fe4177bb426a24552cc0e7109c43e62b438"
 synced_tag = "v478"
 milestone = "M5"
-notes = "2 intents (0 generated `build()`, 2 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: complete authenticated source, native/generated implementation and meaningful fixture bodies independently reviewed. Nonempty emission lists preserve order/duplicates and select a single setter or Utility.batch_all. Threshold uses the root entry, checked native amounts and chain-owned cap. Bodies build the inner call, retaining metadata roles/scopes and read-free preflight; Executor supplies outer Sudo. Authored root::tests::{root_threshold_preserves_native_amounts_and_refuses_all_or_alpha, root_threshold_fake_chain_encodes_root_entry_without_sudo, root_emission_keeps_order_duplicates_and_python_summaries, root_emission_fake_chain_uses_single_call_or_atomic_batch} assert independent literal bytes, boundaries and batch order. intent_plans::all_83_catalog_operations_plan_with_fake_chain separately checks catalog inner-call/outer-Sudo integration. No current hosted regression/oracle success is inferred."
 
 [[file]]
 py = "sdk/python/bittensor/intents/serving.py"
@@ -2281,12 +2281,12 @@ notes = "14 intents (3 generated `build()`, 11 ported); see [parity-inventory.md
 
 [[file]]
 py = "sdk/python/bittensor/intents/transfer.py"
-rs = ["`rtao_intents::transfer` (feature `transfer`)"]
+rs = ["rtao_intents::transfer::{Transfer, TransferAll}","rtao_intents::generated::{interfaces, passthrough}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "4ef01f892de6f97d4e5a1b0528fca2a5a4b9655d"
 synced_tag = "v478"
 milestone = "M2"
-notes = "2 intents (1 generated `build()`, 1 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-15: complete authenticated Python module, native implementation, generated bindings and meaningful fixture bodies independently reviewed. Exact/root amounts retain checked native u64 and accepted SS58 spelling; keep_alive selects the matching fixed/all call, all sweeps stay unbounded under every spend cap, and wrong alpha units refuse. Coldkey/signed roles, defaults, summaries, warnings, empty extras and read-free preflight match. Authored fixtures: transfer::tests::{fixed_all_and_keep_alive_choose_python_calls, exact_amounts_validate_units_and_roundtrip_without_float, summaries_and_spend_match_python_transfer_semantics, ss58_input_prefixes_preserve_json_and_summary_but_encode_the_same_account}; rtao_tx::policy_equivalence::{trusted_m2_policy_pairs_build_identical_chain_calls, full_balance_sweeps_are_blocked_by_every_configured_native_spend_cap, transfer_unit_mismatch_cannot_become_a_bounded_tao_spend}. Prefix fixtures compare generated composition; independent actual core constructors provide separate wire/policy evidence. Hosted regression/oracle execution remains separate and no new success is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/intents/weights.py"
@@ -3010,12 +3010,12 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_http_auth.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["rtao_btauth::conformance","rtao_btauth::nonce::tests","vendor/upstream/extracted/btauth.json (produced by xtask::extract)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0a2fdf4710f4c6a3868aad7f300414775e218d71"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-15: all twenty authenticated upstream test functions have substantive // pyt counterparts in the native conformance target. Complete bodies were reviewed for golden payload/signature/address values, both algorithms, live/fixed nonces, canonical headers, inclusive freshness, atomic replay/expiry, tampering, receiver opt-out, malformed input and Rust error categories. Nonce-store tests additionally cover signed/oversized identities, expiry/capacity and lock failure. Retention moves to construction with a strict margin (D009/D038); native enum/std::error::Error replaces Python inheritance. Golden payload inputs come from the authenticated Rust extraction. These are source relationships, without a current hosted/oracle execution claim."
 
 [[file]]
 py = "sdk/python/tests/unit/test_hyperparams_units.py"
