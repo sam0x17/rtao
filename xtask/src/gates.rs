@@ -132,6 +132,8 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                     "--all-targets",
                     "--all-features",
                     "--locked",
+                    // Report independent target failures in one hosted run.
+                    "--keep-going",
                     "--",
                     "-D",
                     "warnings",
