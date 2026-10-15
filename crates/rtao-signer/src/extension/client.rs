@@ -223,7 +223,7 @@ impl BridgeClient {
             return Err(error("bridge stage label exceeds its size limit"));
         }
         let mut params = json!({"payload": payload, "moreComing": more_coming});
-        if let Some(stage) = stage {
+        if let Some(stage) = stage.filter(|stage| !stage.is_empty()) {
             params["stage"] = Value::String(stage.to_owned());
         }
         let result = self.request("extrinsic.sign", params).await?;

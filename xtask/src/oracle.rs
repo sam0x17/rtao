@@ -574,14 +574,12 @@ fn replay_native(root: &Path, dir: &Path, reads: &Value, intents: &Value) -> Res
         .enable_all()
         .build()?
         .block_on(async {
-            replay::timelock(&read_json(&dir.join("pure/timelock.json"))?)
-                .await
-                .with_context(|| {
-                    format!(
-                        "sdk/python/bittensor/timelock.py; {}",
-                        parity_row("sdk/python/bittensor/timelock.py").unwrap_or_default()
-                    )
-                })?;
+            replay::timelock(&read_json(&dir.join("pure/timelock.json"))?).with_context(|| {
+                format!(
+                    "sdk/python/bittensor/timelock.py; {}",
+                    parity_row("sdk/python/bittensor/timelock.py").unwrap_or_default()
+                )
+            })?;
             let mut union = BTreeMap::<String, replay::Hits>::new();
             for (kind, document) in [("reads", reads), ("intents", intents)] {
                 for row in document["vectors"].as_array().context("native vectors")? {

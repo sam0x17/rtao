@@ -189,10 +189,12 @@ fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
 }
 fn prompt_error(error: PromptError) -> CliError {
+    let help = matches!(&error, PromptError::MissingRequired(_))
+        .then(|| "pass the options explicitly, or run on a terminal to be prompted".into());
     CliError {
         code: error.exit_code(),
         message: error.to_string(),
-        help: None,
+        help,
     }
 }
 fn checked_input(value: &str) -> Result<(), CliError> {

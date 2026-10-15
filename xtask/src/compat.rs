@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/pyproject.toml @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generate the release compatibility matrix from pins and recorded validation.
 
 use std::{
@@ -601,6 +602,20 @@ fn metadata(root: &Path, pins: &DocumentMut) -> Result<Vec<Json>> {
     Ok(output)
 }
 
+fn verify_python_entrypoint(project: &DocumentMut) -> Result<()> {
+    let scripts = project
+        .get("project")
+        .and_then(|item| item.get("scripts"))
+        .and_then(Item::as_table_like)
+        .context("Python project scripts missing or not a table")?;
+    ensure!(
+        scripts.len() == 1
+            && scripts.get("btcli").and_then(Item::as_str) == Some("bittensor.cli.main:main"),
+        "Python project scripts differ from the reviewed btcli entry point"
+    );
+    Ok(())
+}
+
 fn inputs(root: &Path) -> Result<Json> {
     let manifest = toml(root, "Cargo.toml")?;
     let version = manifest["workspace"]["package"]["version"]
@@ -636,6 +651,7 @@ fn inputs(root: &Path) -> Result<Json> {
         project["project"]["version"].as_str() == Some(source_version),
         "Python source version differs from pinned project"
     );
+    verify_python_entrypoint(&project)?;
     parity["python_source_version"] = json!(source_version);
     // A source version alone proves no PyPI release from this exact commit.
     parity["pypi_release"] = Json::Null;
@@ -1319,6 +1335,73 @@ mod tests {
         validate(inputs, ledger, |path| {
             files.get(path).cloned().context("missing report")
         })
+    }
+
+    const PYTHON_PROJECT: &str = r#"[project]
+name = "bittensor"
+version = "11.3.1.dev0"
+
+[project.scripts]
+btcli = "bittensor.cli.main:main"
+"#;
+
+    #[test]
+    fn python_entrypoint_accepts_exact_singleton_scripts() -> Result<()> {
+        let project: DocumentMut = PYTHON_PROJECT.parse()?;
+        verify_python_entrypoint(&project)?;
+        Ok(())
+    }
+
+    #[test]
+    fn python_entrypoint_rejects_missing_extra_renamed_wrong_or_nonstring_scripts() -> Result<()> {
+        for (case, source) in [
+            ("missing project", String::new()),
+            (
+                "missing scripts",
+                PYTHON_PROJECT.replace(
+                    "[project.scripts]\nbtcli = \"bittensor.cli.main:main\"\n",
+                    "",
+                ),
+            ),
+            (
+                "empty scripts",
+                PYTHON_PROJECT.replace("btcli = \"bittensor.cli.main:main\"\n", ""),
+            ),
+            (
+                "extra script",
+                format!("{PYTHON_PROJECT}extra = \"bittensor.cli.main:main\"\n"),
+            ),
+            (
+                "renamed script",
+                PYTHON_PROJECT.replace("btcli =", "other ="),
+            ),
+            (
+                "wrong module",
+                PYTHON_PROJECT.replace("bittensor.cli.main:main", "bittensor.cli.other:main"),
+            ),
+            (
+                "wrong callable",
+                PYTHON_PROJECT.replace("bittensor.cli.main:main", "bittensor.cli.main:other"),
+            ),
+            (
+                "non-string target",
+                PYTHON_PROJECT.replace("\"bittensor.cli.main:main\"", "7"),
+            ),
+            (
+                "non-table scripts",
+                PYTHON_PROJECT.replace(
+                    "[project.scripts]\nbtcli = \"bittensor.cli.main:main\"",
+                    "scripts = 7",
+                ),
+            ),
+        ] {
+            let project: DocumentMut = source.parse()?;
+            ensure!(
+                verify_python_entrypoint(&project).is_err(),
+                "{case} unexpectedly accepted"
+            );
+        }
+        Ok(())
     }
 
     #[test]

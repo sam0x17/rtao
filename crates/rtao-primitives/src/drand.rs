@@ -165,7 +165,8 @@ pub fn parse_duration<'a>(value: impl Into<DurationInput<'a>>) -> Result<f64, Ti
 fn parse_duration_units(text: &str) -> Option<f64> {
     let chars: Vec<_> = text.chars().collect();
     let mut index = 0;
-    let mut total = 0.0;
+    let mut total: f64 = 0.0;
+    let mut correction: f64 = 0.0;
     let mut count = 0;
     while index < chars.len() {
         while index < chars.len() && crate::python::whitespace(chars[index]) {
@@ -212,9 +213,20 @@ fn parse_duration_units(text: &str) -> Option<f64> {
             's' => 1.0,
             _ => return None,
         };
-        total += crate::python::float(&number)? * seconds;
+        // Pinned CPython 3.12 sum(float) compensates low-order terms.
+        let value = crate::python::float(&number)? * seconds;
+        let next = total + value;
+        correction += if total.abs() >= value.abs() {
+            (total - next) + value
+        } else {
+            (value - next) + total
+        };
+        total = next;
         count += 1;
         index += 1;
+    }
+    if correction != 0.0 && correction.is_finite() {
+        total += correction;
     }
     (count > 0).then_some(total)
 }
@@ -609,6 +621,27 @@ mod tests {
     }
 
     #[test]
+    fn duration_units_use_python312_compensated_sums() -> Result<(), TimelockError> {
+        assert_eq!(
+            parse_duration("0.1s".repeat(10))?.to_bits(),
+            1.0_f64.to_bits()
+        );
+        for value in ["9007199254740992s1s1s", "1s9007199254740992s1s"] {
+            assert_eq!(
+                parse_duration(value)?.to_bits(),
+                9_007_199_254_740_994.0_f64.to_bits(),
+                "{value}"
+            );
+        }
+        // Infinite terms must not turn the compensated result into NaN.
+        let infinite = format!("{}s1s", "9".repeat(400));
+        assert_eq!(parse_duration(infinite)?, f64::INFINITY);
+        let overflowing = format!("{0}s{0}s", f64::MAX);
+        assert_eq!(parse_duration(overflowing)?, f64::INFINITY);
+        Ok(())
+    }
+
+    #[test]
     fn rounds_before_at_and_after_slots() -> Result<(), TimelockError> {
         let genesis = GENESIS_TIME as f64;
         assert_eq!(current_round(Some(genesis - 100.0))?, 1);
@@ -702,5 +735,16 @@ mod tests {
         assert!(current_round(Some(f64::MAX)).is_err());
         assert!(round_at(f64::MAX).is_err());
         assert!(reveal_time(u64::MAX).is_err());
+    }
+
+    #[test]
+    fn reveal_time_enforces_the_datetime_boundary_at_materialization() -> Result<(), TimelockError>
+    {
+        assert_eq!(reveal_time(83_903_165_811)?.timestamp(), 253_402_300_797);
+        assert_eq!(
+            reveal_time(83_903_165_812).unwrap_err().message(),
+            "year 10000 is out of range"
+        );
+        Ok(())
     }
 }

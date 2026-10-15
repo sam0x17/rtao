@@ -121,7 +121,6 @@ fn seal_rejects_past_zero_and_nonfinite_inputs_before_crypto() -> Result {
         "reveal moment is not in the future (round 1, but the beacon is already at round 1)"
     );
     assert!(target_round(Reveal::In(Duration::ZERO), DEFAULT_BLOCK_TIME, now).is_err());
-    assert!(target_round(Reveal::Round(u64::MAX), DEFAULT_BLOCK_TIME, now).is_err());
     for duration in ["0", "-1s", "NaN", "inf", "1h nope"] {
         assert!(Reveal::after(duration).is_err(), "{duration}");
     }
@@ -239,6 +238,24 @@ async fn seal_offloads_future_round_and_core_opens_recorded_historical_pulse() -
         rtao_core::offload(move || crypto::decrypt_with_signature(&bytes, &round.signature))
             .await??;
     assert_eq!(opened, expected);
+    Ok(())
+}
+
+#[tokio::test]
+async fn sealing_preserves_native_rounds_beyond_datetime_materialization() -> Result {
+    let now = at_genesis(Duration::ZERO);
+    for round in [83_903_165_812, u64::MAX] {
+        let sealed = seal_at(b"far future payload", Reveal::Round(round), now).await?;
+        assert_eq!(sealed.reveal_round(), round);
+        assert_eq!(crypto::reveal_round(sealed.ciphertext())?, round);
+        assert_eq!(Timelocked::parse(sealed.hex())?, sealed);
+        assert!(!sealed.revealed_at(now)?);
+        assert!(sealed.reveal_at().is_err());
+        assert!(sealed.remaining_at(now).is_err());
+        let inner = sealed.encrypted().await?;
+        assert!(!inner.is_empty());
+        assert_ne!(inner, sealed.ciphertext());
+    }
     Ok(())
 }
 
