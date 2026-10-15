@@ -9617,7 +9617,7 @@
         "name": "announce_coldkey_swap",
         "oracle": "missing",
         "python_class": "AnnounceColdkeySwap",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "associate_evm_key",
@@ -9659,7 +9659,7 @@
         "name": "clear_coldkey_swap_announcement",
         "oracle": "missing",
         "python_class": "ClearColdkeySwapAnnouncement",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "commit_weights",
@@ -9695,7 +9695,7 @@
         "name": "dispute_coldkey_swap",
         "oracle": "missing",
         "python_class": "DisputeColdkeySwap",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "dissolve_crowdloan",
@@ -9995,7 +9995,7 @@
         "name": "swap_coldkey_announced",
         "oracle": "missing",
         "python_class": "SwapColdkeyAnnounced",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "swap_hotkey",

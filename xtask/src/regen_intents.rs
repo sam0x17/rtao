@@ -575,7 +575,12 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
                 args.push(expr);
             }
             if !pending.contains(spec.name) {
-                passthrough.push_str(&format!("{enabled}pub(crate) async fn {}<V:rtao_client::View + ?Sized>(intent:&super::interfaces::{class},cx:&rtao_tx::BuildCx<'_,V>)->Result<rtao_tx::Built,rtao_tx::IntentError> {{ let call=rtao_runtime::calls::{}::{}({}); Ok(rtao_tx::Built {{ call:call.compose(cx.runtime)?, extras:serde_json::Map::new() }}) }}\n", spec.name, emit::snake(pallet), emit::ident(call), args.join(",")));
+                let intent_arg = if args.iter().any(|argument| argument.contains("intent")) {
+                    "intent"
+                } else {
+                    "_intent"
+                };
+                passthrough.push_str(&format!("{enabled}pub(crate) async fn {}<V:rtao_client::View + ?Sized>({intent_arg}:&super::interfaces::{class},cx:&rtao_tx::BuildCx<'_,V>)->Result<rtao_tx::Built,rtao_tx::IntentError> {{ let call=rtao_runtime::calls::{}::{}({}); Ok(rtao_tx::Built {{ call:call.compose(cx.runtime)?, extras:serde_json::Map::new() }}) }}\n", spec.name, emit::snake(pallet), emit::ident(call), args.join(",")));
             }
         }
     }

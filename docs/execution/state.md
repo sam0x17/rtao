@@ -16,12 +16,13 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-Source through `70fca29` implements 32 of 83 intents and 40 of 102 reads.
-The twelve newer crowdloan/root intent ports have verified hosted generated
+Source through `18679e3` implements 36 of 83 intents and 40 of 102 reads.
+The newer crowdloan/root and coldkey intent ports have verified hosted generated
 dispatch and availability metadata, with combined validation still pending;
-see [m5-crowdloan-root.md](m5-crowdloan-root.md). The generated read interfaces
-and dispatch for both M5 owner reads are adopted. No milestone exit or current
-all-job success is claimed.
+see [m5-crowdloan-root.md](m5-crowdloan-root.md) and [m5-coldkey.md](m5-coldkey.md).
+The CLI compiles all intent interfaces and advertises implemented operations.
+The generated read interfaces and dispatch for both M5 owner reads are adopted.
+No milestone exit or current all-job success is claimed.
 
 The binary routes generated transactions/queries, config/tools/explain,
 weights/axon, wallet management, subnet registration/metagraph views and the M4
@@ -37,7 +38,7 @@ shared multisig book/cache writers are committed. The importer authenticates
 all signing views, refuses serde private carrier injection and preserves nonce
 cache state for invalid, stale, expired or foreign preparations. Cache lookup
 authenticates exact canonical call bytes. The M5 fuzz target is source only;
-no fuzz campaign ran. The remaining 51 intents, other command families and
+no fuzz campaign ran. The remaining 47 intents, other command families and
 later milestones still require implementation and acceptance.
 
 Normal hosted run
@@ -70,6 +71,14 @@ at `70fca29` was verified and adopted unchanged. Exact archive paths/digests,
 all 23 dependency inputs, unchanged role inventories, twelve pending-body
 removals, nine pass-through additions, the pre-serde guard and matching matrix
 changes were checked. Its proof is `m5-crowdloan-root-adoption.json`.
+Hosted generation
+[38696143491](https://github.com/sam0x17/rtao/actions/runs/38696143491)
+at `18679e3` was also verified and adopted unchanged. Its thirteen exact
+members include only four availability/pending changes and three call-map
+additions; all other generated interfaces and matrix families are unchanged.
+All 23 dependency hashes include the updated CLI feature declaration, with
+unchanged role package sets/counts and no runtime claims. Its bounded proof is
+`m5-coldkey-adoption.json` in the same recovery directory.
 Runtime validation remains null/empty; Linux graph measurement does not
 establish native Mac, hardware, oracle or chain interoperability coverage.
 

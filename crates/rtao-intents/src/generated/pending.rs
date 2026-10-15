@@ -61,21 +61,6 @@ impl rtao_tx::Intent for super::interfaces::AddStakeLimit {
         self
     }
 }
-#[cfg(feature = "coldkey")]
-impl rtao_tx::Intent for super::interfaces::AnnounceColdkeySwap {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("announce_coldkey_swap"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "association")]
 impl rtao_tx::Intent for super::interfaces::AssociateEvmKey {
     fn summary(&self) -> String {
@@ -151,23 +136,6 @@ impl rtao_tx::Intent for super::interfaces::ClaimRootWithHotkey {
         self
     }
 }
-#[cfg(feature = "coldkey")]
-impl rtao_tx::Intent for super::interfaces::ClearColdkeySwapAnnouncement {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "clear_coldkey_swap_announcement",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "proxy")]
 impl rtao_tx::Intent for super::interfaces::CreatePureProxy {
     fn summary(&self) -> String {
@@ -193,21 +161,6 @@ impl rtao_tx::Intent for super::interfaces::DecreaseTake {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("decrease_take"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "coldkey")]
-impl rtao_tx::Intent for super::interfaces::DisputeColdkeySwap {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("dispute_coldkey_swap"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
@@ -664,21 +617,6 @@ impl rtao_tx::Intent for super::interfaces::SwapBasketMany {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("swap_basket_many"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "coldkey")]
-impl rtao_tx::Intent for super::interfaces::SwapColdkeyAnnounced {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("swap_coldkey_announced"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
