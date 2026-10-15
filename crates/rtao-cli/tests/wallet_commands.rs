@@ -11,7 +11,7 @@ use rtao_cli::{
     commands::wallet,
     context::AppContext,
     globals::Globals,
-    output::{MemorySink, Output, OutputOptions, Stream},
+    output::{MemorySink, Output, OutputOptions, OutputSink, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
 use serde_json::{Value, json};
@@ -801,6 +801,13 @@ async fn password_env_export_is_pure_and_uses_the_existing_keyfile_encoder() -> 
         let command = if json_mode {
             let value: Value = serde_json::from_str(&output)?;
             assert_eq!(value["name"], name);
+            assert_eq!(
+                value["export"],
+                format!(
+                    "export {name}={}",
+                    value["value"].as_str().ok_or("encoded password")?
+                )
+            );
             value["export"].as_str().ok_or("export text")?.to_owned()
         } else {
             output.trim_end().to_owned()
@@ -833,6 +840,83 @@ async fn password_env_export_is_pure_and_uses_the_existing_keyfile_encoder() -> 
     assert_eq!(error.code, 2);
     assert!(sink.text(Stream::Stdout)?.is_empty());
     assert_eq!(reads.load(Ordering::Relaxed), 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn password_export_sink_failure_emits_one_guarded_document_and_redacts_the_error()
+-> TestResult {
+    struct ClosedSink(Mutex<Vec<Vec<u8>>>);
+    impl OutputSink for ClosedSink {
+        fn write(&self, stream: Stream, bytes: &[u8]) -> std::io::Result<()> {
+            assert_eq!(stream, Stream::Stdout);
+            self.0
+                .lock()
+                .map_err(|_| std::io::Error::other("fixture sink poisoned"))?
+                .push(bytes.to_vec());
+            Err(std::io::Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "fixture output closed",
+            ))
+        }
+    }
+    let root = Root::new()?;
+    for json_mode in [false, true] {
+        let (matches, mut ctx, _, reads) = fixture(
+            &root,
+            &["rtao", "wallet", "save-password-env"],
+            json_mode,
+            false,
+            &[],
+        )?;
+        ctx.globals.wallet_path = PathBuf::from("/rtao_wallet_export_fixture");
+        ctx.passwords.password = Some(SecretString::new("disposable export sentinel π".into()));
+        let sink = Arc::new(ClosedSink(Mutex::new(Vec::new())));
+        ctx.output = Output::with_sink(
+            OutputOptions {
+                json_mode,
+                quiet: true,
+                network: None,
+            },
+            sink.clone(),
+        );
+        let wallet = ctx.wallet()?;
+        let name = rtao::wallet::env_var_name(wallet.coldkey_file().path());
+        let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+            .await
+            .err()
+            .ok_or("closed output must fail")?;
+        assert_eq!(error.message, "fixture output closed");
+        let documents = sink.0.lock().map_err(|_| "fixture sink")?;
+        assert_eq!(documents.len(), 1);
+        let text = std::str::from_utf8(&documents[0])?;
+        let command = if json_mode {
+            let value: Value = serde_json::from_str(text)?;
+            assert_eq!(value["name"], name);
+            assert_eq!(value.as_object().ok_or("export object")?.len(), 3);
+            assert_eq!(
+                value["export"],
+                format!(
+                    "export {name}={}",
+                    value["value"].as_str().ok_or("encoded password")?
+                )
+            );
+            value["export"].as_str().ok_or("export command")?.to_owned()
+        } else {
+            text.trim_end().to_owned()
+        };
+        let encoded = command
+            .strip_prefix(&format!("export {name}="))
+            .ok_or("shell assignment")?;
+        assert_eq!(
+            rtao::core::keyfile_env::decode_password_from_environment(&name, encoded)?,
+            "disposable export sentinel π"
+        );
+        assert!(!error.message.contains(encoded));
+        assert!(!error.message.contains("sentinel"));
+        assert_eq!(reads.load(Ordering::Relaxed), 0);
+    }
+    assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }
 

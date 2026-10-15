@@ -103,13 +103,19 @@ impl Terminal for SharedTerminal {
         self.lock().is_ok_and(|terminal| terminal.stderr_is_tty())
     }
     fn read_line(&mut self, label: &str) -> Result<String, PromptError> {
-        self.lock().map_err(|_| PromptError::Io)?.read_line(label)
+        self.lock()
+            .map_err(|_| PromptError::Io)?
+            .read_line(&crate::output::terminal_text(label))
     }
     fn read_secret(&mut self, label: &str) -> Result<SecretString, PromptError> {
-        self.lock().map_err(|_| PromptError::Io)?.read_secret(label)
+        self.lock()
+            .map_err(|_| PromptError::Io)?
+            .read_secret(&crate::output::terminal_text(label))
     }
     fn message(&mut self, message: &str) -> Result<(), PromptError> {
-        self.lock().map_err(|_| PromptError::Io)?.message(message)
+        self.lock()
+            .map_err(|_| PromptError::Io)?
+            .message(&crate::output::terminal_text(message))
     }
 }
 
@@ -134,7 +140,9 @@ impl Terminal for LiveTerminal {
             return Err(PromptError::Unavailable);
         }
         let mut stderr = io::stderr().lock();
-        stderr.write_all(label.as_bytes()).map_err(input_error)?;
+        stderr
+            .write_all(crate::output::terminal_text(label).as_bytes())
+            .map_err(input_error)?;
         stderr.flush().map_err(input_error)?;
         drop(stderr);
         let mut answer = String::new();
@@ -147,13 +155,13 @@ impl Terminal for LiveTerminal {
         if !self.stdin_is_tty() {
             return Err(PromptError::Unavailable);
         }
-        rpassword::prompt_password(label)
+        rpassword::prompt_password(crate::output::terminal_text(label))
             .map(SecretString::new)
             .map_err(input_error)
     }
     fn message(&mut self, message: &str) -> Result<(), PromptError> {
         let mut stderr = io::stderr().lock();
-        writeln!(stderr, "{message}").map_err(input_error)
+        writeln!(stderr, "{}", crate::output::terminal_text(message)).map_err(input_error)
     }
 }
 
@@ -1319,6 +1327,52 @@ mod tests {
             .iter()
             .map(|value| Ok(SecretString::new((*value).into())))
             .collect()
+    }
+
+    #[test]
+    fn shared_terminal_escapes_display_text_without_changing_answers() {
+        struct Observed(Arc<Mutex<Vec<String>>>);
+        const ANSWER: &str = "answer\u{1b}]52;c;payload\u{7}\u{202e}";
+        impl Terminal for Observed {
+            fn stdin_is_tty(&self) -> bool {
+                true
+            }
+            fn stderr_is_tty(&self) -> bool {
+                true
+            }
+            fn read_line(&mut self, label: &str) -> Result<String, PromptError> {
+                self.0
+                    .lock()
+                    .map_err(|_| PromptError::Io)?
+                    .push(label.into());
+                Ok(ANSWER.into())
+            }
+            fn read_secret(&mut self, label: &str) -> Result<SecretString, PromptError> {
+                self.0
+                    .lock()
+                    .map_err(|_| PromptError::Io)?
+                    .push(label.into());
+                Ok(SecretString::new(ANSWER.into()))
+            }
+            fn message(&mut self, text: &str) -> Result<(), PromptError> {
+                self.0
+                    .lock()
+                    .map_err(|_| PromptError::Io)?
+                    .push(text.into());
+                Ok(())
+            }
+        }
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let mut terminal: SharedTerminal = Arc::new(Mutex::new(Box::new(Observed(seen.clone()))));
+        let hostile = "Confirm signer\u{1b}[2J\r\n\u{7}\u{202e}\u{2066}: ";
+        let expected = "Confirm signer\\x1b[2J\\r\\n\\x07\\u{202e}\\u{2066}: ";
+        assert_eq!(terminal.read_line(hostile).unwrap(), ANSWER);
+        assert_eq!(
+            terminal.read_secret(hostile).unwrap().expose_secret(),
+            ANSWER
+        );
+        terminal.message(hostile).unwrap();
+        assert_eq!(*seen.lock().unwrap(), vec![expected, expected, expected]);
     }
 
     #[test]
