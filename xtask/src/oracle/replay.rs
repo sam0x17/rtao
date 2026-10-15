@@ -393,10 +393,9 @@ fn mask_extras(extras: &serde_json::Map<String, Value>) -> Value {
     Value::Object(extras)
 }
 
-/// Check the pure beacon arithmetic against the native Quicknet parameters;
-/// render UTC through the same native timestamp conversion used by reads.
-pub(super) async fn timelock(document: &Value) -> Result<()> {
-    use rtao_core::timelock::constants::{DRAND_PERIOD, GENESIS_TIME};
+/// Replay pure beacon vectors through the actual public timelock helpers.
+pub(super) fn timelock(document: &Value) -> Result<()> {
+    use rtao_primitives::drand::{reveal_time, round_at};
     let rounds = document["round_at"]
         .as_array()
         .context("round_at vectors")?;
@@ -405,13 +404,9 @@ pub(super) async fn timelock(document: &Value) -> Result<()> {
         let stamp = row["unix"]
             .as_u64()
             .context("timelock integer Unix timestamp")?;
-        let round = stamp
-            .saturating_sub(GENESIS_TIME)
-            .div_ceil(DRAND_PERIOD)
-            .checked_add(1)
-            .context("beacon round overflow")?;
+        let round = round_at(stamp).context("round_at native helper")?;
         rtao_primitives::json::compare(&row["result"], &json!({"ok":round}))
-            .context("round_at native Quicknet arithmetic")?;
+            .context("round_at native helper result")?;
     }
     let times = document["reveal_time"]
         .as_array()
@@ -419,22 +414,10 @@ pub(super) async fn timelock(document: &Value) -> Result<()> {
     ensure!(times.len() >= 4, "timelock reveal time coverage missing");
     for row in times {
         let round = row["round"].as_u64().context("beacon round")?;
-        let seconds = round
-            .checked_sub(1)
-            .and_then(|round| round.checked_mul(DRAND_PERIOD))
-            .and_then(|elapsed| GENESIS_TIME.checked_add(elapsed))
-            .context("reveal timestamp overflow")?;
-        let milliseconds = seconds
-            .checked_mul(1000)
-            .context("reveal milliseconds overflow")?;
-        let mut state = FakeState::try_default()?;
-        state.seed_python("Timestamp", "Now", &[], json!(milliseconds))?;
-        let (client, _) = client(state).await?;
-        let result = rtao_reads::reads::m2::timestamp(&client).await;
-        client.close().await;
-        let actual = json!({"ok":result?.iso});
+        let actual = json!({"ok":reveal_time(round)
+            .context("reveal_time native helper")?.to_rfc3339()});
         rtao_primitives::json::compare(&row["result"], &actual)
-            .context("reveal_time native Quicknet arithmetic and UTC")?;
+            .context("reveal_time native helper result")?;
     }
     Ok(())
 }
@@ -513,6 +496,32 @@ fn compare(label: &str, expected: &Value, actual: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn timelock_replay_uses_public_helpers_and_rejects_changed_results() -> Result<()> {
+        let vectors = json!({
+            "round_at":[
+                {"unix":1_692_803_367u64,"result":{"ok":1}},
+                {"unix":1_692_803_368u64,"result":{"ok":2}},
+                {"unix":1_692_803_370u64,"result":{"ok":2}},
+                {"unix":1_692_803_371u64,"result":{"ok":3}}
+            ],
+            "reveal_time":[
+                {"round":0,"result":{"ok":"2023-08-23T15:09:24+00:00"}},
+                {"round":1,"result":{"ok":"2023-08-23T15:09:27+00:00"}},
+                {"round":2,"result":{"ok":"2023-08-23T15:09:30+00:00"}},
+                {"round":3,"result":{"ok":"2023-08-23T15:09:33+00:00"}}
+            ]
+        });
+        timelock(&vectors)?;
+        let mut changed_round = vectors.clone();
+        changed_round["round_at"][1]["result"]["ok"] = json!(3);
+        ensure!(timelock(&changed_round).is_err());
+        let mut changed_time = vectors;
+        changed_time["reveal_time"][1]["result"]["ok"] = json!("2023-08-23T15:09:28+00:00");
+        ensure!(timelock(&changed_time).is_err());
+        Ok(())
+    }
 
     fn workspace() -> Result<&'static std::path::Path> {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

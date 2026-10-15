@@ -17,10 +17,10 @@
 py = "common/src/proxy.rs"
 rs = ["vendor/upstream/extracted/chain_rules.json (proxy_contract source/metadata/Python codec reconciliation)"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "5a9636a7571cafd85cfc2d8ff00205b0d2b6b023"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Source implementation 2026-10-15: extract_proxy_contract.rs authenticates this exact source through Resolver, parses the implicit unit enum and both exhaustive u8 codec conversions (including rejecting unknown indices), and compares ordered names and indices to authenticated V15 metadata plus freshly extracted Python PROXY_TYPES. Output is the proxy_contract section of chain_rules.json. Negative fixtures mutate order, numeric conversion, fallback and conditional arms. Keep pending until hosted generation/adoption and checks run. This producer covers ProxyType codec identity only: Default/is_deprecated, call-filter metadata model layouts and call_info_by_name are not claimed reconciled by this parser."
+notes = "Source reconciliation 2026-10-15: complete authenticated 222-line module and actual metadata/filter consumers reviewed. Producer cross-checks all 19 enum/u8 codec identities against pinned metadata and freshly extracted Python PROXY_TYPES. Any Default is runtime-owned; native typed ProxyType has no implicit default, while add_proxy constructor Staking is separate. Deprecation flags remain live API metadata, not a new local refusal. Five filter model layouts individually agree with pinned metadata; owner routing consumes ParamLessThan/NestedCallMustBe with existing fail-closed fixtures. FRAME metadata builders, tuple/Contains helpers and call_info_by_name are runtime-owned. Extractor does not enforce default/deprecation/layout/freeze semantics; no full runtime API clone or permission equivalence is claimed. Source-only metadata inspection and fixture review do not establish current hosted execution or Python differential coverage."
 
 [[file]]
 py = "common/src/transaction_error.rs"
@@ -717,12 +717,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/__init__.py"
-rs = ["`rtao` facade: `prelude`, per-feature re-exports (§2.4)"]
+rs = ["crates/rtao/src/lib.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "6dce916d2a4037ac0c7d26090fbbd21866a125f5"
 synced_tag = "v478"
 milestone = "M0–M8"
-notes = "public names (`Subtensor`, `Client`, intents, reads, `Balance`, signers, `set_weights`); every `__all__` name (`:122-219`) has a row in [Top-level exports](#top-level-exports-py__init__py122-219-__all__), and `xtask parity check` asserts it or a `#[doc(alias)]` hit (§4.9 layer 8); `_REMOVED_V10_HINTS` (`:238-276`) is n/a (migration guide)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 276-line initializer, all81 fixed exports plus83 registry classes and actual native feature homes reviewed. Feature-scoped owning modules/prelude replace flat eager Python imports; generated intent exports and blocking Subtensor helpers supply native assembly. Lowercase class/module aliasing becomes typed constructors and explicit modules. Public KeyView/KeySource/DynKeySource/IntentKeyView replace structural wallet helpers; typed CryptoType selection replaces dynamic string helpers. Corrected stale EpochEvent and KeyedWallet documentation homes. Library re-exports install no tracing subscriber; CLI/neuron logging setup remains explicit, corresponding to Python NullHandler without configuring application output. Cargo/build versions replace installed-distribution lookup/fallback; PyPI provenance remains unverified. All18 removed-name hints, shared text/migration URL and unknown-name branch are compile-time/migration dispositions. Name-presence gate does not verify imported binding bodies or every native feature; constituent implementations retain their own rows. Source review only, no Python import or current test acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/_generated/__init__.py"
@@ -1239,12 +1239,12 @@ notes = "§10.5; `set-take`, `stake-burn` in M5"
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/timelock.py"
-rs = ["`rtao-cli` `timelock` group"]
+rs = ["rtao_cli::commands::timelock"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "24c3d4cc0e500675fb4a7daa47e29aee66f9aa53"
 synced_tag = "v478"
 milestone = "M7"
-notes = "§10.5; under `misc`"
+notes = "Source reconciliation 2026-10-15: complete authenticated three-command module and all12 helper/callback/parser dispositions reviewed with real command-tree/dispatch, input/output/replay and crypto consumers. Exact data/file conflicts, payload-before-reveal and ciphertext-before-deadline acquisition, duration prompting, public ciphertext history and output schemas have substantive fixtures. MissingRequired now retains exact structured remediation for encrypt/show/decrypt in human and JSON modes without prompting. Native Clap reveal-option conflicts/u64 parsing and malformed timeout parser ordering remain explicit input-boundary adaptations; no exact Typer parser-status/order equivalence is claimed. Native time precision/owned buffers are qualified; D-042 bounds input/omits plaintext history, D-050 escapes human controls and D-066 enforces checked total deadlines. Encrypt and show are local operations; decrypt may fetch public beacon signatures. No locally operated node, testnet or service is required. Source review and authored fixtures do not establish current hosted execution, Python oracle or interoperability."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/upgrade.py"
@@ -1887,21 +1887,21 @@ notes = "Source reconciliation 2026-10-15: Complete authenticated Python/native 
 
 [[file]]
 py = "sdk/python/bittensor/evm/contracts.py"
-rs = ["`rtao_evm` contract artifacts"]
+rs = ["rtao_evm::contracts::{ContractArtifact,load_artifact,encode_deploy}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "01b6162ff77293aa661b0704b638e5d4d1f4155a"
 synced_tag = "v478"
 milestone = "M7"
-notes = "deploy and call encoding"
+notes = "Source reconciliation 2026-10-15: complete authenticated 102-line module, native helpers, CLI consumers and substantive fixture bodies reviewed independently. Python edge strip controls and universal CRLF/bare-CR raw-bin reading are repaired. Ordered ABI functions/first match, bytecode shapes, constructor encoding and actual file acquisition have native homes. Typed ABI records, validated lowercase bytecode, exact-signature extension, bounded regular-file/calldata policy, ~/ only path expansion and native application diagnostics are explicit adaptations; ~user and exact Python diagnostic text are not claimed. Independent finite fixtures include artifact shapes, order/duplicates, constructor word42, newline/strip edges and malformed/resource refusals. No current hosted pass, Python import/oracle or live transaction coverage is established."
 
 [[file]]
 py = "sdk/python/bittensor/evm/keys.py"
-rs = ["`rtao_evm::EvmKeystore`"]
+rs = ["rtao_evm::keys"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "2c23c156c4f9b8350248428367ee1e99129dfb1b"
 synced_tag = "v478"
 milestone = "M7"
-notes = "keystore-V3 next to the wallet (§6.6)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 244-line module, native key helpers/tests and actual CLI consumers reviewed. All create/import/list/info/unlock/export/write, password and V3 crypto/publication paths have explicit homes. Python edge whitespace for private keys/mnemonics is repaired. Typed ImportSource/account/path/error APIs, caller-owned prompting, ~/ only expansion, strict V3 metadata/address validation, bounded KDF/files and atomic owner-only no-clobber publication are documented native policies; arbitrary address-only JSON, ~user and exact Python diagnostic text are not claimed. Four independent published V3 vectors and substantive known-key/BIP44/password/resource/erasure/publication fixtures were read. Dependency entropy/seed/drop boundaries remain qualified. No current hosted test, independent Python differential, live-chain or native-platform result is established."
 
 [[file]]
 py = "sdk/python/bittensor/evm/networks.py"
@@ -1959,12 +1959,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/extension/bridge.py"
-rs = ["`rtao_signer::extension::{BridgeServer, run_bridge}` (feature `extension`): axum page plus a WebSocket upgrade through hyper and tokio-tungstenite 0.30"]
+rs = ["rtao_signer::extension::{BridgeServer,BridgeOptions,run_bridge}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "b095e5c9b2595918d3ab812a11fdee4eaf28dc61"
 synced_tag = "v478"
 milestone = "M7"
-notes = "HTTP + WebSocket bridge on 127.0.0.1:39295 serving `bridge.html` (`:14, 17-40, 235`, §6.5); library API (`PY/__init__.py:198-206`); `rtao-cli` `extension bridge` runs it (§2.3 rule 2)"
+notes = "Source reconciliation 2026-10-15: complete authenticated bridge module, actual client/browser consumers and protocol fixtures reviewed. Exact pinned page, hello/client/session admission, request/result/error forwarding, status, replacement and shutdown have native homes. Both replacement select branches now send the exact Restart close; one original end-to-end fixture retains pending cancellation/new-tab routing, while a private closed-queue fixture deterministically forces the formerly missing branch. D-068 records native loopback/admission/resource/ownership policy; async owned lifecycle replaces Python thread/context management. No measured resource/performance, Python socket interoperability or real browser/extension/platform execution is established by this source review."
 
 [[file]]
 py = "sdk/python/bittensor/extension/browser.py"
@@ -1977,12 +1977,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated helper and sha
 
 [[file]]
 py = "sdk/python/bittensor/extension/client.py"
-rs = ["`rtao_signer::extension::{BridgeClient, connect_extension_signer}` (feature `extension`, tokio-tungstenite)"]
+rs = ["rtao_signer::extension::{BridgeClient,ExtensionAccount}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "add0346cbd29ddfaf43ef6ceb5d10320ca7992c5"
 synced_tag = "v478"
 milestone = "M7"
-notes = "WebSocket client (`websockets.asyncio.client`, `:11`; §6.5)"
+notes = "Source reconciliation 2026-10-15: complete authenticated client, actual signer/session consumers and request/metadata fixture bodies reviewed. Exact supported hello/request/id/result/error, account fallback/truthiness, bytes/payload/result-report schemas retained. Empty optional stage is now omitted like Python, with full absent/empty/nonempty request comparisons. Explicit object params/token, typed malformed responses, bounded sanitized diagnostics and D-068 URL/transport/resource policy replace Python dynamic coercion. Inert construction, serialized cancellation-safe requests and explicit close retain owned sockets. No current hosted pass, Python differential, TLS/native-platform or real extension execution is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/extension/daemon.py"
@@ -1995,30 +1995,30 @@ notes = "Source reconciliation 2026-10-15: complete authenticated daemon source,
 
 [[file]]
 py = "sdk/python/bittensor/extension/picker.py"
-rs = ["`rtao-cli` account picker"]
+rs = ["crates/rtao-signer/src/extension/signer.rs","crates/rtao-cli/src/signer_backends/native.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "81452c3b602e26837f58bc6d89b00facc4a9aae5"
 synced_tag = "v478"
 milestone = "M7"
-notes = ""
+notes = "Source reconciliation 2026-10-15: complete authenticated selection/filter/default/prompt/hint module and actual signer/contact consumers reviewed. Explicit address precedence, source/name filters, unique saved fast path, ambiguity and picked-address persistence have native homes. Blank interactive choice now uses the first remembered duplicate even when later in the list; exact Python integer spellings, dynamic default prompt and last-used markers have substantive fixtures. Full versus filtered available-account hints are preserved. Library returns typed selection/ambiguity without terminal I/O; injected CLI terminal owns prompts and config persistence. Native AccountId equality across prefixes, checked crypto, reviewed-identity no-fallback and escaped human text are explicit adaptations under D-068/D-050. Source fixtures remain unexecuted; no Python/Rich terminal or real wallet execution is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/extension/session.py"
-rs = ["`rtao_signer::extension::{ensure_bridge, stop_bridge_daemon}`"]
+rs = ["rtao_signer::extension::{BridgePaths,BridgeFiles,EnsureBridgeOptions,BridgeWaiting,ensure_bridge,start_bridge_daemon,run_bridge_daemon,stop_bridge_daemon}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "607089d2e87d32a44fb9a0838672c565b3188606"
 synced_tag = "v478"
 milestone = "M7"
-notes = "pid file (`BITTENSOR_EXTENSION_BRIDGE_PID`, `:24`), readiness, restart; the spawn at `:121-140` becomes `rtao extension bridge --daemon` (§6.5)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 287-line lifecycle module and actual signer/contact/accounts consumers reviewed. URL/path/environment, authenticated status, startup/readiness/restart, detached argv spawn and cleanup have explicit native homes. New injected observer reports current session page/status immediately before optional launch and at five-second boundaries; timeout/launch errors retain the manual page URL. All three CLI paths use shared JSON/quiet-suppressed progress, with pure throttle and loopback pending/ready/timeout fixtures. Callback is synchronous/inlined without a separate timeout; observer output is informational. D-068 records explicit process/browser permission, numeric-loopback bounds, verified private state/signal ownership, foreground reuse and unchanged-file cleanup. No daemon/browser/platform rehearsal, current hosted pass or Python execution is established."
 
 [[file]]
 py = "sdk/python/bittensor/extension/signer.py"
-rs = ["`rtao_signer::ExtensionSigner`"]
+rs = ["rtao_signer::extension::{ExtensionSigner,ExtensionAccountSelection,account_crypto_type,select_extension_account,open_extension_signer,connect_extension_signer}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "4181733d556723a826115c4f27a10a49e2dae712"
 synced_tag = "v478"
 milestone = "M7"
-notes = "`PAYLOAD_JSON` capability (§6.3)"
+notes = "Source reconciliation 2026-10-15: complete authenticated 221-line signer, actual client signature attachment/shield/CLI consumers and fixture bodies reviewed. Inert selection/signing, exact chosen payload address, account metadata, sequential manual/explicit-purpose stage labels, raw bytes, result reporting and close have native homes. Crypto normalization now includes all four Python C0 edge separators while interior controls still refuse. Typed checked selection/fixed signature lengths/scheme carriers, explicit token, caller-owned picker persistence and metadata-only Debug are native adaptations; D-068 records admission/I/O policy. Actual shield consumers pass SignPurpose rather than depending on an unwired mutable stage flag. No signing-authorization defect survived source review; current hosted, Python differential, real extension/device/platform execution remains unverified."
 
 [[file]]
 py = "sdk/python/bittensor/extension/static/bridge.html"
@@ -2598,12 +2598,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated file and every
 
 [[file]]
 py = "sdk/python/bittensor/timelock.py"
-rs = ["`rtao_tx::timelock::{seal, open, Timelocked, Reveal, OpenOptions, TimelockError, DrandClient}` over core `timelock`; the pure helpers `current_round`, `round_at`, `reveal_time`, `parse_duration`, `format_duration` → `rtao_primitives::drand`"]
+rs = ["rtao_tx::timelock","rtao_primitives::drand"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "9de2a53dcf837286f30a11da737d900453f744cf"
 synced_tag = "v478"
 milestone = "M1 (helpers), M7"
-notes = "the whole `__all__` `:380-392` (§9.8); `NeuronCommitment.reveals_at` needs `reveal_time` in M1; `Reveal::InBlocks` is an rtao addition (D-033); weight commits use `TimelockCommitter` (M2), not this module"
+notes = "Source reconciliation 2026-10-15: complete authenticated module, all19 source dispositions, actual consumers and47 fixture bodies reviewed independently. Pure duration grammar now uses pinned Python3.12 compensated sums; exact fractional/mixed-magnitude/infinity fixtures retain values. Encryption accepts native u64 rounds before datetime materialization, with actual core-seal year10000/u64MAX and reveal-time boundary fixtures. Timelocked private ownership, Result errors, metadata-only Debug, native Duration nanoseconds versus Python timedelta microseconds and checked positive Reveal conversion are explicit representations. seal/open and Timelocked::decrypt are native async APIs; options/defaultwait=true and CLI wait=false are documented without a nonexistent blocking decrypt promise. D-033 adds block durations and D-066 bounds total decryption waits; D-042 input/replay ownership limits remain. Optional timelock replay now calls actual public drand helpers rather than duplicate arithmetic/reads, with fixed boundary/result-mutation fixtures. Source review does not establish current test, Python differential, beacon or interoperability execution."
 
 [[file]]
 py = "sdk/python/bittensor/vault/__init__.py"
@@ -2778,12 +2778,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/pyproject.toml"
-rs = ["the package version (`python_package_version`) and `[project.scripts]` (the `btcli` entry point)"]
+rs = ["xtask/src/compat.rs"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "72175101919b6410cda91381a946a928f3035528"
 synced_tag = "v478"
 milestone = "M0"
-notes = "Source audit 2026-10-15: compat.rs authenticates and checks python_package_version, but the promised project.scripts entrypoint check has no current producer/consumer. Keep pending for the complete row scope."
+notes = "Source reconciliation 2026-10-15: complete authenticated 143-line project reviewed. Existing compatibility producer verifies retained artifact path/SHA256 and exact source version; new production check requires the singleton project.scripts btcli=bittensor.cli.main:main, with pure missing/empty/extra/renamed/wrong/nonstring fixtures. Successful report serialization is unchanged. Native Cargo owns build/package/bin identity (rtao); Python hatchling/wheel layout, metadata/dependency ranges, no-op extras, uv source override, dev/lint/type/coverage tooling and shared shell-completion installation are explicit upstream packaging/oracle dispositions. Do not install Python packages or completions locally. Exact source target check proves no importability, built/published wheel or compatible native-wheel release. No executed Python/hosted-test or release/runtime validation is claimed."
 
 [[file]]
 py = "sdk/python/scripts/build_basket_index.py"
@@ -2949,21 +2949,21 @@ notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` pr
 
 [[file]]
 py = "sdk/python/tests/unit/test_codec_golden.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
+rs = ["Complete reviewed upstream pytest input; native analogues in crates/rtao-testkit/tests/{goldens,typed_calls,corpus}.rs and related runtime/core-ext fixtures"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "5ad19b8b78ac71abc6f31b4b3b1e4fd1a8259563"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source-input reconciliation 2026-10-15: all 14 authenticated test functions, helper and module skip mapped to actual native fixture/implementation bodies under Q30. Exact immortal payload-parts and complete block-extrinsic dictionaries close CG3/CG5 source gaps. CG12 retains partial pinned IR checklist coverage; CG13 lacks an exact reflected ConsensusMode inventory/order assertion; CG14 emitter syntax/default-constructor checks remain Python tooling-only. Committed fixtures are historical spec461 inputs, not fresh recordings. Optional oracle scripts do not run this pytest module; native tests do not execute upstream dependency unit tests or PyO3/import/skip behavior. This unchanged oracle-only classification records complete source review, not a complete native assertion port, first corpus, current passing execution or differential parity."
 
 [[file]]
 py = "sdk/python/tests/unit/test_codec_properties.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
+rs = ["Complete reviewed upstream pytest input; native analogues in crates/rtao-primitives/tests/primitives.rs, crates/rtao-runtime/src/{handle.rs,models/tests.rs} and recorded codec fixtures"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "db1928ae4c1bb51efafff579d74b55ff64de65b1"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source-input reconciliation 2026-10-15: all five authenticated functions, strategies/decorators and actual native counterparts reviewed independently. CP1 SS58 roundtrip has a direct native property; CP2 arbitrary unique multisig keys/threshold/permutation, CP3 arbitrary transfer destination/full-u64 value, CP4 generated nested remarks and CP5 arbitrary-u64 Compact runtime decode still lack matching generated-input assertions. Existing finite vectors, canonical roundtrips and width boundaries remain specific supporting coverage only. Optional oracle scripts do not run this pytest module; upstream dependency unit tests are not workspace executions. Unchanged oracle-only source disposition under Q30 does not claim a complete native property port, Python/Hypothesis/PyO3 execution, current hosted pass or differential coverage."
 
 [[file]]
 py = "sdk/python/tests/unit/test_evm.py"

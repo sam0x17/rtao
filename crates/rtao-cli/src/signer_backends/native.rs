@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/call.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 use std::sync::Arc;
 
 use rtao::{primitives::AccountId, signer::BoxFuture};
@@ -186,6 +187,9 @@ impl NativeBackend {
         options.open_browser = request.open_browser;
         options.browser = self.browser(request);
         options.fresh = fresh;
+        options.on_waiting = Some(crate::commands::extension::waiting_observer(
+            &self.context.output,
+        ));
         let url = ensure_bridge(&options).await.map_err(failure)?;
         let token = options
             .paths
@@ -215,6 +219,17 @@ impl NativeBackend {
 }
 
 #[cfg(feature = "extension")]
+fn extension_account_hint<'a>(
+    accounts: impl IntoIterator<Item = &'a rtao::signer::extension::ExtensionAccount>,
+) -> String {
+    accounts
+        .into_iter()
+        .map(|account| format!("{} ({}, {})", account.name, account.address, account.source))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+#[cfg(feature = "extension")]
 fn choose_extension_account(
     context: &AppContext,
     request: &BackendRequest,
@@ -233,9 +248,10 @@ fn choose_extension_account(
             .iter()
             .find(|account| matches(account, expected))
             .ok_or_else(|| {
-                CliError::input(
-                    "the reviewed extension account is unavailable; no transaction was signed",
-                )
+                CliError::input(format!(
+                    "the reviewed extension account is unavailable; no transaction was signed; available: {}",
+                    extension_account_hint(accounts)
+                ))
             })?
     } else {
         let filtered: Vec<_> = accounts
@@ -250,9 +266,10 @@ fn choose_extension_account(
             .collect();
         match filtered.as_slice() {
             [] => {
-                return Err(CliError::input(
-                    "no extension account matched the given filters",
-                ));
+                return Err(CliError::input(format!(
+                    "no extension account matched the given filters; available: {}",
+                    extension_account_hint(accounts)
+                )));
             }
             [account] => *account,
             _ => {
@@ -267,10 +284,19 @@ fn choose_extension_account(
                     account
                 } else {
                     if !request.interactive {
-                        return Err(CliError::input(
-                            "multiple extension accounts available; pass --signer-address",
-                        ));
+                        return Err(CliError::input(format!(
+                            "multiple extension accounts available; pass --signer-address or run in a terminal: {}",
+                            extension_account_hint(filtered.iter().copied())
+                        )));
                     }
+                    let default_index = request
+                        .default_address
+                        .and_then(|expected| {
+                            filtered
+                                .iter()
+                                .position(|account| matches(account, expected))
+                        })
+                        .unwrap_or(0);
                     let mut terminal = context
                         .terminal
                         .lock()
@@ -278,17 +304,28 @@ fn choose_extension_account(
                     for (index, account) in filtered.iter().enumerate() {
                         terminal
                             .message(&crate::output::terminal_text(&format!(
-                                "{}: {} ({}, {})",
+                                "{}: {} ({}, {}){}",
                                 index + 1,
                                 account.name,
                                 account.address,
-                                account.source
+                                account.source,
+                                if request
+                                    .default_address
+                                    .is_some_and(|expected| matches(account, expected))
+                                {
+                                    " (last used)"
+                                } else {
+                                    ""
+                                }
                             )))
                             .map_err(failure)?;
                     }
                     loop {
                         let raw = terminal
-                            .read_line("Select extension account [1]: ")
+                            .read_line(&format!(
+                                "Select extension account [{}]: ",
+                                default_index + 1
+                            ))
                             .map_err(|error| CliError {
                                 code: error.exit_code(),
                                 message: error.to_string(),
@@ -296,17 +333,17 @@ fn choose_extension_account(
                             })?;
                         let raw = crate::prompt::python_strip(&raw);
                         let index = if raw.is_empty() {
-                            Some(0)
+                            Some(default_index)
                         } else {
-                            raw.parse::<usize>()
-                                .ok()
+                            rtao::primitives::pyfmt::parse_integer(raw)
+                                .and_then(|index| index.to_string().parse::<usize>().ok())
                                 .and_then(|index| index.checked_sub(1))
                         };
                         if let Some(account) = index.and_then(|index| filtered.get(index)) {
                             break *account;
                         }
                         terminal
-                            .message("Select one of the listed account numbers.")
+                            .message("Enter a number from the list")
                             .map_err(failure)?;
                     }
                 }
@@ -405,7 +442,7 @@ mod tests {
         sync::{Arc, Mutex},
     };
 
-    struct TestTerminal(VecDeque<String>);
+    struct TestTerminal(VecDeque<String>, Arc<Mutex<Vec<String>>>);
     impl Terminal for TestTerminal {
         fn stdin_is_tty(&self) -> bool {
             true
@@ -413,17 +450,30 @@ mod tests {
         fn stderr_is_tty(&self) -> bool {
             true
         }
-        fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
+        fn read_line(&mut self, prompt: &str) -> Result<String, PromptError> {
+            self.1
+                .lock()
+                .map_err(|_| PromptError::Unavailable)?
+                .push(prompt.to_owned());
             self.0.pop_front().ok_or(PromptError::Aborted)
         }
         fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
-        fn message(&mut self, _: &str) -> Result<(), PromptError> {
+        fn message(&mut self, message: &str) -> Result<(), PromptError> {
+            self.1
+                .lock()
+                .map_err(|_| PromptError::Unavailable)?
+                .push(message.to_owned());
             Ok(())
         }
     }
+    type PickerFixture = (AppContext, BackendRequest, Arc<Mutex<Vec<String>>>);
     fn fixture(lines: &[&str]) -> Result<(AppContext, BackendRequest), Box<dyn std::error::Error>> {
+        let (context, request, _) = fixture_with_output(lines)?;
+        Ok((context, request))
+    }
+    fn fixture_with_output(lines: &[&str]) -> Result<PickerFixture, Box<dyn std::error::Error>> {
         let root = command_tree([with_globals(clap::Command::new("submit"), Tier::Tx)])
             .try_get_matches_from(["rtao", "submit", "--signer", "extension"])?;
         let mut globals = Globals::resolve(
@@ -441,15 +491,17 @@ mod tests {
             interactive: false,
             summary: None,
         };
+        let output = Arc::new(Mutex::new(Vec::new()));
         let context = AppContext::new(
             globals,
             Default::default(),
             Books::default(),
             Arc::new(Mutex::new(Box::new(TestTerminal(
                 lines.iter().map(|line| (*line).to_owned()).collect(),
+                output.clone(),
             )))),
         );
-        Ok((context, request))
+        Ok((context, request, output))
     }
     fn account(seed: u8, source: &str) -> ExtensionAccount {
         ExtensionAccount {
@@ -460,6 +512,50 @@ mod tests {
         }
     }
 
+    #[test]
+    fn chooser_errors_include_available_accounts_after_the_correct_filter()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (context, mut request) = fixture(&[])?;
+        let candidates = [
+            account(1, "chosen"),
+            account(2, "other"),
+            account(3, "chosen"),
+        ];
+        request.globals.extension_source = Some("chosen".into());
+        let ambiguous = choose_extension_account(&context, &request, &candidates, None)
+            .err()
+            .ok_or("expected ambiguity")?;
+        assert_eq!(
+            ambiguous.message,
+            format!(
+                "multiple extension accounts available; pass --signer-address or run in a terminal: account 1 ({}, chosen), account 3 ({}, chosen)",
+                candidates[0].address, candidates[2].address
+            )
+        );
+        request.globals.extension_source = Some("missing".into());
+        let missing = choose_extension_account(&context, &request, &candidates, None)
+            .err()
+            .ok_or("expected no matching filter")?;
+        let hint = format!(
+            "account 1 ({}, chosen), account 2 ({}, other), account 3 ({}, chosen)",
+            candidates[0].address, candidates[1].address, candidates[2].address
+        );
+        assert_eq!(
+            missing.message,
+            format!("no extension account matched the given filters; available: {hint}")
+        );
+        let unavailable =
+            choose_extension_account(&context, &request, &candidates, Some(AccountId([4; 32])))
+                .err()
+                .ok_or("expected unavailable reviewed identity")?;
+        assert_eq!(
+            unavailable.message,
+            format!(
+                "the reviewed extension account is unavailable; no transaction was signed; available: {hint}"
+            )
+        );
+        Ok(())
+    }
     #[test]
     fn empty_explicit_browser_uses_config_while_whitespace_remains_explicit()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -539,6 +635,73 @@ mod tests {
                 .account
                 .source,
             "first"
+        );
+        Ok(())
+    }
+    #[test]
+    fn blank_choice_preserves_the_first_saved_identity_even_when_it_is_duplicated()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (context, mut request, output) = fixture_with_output(&[""])?;
+        request.default_address = Some(AccountId([2; 32]));
+        request.interactive = true;
+        let candidates = [
+            account(1, "other"),
+            account(2, "first"),
+            account(2, "second"),
+        ];
+        let selection = choose_extension_account(&context, &request, &candidates, None)?;
+        assert_eq!(selection.account, candidates[1]);
+        let output = output.lock().map_err(|_| "trace lock")?;
+        assert_eq!(
+            output.last().map(String::as_str),
+            Some("Select extension account [2]: ")
+        );
+        assert!(!output[0].contains("last used"));
+        assert!(output[1].ends_with(" (last used)"));
+        assert!(output[2].ends_with(" (last used)"));
+        Ok(())
+    }
+    #[test]
+    fn interactive_choice_accepts_python_decimal_spellings_and_retries_invalid_indices()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let candidates: Vec<_> = (1..=10).map(|seed| account(seed, "fixture")).collect();
+        for (answer, expected) in [("２", 2), ("1_0", 10), (" +１ ", 1)] {
+            let (context, mut request) = fixture(&[answer])?;
+            request.interactive = true;
+            assert_eq!(
+                choose_extension_account(&context, &request, &candidates, None)?.account,
+                candidates[expected - 1],
+                "answer {answer:?}"
+            );
+        }
+        let (context, mut request, output) = fixture_with_output(&[
+            "0",
+            "-1",
+            "11",
+            "1__0",
+            "1 0",
+            "184467440737095516160000000000",
+            "2",
+        ])?;
+        request.interactive = true;
+        assert_eq!(
+            choose_extension_account(&context, &request, &candidates, None)?.account,
+            candidates[1]
+        );
+        let output = output.lock().map_err(|_| "trace lock")?;
+        assert_eq!(
+            output
+                .iter()
+                .filter(|line| line.as_str() == "Enter a number from the list")
+                .count(),
+            6
+        );
+        assert_eq!(
+            output
+                .iter()
+                .filter(|line| line.as_str() == "Select extension account [1]: ")
+                .count(),
+            7
         );
         Ok(())
     }

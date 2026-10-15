@@ -13,8 +13,8 @@ mod signer;
 pub use client::{BridgeClient, ExtensionAccount};
 pub use server::{BridgeOptions, BridgeServer, run_bridge};
 pub use session::{
-    BridgeFiles, BridgePaths, EnsureBridgeOptions, bridge_http_url, bridge_page_url, bridge_ws_url,
-    ensure_bridge, run_bridge_daemon, start_bridge_daemon, stop_bridge_daemon,
+    BridgeFiles, BridgePaths, BridgeWaiting, EnsureBridgeOptions, bridge_http_url, bridge_page_url,
+    bridge_ws_url, ensure_bridge, run_bridge_daemon, start_bridge_daemon, stop_bridge_daemon,
 };
 pub use signer::{
     AccountSelectionOptions, ExtensionAccountSelection, ExtensionSigner, account_crypto_type,

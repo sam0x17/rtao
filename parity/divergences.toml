@@ -3,6 +3,27 @@
 schema = 1
 
 [[divergences]]
+id = "D-068"
+upstream_symbol = "bittensor.extension bridge/client/session/signer local I/O policy"
+python_behavior = "Permits configured non-loopback hosts/URLs, implicit ensure_bridge launch, PID-based daemon termination and permissive raw signature bytes; its request waits do not implement the native aggregate resource policy."
+rtao_behavior = "Admits numeric loopback targets only, requires explicit daemon/browser permission, and bounds transport requests including serialized lock acquisition. Private token/PID publication and daemon termination verify ownership, process identity and unchanged cleanup contents. Selection validates public identity and negotiated signature shape/scheme; reviewed CLI identity never falls back to another account. Native session progress observers run inline and are not a separately timed operation."
+rationale = "Record the existing client-owned local transport, process and signature-admission policy separately from Python behavior. Preserve exact supported protocol messages and manual session guidance without claiming an upstream exploit or a new authorization finding."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; complete pinned extension modules and actual native consumers source-reviewed on 2026-10-15"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_signer::extension::tests::connection_targets_never_send_tokens_off_host",
+  "rtao_signer::extension::tests::library_defaults_require_explicit_process_launch_permissions",
+  "rtao_signer::extension::tests::request_deadline_includes_waiting_behind_an_approval",
+  "rtao_signer::extension::tests::publication_rejects_path_aliases_and_reserves_live_state",
+  "rtao_signer::extension::tests::fresh_ensure_reuses_authenticated_foreground_without_signalling",
+  "rtao_signer::extension::tests::signatures_are_bounded_and_never_change_negotiated_crypto",
+]
+upstream_report = "Existing native policy and fixture bodies reviewed in source; current hosted execution and real browser/device/platform coverage unverified. Device work remains deferred; no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/extension/session.py"
+
+[[divergences]]
 id = "D-067"
 upstream_symbol = "bittensor.vault.server.VaultSessionServer"
 python_behavior = "Allows a configured non-loopback host, opens a browser by default, accepts either signature or scanned replies for a pending request, and lacks the native request/connection/message limits."

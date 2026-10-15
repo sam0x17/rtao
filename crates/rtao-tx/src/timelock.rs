@@ -469,8 +469,6 @@ fn target_round(
             "reveal moment is not in the future (round {target}, but the beacon is already at round {latest})"
         )));
     }
-    // Check Python's datetime bounds before doing expensive cryptography.
-    reveal_time(target)?;
     Ok(target)
 }
 

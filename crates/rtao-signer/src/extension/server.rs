@@ -503,7 +503,12 @@ async fn browser(mut socket: Socket, shared: Arc<Shared>) {
                 break;
             },
             request=incoming.recv()=>{
-                let Some(request)=request else{break;};
+                let Some(request)=request else{
+                    // Replacement drops the sender as well as signalling the
+                    // watch channel. Both ready branches must send the close.
+                    close(&mut socket,CloseCode::Restart,"replaced by new bridge tab").await;
+                    break;
+                };
                 if send_text(&mut socket,request).await.is_err(){break;}
             },
             reply=socket.next()=>{
@@ -652,5 +657,54 @@ async fn client(mut socket: Socket, shared: Arc<Shared>) {
         if send_text(&mut socket, reply.to_string()).await.is_err() {
             break;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use futures::SinkExt;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn closed_browser_queue_sends_restart_without_a_replacement_signal()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut server = BridgeServer::new("127.0.0.1:0".parse()?)?;
+        server.start().await?;
+        let (mut socket, _) = tokio_tungstenite::connect_async(server.ws_url()).await?;
+        socket
+            .send(Message::Text(
+                json!({"role":"bridge","session":server.session_id()})
+                    .to_string()
+                    .into(),
+            ))
+            .await?;
+        server.wait_until_ready(Duration::from_secs(2)).await?;
+
+        let replacement_signal = {
+            let shared = server.shared.as_ref().ok_or("bridge not started")?;
+            let Browser {
+                outgoing, replace, ..
+            } = lock(&shared.inner)?
+                .browser
+                .take()
+                .ok_or("browser not connected")?;
+            drop(outgoing);
+            replace
+        };
+        // Keep the unchanged watch sender alive: only incoming.recv() can
+        // finish, so this exercises the closed-queue branch deterministically.
+        let message = timeout(Duration::from_secs(2), socket.next())
+            .await?
+            .ok_or("missing closed-queue frame")??;
+        assert!(matches!(
+            message,
+            Message::Close(Some(frame))
+                if frame.code == CloseCode::Restart
+                    && frame.reason == "replaced by new bridge tab"
+        ));
+        drop(replacement_signal);
+        server.stop().await?;
+        Ok(())
     }
 }
