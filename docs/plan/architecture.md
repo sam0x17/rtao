@@ -895,7 +895,7 @@ L8  rtao (facade, incl. rtao::blocking) · rtao-cli → rtao · rtao-testkit (de
 3. `rtao-catalog` and the `generated/` modules are 100% generated: `xtask regen --check` must be a no-op.
 4. `rtao-btauth` without features has no tokio, axum, reqwest or hyper. Every intra-workspace dependency is declared
    `default-features = false` and enables exactly what it uses (`rtao-core/offload` only from `rtao-client`,
-   `rtao-wallet` and `rtao-signer/ledger`; the facade depends on `rtao-neuron` without `prometheus`), so a feature
+   `rtao-wallet`, `rtao-tx` and `rtao-signer/ledger|vault`; the facade depends on `rtao-neuron` without `prometheus`), so a feature
    turned off in the facade stays off.
 5. Profile `no-host` (`validator,prometheus` and, separately, `miner,redis`, both `--no-default-features`) has, in
    `cargo tree -e normal,build`, none of the crates listed in §1.7 (libsodium, OpenSSL, `secp256k1-sys`, `aws-lc-*`,
@@ -2135,31 +2135,36 @@ it (§11.6).
 
 ### 3.15 Python transport parity checklist
 
-Every row is a test in `crates/rtao-rpc/tests/` or `crates/rtao-client/tests/`, running against `FakeNode` (a real
-loopback WebSocket server, §11.3). Together they port `PYT/unit/test_rpc.py` test by test, with `// pyt:` provenance
-comments.
+The socket fixtures are in `crates/rtao-testkit/tests/rpc.rs` and run against `FakeNode`, a real loopback WebSocket
+server (§11.3). Client fixtures in `crates/rtao-client/tests/` use the metadata-backed in-process `FakeChain`, except
+the client-drop fixture, which uses `FakeNode`. Classifier and metadata-cache unit tests live alongside their
+implementations. The fixtures port `PYT/unit/test_rpc.py` with `// pyt:` provenance comments and cover the additional
+client invariants below. Run substantial validation in hosted CI under Q30; the listed sources are not an execution
+result.
 
 | Python behavior | rtao test |
 |---|---|
 | unanswered idempotent frames re-sent before the gate opens; sent submits fail "fate unknown"; a submit queued while disconnected is sent normally | `reconnect_resends_reads_not_sent_submits` |
 | subscriptions receive an error on reconnect | `subscription_lost_on_reconnect` |
-| rotation after 5 consecutive failures; give up after 5 × endpoints; backoff schedule | `pool_rotation_backoff_and_exhaustion` (paused clock) |
+| rotation after the configured consecutive failure threshold (default 5); give up after threshold x endpoints; backoff schedule | `rpc.rs::pool_rotation_backoff_and_exhaustion` (asserts default 5, exercises threshold 2 under a paused clock) |
 | handshake 403/429 with `X-RateLimit-*`, `Retry-After`, `X-RateLimit-Reset` fallback, body detail | `handshake_policy_refusal_headers` |
-| `-32004` message match; `-32005` with metadata keys; other `-32004` stays ordinary | `jsonrpc_policy_classification` |
+| `-32004` message match; `-32005` with metadata keys; other `-32004` stays ordinary | `rtao-rpc/src/policy.rs::{policy_code_and_metadata_classification_are_strict, provider_defined_code_without_policy_contract_is_not_terminal, load_shed_policy_supports_camel_case_retry_metadata}`; socket boundary `rpc.rs::policy_rpc_error_preserves_server_details` |
 | close 1008 is terminal with the reason | `close_1008_is_terminal` |
-| `State already discarded` goes to the archive pool once | `state_discarded_uses_archive` |
-| finalized-only hash cache across a reorg | `block_hash_cache_finalized_only` |
-| runtime upgrade picked up within about a block | `runtime_upgrade_switches_codec` (also localnet `set_code`, §11.4) |
-| nonce: increment locally, clear on any failure, explicit pin, fresh for prepare | `nonce_lease_semantics` (+ proptest, §11.7) |
-| mortal era anchored at the finalized head | `era_anchor_finalized` |
-| `Submitted (not waiting).` with `success = true` | `no_wait_reports_pool_acceptance` |
-| V15 fetch; V14 only on the needle | `metadata_v15_needle_fallback_only` |
-| disk cache format read and written both ways | `runtime_disk_cache_python_format` (+ interop, §11.6) |
+| `State already discarded` goes to the archive pool once | `rpc.rs::state_discarded_uses_archive_once` |
+| finalized-only hash cache across a reorg | `rtao-client/tests/connect.rs::number_cache_retains_only_finalized_hashes` |
+| runtime notification automatically refreshes the codec before the twelve-second polling fallback | `rtao-client/src/client.rs::tests::runtime_version_subscription_refreshes_codec_without_explicit_refresh` (new metadata, constant, spec and transaction versions; inspects the installed cache without fetching or joining an in-flight refresh, then asserts foreground observations issue no requests) |
+| nonce: increment locally, clear on any failure, explicit pin, fresh for prepare | `rtao-client/tests/nonces.rs::{concurrent_clones_reserve_unique_consecutive_nonces_with_one_query, unsettled_drop_requeries_pool_and_fresh_does_not_mutate_cache}`; `rtao-client/tests/submission.rs::{policy_pool_and_signer_failures_clear_the_account_cache, explicit_submission_nonce_is_shared_with_client_clones, preparation_anchors_finalized_era_and_does_not_reserve_nonce}` |
+| mortal era anchored at the finalized head | `rtao-client/tests/submission.rs::preparation_anchors_finalized_era_and_does_not_reserve_nonce` |
+| `Submitted (not waiting).` with `success = true` | `rtao-client/tests/submission.rs::pool_acceptance_and_dispatch_failure_both_settle_nonce_leases` |
+| V15 fetch; V14 only on the missing-method or SCALE-None needle | `rtao-client/src/cache.rs::{missing_method_and_scale_none_are_the_only_legacy_paths, other_rpc_errors_never_fall_back_to_v14, malformed_some_wrapper_is_an_error_without_fallback}` |
+| Python disk-cache header, filename and fetch-path flag read and written | `rtao-client/src/cache.rs::{exact_disk_header_and_python_names, disk_flag_records_the_python_fetch_path}`; fresh cross-language interop remains optional under Q30 (§11.6) |
 | a submit whose caller was cancelled before transmission is never sent | `cancelled_unsent_submit_is_never_transmitted` (drop the socket, cancel the submit, reconnect, assert no `author_submitExtrinsic` frame) |
 | a response above 16 MiB in one frame is accepted (Python `max_size=2**32`) | `large_single_frame_response` (a 20 MiB single-frame result) |
-| `wss://` with an explicit ring config, also when a second rustls provider is enabled | `wss_connect_with_extra_roots` (self-signed `FakeNode` certificate through `SessionConfig::extra_roots`; §2.7) |
-| dropping the last `Client` clone stops the background tasks | `client_drop_closes_socket` (`FakeNode` sees the close within 1 s) |
-| `retracted` then `inBlock`/`finalized` is a success; `finalityTimeout(h)` resolves from block h (D-024) | `retracted_then_finalized_is_success`, `finality_timeout_resolves_from_block` (`FakeNode` status scripts `ready → inBlock(A) → retracted(A) → inBlock(B) → finalized(B)`, with one settled lease, and `finalityTimeout(A)`) |
+| `wss://` uses an explicit ring config with extra roots and ignores the process default; a second compiled provider must also be checked in isolation | `rpc.rs::wss_connect_with_extra_roots`; `rtao-testkit/tests/rpc_tls_provider.rs::wss_ignores_an_unusable_process_default_provider` installs an unusable default in its own test process. This checks provider independence; the separate hosted second-implementation fixture is still required (§2.7) |
+| dropping the last `Client` clone stops the background tasks | `rtao-client/tests/connect.rs::last_client_drop_closes_socket_and_background_subscriptions` (`FakeNode` sees the close within 1 s) |
+| `retracted` then `inBlock`/`finalized` is a success; `finalityTimeout(h)` resolves from block h (D-024) | `rtao-client/tests/submission.rs::{retracted_status_keeps_watching_for_later_finalized_inclusion, finality_timeout_resolves_actual_inclusion_and_confirms_finality}` (`FakeChain` status script `ready -> inBlock(A) -> retracted(A) -> inBlock(B) -> finalized(B)` uses distinct fork hashes, B's receipt, one submitted extrinsic and one settled lease) |
+
+Unqualified fixture names in this table refer to `crates/rtao-testkit/tests/rpc.rs`.
 
 ---
 

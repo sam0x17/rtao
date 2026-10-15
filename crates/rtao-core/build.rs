@@ -23,13 +23,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let tag = pin.tag;
     let commit = pin.commit;
     let branch = pin.branch;
+    let patch_commit = pin.patch_commit;
+    let patch_source = pin.patch_source;
     // Both the source selector and reference are also consumed by the lock
     // integration test through the same parser.
     let _ = (pin.selector, pin.reference);
     let source = format!(
         "/// Upstream core release, or `canary:main` for a disposable canary build.\npub const BITTENSOR_CORE_TAG: &str = {tag:?};\n\
-         /// Full effective upstream core commit used by this build.\npub const BITTENSOR_CORE_COMMIT: &str = {commit:?};\n\
-         /// Source branch resolved for a disposable canary; empty for a release build.\npub const BITTENSOR_CORE_BRANCH: &str = {branch:?};\n"
+         /// Base upstream core commit, or resolved disposable canary commit; excludes a carried patch.\npub const BITTENSOR_CORE_COMMIT: &str = {commit:?};\n\
+         /// Source branch resolved for a disposable canary; empty for a release build.\npub const BITTENSOR_CORE_BRANCH: &str = {branch:?};\n\
+         /// Carried PR-U17 core revision; empty when using the upstream core directly.\npub const BITTENSOR_CORE_PATCH_COMMIT: &str = {patch_commit:?};\n\
+         /// Complete Cargo Git source for the carried core patch; empty without a patch.\npub const BITTENSOR_CORE_PATCH_SOURCE: &str = {patch_source:?};\n"
     );
     fs::write(
         PathBuf::from(env::var("OUT_DIR")?).join("core_pin.rs"),

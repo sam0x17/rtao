@@ -25,9 +25,10 @@ rtao-runtime.workspace = true
 rtao-rpc.workspace = true
 rtao-intents = { workspace = true, features = ["all", "pow"] }
 toml_edit.workspace = true
-serde_json.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
 serde.workspace = true
 clap = { workspace = true, features = ["string"] }
+clap_complete.workspace = true
 tokio = { workspace = true, features = ["process"] }
 secrecy.workspace = true
 zeroize.workspace = true
@@ -37,6 +38,9 @@ rpassword = "7"
 comfy-table = "7"
 url.workspace = true
 reqwest.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true
+jiff = "0.2"
 hex.workspace = true
 sha2.workspace = true
 futures.workspace = true
@@ -45,6 +49,9 @@ smallvec = "1"
 parking_lot = "0.12"
 caseless = "=0.2.2"
 unicode-general-category.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 rtao-testkit.workspace = true

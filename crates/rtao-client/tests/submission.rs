@@ -1786,10 +1786,31 @@ async fn lost_acknowledgement_reconciles_actual_inclusion_without_retaining_nonc
 #[tokio::test]
 async fn retracted_status_keeps_watching_for_later_finalized_inclusion() {
     let (client, fake, signer) = fixture().await;
-    let block = fake.state().lock().unwrap().block_hash(100).unwrap();
-    fake.mutate_state(|state|{
-        state.seed_events(block.clone(),json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}])).unwrap();
-        state.queue_submit(SubmitScript::Statuses(vec![json!({"inBlock":block}),json!({"retracted":block}),json!({"inBlock":block}),json!({"finalized":block})]));
+    let (first, replacement) = fake.mutate_state(|state| {
+        state.finalized = 99;
+        let first = state.block_hash(100).unwrap();
+        let parent = state.block_hash(99).unwrap();
+        let replacement = state.fork(&parent).unwrap();
+        assert_ne!(first, replacement);
+        state.set_best(&replacement).unwrap();
+        state.set_finalized(100).unwrap();
+        // Only B contains the successful receipt. Resolving the retracted A
+        // would therefore fail the outcome and block identity assertions.
+        state.seed_events(first.clone(), json!([])).unwrap();
+        state
+            .seed_events(
+                replacement.clone(),
+                json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}]),
+            )
+            .unwrap();
+        state.queue_submit(SubmitScript::Statuses(vec![
+            json!("ready"),
+            json!({"inBlock":first}),
+            json!({"retracted":first}),
+            json!({"inBlock":replacement}),
+            json!({"finalized":replacement}),
+        ]));
+        (first, replacement)
     });
     let report = client
         .submit(
@@ -1801,10 +1822,21 @@ async fn retracted_status_keeps_watching_for_later_finalized_inclusion() {
         .unwrap();
     assert_eq!(report.inclusion, Inclusion::Finalized);
     assert!(report.success);
+    let replacement_hash =
+        rtao_primitives::H256(hex::decode(&replacement[2..]).unwrap().try_into().unwrap());
+    assert_eq!(report.block_hash, Some(replacement_hash));
+    assert_eq!(report.block_number, Some(100));
+    assert_eq!(report.extrinsic_index, Some(0));
+    assert_ne!(first, replacement);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
     assert_eq!(
         client.nonces().cached(&signer.account().to_string()).await,
         Some(0)
     );
+    let next = client.nonces().lease(&signer.account()).await.unwrap();
+    assert_eq!(next.value(), 1);
+    next.settle();
+    client.close().await;
 }
 
 #[tokio::test]

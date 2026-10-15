@@ -277,10 +277,10 @@ impl Drop for BridgeServer {
 pub async fn run_bridge(options: &BridgeOptions) -> Result<BridgeServer, BridgeError> {
     let mut server = BridgeServer::new(options.address)?;
     server.start().await?;
-    if options.open_browser {
-        if let Some(url) = server.page_url() {
-            super::session::open_bridge_page(&url, options.browser.as_deref()).await?;
-        }
+    if options.open_browser
+        && let Some(url) = server.page_url()
+    {
+        super::session::open_bridge_page(&url, options.browser.as_deref()).await?;
     }
     Ok(server)
 }
@@ -513,14 +513,12 @@ async fn browser(mut socket: Socket, shared: Arc<Shared>) {
                     Message::Text(text)=>{
                         let Ok(reply)=bounded_json(text.as_bytes()) else{break;};
                         let Some(id)=reply.get("id").and_then(Value::as_str) else{continue;};
-                        if let Ok(mut inner)=shared.inner.lock() {
-                            if inner.pending.get(id).is_some_and(|p|p.generation==generation) {
-                                if let Some(pending)=inner.pending.remove(id) {
+                        if let Ok(mut inner)=shared.inner.lock()
+                            && inner.pending.get(id).is_some_and(|p|p.generation==generation)
+                            && let Some(pending)=inner.pending.remove(id) {
                                     let result=if let Some(value)=reply.get("error"){Err(super::wire_error(value))}
                                         else{Ok(reply.get("result").cloned().unwrap_or(Value::Null))};
                                     let _=pending.result.send(result);
-                                }
-                            }
                         }
                     },
                     _=>break,

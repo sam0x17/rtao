@@ -435,7 +435,7 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                 && dep.features.iter().any(|f| f == "offload")
             {
                 ensure!(
-                    matches!(owner, "rtao-client" | "rtao-wallet"),
+                    matches!(owner, "rtao-client" | "rtao-wallet" | "rtao-tx"),
                     "{owner} unconditionally enables rtao-core/offload"
                 );
             }
@@ -475,10 +475,10 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                         }
                         if dep.name == "rtao-core" && enabled == "offload" {
                             ensure!(
-                                matches!(owner, "rtao-client" | "rtao-wallet")
+                                matches!(owner, "rtao-client" | "rtao-wallet" | "rtao-tx")
                                     || (owner == "rtao-signer"
                                         && matches!(feature.as_str(), "ledger" | "vault")),
-                                "{owner}/{feature} enables offload outside client, wallet or signer/ledger|vault"
+                                "{owner}/{feature} enables offload outside client, wallet, tx or signer/ledger|vault"
                             );
                         }
                     }
@@ -1335,6 +1335,24 @@ mod tests {
     #[test]
     fn signer_offload_is_limited_to_device_and_vault_cpu_work() -> Result<()> {
         let workspace: DocumentMut = "[workspace]\n".parse()?;
+        for owner in [
+            "rtao-client",
+            "rtao-wallet",
+            "rtao-tx",
+            "rtao-primitives",
+            "rtao-runtime",
+        ] {
+            let mut package = package(owner);
+            let mut dependency = dep("rtao-core");
+            dependency.features.push("offload".into());
+            package.dependencies.push(dependency);
+            let result = check_declarations(std::slice::from_ref(&package), &workspace);
+            if matches!(owner, "rtao-client" | "rtao-wallet" | "rtao-tx") {
+                result?;
+            } else {
+                ensure!(result.is_err());
+            }
+        }
         let mut signer = package("rtao-signer");
         signer.dependencies.push(dep("rtao-core"));
         for feature in ["ledger", "vault"] {

@@ -1,4 +1,4 @@
-//! Parse the effective core identity for build output and lock assertions.
+//! Parse the base core identity and optional carried patch provenance.
 
 use toml_edit::{DocumentMut, Item};
 
@@ -29,10 +29,121 @@ pub(crate) struct CorePin<'a> {
     pub(crate) commit: &'a str,
     pub(crate) selector: &'static str,
     pub(crate) reference: &'a str,
+    // This file is also compiled by xtask's BLS checker, which consumes only
+    // the base identity. Build output and lock tests consume the patch fields.
+    #[allow(dead_code)]
+    pub(crate) patch_commit: &'a str,
+    #[allow(dead_code)]
+    pub(crate) patch_source: String,
 }
 
 fn full_commit(commit: &str) -> bool {
-    commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+    commit.len() == 40
+        && commit
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn patch_identity<'a>(
+    core: &'a Item,
+    tag: &str,
+    commit: &str,
+) -> Result<(&'a str, String), &'static str> {
+    let Some(patch) = core.get("patch") else {
+        return Ok(("", String::new()));
+    };
+    if !patch.is_table() {
+        return Err("core.patch must be a table");
+    }
+    let repo = "https://github.com/sam0x17/subtensor.git";
+    if patch.get("repo").and_then(Item::as_str) != Some(repo) {
+        return Err("core.patch.repo must be the maintained PR-U17 fork");
+    }
+    if !tag.strip_prefix('v').is_some_and(|version| {
+        !version.is_empty() && version.bytes().all(|byte| byte.is_ascii_digit())
+    }) {
+        return Err("a patched core tag must have form vN");
+    }
+    let branch = format!("rtao-core-patch/{tag}");
+    if patch.get("branch").and_then(Item::as_str) != Some(branch.as_str()) {
+        return Err("core.patch.branch differs from the base release tag");
+    }
+    if patch.get("base").and_then(Item::as_str) != Some(commit) {
+        return Err("core.patch.base differs from core.commit");
+    }
+    let revision = patch
+        .get("rev")
+        .and_then(Item::as_str)
+        .filter(|revision| full_commit(revision) && *revision != commit)
+        .ok_or("core.patch.rev must be a full distinct Git commit")?;
+    if patch.get("upstream_pr").and_then(Item::as_str)
+        != Some("https://github.com/RaoFoundation/subtensor/pull/3242")
+    {
+        return Err("core.patch.upstream_pr differs from PR-U17");
+    }
+    for field in ["review_base", "review_rev"] {
+        if !patch
+            .get(field)
+            .and_then(Item::as_str)
+            .is_some_and(full_commit)
+        {
+            return Err("core.patch review identity must use full Git commits");
+        }
+    }
+    if !patch
+        .get("review_diff_sha256")
+        .and_then(Item::as_str)
+        .is_some_and(|digest| {
+            digest.len() == 64
+                && digest
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+    {
+        return Err("core.patch.review_diff_sha256 must be a full SHA256");
+    }
+    if patch.get("merge_commit").is_some()
+        && !patch
+            .get("merge_commit")
+            .and_then(Item::as_str)
+            .is_some_and(full_commit)
+    {
+        return Err("core.patch.merge_commit must be a full Git commit");
+    }
+    for (field, expected) in [
+        (
+            "paths",
+            &[
+                "sdk/bittensor-core/src/signers/mod.rs",
+                "sdk/bittensor-core/src/signers/ledger.rs",
+                "sdk/bittensor-core/src/signers/hid.rs",
+            ][..],
+        ),
+        (
+            "probe",
+            &[
+                "bittensor_core::signers::ApduTransport",
+                "bittensor_core::signers::ledger::LedgerDevice::with_transport",
+            ][..],
+        ),
+    ] {
+        let values = patch
+            .get(field)
+            .and_then(Item::as_array)
+            .ok_or("core.patch path/probe inventory missing")?;
+        if values.len() != expected.len()
+            || !expected.iter().all(|expected| {
+                values
+                    .iter()
+                    .filter(|value| value.as_str() == Some(*expected))
+                    .count()
+                    == 1
+            })
+        {
+            return Err("core.patch path/probe inventory differs from PR-U17");
+        }
+    }
+    Ok((revision, format!("git+{repo}?rev={revision}#{revision}")))
 }
 
 pub(crate) fn effective(pins: &DocumentMut) -> Result<CorePin<'_>, &'static str> {
@@ -49,12 +160,15 @@ pub(crate) fn effective(pins: &DocumentMut) -> Result<CorePin<'_>, &'static str>
         return Err("upstream.toml must contain a nonempty core tag and a full Git commit");
     }
     let Some(canary) = core.get("canary") else {
+        let (patch_commit, patch_source) = patch_identity(core, tag, commit)?;
         return Ok(CorePin {
             tag,
             branch: "",
             commit,
             selector: "tag",
             reference: tag,
+            patch_commit,
+            patch_source,
         });
     };
     if core.get("patch").is_some() {
@@ -93,5 +207,7 @@ pub(crate) fn effective(pins: &DocumentMut) -> Result<CorePin<'_>, &'static str>
         commit,
         selector: "rev",
         reference: commit,
+        patch_commit: "",
+        patch_source: String::new(),
     })
 }
