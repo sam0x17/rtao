@@ -33,7 +33,12 @@ basket generator puts its 45 frozen samples and 171 fund baselines in the CLI
 only. Run `38716924750` at `c281803` succeeds; its reviewed artifacts supply that
 exact table and six rustdoc corrections, with other interfaces unchanged.
 Reports from this run are not adopted because parity source advanced after
-its commit. Catalog exclusion and the matrix need the next hosted generation.
+its commit. Generation run `38718933791` at `e2e19b4` then succeeds and is
+verified/adopted: seventeen exact regular members, all 23 dependency hashes,
+unchanged role inventories, only the six frozen basket records removed from
+the shared catalog, four M6 test mappings and the exact divergence registrations.
+All other generated interfaces remain unchanged. Its private evidence is
+`m6-checkpoint-adoption.json`; ordinary combined validation is next.
 
 The keyfile parser repair is committed in `f16e97c` after independent source
 review. A fresh M4 review records four findings and source repairs in

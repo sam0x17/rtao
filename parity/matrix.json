@@ -1955,6 +1955,25 @@
     ],
     "divergences": [
       {
+        "id": "D-050",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::output_contract::human_detail_escapes_titles_keys_and_nested_values_without_changing_json",
+          "rtao_cli::output_contract::semantic_and_raw_review_cards_keep_signer_and_operation_visible_with_hostile_arguments"
+        ]
+      },
+      {
+        "id": "D-049",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::submission::receipt_rpc_protocol_and_event_decode_failures_keep_hash_and_cause_for_all_entries",
+          "rtao_client::shield::shield_receipt_watch_and_inner_receipt_errors_retain_the_attempted_carrier_and_cause",
+          "rtao_tx::executor::receipt_rpc_failure_keeps_recovery_identity_without_retry_for_every_executor_entry"
+        ]
+      },
+      {
         "id": "D-048",
         "oracle": "unverified",
         "rtao": "active",
@@ -2020,7 +2039,8 @@
         "rtao": "active",
         "tests": [
           "rtao_wallet::password::tests::password_files_reject_oversize_nonregular_and_invalid_utf8",
-          "rtao_wallet::files::read_security_tests::bounded_wallet_reads_reject_large_and_nonregular_files"
+          "rtao_wallet::files::read_security_tests::bounded_wallet_reads_reject_large_and_nonregular_files",
+          "rtao_core_ext::keyfile_json::tests::direct_keyfile_limit_refuses_oversized_historical_text_and_callbacks_but_accepts_boundary_json"
         ]
       },
       {
@@ -2346,7 +2366,9 @@
           "rtao_cli::books::tests::oversized_books_refuse_instead_of_redirecting_names_to_wallet_fallback",
           "rtao_cli::books::tests::acyclic_multisig_chains_have_a_bounded_refusal_and_repeated_branches_are_valid",
           "rtao_cli::call_names::tests::programmatic_json_nesting_refuses_before_clone_or_name_lookup",
-          "rtao_cli::raw_call_contract::programmatic_raw_call_json_depth_refuses_before_runtime_encoding"
+          "rtao_cli::raw_call_contract::programmatic_raw_call_json_depth_refuses_before_runtime_encoding",
+          "rtao_cli::file_input_contract::raw_and_weights_accept_exact_sixteen_mib_files_without_rewriting",
+          "rtao_cli::file_input_contract::sparse_oversized_files_refuse_promptly_and_keep_their_contents"
         ]
       },
       {
@@ -2933,14 +2955,14 @@
       {
         "name": "test_leases_read",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_reads::m6_delegation::leases_preserve_cost_precision_perpetual_expiry_and_map_order"
       },
       {
         "name": "test_metagraph_fast_path_matches_runtime",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_reads::m6_accounts::neurons_sort_by_uid_retain_raw_modes_and_check_native_stake_sum"
       },
       {
         "name": "test_mev_shield_next_key_is_mlkem768",
@@ -3005,8 +3027,8 @@
       {
         "name": "test_quote_stake_slippage_and_fee",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_reads::m6_staking::quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding"
       },
       {
         "name": "test_reads_catalog_nonempty",
@@ -3047,8 +3069,8 @@
       {
         "name": "test_subnets_all_batched",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows"
       },
       {
         "name": "test_timelocked_commitment_reveals_plaintext",
