@@ -2,16 +2,18 @@
 //! Shared btcli file paths, persistent options and per-network display caches.
 //!
 //! All store methods run filesystem work on the blocking pool. Missing and
-//! unreadable files behave as empty data, as in Python. Invalid JSON is retained
-//! in a `.corrupt.<timestamp>` backup. Writes replace complete, fsync'd files;
-//! concurrent processes retain Python's last-writer-wins behavior.
+//! unreadable files behave as empty data, as in Python. Nonregular or oversized
+//! files are refused without replacement or quarantine. Invalid JSON within the
+//! acquisition budget is retained in a `.corrupt.<timestamp>` backup. Writes
+//! replace complete, fsync'd files; concurrent processes retain Python's
+//! last-writer-wins behavior.
 
 use std::{
     collections::BTreeMap,
     ffi::OsString,
     fmt,
     fs::{self, File, OpenOptions},
-    io::{self, Write},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -25,6 +27,94 @@ use num_traits::ToPrimitive;
 use rtao_primitives::NetUid;
 use serde_json::{Map, Number, Value};
 use unicode_general_category::{GeneralCategory, get_general_category};
+
+/// Acquisition budget for public JSON inputs and shared config/cache files.
+///
+/// Sixteen MiB matches the wallet and CLI book limits, accommodates full weight
+/// rows and multisig caches, and also bounds reads if an opened file grows.
+pub const MAX_JSON_FILE_BYTES: usize = 16 * 1024 * 1024;
+
+/// Read public JSON bytes from one bounded, opened regular-file descriptor.
+///
+/// Regular symlink targets remain supported. Unix opens use `O_NONBLOCK` so a
+/// FIFO cannot stall acquisition before its descriptor is rejected. The caller
+/// chooses JSON decoding; this function neither rewrites nor quarantines input.
+/// Oversize inputs return [`io::ErrorKind::FileTooLarge`], including file growth
+/// after metadata inspection. Other nonregular files return `InvalidInput`.
+pub fn read_bounded_json_file(path: &Path) -> io::Result<Vec<u8>> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK);
+    }
+    #[cfg(not(unix))]
+    if !fs::metadata(path)?.is_file() {
+        return Err(nonregular_input());
+    }
+    let file = options.open(path).map_err(|error| {
+        // Sockets can fail during open before an fd exists; normalize those
+        // known nonregular paths without weakening the descriptor check.
+        if fs::metadata(path).is_ok_and(|metadata| !metadata.is_file()) {
+            nonregular_input()
+        } else {
+            error
+        }
+    })?;
+    read_opened_json_file(file, MAX_JSON_FILE_BYTES as u64)
+}
+
+fn nonregular_input() -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, "expected a regular JSON file")
+}
+
+fn oversized_input() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::FileTooLarge,
+        "JSON input exceeds 16 MiB limit",
+    )
+}
+
+fn read_opened_json_file(file: File, limit: u64) -> io::Result<Vec<u8>> {
+    let metadata = file.metadata()?;
+    read_checked_json_file(file, &metadata, limit)
+}
+
+fn read_checked_json_file(file: File, metadata: &fs::Metadata, limit: u64) -> io::Result<Vec<u8>> {
+    if !metadata.is_file() {
+        return Err(nonregular_input());
+    }
+    if metadata.len() > limit {
+        return Err(oversized_input());
+    }
+    read_capped(file, limit)
+}
+
+fn read_capped(reader: impl Read, limit: u64) -> io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    reader.take(limit + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
+        return Err(oversized_input());
+    }
+    Ok(bytes)
+}
+
+#[derive(Default)]
+struct BoundedJsonWriter(Vec<u8>);
+
+impl Write for BoundedJsonWriter {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if bytes.len() > MAX_JSON_FILE_BYTES.saturating_sub(self.0.len()) {
+            return Err(oversized_input());
+        }
+        self.0.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
 
 /// Stored CLI options, preserving the exact JSON values loaded by Python.
 pub type ConfigData = Map<String, Value>;
@@ -351,12 +441,14 @@ impl Store {
     }
 
     /// Read known config keys. Unknown keys are ignored, and stored values are
-    /// not coerced until callers explicitly set a value.
+    /// not coerced until callers explicitly set a value. Oversized/nonregular
+    /// input returns an error while preserving the original file.
     pub async fn load(&self) -> Result<ConfigData, ConfigError> {
-        self.run(|paths, now| Ok(load_config(paths, now))).await
+        self.run(load_config).await
     }
 
-    /// Atomically save a complete config object with sorted keys.
+    /// Atomically save a complete config object with sorted keys, refusing
+    /// oversized/nonregular existing input or serialized output over 16 MiB.
     pub async fn save(&self, data: ConfigData) -> Result<PathBuf, ConfigError> {
         self.run(move |paths, _| {
             let path = paths.path(ConfigFile::Config);
@@ -371,7 +463,7 @@ impl Store {
         let value = coerce(key, value)?;
         let key = key.to_owned();
         self.run(move |paths, now| {
-            let mut data = load_config(paths, now);
+            let mut data = load_config(paths, now)?;
             data.insert(key, value.clone());
             atomic_write(
                 paths.path(ConfigFile::Config),
@@ -388,7 +480,7 @@ impl Store {
         require_key(key)?;
         let key = key.to_owned();
         self.run(move |paths, now| {
-            let mut data = load_config(paths, now);
+            let mut data = load_config(paths, now)?;
             let existed = data.remove(&key).is_some_and(|value| !value.is_null());
             atomic_write(
                 paths.path(ConfigFile::Config),
@@ -445,7 +537,7 @@ impl Store {
     async fn load_cache(&self, kind: CacheKind, network: &str) -> Result<CacheMap, ConfigError> {
         let network = network.to_owned();
         self.run(move |paths, now| {
-            let data = load_object(paths.path(kind.file()), now);
+            let data = load_object(paths.path(kind.file()), now)?;
             let mut result = BTreeMap::new();
             if let Some(values) = data
                 .get(&network)
@@ -466,7 +558,7 @@ impl Store {
     async fn cache_fresh(&self, kind: CacheKind, network: &str) -> Result<bool, ConfigError> {
         let network = network.to_owned();
         self.run(move |paths, now| {
-            let data = load_object(paths.path(kind.file()), now);
+            let data = load_object(paths.path(kind.file()), now)?;
             let timestamp = data.get(&network).and_then(|entry| entry.get("fetched_at"));
             let timestamp = match timestamp {
                 Some(Value::Number(number)) => number.as_f64(),
@@ -487,7 +579,7 @@ impl Store {
         let network = network.to_owned();
         self.run(move |paths, now| {
             let path = paths.path(kind.file());
-            let mut data = load_object(path, now);
+            let mut data = load_object(path, now)?;
             let values = values
                 .0
                 .into_iter()
@@ -542,28 +634,37 @@ fn coerce(key: &str, value: &str) -> Result<Value, ConfigError> {
     }
 }
 
-fn load_config(paths: &Paths, now: f64) -> ConfigData {
-    load_object(paths.path(ConfigFile::Config), now)
+fn load_config(paths: &Paths, now: f64) -> Result<ConfigData, ConfigError> {
+    Ok(load_object(paths.path(ConfigFile::Config), now)?
         .into_iter()
         .filter(|(key, _)| settable().iter().any(|(known, _)| *known == key))
-        .collect()
+        .collect())
 }
 
-fn load_object(path: &Path, now: f64) -> Map<String, Value> {
-    if !path.is_file() {
-        return Map::new();
-    }
-    let Ok(bytes) = fs::read(path) else {
-        return Map::new();
+fn load_object(path: &Path, now: f64) -> Result<Map<String, Value>, ConfigError> {
+    let bytes = match read_bounded_json_file(path) {
+        Ok(bytes) => bytes,
+        Err(source)
+            if matches!(
+                source.kind(),
+                io::ErrorKind::FileTooLarge | io::ErrorKind::InvalidInput
+            ) =>
+        {
+            return Err(ConfigError::Io {
+                path: path.to_owned(),
+                source,
+            });
+        }
+        Err(_) => return Ok(Map::new()),
     };
-    match rtao_primitives::json::from_slice::<Value>(&bytes) {
+    Ok(match rtao_primitives::json::from_slice::<Value>(&bytes) {
         Ok(Value::Object(data)) => data,
         Ok(_) => Map::new(),
         Err(_) => {
             quarantine(path, now);
             Map::new()
         }
-    }
+    })
 }
 
 fn quarantine(path: &Path, now: f64) {
@@ -603,9 +704,24 @@ fn atomic_write(path: &Path, value: &Value) -> Result<(), ConfigError> {
         path: path.to_owned(),
         source,
     };
+    // A whole-object save must not bypass an acquisition refusal and replace
+    // the user's oversized or nonregular original with a fresh empty object.
+    match read_bounded_json_file(path) {
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(io_error(error)),
+    }
+    let mut writer = BoundedJsonWriter::default();
+    serde_json::to_writer_pretty(&mut writer, value).map_err(|error| {
+        if error.io_error_kind() == Some(io::ErrorKind::FileTooLarge) {
+            io_error(oversized_input())
+        } else {
+            ConfigError::Json(error)
+        }
+    })?;
+    writer.write_all(b"\n").map_err(io_error)?;
+    let bytes = writer.0;
     fs::create_dir_all(parent).map_err(io_error)?;
-    let mut bytes = serde_json::to_vec_pretty(value).map_err(ConfigError::Json)?;
-    bytes.push(b'\n');
     let name = path.file_name().ok_or_else(|| {
         io_error(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -851,6 +967,335 @@ mod tests {
                 .is_empty()
         );
         assert!(fixture.store.paths().path(ConfigFile::Config).exists());
+    }
+
+    #[test]
+    fn descriptor_reader_enforces_boundaries_even_when_a_file_grows_after_stat() {
+        let fixture = Fixture::new(42.0);
+        let path = fixture.root.join("growing.json");
+        fs::write(&path, b"{}  ").expect("small regular fixture");
+        let file = File::open(&path).expect("open descriptor");
+        let metadata = file.metadata().expect("initial descriptor metadata");
+        let mut writer = OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .expect("growth writer");
+        writer
+            .write_all(b" ")
+            .expect("append beyond acquisition cap");
+        drop(writer);
+        let error = read_checked_json_file(file, &metadata, 4).expect_err("growth refuses");
+        assert_eq!(error.kind(), io::ErrorKind::FileTooLarge);
+        assert_eq!(fs::read(&path).expect("retained growth bytes"), b"{}   ");
+        assert_eq!(
+            read_capped(&b"1234"[..], 4).expect("inclusive boundary"),
+            b"1234"
+        );
+        assert_eq!(
+            read_capped(&b"12345"[..], 4)
+                .expect_err("extra byte refuses")
+                .kind(),
+            io::ErrorKind::FileTooLarge
+        );
+    }
+
+    #[test]
+    fn bounded_serializer_counts_the_final_newline_in_the_acquisition_budget() {
+        let mut writer = BoundedJsonWriter::default();
+        let prefix = vec![b' '; MAX_JSON_FILE_BYTES - 1];
+        writer.write_all(&prefix).expect("below output cap");
+        writer.write_all(b"\n").expect("inclusive output cap");
+        assert_eq!(writer.0.len(), MAX_JSON_FILE_BYTES);
+        assert_eq!(
+            writer
+                .write_all(b" ")
+                .expect_err("extra output byte")
+                .kind(),
+            io::ErrorKind::FileTooLarge
+        );
+        assert_eq!(writer.0.len(), MAX_JSON_FILE_BYTES);
+    }
+
+    #[tokio::test]
+    async fn config_and_cache_limits_preserve_input_across_load_and_update_paths() {
+        use std::io::{Seek, SeekFrom};
+
+        let fixture = Fixture::new(42.0);
+        let limit = MAX_JSON_FILE_BYTES as u64;
+        for kind in [
+            ConfigFile::Config,
+            ConfigFile::SubnetNames,
+            ConfigFile::TokenSymbols,
+        ] {
+            fixture.write(kind, b"original-invalid-json");
+            let path = fixture.store.paths().path(kind);
+            let file = OpenOptions::new()
+                .write(true)
+                .open(path)
+                .expect("sparse original");
+            file.set_len(limit + 1).expect("sparse oversize");
+            drop(file);
+            let refused = match kind {
+                ConfigFile::Config => fixture.store.load().await.map(|_| ()),
+                ConfigFile::SubnetNames => {
+                    fixture.store.load_subnet_names("test").await.map(|_| ())
+                }
+                ConfigFile::TokenSymbols => {
+                    fixture.store.load_token_symbols("test").await.map(|_| ())
+                }
+                _ => return,
+            };
+            assert!(
+                matches!(refused, Err(ConfigError::Io { source, .. }) if source.kind() == io::ErrorKind::FileTooLarge)
+            );
+            let refused = match kind {
+                ConfigFile::Config => fixture.store.set_value("network", "test").await.map(|_| ()),
+                ConfigFile::SubnetNames => fixture
+                    .store
+                    .save_subnet_names("test", CacheMap::default())
+                    .await
+                    .map(|_| ()),
+                ConfigFile::TokenSymbols => fixture
+                    .store
+                    .save_token_symbols("test", CacheMap::default())
+                    .await
+                    .map(|_| ()),
+                _ => return,
+            };
+            assert!(
+                matches!(refused, Err(ConfigError::Io { source, .. }) if source.kind() == io::ErrorKind::FileTooLarge)
+            );
+            if kind == ConfigFile::Config {
+                assert!(fixture.store.unset_value("network").await.is_err());
+                assert!(fixture.store.save(Map::new()).await.is_err());
+            } else {
+                let fresh = if kind == ConfigFile::SubnetNames {
+                    fixture.store.subnet_names_fresh("test").await
+                } else {
+                    fixture.store.token_symbols_fresh("test").await
+                };
+                assert!(fresh.is_err());
+            }
+            assert_eq!(
+                fs::metadata(path).expect("retained metadata").len(),
+                limit + 1
+            );
+            let mut file = File::open(path).expect("retained source");
+            let mut prefix = [0; b"original-invalid-json".len()];
+            file.read_exact(&mut prefix)
+                .expect("retained original prefix");
+            assert_eq!(&prefix, b"original-invalid-json");
+            file.seek(SeekFrom::End(-1)).expect("last byte");
+            let mut tail = [1];
+            file.read_exact(&mut tail).expect("sparse final byte");
+            assert_eq!(tail, [0]);
+            assert_eq!(
+                fs::read_dir(path.parent().expect("parent"))
+                    .expect("sibling files")
+                    .count(),
+                if kind == ConfigFile::Config {
+                    1
+                } else if kind == ConfigFile::SubnetNames {
+                    2
+                } else {
+                    3
+                }
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn shared_json_exact_budget_is_accepted_and_regular_symlinks_are_supported() {
+        let fixture = Fixture::new(42.0);
+        let path = fixture.store.paths().path(ConfigFile::Config);
+        let mut bytes = br#"{"network":"test"}"#.to_vec();
+        bytes.resize(MAX_JSON_FILE_BYTES, b' ');
+        fixture.write(ConfigFile::Config, &bytes);
+        assert_eq!(
+            fixture.store.load().await.expect("inclusive file budget")["network"],
+            "test"
+        );
+        assert_eq!(
+            fs::metadata(path).expect("unchanged length").len(),
+            MAX_JSON_FILE_BYTES as u64
+        );
+        #[cfg(unix)]
+        {
+            let link = fixture.root.join("regular-link.json");
+            std::os::unix::fs::symlink(path, &link).expect("regular symlink");
+            assert_eq!(read_bounded_json_file(&link).expect("symlink read"), bytes);
+            assert!(
+                fs::symlink_metadata(&link)
+                    .expect("link metadata")
+                    .file_type()
+                    .is_symlink()
+            );
+        }
+        assert_eq!(
+            read_bounded_json_file(&fixture.root)
+                .expect_err("directory refuses")
+                .kind(),
+            io::ErrorKind::InvalidInput
+        );
+    }
+
+    #[tokio::test]
+    async fn oversized_serialized_config_and_cache_do_not_replace_valid_sources() {
+        let fixture = Fixture::new(42.0);
+        let original = br#"{"network":"test"}"#;
+        fixture.write(ConfigFile::Config, original);
+        let large = "x".repeat(MAX_JSON_FILE_BYTES);
+        let result = fixture.store.set_value("wallet", &large).await;
+        assert!(
+            matches!(result, Err(ConfigError::Io { source, .. }) if source.kind() == io::ErrorKind::FileTooLarge)
+        );
+        let path = fixture.store.paths().path(ConfigFile::Config);
+        assert_eq!(fs::read(path).expect("preserved config"), original);
+        assert_eq!(
+            fs::read_dir(path.parent().expect("config parent"))
+                .expect("config only")
+                .count(),
+            1
+        );
+        fixture.write(
+            ConfigFile::TokenSymbols,
+            br#"{"other":{"symbols":{"1":"retained"},"fetched_at":7}}"#,
+        );
+        let path = fixture.store.paths().path(ConfigFile::TokenSymbols);
+        let original = fs::read(path).expect("original cache");
+        let result = fixture
+            .store
+            .save_token_symbols("test", CacheMap(BTreeMap::from([(1.into(), large)])))
+            .await;
+        assert!(
+            matches!(result, Err(ConfigError::Io { source, .. }) if source.kind() == io::ErrorKind::FileTooLarge)
+        );
+        assert_eq!(fs::read(path).expect("preserved cache"), original);
+        assert_eq!(
+            fs::read_dir(path.parent().expect("cache parent"))
+                .expect("cache and config only")
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn socket_config_and_cache_are_refused_without_replacement() {
+        use std::os::unix::{fs::FileTypeExt, net::UnixListener};
+
+        let fixture = Fixture::new(42.0);
+        for kind in [
+            ConfigFile::Config,
+            ConfigFile::SubnetNames,
+            ConfigFile::TokenSymbols,
+        ] {
+            let path = fixture.store.paths().path(kind);
+            fs::create_dir_all(path.parent().expect("socket parent"))
+                .expect("socket parent directory");
+            let socket = UnixListener::bind(path).expect("public socket fixture");
+            let result = load_object(path, 42.0);
+            assert!(
+                matches!(result, Err(ConfigError::Io { source, .. }) if source.kind() == io::ErrorKind::InvalidInput)
+            );
+            let result = if kind == ConfigFile::Config {
+                fixture.store.save(Map::new()).await
+            } else if kind == ConfigFile::SubnetNames {
+                fixture
+                    .store
+                    .save_subnet_names("test", CacheMap::default())
+                    .await
+            } else {
+                fixture
+                    .store
+                    .save_token_symbols("test", CacheMap::default())
+                    .await
+            };
+            assert!(result.is_err());
+            assert!(
+                fs::symlink_metadata(path)
+                    .expect("socket retained")
+                    .file_type()
+                    .is_socket()
+            );
+            drop(socket);
+        }
+    }
+
+    #[tokio::test]
+    async fn directory_config_refuses_before_mutation_and_retains_its_contents() {
+        let fixture = Fixture::new(42.0);
+        let path = fixture.store.paths().path(ConfigFile::Config);
+        fs::create_dir_all(path).expect("directory config fixture");
+        fs::write(path.join("keep"), b"retained").expect("directory child");
+        assert!(fixture.store.load().await.is_err());
+        assert!(fixture.store.set_value("network", "test").await.is_err());
+        assert!(fixture.store.unset_value("network").await.is_err());
+        assert!(fixture.store.save(Map::new()).await.is_err());
+        assert_eq!(
+            fs::read(path.join("keep")).expect("retained child"),
+            b"retained"
+        );
+        assert_eq!(
+            fs::read_dir(path.parent().expect("config parent"))
+                .expect("config directory only")
+                .count(),
+            1
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn config_fifo_read_and_update_refuse_without_blocking_or_replacing_it() {
+        use std::{
+            os::unix::fs::{FileTypeExt, OpenOptionsExt},
+            process::Command,
+            time::{Duration, Instant},
+        };
+
+        let fixture = Fixture::new(42.0);
+        let path = fixture.store.paths().path(ConfigFile::Config);
+        fs::create_dir_all(path.parent().expect("FIFO parent")).expect("FIFO parent directory");
+        assert!(
+            Command::new("mkfifo")
+                .arg(path)
+                .status()
+                .expect("mkfifo")
+                .success()
+        );
+        // An accidentally blocking reader is released after the assertion's
+        // deadline, and the rescue is joined before the fixture is removed.
+        let rescue_path = path.to_owned();
+        let rescue = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(500));
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(libc::O_NONBLOCK)
+                .open(rescue_path)
+                .expect("FIFO rescue descriptor");
+            drop(file);
+        });
+        let started = Instant::now();
+        let result = fixture.store.load().await;
+        let elapsed = started.elapsed();
+        rescue.join().expect("rescue thread");
+        assert!(result.is_err());
+        assert!(elapsed < Duration::from_millis(400));
+        assert!(fixture.store.set_value("network", "test").await.is_err());
+        assert!(fixture.store.save(Map::new()).await.is_err());
+        assert!(
+            fs::symlink_metadata(path)
+                .expect("FIFO retained")
+                .file_type()
+                .is_fifo()
+        );
+        assert_eq!(
+            fs::read_dir(path.parent().expect("FIFO parent"))
+                .expect("FIFO only")
+                .count(),
+            1
+        );
     }
 
     #[tokio::test]
