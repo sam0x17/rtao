@@ -7847,11 +7847,16 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_transport/rpc.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_rpc::Session` + generated `py_rpc.rs`"
+          "crates/rtao-rpc/src/session.rs",
+          "crates/rtao-rpc/src/session/handshake.rs",
+          "crates/rtao-rpc/src/types.rs",
+          "crates/rtao-rpc/src/policy.rs",
+          "crates/rtao-rpc/src/subscription.rs",
+          "crates/rtao-rpc/src/generated/py_rpc.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "132871ca8047858efc2d6c0991dcf818312b5303"
       },
       {
         "kind": "ported",
@@ -9137,11 +9142,15 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/evm/precompiles.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_evm::Precompiles`"
+          "crates/rtao-evm/src/precompiles.rs",
+          "crates/rtao-evm/src/precompile_catalog.rs",
+          "crates/rtao-cli/src/commands/evm/precompiles.rs",
+          "xtask/src/extract_precompiles.rs",
+          "crates/rtao-catalog/src/py.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ce5b43be2cb6c1477b970858bb9992bff348855e"
       },
       {
         "kind": "ported",

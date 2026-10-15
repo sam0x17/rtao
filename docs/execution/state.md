@@ -17,6 +17,20 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-15
 
 Hosted report refresh
+[38823630645](https://github.com/sam0x17/rtao/actions/runs/38823630645) passed
+at clean `7cc750178a17d89424b0c95616d493adab16b52c`. Its 57,584-byte artifact was
+authenticated and independently refetched; exactly four reports are adopted. The matrix
+changes only the two reviewed precompile/RPC source rows, reaching 284/357
+reconciled and 73 pending. All 23 dependency inputs match that source; exactly
+the reviewed workspace lock and RPC manifest hashes change. Role inventories,
+host flags, 20 pending e2e mappings, 68 divergences and other compatibility
+claims remain unchanged. Bounded proofs are `7cc7501-report-inspection.json`
+and `7cc7501-report-adoption.json`; no archive or extraction tree is retained.
+The combined hosted gate must still execute the newer transport fixtures,
+constructor-refusal correction and documentation fix. Strict M8 remains off,
+M2-S02 open/unaccepted and no milestone is accepted.
+
+Hosted report refresh
 [38819346876](https://github.com/sam0x17/rtao/actions/runs/38819346876) passed
 full source parity at clean `d8db07d43f5c7e32623e8614b2e09f07629abeb9`. Adopted
 exactly four report files after authenticating and independently refetching
@@ -36,7 +50,7 @@ unchanged. Existing legacy runtime-API output is unchanged. Bounded proofs
 `2ad5d1b-artifact-inspection.json` and `2ad5d1b-artifact-adoption.json` remain
 under `.local/recovery/2026-10-15/`, without archives or extraction directories.
 
-The published matrix has 282/357 source rows reconciled, 75 pending, 20 pending
+The published matrix has 284/357 source rows reconciled, 73 pending, 20 pending
 e2e mappings and 68 divergences. Source mappings retain explicit native API,
 strictness and coverage limits. These are source reconciliation results.
 Strict M8 completeness remains off; no milestone is accepted. M2-S02 remains
@@ -103,8 +117,8 @@ frames, cancellation, deadlines, framing and resource limits. These fixtures are
 authored and source-reviewed; compilation and execution remain pending.
 
 Complete precompile and RPC source dispositions bring the source map to
-284 reconciled and 73 pending. The published generated matrix remains at
-282 until the next hosted refresh. Precompile table/notice blockers are resolved
+284 reconciled and 73 pending. The published generated matrix now agrees
+after refresh 38823630645. Precompile table/notice blockers are resolved
 by authenticated adopted output and source changes; full selector/runtime/oracle
 execution remains unclaimed. RPC retains explicit typed/budget/replay policies
 and the inherited pre-ack subscription-cancellation limitation.
@@ -116,8 +130,8 @@ and independently fetched twice; both generated locks are adopted. Each adds onl
 the existing rtao-rpc -> tokio-rustls edge; all package identities and other
 bytes are unchanged. The handwritten candidate was excluded. Bounded proof is
 `cc32b5d-lock-adoption.json`, without archives or extraction trees. The existing
-resolver checks both locks under one 170-second deadline. Source reports still
-need refresh before ordinary validation. The main gate now checks documentation
+resolver checks both locks under one 170-second deadline. Source reports are
+refreshed for ordinary validation. The main gate now checks documentation
 before nextest/doctests, preserving every command and catching link failures earlier.
 
 All current work follows Q30. Local target output remains 547,192 KiB; only
