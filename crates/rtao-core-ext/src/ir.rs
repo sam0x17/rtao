@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/bittensor-core-py/src/runtime.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/contract.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! UPSTREAM-TARGET: runtime::Runtime::metadata_ir (PR-U9)
 //! UPSTREAM-PROBE: symbol runtime::Runtime::metadata_ir
 //! UPSTREAM-FEATURES: none

@@ -2278,6 +2278,102 @@ mod tests {
         );
         assert!(fake.requests.lock().unwrap().is_empty());
     }
+    fn v15_byte_output_runtime() -> RuntimeHandle {
+        // Rewrite and reparse actual V15 bytes, retaining their portable registry.
+        let byte_output = current_core().type_id_of("Vec<u8>").unwrap();
+        let mut metadata =
+            frame_metadata::RuntimeMetadataPrefixed::decode(&mut &METADATA[..]).unwrap();
+        let frame_metadata::RuntimeMetadata::V15(v15) = &mut metadata.1 else {
+            panic!("fixture must be V15")
+        };
+        let api = v15
+            .apis
+            .iter_mut()
+            .find(|api| api.name == "StakeInfoRuntimeApi")
+            .unwrap();
+        let method = api
+            .methods
+            .iter_mut()
+            .find(|method| method.name == "get_stake_info_for_coldkey")
+            .unwrap();
+        // This changes only the output. Its modern AccountId input must no longer
+        // control encoding once a byte-vector output selects the frozen contract.
+        method.output.id = byte_output;
+        let mut unknown = method.clone();
+        unknown.name = "unknown_archive_bytes".into();
+        api.methods.push(unknown);
+        RuntimeHandle::parse(&metadata.encode(), 478, 1, 42).unwrap()
+    }
+
+    #[tokio::test]
+    async fn v15_byte_output_uses_frozen_parameters_and_double_encoded_stake_rows() {
+        use parity_scale_codec::Compact;
+        let runtime = v15_byte_output_runtime();
+        assert_eq!(runtime.metadata_level(), rtao_runtime::MetadataLevel::V15);
+        let info = runtime
+            .runtime_api("StakeInfoRuntimeApi", "get_stake_info_for_coldkey")
+            .unwrap();
+        assert_eq!(runtime.core().type_ident(info.output), "Vec<u8>");
+        let (snapshot, fake) = fixture(runtime).await;
+        let inner = (
+            Compact(2u32),
+            [7u8; 32],
+            [8u8; 32],
+            Compact(u64::MAX),
+            [9u8; 32],
+            [10u8; 32],
+            Compact(64u64),
+        )
+            .encode();
+        let outer = inner.encode();
+        assert_ne!(inner, outer);
+        fake.calls.lock().unwrap().insert(
+            "StakeInfoRuntimeApi_get_stake_info_for_coldkey".into(),
+            json!(hex_bytes(&outer)),
+        );
+        let output = snapshot
+            .call_dyn(
+                "StakeInfoRuntimeApi",
+                "get_stake_info_for_coldkey",
+                &[Value::Str(AccountId([8; 32]).to_ss58(42))],
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            output.to_json(),
+            json!([
+                {"netuid":0,"hotkey":AccountId([7;32]).to_ss58(42),"coldkey":AccountId([8;32]).to_ss58(42),"stake":u64::MAX,"locked":0,"emission":0,"drain":0,"is_registered":false},
+                {"netuid":0,"hotkey":AccountId([9;32]).to_ss58(42),"coldkey":AccountId([10;32]).to_ss58(42),"stake":64,"locked":0,"emission":0,"drain":0,"is_registered":false}
+            ])
+        );
+        assert_eq!(
+            *fake.requests.lock().unwrap(),
+            vec![(
+                "state_call".into(),
+                json!([
+                    "StakeInfoRuntimeApi_get_stake_info_for_coldkey",
+                    hex_bytes(&vec![8u8; 32].encode()),
+                    crate::hash_hex(HASH)
+                ])
+            )]
+        );
+    }
+
+    #[tokio::test]
+    async fn v15_unknown_byte_output_is_refused_before_rpc() {
+        let runtime = v15_byte_output_runtime();
+        let info = runtime
+            .runtime_api("StakeInfoRuntimeApi", "unknown_archive_bytes")
+            .unwrap();
+        assert_eq!(runtime.core().type_ident(info.output), "Vec<u8>");
+        let (snapshot, fake) = fixture(runtime).await;
+        assert!(
+            matches!(snapshot.call_dyn("StakeInfoRuntimeApi", "unknown_archive_bytes", &[Value::Str(AccountId([8;32]).to_ss58(42))]).await,
+            Err(ClientError::RuntimeApiUnavailable { api, method }) if api == "StakeInfoRuntimeApi" && method == "unknown_archive_bytes")
+        );
+        assert!(fake.requests.lock().unwrap().is_empty());
+    }
+
     #[tokio::test]
     async fn v14_archive_calls_use_only_frozen_double_encoded_api_definitions() {
         let golden = golden();
