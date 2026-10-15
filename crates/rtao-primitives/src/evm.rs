@@ -61,7 +61,7 @@ fn python_fromhex(input: &str) -> Option<Vec<u8>> {
         if !group.len().is_multiple_of(2) {
             return None;
         }
-        for pair in group.chunks_exact(2) {
+        for pair in group.as_chunks::<2>().0 {
             output.push((nibble(pair[0])? << 4) | nibble(pair[1])?);
         }
     }

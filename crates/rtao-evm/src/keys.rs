@@ -493,7 +493,7 @@ fn keystore_mac(derived: &[u8; 32], cipher: &[u8; 32]) -> [u8; 32] {
     let mut input = Zeroizing::new([0u8; 48]);
     input[..16].copy_from_slice(&derived[16..]);
     input[16..].copy_from_slice(cipher);
-    keccak256(input.as_ref()).0
+    keccak256(&input[..]).0
 }
 fn apply_aes_ctr(key: &[u8], iv: [u8; 16], bytes: &mut [u8; 32]) -> Result<()> {
     // Ctr128BE adds an independent block counter to the initial nonce modulo
@@ -682,7 +682,7 @@ fn encrypt_keystore(account: &EvmAccount, password: &str, n: u64) -> Result<Valu
     let mut cipher = Zeroizing::new([0u8; 32]);
     cipher.copy_from_slice(scalar.as_slice());
     apply_aes_ctr(&derived[..16], iv, &mut cipher)?;
-    crypto["ciphertext"] = Value::String(hex::encode(cipher.as_ref()));
+    crypto["ciphertext"] = Value::String(hex::encode(&cipher[..]));
     crypto["mac"] = Value::String(hex::encode(keystore_mac(&derived, &cipher)));
     Ok(json!({ "version": 3,
         "id": format!("{}-{}-{}-{}-{}", &id[..8], &id[8..12], &id[12..16], &id[16..20], &id[20..]),
