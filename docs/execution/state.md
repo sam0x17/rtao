@@ -16,6 +16,21 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
+Refresh [38761784282](https://github.com/sam0x17/rtao/actions/runs/38761784282)
+succeeds at clean `8cd8de5`. Verify/adopt four exact regular report members,
+the immutable archive digest/size and all 23 unchanged dependency inputs.
+Role inventories/host selection and compatibility claims stay unchanged.
+Matrix changes are exactly ten reviewed file rows, two new unverified decisions,
+D055's exact module reference and the scoped e2e evidence described below.
+All 115 e2e keys remain: 72 intent plans, 6 read fixtures, 5 client contracts,
+6 hosted scenario sources, 2 inapplicable and 24 pending. Runtime claims remain
+unverified or inapplicable; no fixture result is reported as a chain execution.
+Proof is `8cd-generation-adoption.json`; no archive/extraction directory remains.
+Combined normal hosted validation and independent gate-integration rereview
+remain pending. A spelling-only source inspection finds all 199 registered
+divergence functions, including two manually traced module aliases; this does
+not establish feature/harness qualification or execution.
+
 Run [38759055202](https://github.com/sam0x17/rtao/actions/runs/38759055202)
 is terminal: all five supporting jobs, main compilation and strict Clippy pass.
 Parity stops before tests on D055's incorrect `client::tests` module path.
