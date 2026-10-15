@@ -346,6 +346,7 @@ jobs:
             'crates/rtao-catalog/src/py.rs',
             'vendor/upstream/extracted/env_vars.json',
             'vendor/upstream/extracted/chain_rules.json',
+            'vendor/upstream/extracted/named_tables.json',
             'vendor/upstream/extracted/root_claim_fixtures.json',
           ];
           const allowed = new Set([...reports, ...(process.env.REFRESH_CODEGEN === 'true' ? interfaces : [])]);
@@ -391,6 +392,7 @@ jobs:
             crates/rtao-catalog/src/py.rs
             vendor/upstream/extracted/env_vars.json
             vendor/upstream/extracted/chain_rules.json
+            vendor/upstream/extracted/named_tables.json
             vendor/upstream/extracted/root_claim_fixtures.json
           if-no-files-found: error
           retention-days: 3
