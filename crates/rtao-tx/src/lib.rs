@@ -7,6 +7,8 @@ mod executor;
 mod intent;
 /// Multisig account approvals and reusable opening-deposit funding checks.
 pub mod multisig;
+/// Public preparation and policy-gated external signature submission.
+pub mod offline;
 mod output;
 mod plan;
 mod policy;
@@ -21,11 +23,12 @@ pub use intent::{
     OriginMarker, OriginView, PreflightCx, Root, Signed, SubnetOwner, SystemClock,
 };
 pub use multisig::{ApproveOptions, Multisig};
+pub use offline::PrepareOptions;
 pub use output::{
     ExtrinsicResult, IntentOutput, MultisigCall, PureCreated, SubnetRegistered, WeightsSubmitted,
 };
 pub use plan::Plan;
 pub use policy::{Policy, PolicySubject};
-pub use rtao_client::ShieldPeriod;
+pub use rtao_client::{ShieldPeriod, UnsignedExtrinsic};
 pub use rtao_primitives::Spend;
 pub use rtao_runtime::models::ProxyType;

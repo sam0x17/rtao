@@ -3137,6 +3137,7 @@ dependencies = [
  "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
+ "serde_json",
  "tower",
 ]
 

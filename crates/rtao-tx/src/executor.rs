@@ -129,7 +129,7 @@ impl ExecuteOptions {
             deadline: self.deadline,
         }
     }
-    fn submit_options(&self) -> SubmitOptions {
+    pub(crate) fn submit_options(&self) -> SubmitOptions {
         SubmitOptions {
             mortality: self.period.map_or(Mortality::Immortal, |period| {
                 Mortality::Mortal(Period::new(u64::from(period)))
@@ -678,7 +678,7 @@ impl Executor {
         .await
     }
 
-    fn enforce_raw_call(&self, opts: &ExecuteOptions) -> Result<(), TxError> {
+    pub(crate) fn enforce_raw_call(&self, opts: &ExecuteOptions) -> Result<(), TxError> {
         if let Some(policy) = opts.policy.as_ref().or(self.policy.as_ref()) {
             let violations = policy.check_raw_call();
             if !violations.is_empty() {
@@ -862,7 +862,7 @@ impl Executor {
         }
     }
 
-    fn lift_submission(
+    pub(crate) fn lift_submission(
         &self,
         result: Result<rtao_client::ExtrinsicReport, SubmitFailure>,
         extras: Map<String, Value>,
