@@ -6,8 +6,10 @@
 //! Python-shaped JSON, and balances in read results use [`PythonBalance`]. Human
 //! formatting preserves fields and columns, rather than Rich terminal bytes.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::fmt::Write as _;
 use std::io::{self, IsTerminal, Write};
 use std::sync::{Arc, Mutex};
 
@@ -15,8 +17,122 @@ use comfy_table::{Cell, CellAlignment, Table, presets::UTF8_FULL};
 use parking_lot::RwLock;
 use rtao::primitives::{DynBalance, NetUid, Symbol};
 use rtao::tx::{ChainError, ExtrinsicResult, Plan};
-use serde::{Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use serde_json::{Map, Value, json};
+use zeroize::{Zeroize, Zeroizing};
+
+fn terminal_control(character: char) -> bool {
+    character.is_control()
+        || matches!(character, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+}
+
+struct TerminalText<'a>(&'a str);
+
+impl fmt::Display for TerminalText<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for character in self.0.chars() {
+            match character {
+                '\n' => formatter.write_str("\\n")?,
+                '\r' => formatter.write_str("\\r")?,
+                '\t' => formatter.write_str("\\t")?,
+                character if terminal_control(character) && u32::from(character) <= 0xff => {
+                    write!(formatter, "\\x{:02x}", u32::from(character))?;
+                }
+                character if terminal_control(character) => {
+                    write!(formatter, "\\u{{{:x}}}", u32::from(character))?;
+                }
+                character => formatter.write_char(character)?,
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Escape terminal controls and directional formatting in human text only.
+/// JSON and transaction inputs must retain their original characters.
+pub fn terminal_text(text: &str) -> Cow<'_, str> {
+    if text.chars().any(terminal_control) {
+        Cow::Owned(TerminalText(text).to_string())
+    } else {
+        Cow::Borrowed(text)
+    }
+}
+
+#[cfg(test)]
+type SecretWipeObserver = Arc<dyn Fn(&[u8]) + Send + Sync>;
+
+struct SecretBuffer {
+    bytes: Zeroizing<Box<[u8]>>,
+    #[cfg(test)]
+    after_wipe: Option<SecretWipeObserver>,
+}
+
+impl Drop for SecretBuffer {
+    fn drop(&mut self) {
+        self.bytes.zeroize();
+        #[cfg(test)]
+        if let Some(observer) = &self.after_wipe {
+            // Observe the still-owned allocation, before either guard frees it.
+            observer(&self.bytes);
+        }
+    }
+}
+
+struct OutputSize(usize);
+
+impl Write for OutputSize {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0 = self
+            .0
+            .checked_add(bytes.len())
+            .ok_or_else(|| io::Error::other("secret output is too large"))?;
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl fmt::Write for OutputSize {
+    fn write_str(&mut self, text: &str) -> fmt::Result {
+        self.write_all(text.as_bytes()).map_err(|_| fmt::Error)
+    }
+}
+
+struct OutputFormat<'a>(io::Cursor<&'a mut [u8]>);
+
+impl fmt::Write for OutputFormat<'_> {
+    fn write_str(&mut self, text: &str) -> fmt::Result {
+        self.0.write_all(text.as_bytes()).map_err(|_| fmt::Error)
+    }
+}
+
+enum SecretField<'a> {
+    Public(&'a Value),
+    Secret(&'a str),
+}
+
+impl Serialize for SecretField<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Public(value) => value.serialize(serializer),
+            Self::Secret(value) => serializer.serialize_str(value),
+        }
+    }
+}
+
+struct SecretFields<'a>(BTreeMap<&'a str, SecretField<'a>>);
+
+impl Serialize for SecretFields<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (name, value) in &self.0 {
+            map.serialize_entry(name, value)?;
+        }
+        map.end()
+    }
+}
 
 /// Destination of CLI output.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -286,8 +402,11 @@ impl TableSpec {
 /// Result of a registered human renderer; machine output ignores this result.
 #[derive(Clone, Debug)]
 pub enum HumanView {
-    /// Text kept intact, including long hashes and copyable call bytes.
+    /// One human text fragment; terminal controls are displayed as escapes.
     Text(String),
+    /// Renderer-owned line boundaries; each fragment is escaped independently.
+    /// Keep untrusted newlines inside a fragment rather than splitting them.
+    Lines(Vec<String>),
     /// Human key/value pairs in the requested order.
     Detail {
         /// Optional human title.
@@ -339,6 +458,8 @@ pub struct Output {
     address_names: Arc<RwLock<BTreeMap<String, String>>>,
     subnet_names: Arc<RwLock<BTreeMap<u16, String>>>,
     token_symbols: Arc<RwLock<BTreeMap<u16, Symbol>>>,
+    #[cfg(test)]
+    secret_wipe_observer: Option<SecretWipeObserver>,
 }
 
 impl Output {
@@ -356,6 +477,8 @@ impl Output {
             address_names: Arc::new(RwLock::new(BTreeMap::new())),
             subnet_names: Arc::new(RwLock::new(BTreeMap::from([(0, "root".into())]))),
             token_symbols: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(test)]
+            secret_wipe_observer: None,
         }
     }
 
@@ -561,6 +684,76 @@ impl Output {
         self.fields(fields, 2)
     }
 
+    /// Render public wallet fields with borrowed secret fields in JSON mode.
+    /// Secrets are never copied into an owned JSON value or a human detail view.
+    pub fn secret_detail(
+        &self,
+        title: Option<&str>,
+        fields: &[(String, Value)],
+        secrets: &[(&str, &str)],
+    ) -> Result<(), OutputError> {
+        if !self.options.json_mode {
+            return self.detail(title, fields, None);
+        }
+        let mut payload = SecretFields(
+            fields
+                .iter()
+                .map(|(name, value)| (name.as_str(), SecretField::Public(value)))
+                .collect(),
+        );
+        for (name, value) in secrets {
+            payload.0.insert(name, SecretField::Secret(value));
+        }
+        self.secret_json(&payload)
+    }
+
+    fn secret_buffer(&self, length: usize) -> SecretBuffer {
+        SecretBuffer {
+            // Allocation and any capacity adjustment happen before plaintext
+            // is written. A boxed slice cannot grow or release old copies.
+            bytes: Zeroizing::new(vec![0; length].into_boxed_slice()),
+            #[cfg(test)]
+            after_wipe: self.secret_wipe_observer.clone(),
+        }
+    }
+
+    fn secret_json(&self, payload: &SecretFields<'_>) -> Result<(), OutputError> {
+        let mut size = OutputSize(0);
+        serde_json::to_writer_pretty(&mut size, payload)?;
+        size.write_all(b"\n")?;
+        let mut guarded = self.secret_buffer(size.0);
+        let mut writer = io::Cursor::new(guarded.bytes.as_mut());
+        serde_json::to_writer_pretty(&mut writer, payload)?;
+        writer.write_all(b"\n")?;
+        if writer.position() != size.0 as u64 {
+            return Err(OutputError::Render("secret output size changed".into()));
+        }
+        self.sink.write(Stream::Stdout, &guarded.bytes)?;
+        Ok(())
+    }
+
+    /// Write one intentional secret line from borrowed fragments. The only
+    /// formatted allocation is fixed-size and wiped on success or sink failure.
+    pub fn secret_line(&self, fragments: &[&str]) -> Result<(), OutputError> {
+        let render = |writer: &mut dyn fmt::Write| -> fmt::Result {
+            for fragment in fragments {
+                write!(writer, "{}", TerminalText(fragment))?;
+            }
+            writer.write_char('\n')
+        };
+        let mut size = OutputSize(0);
+        render(&mut size).map_err(|_| OutputError::Render("secret output is too large".into()))?;
+        let mut guarded = self.secret_buffer(size.0);
+        let mut writer = OutputFormat(io::Cursor::new(guarded.bytes.as_mut()));
+        render(&mut writer)
+            .map_err(|_| OutputError::Render("secret output size changed".into()))?;
+        if writer.0.position() != size.0 as u64 {
+            return Err(OutputError::Render("secret output size changed".into()));
+        }
+        self.sink.write(Stream::Stdout, &guarded.bytes)?;
+        Ok(())
+    }
+
     /// Human table or complete machine records.
     pub fn table(&self, spec: &TableSpec) -> Result<(), OutputError> {
         if self.options.json_mode {
@@ -572,10 +765,14 @@ impl Output {
             return self.line(Stream::Stdout, "  none");
         }
         let mut table = Table::new();
-        table.load_preset(UTF8_FULL).set_header(&spec.columns);
+        table.load_preset(UTF8_FULL).set_header(
+            spec.columns
+                .iter()
+                .map(|column| terminal_text(column).into_owned()),
+        );
         for row in &spec.rows {
             table.add_row(row.iter().enumerate().map(|(index, value)| {
-                let cell = Cell::new(self.cell(&spec.columns[index], value));
+                let cell = Cell::new(terminal_text(&self.cell(&spec.columns[index], value)));
                 if spec.right_align.contains(&index) {
                     cell.set_alignment(CellAlignment::Right)
                 } else {
@@ -583,7 +780,11 @@ impl Output {
                 }
             }));
         }
-        self.line(Stream::Stdout, &table.to_string())?;
+        // Only the table renderer supplies structural newlines. Untrusted
+        // header and cell text has already been escaped before table parsing.
+        for row in table.to_string().lines() {
+            self.line(Stream::Stdout, row)?;
+        }
         for (term, meaning) in &spec.legend {
             self.line(Stream::Stdout, &format!("  {term}  {meaning}"))?;
         }
@@ -603,13 +804,21 @@ impl Output {
         if spec.rows.is_empty() {
             return self.line(Stream::Stdout, "  none");
         }
+        let columns = spec
+            .columns
+            .iter()
+            .map(|column| terminal_text(column).into_owned())
+            .collect::<Vec<_>>();
         let cells: Vec<Vec<_>> = spec
             .rows
             .iter()
-            .map(|row| row.iter().map(python_value).collect())
+            .map(|row| {
+                row.iter()
+                    .map(|value| terminal_text(&python_value(value)).into_owned())
+                    .collect()
+            })
             .collect();
-        let widths: Vec<_> = spec
-            .columns
+        let widths: Vec<_> = columns
             .iter()
             .enumerate()
             .map(|(i, name)| {
@@ -621,7 +830,7 @@ impl Output {
                     .unwrap_or(0)
             })
             .collect();
-        for row in std::iter::once(&spec.columns).chain(cells.iter()) {
+        for row in std::iter::once(&columns).chain(cells.iter()) {
             let rendered = row
                 .iter()
                 .enumerate()
@@ -955,17 +1164,20 @@ impl Output {
         if self.options.json_mode {
             return Ok(());
         }
-        self.detail(
-            Some(&format!("generating new {role}")),
-            &[("mnemonic".into(), json!(phrase))],
-            None,
-        )?;
+        self.line(Stream::Stdout, &format!("generating new {role}"))?;
+        self.secret_line(&["  mnemonic  ", phrase])?;
         self.sub_diag(Stream::Stdout,"note",&format!("write this mnemonic down and store it somewhere safe — it is the only way to recover the {role}"))
     }
 
     fn human(&self, view: &HumanView) -> Result<(), OutputError> {
         match view {
             HumanView::Text(text) => self.line(Stream::Stdout, text),
+            HumanView::Lines(lines) => {
+                for line in lines {
+                    self.line(Stream::Stdout, line)?;
+                }
+                Ok(())
+            }
             HumanView::Detail { title, fields } => self.detail(title.as_deref(), fields, None),
             HumanView::Table(spec) => self.table(spec),
             HumanView::Columns(spec) => self.columns(spec),
@@ -976,14 +1188,15 @@ impl Output {
     fn fields(&self, fields: &[(String, Value)], indent: usize) -> Result<(), OutputError> {
         let width = fields
             .iter()
-            .map(|(key, _)| key.chars().count())
+            .map(|(key, _)| terminal_text(key).chars().count())
             .max()
             .unwrap_or(0);
         for (key, value) in fields {
+            let display_key = terminal_text(key);
             let prefix = format!(
-                "{}{}{key}",
+                "{}{}{display_key}",
                 " ".repeat(indent),
-                " ".repeat(width.saturating_sub(key.chars().count()))
+                " ".repeat(width.saturating_sub(display_key.chars().count()))
             );
             match value {
                 Value::Object(values) if !values.is_empty() => {
@@ -1069,7 +1282,8 @@ impl Output {
     }
 
     fn line(&self, stream: Stream, text: &str) -> Result<(), OutputError> {
-        self.sink.write(stream, format!("{text}\n").as_bytes())?;
+        self.sink
+            .write(stream, format!("{}\n", TerminalText(text)).as_bytes())?;
         Ok(())
     }
 }
@@ -1186,4 +1400,172 @@ fn python_bytes_repr(bytes: &[u8]) -> String {
     }
     out.push(quote);
     out
+}
+
+#[cfg(test)]
+mod secret_output_tests {
+    use super::*;
+    use secrecy::{ExposeSecret, SecretString};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    struct InspectSink {
+        fail: bool,
+        writes: AtomicUsize,
+        documents: Mutex<Vec<Vec<u8>>>,
+    }
+
+    impl OutputSink for InspectSink {
+        fn write(&self, stream: Stream, bytes: &[u8]) -> io::Result<()> {
+            assert_eq!(stream, Stream::Stdout);
+            self.writes.fetch_add(1, Ordering::SeqCst);
+            self.documents
+                .lock()
+                .map_err(|_| io::Error::other("fixture sink poisoned"))?
+                .push(bytes.to_vec());
+            if self.fail {
+                Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    "fixture sink closed",
+                ))
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    #[test]
+    fn exact_secret_buffers_are_wiped_before_free_on_success_and_sink_error() -> TestResult {
+        // Escaping expands this input; the counted allocation must still hold
+        // the complete output without growing or creating ordinary JSON text.
+        let secret = SecretString::new("disposable \"\\\n\u{1b}\u{202e} π sentinel".into());
+        for json_mode in [false, true] {
+            for fail in [false, true] {
+                let sink = Arc::new(InspectSink {
+                    fail,
+                    writes: AtomicUsize::new(0),
+                    documents: Mutex::new(Vec::new()),
+                });
+                let wiped = Arc::new(Mutex::new(Vec::new()));
+                let mut output = Output::new(
+                    OutputOptions {
+                        json_mode,
+                        quiet: true,
+                        network: None,
+                    },
+                    sink.clone(),
+                );
+                let observed = wiped.clone();
+                output.secret_wipe_observer = Some(Arc::new(move |bytes| {
+                    // Drop calls this before freeing the boxed slice. No test
+                    // reads allocator storage after its ownership ends.
+                    assert!(!bytes.is_empty());
+                    assert!(bytes.iter().all(|byte| *byte == 0));
+                    if let Ok(mut lengths) = observed.lock() {
+                        lengths.push(bytes.len());
+                    }
+                }));
+                let result = if json_mode {
+                    output.secret_detail(
+                        Some("unused JSON title"),
+                        &[("wallet".into(), json!("fixture"))],
+                        &[("mnemonic", secret.expose_secret())],
+                    )
+                } else {
+                    output.secret_line(&["mnemonic: ", secret.expose_secret()])
+                };
+                assert_eq!(result.is_err(), fail);
+                if let Err(error) = result {
+                    assert!(!error.to_string().contains("sentinel"));
+                }
+                assert_eq!(sink.writes.load(Ordering::SeqCst), 1);
+                let documents = sink.documents.lock().map_err(|_| "fixture sink")?;
+                assert_eq!(documents.len(), 1);
+                let document = &documents[0];
+                assert_eq!(
+                    *wiped.lock().map_err(|_| "wipe observer")?,
+                    vec![document.len()]
+                );
+                if json_mode {
+                    let expected = json!({"wallet":"fixture","mnemonic":secret.expose_secret()});
+                    assert_eq!(serde_json::from_slice::<Value>(document)?, expected);
+                    let mut expected_bytes = serde_json::to_vec_pretty(&expected)?;
+                    expected_bytes.push(b'\n');
+                    assert_eq!(*document, expected_bytes);
+                } else {
+                    assert_eq!(
+                        std::str::from_utf8(document)?,
+                        format!("mnemonic: {}\n", terminal_text(secret.expose_secret()))
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn human_mnemonic_uses_one_guarded_buffer_and_json_helper_allocates_none() -> TestResult {
+        for json_mode in [false, true] {
+            let sink = Arc::new(InspectSink {
+                fail: false,
+                writes: AtomicUsize::new(0),
+                documents: Mutex::new(Vec::new()),
+            });
+            let wipes = Arc::new(AtomicUsize::new(0));
+            let observed = wipes.clone();
+            let mut output = Output::new(
+                OutputOptions {
+                    json_mode,
+                    quiet: true,
+                    network: None,
+                },
+                sink.clone(),
+            );
+            output.secret_wipe_observer = Some(Arc::new(move |bytes| {
+                assert!(bytes.iter().all(|byte| *byte == 0));
+                observed.fetch_add(1, Ordering::SeqCst);
+            }));
+            output.mnemonic("coldkey", "disposable recovery sentinel")?;
+            assert_eq!(wipes.load(Ordering::SeqCst), usize::from(!json_mode));
+            if json_mode {
+                assert_eq!(sink.writes.load(Ordering::SeqCst), 0);
+            } else {
+                let documents = sink.documents.lock().map_err(|_| "fixture sink")?;
+                assert_eq!(
+                    documents
+                        .iter()
+                        .filter(|bytes| bytes
+                            .windows(b"disposable".len())
+                            .any(|part| part == b"disposable"))
+                        .count(),
+                    1
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn human_secret_detail_only_formats_public_fields() -> TestResult {
+        let sink = MemorySink::default();
+        let mut output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+        let wipes = Arc::new(AtomicUsize::new(0));
+        let observed = wipes.clone();
+        output.secret_wipe_observer = Some(Arc::new(move |_| {
+            observed.fetch_add(1, Ordering::SeqCst);
+        }));
+        output.secret_detail(
+            Some("created coldkey"),
+            &[("wallet".into(), json!("fixture"))],
+            &[("mnemonic", "disposable private sentinel")],
+        )?;
+        let rendered = sink.text(Stream::Stdout)?;
+        assert!(rendered.contains("created coldkey"));
+        assert!(rendered.contains("fixture"));
+        assert!(!rendered.contains("mnemonic"));
+        assert!(!rendered.contains("sentinel"));
+        assert_eq!(wipes.load(Ordering::SeqCst), 0);
+        Ok(())
+    }
 }

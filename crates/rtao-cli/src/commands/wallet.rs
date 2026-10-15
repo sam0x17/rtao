@@ -7,7 +7,7 @@ use crate::{
     context::AppContext,
     error::CliError,
     globals::{Tier, with_globals},
-    output::{Output, Stream, TableSpec},
+    output::{Output, TableSpec},
     prompt::{PromptHistory, WalletConfirmation},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -618,7 +618,7 @@ async fn run_local(
             generated.mnemonic.expose_secret(),
         )
         .map_err(failure)?;
-    let (title, fields, payload) = if both {
+    if both {
         let created_hot = wallet
             .create_new_hotkey(
                 words,
@@ -641,16 +641,16 @@ async fn run_local(
             ("coldkey_ss58".into(), json!(generated.account)),
             ("path".into(), json!(path)),
         ];
-        let mut payload: serde_json::Map<String, Value> = fields.iter().cloned().collect();
-        payload.insert(
-            "coldkey_mnemonic".into(),
-            json!(generated.mnemonic.expose_secret()),
-        );
-        payload.insert(
-            "hotkey_mnemonic".into(),
-            json!(created_hot.mnemonic.expose_secret()),
-        );
-        ("created wallet", fields, Value::Object(payload))
+        ctx.output
+            .secret_detail(
+                Some("created wallet"),
+                &fields,
+                &[
+                    ("coldkey_mnemonic", generated.mnemonic.expose_secret()),
+                    ("hotkey_mnemonic", created_hot.mnemonic.expose_secret()),
+                ],
+            )
+            .map_err(failure)?;
     } else {
         let mut fields = vec![
             ("wallet".into(), json!(ctx.globals.wallet_name)),
@@ -660,21 +660,18 @@ async fn run_local(
         if hot {
             fields.insert(1, ("hotkey".into(), json!(ctx.globals.hotkey_name)));
         }
-        let mut payload: serde_json::Map<String, Value> = fields.iter().cloned().collect();
-        payload.insert("mnemonic".into(), json!(generated.mnemonic.expose_secret()));
-        (
-            if hot {
-                "created hotkey"
-            } else {
-                "created coldkey"
-            },
-            fields,
-            Value::Object(payload),
-        )
-    };
-    ctx.output
-        .detail(Some(title), &fields, Some(&payload))
-        .map_err(failure)?;
+        ctx.output
+            .secret_detail(
+                Some(if hot {
+                    "created hotkey"
+                } else {
+                    "created coldkey"
+                }),
+                &fields,
+                &[("mnemonic", generated.mnemonic.expose_secret())],
+            )
+            .map_err(failure)?;
+    }
     if !ctx.output.options.json_mode {
         ctx.output.message("once stored, wipe the mnemonic from this terminal: run `clear && printf '\\e[3J'` (or clear terminal scrollback)").map_err(failure)?;
     }
@@ -700,17 +697,27 @@ async fn save_password_env(ctx: &AppContext) -> Result<(), CliError> {
         rtao::core::keyfile_env::encode_password_for_environment(&name, password.expose_secret())
             .map_err(failure)?,
     );
-    let command = Zeroizing::new(format!("export {name}={}", encoded.as_str()));
+    let command_length = "export "
+        .len()
+        .checked_add(name.len())
+        .and_then(|length| length.checked_add(1))
+        .and_then(|length| length.checked_add(encoded.len()))
+        .ok_or_else(|| failure("password export is too large"))?;
+    let mut command = Zeroizing::new(String::with_capacity(command_length));
+    command.push_str("export ");
+    command.push_str(&name);
+    command.push('=');
+    command.push_str(&encoded);
     if ctx.output.options().json_mode {
         ctx.output
-            .value(&json!({"name":name,"value":encoded.as_str(),"export":command.as_str()}))
+            .secret_detail(
+                None,
+                &[("name".into(), json!(name))],
+                &[("value", encoded.as_str()), ("export", command.as_str())],
+            )
             .map_err(failure)
     } else {
-        let line = Zeroizing::new(format!("{}\n", command.as_str()));
-        ctx.output
-            .sink()
-            .write(Stream::Stdout, line.as_bytes())
-            .map_err(failure)
+        ctx.output.secret_line(&[command.as_str()]).map_err(failure)
     }
 }
 
