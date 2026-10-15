@@ -11,7 +11,7 @@
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
         "machine": "AMD EPYC 7763 64-Core Processor",
-        "measured_unix_seconds": 1792062728,
+        "measured_unix_seconds": 1792065066,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1440,11 +1440,11 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "0c04aa398db3180d756cfb5f0e645d90b01947c0c3f1d8fed07e833770ed9332",
-            "Cargo.toml": "c87ede86fb43b8ad12309e07fffe39b2c478975abb7c38fda06a92305f855e79",
+            "Cargo.lock": "1d37e155b07ad6cb6cb2a1f4c378a4f42be1959b9c2a5ff614a7b8b810c06dbe",
+            "Cargo.toml": "74ad7579ba744b41b367494ec329ee4a7cc27f5596058a46f01e7d259b4035ff",
             "crates/rtao-btauth/Cargo.toml": "00a6700118a48836e1e313bf83863c7b9c7ea2519df98d83ef62dcea3f8c8d9b",
             "crates/rtao-catalog/Cargo.toml": "60ba030686f56ec52efc3200004081de72e9a1a3a98133c994e0346fec0f99dc",
-            "crates/rtao-cli/Cargo.toml": "b5c0bd2b158aaa41c1bf14baf42e2c6e1a51143a3be0cfd48d19d8c7a99f69a6",
+            "crates/rtao-cli/Cargo.toml": "588f0b6d5a753a31aeb06f2cb689cc81ea132b29fddeae1a29c14289f1d201bf",
             "crates/rtao-client/Cargo.toml": "c281c8e68ad4cc67621f759def76b07ceaec2a419b08355b33fb6dde2f079b8f",
             "crates/rtao-core-ext/Cargo.toml": "3373f7dfb7e74a4a7c9c8948395091fbc811074fc1039f00a18e84bae3641b4e",
             "crates/rtao-core/Cargo.toml": "394fb9f9dfa323aff06f4e369575edd96126c397b30822943f47b641541fe383",
@@ -1464,13 +1464,13 @@
             "upstream.toml": "b74e2a722183b8a5e23ae95c3d5cd5183f78ae16fd581e5aa13330ab7201424c",
             "xtask/Cargo.toml": "35432d81fa57601a519afb304f541b4c6d1ef9e9134ef25d582dfdad1160a0e2"
           },
-          "dependency_inputs_sha256": "64cb37ab4dcbc9ad0c73e23dc1c45353f31bc49fd1f24989fad7c2b2740dca91",
+          "dependency_inputs_sha256": "69631ec1684bb5bdf2137ee1bf85ab6f6efa7171b9dc6c0a90afac41217e0e14",
           "dirty": false,
-          "head_commit": "01b1f7d9af9ba394b51e947ceb6e89675db05741"
+          "head_commit": "a8d2d1a3e3a9b5d459f949bcaf8ea2c9f95922a1"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "78c26b9d1b3e2d682ff1b771d2b12403620a1826515e24bc14236e088c23580e"
+      "sha256": "dddb72fcbe8ee5b1e8178700cba0456a21f6246482e52f85f00a92dd7c4c54a1"
     }
   ],
   "core": {

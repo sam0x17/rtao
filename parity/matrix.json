@@ -1955,6 +1955,16 @@
     ],
     "divergences": [
       {
+        "id": "D-052",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::commands::upgrade::tests::mixed_signer_sources_refuse_and_threshold_one_review_is_executing",
+          "rtao_cli::commands::upgrade::tests::threshold_one_dispatches_full_finalizing_call_with_native_threshold_one_wrapper",
+          "rtao_cli::commands::upgrade::tests::post_review_sudo_change_and_reopened_operation_refuse_before_source"
+        ]
+      },
+      {
         "id": "D-051",
         "oracle": "unverified",
         "rtao": "active",
@@ -2073,7 +2083,8 @@
           "rtao_primitives::money::tests::native_balance_rejects_negative_and_oversized_input",
           "rtao_primitives::money::tests::native_balance_arithmetic_reports_overflow_and_underflow",
           "rtao_primitives::money::tests::native_balance_float_input_is_explicitly_lossy",
-          "rtao_primitives::money::tests::native_balance_keeps_valid_chain_json"
+          "rtao_primitives::money::tests::native_balance_keeps_valid_chain_json",
+          "rtao_cli::m8_misc_commands::rejects_invalid_nonfinite_negative_precision_and_overflow_before_network"
         ]
       },
       {
@@ -2381,7 +2392,10 @@
           "rtao_cli::file_input_contract::sparse_oversized_files_refuse_promptly_and_keep_their_contents",
           "rtao_cli::m7_timelock_commands::boundary_ciphertext_roundtrips_as_prefixed_hex_and_oversized_output_is_not_emitted",
           "rtao_cli::m7_timelock_commands::prompted_large_hex_uses_same_decode_path_and_plaintext_is_omitted_from_replay",
-          "rtao_cli::m7_timelock_commands::oversized_sparse_ciphertext_is_rejected_before_beacon_and_left_unchanged"
+          "rtao_cli::m7_timelock_commands::oversized_sparse_ciphertext_is_rejected_before_beacon_and_left_unchanged",
+          "rtao_wallet::messages::tests::oversized_message_hex_refuses_before_decoding",
+          "rtao_cli::commands::wallet::m8::history::tests::refuses_foreign_pagination_and_cycles_without_following_them",
+          "rtao_cli::commands::wallet::m8::history::tests::malformed_pages_and_aggregate_budget_refuse_without_partial_output"
         ]
       },
       {
@@ -2414,7 +2428,11 @@
           "rtao_cli::book_cache_contract::corrupt_inputs_survive_and_rejected_output_creates_no_backups",
           "rtao_cli::book_cache_contract::cache_rejects_hash_or_data_substitution_before_modifying_any_file",
           "rtao_cli::book_cache_contract::writers_refuse_nonregular_destinations_and_keep_platform_file_guards",
-          "rtao_cli::book_cache_contract::cache_lookup_decodes_exact_bytes_and_ignores_untrusted_presentation_fields"
+          "rtao_cli::book_cache_contract::cache_lookup_decodes_exact_bytes_and_ignores_untrusted_presentation_fields",
+          "rtao_cli::m8_books::address_writers_share_paths_preserve_rows_reorder_replacement_and_exact_signer_tag",
+          "rtao_cli::m8_books::proxy_updates_only_first_match_preserve_coordinates_and_do_not_rewrite_missing_names",
+          "rtao_cli::m8_books::corrupt_books_are_read_only_until_a_valid_bounded_replacement_preserves_recovery_bytes",
+          "rtao_cli::m8_books::oversized_input_and_output_leave_original_book_unchanged"
         ]
       }
     ],
