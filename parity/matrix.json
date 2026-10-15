@@ -7819,11 +7819,12 @@
         "milestone": "M0",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/balance.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_primitives::{DynBalance, Balance<U>, pyfmt}`"
+          "rtao_primitives::{Balance, DynBalance, Tao, Alpha, Symbol, UnitError}",
+          "rtao_primitives::pyfmt"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9fdb0d2f1eebf71b22e4f8259e159297138a1e65"
       },
       {
         "kind": "ported",
@@ -8078,8 +8079,7 @@
         "rust": [
           "rtao_cli::commands::conviction",
           "rtao_cli::commands::{generated, schema}",
-          "rtao_cli::application::compatibility_aliases",
-          "rtao_reads::reads::m6_locks"
+          "rtao_cli::application::compatibility_aliases"
         ],
         "synced_blob": "10cce2a5b71c33c946844f1b82da78993c9eda7a"
       },
@@ -9337,8 +9337,7 @@
         "rtao": "reconciled",
         "rust": [
           "rtao_intents::evm::{FundEvmKey, EvmWithdraw}",
-          "rtao_intents::generated::interfaces",
-          "rtao_primitives::evm"
+          "rtao_intents::generated::interfaces"
         ],
         "synced_blob": "62274b85ee0d003ae650099b83bb1e73dba37533"
       },
@@ -9364,8 +9363,7 @@
         "rust": [
           "rtao_intents::hyperparameters::{SetHyperparameter, owner_parameter, owner_value, owner_call, HyperparamPlanner}",
           "rtao_intents::generated::interfaces",
-          "rtao_catalog::owner_map::OWNER_HYPERPARAMETERS",
-          "rtao_primitives::hyperparams"
+          "rtao_catalog::owner_map::OWNER_HYPERPARAMETERS"
         ],
         "synced_blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63"
       },
@@ -9472,8 +9470,7 @@
         "rtao": "reconciled",
         "rust": [
           "rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}",
-          "rtao_intents::generated::interfaces",
-          "rtao_tx::Executor (outer Sudo wrapper)"
+          "rtao_intents::generated::interfaces"
         ],
         "synced_blob": "dc097fe4177bb426a24552cc0e7109c43e62b438"
       },
@@ -10302,11 +10299,12 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_balance_properties.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "rtao_primitives::money::tests",
+          "rtao_primitives::DynBalance (compile-fail comparison examples)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3c6bc6ebf4ba1a1cc4f9ac9433a48857deabc2c9"
       },
       {
         "kind": "oracle-only",
@@ -10438,7 +10436,7 @@
         "rust": [
           "rtao_btauth::conformance",
           "rtao_btauth::nonce::tests",
-          "vendor/upstream/extracted/btauth.json (produced by xtask::extract)"
+          "vendor/upstream/extracted/btauth.json"
         ],
         "synced_blob": "0a2fdf4710f4c6a3868aad7f300414775e218d71"
       },
