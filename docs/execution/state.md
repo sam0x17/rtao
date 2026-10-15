@@ -62,23 +62,35 @@ Qualify that existing public type's link without changing behavior or lint
 policy. The 782,118-byte log has SHA256
 `8343a0f3afc901d20745f0f6b5d1c12f053e0f33d7fa7feac4c18141ca115394`;
 bounded proof is `check-38814558931.json`. Book generation was not reached.
-Newer precompile extraction, CLI canonical-signature notice,
-nested Utility.batch and positive offline reconstruction fixtures still
-require exact-source hosted execution. The hand-authored positive fuzz seed
-has not been executed or validated, and no sanitizer coverage is claimed.
-
 Ordinary [38818850318](https://github.com/sam0x17/rtao/actions/runs/38818850318)
-is running at `f21c0919fcf42a73c09e9903d8a8bffa3180d562`, covering the adopted
-precompile output and corrected CLI documentation link. All five supporting
-jobs have passed; preserve its live main check.
+completed at `f21c0919fcf42a73c09e9903d8a8bffa3180d562`. All five supporting
+jobs passed. The main gate ran 2,977 tests: 2,976 passed, one failed, four skipped.
+The failure is the extractor's constructor-semantic refusal fixture; doctests
+and documentation were not reached. The exact 773,213-byte log has SHA256
+`572428c4f9513974a72b200c53e5fc947ab20fe882f258bccf469a74b5818754`;
+bounded proof is `check-38818850318.json`.
+
+An authenticated second read of that immutable log confirms seven exact named
+passes: positive unsigned-seed reconstruction/signing/attachment, Utility.batch
+roundtrip, all three canonical CLI notice fixtures, source-table mutations and
+comprehension refusals. Proof is `f21c091-named-test-results.json`. The positive
+seed is validated through its ordinary fixture; fuzz-driver/sanitizer execution,
+fresh Python/oracle results and newer-source test success remain unclaimed.
+
+The failed refusal comes from RustPython 0.4 dropping singleton parentheses and
+deriving AnnAssign.simple from the remaining Name node. The lexical correction
+checks the original statement-to-name source span, retaining the parenthesized
+case and adding nested/index variants plus exact mutation diagnostics. Direct
+formatting and source inspection pass; hosted execution of the correction is
+still required.
 
 Source checkpoint `d8db07d` repairs terminal policy refusals during paced
 reconnect setup, with four real-session regression fixtures. It also normalizes
 public RPC diagnostic text while retaining typed causes and policy metadata,
 with eleven fake-startup vectors. Both patches passed independent source review
 and direct formatting checks; neither has executed in hosted tests yet.
-Complete substrate/interface reviews add two qualified source dispositions;
-the source map and generated matrix agree at 282 reconciled and 75 pending.
+Complete substrate/interface reviews added two qualified source dispositions;
+at that checkpoint the map and matrix agreed at 282 reconciled and 75 pending.
 Native read/write API ownership, raw pool-only submission and map-presence
 capability/coverage limits are documented.
 The next source checkpoint repairs fragmented HTTP rejection-body diagnostics.
@@ -97,13 +109,16 @@ by authenticated adopted output and source changes; full selector/runtime/oracle
 execution remains unclaimed. RPC retains explicit typed/budget/replay policies
 and the inherited pre-ack subscription-cancellation limitation.
 
-The retained TLS stream needs a direct edge to the existing tokio-rustls
-package. Both workspace and fuzz locks await bounded hosted regeneration;
-the hand-authored lock candidate was excluded from source adoption. The existing
-lock job now emits both locks, rejects changed package identities or unreviewed
-edges, and shares one 170-second resolver deadline. Normal validation follows
-lock adoption. The main gate also checks documentation before nextest/doctests,
-preserving every command while catching documentation failures earlier.
+Hosted lock refresh
+[38822187126](https://github.com/sam0x17/rtao/actions/runs/38822187126) succeeded
+at clean `cc32b5d011514ddf399c8ebe3f21e83643d819cd`. Its artifact was authenticated
+and independently fetched twice; both generated locks are adopted. Each adds only
+the existing rtao-rpc -> tokio-rustls edge; all package identities and other
+bytes are unchanged. The handwritten candidate was excluded. Bounded proof is
+`cc32b5d-lock-adoption.json`, without archives or extraction trees. The existing
+resolver checks both locks under one 170-second deadline. Source reports still
+need refresh before ordinary validation. The main gate now checks documentation
+before nextest/doctests, preserving every command and catching link failures earlier.
 
 All current work follows Q30. Local target output remains 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.
