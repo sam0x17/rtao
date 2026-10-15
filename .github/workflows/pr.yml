@@ -283,11 +283,13 @@ jobs:
           build-warnings: ""
       - name: Resolve reviewed existing dependency edges without building
         run: timeout 180s node ci/resolve-existing-lock.mjs
-      - name: Retain candidate dependency lock for review
+      - name: Retain candidate dependency locks for review
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lock-${{ github.sha }}
-          path: Cargo.lock
+          path: |
+            Cargo.lock
+            fuzz/Cargo.lock
           if-no-files-found: error
           retention-days: 3
 

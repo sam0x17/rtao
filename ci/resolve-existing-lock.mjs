@@ -28,22 +28,33 @@ function packages(text) {
   return result;
 }
 
-const beforeText = execFileSync('git', ['show', 'HEAD:Cargo.lock'], { encoding: 'utf8', maxBuffer: 1048576 });
-if (readFileSync('Cargo.lock', 'utf8') !== beforeText) throw new Error('Lock refresh requires its committed baseline.');
-const before = packages(beforeText);
-execFileSync('cargo', ['update', '--workspace'], { stdio: 'inherit', timeout: 170000 });
-const after = packages(readFileSync('Cargo.lock', 'utf8'));
-if (before.size !== after.size) throw new Error('Lock refresh changed package inventory.');
-const additions = new Map([['rtao-cli', 'nix'], ['rtao-wallet', 'rustix']]);
-const changed = [];
-for (const [identity, old] of before) {
-  const current = after.get(identity);
-  if (!current || old.rest !== current.rest) throw new Error(`Changed package identity or metadata: ${identity}`);
-  const added = current.dependencies.filter(value => !old.dependencies.includes(value));
-  const removed = old.dependencies.filter(value => !current.dependencies.includes(value));
-  if (removed.length || added.some(value => value !== additions.get(old.name))) {
-    throw new Error(`Unreviewed dependency edge change: ${old.name}`);
+const additions = new Map([
+  ['rtao-cli', 'nix'],
+  ['rtao-wallet', 'rustix'],
+  ['rtao-rpc', 'tokio-rustls'],
+]);
+const deadline = Date.now() + 170000;
+const reports = [];
+for (const [lock, manifest] of [['Cargo.lock', 'Cargo.toml'], ['fuzz/Cargo.lock', 'fuzz/Cargo.toml']]) {
+  const beforeText = execFileSync('git', ['show', `HEAD:${lock}`], { encoding: 'utf8', maxBuffer: 1048576 });
+  if (readFileSync(lock, 'utf8') !== beforeText) throw new Error(`Lock refresh requires its committed baseline: ${lock}`);
+  const before = packages(beforeText);
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) throw new Error('Lock refresh deadline elapsed.');
+  execFileSync('cargo', ['update', '--workspace', '--manifest-path', manifest], { stdio: 'inherit', timeout: remaining });
+  const after = packages(readFileSync(lock, 'utf8'));
+  if (before.size !== after.size) throw new Error(`Lock refresh changed package inventory: ${lock}`);
+  const changed = [];
+  for (const [identity, old] of before) {
+    const current = after.get(identity);
+    if (!current || old.rest !== current.rest) throw new Error(`Changed package identity or metadata: ${identity}`);
+    const added = current.dependencies.filter(value => !old.dependencies.includes(value));
+    const removed = old.dependencies.filter(value => !current.dependencies.includes(value));
+    if (removed.length || added.some(value => value !== additions.get(old.name))) {
+      throw new Error(`Unreviewed dependency edge change: ${old.name}`);
+    }
+    if (added.length) changed.push({ package: old.name, added });
   }
-  if (added.length) changed.push({ package: old.name, added });
+  reports.push({ lock, changed, packages: after.size });
 }
-console.log(JSON.stringify({ changed, packages: after.size, claim: 'Existing package identities preserved; candidate lock still requires source review.' }));
+console.log(JSON.stringify({ reports, claim: 'Existing package identities preserved; candidate locks still require source review.' }));

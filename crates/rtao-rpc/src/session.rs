@@ -22,16 +22,13 @@ use std::{
 };
 use subxt_rpcs::client::{RawRpcFuture, RawRpcSubscription, RpcClientT};
 use tokio::{
-    net::TcpStream,
     sync::{broadcast, mpsc, oneshot, watch},
     time::{Instant, sleep, sleep_until, timeout},
 };
-use tokio_tungstenite::{
-    Connector, MaybeTlsStream, WebSocketStream, connect_async_tls_with_config,
-    tungstenite::{Message, client::IntoClientRequest, protocol::WebSocketConfig},
-};
+use tokio_tungstenite::tungstenite::Message;
 use url::Url;
-type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+mod handshake;
+use handshake::{Socket, connect_socket};
 type Response = Result<Reply, WireError>;
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -1675,57 +1672,6 @@ fn tls_config_with_roots(
     tls.alpn_protocols = vec![b"http/1.1".to_vec()];
     Ok(Arc::new(tls))
 }
-async fn connect_socket(
-    config: &SessionConfig,
-    url: &Url,
-    tls: Arc<rustls::ClientConfig>,
-) -> Result<Socket, RpcError> {
-    let mut request = url
-        .as_str()
-        .into_client_request()
-        .map_err(|error| RpcError::Protocol(error.to_string()))?;
-    for (name, value) in &config.headers {
-        let mut value = value.clone();
-        value.set_sensitive(true);
-        request.headers_mut().append(name, value);
-    }
-    let websocket = WebSocketConfig::default()
-        .max_message_size(Some(config.max_message_bytes))
-        .max_frame_size(Some(config.max_message_bytes));
-    let connection = connect_async_tls_with_config(
-        request,
-        Some(websocket),
-        false,
-        Some(Connector::Rustls(tls)),
-    );
-    let result = timeout(config.handshake_timeout, connection)
-        .await
-        .map_err(|_| RpcError::Timeout {
-            detail: format!(
-                "no response during the WebSocket handshake with {} after {:.0}s",
-                policy::safe_endpoint(url.as_str()),
-                config.handshake_timeout.as_secs_f64()
-            ),
-        })?;
-    match result {
-        Ok((socket, _)) => Ok(socket),
-        Err(tokio_tungstenite::tungstenite::Error::Http(response)) => {
-            let status = response.status().as_u16();
-            let body = response.body().as_deref();
-            if let Some(policy) = policy::classify_handshake(status, response.headers(), body) {
-                Err(RpcError::Policy(Box::new(policy)))
-            } else {
-                let detail = body.map(policy::response_detail).unwrap_or_default();
-                Err(RpcError::Handshake { status, detail })
-            }
-        }
-        Err(error) => Err(RpcError::Transport(policy::safe_diagnostic(
-            &error.to_string(),
-            generated::py_rpc::POLICY_DETAIL_LIMIT,
-        ))),
-    }
-}
-
 #[cfg(test)]
 mod tls_tests {
     use super::*;
