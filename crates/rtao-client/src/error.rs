@@ -89,24 +89,10 @@ impl ClientError {
         }
     }
 
-    /// Normalize transport errors at the Python public boundary.
-    pub fn public_rpc(mut error: RpcError) -> Self {
-        let replacement = match &error {
-            RpcError::Timeout { detail } if detail.trim().is_empty() => {
-                Some("the connection timed out without a response")
-            }
-            RpcError::Transport(detail) | RpcError::Protocol(detail)
-                if detail.trim().is_empty() =>
-            {
-                Some("the RPC connection failed without an error detail")
-            }
-            _ => None,
-        };
-        if let Some(detail) = replacement {
-            error = RpcError::Timeout {
-                detail: detail.into(),
-            };
-        }
+    /// Preserve the transport cause and metadata at the public boundary.
+    ///
+    /// Display normalizes the public text without rewriting the typed cause.
+    pub fn public_rpc(error: RpcError) -> Self {
         Self::Rpc(error)
     }
 }
@@ -114,7 +100,26 @@ impl ClientError {
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Rpc(error) => error.fmt(f),
+            Self::Rpc(RpcError::Policy(policy)) => fmt::Display::fmt(policy, f),
+            Self::Rpc(error) => {
+                let detail = error.to_string();
+                // Match Python str.strip, including its four C0 separators.
+                // The primitive helper is crate-private; this is the same
+                // predicate used by this crate's Python config readers.
+                let detail = detail.trim_matches(|character: char| {
+                    character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}')
+                });
+                let detail = if detail.is_empty() {
+                    if matches!(error, RpcError::Timeout { .. }) {
+                        "the connection timed out without a response"
+                    } else {
+                        "the RPC connection failed without an error detail"
+                    }
+                } else {
+                    detail
+                };
+                f.write_str(detail)
+            }
             Self::Decode { what, source } => write!(f, "cannot decode {what}: {source}"),
             Self::RuntimeApiUnavailable { api, method } => {
                 write!(f, "runtime API unavailable: {api}.{method}")

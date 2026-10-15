@@ -1460,6 +1460,13 @@ The core parses V14 and V15 and rejects V16 (`CORE/runtime/mod.rs:163-199` [V]).
 
 ### 3.5 Views, snapshots and pinning
 
+Python's public `Substrate` protocol combines reads, signing and result-returning writes
+(`PY/_substrate.py:77-302`). The native API separates those responsibilities: `View`/`DynView` provide read
+capabilities, `Client` owns the connected RPC, nonce and signing state, and `Executor` applies write policy and
+lifts reports into `ExtrinsicResult`. `Client::from_rpc` accepts injected transports, including `FakeChain`, for
+write fixtures; implementing a custom `View` alone does not implement a write backend. The blocking facade
+delegates to the same client and executor. The mutable Python protocol's responsibilities have typed API owners.
+
 ```rust
 pub enum BlockRef { Best, Finalized, Number(u64), Hash(H256) }
 pub enum HeadPolicy { Best /* Python parity for head reads */, Finalized /* neuron runtimes; but the weight preflight reads at Best, §9.3 step 2 */ }
@@ -1498,6 +1505,11 @@ impl ClientError {
     pub fn policy(&self) -> Option<&PolicyRefusal>;   // so a neuron can honor retry_after on -32004/-32005
 }
 ```
+
+`ClientError::Rpc` preserves its original typed cause and `Error::source`. Its public display follows Python's
+`str(error).strip()`, including U+001C through U+001F. Blank timeouts receive the timeout fallback; other blank
+errors receive the generic connection fallback. Policy errors retain their separate sanitized display and
+structured metadata. Normalizing the displayed text never changes the stored variant or unknown-fate hash.
 
 - `client.at(BlockRef)` resolves `n → hash` once. It uses the finalized-only hash cache, re-probing the finalized
   height at most every 12 s (Python's reorg safety, `PY/_transport/interface.py:187-230`).
@@ -1548,6 +1560,20 @@ pub trait ViewExt: View {   // provided methods, generic over View (RPITIT; show
   Python's private `SubstrateConnection.query_map(ignore_decoding_errors=True)`, reachable through
   `RpcSubstrate.raw`, can retain a decoded value with an undecodable whole key represented as `None`; rtao omits
   this private option. Supported Python `Substrate`, `Client`, `Snapshot` and sync map methods use strict defaults.
+
+Python's public `map_has_entries` capability is available through native view and runtime primitives. Pin once,
+resolve the storage entry from that snapshot, reject a non-map or a prefix that supplies every key component,
+and encode the remaining map prefix with the runtime's key types and hashers. Call
+`View::keys_paged(&snapshot, &prefix, 1, Some(&prefix))` and inspect key nonemptiness without fetching values.
+The exclusive cursor matches Python's encoded-prefix start. Metadata and RPC errors propagate. There is no
+dedicated native convenience wrapper or complete probe-contract fixture. The owner trim queue consumer uses
+one-key probes, but its two-map scan and final pre-sign recheck do not establish identical null-pruning behavior.
+
+Native map streams use 256-key pages and pin the entire scan. Python's `QueryMapResult` defaults to 100 keys,
+retains loaded records and private iteration/page options, and can resolve a fresh head on later pages when its
+original selector is absent. Those object and request semantics are not part of the native stream API. Likewise,
+the native finalized-number cache is a 512-entry FIFO without Python's reverse LRU; the 12-second finalized
+height probe remains, while exact expiry/eviction fixture coverage is unverified.
 
 **Coalesced reads (`ReadPlan`)** address [J-PD concern 6]. `fetch` takes a tuple of up to 16 `StorageQuery` values
 (macro-generated impls). It builds every key from the live runtime, issues **one** `state_queryStorageAt(keys, hash)` at
@@ -1858,6 +1884,17 @@ zero.
   (`UP/runtime/src/transaction_payment_wrapper.rs:265-303`, [R] C1 §0.5).
 
 #### 3.9.3 Sign, assemble, submit, watch
+
+The public `Client::submit_signed_raw(bytes, signer_address)` escape hatch returns a pool-acknowledged `H256`
+and clears the signer's cached nonce on failure, cancellation or shutdown. It has no wait option and does not
+return an inclusion result. The public watched external-signing path is an authenticated `UnsignedExtrinsic`
+plus `MultiSignature` passed to `Client::submit_signature` (§3.14); `Executor::submit_signature` adds raw-call
+policy and domain result lifting. Ordinary, multisig and shield submissions share the internal watch/receipt
+path. A public API that waits on arbitrary presigned bytes is not part of this typed factoring.
+
+Receipt lookup is factored similarly: public `Client::find_extrinsic` returns the matching index or `None`,
+and `resolve_extrinsic` returns the resolved `ExtrinsicReport`. The executor owns conversion into
+`ExtrinsicResult`. These methods provide the native representations of Python's combined lookup/result wrapper.
 
 1. `(extra, additional) = runtime.signature_payload_parts(&params)`;
    `payload = runtime.signature_payload(call, &params)`, which is blake2-256 above 256 bytes.

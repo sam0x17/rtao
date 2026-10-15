@@ -59,6 +59,22 @@ nested Utility.batch and positive offline reconstruction fixtures still
 require exact-source hosted execution. The hand-authored positive fuzz seed
 has not been executed or validated, and no sanitizer coverage is claimed.
 
+Ordinary [38818850318](https://github.com/sam0x17/rtao/actions/runs/38818850318)
+is running at `f21c0919fcf42a73c09e9903d8a8bffa3180d562`, covering the adopted
+precompile output and corrected CLI documentation link. Preserve this run.
+
+The next source checkpoint repairs terminal policy refusals during paced
+reconnect setup, with four real-session regression fixtures. It also normalizes
+public RPC diagnostic text while retaining typed causes and policy metadata,
+with eleven fake-startup vectors. Both patches passed independent source review
+and direct formatting checks; neither has executed in hosted tests yet.
+Complete substrate/interface reviews add two qualified source dispositions,
+bringing the map to 282 reconciled and 75 pending; the generated matrix remains
+at 280 until hosted refresh/adoption. Native read/write API ownership, raw
+pool-only submission and map-presence capability/coverage limits are documented.
+The RPC source row stays pending: fragmented HTTP rejection bodies can still
+lose diagnostic text, and that separate repair remains under design review.
+
 All current work follows Q30. Local target output remains 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.
 No local builds/tests, new temporary root, node, Mac Studio work, device run

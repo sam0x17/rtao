@@ -215,3 +215,90 @@ async fn raw_submission_cancellation_and_shutdown_clear_without_changing_the_non
         assert_eq!(client.nonces().cached("5Signer").await, None);
     }
 }
+
+#[tokio::test]
+async fn public_connection_error_text_uses_python_strip_without_rewriting_typed_causes() {
+    let separators = "\u{1c}\u{1d}\u{1e}\u{1f}\t";
+    for (cause, expected) in [
+        (
+            RpcError::Timeout {
+                detail: " \u{1c} timed out \u{1f}\n".into(),
+            },
+            "timed out",
+        ),
+        (
+            RpcError::MaxRetriesExceeded {
+                detail: "\u{1d} no response \u{1e}".into(),
+            },
+            "no response",
+        ),
+        (
+            RpcError::Transport("\u{1f} transport sentinel \u{1c}".into()),
+            "transport sentinel",
+        ),
+        (
+            RpcError::Protocol("\u{1e} protocol sentinel \u{1d}".into()),
+            "protocol sentinel",
+        ),
+        (
+            RpcError::Timeout {
+                detail: separators.into(),
+            },
+            "the connection timed out without a response",
+        ),
+        (
+            RpcError::MaxRetriesExceeded {
+                detail: separators.into(),
+            },
+            "the RPC connection failed without an error detail",
+        ),
+        (
+            RpcError::Transport(separators.into()),
+            "the RPC connection failed without an error detail",
+        ),
+        (
+            RpcError::Protocol(separators.into()),
+            "the RPC connection failed without an error detail",
+        ),
+        (
+            RpcError::MaxRetriesExceeded {
+                detail: String::new(),
+            },
+            "the RPC connection failed without an error detail",
+        ),
+        (
+            RpcError::Handshake {
+                status: 502,
+                detail: "gateway sentinel \u{1f}\r".into(),
+            },
+            "RPC endpoint rejected the WebSocket handshake (HTTP 502): gateway sentinel",
+        ),
+        (
+            RpcError::FateUnknown {
+                hash: H256([7; 32]),
+            },
+            "Connection dropped while an extrinsic submission was in flight; the transaction may already be in the pool or on chain. Verify chain state before retrying.",
+        ),
+    ] {
+        // Exercise the actual injected transport -> startup public boundary.
+        let raw = FakeChain::from_state(FakeState::default());
+        raw.queue_transport_error(
+            "chain_getBlockHash",
+            subxt_rpcs::Error::Client(Box::new(cause.clone())),
+        );
+        let error = Client::from_rpc(RpcClient::new(raw), config())
+            .await
+            .unwrap_err();
+        assert_eq!(error.to_string(), expected);
+        let rtao_client::ClientError::Rpc(retained) = &error else {
+            panic!("transport error lost its typed public cause")
+        };
+        assert_eq!(retained, &cause);
+        assert_eq!(
+            std::error::Error::source(&error).and_then(|source| source.downcast_ref::<RpcError>()),
+            Some(&cause)
+        );
+    }
+    // The separate rpc_substrate_exposes_public_policy_error fixture retains
+    // independent exact payload/retry/policy/reason and safe-display assertions.
+}
