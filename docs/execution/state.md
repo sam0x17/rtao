@@ -23,7 +23,7 @@ pending. Seven EVM input corrections
 preserve exact-empty option semantics, one shared fund-all decision and the
 alpha-only root guard. Fourteen new injected fixture functions exercise actual
 handlers, intent construction, ABI words, preview/confirmation and refusal
-boundaries. They have not compiled or executed yet. A distinct-price basket
+boundaries. They compiled under hosted Clippy but have not executed yet. A distinct-price basket
 fixture now detects incorrect dust inclusion and the exact cutoff.
 
 The same batch repairs first-approval journal authentication: derive the original
@@ -62,7 +62,21 @@ identities and other compatibility claims are unchanged. Inspection and adoption
 proofs are `d2d5add-report-inspection.json` and `d2d5add-report-adoption.json`.
 The timer patch has independent source approval in
 `null-pruning-wait-independent-review.txt`; its three fixtures and the integrated
-compiler, transport, extractor and documentation fixes await ordinary hosted CI.
+compiler, transport and extractor fixtures await ordinary hosted execution.
+
+Ordinary [38827263561](https://github.com/sam0x17/rtao/actions/runs/38827263561)
+at `dc5c09a8a0e451eaee256cfc517b5a68c8782b56` passed all five supporting
+jobs: supply, MSRV, feature graphs, semver and no-host. Its main job passed
+Clippy for all targets and all source/pin/extraction checks, then failed strict
+rustdoc on two unqualified module links to timelock `seal` and `open`.
+Qualify both public targets without changing behavior or lint policy.
+The 106,372-byte terminal log has SHA256
+`e30baf51a75ef2456d0d676950754e4be50e48c07bd0e9350cbc8dcc331bdafd`;
+bounded proof is `check-38827263561.json`. Docs precede nextest in the current
+gate, so behavior tests and workspace doctests were not reached. The compiler
+corrections are verified, but current fixture execution and documentation
+completion remain unverified. The separate weights, staking and source-map
+proposals remain ignored and unapplied while this documentation gate is fixed.
 
 Ordinary [38824416747](https://github.com/sam0x17/rtao/actions/runs/38824416747)
 at `d9ae66842d0cdb261b353ea0284b1f5936c324b4` passed supply, MSRV and
