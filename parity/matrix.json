@@ -8449,11 +8449,12 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/null_pruning.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `hparams trim-null`; `rtao_neuron::OwnerOps::trim_null`"
+          "crates/rtao-cli/src/commands/hparams.rs",
+          "crates/rtao-neuron/src/owner_ops/trim.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c85a57d552b50b3445dff75022909425cc8d320e"
       },
       {
         "kind": "ported",
@@ -9614,11 +9615,15 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/staking.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::staking` (feature `staking`)"
+          "crates/rtao-intents/src/staking_trades.rs",
+          "crates/rtao-intents/src/staking_claims.rs",
+          "crates/rtao-intents/src/staking_baskets.rs",
+          "crates/rtao-intents/src/lock.rs",
+          "crates/rtao-intents/src/arguments.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121"
       },
       {
         "kind": "ported",
@@ -9637,11 +9642,13 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/weights.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::weights` (feature `weights`)"
+          "crates/rtao-intents/src/weights/math.rs",
+          "crates/rtao-intents/src/weights/intents.rs",
+          "crates/rtao-intents/src/arguments.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c"
       },
       {
         "kind": "ported",

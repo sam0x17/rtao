@@ -295,6 +295,369 @@ fn clone_binding(binding: &Binding, budget: &Cell<usize>) -> Result<Binding> {
     Ok(binding.clone())
 }
 
+// The samples producer is a deliberately small static adapter. In these three
+// modules only imports and inert declarations may run before addresses are
+// extracted. Reject new executable forms rather than guessing their effects on
+// the imported native class, including effects hidden behind symbolic aliases.
+fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt]) -> Result<()> {
+    fn expression(value: &ast::Expr, depth: usize) -> Result<()> {
+        ensure!(
+            depth < MAX_DEPTH,
+            "sample producer expression nesting exceeds bound"
+        );
+        match value {
+            ast::Expr::Constant(_) | ast::Expr::Name(_) => Ok(()),
+            ast::Expr::Attribute(attribute) => {
+                if let ast::Expr::Call(call) = &*attribute.value {
+                    ensure!(
+                        attribute.attr.as_str() == "ss58_address"
+                            && call_path(&call.func).as_deref() == Some("Keypair.create_from_uri")
+                            && call.args.len() == 1
+                            && call.keywords.is_empty()
+                            && matches!(&call.args[0], ast::Expr::Constant(value)
+                                if matches!(&value.value, ast::Constant::Str(uri)
+                                    if matches!(uri.as_str(), "//Alice" | "//Alice//hot" | "//Bob" | "//Bob//hot"))),
+                        "sample producer executes an unsupported constructor expression"
+                    );
+                    Ok(())
+                } else {
+                    expression(&attribute.value, depth + 1)
+                }
+            }
+            ast::Expr::List(value) => sequence(&value.elts, depth + 1),
+            ast::Expr::Tuple(value) => sequence(&value.elts, depth + 1),
+            ast::Expr::Set(value) => sequence(&value.elts, depth + 1),
+            ast::Expr::Dict(value) => {
+                for key in &value.keys {
+                    expression(
+                        key.as_ref()
+                            .context("sample producer dictionary expansion")?,
+                        depth + 1,
+                    )?;
+                }
+                sequence(&value.values, depth + 1)
+            }
+            ast::Expr::BinOp(_) | ast::Expr::UnaryOp(_) => literal_arithmetic(value, depth + 1),
+            _ => bail!("sample producer executes an unsupported expression"),
+        }
+    }
+    fn sequence(values: &[ast::Expr], depth: usize) -> Result<()> {
+        for value in values {
+            expression(value, depth)?;
+        }
+        Ok(())
+    }
+    fn literal_arithmetic(value: &ast::Expr, depth: usize) -> Result<()> {
+        ensure!(
+            depth < MAX_DEPTH,
+            "sample producer arithmetic nesting exceeds bound"
+        );
+        match value {
+            ast::Expr::Constant(_) => Ok(()),
+            ast::Expr::BinOp(value) => {
+                literal_arithmetic(&value.left, depth + 1)?;
+                literal_arithmetic(&value.right, depth + 1)
+            }
+            ast::Expr::UnaryOp(value) => literal_arithmetic(&value.operand, depth + 1),
+            _ => bail!("sample producer arithmetic must use literal operands"),
+        }
+    }
+    fn defaults(arguments: &ast::Arguments) -> Result<()> {
+        for argument in arguments
+            .posonlyargs
+            .iter()
+            .chain(&arguments.args)
+            .chain(&arguments.kwonlyargs)
+        {
+            if let Some(value) = &argument.default {
+                expression(value, 0)?;
+            }
+        }
+        Ok(())
+    }
+    fn aliases(names: &[ast::Alias]) -> String {
+        names
+            .iter()
+            .map(|name| match &name.asname {
+                Some(alias) => format!("{}={alias}", name.name),
+                None => name.name.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+    fn callback_dependency(path: &str, class_body: bool, name: &str) -> Result<()> {
+        ensure!(
+            path != "sdk/python/bittensor/keyfiles.py"
+                || class_body
+                || !matches!(name, "AttributeError" | "getattr"),
+            "sample producer import callback dependency shadowed"
+        );
+        Ok(())
+    }
+    fn body(
+        path: &str,
+        source: &str,
+        statements: &[ast::Stmt],
+        keypair_exports: &mut usize,
+        imports: &mut Vec<String>,
+        class_body: bool,
+        depth: usize,
+    ) -> Result<()> {
+        ensure!(
+            depth < MAX_DEPTH,
+            "sample producer declaration nesting exceeds bound"
+        );
+        let mut declarations = false;
+        for statement in statements {
+            match statement {
+                ast::Stmt::Import(import) if !class_body => {
+                    ensure!(
+                        !declarations,
+                        "sample producer imports must precede declarations"
+                    );
+                    imports.push(format!("import:{}", aliases(&import.names)));
+                }
+                ast::Stmt::ImportFrom(import) if !class_body => {
+                    ensure!(
+                        !declarations,
+                        "sample producer imports must precede declarations"
+                    );
+                    imports.push(format!(
+                        "from:{}:{}:{}",
+                        import.level.map_or(0, |level| level.to_usize()),
+                        import.module.as_ref().map_or("", |module| module.as_str()),
+                        aliases(&import.names)
+                    ));
+                }
+                ast::Stmt::Assign(assign) => {
+                    declarations = true;
+                    ensure!(
+                        !class_body,
+                        "sample producer class value declarations require review"
+                    );
+                    for target in &assign.targets {
+                        let ast::Expr::Name(name) = target else {
+                            bail!("sample producer writes an unsupported assignment target")
+                        };
+                        callback_dependency(path, class_body, name.id.as_str())?;
+                        ensure!(
+                            class_body
+                                || !name.id.as_str().starts_with("__")
+                                || !name.id.as_str().ends_with("__")
+                                || name.id.as_str() == "__all__",
+                            "sample producer module callback binding changed"
+                        );
+                        ensure!(
+                            name.id.as_str() != "_backend",
+                            "sample producer backend binding changed"
+                        );
+                        if name.id.as_str() == "Keypair" {
+                            ensure!(
+                                path == "sdk/python/bittensor/sp_core.py"
+                                    && !class_body
+                                    && *keypair_exports == 0
+                                    && call_path(&assign.value).as_deref()
+                                        == Some("_backend.Keypair"),
+                                "sample producer Keypair export changed"
+                            );
+                            *keypair_exports += 1;
+                        }
+                    }
+                    expression(&assign.value, 0)?;
+                }
+                ast::Stmt::AnnAssign(assign) => {
+                    declarations = true;
+                    ensure!(
+                        !class_body,
+                        "sample producer class value declarations require review"
+                    );
+                    if let ast::Expr::Name(name) = &*assign.target {
+                        callback_dependency(path, class_body, name.id.as_str())?;
+                    }
+                    ensure!(
+                        matches!(&*assign.target, ast::Expr::Name(_)),
+                        "sample producer writes an unsupported annotated target"
+                    );
+                    ensure!(
+                        class_body
+                            || !matches!(&*assign.target, ast::Expr::Name(name) if name.id.as_str().starts_with("__") && name.id.as_str().ends_with("__") && name.id.as_str() != "__all__"),
+                        "sample producer module callback binding changed"
+                    );
+                    ensure!(
+                        !matches!(&*assign.target, ast::Expr::Name(name) if matches!(name.id.as_str(), "Keypair" | "_backend")),
+                        "sample producer constructor binding changed"
+                    );
+                    if let Some(value) = &assign.value {
+                        expression(value, 0)?;
+                    }
+                }
+                ast::Stmt::FunctionDef(function) => {
+                    declarations = true;
+                    callback_dependency(path, class_body, function.name.as_str())?;
+                    ensure!(
+                        !class_body
+                            || !function.name.as_str().starts_with("__")
+                            || !function.name.as_str().ends_with("__")
+                            || matches!(function.name.as_str(), "__init__" | "__repr__"),
+                        "sample producer class callback changed"
+                    );
+                    ensure!(
+                        !matches!(function.name.as_str(), "Keypair" | "_backend"),
+                        "sample producer constructor function shadowed"
+                    );
+                    ensure!(
+                        function.decorator_list.is_empty() && function.type_params.is_empty(),
+                        "sample producer function decorators require review"
+                    );
+                    if !class_body
+                        && function.name.as_str().starts_with("__")
+                        && function.name.as_str().ends_with("__")
+                    {
+                        let text = source
+                            .get(
+                                function.range().start().to_usize()
+                                    ..function.range().end().to_usize(),
+                            )
+                            .context("sample producer module callback span")?;
+                        ensure!(
+                            path == "sdk/python/bittensor/keyfiles.py"
+                                && function.name.as_str() == "__getattr__"
+                                && format!("{:x}", Sha256::digest(text.as_bytes()))
+                                    == "0ec9544796c87b43d5002ace0376da5f46543be3a374ea9a5194fcbd922d4afc",
+                            "sample producer module import callback changed"
+                        );
+                    }
+                    defaults(&function.args)?;
+                    // Function bodies are not executed by defining the module.
+                    // The reviewed module import callback above is the exception.
+                    // A later explicit opaque call is outside this static surface.
+                }
+                ast::Stmt::AsyncFunctionDef(function) => {
+                    declarations = true;
+                    callback_dependency(path, class_body, function.name.as_str())?;
+                    ensure!(
+                        !class_body
+                            || !function.name.as_str().starts_with("__")
+                            || !function.name.as_str().ends_with("__")
+                            || matches!(function.name.as_str(), "__init__" | "__repr__"),
+                        "sample producer class callback changed"
+                    );
+                    ensure!(
+                        class_body
+                            || !function.name.as_str().starts_with("__")
+                            || !function.name.as_str().ends_with("__"),
+                        "sample producer module callback changed"
+                    );
+                    ensure!(
+                        !matches!(function.name.as_str(), "Keypair" | "_backend"),
+                        "sample producer constructor function shadowed"
+                    );
+                    ensure!(
+                        function.decorator_list.is_empty() && function.type_params.is_empty(),
+                        "sample producer function decorators require review"
+                    );
+                    defaults(&function.args)?;
+                }
+                ast::Stmt::ClassDef(class) => {
+                    declarations = true;
+                    callback_dependency(path, class_body, class.name.as_str())?;
+                    ensure!(
+                        path == "sdk/python/bittensor/keyfiles.py"
+                            && !class_body
+                            && class.name.as_str() == "Keyfile",
+                        "sample producer extra class requires review"
+                    );
+                    ensure!(
+                        class_body
+                            || !class.name.as_str().starts_with("__")
+                            || !class.name.as_str().ends_with("__"),
+                        "sample producer module callback class changed"
+                    );
+                    ensure!(
+                        !matches!(class.name.as_str(), "Keypair" | "_backend"),
+                        "sample producer constructor class shadowed"
+                    );
+                    ensure!(
+                        class.decorator_list.is_empty()
+                            && class.bases.is_empty()
+                            && class.keywords.is_empty()
+                            && class.type_params.is_empty(),
+                        "sample producer class construction requires review"
+                    );
+                    body(
+                        path,
+                        source,
+                        &class.body,
+                        keypair_exports,
+                        imports,
+                        true,
+                        depth + 1,
+                    )?;
+                }
+                ast::Stmt::Expr(value) if matches!(&*value.value, ast::Expr::Constant(value) if matches!(&value.value, ast::Constant::Str(_))) =>
+                    {}
+                ast::Stmt::Pass(_) => {}
+                _ => bail!("sample producer executes an unsupported statement"),
+            }
+        }
+        Ok(())
+    }
+
+    let expected: &[&str] = match path {
+        "sdk/python/tests/harness/samples.py" => &[
+            "from:0:__future__:annotations",
+            "from:0:types:SimpleNamespace",
+            "from:0:bittensor.keyfiles:Keypair",
+        ],
+        "sdk/python/bittensor/keyfiles.py" => &[
+            "from:0:__future__:annotations",
+            "import:os",
+            "import:sys",
+            "from:0:pathlib:Path",
+            "from:1:_live:pause_live_display",
+            "from:1:masked_input:masked_input",
+            "from:1:sp_core:KeyfileError,Keypair,WrongPasswordError,decrypt_keyfile_data,deserialize_keypair_from_keyfile_data,encrypt_keyfile_data,get_password_from_environment,keyfile_data_is_encrypted,save_password_to_environment,serialized_keypair_to_keyfile_data",
+        ],
+        "sdk/python/bittensor/sp_core.py" => &[
+            "from:0:__future__:annotations",
+            "import:bittensor_core=_backend",
+        ],
+        _ => bail!("unreviewed sample producer module {path}"),
+    };
+    ensure!(
+        suite
+            .iter()
+            .filter(|statement| matches!(statement, ast::Stmt::ClassDef(_)))
+            .count()
+            == usize::from(path == "sdk/python/bittensor/keyfiles.py"),
+        "sample producer class declaration count changed"
+    );
+    let mut imports = Vec::new();
+    let mut keypair_exports = 0;
+    body(
+        path,
+        source,
+        suite,
+        &mut keypair_exports,
+        &mut imports,
+        false,
+        0,
+    )
+    .with_context(|| format!("{path}: sample producer static surface"))?;
+    ensure!(
+        imports
+            .iter()
+            .map(String::as_str)
+            .eq(expected.iter().copied()),
+        "{path}: sample producer imports changed"
+    );
+    ensure!(
+        keypair_exports == usize::from(path == "sdk/python/bittensor/sp_core.py"),
+        "{path}: sample producer Keypair export count changed"
+    );
+    Ok(())
+}
+
 struct Module {
     bindings: Bindings,
     locations: BTreeMap<String, (usize, usize)>,
@@ -311,6 +674,7 @@ struct Resolver<'a> {
     loading: BTreeSet<String>,
     budget: Cell<usize>,
     surface: Option<DescriptorSurface>,
+    sample_producer_mode: bool,
     #[cfg(test)]
     sources: BTreeMap<String, String>,
 }
@@ -527,6 +891,7 @@ impl<'a> Resolver<'a> {
             loading: BTreeSet::new(),
             budget: Cell::new(MAX_ALLOCATION_UNITS),
             surface: None,
+            sample_producer_mode: false,
             #[cfg(test)]
             sources: BTreeMap::new(),
         })
@@ -788,6 +1153,61 @@ impl<'a> Resolver<'a> {
             .with_context(|| format!("{path}: imported name {name} absent from {module_path}"))
     }
 
+    fn sample_binding(&self, evaluated: &Result<Binding>, path: &str) -> Result<()> {
+        if !self.sample_producer_mode
+            || !matches!(
+                path,
+                "sdk/python/tests/harness/samples.py"
+                    | "sdk/python/bittensor/keyfiles.py"
+                    | "sdk/python/bittensor/sp_core.py"
+            )
+        {
+            return Ok(());
+        }
+        let binding = match evaluated {
+            Ok(binding) => binding,
+            Err(error) => bail!("{path}: sample producer declaration cannot resolve: {error:#}"),
+        };
+        // The supported re-export surface is the pinned sp_core backend. Do
+        // not invent a Symbol for an absent native attribute and silently
+        // retain it in an otherwise unused executed declaration.
+        let supported = match binding {
+            Binding::Value(_) => true,
+            Binding::Module(module) => module.as_str() == "bittensor_core",
+            Binding::Symbol(symbol) => matches!(
+                symbol.strip_prefix("bittensor_core."),
+                Some(
+                    "CRYPTO_ED25519"
+                        | "CRYPTO_SR25519"
+                        | "Keypair"
+                        | "Keypair.create_from_uri"
+                        | "KeyfileError"
+                        | "WrongPasswordError"
+                        | "verify"
+                        | "ss58_decode"
+                        | "ss58_encode"
+                        | "decrypt_keyfile_data"
+                        | "deserialize_keypair_from_keyfile_data"
+                        | "encrypt_keyfile_data"
+                        | "get_password_from_environment"
+                        | "keyfile_data_encryption_method"
+                        | "keyfile_data_is_encrypted"
+                        | "keyfile_data_is_encrypted_ansible"
+                        | "keyfile_data_is_encrypted_legacy"
+                        | "keyfile_data_is_encrypted_nacl"
+                        | "save_password_to_environment"
+                        | "serialized_keypair_to_keyfile_data"
+                )
+            ),
+            _ => false,
+        };
+        ensure!(
+            supported,
+            "{path}: sample producer declaration has an unsupported binding"
+        );
+        Ok(())
+    }
+
     fn assign(
         &mut self,
         module: &mut Module,
@@ -802,8 +1222,9 @@ impl<'a> Resolver<'a> {
             line(source, stmt.range().end().to_usize()),
         );
         self.apply_effects(module, expr, None)?;
-        let evaluated = self
-            .eval_binding(expr, &module.bindings, path, 0)
+        let evaluated = self.eval_binding(expr, &module.bindings, path, 0);
+        self.sample_binding(&evaluated, path)?;
+        let evaluated = evaluated
             .unwrap_or_else(|error| Binding::Refused(format!("{path}:{}: {error:#}", span.0)));
         match target {
             ast::Expr::Name(name) => {
@@ -1196,8 +1617,9 @@ impl<'a> Resolver<'a> {
                         module
                             .escaped
                             .insert(key.clone(), dependencies(value, bindings)?);
-                        let binding = self
-                            .eval_binding(value, bindings, path, 0)
+                        let evaluated = self.eval_binding(value, bindings, path, 0);
+                        self.sample_binding(&evaluated, path)?;
+                        let binding = evaluated
                             .unwrap_or_else(|error| Binding::Refused(format!("{error:#}")));
                         module.bindings.insert(key.clone(), binding);
                         module.locations.insert(
@@ -1231,6 +1653,7 @@ impl<'a> Resolver<'a> {
                             } else {
                                 self.eval_binding(&field.value, bindings, path, 0)
                             };
+                            self.sample_binding(&evaluated, path)?;
                             let binding = evaluated
                                 .unwrap_or_else(|error| Binding::Refused(format!("{error:#}")));
                             module.bindings.insert(key.clone(), binding);
@@ -1294,9 +1717,10 @@ impl<'a> Resolver<'a> {
                     },
                 )?;
                 let key = format!("{prefix}.{}", argument.def.arg);
-                let binding = self
-                    .eval_binding(default, bindings, path, 0)
-                    .unwrap_or_else(|error| Binding::Refused(format!("{error:#}")));
+                let evaluated = self.eval_binding(default, bindings, path, 0);
+                self.sample_binding(&evaluated, path)?;
+                let binding =
+                    evaluated.unwrap_or_else(|error| Binding::Refused(format!("{error:#}")));
                 module.bindings.insert(key.clone(), binding);
                 module.locations.insert(
                     key,
@@ -1466,6 +1890,14 @@ impl<'a> Resolver<'a> {
                         && call.args.len() == 1
                         && call.keywords.is_empty(),
                     "test-harness address must use the fixed dev URI table"
+                );
+                ensure!(
+                    matches!(
+                        self.eval_binding(&call.func, bindings, path, next)?,
+                        Binding::Symbol(symbol)
+                            if symbol == "bittensor_core.Keypair.create_from_uri"
+                    ),
+                    "test-harness address constructor is not the resolved bittensor_core Keypair binding"
                 );
                 let Literal::Str(uri) = self.eval(&call.args[0], bindings, path, next)? else {
                     bail!("dev URI must be a literal string");
@@ -1958,6 +2390,28 @@ impl<'a> Resolver<'a> {
     }
 
     fn values(&mut self, path: &str, names: &[&str]) -> Result<Value> {
+        if path == "sdk/python/tests/harness/samples.py" {
+            if !self.sample_producer_mode {
+                self.sample_producer_mode = true;
+                for producer in [
+                    path,
+                    "sdk/python/bittensor/keyfiles.py",
+                    "sdk/python/bittensor/sp_core.py",
+                ] {
+                    self.modules.remove(producer);
+                }
+            }
+            for producer in [
+                path,
+                "sdk/python/bittensor/keyfiles.py",
+                "sdk/python/bittensor/sp_core.py",
+            ] {
+                let source = self.source(producer)?;
+                let suite = ast::Suite::parse(&source, producer)
+                    .map_err(|error| anyhow::anyhow!("{producer}: {error}"))?;
+                sample_producer_static_surface(producer, &source, &suite)?;
+            }
+        }
         self.module(path)?;
         let module = &self.modules[path];
         let mut values = serde_json::Map::new();
@@ -2857,6 +3311,336 @@ mod tests {
         let mut resolver = Resolver::new(&root)?;
         resolver.sources.insert("fixture.py".into(), source.into());
         Ok(resolver.values("fixture.py", &[name])?[name]["value"].clone())
+    }
+
+    #[test]
+    fn sample_addresses_require_the_actual_imported_keypair_producer() -> Result<()> {
+        const SAMPLE: &str = "sdk/python/tests/harness/samples.py";
+        const NAMES: &[&str] = &[
+            "ALICE",
+            "ALICE_HOT",
+            "BOB",
+            "BOB_HOT",
+            "INTENT_SAMPLES",
+            "READ_SAMPLES",
+        ];
+        fn extracted(source: &str, changed_producer: Option<(&str, &str)>) -> Result<Value> {
+            let root = root()?;
+            let mut resolver = Resolver::new(&root)?;
+            resolver.sources.insert(SAMPLE.into(), source.into());
+            if let Some((path, changed)) = changed_producer {
+                resolver.sources.insert(path.into(), changed.into());
+            }
+            // Exercise the production resolver and all six requested declarations,
+            // not a standalone spelling predicate or compiled-table round trip.
+            resolver.values(SAMPLE, NAMES)
+        }
+
+        let root = root()?;
+        let resolver = Resolver::new(&root)?;
+        let source = resolver.source(SAMPLE)?;
+        let retained: Value = serde_json::from_slice(&fs::read(
+            root.join("vendor/upstream/extracted/named_tables.json"),
+        )?)?;
+        assert_eq!(
+            extracted(&source, None)?,
+            retained["tables"][SAMPLE]["values"]
+        );
+
+        let import = "from bittensor.keyfiles import Keypair";
+        for changed in [
+            source.replace(import, "import unrelated_key_backend as Keypair"),
+            source.replace(import, "from types import SimpleNamespace as Keypair"),
+            source.replace(import, "from bittensor.keyfiles import Keyfile as Keypair"),
+            source.replace(import, &format!("{import}\nKeypair = None")),
+            source.replace(
+                import,
+                &format!("{import}\nif opaque_condition:\n    Keypair = None"),
+            ),
+            source.replace(import, &format!("{import}\ndef Keypair():\n    pass")),
+            source.replace(import, &format!("{import}\nAlias = None\nKeypair = Alias")),
+        ] {
+            let failure = extracted(&changed, None)
+                .err()
+                .context("unsupported sample Keypair producer was silently reconstructed")?;
+            assert!(
+                format!("{failure:#}").contains("required table ALICE")
+                    || format!("{failure:#}").contains("sample producer")
+            );
+        }
+        // A recognized local name cannot hide a changed transitive producer.
+        let backend_path = "sdk/python/bittensor/sp_core.py";
+        let backend = resolver.source(backend_path)?;
+        let changed = backend.replace(
+            "Keypair = _backend.Keypair",
+            "Keypair = _backend.KeyfileError",
+        );
+        assert_ne!(changed, backend);
+        let failure = extracted(&source, Some((backend_path, &changed)))
+            .err()
+            .context("a changed backend Keypair producer was silently reconstructed")?;
+        assert!(
+            format!("{failure:#}").contains("required table ALICE")
+                || format!("{failure:#}").contains("sample producer")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn sample_producer_rejects_symbol_writes_and_opaque_escapes_before_resolution() -> Result<()> {
+        const SAMPLE: &str = "sdk/python/tests/harness/samples.py";
+        const NAMES: &[&str] = &[
+            "ALICE",
+            "ALICE_HOT",
+            "BOB",
+            "BOB_HOT",
+            "INTENT_SAMPLES",
+            "READ_SAMPLES",
+        ];
+        fn extracted(sample: &str, producer: Option<(&str, &str)>) -> Result<Value> {
+            let root = root()?;
+            let mut resolver = Resolver::new(&root)?;
+            resolver.sources.insert(SAMPLE.into(), sample.into());
+            if let Some((path, source)) = producer {
+                resolver.sources.insert(path.into(), source.into());
+            }
+            resolver.values(SAMPLE, NAMES)
+        }
+        let root = root()?;
+        let resolver = Resolver::new(&root)?;
+        let original = resolver.source(SAMPLE)?;
+        let import = "from bittensor.keyfiles import Keypair";
+        let original_values = extracted(&original, None)?;
+        // A harmless static alias is still accepted, while all six generated
+        // values remain identical despite the shifted declaration spans.
+        let aliased = extracted(
+            &original.replace(import, &format!("{import}\nAlias = Keypair")),
+            None,
+        )?;
+        for name in NAMES {
+            assert_eq!(aliased[*name]["value"], original_values[*name]["value"]);
+        }
+
+        for executed in [
+            "Keypair.create_from_uri = None",
+            "Alias = Keypair\nAlias.create_from_uri = None",
+            "Alias = Keypair.create_from_uri\nAlias.__call__ = None",
+            "Keypair.create_from_uri: object = None",
+            "Keypair.__dict__['create_from_uri'] = None",
+            "del Keypair.create_from_uri",
+            "setattr(Keypair, 'create_from_uri', None)",
+            "opaque(Keypair)",
+            "def opaque(value):\n    value.create_from_uri = None\nopaque(Keypair)",
+            "Alias = Keypair\nopaque(Alias)",
+            "Escaped = [Keypair]\nopaque(Escaped)",
+            "def opaque(values):\n    values[0].create_from_uri = None\nEscaped = [Keypair]\nopaque(Escaped)",
+            "Escaped = {'class': Keypair}\nopaque(Escaped)",
+            "Escaped = lambda: Keypair\nopaque(Escaped)",
+            "def mutate():\n    Keypair.create_from_uri = None\nmutate()",
+            "def helper(arg=opaque(Keypair)):\n    pass",
+            "@opaque(Keypair)\ndef helper():\n    pass",
+            "class Helper:\n    Keypair.create_from_uri = None",
+            "class Helper(opaque(Keypair)):\n    pass",
+            "if unknown_condition:\n    Keypair.create_from_uri = None",
+            "Other = opaque(Keypair)",
+            "opaque()",
+            "def __getattr__(name):\n    global Keypair\n    Keypair = None\n    raise AttributeError(name)",
+            "__getattr__ = Keypair",
+            "async def __getattr__(name):\n    pass",
+            "class __getattr__:\n    def __init__(self, name):\n        Keypair.create_from_uri = None",
+            "Saved = Keypair\nclass Imposter:\n    def create_from_uri(uri):\n        Saved.create_from_uri = None\nKeypair = Imposter\ndef helper(arg=Keypair.create_from_uri('//Alice').ss58_address):\n    pass\nKeypair = Saved",
+        ] {
+            let changed = original.replace(import, &format!("{import}\n{executed}"));
+            let failure = extracted(&changed, None)
+                .err()
+                .with_context(|| format!("executed producer escape was accepted: {executed}"))?;
+            assert!(
+                format!("{failure:#}").contains("sample producer"),
+                "{executed}"
+            );
+        }
+        // The class is imported transitively. Attribute mutation and escaping
+        // calls in either export module must fail before the native URI path.
+        for path in [
+            "sdk/python/bittensor/keyfiles.py",
+            "sdk/python/bittensor/sp_core.py",
+        ] {
+            let source = resolver.source(path)?;
+            for executed in [
+                "Keypair.create_from_uri = None",
+                "Alias = Keypair\nAlias.create_from_uri = None",
+                "opaque(Keypair)",
+                "opaque()",
+                "Alias = _backend\nAlias.Keypair.create_from_uri = None",
+            ] {
+                let changed = format!("{source}\n{executed}\n");
+                let failure = extracted(&original, Some((path, &changed)))
+                    .err()
+                    .with_context(|| {
+                        format!("transitive producer escape was accepted: {path}/{executed}")
+                    })?;
+                assert!(format!("{failure:#}").contains("sample producer"));
+            }
+        }
+        // This intentionally conservative surface belongs only to samples.
+        // Other static extraction paths retain their existing effect policy.
+        assert_eq!(
+            fixture("def opaque():\n    pass\nopaque()\nTABLE = 7", "TABLE")?,
+            json!(7)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn sample_import_callbacks_cannot_mutate_the_constructor_implicitly() -> Result<()> {
+        const SAMPLE: &str = "sdk/python/tests/harness/samples.py";
+        const KEYFILES: &str = "sdk/python/bittensor/keyfiles.py";
+        let root = root()?;
+        let resolver = Resolver::new(&root)?;
+        let keyfiles = resolver.source(KEYFILES)?;
+        let suite =
+            ast::Suite::parse(&keyfiles, KEYFILES).map_err(|error| anyhow::anyhow!("{error}"))?;
+        let callback = suite
+            .iter()
+            .find_map(|statement| match statement {
+                ast::Stmt::FunctionDef(function) if function.name.as_str() == "__getattr__" => {
+                    Some(function)
+                }
+                _ => None,
+            })
+            .context("pinned module import callback missing")?;
+        // CPython from-import probes __path__ on a nonpackage module. That
+        // invokes keyfiles.__getattr__ even without an explicit source call.
+        let mut changed = keyfiles.clone();
+        changed.replace_range(
+            callback.range().start().to_usize()..callback.range().end().to_usize(),
+            "def __getattr__(name):\n    global Keypair\n    Keypair = None\n    raise AttributeError(name)",
+        );
+        let mut actual = Resolver::new(&root)?;
+        actual.sources.insert(KEYFILES.into(), changed);
+        let failure = actual
+            .values(
+                SAMPLE,
+                &[
+                    "ALICE",
+                    "ALICE_HOT",
+                    "BOB",
+                    "BOB_HOT",
+                    "INTENT_SAMPLES",
+                    "READ_SAMPLES",
+                ],
+            )
+            .err()
+            .context("implicit import callback was silently ignored")?;
+        assert!(format!("{failure:#}").contains("module import callback changed"));
+        for path in [SAMPLE, KEYFILES, "sdk/python/bittensor/sp_core.py"] {
+            let source = resolver.source(path)?;
+            let mut actual = Resolver::new(&root)?;
+            actual
+                .sources
+                .insert(path.into(), format!("{source}\n__getattr__ = Keypair\n"));
+            let failure = actual
+                .values(SAMPLE, &["ALICE"])
+                .err()
+                .context("a shadowed module import callback was accepted")?;
+            assert!(format!("{failure:#}").contains("module callback binding changed"));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn sample_producer_refuses_failed_unused_declarations_and_unknown_exports() -> Result<()> {
+        const SAMPLE: &str = "sdk/python/tests/harness/samples.py";
+        const NAMES: &[&str] = &[
+            "ALICE",
+            "ALICE_HOT",
+            "BOB",
+            "BOB_HOT",
+            "INTENT_SAMPLES",
+            "READ_SAMPLES",
+        ];
+        let root = root()?;
+        let resolver = Resolver::new(&root)?;
+        for path in [
+            SAMPLE,
+            "sdk/python/bittensor/keyfiles.py",
+            "sdk/python/bittensor/sp_core.py",
+        ] {
+            let original = resolver.source(path)?;
+            for executed in [
+                "Unused = missing_name",
+                "Unused = 1 / 0",
+                "Unused = missing_name\nUnused = 1",
+                "def helper(arg=missing_name):\n    pass",
+                "def helper(arg=1 / 0):\n    pass",
+                "Unused = Keypair.no_such_export",
+                "Unused = _backend.no_such_export",
+            ] {
+                let mut actual = Resolver::new(&root)?;
+                actual
+                    .sources
+                    .insert(path.into(), format!("{original}\n{executed}\n"));
+                let failure = actual.values(SAMPLE, NAMES).err().with_context(|| {
+                    format!("failed executed declaration was ignored: {path}/{executed}")
+                })?;
+                assert!(format!("{failure:#}").contains("sample producer declaration"));
+            }
+        }
+        // A producer cached under the ordinary partial-table policy must be
+        // checked again when samples require complete executed declarations.
+        let path = "sdk/python/bittensor/keyfiles.py";
+        let source = resolver.source(path)?;
+        let mut actual = Resolver::new(&root)?;
+        actual
+            .sources
+            .insert(path.into(), format!("{source}\nUnused = missing_name\n"));
+        actual.module(path)?;
+        let failure = actual
+            .values(SAMPLE, NAMES)
+            .err()
+            .context("an unchecked cached producer bypassed the samples policy")?;
+        assert!(format!("{failure:#}").contains("sample producer declaration"));
+        Ok(())
+    }
+
+    #[test]
+    fn sample_import_callback_dependencies_cannot_be_shadowed() -> Result<()> {
+        const SAMPLE: &str = "sdk/python/tests/harness/samples.py";
+        const KEYFILES: &str = "sdk/python/bittensor/keyfiles.py";
+        let root = root()?;
+        let resolver = Resolver::new(&root)?;
+        let source = resolver.source(KEYFILES)?;
+        for executed in [
+            "SavedAttributeError = AttributeError\ndef AttributeError(message):\n    global Keypair\n    Keypair = None\n    return SavedAttributeError(message)",
+            "AttributeError = None",
+            "AttributeError: object = None",
+            "async def AttributeError(message):\n    pass",
+            "getattr = None",
+            "getattr: object = None",
+            "def getattr(value, name):\n    global Keypair\n    Keypair = None",
+        ] {
+            let mut actual = Resolver::new(&root)?;
+            // Keep the reviewed __getattr__ source span byte-for-byte intact.
+            actual
+                .sources
+                .insert(KEYFILES.into(), format!("{source}\n{executed}\n"));
+            let failure = actual
+                .values(
+                    SAMPLE,
+                    &[
+                        "ALICE",
+                        "ALICE_HOT",
+                        "BOB",
+                        "BOB_HOT",
+                        "INTENT_SAMPLES",
+                        "READ_SAMPLES",
+                    ],
+                )
+                .err()
+                .context("an import callback dependency was shadowed")?;
+            assert!(format!("{failure:#}").contains("import callback dependency shadowed"));
+        }
+        Ok(())
     }
 
     #[test]
