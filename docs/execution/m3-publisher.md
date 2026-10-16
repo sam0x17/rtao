@@ -1,5 +1,9 @@
 # M3 axon publisher preparation
 
+Validation below describes the original preparation checkpoint. Applicable
+client tests and security review remain required in free `ubuntu-latest` CI;
+localnet and interop are optional targeted hosted evidence under Q30.
+
 `AxonConfig` and `AxonPublisher` are available with the neuron `miner` feature.
 The publisher uses an explicit IP override before IPv4 discovery. Each discovery
 source has a five-second deadline, redirects are disabled, and responses are
@@ -32,11 +36,11 @@ Nine production-module tests cover certificate-only rotation, unchanged
 publication without unlock or submission, the ignored-certificate case,
 scheduled rate limits, actual pool-rejection mapping and refreshed scheduling,
 the 65-byte boundary, non-global rejection, IPv6 encoding and bounded discovery
-fallback. Current Rust and Rust 1.89 pass all nine as part of the 61-test neuron
-suite. Strict MSRV all-feature/all-target Clippy also passes. Logs are
+fallback. At that checkpoint, current Rust and Rust 1.89 passed all nine as
+part of the 61-test neuron suite. Strict MSRV all-feature/all-target Clippy also passed. Historical logs were
 `tmp/neuron-publisher-tests.log` under `target/execute-plan.6Ro0PC`.
 
-These local checks supplement the required localnet scenario and interop lanes;
-they do not claim a milestone exit. Discovery listeners are awaited and all
-fake clients are closed. No publisher filesystem fixtures remain. Shared build
-caches remain in use by the other execution lanes.
+These historical checks establish no current hosted result or milestone exit.
+The fixture discovery listeners were awaited and fake clients closed; no
+publisher filesystem fixtures remained. Q30 cleanup retired the shared task
+build caches and raw logs. No local rerun or replacement host is required.

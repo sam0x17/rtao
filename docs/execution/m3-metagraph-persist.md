@@ -1,5 +1,9 @@
 # M3-04 metagraph persistence
 
+Validation below is historical preparation. Current acceptance uses applicable
+free `ubuntu-latest` client checks under Q30; former builds, fixture roots and
+raw logs are retired. Do not restore them for another local run.
+
 The `rtao-metagraph` `persist` feature provides asynchronous
 `persist::save(&Metagraph, path)` and `persist::load(path, &RuntimeCache)`.
 Fetched graphs retain their chain and API provenance. Synthetic graphs,
@@ -51,19 +55,19 @@ Validation on 2026-10-14:
   including the seven persistence tests. Strict Clippy passed all metagraph
   targets and features after the final identity checks.
 
-The focused MSRV log is retained at
+The focused historical MSRV log was recorded at
 `target/execute-plan.6Ro0PC/tmp/m3-metagraph-persist-msrv.log`; consolidated
-current-toolchain logs are `m3-metagraph-all-features-current.log` and
+current-toolchain logs were `m3-metagraph-all-features-current.log` and
 `m3-metagraph-all-features-clippy.log` in the same `tmp` directory. The first test
 run found a selective fixture missing mandatory `netuid`; the file loader
 correctly rejected its encoded subnet 0. The fixture now names subnet 1, and
 save also rejects responses whose subnet differs from the fetched identity.
 
-Temporary fixtures stay beneath
-`target/execute-plan.6Ro0PC/metagraph-persist-tests` and remove their precisely
-owned directories when each test ends. After validation, the empty fixture
+Historical fixtures used
+`target/execute-plan.6Ro0PC/metagraph-persist-tests` and removed their precisely
+owned directories when each test ended. After validation, the empty fixture
 container was audited for live processes, launchd/configuration references and
 symlinks, then removed with its exact path. It contained no virtual environment
-or other live dependency. The shared build and tmp directories remain live for
-the parent task. No local Python, hosted verification, PLAN
-checkboxes, commits or pushes are claimed here.
+or other live dependency. Q30 cleanup later removed the shared build and tmp
+directories and raw logs. No current hosted verification, PLAN checkbox, commit
+or milestone exit is claimed by this preparation record.

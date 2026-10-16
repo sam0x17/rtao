@@ -1,5 +1,8 @@
 # M3 miner metagraph synchronization
 
+The validation below describes the 2026-10-14 preparation checkpoint. Q30
+requires applicable hosted client checks and retires its local build campaign.
+
 `Preset::Miner` selects exactly `Hotkeys`, `ValidatorPermit`, `TotalStake` and
 `Validators`. `SyncPolicy::miner()` defaults to a 600-second interval, no
 commitments and early refreshes from finalized events. The existing minimum
@@ -47,7 +50,7 @@ The new native `u16` immunity-period read and its validation are recorded in
 `m3-immunity.md`. The M2 pending-read regression was updated for that read;
 the historical M2 execution record remains unchanged.
 
-This work created no temporary directories. Bounded logs and shared build
-outputs remain under `target/execute-plan.6Ro0PC`, which is still live for the
-parent task. No local Python, hosted validation, commits, pushes or milestone
-checkbox changes are claimed.
+This work created no temporary directories. Its original logs and shared build
+outputs used `target/execute-plan.6Ro0PC`; Q30 cleanup retired that tree and
+its raw logs. Do not recreate it. No current hosted result or milestone exit
+is established by this historical record.

@@ -1,5 +1,10 @@
 # M3 miner framework preparation
 
+The test results below describe historical preparation. Current development
+requires applicable free `ubuntu-latest` client/template checks and security
+review. Localnet and interop execution are optional targeted hosted evidence
+under Q30; no local service or validation campaign is required.
+
 `NeuronRuntime::miner(config, application)` returns a `MinerRuntime` with the
 miner metagraph preset, persistent `StateCell`, authenticated axum routes,
 axon publication, pruning metrics, telemetry and graceful shutdown. The
@@ -36,8 +41,8 @@ validator example and persists its request count. The feature gate already
 includes the real example in the `miner,redis` profile; root owns its manifest
 entry and workspace dependency edges.
 
-Current Rust and Rust 1.89 pass all 61 neuron library tests and the compile-fail
-state-guard doctest. The original 41 validator tests remain in the suite. Eight
+At the historical checkpoint, current Rust and Rust 1.89 passed all 61 neuron
+library tests and the compile-fail state-guard doctest. The original 41 validator tests remain in the suite. Eight
 pruning tests include historical encoded state and missing/zero account cases.
 The complete miner regression uses the production context initializer with
 cache writes disabled, restores a checkpoint before `on_start` and router
@@ -50,7 +55,7 @@ passes strict MSRV Clippy with `miner,redis`; the existing validator example
 passes with `validator,prometheus`. The miner example also passes the final
 current-Rust check with `miner,redis`.
 
-Logs are `tmp/neuron-m3-current.log`, `tmp/neuron-m3-msrv.log`,
+Historical log names were `tmp/neuron-m3-current.log`, `tmp/neuron-m3-msrv.log`,
 `tmp/neuron-miner-runtime-tests.log` and `tmp/neuron-prune-{tests,msrv}.log`
 under `target/execute-plan.6Ro0PC`. The development wallet and state fixture
 was created under that recorded root, then removed after the runtime, client,
@@ -58,9 +63,10 @@ metagraph and socket node had stopped. No user wallets or state were used.
 The empty `tmp/rtao-neuron-tests` fallback and its empty `tmp` child were also
 removed after checking processes, launchd units, configuration references,
 symlinks and virtual-environment dependencies. No neuron fixture directories
-remain. Shared build caches remain live. These checks are preparation for the
-required localnet, interop, template and security exits.
-Additional check logs are `tmp/neuron-m3-clippy.log`,
+remain from that validation. Q30 cleanup later removed shared task builds and
+raw logs. These historical checks do not establish current hosted success or
+M3 acceptance.
+Additional historical logs were `tmp/neuron-m3-clippy.log`,
 `tmp/neuron-m3-miner-only-clippy.log`, `tmp/neuron-miner-example-msrv.log` and
-`tmp/neuron-validator-example-m3-msrv.log`. The current-Rust example log is
-`tmp/neuron-miner-example.log`. The final neuron formatting check passes.
+`tmp/neuron-validator-example-m3-msrv.log`. The current-Rust example log was
+`tmp/neuron-miner-example.log`. The final neuron formatting check passed.

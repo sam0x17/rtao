@@ -1,5 +1,12 @@
 # M4 combined source integration
 
+The first section records historical integration before Q30. Its local drivers,
+raw logs, snapshots and shared build caches were retired during cleanup. Do not
+resume those commands or restore the old root. Current source/fixture/security
+and documentation checks remain required in free `ubuntu-latest` CI; oracle,
+localnet, interop and image execution are optional targeted hosted evidence,
+and release work is deferred.
+
 Root adopted 66 paths from eight reviewed patches on 2026-10-14. The exact
 composition was rehearsed against the current source before canonical writes.
 All before and after hashes matched, and `git diff --check` passed. The parity
@@ -15,7 +22,7 @@ adds the three owner-read types exactly once. D-039 and D-040 coexist in the
 divergence register. Existing Q29 and license/NOTICE changes were preserved.
 
 Exact patch identities, path inventories, rehearsal results, baseline hashes
-and adoption hashes remain under the recorded execution root:
+and adoption hashes were recorded under the former execution root:
 
 - `root-m4-integration/rehearsal.json`
 - `root-m4-integration/composed-source.json`
@@ -23,8 +30,8 @@ and adoption hashes remain under the recorded execution root:
 - `root-m4-integration/canonical-before/` (reversible source backup)
 
 The isolated current/MSRV tests and independent reviews prove each patch's
-recorded scope. They do not prove the combined source or replace hosted
-oracle, localnet, interoperability, image or release acceptance. Source-backed
+recorded scope. They do not prove the combined source or establish oracle,
+localnet, interoperability, image or release execution. Source-backed
 upstream findings remain local drafts until their exact claims are reviewed.
 
 Canonical regeneration completed successfully in
@@ -34,13 +41,13 @@ and reports 20 implemented intent behaviors and 38 implemented read behaviors.
 The remaining 63 intent and 64 read behaviors remain pending. These are source
 coverage counts, not an oracle acceptance result.
 
-The combined check script is `tmp/root-m4-combined-checks.sh`. It runs the real
+The historical combined script was `tmp/root-m4-combined-checks.sh`. It ran the
 parity matrix generator, extraction/regeneration checks, target/profile
 dependency remeasurement and compatibility output generation, dependency and
 parity checks, formatting, and affected-package tests on current Rust and Rust
-1.89. Each command retains its log, timestamps and actual exit status under
-`tmp/root-m4-combined-*.log`. `PYO3_NO_PYTHON=1` remains set, and the canonical
-compiler wrapper distinguishes workspace artifacts from isolated reviews.
+1.89. Each command recorded its log, timestamps and actual exit status under
+`tmp/root-m4-combined-*.log`. `PYO3_NO_PYTHON=1` was set, and the then-current
+compiler wrapper distinguished workspace artifacts from isolated reviews.
 The matrix generator passed with 1,533 rows. Extraction, regeneration,
 target/profile dependency measurement, dependency and parity checks, and
 formatting passed on the combined source. Measured package counts remain
@@ -62,7 +69,8 @@ The previous complete gate attempt passed 1,192 tests, doctests, no-host and
 MSRV on earlier source before failing the temporary no-dev feature manifest.
 Supply passed separately with the approved exact dormant advisory exceptions
 and their activation guards. The isolated feature-harness repair and a fresh
-complete `cargo xtask gates` on the combined source remain necessary. The
+complete `cargo xtask gates` on the combined source were still pending at that
+checkpoint. Q30 now requires applicable hosted jobs, with no local rerun. The
 initial isolated repaired features job passed its full matrix, but independent
 review found that removing a dev dependency can hide a syntactically valid
 forward to an undefined feature. The final candidate validates the original
@@ -78,26 +86,27 @@ Rust 1.89 validation, all 393 source hashes and every required command exit,
 then adopted only the exact reviewed `xtask/src/gates.rs` repair. Before SHA-256
 is `1c0e16c7d33a6b1a74c08d0c96f814a5ae48a75ce7efafeff7b72cd3b5c57c8d`;
 after is `5c9430fb266a4062c259236d22907e17f15f8a1012ba3f9d1ff5c4dc3672d984`.
-The reversible backup, actual apply checks and adoption record are in
-`root-feature-harness-adoption/`. Complete canonical gates are now running on
-the combined source plus this repair, retaining
-`tmp/root-m4-feature-repaired-gates.log` and its eventual actual terminal exit.
-No full gate success is inferred from launching this driver.
+The reversible backup, actual apply checks and adoption record were recorded in
+`root-feature-harness-adoption/`. Complete canonical gates were then launched
+on the combined source plus this repair, with
+`tmp/root-m4-feature-repaired-gates.log` as the historical log name. The driver
+was retired during Q30 cleanup; no full gate success is inferred from its launch.
 No main
 push, milestone exit or release follows from this adoption alone.
 
-M4-08 owner orchestration/monitoring and M4-09 CLI machinery are being prepared
-in isolated snapshots while combined checks and the harness repair run. Their
-source is not part of the adopted composition. The pending license-criterion
-decision remains unchanged. Q29 waives only the 24-hour testnet soak.
+At that checkpoint, M4-08 owner orchestration/monitoring and M4-09 CLI
+machinery were being prepared in isolated snapshots while combined checks and
+the harness repair ran. Their source was outside that composition, and the
+license-criterion decision was still pending. Q29 waived the testnet soak;
+Q30 later retired the costly local work described here.
 
 The finished composition rehearsal was removed after checking running
 processes, open files, launchd, configuration, symlinks, virtual environments
 and Git dependencies. `root-m4-integration/trial-cleanup-audit.json` retains
-its exact inventory and the 3,868,601 removed bytes. Live source/proof, the
-reversible backup and shared build caches remain dependencies until validation
-and integration finish. Finished owned builds must undergo exact dependency
-audits before removal. The durable prepared
+its exact inventory and the 3,868,601 removed bytes. Q30 cleanup later removed
+the remaining disposable snapshots, shared builds and raw logs after dependency
+checks. Authored source and bounded repository/recovery evidence remain; no
+validation depends on the retired caches. The durable prepared
 wallet/recovery root is excluded from disposable cleanup. No remote Studio
 task directory, wallet copy or service was created.
 
