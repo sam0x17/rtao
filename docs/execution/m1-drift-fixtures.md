@@ -40,15 +40,17 @@ Finney 477 versus devnet 478 differs at exactly one byte per metadata version:
 V15 offset 307750 and V16 offset 307775 change `0xdd` to `0xde`, the spec-number
 increment. This supplies the real 477→478 input for the semantic drift test.
 
-The acquisition environment had no Docker daemon, local listener on port 9944,
-or installed Docker/OrbStack application. A real `localnet-main` fixture still
-requires booting the pinned `:main` image on Ubuntu and fetching its metadata.
-Localnet has a faucet call and different fast-runtime constants, so copying
-devnet or Finney metadata would not establish that baseline. No localnet
-fixture or image execution result is claimed by this acquisition record.
+The historical acquisition environment had no Docker daemon, local listener on
+port 9944, or installed Docker/OrbStack application. No `localnet-main` fixture
+or image execution result is claimed. Establishing that baseline would require
+the pinned `:main` image and its own metadata; copying devnet or Finney metadata
+would not account for its faucet call and fast-runtime constants. Q30 defers
+that infrastructure work. Any future targeted acquisition belongs in a reviewed
+bounded hosted job and is not an M1 prerequisite.
 
 The retained JSON record is `m1-drift-fixtures-provenance.json`. Temporary
 downloads, scripts and checker sources lived only under
 `target/execute-plan.6Ro0PC/tmp/drift-pins`; that exact directory was audited
-for live dependencies before cleanup. Shared workspace build caches remain
-available to the ongoing goal work.
+for live dependencies before cleanup. That execution root is retired and
+absent; it is not a current cache or reproduction location. Shared global Cargo
+caches and unrelated work remain preserved.

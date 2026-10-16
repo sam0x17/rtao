@@ -9,15 +9,18 @@ That fixture does not compile a second provider.
 
 The follow-up adds two source-extracted pytest parameter tables and seven exact
 `pyt:` origins. Three actual-resolver fixtures check literal updates, provenance
-spans and unsupported producer refusal. Hosted generation and execution remain
-pending. These tables supply test inputs; they do not establish Python assertion
-execution or complete `test_rpc.py` reconciliation.
+spans and unsupported producer refusal. Hosted generation passed in run
+38871417189 at `d5132a0`; authenticated outputs are adopted. Fixture compilation
+and execution remain pending. These tables supply test inputs; they do not
+establish Python assertion execution or complete `test_rpc.py` reconciliation.
 
 A maintained independent workspace at `ci/tls-two-providers` exercises the real
 RPC connector with both ring and AWS-LC compiled for the shipped Rustls version
-and no process-default provider. Its independent lock must be generated and
-reviewed in hosted CI before the existing features job can execute its one test.
-Preparation alone proves no TLS execution. The shipped workspace's AWS-LC bans,
+and no process-default provider. Run 38871434589 generated its independent lock;
+the reviewed 127,044-byte lock has SHA256
+`f193c79d7eab8fd4bbc06c7e0099a3bb3f8fdb46b39be8719c72c5fcd9730fe1`.
+The existing features job must still execute its one test. Preparation alone
+proves no TLS execution. The shipped workspace's AWS-LC bans,
 dependency inputs and locks remain unchanged. This fixture supplies no HTTPS
 SignedClient or additional platform result.
 

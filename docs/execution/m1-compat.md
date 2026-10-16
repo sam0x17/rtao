@@ -48,5 +48,7 @@ Verification on 2026-10-14:
 All Cargo invocations used the recorded task root
 `/Users/sam/workspace/rtao/target/execute-plan.6Ro0PC`, its `build` directory as
 `CARGO_TARGET_DIR`, and its `tmp` directory as `TMPDIR`. Tests used in-memory
-reports and created no private disposable fixtures. Shared build and temporary
-directories remain in use by the ongoing goal.
+reports and created no private disposable fixtures. That execution root is
+retired and absent; no build or temporary directory there is a current live
+dependency. Current compatibility generation/checks use bounded free
+`ubuntu-latest` CI under Q30, preserving shared global Cargo caches.

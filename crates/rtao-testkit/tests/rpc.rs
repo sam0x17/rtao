@@ -215,6 +215,7 @@ async fn batch_preserves_order_and_demuxes() -> Result {
         .collect();
     node.push_frame(Value::Array(responses))?;
     let values = timeout(Duration::from_secs(2), batch).await???;
+    assert_eq!(values.len(), 10);
     for (index, result) in values.into_iter().enumerate() {
         assert_eq!(serde_json::from_str::<u64>(result?.get())?, index as u64);
     }

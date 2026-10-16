@@ -37,8 +37,11 @@ runtime API and compact UTF-8 name/symbol fields. Large map decoding and
 commitment projection run through `offload`.
 
 `Subnets::view()` exposes the underlying view to the curated metagraph trait.
-The namespace type/accessor is currently a hand-written integration contract;
-the `xtask regen` owner must replace it with category-derived output before
-claiming M1-17. Dispatch remains M2. This evidence does not claim M0 or M1 exit.
-No additional disposable directory was created. Shared execution builds remain
-in use by the other milestone tasks.
+At that checkpoint, the namespace type/accessor was a hand-written integration
+contract. The current namespace is category-generated; its earlier integration
+requirement is historical. Dispatch belongs to M2. This evidence does not claim
+M0 or M1 exit.
+No additional disposable directory was created. The former execution build
+root is retired and absent; it is not a current live dependency. Current
+substantial checks use free `ubuntu-latest` CI under Q30, preserving shared
+global Cargo/toolchain caches.

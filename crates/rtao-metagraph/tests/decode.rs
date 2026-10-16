@@ -350,6 +350,58 @@ fn padding_legacy_collateral_mechanism_and_text_follow_python() {
     );
 }
 
+// py: sdk/python/bittensor/metagraph.py:459-472 (_text)
+#[test]
+fn dynamic_text_hex_preserves_python_pair_separators_and_error_positions() {
+    let runtime = runtime();
+    let original = dynamic(
+        &runtime,
+        include_bytes!("../../../vendor/bench/finney-1.scale"),
+    );
+    for separator in [' ', '\t', '\n', '\u{b}', '\u{c}', '\r'] {
+        let mut value = original.clone();
+        set(
+            &mut value,
+            "name",
+            Value::Str(format!("0x{separator}61{separator}62{separator}")),
+        );
+        set(
+            &mut value,
+            "symbol",
+            Value::Str(format!("0x{separator}ce{separator}bb{separator}")),
+        );
+        let graph = Metagraph::from_dynamic(NetUid(1), value, SnapshotInfo::default()).unwrap();
+        assert_eq!(graph.header.name, "ab", "separator={separator:?}");
+        assert_eq!(graph.header.symbol, "λ", "separator={separator:?}");
+    }
+    for field in ["name", "symbol"] {
+        for (input, position) in [
+            ("0x6 1", 1),
+            ("0x6\t1", 1),
+            ("0x6", 1),
+            ("0x61\u{1c}62", 2),
+            ("0x61\u{1d}62", 2),
+            ("0x61\u{1e}62", 2),
+            ("0x61\u{1f}62", 2),
+            ("0xggé", 2),
+            ("0x0 é", 2),
+            ("0xg\t00😀", 4),
+            ("0x00\u{a0}11", 2),
+            ("0xégg", 0),
+        ] {
+            let mut value = original.clone();
+            set(&mut value, field, Value::Str(input.into()));
+            let error =
+                Metagraph::from_dynamic(NetUid(1), value, SnapshotInfo::default()).unwrap_err();
+            assert!(
+                matches!(error, rtao_metagraph::MetagraphError::Malformed(message)
+                    if message == format!("non-hexadecimal number found in fromhex() arg at position {position}")),
+                "{field}={input:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn parser_rejects_truncated_input_and_trailing_bytes() {
     let runtime = runtime();

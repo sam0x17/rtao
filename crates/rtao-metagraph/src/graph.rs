@@ -1028,7 +1028,7 @@ fn text(value: &Value) -> Result<String> {
         Value::Null => return Ok(String::new()),
         Value::Str(value) => {
             if let Some(hex) = value.strip_prefix("0x") {
-                hex::decode(hex).map_err(|error| MetagraphError::Malformed(error.to_string()))?
+                rtao_primitives::pyfmt::bytes_fromhex(hex).map_err(MetagraphError::Malformed)?
             } else {
                 return Ok(value.clone());
             }

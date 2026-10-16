@@ -70,7 +70,9 @@ changed lookup returns or alias bindings, changed path-getter semantics, and
 overflowing runtime wire constants. Catalog tests cover serialization, lookup
 precedence, transaction names, and ratio-denominator equality.
 
-Validation used the recorded `RTAO_TEMP_ROOT`, `CARGO_TARGET_DIR`, and `TMPDIR`:
+Historical validation used the recorded `RTAO_TEMP_ROOT`, `CARGO_TARGET_DIR`,
+and `TMPDIR`. Current substantial checks run in free `ubuntu-latest` CI under
+Q30; the commands below do not require a local rerun:
 
 - `cargo run --locked -p xtask -- extract --check`
 - `cargo test --locked -p xtask extract`
@@ -89,5 +91,6 @@ checks.
 
 The new resolver tests use in-memory source fixtures. The existing M0 fixture
 check removes its exact test directory after synchronous reads/writes finish.
-The shared build and imported-source caches remain live dependencies of ongoing
-plan execution. This task created no other disposable directories.
+The former execution build root is retired and absent; these historical checks
+create no current cache dependency. Preserve shared global Cargo/source caches
+and unrelated work. This task created no other disposable directories.
