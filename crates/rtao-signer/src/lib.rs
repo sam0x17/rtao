@@ -239,7 +239,8 @@ pub trait Signer: Send + Sync + 'static {
     ///
     /// Software signers require no preparation. Implementations must not sign
     /// or submit a transaction here; the caller bounds this future by its
-    /// existing submission deadline.
+    /// existing submission deadline. Preparation must preserve the account
+    /// and signature algorithm.
     fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
         Box::pin(async { Ok(()) })
     }

@@ -165,12 +165,14 @@ impl Client {
         let attempted_hash = SubmissionAttempt::default();
         let operation = async {
             limits.admission.run(self, self.ensure_signing()).await?;
+            let account = signer.account();
+            let crypto_type = signer.crypto_type();
             if let Some(max_fee) = opts.max_fee {
                 let fee = limits
                     .admission
                     .run(
                         self,
-                        self.estimate_weight(call.clone(), signer.account(), signer.crypto_type()),
+                        self.estimate_weight(call.clone(), account, crypto_type),
                     )
                     .await?;
                 if fee.partial_fee > max_fee.rao() {
@@ -192,6 +194,14 @@ impl Client {
                         .map_err(ClientError::Signing)
                 })
                 .await?;
+            if signer.account() != account || signer.crypto_type() != crypto_type {
+                return Err(
+                    ClientError::Signing(rtao_signer::SignerError::InvalidSignature(
+                        "signer identity changed during shield preparation".into(),
+                    ))
+                    .into(),
+                );
+            }
             // Interactive preparation may span many blocks. Both heights used
             // by the era guard must be observed after the signer is ready.
             let best = limits
@@ -209,7 +219,7 @@ impl Client {
             check_era(opts.period, best, finalized)?;
             let (carrier_lease, inner_lease) = limits
                 .admission
-                .run(self, self.nonces().lease_pair(&signer.account()))
+                .run(self, self.nonces().lease_pair(&account))
                 .await?;
             let inner = limits
                 .admission
