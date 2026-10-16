@@ -1,15 +1,23 @@
 # M1 metagraph decoder evidence
 
 Current whole-source review traces all 32 functions and 54 dataclass fields.
-It finds one direct `from_dynamic` adapter gap: hex text accepted by Python's
+It identified one direct `from_dynamic` adapter gap: hex text accepted by Python's
 `bytes.fromhex` may contain ASCII separators between complete byte pairs. The
 repair shares the existing exact commitment parser through `pyfmt`, retaining
 commitment diagnostics and correcting three source spans. One new public
 adapter fixture covers both text fields, all six accepted separators and exact
-split-nibble/non-ASCII error positions. It remains unexecuted pending hosted CI.
+split-nibble/non-ASCII error positions.
+`dynamic_text_hex_preserves_python_pair_separators_and_error_positions` passed in
+[hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
+at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six blocking jobs passed;
+the main job passed 3,051 tests with zero failures and four skipped tests, plus
+nine doctests across 19 crate suites. This supplies current adapter execution
+for the applicable [M1 Q30 development exit](m1-client.md#current-q30-development-exit).
 Canonical chain text uses byte lists; this case demonstrates no wire-path
 failure. Typed row access, `Option` and Rust `Debug` are explicit native API
-choices; the whole source row remains pending final disposition and results.
+choices. The whole source row retains its separate final disposition; these
+Rust results establish no fresh Python/oracle, live-network, benchmark, fuzz,
+platform or release coverage.
 
 The graph has one row projector shared by the borrowed parser, by-name typed
 models and the core's dynamic values. Fixed-width key, axon and boolean columns
@@ -85,7 +93,8 @@ The standalone fuzz target completed a direct 512-run entry-point smoke check
 with all four payloads as seeds. That command lacked coverage instrumentation
 and is not an instrumented nightly fuzz result. Q30 makes further fuzz/oracle
 campaigns optional targeted hosted work and defers localnet infrastructure;
-none is a current M1 prerequisite. This evidence does not mark M1 complete.
+none is a current M1 prerequisite. Those historical smoke results alone do not
+establish the development exit recorded above.
 The capture and smoke-corpus temporary directories were removed after checking
 processes, open files, configuration, launchd, symlinks and virtual-environment
 dependencies. The former task build root is retired and absent; no current

@@ -2,10 +2,21 @@
 
 Current source review traces all 40 pinned `test_rpc.py` functions and 91
 explicit assertions to native witnesses or documented API/input adaptations.
-The follow-up adds an actual refused-Client-initialization socket observer and
-the missing ten-result batch cardinality assertion. Generated parameter inputs
-are authenticated and adopted; combined hosted execution remains pending.
-The complete source/pytest row is not accepted by the older counts below.
+The actual refused-Client-initialization socket observer and the ten-result
+batch cardinality assertion passed in
+[hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
+at `d01830cdf6a7e1301ca4a2629b35663617f97dab`, together with all three guarded
+parameter-producer fixtures and the existing socket/public-client witnesses.
+All six blocking jobs passed; the main result was 3,051 passed, zero failed and
+four skipped tests, plus nine doctests across 19 crate suites. The separate
+two-provider RPC test passed once with zero ignored or filtered tests, as
+recorded in [m1-transport-policy.md](m1-transport-policy.md).
+
+This supplies current transport execution for the applicable
+[M1 Q30 development exit](m1-client.md#current-q30-development-exit).
+Generated parameter inputs are authenticated and adopted. Complete source/pytest
+row disposition remains separate; these Rust results add no Python/oracle,
+HTTPS two-provider, live-network, platform or release claim.
 
 `rtao-rpc` now owns a single WebSocket supervisor and implements the real
 `subxt_rpcs::client::RpcClientT` interface. `FakeNode` exercises it over loopback
@@ -44,7 +55,7 @@ the process-default crypto provider. Current two-provider source and hosted
 validation status are recorded in
 [m1-transport-policy.md](m1-transport-policy.md).
 
-## Checks
+## Historical checks
 
 The following commands record historical validation. Current substantial checks
 run in free `ubuntu-latest` CI under Q30. The former execution root is retired
@@ -88,10 +99,10 @@ third-party-only dependency layer. A workspace consumer must enable the
 `rtao-rpc/rate-limit` feature explicitly because workspace path dependencies
 disable default features.
 
-No milestone checkbox, release tag or successful full-workspace gate is inferred
-from these narrow checks. Disposable transport probes were removed; the former
-task build root is retired and creates no current cache dependency. Shared
-global Cargo/toolchain caches remain preserved.
+Those historical narrow checks alone established no milestone exit or release
+tag. Current hosted evidence is recorded above. Disposable transport probes
+were removed; the former task build root is retired and creates no current
+cache dependency. Shared global Cargo/toolchain caches remain preserved.
 
 The final repeat of the testkit target Clippy command reached a concurrent
 primitive edit and stopped because the newly declared `python`, `drand`,

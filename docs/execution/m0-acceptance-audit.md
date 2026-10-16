@@ -1,42 +1,41 @@
 # M0 acceptance audit
 
-## Current completion checkpoint, 2026-10-16
+## Accepted client checkpoint, 2026-10-16
 
-Ordinary hosted [38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
-passed all six jobs at `3f1aa6731abfccb15a12c2a52da23ff08850f278`.
-The main gate passed 3,040 tests, zero failed, four skipped, followed by
-workspace doctests. Strict Clippy, source/pin/extraction, dependency, staged,
-core-surface, upstream lint and documentation checks passed. The 715,611-byte
-main log has SHA256
-`55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
+M0 is accepted for client development at
+`d01830cdf6a7e1301ca4a2629b35663617f97dab`. Ordinary hosted
+[38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
+passed all six jobs: check, no-host, MSRV, features, supply and semver.
+The main gate passed 3,051 tests, zero failed and four skipped, followed by
+all 19 workspace doctest suites (nine doctests, zero failed or ignored).
+Strict Clippy, source/pin/extraction, dependency, staged, core-surface,
+upstream lint and documentation checks passed. The 717,929-byte main log has
+SHA256 `9c5a4c537e36e27fdac9e215360db2d591d546313116ad195dc0943cadea34bc`.
 
-A new independent source audit found no missing M0 implementation obligation.
-It binds 60 exact inputs and maps every active step and exit. Authenticated
-hosted evidence confirms 123 named M0 PASS records: six golden sections,
-additional golden/corpus/loaders, all 44 btauth conformance tests, native money
-properties, JSON regressions, signer/role checks, strict verification, BLS and
-provenance checks, and both actual-binary doctor cases. The static inventory
-and executed records are separate evidence; no source count substitutes for a
-test result.
+The independent foundation audit found no missing active M0 obligation.
+Its 60 final input identities comprise 55 unchanged source blobs and five
+reviewed workflow/plan/completion-document updates. Exact hosted evidence
+confirms all 123 M0 fixture results, including all six golden sections,
+44 btauth conformance cases, native money/JSON, signer/role, strict verification,
+BLS/provenance and both real-binary doctor regressions. The combined checkpoint
+now satisfies the outstanding M0 exit check; active steps M0-01 through M0-29
+and C1-C7 are complete within Q30.
 
-Bounded local evidence under `.local/recovery/2026-10-15/` is
-`m0-current-source-audit-3f1aa67.{txt,json}` and
-`m0-3f1aa67-hosted-results.json`. The executed proof is 60,592 bytes, SHA256
-`2f9256ef73b49321c0b74ea1ed7c3d4c8b19bbeba783f8ea73c497412e0094ff`.
-It authenticates the exact run, six job results, input blobs and each named
-fixture. No raw log or archive is retained.
-
-This record supplies the M0 source/fixture completion evidence and M0-29.
-Applicable step boxes record that work. The combined follow-up source, map and
-documentation checkpoint must also pass its applicable hosted checks before
-the M0 milestone exit is claimed. M1's two-provider/provenance/extraction gaps,
-the remaining M8 source/e2e mappings, S9-11 and M2-S02 remain separate work.
+The bounded evidence under `.local/recovery/2026-10-15/` is
+`m0-m1-d01830c-hosted-results.json` (131,708 bytes, SHA256
+`bef2ded037673d97f8016981ab402868776824558289fd895f96aeb53c3a33a0`),
+`m0-d01830c-source-audit-delta.json` and the original independent source audit.
+The combined proof authenticates six job identities, 175 unique named results,
+129 final source inputs, doctests and the documentation upload. It preserves
+M0/M1/new-fixture group memberships. No raw log or archive is retained.
 
 C2/C7 limits remain explicit: no fresh independent Python/oracle, localnet,
 interop, macOS/ARM, Keychain, hardware, release or deployment acceptance follows.
-Q25 native balances, Q26 built-BLS and the existing guarded dormant supply
-exceptions are unchanged. All thirteen existing filings were rechecked open
-at unchanged PR heads; no new filing or GitHub notification action was needed.
+Q25 native balances, Q26 built-BLS and the guarded dormant supply exceptions
+remain unchanged. Existing upstream filings retain their reviewed links and
+recorded unchanged heads; no new filing or notification action was needed.
+M1's separate TLS proof and later source/e2e reconciliation have their own
+records. M2-S02 remains open/unaccepted and does not become accepted by this exit.
 
 ## Earlier source and failure history
 
@@ -49,7 +48,7 @@ hosted compilation; its source repair still needs hosted acceptance. Q30 limits
 acceptance to client development and bounded free `ubuntu-latest` CI. Local
 campaigns, release tags, publication, hardware and infrastructure setup remain deferred.
 
-## Source coverage
+### Historical source coverage
 
 | M0 exit | Canonical source and hosted coverage |
 |---|---|
@@ -80,7 +79,7 @@ extracted fixture provenance. The golden tests consume
 `vendor/upstream/extracted/btauth.json`; extraction and import checks guard its
 identity. These source relationships do not prove runtime conformance.
 
-## Remaining acceptance work
+### Historical remaining acceptance work
 
 Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
 at `06a3598` passes compilation, strict Clippy, parity and the five other jobs.
