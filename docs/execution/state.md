@@ -197,6 +197,15 @@ the corrected ordinary checkpoint must establish compilation and the 26 new
 fixture results. Bounded MSRV evidence is `check-38863766724.json`, 58,981-byte
 log SHA256 `c776d6f6862cc8b4af9ba8737660b973258c7269eed3f15c3e51ab6088b5d935`.
 
+Corrected ordinary [38864132855](https://github.com/sam0x17/rtao/actions/runs/38864132855)
+at `821142045101e74137f673c6c31890f514527a0a` passes MSRV, no-host and
+semver. Its main job stops before tests on two `needless_borrows_for_generic_args`
+findings in the new wallet fixture's environment closure. Pass the Copy closure
+directly at both calls. Formatting passes; the 26 new fixtures still require
+execution on the corrected checkpoint. Main failure evidence is
+`check-38864132855.json`, 68,704-byte log SHA256
+`0876f601d04385eb3305af03cfd868c69bd710d0869e004849f0f032617cdb95`.
+
 ## Prior integrated client checkpoint, 2026-10-15
 
 The following records describe earlier checkpoints. Their pending execution
