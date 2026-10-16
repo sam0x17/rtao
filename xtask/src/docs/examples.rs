@@ -1,4 +1,4 @@
-//! Embed the actual compiled operator examples in the downloadable guides.
+//! Embed shared offline tests and compiled operator examples in the guides.
 
 use std::{collections::BTreeMap, fs, path::Path};
 
@@ -9,6 +9,7 @@ use anyhow::Result;
 const _: &str = include_str!("../../../crates/rtao/examples/validator.rs");
 const _: &str = include_str!("../../../crates/rtao/examples/miner.rs");
 const _: &str = include_str!("../../../crates/rtao/examples/owner.rs");
+const _: &str = include_str!("../../../crates/rtao/tests/documentation_examples.rs");
 const _: &str = include_str!("../../../README.docify.md");
 
 const README: &str = docify::compile_markdown!("../README.docify.md");
@@ -19,6 +20,14 @@ const VALIDATOR: &str = docify::embed!(
 const MINER: &str = docify::embed!("../crates/rtao/examples/miner.rs", miner_implementation);
 const HANDLER: &str = docify::embed!("../crates/rtao/examples/miner.rs", miner_handler);
 const OWNER: &str = docify::embed!("../crates/rtao/examples/owner.rs", owner_configuration);
+const NATIVE_BALANCES: &str = docify::embed_run!(
+    "../crates/rtao/tests/documentation_examples.rs",
+    checked_native_balances
+);
+const NUMBER_FORMATTING: &str = docify::embed_run!(
+    "../crates/rtao/tests/documentation_examples.rs",
+    python_compatible_number_formatting
+);
 
 pub(super) fn pages(root: &Path) -> Result<BTreeMap<String, String>> {
     let mut pages = BTreeMap::from([("README.md".into(), README.into())]);
@@ -35,5 +44,14 @@ pub(super) fn pages(root: &Path) -> Result<BTreeMap<String, String>> {
         }
         pages.insert(format!("{name}.md"), text);
     }
+    let mut getting_started = fs::read_to_string(root.join("book/src/getting-started.md"))?;
+    getting_started.push_str("\n## Offline examples\n\nThese examples are ordinary Rust tests in `crates/rtao/tests/documentation_examples.rs`. CI runs the same functions shown here.\n\n");
+    for (heading, excerpt) in [
+        ("Checked native balances", NATIVE_BALANCES),
+        ("Python-compatible number formatting", NUMBER_FORMATTING),
+    ] {
+        getting_started.push_str(&format!("### {heading}\n\n{excerpt}\n\n"));
+    }
+    pages.insert("getting-started.md".into(), getting_started);
     Ok(pages)
 }
