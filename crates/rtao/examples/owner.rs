@@ -46,6 +46,7 @@ struct Args {
     execute: bool,
 }
 
+#[docify::export(owner_configuration)]
 async fn configure(args: &Args, client: Client) -> anyhow::Result<()> {
     let netuid = NetUid(args.netuid);
     let timeout = Duration::from_secs(args.operation_timeout_secs);

@@ -30,6 +30,8 @@ test "$("$docs_root/bin/mdbook" --version)" = "mdbook v$RTAO_MDBOOK_VERSION"
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps --all-features
 cargo run --locked -p xtask -- docs --llms --out "$docs_root/generated"
 cargo run --locked -p xtask -- docs --llms --out "$docs_root/generated" --check
+# Check the repository README against its compiled template.
+cmp README.md "$docs_root/generated/README.md"
 
 # Copy only the small book source and generated references. The generated
 # SUMMARY includes every catalog page so mdBook renders and links the full set.

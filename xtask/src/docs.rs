@@ -1,5 +1,6 @@
 //! Generate the downloadable book references, catalogs and LLM text.
 
+mod examples;
 mod extra;
 mod reference;
 
@@ -256,6 +257,7 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
             )
         ));
     }
+    let examples = examples::pages(root)?;
     let mut llms = "# rtao\n\nRust SDK for Bittensor. The downloadable book includes rustdoc in `api/`. This text records source documentation and parity mappings; it is not a claim that pending milestones have shipped.\n\n".to_owned();
     for file in [
         "README.md",
@@ -271,7 +273,15 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
     ] {
         llms.push_str(&format!(
             "## {file}\n\n{}\n\n",
-            fs::read_to_string(root.join(file))?
+            match examples.get(
+                Path::new(file)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .context("documentation filename")?
+            ) {
+                Some(compiled) => compiled.clone(),
+                None => fs::read_to_string(root.join(file))?,
+            }
         ));
     }
     let pending_source = fs::read_to_string(root.join("parity/pending.toml"))?;
@@ -280,6 +290,12 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
         pending_entries(&pending_source, "reads", READS.iter().map(|spec| spec.name))?;
     let transactions = transaction_reference(&pending)?;
     let mut outputs = reference::pages(root, &pending, &pending_reads)?;
+    for (path, text) in &examples {
+        ensure!(
+            outputs.insert(path.clone(), text.clone()).is_none(),
+            "duplicate compiled-example page {path}"
+        );
+    }
     for (path, text) in extra::pages()? {
         ensure!(
             outputs.insert(path.clone(), text).is_none(),
@@ -290,7 +306,7 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
     llms.push_str(&index);
     llms.push('\n');
     for (path, text) in &outputs {
-        if path.ends_with(".md") && path != "SUMMARY.md" {
+        if path.ends_with(".md") && path != "SUMMARY.md" && !examples.contains_key(path) {
             llms.push_str(&format!("\n## {path}\n\n{text}\n"));
         }
     }

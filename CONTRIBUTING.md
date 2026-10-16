@@ -88,6 +88,13 @@ strict checking. Pin bumps follow
 [the playbook](PLAN.md#103-a-pin-bump-step-by-step), including the CI-only
 oracle and recorder work.
 
+## Documentation examples
+
+Edit `README.docify.md` when changing the README. Hosted docs generation uses
+Docify 0.4.1 and checks that its output matches `README.md`. The validator, miner
+and owner guides embed exported items from the same examples compiled by the
+features job. These excerpts do not run neurons or require a local node.
+
 ## Attribution and licensing
 
 Original files use `MIT OR Apache-2.0`. Every Rust file copied or derived from
