@@ -226,6 +226,42 @@ impl RawSignerFactory for Factory {
     }
 }
 
+struct RefuseFollowupAfterRelease<'a> {
+    inner: &'a Factory,
+    chain: &'a FakeChain,
+    policy: rtao_rpc::PolicyRefusal,
+}
+impl RawSignerFactory for RefuseFollowupAfterRelease<'_> {
+    fn source<'a>(
+        &'a self,
+        ctx: &'a AppContext,
+        selection: &'a SigningSelection,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
+        self.inner.source(ctx, selection)
+    }
+    fn release<'a>(
+        &'a self,
+        selection: &'a SigningSelection,
+        keys: &'a dyn DynKeySource,
+        success: bool,
+    ) -> BoxFuture<'a, Result<(), CliError>> {
+        Box::pin(async move {
+            self.inner.release(selection, keys, success).await?;
+            assert!(
+                success,
+                "policy refusal must follow a successful submission"
+            );
+            self.chain.queue_transport_error(
+                "chain_getBlockHash",
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                    self.policy.clone(),
+                )))),
+            );
+            Ok(())
+        })
+    }
+}
+
 #[derive(Default)]
 struct Cache(Mutex<BTreeMap<String, Value>>);
 impl RawCallCache for Cache {
@@ -1693,6 +1729,57 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
         serde_json::from_str::<Value>(&json_sink.text(Stream::Stdout)?)?,
         receipt.to_json()
     );
+    // Arm the refusal only after the real executor returns its receipt and
+    // releases the source. Retry help must also identify the reviewed call.
+    let refused_keys = vec![Keys::new(7)?, Keys::new(8)?];
+    let (refused_client, refused_chain) = fixture(&refused_keys).await?;
+    let (refused_ctx, refused_sink) = context(&["--yes", "--json"])?;
+    let inner = Factory::new([("alice".into(), refused_keys[0].clone())]);
+    let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+        "code":-32005,"message":"slow down",
+        "data":{"policy":"rate","retry_after":"12"},
+    }))
+    .ok_or("typed followup policy")?;
+    let expected_message = policy.to_string();
+    let factory = RefuseFollowupAfterRelease {
+        inner: &inner,
+        chain: &refused_chain,
+        policy,
+    };
+    let error = call::execute_rounds_with(
+        &refused_ctx,
+        &refused_client,
+        &raw,
+        "rtao call",
+        &factory,
+        &Cache::default(),
+    )
+    .await
+    .err()
+    .ok_or("followup policy refusal was accepted")?;
+    assert_eq!(error.code, 1);
+    assert_eq!(error.message, expected_message);
+    let help = error.help.as_deref().ok_or("followup recovery help")?;
+    assert!(help.contains("wait 12 seconds, then retry"));
+    assert!(help.contains("the transaction was already submitted"));
+    assert!(help.contains("inspect that result before retrying"));
+    let submissions = refused_chain.mutate_state(|state| state.submissions.clone());
+    assert_eq!(submissions.len(), 1);
+    assert!(help.contains(&format!("call hash 0x{}", hex::encode(call.hash()))));
+    assert_eq!(inner.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(*inner.released.lock().map_err(|_| "release")?, vec![true]);
+    assert_eq!(refused_keys[0].unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        refused_chain
+            .requests()
+            .iter()
+            .filter(|request| request.method.starts_with("author_submit"))
+            .count(),
+        1
+    );
+    assert!(refused_sink.bytes(Stream::Stdout)?.is_empty());
+    assert!(refused_sink.bytes(Stream::Stderr)?.is_empty());
+    refused_client.close().await;
     client.close().await;
     Ok(())
 }

@@ -327,7 +327,7 @@ pub async fn execute_prepared_read(
         ]);
         let lock = rtao::reads::dispatch(client, ReadName::ColdkeyLock, &params)
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         let conviction = if lock.is_null() {
             Value::Null
         } else {
@@ -335,7 +335,7 @@ pub async fn execute_prepared_read(
             params.insert("hotkey_ss58".into(), lock["hotkey"].clone());
             rtao::reads::dispatch(client, ReadName::HotkeyConviction, &params)
                 .await
-                .map_err(failure)?
+                .map_err(CliError::from)?
         };
         let data = json!({"lock":lock,"conviction":conviction});
         return ctx
@@ -350,7 +350,9 @@ pub async fn execute_prepared_read(
             )
             .map_err(failure);
     }
-    let prices = m6_staking::alpha_prices(client).await.map_err(failure)?;
+    let prices = m6_staking::alpha_prices(client)
+        .await
+        .map_err(CliError::from)?;
     let names = local_names(ctx)?;
     let mut records = Vec::new();
     let mut rows = Vec::new();
@@ -361,10 +363,10 @@ pub async fn execute_prepared_read(
             let owner = request.account;
             let locks = m6_locks::locks_for_coldkey(client, owner)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let accepts = m6_locks::accepts_locked_alpha(client, owner)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let identities = rtao::reads::reads::owner::hotkey_identities(
                 client,
                 locks
@@ -374,7 +376,7 @@ pub async fn execute_prepared_read(
                     .collect(),
             )
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
             let mut dust_count = 0usize;
             let mut dust_value = 0.0;
             for lock in locks
@@ -447,11 +449,11 @@ pub async fn execute_prepared_read(
             let n = netuid.ok_or_else(|| CliError::input("missing --netuid"))?;
             let mut locks = m6_locks::locks_for_hotkey(client, hotkey, n)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             locks.sort_by_key(|l| std::cmp::Reverse(l.lock.locked_alpha.rao));
             let conviction = m6_locks::hotkey_conviction(client, hotkey, n)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             for position in locks {
                 let lock = &position.lock;
                 let value = spot(&lock.locked_alpha, &prices)?;
@@ -468,7 +470,7 @@ pub async fn execute_prepared_read(
                         &Map::from_iter([("coldkey_ss58".into(), json!(position.coldkey))]),
                     )
                     .await
-                    .map_err(failure)?
+                    .map_err(CliError::from)?
                 };
                 let label = local
                     .cloned()

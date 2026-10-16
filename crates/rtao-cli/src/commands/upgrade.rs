@@ -293,11 +293,11 @@ async fn execute_loaded(
         .subcommand()
         .ok_or_else(|| CliError::input("missing upgrade command"))?;
     if name == "pending" {
-        let snapshot = client.at(BlockRef::Best).await.map_err(failure)?;
+        let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
         let sudo = snapshot
             .storage(&rtao_runtime::storage::sudo::KEY, ())
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         let records = match sudo {
             Some(sudo) => {
                 crate::commands::multisig::load_pending_upgrades_from_repo(
@@ -335,7 +335,7 @@ async fn execute_loaded(
         return Ok(());
     }
     let bundle = bundle.ok_or_else(|| failure("upgrade artifact bundle is missing"))?;
-    let snapshot = client.at(BlockRef::Best).await.map_err(failure)?;
+    let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
     let outcome = chain::verify(&snapshot, &bundle).await?;
     render_checks(ctx, &outcome)?;
     if name == "check" {
@@ -733,7 +733,7 @@ async fn submit_verified(
 ) -> Result<(), CliError> {
     // Re-read every trust check and both proposal identities after confirmation.
     // Advancing approvals is safe; replacing either opening requires a new review.
-    let snapshot = client.at(BlockRef::Best).await.map_err(failure)?;
+    let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
     let outcome = chain::verify(&snapshot, bundle).await?;
     ensure_checks(&outcome)?;
     if outcome.sudo != reviewed_sudo {
@@ -780,7 +780,7 @@ async fn submit_verified(
     let estimate = client
         .estimate_weight(finalizing.clone(), signer, CryptoType::Sr25519)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let padded = |name: &str| -> Result<u64, CliError> {
         estimate
             .weight
@@ -849,7 +849,7 @@ async fn submit_verified(
                 },
             )
             .await
-            .map_err(failure)
+            .map_err(CliError::transaction)
     }
     .await;
     let _ = factory
@@ -863,7 +863,7 @@ async fn submit_verified(
     if !ctx
         .output
         .result(&result, "runtime-upgrade approval submitted")
-        .map_err(failure)?
+        .map_err(|error| crate::context::known_receipt_error(failure(error), &result))?
     {
         return Err(failure(""));
     }

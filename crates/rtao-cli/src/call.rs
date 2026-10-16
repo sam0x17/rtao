@@ -901,7 +901,7 @@ pub async fn execute_with(
     replay: &str,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
     validate_rounds(request)?;
-    let runtime = View::runtime(client).await.map_err(public_failure)?;
+    let runtime = View::runtime(client).await.map_err(CliError::from)?;
     let call = compose(&runtime, request)?;
     let executor = rtao::Executor::new(client.clone());
     let multisig = request
@@ -938,15 +938,21 @@ pub async fn execute_with(
             .as_ref()
             .map(|store| FsRawCallCache::new(store.paths()))
             .map(Ok)
-            .unwrap_or_else(FsRawCallCache::from_process)?;
-        let followup =
-            multisig_followup(ctx, client, request, group, &call, &result, &cache).await?;
+            .unwrap_or_else(FsRawCallCache::from_process)
+            .map_err(|error| {
+                crate::context::known_receipt_error(continuation_failure(error, &call), &result)
+            })?;
+        let followup = multisig_followup(ctx, client, request, group, &call, &result, &cache)
+            .await
+            .map_err(|error| {
+                crate::context::known_receipt_error(continuation_failure(error, &call), &result)
+            })?;
         result.data.insert("multisig_followup".into(), followup);
     }
     if !ctx
         .output
         .result(&result, &success_message(request, shield.enabled))
-        .map_err(public_failure)?
+        .map_err(|error| crate::context::known_receipt_error(public_failure(error), &result))?
     {
         return Err(CliError::failure(""));
     }
@@ -963,7 +969,7 @@ pub async fn execute_rounds_with(
     cache: &dyn RawCallCache,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
     validate_rounds(request)?;
-    let runtime = View::runtime(client).await.map_err(public_failure)?;
+    let runtime = View::runtime(client).await.map_err(CliError::from)?;
     let call = compose(&runtime, request)?;
     let executor = rtao::Executor::new(client.clone());
     let multisig = request
@@ -1103,14 +1109,17 @@ pub async fn execute_rounds_with(
     }
     let mut result = last.ok_or_else(|| CliError::failure("no approval result"))?;
     if let Some(group) = &multisig {
-        let followup =
-            multisig_followup(ctx, client, request, group, &call, &result, cache).await?;
+        let followup = multisig_followup(ctx, client, request, group, &call, &result, cache)
+            .await
+            .map_err(|error| {
+                crate::context::known_receipt_error(continuation_failure(error, &call), &result)
+            })?;
         result.data.insert("multisig_followup".into(), followup);
     }
     if !ctx
         .output
         .result(&result, &success_message(request, shield.enabled))
-        .map_err(public_failure)?
+        .map_err(|error| crate::context::known_receipt_error(public_failure(error), &result))?
     {
         return Err(CliError::failure(""));
     }
@@ -1139,11 +1148,11 @@ async fn prepare_continuation(
     let signer = selection
         .address
         .ok_or_else(|| CliError::input("continued approval requires a known public member"))?;
-    let snapshot = View::pin(client).await.map_err(public_failure)?;
+    let snapshot = View::pin(client).await.map_err(CliError::from)?;
     let estimate = client
         .estimate_weight(call.clone(), signer, CryptoType::Sr25519)
         .await
-        .map_err(public_failure)?;
+        .map_err(CliError::from)?;
     let outer = rtao::client::compose::as_multi_existing(
         &snapshot,
         signer,
@@ -1154,7 +1163,7 @@ async fn prepare_continuation(
         expected,
     )
     .await
-    .map_err(public_failure)?;
+    .map_err(CliError::from)?;
     check_multisig_funds(
         client,
         &snapshot,
@@ -1244,7 +1253,7 @@ async fn honor_raw_shield(
     let key = client
         .storage(&rtao_runtime::storage::mev_shield::NEXT_KEY, ())
         .await
-        .map_err(public_failure)?;
+        .map_err(CliError::from)?;
     if key.is_some() {
         return Ok(true);
     }
@@ -2389,7 +2398,7 @@ async fn raw_pending(
     client
         .storage(&rtao_runtime::storage::multisig::MULTISIGS, (address, hash))
         .await
-        .map_err(|error| CliError::failure(error.to_string()))
+        .map_err(CliError::from)
 }
 
 async fn raw_query_pending(
@@ -2410,7 +2419,7 @@ async fn raw_query_pending(
     let stream = client.storage_iter(&rtao_runtime::storage::multisig::MULTISIGS, (ms.address,));
     tokio::pin!(stream);
     while let Some(row) = stream.next().await {
-        let (keys, pending) = row.map_err(|error| CliError::failure(error.to_string()))?;
+        let (keys, pending) = row.map_err(CliError::from)?;
         let key = keys
             .first()
             .filter(|_| keys.len() == 1)

@@ -77,14 +77,14 @@ impl SubmissionExecution for Execution {
                 let receipt = executor
                     .execute_dyn(intent.as_dyn(), &unlocked, options)
                     .await
-                    .map_err(failure)?;
+                    .map_err(CliError::transaction)?;
                 if attempt == 2 || !retriable_pool_rejection(&receipt) {
                     return Ok(receipt);
                 }
                 let AnyIntent::PowRegister(pow) = &intent else {
                     return Ok(receipt);
                 };
-                let head = client.at(BlockRef::Best).await.map_err(failure)?;
+                let head = client.at(BlockRef::Best).await.map_err(CliError::from)?;
                 if !head
                     .block()
                     .number
@@ -181,7 +181,7 @@ async fn refresh_with_origin(
     let AnyIntent::PowRegister(pow) = intent else {
         return Ok(intent);
     };
-    let at = client.at(BlockRef::Best).await.map_err(failure)?;
+    let at = client.at(BlockRef::Best).await.map_err(CliError::from)?;
     let (difficulty, minimum, maximum) = at
         .fetch((
             st::DIFFICULTY.at((pow.netuid,)),
@@ -189,7 +189,7 @@ async fn refresh_with_origin(
             st::MAX_DIFFICULTY.at((pow.netuid,)),
         ))
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let difficulty = effective_difficulty(difficulty, minimum, maximum);
     let text = pow.work_hex.strip_prefix("0x").unwrap_or(&pow.work_hex);
     // AnyIntent has already checked Python's byte-pair whitespace syntax.
@@ -319,13 +319,13 @@ pub(super) async fn solve_public(
                 &options,
             )
             .await
-            .map_err(failure)
+            .map_err(CliError::from)
     }
     #[cfg(not(feature = "pow-gpu"))]
     solver
         .solve(client, netuid, hotkey, coldkey, &CancellationToken::new())
         .await
-        .map_err(failure)
+        .map_err(CliError::from)
 }
 
 #[cfg(test)]

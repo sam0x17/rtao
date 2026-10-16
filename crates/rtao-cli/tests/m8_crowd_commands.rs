@@ -306,6 +306,7 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         .ok_or("missing crowdloan was accepted")?;
     assert_eq!(error.code, 1);
     assert_eq!(error.message, "crowdloan 4294967295 not found");
+    assert!(error.help.is_none());
     assert!(sink.bytes(Stream::Stdout)?.is_empty());
 
     chain.mutate_state(|state| {
@@ -328,7 +329,45 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         error.message
     );
     assert!(!error.message.contains("not found"));
+    assert!(error.help.is_none());
     assert!(sink.bytes(Stream::Stdout)?.is_empty());
+    for args in [
+        vec!["rtao", "misc", "crowd", "list", "--json"],
+        vec!["rtao", "misc", "crowd", "info", "11", "--json"],
+        vec!["rtao", "misc", "crowd", "contributors", "11", "--json"],
+    ] {
+        let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+            "code":-32005,"message":"slow down",
+            "data":{"policy":"rate","retry_after":"12"},
+        }))
+        .ok_or("typed crowd policy")?;
+        let expected_message = policy.to_string();
+        let start = chain.requests().len();
+        chain.queue_transport_error(
+            "chain_getBlockHash",
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                policy,
+            )))),
+        );
+        let parsed = parse(&args)?;
+        let (ctx, sink) = context(&parsed)?;
+        let error = crowd::execute(&ctx, &client, group(&parsed)?)
+            .await
+            .err()
+            .ok_or("typed crowd refusal was accepted")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(error.message, expected_message);
+        assert_eq!(error.help.as_deref(), Some("wait 12 seconds, then retry"));
+        assert_eq!(
+            chain.requests()[start..]
+                .iter()
+                .filter(|request| request.method == "chain_getBlockHash")
+                .count(),
+            1
+        );
+        assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        assert!(sink.bytes(Stream::Stderr)?.is_empty());
+    }
     assert_read_only(&chain);
     client.close().await;
     Ok(())

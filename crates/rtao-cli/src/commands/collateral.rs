@@ -140,20 +140,20 @@ pub async fn execute_prepared_read(
     let data = match request.position {
         None => rtao::reads::dispatch(client, ReadName::SubnetCollateral, &params)
             .await
-            .map_err(failure)?,
+            .map_err(CliError::from)?,
         Some((hotkey, coldkey)) => {
             params.insert("hotkey_ss58".into(), json!(hotkey));
             params.insert("coldkey_ss58".into(), json!(coldkey));
             let collateral = rtao::reads::dispatch(client, ReadName::MinerCollateral, &params)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let policy = rtao::reads::dispatch(
                 client,
                 ReadName::CollateralPolicy,
                 &Map::from_iter([("netuid".into(), json!(netuid))]),
             )
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
             json!({"collateral":collateral,"policy":policy})
         }
     };

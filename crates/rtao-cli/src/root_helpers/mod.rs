@@ -60,17 +60,13 @@ pub async fn fetch_root_positions(
     client: &Client,
     owner: AccountId,
 ) -> Result<Vec<RootPosition>, CliError> {
-    let fail = |error: rtao::reads::ReadError| CliError::failure(error.to_string());
-    let snapshot = client
-        .at(BlockRef::Best)
-        .await
-        .map_err(|error| CliError::failure(error.to_string()))?;
+    let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
     let stakes = rtao::reads::reads::m6_staking::stake_for_coldkey(&snapshot, owner)
         .await
-        .map_err(fail)?;
+        .map_err(CliError::from)?;
     let owed = rtao::reads::reads::m6_root::root_basket_owed_breakdown(&snapshot, owner)
         .await
-        .map_err(fail)?;
+        .map_err(CliError::from)?;
     // Python dict comprehensions retain the last duplicate, rather than summing.
     let mut rows: BTreeMap<String, RootPosition> = BTreeMap::new();
     for row in stakes

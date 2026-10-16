@@ -1508,8 +1508,11 @@ mod chain {
 
     async fn snapshot(client: &Client, matches: &ArgMatches) -> Result<Snapshot, CliError> {
         match matches.try_get_one::<u64>("__block").ok().flatten() {
-            Some(block) => client.at(BlockRef::Number(*block)).await.map_err(failure),
-            None => client.pin().await.map_err(failure),
+            Some(block) => client
+                .at(BlockRef::Number(*block))
+                .await
+                .map_err(CliError::from),
+            None => client.pin().await.map_err(CliError::from),
         }
     }
 
@@ -1525,7 +1528,7 @@ mod chain {
                 &[CoreValue::Str(coldkey.to_string())],
             )
             .await
-            .map_err(failure)?
+            .map_err(CliError::from)?
             .to_json();
         if value.is_null() {
             return Ok(Vec::new());
@@ -1552,7 +1555,7 @@ mod chain {
         let value = view.call(
             &rtao_runtime::runtime_apis::stake_info_runtime_api::GET_STAKE_AVAILABILITY_FOR_COLDKEYS,
             (vec![coldkey], Some(netuids)),
-        ).await.map_err(failure)?.to_json();
+        ).await.map_err(CliError::from)?.to_json();
         if value.is_null() {
             return Ok((tao(0), 0));
         }
@@ -1607,12 +1610,12 @@ mod chain {
         let view = snapshot(client, matches).await?;
         let valuation = owner::stake_value_for_coldkey(&view, coldkey)
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         let (free, beta) = tokio::try_join!(
             owner::balance(&view, coldkey),
             owner::root_basket_owed(&view, coldkey)
         )
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
         let (locked, positions) = tokio::try_join!(
             locked_value(&view, coldkey, &valuation),
             positions(&view, coldkey)
@@ -1695,14 +1698,14 @@ mod chain {
             owner::stake_value_for_coldkeys(&view, addresses.clone()),
             owner::balances(&view, addresses.clone())
         )
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
         let mut owed = BTreeMap::new();
         for address in addresses {
             owed.insert(
                 address,
                 owner::root_basket_owed(&view, address)
                     .await
-                    .map_err(failure)?,
+                    .map_err(CliError::from)?,
             );
         }
         let mut rows = accounts
@@ -1875,8 +1878,10 @@ mod chain {
             owner::identity(&view, coldkey),
             owner::root_basket_owed(&view, coldkey),
         )
-        .map_err(failure)?;
-        let free = owner::balance(&view, coldkey).await.map_err(failure)?;
+        .map_err(CliError::from)?;
+        let free = owner::balance(&view, coldkey)
+            .await
+            .map_err(CliError::from)?;
         let raw_baskets = positions(&view, coldkey).await?;
         sum(
             raw_baskets.iter().map(|position| position.1),
@@ -1895,7 +1900,7 @@ mod chain {
         for (hotkey, beta_raw, payout) in &raw_baskets {
             let summary = owner::validator_basket_summary(&view, *hotkey)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             baskets.push(json!({
                 "hotkey": hotkey, "beta_raw": beta_raw, "beta": pyfmt::rao_to_f64(*beta_raw),
                 "claimable": display(&tao(*payout)), "claimable_tao": pyfmt::rao_to_f64(*payout),
@@ -1963,7 +1968,7 @@ mod chain {
             .collect();
         let identities = owner::hotkey_identities(&view, hotkeys)
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         if ctx.output.options.json_mode {
             return ctx.output.value(&data).map_err(failure);
         }

@@ -45,7 +45,7 @@ pub(super) async fn live<V: View + ?Sized>(
     };
     let (burn, lock) = rtao_intents::registration::neuron_registration_split(view, netuid)
         .await
-        .map_err(|error| CliError::failure(error.to_string()))?;
+        .map_err(|error| CliError::transaction(error.into()))?;
     let burn = DynBalance::from(burn);
     let lock = DynBalance::from(lock);
     let lock_part = if lock.rao == 0 {
@@ -85,17 +85,14 @@ async fn subnet_creation<V: View + ?Sized>(
     view: &V,
     assume_yes: bool,
 ) -> Result<RegistrationReview, CliError> {
-    let snapshot = view
-        .pin()
-        .await
-        .map_err(|error| CliError::failure(error.to_string()))?;
+    let snapshot = view.pin().await.map_err(CliError::from)?;
     let quote = snapshot
         .call(
             &api::subnet_registration_runtime_api::GET_NETWORK_REGISTRATION_COST,
             (),
         )
         .await
-        .map_err(|error| CliError::failure(error.to_string()))?;
+        .map_err(CliError::from)?;
     let quote = DynBalance::from_rao(quote.0, NetUid::ROOT);
     // Python formats Balance.decimal, not Balance.tao: keep all native rao
     // digits before adding the thousands separators.
@@ -121,7 +118,7 @@ async fn subnet_creation<V: View + ?Sized>(
                 st::NETWORK_REGISTRATION_QUEUE.at(()),
             )),
         )
-        .map_err(|error| CliError::failure(error.to_string()))?;
+        .map_err(CliError::from)?;
         let mut active = 0usize;
         for (keys, added) in networks {
             let netuid = keys
@@ -145,7 +142,7 @@ async fn subnet_creation<V: View + ?Sized>(
             match snapshot
                 .call(&api::subnet_info_runtime_api::GET_SUBNET_TO_PRUNE, ())
                 .await
-                .map_err(|error| CliError::failure(error.to_string()))?
+                .map_err(CliError::from)?
             {
                 None => "blocked · no subnet is eligible for deregistration".into(),
                 Some(target) => {

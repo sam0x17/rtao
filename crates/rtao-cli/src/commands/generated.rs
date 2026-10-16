@@ -629,7 +629,7 @@ impl TxRequest {
                 let label = super::stake::picker::owner_label(ctx, owner);
                 let free = rtao::reads::generated::interfaces::balance(client, owner)
                     .await
-                    .map_err(failure)?;
+                    .map_err(CliError::from)?;
                 Some(format!("free balance of {label}: {free}"))
             } else {
                 None

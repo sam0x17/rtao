@@ -509,7 +509,7 @@ pub async fn execute(
             };
             let stake = m6_staking::stake(client, *owner, hotkey, *netuid)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             detail(
                 ctx,
                 None,
@@ -524,7 +524,7 @@ pub async fn execute(
         Request::Auto(owner) => {
             let rows = m6_staking::auto_stake_all(client, *owner)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             if rows.is_empty() {
                 detail(ctx, Some("auto-stake"), json!({"destinations":[]}))?;
             } else {
@@ -554,7 +554,7 @@ pub async fn execute(
         Request::Children { hotkey, netuid } => {
             let children = m6_delegation::children(client, *hotkey, *netuid)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             detail(
                 ctx,
                 Some("children"),
@@ -679,7 +679,7 @@ async fn list(
             owners.iter().map(|(_, account)| *account).collect(),
         )
         .await
-        .map_err(failure)?
+        .map_err(CliError::from)?
     } else {
         let mut values = BTreeMap::new();
         for (_, account) in owners {
@@ -687,7 +687,7 @@ async fn list(
                 *account,
                 owner::stake_value_for_coldkey(client, *account)
                     .await
-                    .map_err(failure)?,
+                    .map_err(CliError::from)?,
             );
         }
         values
@@ -725,17 +725,17 @@ async fn list(
             async {
                 m6_locks::locks_for_coldkey(client, *account)
                     .await
-                    .map_err(failure)
+                    .map_err(CliError::from)
             },
             async {
                 m6_staking::stake_availability_for_coldkey(client, *account, netuids)
                     .await
-                    .map_err(failure)
+                    .map_err(CliError::from)
             },
             async {
                 owner::root_basket_owed(client, *account)
                     .await
-                    .map_err(failure)
+                    .map_err(CliError::from)
             },
         )?;
         let wallet_records =
@@ -933,7 +933,7 @@ async fn fill_names(
     if !missing.is_empty() {
         for (account, identity) in owner::hotkey_identities(client, missing)
             .await
-            .map_err(failure)?
+            .map_err(CliError::from)?
         {
             if let Some(name) = identity["name"].as_str().filter(|name| !name.is_empty()) {
                 names.entry(account).or_insert_with(|| name.to_owned());
