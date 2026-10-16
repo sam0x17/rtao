@@ -1113,6 +1113,101 @@ async fn real_execution_unlocks_once_and_renders_one_canonical_receipt() -> Test
         receipt.to_json()
     );
     client.close().await;
+    // A watched submission can return a failed receipt with native unknown-fate
+    // identity. Keep canonical stdout while making that identity usable in CLI
+    // recovery, after the actual SDK and durable receipt hook have completed.
+    for (json_mode, fail_output) in [(false, false), (true, false), (true, true)] {
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        chain.mutate_state(|state| {
+            state.queue_submit(rtao_testkit::SubmitScript::Statuses(vec![json!("ready")]))
+        });
+        let mut flags = vec!["--yes", "--quiet", "--no-mev-shield"];
+        if json_mode {
+            flags.push("--json");
+        }
+        let (mut ctx, sink, _) = context(&flags)?;
+        let broken = Arc::new(RefuseReceiptSink::default());
+        if fail_output {
+            ctx.output = Output::new(ctx.output.options.clone(), broken.clone());
+        }
+        let releases = Mutex::new(Vec::new());
+        let hooks = DurablePlanHooks {
+            unlocks: &keys.unlocks,
+            source_acquisitions: None,
+            releases: &releases,
+            plans: Mutex::new(Vec::new()),
+            raw: Mutex::new(Vec::new()),
+            enriched: Mutex::new(Vec::new()),
+            fail_result: false,
+        };
+        let error = ctx
+            .submit_with_keys_options(
+                &client,
+                &Preview { blocked: false },
+                &keys,
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    deadline: Some(std::time::Duration::from_secs(5)),
+                    ..Default::default()
+                },
+            )
+            .await
+            .err()
+            .ok_or("unknown-fate receipt must fail")?;
+        assert_eq!(error.code, 1);
+        let receipt = {
+            let receipts = hooks.raw.lock().map_err(|_| "raw receipt")?;
+            assert_eq!(receipts.len(), 1, "raw receipt missing before {error:?}");
+            receipts[0].clone()
+        };
+        assert!(!receipt.success);
+        let hash = receipt.fate_unknown.ok_or("native unknown-fate hash")?;
+        let submissions = chain
+            .state()
+            .lock()
+            .map_err(|_| "state")?
+            .submissions
+            .clone();
+        assert_eq!(submissions.len(), 1);
+        assert_eq!(
+            rtao::core::ops::extrinsic_lookup::find(
+                &json!({"block":{"extrinsics":[format!("0x{}",hex::encode(&submissions[0]))]}}),
+                hash.0,
+            )?,
+            Some(0)
+        );
+        let hash = format!("0x{}", hex::encode(hash.0));
+        if fail_output {
+            assert!(error.message.contains("receipt pipe closed"));
+            let help = error
+                .help
+                .as_deref()
+                .ok_or("unknown-fate output recovery")?;
+            assert!(help.contains(&hash));
+            assert!(help.contains("do not resubmit until its outcome is known"));
+            let captured: Value = serde_json::from_slice(&broken.0.lock().map_err(|_| "sink")?)?;
+            assert_eq!(captured, receipt.to_json());
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+            client.close().await;
+            continue;
+        }
+        let stderr = sink.text(Stream::Stderr)?;
+        assert!(stderr.contains(&hash));
+        assert!(stderr.contains("do not resubmit until its outcome is known"));
+        assert!(!stderr.contains("--no-mev-shield"));
+        assert!(error.message.is_empty(), "the receipt is already rendered");
+        if json_mode {
+            let stdout: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+            assert_eq!(stdout, receipt.to_json());
+            assert!(stdout.get("fate_unknown").is_none());
+            let diagnostic: Value = serde_json::from_str(&stderr)?;
+            assert_eq!(diagnostic["error"], receipt.message);
+        } else {
+            assert!(sink.text(Stream::Stdout)?.is_empty());
+        }
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        client.close().await;
+    }
     Ok(())
 }
 

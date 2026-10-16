@@ -582,7 +582,7 @@ async fn local_signer(
             SignerRole::Coldkey
         })
         .await
-        .map_err(failure)
+        .map_err(CliError::from)
 }
 
 async fn decrypt_with_retry(
@@ -597,13 +597,21 @@ async fn decrypt_with_retry(
                 source: rtao::wallet::PasswordSource::Prompt,
             }) if !hotkey && attempts_left > 0 => {
                 ctx.output
-                    .error(
-                        "wrong password",
-                        crate::output::DiagnosticContext::default(),
-                    )
+                    .message("error: wrong password")
                     .map_err(failure)?;
             }
-            result => return result.map_err(failure),
+            result => {
+                return result.map_err(|error| {
+                    CliError::from(crate::context::wallet_key_error(
+                        error,
+                        if hotkey {
+                            SignerRole::Hotkey
+                        } else {
+                            SignerRole::Coldkey
+                        },
+                    ))
+                });
+            }
         }
     }
     Err(failure("decryption failed"))

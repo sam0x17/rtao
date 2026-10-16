@@ -171,10 +171,27 @@ pub enum SignerError {
     RoleUnavailable(SignerRole),
     /// Intent-dependent key defaults cannot be resolved from this public view.
     KeyView(String),
+    /// A backend failure with safe, separately rendered remediation.
+    WithHelp {
+        /// Public diagnostic; never include passwords or captured secret output.
+        message: String,
+        /// Actionable next step containing no secret values.
+        help: String,
+    },
     /// A browser-extension signing session failed.
     Extension(String),
     /// An offline Vault signing session failed.
     Vault(String),
+}
+
+impl SignerError {
+    /// Safe remediation supplied by the failing backend, separately from its message.
+    pub fn help(&self) -> Option<&str> {
+        match self {
+            Self::WithHelp { help, .. } => Some(help),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for SignerError {
@@ -197,6 +214,7 @@ impl fmt::Display for SignerError {
                 write!(formatter, "this key source cannot sign as {role}")
             }
             Self::KeyView(message) => formatter.write_str(message),
+            Self::WithHelp { message, .. } => formatter.write_str(message),
             Self::Extension(message) => formatter.write_str(message),
             Self::Vault(message) => formatter.write_str(message),
         }
