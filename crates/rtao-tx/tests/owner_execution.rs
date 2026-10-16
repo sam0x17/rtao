@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Real owner and registration intents through signed executor submissions.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -920,5 +921,199 @@ async fn shield_owner_rate_replan_opt_out_signs_and_submits_only_one_pair() {
     assert_eq!(requests[0].0, SignPurpose::ShieldInner);
     assert_eq!(requests[1].0, SignPurpose::ShieldCarrier);
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    ex.client().close().await;
+}
+
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_register_subnet_waits_for_its_network_added_after_cleanup
+#[tokio::test]
+async fn subnet_registration_executor_follows_cleanup_through_one_waiting_block() {
+    use rtao_core::{runtime::TypeSpec, value_ext::ValueExt};
+    use rtao_testkit::SubscriptionScript;
+
+    // Native author inclusion advances the fixture from 100 to 101; Python
+    // starts with a mocked receipt at 100. Later heads here are 102 and 103.
+    const PRICE: u64 = 1_000_000_000;
+    let (ex, fake, keys) = fixture().await;
+    let owner = keys.signer.account();
+    let registered = NetUid(4);
+    let runtime = ex.client().refresh_runtime().await.unwrap();
+    let expected = rtao_runtime::calls::subtensor_module::register_network(HOTKEY)
+        .compose(&runtime)
+        .unwrap();
+    fake.mutate_state(|state| {
+        state.seed_python("SubtensorModule", "NetworkRegistrationQueue", &[], json!([{
+            "coldkey":owner,"hotkey":HOTKEY,"registration_block":101,"lock_amount":PRICE
+        }])).unwrap();
+        state.queue_submit(SubmitScript::InBlockThenFinalized { events: json!([
+            {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"SubtensorModule","event_id":"NetworkRemoved","attributes":registered.0,"topics":[]},
+            {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"SubtensorModule","event_id":"NetworkRegistrationQueued","attributes":{"coldkey":owner,"hotkey":HOTKEY,"registration_block":101,"lock_amount":PRICE},"topics":[]},
+            success(0)
+        ]) });
+        // This finite subscription emits only later heads, avoiding a duplicate
+        // bootstrap notification for the already-scanned inclusion block.
+        state.queue_subscription("chain_subscribeNewHeads", SubscriptionScript { items: Vec::new(), early: false });
+    });
+    let (sender, mut receiver) = tokio::sync::mpsc::channel(8);
+    let opts = ExecuteOptions {
+        progress: Some(sender),
+        registration_timeout: Some(Duration::from_secs(5)),
+        deadline: Some(Duration::from_secs(5)),
+        retries: 0,
+        replan_owner_rate_limit: false,
+        ..included()
+    };
+    let intent = RegisterSubnet { hotkey_ss58: None };
+    let execution = ex.execute(&intent, &keys, &opts);
+    let driver = async {
+        let queued = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(queued.stage, "queued");
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while !fake
+                .requests()
+                .iter()
+                .any(|request| request.method == "chain_subscribeNewHeads")
+            {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        let waiting_head = fake.mutate_state(|state| {
+            let header = state.advance(1).pop().unwrap();
+            assert_eq!(state.block, 102);
+            let hash = state.block_hash(102).unwrap();
+            state.seed_events(hash, json!([])).unwrap();
+            header
+        });
+        fake.publish_method("chain_subscribeNewHeads", waiting_head)
+            .unwrap();
+        let waiting = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(waiting.stage, "waiting");
+        let registered_head = fake.mutate_state(|state| {
+            // Seed before advancing so height 102 keeps its prior pending
+            // observation and the new identities belong to the height-103 snapshot.
+            state.seed(&st::SUBNET_OWNER, (registered,), DefaultAccount::from(owner)).unwrap();
+            state.seed(&st::SUBNET_OWNER_HOTKEY, (registered,), DefaultAccount::from(HOTKEY)).unwrap();
+            state.seed(&st::SUBNET_LOCKED, (registered,), TaoBalance(PRICE)).unwrap();
+            state.seed_python("SubtensorModule", "NetworkRegistrationQueue", &[], json!([])).unwrap();
+            let header = state.advance(1).pop().unwrap();
+            assert_eq!(state.block, 103);
+            let hash = state.block_hash(103).unwrap();
+            state.seed_events(hash, json!([{
+                "phase":"Finalization","extrinsic_idx":null,"module_id":"SubtensorModule","event_id":"NetworkAdded","attributes":[registered.0,1],"topics":[]
+            }])).unwrap();
+            header
+        });
+        fake.publish_method("chain_subscribeNewHeads", registered_head)
+            .unwrap();
+        let registered = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(registered.stage, "registered");
+        vec![queued, waiting, registered]
+    };
+    let (result, updates) = tokio::time::timeout(Duration::from_secs(10), async {
+        tokio::join!(execution, driver)
+    })
+    .await
+    .unwrap();
+    let result = result.unwrap();
+    let progress: Vec<Value> = updates
+        .into_iter()
+        .map(|update| {
+            let mut fields = update.data;
+            fields.insert("stage".into(), Value::String(update.stage));
+            Value::Object(fields)
+        })
+        .collect();
+    assert_eq!(
+        progress,
+        vec![
+            json!({"stage":"queued","block":101,"cleanup_netuid":4,"deregistered_netuid":4}),
+            json!({"stage":"waiting","block":102,"blocks_since_call":1,"cleanup_netuid":4,"deregistered_netuid":4}),
+            json!({"stage":"registered","mode":"after_deregistration","netuid":4,"block":103,"cleanup_netuid":4,"deregistered_netuid":4})
+        ]
+    );
+    assert!(matches!(
+        receiver.try_recv(),
+        Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+    ));
+    assert!(result.success);
+    assert!(result.error.is_none());
+    assert!(result.fate_unknown.is_none());
+    assert_eq!(result.message, "Subnet 4 registered.");
+    assert_eq!(
+        result.data,
+        json!({
+            "netuid":4,"registration_mode":"after_deregistration","queued_at_block":101,
+            "registered_at_block":103,"cleanup_netuid":4,"deregistered_netuid":4,
+            "registration_price_rao":PRICE
+        })
+        .as_object()
+        .unwrap()
+        .clone()
+    );
+    assert_eq!(result.output.netuid, Some(registered));
+    assert_eq!(result.output.mode.as_deref(), Some("after_deregistration"));
+    assert_eq!(result.output.registered_at_block, Some(103));
+    assert_eq!(result.inclusion, Inclusion::InBlock);
+    assert_eq!(result.extrinsic_id.as_deref(), Some("101-0000"));
+    let inclusion = fake.mutate_state(|state| state.block_hash(101).unwrap());
+    assert_eq!(
+        format!("0x{}", hex::encode(result.block_hash.unwrap().0)),
+        inclusion
+    );
+    assert_eq!(result.events.len(), 3);
+    assert!(
+        result
+            .events
+            .iter()
+            .any(|event| event.matches("SubtensorModule", "NetworkRegistrationQueued"))
+    );
+    assert!(
+        !result
+            .events
+            .iter()
+            .any(|event| event.matches("SubtensorModule", "NetworkAdded"))
+    );
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        *keys.signer.requests.lock().unwrap(),
+        vec![(SignPurpose::Extrinsic, expected.as_bytes().to_vec())]
+    );
+    let submissions = fake.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 1);
+    let decoded = runtime
+        .core()
+        .decode_extrinsic(&submissions[0], true)
+        .unwrap();
+    let call = runtime
+        .core()
+        .decode_spec(&TypeSpec::Call, expected.as_bytes(), true)
+        .unwrap();
+    assert_eq!(decoded.field("call"), Some(&call));
+    assert_eq!(
+        decoded
+            .field("address")
+            .and_then(ValueExt::as_str)
+            .unwrap()
+            .parse::<AccountId>()
+            .unwrap(),
+        owner
+    );
+    assert_eq!(
+        fake.requests()
+            .iter()
+            .filter(|request| request.method.starts_with("author_submit"))
+            .count(),
+        1
+    );
     ex.client().close().await;
 }

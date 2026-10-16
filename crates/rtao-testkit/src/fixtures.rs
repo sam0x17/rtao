@@ -13,6 +13,9 @@ use rtao_core::{
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
+/// Public native sample scenarios shared by SDK and CLI table fixtures.
+pub mod catalog_samples;
+
 /// A failed fixture read, parse, or metadata decode.
 #[derive(Debug)]
 pub enum FixtureError {

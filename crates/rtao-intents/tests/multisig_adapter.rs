@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Public typed multisig adapters exercised through the executor and FakeChain.
 #![cfg(feature = "all")]
@@ -1791,4 +1792,174 @@ async fn pinned_proxy_layers_require_the_original_effective_semantic_origin() {
     assert_eq!(semantic.builds.load(Ordering::SeqCst), 1);
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(fake.state().lock().unwrap().submissions.is_empty());
+}
+
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_submit_shielded_wraps_root_in_sudo
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_submit_shielded_wraps_proxy
+// These production intents prove wrapping before shield signing. The supplied
+// carrier acceptance does not establish decryption, dispatch or runtime effects.
+#[tokio::test]
+async fn production_root_and_proxy_shield_sign_the_wrapped_semantic_call_before_the_carrier() {
+    use rtao_signer::{MultiSignature, SignPurpose, SigningRequest};
+
+    #[derive(Clone)]
+    struct Capture {
+        key: KeypairSigner,
+        requests: Arc<Mutex<Vec<(SignPurpose, Vec<u8>)>>>,
+    }
+    impl Signer for Capture {
+        fn account(&self) -> AccountId {
+            self.key.account()
+        }
+        fn crypto_type(&self) -> CryptoType {
+            self.key.crypto_type()
+        }
+        fn sign<'a>(
+            &'a self,
+            request: &'a SigningRequest<'a>,
+        ) -> BoxFuture<'a, Result<MultiSignature, SignerError>> {
+            Box::pin(async move {
+                self.requests
+                    .lock()
+                    .unwrap()
+                    .push((request.purpose, request.call.to_vec()));
+                self.key.sign(request).await
+            })
+        }
+    }
+
+    tokio::time::timeout(std::time::Duration::from_secs(20), async {
+        for root in [true, false] {
+            let (executor, fake, keys) = fixture(u64::MAX).await;
+            let real = AccountId([3; 32]);
+            fake.mutate_state(|state| {
+                state
+                    .seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])
+                    .unwrap();
+                state
+                    .seed_python(
+                        "System",
+                        "Account",
+                        &[json!(real)],
+                        json!({"data":{"free":u64::MAX}}),
+                    )
+                    .unwrap();
+                state.queue_submit(rtao_testkit::SubmitScript::Statuses(vec![json!("ready")]));
+            });
+            let signer = Capture {
+                key: keys.signer.clone(),
+                requests: Arc::new(Mutex::new(Vec::new())),
+            };
+            let intent: Box<dyn DynIntent> = if root {
+                Box::new(rtao_intents::SetSubnetEmissionEnabled {
+                    netuids: vec![NetUid(1)],
+                    enabled: true,
+                })
+            } else {
+                Box::new(rtao_intents::Transfer {
+                    dest_ss58: real.into(),
+                    amount_tao: Balance::<Tao>::from_rao(1_000_000_000).into(),
+                    keep_alive: true,
+                })
+            };
+            let options = rtao_tx::ShieldOptions {
+                execute: ExecuteOptions {
+                    proxy_for: (!root).then_some(real),
+                    wait_for_inclusion: false,
+                    wait_for_finalization: false,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let result = executor
+                .submit_shielded_dyn(intent.as_ref(), &signer, &options)
+                .await
+                .unwrap();
+            assert!(result.success, "{}", result.message);
+            assert_eq!(result.inclusion, rtao_client::Inclusion::PoolAccepted);
+            assert_eq!(result.data["shielded"], true);
+            if root {
+                assert!(!result.data.contains_key("proxy_for"));
+            } else {
+                assert_eq!(result.data["proxy_for"], json!(real));
+            }
+            let signed = signer.requests.lock().unwrap().clone();
+            assert_eq!(
+                signed.iter().map(|request| request.0).collect::<Vec<_>>(),
+                [SignPurpose::ShieldInner, SignPurpose::ShieldCarrier]
+            );
+            // Fixed v478 SCALE, independent of intent build and wrapper helpers.
+            // Root: Sudo12/0 -> AdminUtils19/94, netuid1, enabled=true.
+            // Proxy: Proxy16/0, real Id, None, Balances5/3, dest Id, compact1TAO.
+            let expected = if root {
+                vec![12, 0, 19, 94, 1, 0, 1]
+            } else {
+                let mut bytes = vec![16, 0, 0];
+                bytes.extend_from_slice(real.as_bytes());
+                bytes.extend_from_slice(&[0, 5, 3, 0]);
+                bytes.extend_from_slice(real.as_bytes());
+                bytes.extend_from_slice(&[2, 40, 107, 238]);
+                bytes
+            };
+            assert_eq!(signed[0].1, expected);
+            let runtime = executor.client().refresh_runtime().await.unwrap();
+            let inner = rtao_core::DynValue::new(
+                runtime
+                    .core()
+                    .decode_spec(&TypeSpec::Call, &signed[0].1, true)
+                    .unwrap(),
+            )
+            .to_json();
+            assert_eq!(inner["call_module"], if root { "Sudo" } else { "Proxy" });
+            assert_eq!(inner["call_function"], if root { "sudo" } else { "proxy" });
+            let nested = arg(&inner, "call");
+            assert_eq!(
+                nested["call_module"],
+                if root { "AdminUtils" } else { "Balances" }
+            );
+            assert_eq!(
+                nested["call_function"],
+                if root {
+                    "sudo_set_subnet_emission_enabled"
+                } else {
+                    "transfer_keep_alive"
+                }
+            );
+            if root {
+                assert_eq!(arg(nested, "netuid"), &json!(1));
+                assert_eq!(arg(nested, "enabled"), &json!(true));
+            }
+            let submissions = fake.state().lock().unwrap().submissions.clone();
+            assert_eq!(submissions.len(), 1);
+            assert!(submissions[0].ends_with(&signed[1].1));
+            let outer = runtime
+                .core()
+                .decode_extrinsic(&submissions[0], true)
+                .unwrap();
+            use rtao_core::value_ext::ValueExt;
+            assert_eq!(
+                outer.field("address").and_then(ValueExt::as_str),
+                Some(signer.account().to_string().as_str())
+            );
+            let carrier = runtime
+                .core()
+                .decode_spec(&TypeSpec::Call, &signed[1].1, true)
+                .unwrap();
+            assert_eq!(outer.field("call"), Some(&carrier));
+            let carrier = rtao_core::DynValue::new(carrier).to_json();
+            assert_eq!(carrier["call_module"], "MevShield");
+            assert_eq!(carrier["call_function"], "submit_encrypted");
+            assert!(signed[1].1.starts_with(&[30, 1]));
+            assert_eq!(
+                fake.requests()
+                    .iter()
+                    .filter(|request| request.method.starts_with("author_submit"))
+                    .count(),
+                1
+            );
+            executor.client().close().await;
+        }
+    })
+    .await
+    .unwrap();
 }
