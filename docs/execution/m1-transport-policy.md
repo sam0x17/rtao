@@ -10,7 +10,8 @@ for literal updates, authenticated spans and unsupported producer refusal.
 The two source-extracted pytest parameter tables and seven exact `pyt:` origins
 are integrated; hosted generation in run 38871417189 at `d5132a0` supplied the
 authenticated outputs, and the final extraction check passed. These are Rust
-fixture results, with Python execution and source-row disposition kept separate.
+fixture results. Complete source review now reconciles test_rpc.py and the
+FakeNode harness, while Python execution remains unverified.
 
 The maintained independent workspace at `ci/tls-two-providers` passed
 `wss_with_two_compiled_providers_and_no_process_default` in the same run's

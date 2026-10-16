@@ -385,6 +385,16 @@ impl Request {
                 })
             }
             "swap" => {
+                // Resolve wallet-relative hotkeys only after the signing wallet
+                // is selected, as the source command does before its quote.
+                ctx.confirm_wallet(
+                    &crate::prompt::WalletConfirmation {
+                        help: "Wallet whose coldkey signs this transaction.".into(),
+                        require_coldkey: true,
+                        ..Default::default()
+                    },
+                    history,
+                )?;
                 let hotkey = target(ctx, "hotkey_ss58", optional(leaf, "hotkey_ss58"), history)?;
                 let origin = NetUid(
                     *leaf
@@ -748,13 +758,18 @@ async fn pick_position(
     }
     Ok(result)
 }
+struct PickedFund {
+    hotkey: AccountId,
+    name: Option<String>,
+    beta_price_tao: f64,
+}
 async fn pick_fund(
     ctx: &AppContext,
     client: &Client,
     exclude: Option<AccountId>,
     flag: &str,
     history: &mut PromptHistory,
-) -> Result<Option<AccountId>, CliError> {
+) -> Result<Option<PickedFund>, CliError> {
     let mut funds = m6_root::root_baskets(client).await.map_err(failure)?;
     let normalized = basket_index::normalize_positions(
         &funds
@@ -788,11 +803,19 @@ async fn pick_fund(
     }
     let hotkeys: Vec<_> = funds.iter().map(|row| row.hotkey).collect();
     let names = names(ctx, client, &hotkeys).await?;
-    let result = choose(ctx, &hotkeys, &names, &details, flag, true)?;
-    if let Some(key) = result {
-        record_answer(history, flag, key);
-    }
-    Ok(result)
+    let Some(hotkey) = choose(ctx, &hotkeys, &names, &details, flag, true)? else {
+        return Ok(None);
+    };
+    let fund = funds
+        .iter()
+        .find(|fund| fund.hotkey == hotkey)
+        .ok_or_else(|| failure("selected root fund is not in the picker"))?;
+    record_answer(history, flag, hotkey);
+    Ok(Some(PickedFund {
+        hotkey,
+        name: names.get(&hotkey).cloned(),
+        beta_price_tao: fund.beta_price_tao,
+    }))
 }
 
 fn tx(op: &'static str, args: Map<String, Value>) -> Result<TxRequest, CliError> {
@@ -1017,10 +1040,10 @@ pub async fn prepare_transaction(
             .map(Some)
         }
         Request::Allocate { hotkey, amount } => {
-            let hotkey = match hotkey {
-                Some(key) => *key,
+            let (hotkey, picked) = match hotkey {
+                Some(key) => (*key, None),
                 None => match pick_fund(ctx, client, None, "--hotkey", history).await? {
-                    Some(key) => key,
+                    Some(fund) => (fund.hotkey, Some(fund)),
                     None => return Ok(None),
                 },
             };
@@ -1059,16 +1082,26 @@ pub async fn prepare_transaction(
                     ),
                 ),
             ];
-            // These are display-only reads in Python; a pre-v4 node or a quote
-            // failure must not prevent planning the allocation.
-            if let Ok(summary) = owner::validator_basket_summary(client, hotkey).await {
-                if let Ok(names) = names(ctx, client, &[hotkey]).await
-                    && let Some(name) = names.get(&hotkey)
-                {
+            // The interactive picker already holds Python's selected record.
+            // Keep its name and raw mint rate without another display-only RPC.
+            // Explicit targets retain their best-effort individual quote.
+            let context = if let Some(fund) = picked {
+                Some((fund.name, fund.beta_price_tao))
+            } else if let Ok(summary) = owner::validator_basket_summary(client, hotkey).await {
+                let name = names(ctx, client, &[hotkey])
+                    .await
+                    .ok()
+                    .and_then(|names| names.get(&hotkey).cloned());
+                Some((name, summary.beta_price_tao))
+            } else {
+                None
+            };
+            if let Some((name, beta_price_tao)) = context {
+                if let Some(name) = name {
                     rows.insert(0, ("name", json!(name)));
                 }
-                if summary.beta_price_tao > 0.0 {
-                    rows.push(("rate", json!(format!("{:.4} τ/β", summary.beta_price_tao))));
+                if beta_price_tao > 0.0 {
+                    rows.push(("rate", json!(format!("{beta_price_tao:.4} τ/β"))));
                     if let Ok(ResolvedAmount::Exact(amount)) =
                         Amount::parse(&amount).and_then(|amount| amount.resolve(NetUid::ROOT, true))
                     {
@@ -1076,7 +1109,7 @@ pub async fn prepare_transaction(
                             "receive",
                             json!(format!(
                                 "~{} β",
-                                comma_fixed(amount.amount() / summary.beta_price_tao, 4)
+                                comma_fixed(amount.amount() / beta_price_tao, 4)
                             )),
                         ));
                     }
@@ -1108,7 +1141,7 @@ pub async fn prepare_transaction(
             let dest = match dest {
                 Some(value) => selector(ctx, client, value).await?,
                 None => match pick_fund(ctx, client, Some(origin), "--to", history).await? {
-                    Some(key) => key,
+                    Some(fund) => fund.hotkey,
                     None => return Ok(None),
                 },
             };
