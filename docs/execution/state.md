@@ -123,6 +123,19 @@ refusal. Independent source reviews and formatting pass. The next ordinary
 run expects 3,106 tests, four skipped and 65 selected PASS records; execution
 and source-row acceptance remain pending.
 
+The separate EVM source batch adds canonical Solidity ABI import and equality
+checks for every watched SDK JSON file, including unregistered files. Nine
+new tests exercise the real imported inputs and missing/drift/identity refusals.
+A bounded `refresh_canonical_abis` dispatch reuses `compat-refresh` on free
+`ubuntu-latest`, imports only 21 independently named files at the existing
+parity commit, verifies all 21 focused importer/extractor tests and retains
+23 candidate source files plus bounded proof. Its verifier explicitly requires
+all nine new test names and preserves every prior artifact, pin and NOTICE
+entry. The canonical files have not been imported or adopted yet. Source review,
+formatting and Node syntax checks pass; the source commit skips ordinary CI
+until the required candidate inputs are reviewed and adopted. Ordinary hosted
+validation follows adoption. No EVM row or milestone acceptance follows now.
+
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.

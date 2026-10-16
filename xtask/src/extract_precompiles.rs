@@ -1,7 +1,8 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/precompiles.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Authenticated precompile declarations and the native tables that consume them.
 
-use std::{collections::BTreeSet, fs, path::Path};
+use std::{collections::BTreeSet, fs, io::Read, path::Path};
 
 use anyhow::{Context, Result, bail, ensure};
 use rustpython_parser::{Parse, ast};
@@ -23,6 +24,8 @@ pub(super) const NAMES: &[&str] = &[
     "STANDARD_PRECOMPILES",
 ];
 const OUTPUT: &str = "crates/rtao-evm/src/precompile_catalog.rs";
+const SDK_ABI_PREFIX: &str = "sdk/python/bittensor/evm/abi/";
+const CANONICAL_ABI_PREFIX: &str = "precompiles/src/solidity/";
 
 fn validate_class(source: &str, bindings: &Bindings) -> Result<()> {
     ensure!(
@@ -339,32 +342,105 @@ fn render(table: &Value, rao: &[String]) -> Result<String> {
     Ok(out)
 }
 
+fn sdk_abi_file(source: &str) -> Option<&str> {
+    source
+        .strip_prefix(SDK_ABI_PREFIX)
+        .filter(|file| !file.contains('/') && file.ends_with(".json"))
+}
+
+fn authenticated_abi(
+    root: &Path,
+    pins: &DocumentMut,
+    source: &str,
+    destination: &str,
+    expected_blob: Option<&str>,
+) -> Result<Value> {
+    let artifact = pins["artifacts"]
+        .get(source)
+        .with_context(|| format!("ABI artifact pin missing: {source}"))?;
+    ensure!(
+        artifact.get("to").and_then(toml_edit::Item::as_str) == Some(destination),
+        "ABI destination differs: {source} must be copied to {destination}"
+    );
+    let path = root.join(destination);
+    let metadata = fs::symlink_metadata(&path)
+        .with_context(|| format!("read ABI input {source} at {destination}"))?;
+    ensure!(
+        metadata.is_file() && !metadata.file_type().is_symlink(),
+        "ABI input must be a regular file: {source}"
+    );
+    ensure!(
+        metadata.len() <= MAX_SOURCE_BYTES as u64,
+        "ABI exceeds extraction bound: {source}"
+    );
+    let mut bytes = Vec::new();
+    fs::File::open(&path)
+        .with_context(|| format!("read ABI input {source} at {destination}"))?
+        .take(MAX_SOURCE_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)?;
+    ensure!(
+        bytes.len() <= MAX_SOURCE_BYTES,
+        "ABI exceeds extraction bound: {source}"
+    );
+    ensure!(
+        artifact.get("sha256").and_then(toml_edit::Item::as_str)
+            == Some(format!("{:x}", Sha256::digest(&bytes)).as_str()),
+        "ABI artifact SHA256 differs: {source}"
+    );
+    if let Some(expected) = expected_blob {
+        ensure!(
+            super::git_blob(&bytes) == expected,
+            "ABI watched-tree blob differs: {source}"
+        );
+    }
+    let abi: Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("parse ABI JSON array: {source}"))?;
+    ensure!(abi.is_array(), "ABI must be an array: {source}");
+    Ok(abi)
+}
+
 fn authenticate_abis(root: &Path, pins: &DocumentMut, table: &Value) -> Result<()> {
     let resolver = Resolver::new(root)?;
+    let mut abi_count = 0;
+    // Python's glob includes every direct JSON file, including unregistered ABIs.
+    // Canonical files are separately imported extras, outside the watched tree.
+    for (source, blob) in &resolver.tree {
+        let Some(file) = sdk_abi_file(source) else {
+            continue;
+        };
+        ensure!(
+            abi_count < MAX_CONTAINER_ITEMS,
+            "SDK ABI file inventory exceeds extraction bound"
+        );
+        abi_count += 1;
+        let destination = format!("vendor/upstream/evm/abi/{file}");
+        let abi = authenticated_abi(root, pins, source, &destination, Some(blob))?;
+        let stem = Path::new(file)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .context("SDK ABI filename has no UTF-8 stem")?;
+        let canonical_source = format!("{CANONICAL_ABI_PREFIX}{stem}.abi");
+        let canonical_destination = format!("vendor/upstream/src/{canonical_source}");
+        let canonical =
+            authenticated_abi(root, pins, &canonical_source, &canonical_destination, None)?;
+        ensure!(
+            abi == canonical,
+            "SDK ABI differs from canonical Solidity ABI: {source} != {canonical_source}"
+        );
+    }
     let mut functions = BTreeSet::new();
     for (name, record) in pairs(value(table, "PRECOMPILES")?)? {
         let file = string(&record["fields"], "abi_file")?;
-        let source = format!("sdk/python/bittensor/evm/abi/{file}");
+        let source = format!("{SDK_ABI_PREFIX}{file}");
+        let blob = resolver
+            .tree
+            .get(&source)
+            .filter(|_| sdk_abi_file(&source).is_some())
+            .with_context(|| {
+                format!("registered ABI is absent from watched SDK JSON files: {source}")
+            })?;
         let destination = format!("vendor/upstream/evm/abi/{file}");
-        let artifact = &pins["artifacts"][source.as_str()];
-        ensure!(
-            artifact["to"].as_str() == Some(destination.as_str()),
-            "ABI destination differs"
-        );
-        let path = root.join(&destination);
-        ensure!(
-            fs::metadata(&path)?.len() <= MAX_SOURCE_BYTES as u64,
-            "ABI exceeds extraction bound"
-        );
-        let bytes = fs::read(path)?;
-        ensure!(
-            bytes.len() <= MAX_SOURCE_BYTES
-                && artifact["sha256"].as_str()
-                    == Some(format!("{:x}", Sha256::digest(&bytes)).as_str())
-                && resolver.tree.get(&source) == Some(&super::git_blob(&bytes)),
-            "ABI artifact/tree identity differs"
-        );
-        let abi: Value = serde_json::from_slice(&bytes)?;
+        let abi = authenticated_abi(root, pins, &source, &destination, Some(blob))?;
         for entry in abi.as_array().context("ABI must be an array")? {
             if entry["type"] == "function" {
                 functions.insert((name.to_owned(), string(entry, "name")?.to_owned()));
@@ -402,6 +478,109 @@ pub(super) fn outputs(
 mod tests {
     use super::super::document;
     use super::*;
+    use std::{
+        path::PathBuf,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
+
+    const FIXTURE_SDK: &str = "sdk/python/bittensor/evm/abi/registered.json";
+    const FIXTURE_CANONICAL: &str = "precompiles/src/solidity/registered.abi";
+    const FIXTURE_CANONICAL_DEST: &str =
+        "vendor/upstream/src/precompiles/src/solidity/registered.abi";
+    const FIXTURE_ABI: &[u8] = br#"[{"type":"function","name":"fixture","inputs":[],"outputs":[],"stateMutability":"view"}]"#;
+    static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+
+    struct AbiFixture {
+        root: PathBuf,
+        pins: DocumentMut,
+        tree: String,
+        table: Value,
+    }
+
+    impl AbiFixture {
+        fn new() -> Result<Self> {
+            let pins = "[artifacts]\n".parse()?;
+            let base = std::env::var_os("RTAO_TEMP_ROOT").map_or_else(
+                || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../target/extract-tests"),
+                PathBuf::from,
+            );
+            let base = base.join("precompiles");
+            fs::create_dir_all(&base)?;
+            let root = base.join(format!(
+                "fixture-{}-{}",
+                std::process::id(),
+                SEQUENCE.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir(&root)?;
+            let mut fixture = Self {
+                root,
+                pins,
+                tree: String::new(),
+                table: serde_json::json!({"values": {
+                    "PRECOMPILES": {"value": {"dict": [
+                        ["fixture", {"fields": {"abi_file": "registered.json"}}]
+                    ]}},
+                    "DEPRECATED_FUNCTIONS": {"value": {"dict": []}},
+                    "CALLER_ROLES": {"value": {"dict": []}}
+                }}),
+            };
+            fixture.artifact(
+                "pallets/subtensor/src/lib.rs",
+                "vendor/upstream/src/pallets/subtensor/src/lib.rs",
+                b"pub const FIXTURE: u8 = 1;\n",
+            )?;
+            fixture.sdk("registered.json", FIXTURE_ABI)?;
+            fixture.artifact(FIXTURE_CANONICAL, FIXTURE_CANONICAL_DEST, FIXTURE_ABI)?;
+            authenticate_abis(&fixture.root, &fixture.pins, &fixture.table)?;
+            Ok(fixture)
+        }
+
+        fn save_pins(&self) -> Result<()> {
+            fs::write(self.root.join("upstream.toml"), self.pins.to_string())?;
+            Ok(())
+        }
+
+        fn artifact(&mut self, source: &str, destination: &str, bytes: &[u8]) -> Result<()> {
+            let path = self.root.join(destination);
+            fs::create_dir_all(path.parent().context("fixture artifact parent")?)?;
+            fs::write(path, bytes)?;
+            let mut artifact = toml_edit::InlineTable::new();
+            artifact.insert("to", destination.into());
+            artifact.insert("sha256", format!("{:x}", Sha256::digest(bytes)).into());
+            self.pins["artifacts"][source] = toml_edit::value(artifact);
+            self.save_pins()
+        }
+
+        fn sdk(&mut self, file: &str, bytes: &[u8]) -> Result<()> {
+            let source = format!("{SDK_ABI_PREFIX}{file}");
+            self.artifact(&source, &format!("vendor/upstream/evm/abi/{file}"), bytes)?;
+            self.tree.push_str(&format!(
+                "100644 blob {}\t{source}\n",
+                super::super::git_blob(bytes)
+            ));
+            fs::write(self.root.join("vendor/upstream/tree.txt"), &self.tree)?;
+            Ok(())
+        }
+
+        fn refuses(&self, diagnostic: &str) -> Result<()> {
+            let error = authenticate_abis(&self.root, &self.pins, &self.table)
+                .err()
+                .context("invalid ABI fixture was accepted")?;
+            ensure!(
+                format!("{error:#}").contains(diagnostic),
+                "wrong ABI refusal: {error:#}"
+            );
+            Ok(())
+        }
+    }
+
+    impl Drop for AbiFixture {
+        fn drop(&mut self) {
+            // Only data files are created under this exact newly created root;
+            // these fixtures create no processes, services, symlinks or venvs.
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
 
     fn resolved(source: &str) -> Result<Value> {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -411,6 +590,98 @@ mod tests {
         let mut resolver = Resolver::new(root)?;
         resolver.sources.insert(SOURCE.into(), source.into());
         document(&mut resolver, &pins, SOURCE, NAMES)
+    }
+
+    #[test]
+    // pyt: tests/unit/test_evm.py::TestVendoredAbiSync::test_vendored_abi_matches_canonical
+    fn all_imported_sdk_abis_match_independent_canonical_solidity_arrays() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let pins: DocumentMut = fs::read_to_string(root.join("upstream.toml"))?.parse()?;
+        let mut resolver = Resolver::new(root)?;
+        ensure!(
+            resolver
+                .tree
+                .keys()
+                .filter(|source| sdk_abi_file(source).is_some())
+                .count()
+                == 21,
+            "pinned SDK ABI file inventory changed"
+        );
+        let table = document(&mut resolver, &pins, SOURCE, NAMES)?;
+        authenticate_abis(root, &pins, &table)
+    }
+
+    #[test]
+    fn canonical_abi_input_and_artifact_pin_are_both_required() -> Result<()> {
+        let fixture = AbiFixture::new()?;
+        fs::remove_file(fixture.root.join(FIXTURE_CANONICAL_DEST))?;
+        fixture.refuses(&format!("read ABI input {FIXTURE_CANONICAL}"))?;
+
+        let mut fixture = AbiFixture::new()?;
+        fixture.pins["artifacts"]
+            .as_table_mut()
+            .context("fixture artifact table")?
+            .remove(FIXTURE_CANONICAL);
+        fixture.save_pins()?;
+        fixture.refuses(&format!("ABI artifact pin missing: {FIXTURE_CANONICAL}"))
+    }
+
+    #[test]
+    fn reauthenticated_canonical_abi_content_drift_and_non_arrays_are_refused() -> Result<()> {
+        let mut fixture = AbiFixture::new()?;
+        fixture.artifact(
+            FIXTURE_CANONICAL,
+            FIXTURE_CANONICAL_DEST,
+            br#"[{"type":"function","name":"changed","inputs":[],"outputs":[],"stateMutability":"view"}]"#,
+        )?;
+        fixture.refuses("SDK ABI differs from canonical Solidity ABI")?;
+        fixture.artifact(FIXTURE_CANONICAL, FIXTURE_CANONICAL_DEST, b"{}")?;
+        fixture.refuses(&format!("ABI must be an array: {FIXTURE_CANONICAL}"))
+    }
+
+    #[test]
+    fn canonical_abi_json_formatting_and_object_key_order_do_not_change_equality() -> Result<()> {
+        let mut fixture = AbiFixture::new()?;
+        let formatted = b"[\n  {\"stateMutability\": \"view\", \"outputs\": [], \"inputs\": [], \"name\": \"fixture\", \"type\": \"function\"}\n]\n";
+        ensure!(formatted.as_slice() != FIXTURE_ABI);
+        fixture.artifact(FIXTURE_CANONICAL, FIXTURE_CANONICAL_DEST, formatted)?;
+        authenticate_abis(&fixture.root, &fixture.pins, &fixture.table)
+    }
+
+    #[test]
+    fn unregistered_watched_sdk_json_requires_its_own_canonical_counterpart() -> Result<()> {
+        let mut fixture = AbiFixture::new()?;
+        fixture.sdk("unregistered.json", FIXTURE_ABI)?;
+        let source = "precompiles/src/solidity/unregistered.abi";
+        let destination = "vendor/upstream/src/precompiles/src/solidity/unregistered.abi";
+        fixture.refuses(&format!("ABI artifact pin missing: {source}"))?;
+        fixture.artifact(source, destination, FIXTURE_ABI)?;
+        authenticate_abis(&fixture.root, &fixture.pins, &fixture.table)?;
+        fs::remove_file(fixture.root.join(destination))?;
+        fixture.refuses(&format!("read ABI input {source}"))
+    }
+
+    #[test]
+    fn sdk_abi_hash_blob_and_destination_authentication_survive_canonical_checks() -> Result<()> {
+        let mut fixture = AbiFixture::new()?;
+        fixture.artifact(
+            FIXTURE_SDK,
+            "vendor/upstream/evm/abi/registered.json",
+            b"[]",
+        )?;
+        fixture.refuses(&format!("ABI watched-tree blob differs: {FIXTURE_SDK}"))?;
+
+        let mut fixture = AbiFixture::new()?;
+        fixture.pins["artifacts"][FIXTURE_SDK]["to"] =
+            toml_edit::value("vendor/upstream/other.json");
+        fixture.save_pins()?;
+        fixture.refuses(&format!("ABI destination differs: {FIXTURE_SDK}"))?;
+
+        let fixture = AbiFixture::new()?;
+        fs::write(fixture.root.join(FIXTURE_CANONICAL_DEST), b"[]")?;
+        fixture.refuses(&format!("ABI artifact SHA256 differs: {FIXTURE_CANONICAL}"))
     }
 
     #[test]
