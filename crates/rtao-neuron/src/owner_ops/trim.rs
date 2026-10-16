@@ -173,7 +173,7 @@ pub struct TrimNullConfig {
     pub max_batches: u32,
     /// Delay between read-only window checks.
     pub poll_interval: Duration,
-    /// Maximum time without finalized progress.
+    /// Wait budget starting at the first wait, cleared after each accepted batch.
     pub wait_timeout: Duration,
 }
 
@@ -253,7 +253,7 @@ pub struct TrimNullSession {
     report: TrimReport,
     journal: SubmissionJournal,
     stalled: u8,
-    progress_at: tokio::time::Instant,
+    wait_deadline: Option<tokio::time::Instant>,
     retry_window: Option<String>,
 }
 
@@ -306,7 +306,7 @@ impl TrimNullSession {
             report,
             journal,
             stalled: 0,
-            progress_at: tokio::time::Instant::now(),
+            wait_deadline: None,
             retry_window: None,
         })
     }
@@ -405,21 +405,25 @@ impl TrimNullSession {
         }
     }
 
-    /// Wait without a submission future; stop after a bounded stalled interval.
+    /// Wait without a submission future, sharing a deadline until a batch is accepted.
     pub async fn wait(&mut self, reason: &str, delay: Duration) -> Result<(), TxError> {
-        let deadline = self
-            .progress_at
-            .checked_add(self.config.wait_timeout)
-            .ok_or_else(|| invalid("Null pruning wait deadline overflow"))?;
-        if tokio::time::Instant::now() >= deadline {
+        let now = tokio::time::Instant::now();
+        let deadline = match self.wait_deadline {
+            Some(deadline) => deadline,
+            None => {
+                let deadline = now
+                    .checked_add(self.config.wait_timeout)
+                    .ok_or_else(|| invalid("Null pruning wait deadline overflow"))?;
+                self.wait_deadline = Some(deadline);
+                deadline
+            }
+        };
+        if now >= deadline {
             return Err(invalid(format!("Null pruning wait timed out: {reason}")));
         }
-        tokio::time::timeout_at(
-            deadline,
-            tokio::time::sleep(delay.min(self.config.poll_interval)),
-        )
-        .await
-        .map_err(|_| invalid(format!("Null pruning wait timed out: {reason}")))?;
+        // Like Python's final partial sleep, return to the driver to reread state.
+        // Only another required wait at or after the deadline is a timeout.
+        tokio::time::sleep(delay.min(self.config.poll_interval).min(deadline - now)).await;
         Ok(())
     }
 
@@ -590,9 +594,6 @@ impl TrimNullSession {
                     || progress.cleared_commits != 0
                     || after.complete(self.report.target);
                 self.stalled = if changed { 0 } else { self.stalled + 1 };
-                if changed {
-                    self.progress_at = tokio::time::Instant::now();
-                }
                 if self.stalled >= 3 {
                     return Err(invalid(
                         "three finalized Null pruning batches made no progress; stopping",
@@ -623,9 +624,9 @@ impl TrimNullSession {
                 }
                 self.journal.finish()?;
                 self.report.switched_to_yuma = true;
-                self.progress_at = tokio::time::Instant::now();
             }
         }
+        self.wait_deadline = None;
         self.report.last_extrinsic_id = receipt.extrinsic_id.clone();
         Ok(())
     }

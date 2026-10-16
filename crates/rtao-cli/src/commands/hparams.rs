@@ -214,7 +214,8 @@ pub struct NullPruningRequest {
     pub target: Option<u16>,
     /// Switch consensus only after finalized pruning and queue drainage.
     pub switch_to_yuma: bool,
-    /// Wait timeout since finalized progress; default deadline for each submission.
+    /// Budget from the first wait, cleared by each accepted finalized batch.
+    /// Also the default deadline for each submission.
     pub wait_timeout: Duration,
     /// Interval between live state checks while waiting.
     pub poll_interval: Duration,
@@ -235,7 +236,7 @@ pub fn trim_null_command() -> Command {
             .arg(Arg::new("netuid").long("netuid").required(true).value_parser(clap::value_parser!(u16).range(1..=4095)))
             .arg(Arg::new("target").long("target").value_parser(clap::value_parser!(u16).range(1..=65535)).help("Final population; defaults to the pending target or floor(256 / mechanism_count)."))
             .arg(Arg::new("switch_to_yuma").long("switch-to-yuma").action(ArgAction::SetTrue).help("Switch to Yuma after finalized pruning and prerequisite checks."))
-            .arg(Arg::new("wait_timeout").long("wait-timeout").default_value("3600").value_parser(clap::builder::ValueParser::new(wait_seconds)).help("Stop waiting after this many seconds without finalized progress; default submission deadline (1..86400)."))
+            .arg(Arg::new("wait_timeout").long("wait-timeout").default_value("3600").value_parser(clap::builder::ValueParser::new(wait_seconds)).help("Seconds from the first wait until timeout; each accepted finalized batch clears the timer. Also the default submission deadline (1..86400)."))
             .arg(Arg::new("poll_seconds").long("poll-seconds").default_value("12").value_parser(clap::builder::ValueParser::new(poll_seconds)).help("Seconds between live state polls (1..60)."))
             .arg(Arg::new("max_batches").long("max-batches").default_value("256").value_parser(clap::value_parser!(u32).range(1..=4096)).help("Stop after this many batches; rerun to resume."))
             .arg(Arg::new("state_file").long("state-file").value_parser(clap::value_parser!(PathBuf)).help("Durable unresolved-submission record; defaults beside CLI config, keyed by chain and subnet."))
