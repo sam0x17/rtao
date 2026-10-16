@@ -308,34 +308,55 @@ mod tests {
             plan.contains("- **M2-05 optional hosted refresh.**"),
             "fixture must exercise the current optional hosted refresh declaration"
         );
-        fs::write(fixture.0.join("PLAN.md"), &plan)?;
-        assert_eq!(
-            fixture.check(false, None, |_, _| {
-                anyhow::bail!("optional refresh cannot invent oracle evidence")
-            })?,
-            CommittedStatus::OptionalUnverified
+        // Exercise both allowed source-parity states independently of the
+        // workspace's current completion checkbox. In particular, an invalid
+        // historical-claim mutation must not become a no-op after completion.
+        let pending = "- [ ] **M2-14** Strict client-source parity machinery:";
+        let complete = "- [x] **M2-14** Strict client-source parity machinery:";
+        let plan = plan.replace(complete, pending);
+        ensure!(
+            plan.lines()
+                .filter(|line| line.starts_with(pending))
+                .count()
+                == 1,
+            "fixture requires one current M2-14 source-parity status row"
         );
-        let status = fixture.check(true, None, |_, _| {
-            anyhow::bail!("strict source checks must not invent oracle execution")
-        })?;
-        assert_eq!(status, CommittedStatus::OptionalUnverified);
-        assert_eq!(status.report()["status"], "optional-unverified");
-        fs::write(
-            fixture.0.join("PLAN.md"),
-            plan.replace("- [ ] **M2-14**", "- [x] **M2-14**"),
-        )?;
-        assert_eq!(fixture.readiness(true, None)?, Readiness::OptionalAbsent);
-        for invalid in [
-            plan.replace(
-                "- [ ] **M2-14** Strict client-source parity machinery:",
-                "- [x] **M2-14** historical oracle parity claim:",
+        for valid in [&plan, &plan.replace(pending, complete)] {
+            fs::write(fixture.0.join("PLAN.md"), valid)?;
+            for strict in [false, true] {
+                let status = fixture.check(strict, None, |_, _| {
+                    anyhow::bail!("optional refresh cannot invent oracle evidence")
+                })?;
+                assert_eq!(status, CommittedStatus::OptionalUnverified);
+                assert_eq!(status.report()["status"], "optional-unverified");
+            }
+        }
+        for (case, invalid) in [
+            (
+                "historical oracle completion",
+                plan.replace(pending, "- [x] **M2-14** historical oracle parity claim:"),
             ),
-            format!("{plan}\n- [x] **M2-05** completed\n"),
-            format!("{plan}\n- [ ] **M2-05** duplicate\n"),
-            plan.replace("- **M2-05 optional hosted refresh.**", "- [x] **M2-05**"),
+            (
+                "duplicate completed M2-05",
+                format!("{plan}\n- [x] **M2-05** completed\n"),
+            ),
+            (
+                "duplicate pending M2-05",
+                format!("{plan}\n- [ ] **M2-05** duplicate\n"),
+            ),
+            (
+                "completed M2-05 without evidence",
+                plan.replace("- **M2-05 optional hosted refresh.**", "- [x] **M2-05**"),
+            ),
         ] {
+            assert_ne!(invalid, plan, "fixture mutation must change plan: {case}");
             fs::write(fixture.0.join("PLAN.md"), invalid)?;
-            assert!(fixture.readiness(false, None).is_err());
+            for strict in [false, true] {
+                assert!(
+                    fixture.readiness(strict, None).is_err(),
+                    "{case} must fail with strict={strict}"
+                );
+            }
         }
         Ok(())
     }
