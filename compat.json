@@ -11,7 +11,7 @@
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
         "machine": "AMD EPYC 7763 64-Core Processor",
-        "measured_unix_seconds": 1792154307,
+        "measured_unix_seconds": 1792168613,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1464,16 +1464,16 @@
             "crates/rtao-tx/Cargo.toml": "cced832ba99005d13450d3611b9254c2d1e832d5427fe18dbb4dc8a80313d6ec",
             "crates/rtao-wallet/Cargo.toml": "83d6a456e2c159f029f1bc628373f5e5b36fc75d422ca388cbf0641a22841146",
             "crates/rtao/Cargo.toml": "aa67a88fc1148cca1f054992f1f54c1f54f3074b68c5374c16692d5e0001f2c6",
-            "upstream.toml": "13e561191675f9b3fe5eb8b5defb8c4bf2b84bbcbd5b9130d3470b236e73f261",
+            "upstream.toml": "8d3492e1566a13307ba67a0073dee607babe320a3d56d7d040c6f2f810886192",
             "xtask/Cargo.toml": "c17a680dd0a1e0b3b50efad4fd24fee55b71a6d02a9b661df66165e6396f255e"
           },
-          "dependency_inputs_sha256": "f1b76b4ddf7b0f5229482101266958f35cfe4098d6b7d3425bd6ac9e5aa66ba9",
+          "dependency_inputs_sha256": "a0e236e541f7f0115ad13d7c1b230c1b2e71992040ca773ce4e04994ae3dd847",
           "dirty": false,
-          "head_commit": "1ba30ab04fc1fefb29b18e499e1690e08f6f1e88"
+          "head_commit": "ea9d7b79b26f1df37ca31cedc857007ef989d93b"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "415f25c0b69101875bd57e50b6318cf746b35a1d8b861e1c6c4fdc4a29476eaa"
+      "sha256": "e2971f26b0e84f167e27586e0d4705596847aac2e920cc91fd8e88de2d64f17e"
     }
   ],
   "core": {

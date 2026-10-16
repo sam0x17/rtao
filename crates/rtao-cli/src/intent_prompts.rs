@@ -70,7 +70,9 @@ pub fn apply_intent_prompt_policy(
     mut missing: Vec<PromptSpec>,
     answers: &Map<String, Value>,
 ) -> Result<Vec<PromptSpec>, PromptError> {
-    if op == "remove_stake"
+    if !context.json
+        && !context.quiet
+        && op == "remove_stake"
         && !supplied(answers, "netuid")
         && answers
             .get("amount_alpha")
