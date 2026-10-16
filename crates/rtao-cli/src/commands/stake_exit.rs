@@ -20,12 +20,47 @@ use std::collections::BTreeSet;
 
 /// Build one high-level exit command with shared transaction globals.
 pub fn command(name: &'static str, include_root: bool) -> Command {
-    with_globals(Command::new(name)
-        .about(if include_root { "Unstake every position on one hotkey, or sweep all hotkeys atomically." } else { "Sell alpha positions to root stake on one hotkey, or sweep all hotkeys atomically." })
-        .after_help("Use --hotkey for one hotkey, or --all-hotkeys for every live non-zero position. Multiple hotkeys execute in Utility.batch_all, which the Staking proxy type cannot wrap; sign directly or use a broader proxy type such as NonTransfer.")
-        .arg(Arg::new("hotkey_ss58").long("hotkey").conflicts_with("all_hotkeys").help(crate::books::ss58_param_help("hotkey_ss58")))
-        .arg(Arg::new("all_hotkeys").long("all-hotkeys").action(ArgAction::SetTrue))
-        .arg(Arg::new("__period").long("period").value_parser(clap::value_parser!(u32))), Tier::Tx)
+    let op = if include_root {
+        "unstake_all"
+    } else {
+        "unstake_all_alpha"
+    };
+    let description = rtao_catalog::INTENTS
+        .iter()
+        .find(|spec| spec.name == op)
+        .map_or("", |spec| spec.description);
+    let position_kind = if include_root {
+        "live non-zero position"
+    } else {
+        "live non-zero alpha position outside root"
+    };
+    with_globals(
+        Command::new(name)
+            .about(if include_root {
+                "Unstake every position on one hotkey, or sweep all hotkeys atomically."
+            } else {
+                "Sell alpha positions to root stake on one hotkey, or sweep all hotkeys atomically."
+            })
+            .long_about(format!(
+                "{description}\n\nUse --hotkey for one hotkey, or --all-hotkeys to sweep every hotkey with a {position_kind} for the coldkey. Multiple hotkeys execute atomically in Utility.batch_all. The multi-hotkey form cannot use a Staking proxy because that proxy type cannot wrap Utility.batch_all on the current runtime; sign directly or use a broader proxy type such as NonTransfer.\n\nDocs: {}/tx/{}",
+                rtao_catalog::py::DOCS_URL,
+                op.replace('_', "-")
+            ))
+            .arg(
+                Arg::new("hotkey_ss58")
+                    .long("hotkey")
+                    .conflicts_with("all_hotkeys")
+                    .help(crate::books::ss58_param_help("hotkey_ss58")),
+            )
+            .arg(
+                Arg::new("all_hotkeys")
+                    .long("all-hotkeys")
+                    .action(ArgAction::SetTrue)
+                    .help(format!("Sweep every hotkey with a {position_kind} for this coldkey.")),
+            )
+            .arg(Arg::new("__period").long("period").value_parser(clap::value_parser!(u32))),
+        Tier::Tx,
+    )
 }
 
 /// Exit target selection retained without opening a signing session.

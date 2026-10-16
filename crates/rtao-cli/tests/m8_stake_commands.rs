@@ -229,6 +229,45 @@ fn aliases_routes_and_read_transaction_flag_tiers_are_preserved() -> TestResult 
         let parsed = parse(&argv)?;
         assert_eq!(stake::operation(parsed.subcommand().ok_or("group")?.1)?, op);
     }
+    for (name, op, kind) in [
+        ("unstake-all", "unstake_all", "live non-zero position"),
+        (
+            "unstake-all-alpha",
+            "unstake_all_alpha",
+            "live non-zero alpha position outside root",
+        ),
+    ] {
+        let spec = rtao_catalog::INTENTS
+            .iter()
+            .find(|spec| spec.name == op)
+            .ok_or("exit catalog description")?;
+        let mut command = exit::command(name, name == "unstake-all");
+        let help = command.render_long_help().to_string();
+        // Flatten only wrapping whitespace; require the full pinned intent
+        // description, including its slippage/skipped-position caveats.
+        let compact = |value: &str| value.split_whitespace().collect::<Vec<_>>().join(" ");
+        let help = compact(&help);
+        assert!(help.contains(&compact(spec.description)));
+        assert!(help.contains(&format!(
+            "Docs: {}/tx/{}",
+            rtao_catalog::py::DOCS_URL,
+            op.replace('_', "-")
+        )));
+        assert!(help.contains("Utility.batch_all"));
+        assert!(help.contains("Staking proxy"));
+        assert!(help.contains("NonTransfer"));
+        assert!(help.contains(&format!("every hotkey with a {kind}")));
+        let all = command
+            .get_arguments()
+            .find(|argument| argument.get_id() == "all_hotkeys")
+            .ok_or("all-hotkeys option")?;
+        assert_eq!(
+            all.get_help().map(ToString::to_string),
+            Some(format!(
+                "Sweep every hotkey with a {kind} for this coldkey."
+            ))
+        );
+    }
     Ok(())
 }
 
