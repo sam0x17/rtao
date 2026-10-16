@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/stake.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_exit.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
@@ -1278,5 +1279,92 @@ async fn source_owner_labels_keep_account_reads_and_explicit_show_context() -> T
     );
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn stake_list_uses_natural_local_aliases_and_empty_contacts_allow_chain_names() -> TestResult
+{
+    let wallets = TempRoot::new();
+    // File creation order opposes natural wallet and hotkey ordering.
+    for (wallet, hotkey) in [
+        ("wallet10", "wrong-wallet"),
+        ("wallet2", "hot10"),
+        ("wallet2", "hot2"),
+    ] {
+        let directory = wallets.path().join(wallet);
+        std::fs::create_dir_all(directory.join("hotkeys"))?;
+        std::fs::write(
+            directory.join("coldkeypub.txt"),
+            serde_json::to_vec(&json!({"ss58Address":OWNER,"cryptoType":1}))?,
+        )?;
+        std::fs::write(
+            directory.join("hotkeys").join(hotkey),
+            serde_json::to_vec(&json!({"ss58Address":HOT,"cryptoType":1}))?,
+        )?;
+    }
+    let mut state = FakeState::try_default()?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_info_for_coldkey",
+        json!([
+            {"hotkey":HOT,"coldkey":OWNER,"netuid":1,"stake":1_000_000_000u64,"is_registered":true},
+            {"hotkey":OTHER,"coldkey":OWNER,"netuid":1,"stake":500_000_000u64,"is_registered":true}
+        ]),
+    )?;
+    state.seed_runtime(
+        "SwapRuntimeApi",
+        "current_alpha_price_all",
+        json!([
+            {"netuid":1,"price":1_000_000_000}
+        ]),
+    )?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_availability_for_coldkeys",
+        json!({}),
+    )?;
+    state.seed_runtime("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0))?;
+    state.seed_python("SubtensorModule", "Owner", &[json!(OTHER)], json!(OWNER))?;
+    state.seed_python(
+        "SubtensorModule",
+        "IdentitiesV2",
+        &[json!(OWNER)],
+        json!({"name":"chain-only"}),
+    )?;
+    let (client, chain) = client(state).await?;
+    let parsed = parse(&["rtao", "stake", "list", "--coldkey", &OWNER.to_string()])?;
+    let (mut ctx, sink) = context(&parsed)?;
+    ctx.globals.wallet_path = wallets.path().to_owned();
+    ctx.books.addresses = vec![
+        json!({"name":"contact-must-not-replace-hot2","address":HOT}),
+        json!({"name":"","address":OTHER}),
+    ];
+    let request = request(&mut ctx, &parsed)?;
+    let outcome = stake::execute(
+        &mut ctx,
+        &client,
+        &request,
+        Default::default(),
+        None,
+        &mut PromptHistory::default(),
+    )
+    .await;
+    client.close().await;
+    outcome?;
+    let text = sink.text(Stream::Stdout)?;
+    assert!(text.contains("hot2"), "{text}");
+    assert!(text.contains("chain-only"), "{text}");
+    assert!(!text.contains("hot10"));
+    assert!(!text.contains("wrong-wallet"));
+    assert!(!text.contains("contact-must-not-replace-hot2"));
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
     Ok(())
 }

@@ -528,7 +528,7 @@ pub async fn execute(
             if rows.is_empty() {
                 detail(ctx, Some("auto-stake"), json!({"destinations":[]}))?;
             } else {
-                let mut names = local_names(ctx)?;
+                let mut names = picker::local_names(ctx)?;
                 fill_names(client, rows.iter().map(|row| row.hotkey), &mut names).await?;
                 let mut spec = TableSpec::new(
                     "auto-stake destinations",
@@ -695,7 +695,7 @@ async fn list(
     let mut records = Vec::new();
     let mut rows = Vec::new();
     let mut has_locked = false;
-    let mut names = local_names(ctx)?;
+    let mut names = picker::local_names(ctx)?;
     fill_names(
         client,
         valuations
@@ -919,34 +919,6 @@ async fn list(
     Ok(())
 }
 
-fn local_names(ctx: &AppContext) -> Result<BTreeMap<AccountId, String>, CliError> {
-    let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
-    let mut names = BTreeMap::new();
-    for entry in lookup
-        .candidates()
-        .into_iter()
-        .filter(|entry| entry.source == "hotkey")
-    {
-        if let Ok(account) = entry.address.parse() {
-            names.entry(account).or_insert_with(|| {
-                entry
-                    .name
-                    .rsplit('/')
-                    .next()
-                    .unwrap_or(&entry.name)
-                    .to_owned()
-            });
-        }
-    }
-    for entry in &ctx.books.addresses {
-        if let (Some(address), Some(name)) = (entry["address"].as_str(), entry["name"].as_str())
-            && let Ok(account) = address.parse()
-        {
-            names.entry(account).or_insert_with(|| name.to_owned());
-        }
-    }
-    Ok(names)
-}
 async fn fill_names(
     client: &Client,
     hotkeys: impl IntoIterator<Item = AccountId>,

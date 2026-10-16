@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/root_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Public-only stake source, validator target and destination pickers.
@@ -287,7 +288,7 @@ fn sort_candidates(candidates: &mut [NameCandidate]) {
             .then_with(|| crate::commands::wallet::natural_cmp(ah, bh))
     });
 }
-fn local_names(ctx: &AppContext) -> Result<BTreeMap<AccountId, String>, CliError> {
+pub(super) fn local_names(ctx: &AppContext) -> Result<BTreeMap<AccountId, String>, CliError> {
     let mut names = BTreeMap::new();
     for candidate in local_candidates(ctx)? {
         if candidate.source == "hotkey"
