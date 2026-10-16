@@ -63,5 +63,7 @@ parts, wrong signatures before nonce mutation, runtime upgrades, foreign
 genesis, metadata hashes, mortality, fee bounds, deadline ordering, byte spans
 and U256 calls. Focused structural tests cover cumulative node charging and
 depth refusal. Installed formatting and diff checks are the only local
-validation. Compilation, execution and cross-language interoperability remain
-for hosted CI; no passing result is claimed here.
+validation. Compilation, ordinary fixtures and strict checks remain required
+in hosted CI. Cross-language interoperability is optional targeted hosted
+coverage under Q30 and remains unverified by this record. No passing result
+is claimed here.

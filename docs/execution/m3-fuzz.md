@@ -1,5 +1,9 @@
 # M3 robustness targets
 
+This is a historical campaign report. Q30 retires local and Mac Studio fuzz
+runs; instrumented execution is optional targeted hosted evidence. Ordinary
+client regressions and applicable hosted checks remain required.
+
 All eight committed targets passed coverage-instrumented nightly libFuzzer
 execution with AddressSanitizer on the Mac Studio after the Unicode/keyfile
 fixes and authentication middleware retention changes. Each requested 15
@@ -33,11 +37,11 @@ They do not decrypt wallet envelopes. Public mnemonic-to-key derivation can
 run PBKDF2. Event splitting, JSON-RPC frames and metagraph parsing also ran. No
 local Python or Docker process was used.
 
-Logs, toolchain records, source hashes, binary instrumentation records and the
-preflight metadata remain under
-`target/execute-plan.6Ro0PC/fuzz/integration-refresh`. After retaining the
-results, the task-owned corpus and artifact directories were checked for
+The original logs, toolchain and instrumentation records used
+`target/execute-plan.6Ro0PC/fuzz/integration-refresh`. That path is historical
+provenance. The task-owned corpus and artifact directories were checked for
 processes, open files, launchd/configuration references, symlinks and virtual
-environments, then removed. Shared instrumented builds and tools remain live
-for the parent goal's later checks. This local run establishes neither a
-hosted workflow result nor a milestone exit.
+environments, then removed. Q30 cleanup also retired the shared instrumented
+builds, tools and raw logs; do not restore them. The committed `m3-fuzz.json`
+retains bounded counts and identities. This local run establishes neither a
+current hosted workflow result nor a milestone exit.

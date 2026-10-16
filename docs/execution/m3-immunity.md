@@ -1,5 +1,9 @@
 # M3 immunity-period read
 
+The validation and pending-read counts below describe the original preparation
+checkpoint. Under Q30, substantial validation belongs on free `ubuntu-latest`
+CI; no former task build or regeneration command is resumed locally.
+
 The `immunity_period` read now returns the chain's native `u16` block count.
 Its scalar body is generated from the reviewed
 `SubtensorModule.ImmunityPeriod` descriptor mapping. The free typed wrapper and
@@ -30,8 +34,9 @@ type. That binary generated the read outputs from the reviewed inputs and
 passed `regen --reads-only --check`; canonical regeneration then rebuilt from
 the current sources. No generated file was edited by hand.
 
-Every Cargo invocation uses `target/execute-plan.6Ro0PC` as the recorded task
-root, with its `build` target and `tmp` directory. This read work created no
-temporary directories, wallets or validator state. Shared builds remain live
-for the parent task. No Python ran locally; hosted differential validation
-remains separate.
+Those historical Cargo invocations used `target/execute-plan.6Ro0PC`, with
+its `build` target and `tmp` directory. This read work created no temporary
+directories, wallets or validator state. Q30 cleanup retired that build tree
+and its raw logs; it is no longer a live dependency and must not be recreated.
+No Python ran locally. Fresh differential execution remains optional targeted
+hosted evidence and is not established by these native results.

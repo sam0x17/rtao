@@ -100,7 +100,12 @@ keep optional infrastructure evidence unverified, and distinguish historical
 results from current source. Actual event refresh, reveal tracking, parser/S04
 proofs and Q30 optional-oracle machinery are described accurately. M2-S02 stays
 open/unaccepted; no M2 security or milestone exit is claimed. The remaining
-M3-M9 execution-record resource audit is in progress.
+M3-M9 execution-record resource audit reviewed all 31 authored Markdown files.
+Thirteen needed resource-policy corrections; 18 required no changes. Exact
+patch review and all 13 reconstructed after-image hashes pass. Historical
+counts and the durable hyperparameter proof remain intact; local restore/build
+instructions and mandatory infrastructure requirements are retired. This
+resource audit grants no source-step or milestone acceptance.
 
 Direct rustfmt, whitespace, exact patch/source reviews and all 26 documentation
 after-image identities pass. None of the seven new functions is executed yet;
