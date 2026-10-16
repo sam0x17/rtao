@@ -55,6 +55,12 @@ of `named_tables.json` and catalog `py.rs` before ordinary checks. The reports
 also need to include the three source dispositions above. This newer batch
 has no execution credit from the green checkpoint.
 
+The first refresh, run 38954992909 at `e497f18`, generated the candidate
+outputs but failed source parity because the newly mapped CLI entry file
+lacked its separate `main.py` attribution header. No artifacts were adopted.
+A header-only correction preserves all executable bytes and the existing
+`prompt.py` attribution. A new hosted refresh is required before full tests.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded
