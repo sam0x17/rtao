@@ -65,6 +65,17 @@ weights source row stays pending; native checked u64 balances and raw-weight
 semantics are unchanged. Bounded proposal/review evidence remains under the
 existing recovery root, with no build output or extra temporary directory.
 
+### Subsequent source disposition, reports awaiting hosted refresh
+
+Complete independent review reconciles `codegen/check.py`: all six functions,
+declarations, native producers/consumers and gate callers have explicit homes.
+The metadata-name/Unknown-classification and Python-strip-nonblank repairs both
+have exact PASS records on `7bb8c0b`. Native pinned regeneration and Result/CLI
+errors replace Python live generation and stdout conventions; fresh Python,
+oracle and live drift remain unverified. The source map reaches 298/357
+reconciled, 59 pending; the generated matrix remains at 297/60 until authenticated
+hosted refresh. Other pending rows, strict M8 and milestone status are unchanged.
+
 ## Prior integrated client checkpoint, 2026-10-15
 
 The following records describe earlier checkpoints. Their pending execution
