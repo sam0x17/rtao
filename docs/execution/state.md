@@ -124,6 +124,30 @@ fixtures cover these behaviors. Independent source reviews and formatting pass;
 these seven new fixture functions remain unexecuted. Prompt/output source rows
 stay pending their remaining caller/content reviews. No local builds or tests ran.
 
+### CLI follow-up and failed report refresh
+
+Report-only hosted [38862240133](https://github.com/sam0x17/rtao/actions/runs/38862240133)
+failed at exact `b59fd13140ddfac01281e5a3b816b85219231e44`: the license guard
+could not attribute the newly reconciled pruning home in `rtao-neuron`. Its
+combined two-source comment did not supply the exact canonical upstream path.
+Split that comment into one canonical header per source without changing the
+guard. No report artifact was adopted. The 59,499-byte job log has SHA256
+`0971f8c9149cd5390fb2b53e9df618110d4ae8278cf6538bd9ab7d73ad60a681`;
+`check-38862240133.json` retains bounded failure evidence.
+
+Independently reviewed CLI follow-ups restore transfer-history dates, signed
+balances, names, failed markers and checked successful root-TAO totals at the
+actual command/renderer boundary. JSON retains the original records, including
+unknown fields; human total overflow refuses before partial output. Chain
+errors offer `rtao explain` only for a catalog member or known semantic code.
+Also confirm a default local wallet before omitted sign/decrypt inputs, using
+the ordinary public context and preserving original argv/history. Strict
+parsing, environment/flag precedence and noninteractive suppression remain.
+Four output/command and six wallet-order fixture functions are added; they and
+the earlier seven fixtures await hosted compile, lint and execution. Direct
+rustfmt and whitespace checks pass. Output/prompt and pytest source rows remain
+pending; source/matrix counts, strict M8 and milestone status are unchanged.
+
 ## Prior integrated client checkpoint, 2026-10-15
 
 The following records describe earlier checkpoints. Their pending execution

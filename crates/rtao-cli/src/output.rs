@@ -885,6 +885,133 @@ impl Output {
         Ok(())
     }
 
+    /// Recent transfers retain raw machine records and a human balance summary.
+    ///
+    /// Human amounts and successful root-TAO totals use checked native u64 rao.
+    /// Malformed records or total overflow refuse before any human output.
+    pub fn transfer_history(&self, title: &str, records: &[Value]) -> Result<(), OutputError> {
+        if self.options.json_mode {
+            return self.json(Stream::Stdout, records);
+        }
+        let number = |value: &Value, field: &str| {
+            value
+                .as_u64()
+                .or_else(|| value.as_str().and_then(|text| text.parse::<u64>().ok()))
+                .ok_or_else(|| {
+                    OutputError::Render(format!("transfer history {field} must be a u64"))
+                })
+        };
+        let names = self.address_names.read();
+        let mut incoming = 0u64;
+        let mut outgoing = 0u64;
+        let mut failed = 0usize;
+        let mut rows = Vec::with_capacity(records.len());
+        for record in records {
+            let amount = number(&record["amount_rao"], "amount_rao")?;
+            let netuid = if record["netuid"].is_null() {
+                NetUid::ROOT
+            } else {
+                NetUid(
+                    u16::try_from(number(&record["netuid"], "netuid")?).map_err(|_| {
+                        OutputError::Render("transfer history netuid must be a u16".into())
+                    })?,
+                )
+            };
+            let direction = record["direction"]
+                .as_str()
+                .filter(|direction| matches!(*direction, "in" | "out" | "self"))
+                .ok_or_else(|| {
+                    OutputError::Render("transfer history direction is invalid".into())
+                })?;
+            let success = record["success"].as_bool().ok_or_else(|| {
+                OutputError::Render("transfer history success must be a boolean".into())
+            })?;
+            if !success {
+                failed += 1;
+            } else if netuid == NetUid::ROOT {
+                let total = match direction {
+                    "in" => Some(&mut incoming),
+                    "out" => Some(&mut outgoing),
+                    _ => None,
+                };
+                if let Some(total) = total {
+                    *total = total.checked_add(amount).ok_or_else(|| {
+                        OutputError::Render(format!(
+                            "transfer history {direction} TAO total exceeds u64 rao"
+                        ))
+                    })?;
+                }
+            }
+            let timestamp = record["timestamp"].as_str().ok_or_else(|| {
+                OutputError::Render("transfer history timestamp must be text".into())
+            })?;
+            // Python formats the written wall time, without converting its offset.
+            let when = jiff::fmt::temporal::DateTimeParser::new()
+                .parse_datetime(timestamp.replace('Z', "+00:00"))
+                .map(|datetime| datetime.strftime("%Y-%m-%d %H:%M").to_string())
+                .unwrap_or_else(|_| timestamp.to_owned());
+            let counterparty = record[if direction == "out" { "to" } else { "from" }]
+                .as_str()
+                .ok_or_else(|| {
+                    OutputError::Render("transfer history counterparty must be text".into())
+                })?;
+            let account = match names.get(counterparty) {
+                Some(name) => format!("{name} ({counterparty})"),
+                None => counterparty.to_owned(),
+            };
+            let word = match direction {
+                "out" => "to",
+                "self" => "self",
+                _ => "from",
+            };
+            rows.push(vec![
+                json!(when),
+                record["block_number"].clone(),
+                json!(format!(
+                    "{}{}",
+                    if direction == "out" { "−" } else { "+" },
+                    self.balance(amount, netuid).0.to_python_string()
+                )),
+                json!(format!(
+                    "{word} {account}{}",
+                    if success { "" } else { "  ✗ failed" }
+                )),
+            ]);
+        }
+        drop(names);
+        let mut summary = vec![format!(
+            "{} {}",
+            records.len(),
+            if records.len() == 1 {
+                "transfer"
+            } else {
+                "transfers"
+            }
+        )];
+        for (word, total) in [("in", incoming), ("out", outgoing)] {
+            if total != 0 {
+                summary.push(format!(
+                    "{word} {}",
+                    self.balance(total, NetUid::ROOT).0.to_python_string()
+                ));
+            }
+        }
+        if failed != 0 {
+            summary.push(format!("{failed} failed excluded"));
+        }
+        let mut table = TableSpec::new(
+            title,
+            ["when", "block", "amount", "counterparty"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+            rows,
+        );
+        table.right_align.extend([1, 2]);
+        table.footer = Some(summary.join("  ·  "));
+        self.columns(&table)
+    }
+
     /// Two-level grouping; machine shape comes exclusively from records.
     pub fn tree(
         &self,
@@ -1161,6 +1288,19 @@ impl Output {
         }
         if let Some(url) = explorer_url.filter(|url| !url.is_empty()) {
             self.sub_diag(Stream::Stderr, "see", url)?;
+        }
+        let explain_target = error
+            .name
+            .as_deref()
+            .filter(|name| rtao_catalog::errors::chain_error_code(name).is_some())
+            .or_else(|| {
+                (error.code != rtao_catalog::ErrorCode::Unknown).then_some(error.code.as_str())
+            });
+        if let Some(target) = explain_target {
+            self.line(
+                Stream::Stderr,
+                &format!("for more information about this error, run `rtao explain {target}`"),
+            )?;
         }
         Ok(())
     }
