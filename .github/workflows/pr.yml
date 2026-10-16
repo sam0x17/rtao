@@ -14,6 +14,10 @@ on:
         description: Also regenerate catalog interfaces and upload them for review
         type: boolean
         default: false
+      refresh_canonical_abis:
+        description: Import only the reviewed canonical ABI files at the existing parity pin
+        type: boolean
+        default: false
       refresh_lock:
         description: Resolve the reviewed existing dependency edges and retain the candidate lock
         type: boolean
@@ -31,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.ref }}-${{ inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
+  group: pr-${{ github.ref }}-${{ inputs.refresh_canonical_abis && 'canonical-abis' || inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
   cancel-in-progress: true
 
 env:
@@ -46,7 +50,7 @@ env:
 # Python and live Docker/hardware targets are excluded by the ci test profile.
 jobs:
   check:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -88,7 +92,7 @@ jobs:
           retention-days: 7
 
   no-host:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -108,7 +112,7 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -132,7 +136,7 @@ jobs:
           timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -190,7 +194,7 @@ jobs:
         run: timeout 300s cargo test --locked -p rtao-wallet --no-default-features --test keyfile
 
   supply:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -225,7 +229,7 @@ jobs:
           retention-days: 14
 
   semver:
-    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock))
+    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -248,7 +252,7 @@ jobs:
         # Pre-1.0 comparison failures warn; comparisons from 1.0 block.
 
   core-patch-prepare:
-    if: github.event_name == 'workflow_dispatch' && inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -290,7 +294,7 @@ jobs:
           retention-days: 7
 
   lock-refresh:
-    if: github.event_name == 'workflow_dispatch' && (inputs.refresh_lock || inputs.refresh_tls_provider_lock)
+    if: github.event_name == 'workflow_dispatch' && (inputs.refresh_lock || inputs.refresh_tls_provider_lock) && !inputs.refresh_canonical_abis
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -338,10 +342,15 @@ jobs:
           retention-days: 3
 
   compat-refresh:
-    if: github.event_name == 'workflow_dispatch' && !inputs.refresh_lock && (inputs.refresh_compat || inputs.refresh_codegen) && !inputs.refresh_tls_provider_lock
+    if: github.event_name == 'workflow_dispatch' && (inputs.refresh_canonical_abis || (!inputs.refresh_lock && (inputs.refresh_compat || inputs.refresh_codegen) && !inputs.refresh_tls_provider_lock))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Refuse combined canonical ABI and other refresh modes
+        if: inputs.refresh_canonical_abis && (inputs.refresh_compat || inputs.refresh_codegen || inputs.refresh_lock || inputs.refresh_tls_provider_lock || inputs.prepare_core_patch)
+        run: |
+          echo 'Use refresh_canonical_abis without another refresh flag.' >&2
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -355,7 +364,36 @@ jobs:
           workspaces: . -> target/pr-gates/build
           cache-directories: ~/.cargo/git
       - run: cargo fetch --locked
+      - name: Fetch only the reviewed canonical ABI source commit
+        if: inputs.refresh_canonical_abis
+        run: timeout 120s node ci/refresh-canonical-abis.mjs prepare
+      - name: Import only the authenticated canonical ABI additions
+        if: inputs.refresh_canonical_abis
+        run: timeout 480s cargo run --locked -p xtask -- import-upstream --canonical-abis --cache "$RTAO_TEMP_ROOT/canonical-abis/upstream.git"
+      - name: Verify ordinary imports and extraction with canonical inputs
+        if: inputs.refresh_canonical_abis
+        run: |
+          timeout 90s cargo run --locked -p xtask -- import-upstream --verify-only
+          timeout 180s cargo run --locked -p xtask -- extract --check
+      - name: Exercise canonical import and extraction acceptance and refusal cases
+        if: inputs.refresh_canonical_abis
+        shell: bash
+        run: |
+          timeout 300s cargo --color never test --locked -p xtask import_upstream::tests:: -- --test-threads=1 | tee "$RTAO_TEMP_ROOT/canonical-abis/import-tests.log"
+          timeout 180s cargo --color never test --locked -p xtask extract::resolved::precompiles::tests:: -- --test-threads=1 | tee "$RTAO_TEMP_ROOT/canonical-abis/extract-tests.log"
+      - name: Verify the bounded canonical ABI candidate
+        if: inputs.refresh_canonical_abis
+        run: timeout 90s node ci/refresh-canonical-abis.mjs verify
+      - name: Retain only the canonical ABI candidate and source proof
+        if: inputs.refresh_canonical_abis
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: canonical-abis-${{ github.sha }}
+          path: target/pr-gates/canonical-abis/candidate
+          if-no-files-found: error
+          retention-days: 3
       - name: Refresh the recorded dependency graph and compatibility outputs
+        if: ${{ !inputs.refresh_canonical_abis }}
         # This is cargo tree for the existing report target, not a Mac build
         # or native-platform test. The report records this Linux compiler host.
         run: cargo run --locked -p xtask -- compat --measure-build-weight --build-target aarch64-apple-darwin
@@ -365,14 +403,17 @@ jobs:
           cargo run --locked -p xtask -- extract
           cargo run --locked -p xtask -- regen
       - name: Refresh the declared parity inventory
+        if: ${{ !inputs.refresh_canonical_abis }}
         run: cargo run --locked -p xtask -- parity matrix
       - name: Verify refreshed client source parity
+        if: ${{ !inputs.refresh_canonical_abis }}
         # Catch source, attribution and generated-output failures in this
         # bounded refresh before starting the ordinary hosted test jobs.
         # Manual parity compares the exact selected commit to its first parent;
         # the full checkout above preserves shrink-only and oracle history.
         run: cargo run --locked -p xtask -- parity check
       - name: Verify generated output paths
+        if: ${{ !inputs.refresh_canonical_abis }}
         env:
           REFRESH_CODEGEN: ${{ inputs.refresh_codegen && 'true' || 'false' }}
         run: |
@@ -415,6 +456,7 @@ jobs:
           }
           NODE_VERIFY
       - name: Retain source reports for review
+        if: ${{ !inputs.refresh_canonical_abis }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: compat-${{ github.sha }}

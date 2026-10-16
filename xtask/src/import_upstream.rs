@@ -16,6 +16,36 @@ const TREE_KEY: &str = "git:watched-tree";
 const TREE_DEST: &str = "vendor/upstream/tree.txt";
 const NOTICE_BEGIN: &str = "BEGIN cargo xtask import-upstream attribution\n";
 const NOTICE_END: &str = "END cargo xtask import-upstream attribution\n";
+const CANONICAL_ABI_COMMIT: &str = "850f2755bb05a3851f948489f0ab27b0645cebce";
+const UPSTREAM_URL: &str = "https://github.com/RaoFoundation/subtensor.git";
+const SDK_ABI_ROOT: &str = "sdk/python/bittensor/evm/abi/";
+const CANONICAL_ABI_ROOT: &str = "precompiles/src/solidity/";
+const MAX_CANONICAL_ABIS: usize = 64;
+const MAX_CANONICAL_ABI_BYTES: usize = 64 * 1024;
+const MAX_CANONICAL_TOTAL_BYTES: usize = 1024 * 1024;
+const CURRENT_ABI_STEMS: &[&str] = &[
+    "addressMapping",
+    "alpha",
+    "balance",
+    "balanceTransfer",
+    "crowdloan",
+    "drand",
+    "ed25519Verify",
+    "leasing",
+    "metagraph",
+    "neuron",
+    "proxy",
+    "registry",
+    "runtimeConfiguration",
+    "scheduler",
+    "sr25519Verify",
+    "staking",
+    "stakingV2",
+    "subnet",
+    "timestamp",
+    "uidLookup",
+    "votingPower",
+];
 
 /// Exactly the roots specified by architecture §4.9 and the module map.
 /// Test package setup files outside these roots are deliberately not watched.
@@ -79,6 +109,8 @@ struct TreeEntry {
 /// Import from the pin tool's cached clone, or verify committed inputs offline.
 pub fn run(args: &[String]) -> Result<()> {
     let mut verify_only = false;
+    let mut canonical_only = false;
+    let mut explicit_cache = false;
     let mut cache = std::env::var_os("RTAO_UPSTREAM_CACHE").map_or_else(
         || {
             std::env::var_os("RTAO_TEMP_ROOT")
@@ -94,10 +126,17 @@ pub fn run(args: &[String]) -> Result<()> {
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--verify-only" => verify_only = true,
-            "--cache" => cache = PathBuf::from(iter.next().context("--cache requires a path")?),
+            "--canonical-abis" => canonical_only = true,
+            "--cache" => {
+                cache = PathBuf::from(iter.next().context("--cache requires a path")?);
+                explicit_cache = true;
+            }
             "--help" | "-h" => {
                 println!(
-                    "cargo xtask import-upstream [--cache <clone>] [--verify-only]\n\nImports parity.commit from the pin cache. Verification reads only committed files."
+                    "cargo xtask import-upstream [--cache <clone>] [--verify-only]\n\
+                     cargo xtask import-upstream --canonical-abis --cache <exact-pin-bare-cache>\n\n\
+                     Imports parity.commit from the pin cache. Verification reads only committed files.\n\
+                     Canonical-only import accepts the reviewed v478 pin and preserves existing artifacts."
                 );
                 return Ok(());
             }
@@ -105,6 +144,15 @@ pub fn run(args: &[String]) -> Result<()> {
         }
     }
     let root = std::env::current_dir()?.canonicalize()?;
+    if canonical_only {
+        ensure!(
+            explicit_cache && !verify_only,
+            "--canonical-abis requires explicit --cache and cannot use --verify-only"
+        );
+        let count = import_canonical_abis(&root, &cache, CANONICAL_ABI_COMMIT, CURRENT_ABI_STEMS)?;
+        println!("Imported {count} canonical ABI artifacts");
+        return Ok(());
+    }
     let count = if verify_only {
         verify(&root)?
     } else {
@@ -197,6 +245,7 @@ fn import(root: &Path, cache: &Path) -> Result<usize> {
     let tree_bytes = git(cache, &args)?;
     let tree = parse_tree(&tree_bytes)?;
     ensure!(!tree.is_empty(), "pinned watched tree is empty");
+    let canonical = canonical_abi_inputs(&tree)?;
 
     // Keep canonical artifact destinations supplied by pin. Every other watched
     // input is retained under src, so Rust-native extraction never needs Python
@@ -205,6 +254,7 @@ fn import(root: &Path, cache: &Path) -> Result<usize> {
         .keys()
         .map(String::as_str)
         .chain(EXTRA_INPUTS.iter().copied())
+        .chain(canonical.values().map(String::as_str))
     {
         imports
             .entry(source.to_owned())
@@ -223,10 +273,12 @@ fn import(root: &Path, cache: &Path) -> Result<usize> {
     validate_scope(&imports, &tree)?;
     let mut extra_args = vec!["ls-tree", "-r", "--full-tree", &commit, "--"];
     extra_args.extend_from_slice(EXTRA_INPUTS);
+    extra_args.extend(canonical.values().map(String::as_str));
     let extra = parse_tree_unscoped(&git(cache, &extra_args)?)?;
     ensure!(
-        extra.len() == EXTRA_INPUTS.len()
-            && EXTRA_INPUTS.iter().all(|path| extra.contains_key(*path)),
+        extra.len() == EXTRA_INPUTS.len() + canonical.len()
+            && EXTRA_INPUTS.iter().all(|path| extra.contains_key(*path))
+            && canonical.values().all(|path| extra.contains_key(path)),
         "required extraction/attribution inputs are absent or not regular files"
     );
     prefetch_blobs(cache, tree.values().chain(extra.values()))?;
@@ -275,6 +327,10 @@ fn import(root: &Path, cache: &Path) -> Result<usize> {
 }
 
 fn verify(root: &Path) -> Result<usize> {
+    verify_with_canonical(root, true)
+}
+
+fn verify_with_canonical(root: &Path, require_canonical: bool) -> Result<usize> {
     let doc = manifest(root)?;
     let commit = parity_commit(&doc)?;
     let imports = artifacts(&doc, true)?;
@@ -284,7 +340,7 @@ fn verify(root: &Path) -> Result<usize> {
     checked_path(root, &tree_artifact.to)?;
     let tree = parse_tree(&fs::read(root.join(&tree_artifact.to))?)?;
     ensure!(!tree.is_empty(), "watched tree is empty");
-    validate_scope(&imports, &tree)?;
+    validate_scope_with_canonical(&imports, &tree, require_canonical)?;
     for (source, artifact) in &imports {
         checked_path(root, &artifact.to)?;
         let bytes = fs::read(root.join(&artifact.to))
@@ -316,6 +372,15 @@ fn validate_scope(
     imports: &BTreeMap<String, Artifact>,
     tree: &BTreeMap<String, TreeEntry>,
 ) -> Result<()> {
+    validate_scope_with_canonical(imports, tree, true)
+}
+
+fn validate_scope_with_canonical(
+    imports: &BTreeMap<String, Artifact>,
+    tree: &BTreeMap<String, TreeEntry>,
+    require_canonical: bool,
+) -> Result<()> {
+    let canonical: BTreeSet<_> = canonical_abi_inputs(tree)?.into_values().collect();
     let mut destinations = BTreeSet::new();
     for artifact in imports.values() {
         ensure!(
@@ -366,15 +431,192 @@ fn validate_scope(
             "required input destination differs: {path}"
         );
     }
+    for path in &canonical {
+        if !require_canonical && !imports.contains_key(path) {
+            continue;
+        }
+        let artifact = imports
+            .get(path)
+            .with_context(|| format!("required canonical ABI input is missing: {path}"))?;
+        ensure!(
+            artifact.to == format!("vendor/upstream/src/{path}"),
+            "canonical ABI destination differs: {path}"
+        );
+    }
     for source in imports.keys() {
         ensure!(
             source == TREE_KEY
                 || tree.contains_key(source)
-                || EXTRA_INPUTS.contains(&source.as_str()),
+                || EXTRA_INPUTS.contains(&source.as_str())
+                || canonical.contains(source),
             "artifact outside declared watched/extraction scope: {source}"
         );
     }
     Ok(())
+}
+
+fn canonical_abi_inputs(tree: &BTreeMap<String, TreeEntry>) -> Result<BTreeMap<String, String>> {
+    let mut inputs = BTreeMap::new();
+    for source in tree.keys() {
+        let Some(file) = source.strip_prefix(SDK_ABI_ROOT) else {
+            continue;
+        };
+        if file.contains('/') || !file.ends_with(".json") {
+            continue;
+        }
+        let stem = file.strip_suffix(".json").context("ABI suffix")?;
+        ensure!(!stem.is_empty(), "SDK ABI stem is empty");
+        inputs.insert(source.clone(), format!("{CANONICAL_ABI_ROOT}{stem}.abi"));
+    }
+    ensure!(
+        inputs.len() <= MAX_CANONICAL_ABIS,
+        "canonical ABI inventory exceeds bound"
+    );
+    Ok(inputs)
+}
+
+// Candidate preparation never changes a pin or refetches the watched source
+// inventory. A hosted caller supplies a shallow, blob-filtered bare cache of
+// this exact commit; only the independently named canonical blobs are read.
+fn import_canonical_abis(
+    root: &Path,
+    cache: &Path,
+    expected_commit: &str,
+    expected_stems: &[&str],
+) -> Result<usize> {
+    let mut doc = manifest(root)?;
+    let commit = parity_commit(&doc)?.to_owned();
+    ensure!(
+        commit == expected_commit,
+        "canonical-only import requires the reviewed exact parity pin"
+    );
+    ensure!(
+        !fs::symlink_metadata(cache)?.file_type().is_symlink()
+            && git(cache, &["rev-parse", "--is-bare-repository"])? == b"true\n"
+            && git(cache, &["remote", "get-url", "origin"])?
+                == format!("{UPSTREAM_URL}\n").as_bytes(),
+        "canonical-only cache must be bare with the exact pinned upstream origin"
+    );
+    ensure!(
+        git(
+            cache,
+            &["rev-parse", "--verify", &format!("{commit}^{{commit}}")]
+        )? == format!("{commit}\n").as_bytes()
+            && git(cache, &["rev-parse", "--verify", "FETCH_HEAD"])?
+                == format!("{commit}\n").as_bytes(),
+        "canonical-only cache must have fetched the exact parity commit"
+    );
+    // This migration-only baseline accepts missing canonical additions, while
+    // still verifying every existing source/hash/destination and NOTICE. The
+    // ordinary verifier below requires the complete canonical inventory.
+    verify_with_canonical(root, false)?;
+    let tree_bytes = fs::read(root.join(TREE_DEST))?;
+    let tree = parse_tree(&tree_bytes)?;
+    let mut watched_args = vec!["ls-tree", "-r", "--full-tree", &commit, "--"];
+    watched_args.extend_from_slice(WATCHED_ROOTS);
+    ensure!(
+        git(cache, &watched_args)? == tree_bytes,
+        "canonical-only cache watched tree differs from committed source identity"
+    );
+    let canonical = canonical_abi_inputs(&tree)?;
+    let actual: BTreeSet<_> = canonical
+        .keys()
+        .map(|source| source.strip_prefix(SDK_ABI_ROOT).unwrap_or(source.as_str()))
+        .collect();
+    let expected: BTreeSet<_> = expected_stems
+        .iter()
+        .map(|stem| format!("{stem}.json"))
+        .collect();
+    ensure!(
+        actual.len() == expected.len()
+            && actual
+                .iter()
+                .copied()
+                .eq(expected.iter().map(String::as_str)),
+        "canonical-only SDK ABI inventory differs from the reviewed exact pin"
+    );
+    let mut canonical_args = vec!["ls-tree", "-r", "--full-tree", &commit, "--"];
+    canonical_args.extend(canonical.values().map(String::as_str));
+    let canonical_tree = parse_tree_unscoped(&git(cache, &canonical_args)?)?;
+    ensure!(
+        canonical_tree.len() == canonical.len()
+            && canonical
+                .values()
+                .all(|path| canonical_tree.contains_key(path)),
+        "canonical counterparts are absent or not regular blobs"
+    );
+    prefetch_blobs(cache, canonical_tree.values())?;
+    let mut imports = artifacts(&doc, true)?;
+    let mut payloads = BTreeMap::new();
+    let mut total = 0usize;
+    for (sdk_source, source) in canonical {
+        let entry = canonical_tree
+            .get(&source)
+            .context("canonical tree entry")?;
+        let bytes = git(cache, &["show", &format!("{commit}:{source}")])?;
+        total = total
+            .checked_add(bytes.len())
+            .context("canonical ABI size overflow")?;
+        ensure!(
+            bytes.len() <= MAX_CANONICAL_ABI_BYTES && total <= MAX_CANONICAL_TOTAL_BYTES,
+            "canonical ABI bytes exceed candidate bounds"
+        );
+        ensure!(
+            blob_sha(&bytes) == entry.blob,
+            "canonical input differs from exact-pin Git blob: {source}"
+        );
+        let sdk = imports.get(&sdk_source).context("SDK ABI artifact")?;
+        let sdk_bytes = fs::read(root.join(&sdk.to))?;
+        let sdk_json: serde_json::Value = serde_json::from_slice(&sdk_bytes)?;
+        let canonical_json: serde_json::Value = serde_json::from_slice(&bytes)?;
+        ensure!(
+            sdk_json.is_array() && canonical_json.is_array() && sdk_json == canonical_json,
+            "SDK ABI differs from canonical input: {sdk_source}"
+        );
+        let destination = format!("vendor/upstream/src/{source}");
+        checked_path(root, &destination)?;
+        let artifact = Artifact {
+            to: destination,
+            sha256: sha256(&bytes),
+        };
+        if let Some(existing) = imports.get(&source) {
+            ensure!(
+                existing.to == artifact.to && existing.sha256 == artifact.sha256,
+                "canonical-only import would replace an existing artifact: {source}"
+            );
+        }
+        imports.insert(source.clone(), artifact);
+        payloads.insert(source, bytes);
+    }
+    validate_scope(&imports, &tree)?;
+    let destinations = imports
+        .values()
+        .map(|artifact| artifact.to.clone())
+        .collect();
+    ensure_no_extra_copies(root, &destinations)?;
+    let generated_notice = notice(root, &commit, &imports)?;
+    let table = doc["artifacts"].as_table_mut().context("artifacts")?;
+    for source in payloads.keys() {
+        if table.contains_key(source) {
+            continue;
+        }
+        let artifact = imports.get(source).context("staged canonical artifact")?;
+        let mut row = InlineTable::new();
+        row.insert("to", Value::from(artifact.to.clone()));
+        row.insert("sha256", Value::from(artifact.sha256.clone()));
+        table.insert(source, Item::Value(Value::InlineTable(row)));
+    }
+    for (source, bytes) in &payloads {
+        write_if_changed(
+            root,
+            &imports.get(source).context("canonical artifact")?.to,
+            bytes,
+        )?;
+    }
+    write_if_changed(root, "upstream.toml", doc.to_string().as_bytes())?;
+    write_if_changed(root, "NOTICE", generated_notice.as_bytes())?;
+    verify(root)?;
+    Ok(payloads.len())
 }
 
 fn is_asset(path: &str) -> bool {
@@ -766,6 +1008,189 @@ mod tests {
             // and every path is confined to this exact task-scoped fixture root.
             let _ = fs::remove_dir_all(&self.root);
         }
+    }
+
+    fn canonical_fixture(drift: bool) -> Result<(Fixture, PathBuf, String)> {
+        let fixture = Fixture::new()?;
+        let sdk = br#"[{"type":"function","name":"alpha","inputs":[],"outputs":[]}]"#;
+        let canonical = if drift {
+            br#"[{"type":"function","name":"changed","inputs":[],"outputs":[]}]"#.as_slice()
+        } else {
+            sdk.as_slice()
+        };
+        write_if_changed(&fixture.cache, &format!("{SDK_ABI_ROOT}alpha.json"), sdk)?;
+        write_if_changed(
+            &fixture.cache,
+            &format!("{CANONICAL_ABI_ROOT}alpha.abi"),
+            canonical,
+        )?;
+        git(&fixture.cache, &["add", "."])?;
+        git(
+            &fixture.cache,
+            &[
+                "-c",
+                "user.name=rtao test",
+                "-c",
+                "user.email=test@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "canonical fixture",
+            ],
+        )?;
+        let commit = String::from_utf8(git(&fixture.cache, &["rev-parse", "HEAD"])?)?
+            .trim()
+            .to_owned();
+        let mut doc = manifest(&fixture.root)?;
+        doc["parity"]["commit"] = toml_edit::value(&commit);
+        fs::write(fixture.root.join("upstream.toml"), doc.to_string())?;
+        fixture.import()?;
+        // Reconstruct the previously valid manifest without the newly required
+        // independent input. All baseline watched files and hashes stay intact.
+        let canonical_source = format!("{CANONICAL_ABI_ROOT}alpha.abi");
+        let mut imports = artifacts(&manifest(&fixture.root)?, true)?;
+        let removed = imports
+            .remove(&canonical_source)
+            .context("canonical fixture artifact")?;
+        fs::remove_file(fixture.root.join(removed.to))?;
+        let mut legacy = manifest(&fixture.root)?;
+        legacy["artifacts"]
+            .as_table_mut()
+            .context("artifacts")?
+            .remove(&canonical_source);
+        fs::write(fixture.root.join("upstream.toml"), legacy.to_string())?;
+        fs::write(
+            fixture.root.join("NOTICE"),
+            notice(&fixture.root, &commit, &imports)?,
+        )?;
+        verify_with_canonical(&fixture.root, false)?;
+        ensure!(
+            verify(&fixture.root).is_err(),
+            "strict verification accepted missing canonical input"
+        );
+        let bare = fixture.root.join("canonical-cache.git");
+        git(
+            &fixture.cache,
+            &[
+                "clone",
+                "--bare",
+                ".",
+                bare.to_str().context("fixture cache path")?,
+            ],
+        )?;
+        git(&bare, &["remote", "set-url", "origin", UPSTREAM_URL])?;
+        // Local-only fixture fetch establishes FETCH_HEAD without contacting
+        // the pinned public origin or starting a service.
+        git(
+            &bare,
+            &[
+                "fetch",
+                "--no-tags",
+                fixture.cache.to_str().context("fixture source path")?,
+                &commit,
+            ],
+        )?;
+        Ok((fixture, bare, commit))
+    }
+
+    #[test]
+    fn canonical_abis_import_preserves_existing_pins_and_artifacts() -> Result<()> {
+        let (fixture, cache, commit) = canonical_fixture(false)?;
+        let before = manifest(&fixture.root)?;
+        let previous: BTreeMap<_, _> = artifacts(&before, true)?
+            .into_iter()
+            .map(|(source, artifact)| {
+                let bytes = fs::read(fixture.root.join(&artifact.to))?;
+                Ok((source, (artifact.to, bytes)))
+            })
+            .collect::<Result<_>>()?;
+        ensure!(import_canonical_abis(&fixture.root, &cache, &commit, &["alpha"])? == 1);
+        let after = manifest(&fixture.root)?;
+        for (section, value) in before.iter().filter(|(key, _)| *key != "artifacts") {
+            assert_eq!(value.to_string(), after[section].to_string());
+        }
+        for (source, (destination, bytes)) in previous {
+            assert_eq!(
+                before["artifacts"][&source].to_string(),
+                after["artifacts"][&source].to_string()
+            );
+            assert_eq!(bytes, fs::read(fixture.root.join(destination))?);
+        }
+        let manifest_bytes = fs::read(fixture.root.join("upstream.toml"))?;
+        let notice_bytes = fs::read(fixture.root.join("NOTICE"))?;
+        import_canonical_abis(&fixture.root, &cache, &commit, &["alpha"])?;
+        assert_eq!(
+            manifest_bytes,
+            fs::read(fixture.root.join("upstream.toml"))?
+        );
+        assert_eq!(notice_bytes, fs::read(fixture.root.join("NOTICE"))?);
+        verify(&fixture.root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_abis_import_refuses_wrong_pin_cache_inventory_and_existing_changes() -> Result<()>
+    {
+        let (fixture, cache, commit) = canonical_fixture(false)?;
+        let before = fs::read(fixture.root.join("upstream.toml"))?;
+        let notice_before = fs::read(fixture.root.join("NOTICE"))?;
+        ensure!(import_canonical_abis(&fixture.root, &cache, &"0".repeat(40), &["alpha"]).is_err());
+        git(
+            &cache,
+            &[
+                "remote",
+                "set-url",
+                "origin",
+                "https://example.invalid/subtensor.git",
+            ],
+        )?;
+        ensure!(import_canonical_abis(&fixture.root, &cache, &commit, &["alpha"]).is_err());
+        git(&cache, &["remote", "set-url", "origin", UPSTREAM_URL])?;
+        let fetch_head = fs::read(cache.join("FETCH_HEAD"))?;
+        fs::write(cache.join("FETCH_HEAD"), format!("{}\n", "0".repeat(40)))?;
+        ensure!(import_canonical_abis(&fixture.root, &cache, &commit, &["alpha"]).is_err());
+        fs::write(cache.join("FETCH_HEAD"), fetch_head)?;
+        ensure!(import_canonical_abis(&fixture.root, &cache, &commit, &["missing"]).is_err());
+        let doc = manifest(&fixture.root)?;
+        let imported = artifacts(&doc, true)?;
+        let sdk = imported
+            .get(&format!("{SDK_ABI_ROOT}alpha.json"))
+            .context("SDK artifact")?;
+        fs::write(fixture.root.join(&sdk.to), b"[]")?;
+        ensure!(import_canonical_abis(&fixture.root, &cache, &commit, &["alpha"]).is_err());
+        assert_eq!(before, fs::read(fixture.root.join("upstream.toml"))?);
+        assert_eq!(notice_before, fs::read(fixture.root.join("NOTICE"))?);
+        ensure!(
+            !fixture
+                .root
+                .join(format!("vendor/upstream/src/{CANONICAL_ABI_ROOT}alpha.abi"))
+                .exists()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_abis_import_refuses_drift_before_publishing() -> Result<()> {
+        let (fixture, cache, commit) = canonical_fixture(true)?;
+        let before = fs::read(fixture.root.join("upstream.toml"))?;
+        let notice_before = fs::read(fixture.root.join("NOTICE"))?;
+        let error = import_canonical_abis(&fixture.root, &cache, &commit, &["alpha"])
+            .err()
+            .context("canonical content drift was accepted")?;
+        ensure!(
+            error.to_string().contains("SDK ABI differs from canonical"),
+            "wrong failure: {error:#}"
+        );
+        assert_eq!(before, fs::read(fixture.root.join("upstream.toml"))?);
+        assert_eq!(notice_before, fs::read(fixture.root.join("NOTICE"))?);
+        ensure!(
+            !fixture
+                .root
+                .join(format!("vendor/upstream/src/{CANONICAL_ABI_ROOT}alpha.abi"))
+                .exists()
+        );
+        Ok(())
     }
 
     #[test]
