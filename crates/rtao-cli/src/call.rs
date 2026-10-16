@@ -539,7 +539,7 @@ pub fn load_params(
         })
         .transpose()?;
     let raw = file.as_deref().or(args).unwrap_or("");
-    if raw.trim().is_empty() {
+    if crate::prompt::python_strip(raw).is_empty() {
         return Ok(Map::new());
     }
     match rtao::primitives::json::from_str::<Json>(raw)
@@ -1550,9 +1550,8 @@ fn signing_rounds(
     backend_override: Option<&str>,
     automatic: bool,
 ) -> Result<Vec<SigningSelection>, CliError> {
-    let backend = backend_override
-        .or(ctx.globals.signer_backend.as_deref())
-        .unwrap_or("wallet");
+    let selected_backend = backend_override.or(ctx.globals.signer_backend.as_deref());
+    let backend = selected_backend.unwrap_or("wallet");
     let normalized_backend = crate::globals::normalize_signer_backend(backend);
     let explicit = &ctx.globals.signatories;
     let Some(group) = group else {
@@ -1618,13 +1617,14 @@ fn signing_rounds(
             .map(crate::globals::normalize_signer_backend)
             .filter(|backend| ["vault", "ledger", "extension"].contains(&backend.as_str()))
     };
-    let member = |reference: &str| -> Result<SigningSelection, CliError> {
+    let member = |reference: &str, wallet_only: bool| -> Result<SigningSelection, CliError> {
         let (reference, forced) = reference
             .split_once('=')
             .map(|(reference, forced)| {
                 (
                     reference,
-                    Some(crate::globals::normalize_signer_backend(forced)),
+                    Some(crate::globals::normalize_signer_backend(forced))
+                        .filter(|backend| explicit.len() == 1 || !backend.is_empty()),
                 )
             })
             .unwrap_or((reference, None));
@@ -1647,7 +1647,7 @@ fn signing_rounds(
             )));
         }
         let local = locals.iter().find(|(_, member)| *member == address);
-        let inferred = if local.is_some() {
+        let inferred = if wallet_only || local.is_some() {
             Some("wallet".into())
         } else {
             external(reference, address)
@@ -1682,7 +1682,7 @@ fn signing_rounds(
         }
         let rounds = explicit
             .iter()
-            .map(|reference| member(reference))
+            .map(|reference| member(reference, false))
             .collect::<Result<Vec<_>, _>>()?;
         let mut unique = BTreeSet::new();
         if rounds
@@ -1715,11 +1715,16 @@ fn signing_rounds(
         }]);
     }
     if let Some(reference) = explicit.first() {
-        return member(reference).map(|selected| vec![selected]);
+        // An explicitly chosen root wallet backend suppresses external tag
+        // inference for a single member. Repeated approvals keep their own
+        // per-member inference, matching Python's separate rounds planner.
+        let wallet_only = selected_backend.is_some_and(|backend| !backend.is_empty());
+        return member(reference, wallet_only).map(|selected| vec![selected]);
     }
     if automatic
         && role == SignerRole::Coldkey
         && normalized_backend == "wallet"
+        && selected_backend.is_none_or(str::is_empty)
         && ctx.globals.signer_address.is_none()
         && group.threshold >= 2
     {
@@ -1831,7 +1836,7 @@ fn signing_rounds(
         help: None,
     })?;
     drop(terminal);
-    member(&selected).map(|member| vec![member])
+    member(&selected, false).map(|member| vec![member])
 }
 
 fn signer_address_for_backend(
