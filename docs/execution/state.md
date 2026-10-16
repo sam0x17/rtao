@@ -29,13 +29,26 @@ observed author acceptance.
 
 The next combined source candidate expects **3,196 tests and four skips**.
 It includes the nine CLI context fixtures and the three existing-fixture
-corrections. Formatting and source review are complete; hosted compilation,
-execution and divergence report refresh remain pending. The earlier planned
+corrections. Formatting and source review are complete; hosted compilation and
+execution remain pending. The earlier planned
 standalone 3,187-test checkpoint is superseded by these failure corrections.
 The last fully green checkpoint remains `7997ec0` below.
 
-Source reconciliation remains 322/357, with 35 pending. D-073 brings the source
-divergence register to 73 while the adopted matrix still has 72. M0/M1,
+Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
+passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
+Artifact 12078644250 is 59,739 bytes, SHA256
+`44ed0f18bccda7a3066da14e2854e9199aadbb257646ce336f08e99a37e525b4`.
+Inspection and a separate authenticated refetch adopt exactly four reports.
+The matrix adds D-073 and four D-068 witnesses; all 23 dependency inputs,
+role inventories, host flags, source/e2e counts and runtime/platform/oracle
+claims remain unchanged. Inspection SHA256 is
+`8bd944e0b1469c0d848895d8206848e6a8a6b7a3cbab662d24188e44ed2da6a0`;
+adoption SHA256 is
+`b58b2200d1879ceff8ee7dfda89e9c6cd26d1e5707a75fcfc7a7498dbdbbb55d`.
+No raw archive is retained. The next push starts ordinary 3,196-test validation.
+
+Source reconciliation remains 322/357, with 35 pending. The source divergence
+register and adopted matrix now both contain 73 entries. M0/M1,
 twenty M2 steps and eight M3 steps are accepted; whole M2/M3 and all later
 milestones remain open. M2-S02 remains unresolved under its existing decision
 request. The local target directory is absent, and validation remains hosted.

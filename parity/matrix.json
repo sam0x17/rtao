@@ -1963,6 +1963,14 @@
     ],
     "divergences": [
       {
+        "id": "D-073",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::context_contract::external_root_claim_reacquires_after_release_and_uses_the_effective_proxy_owner"
+        ]
+      },
+      {
         "id": "D-072",
         "oracle": "unverified",
         "rtao": "active",
@@ -2013,7 +2021,11 @@
           "rtao_signer::extension::tests::library_defaults_require_explicit_process_launch_permissions",
           "rtao_signer::extension::tests::request_deadline_includes_waiting_behind_an_approval",
           "rtao_signer::extension::tests::expired_startup_refuses_spawn_without_touching_state",
-          "rtao_signer::extension::tests::signatures_are_bounded_and_never_change_negotiated_crypto"
+          "rtao_signer::extension::tests::signatures_are_bounded_and_never_change_negotiated_crypto",
+          "rtao_cli::m7_signers::confirmation_and_durable_plan_precede_acquisition_receipt_precedes_release",
+          "rtao_cli::m7_signers::durable_storage_failure_and_confirmation_refusal_leave_backend_untouched",
+          "rtao_cli::context_contract::direct_external_confirmation_refusal_releases_without_unlock_or_submission",
+          "rtao_cli::context_contract::direct_external_success_releases_once_and_preserves_the_receipt"
         ]
       },
       {
