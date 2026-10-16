@@ -342,7 +342,7 @@ fn captured(ctx: &mut AppContext, json_mode: bool) -> rtao_cli::output::MemorySi
     ctx.output = Output::new(
         OutputOptions {
             json_mode,
-            quiet: false,
+            quiet: ctx.globals.quiet,
             network: None,
         },
         Arc::new(sink.clone()),
@@ -581,24 +581,78 @@ async fn empty_human_lock_view_still_reports_acceptance_and_dust() -> Result {
     use rtao_cli::output::Stream;
     let (client, chain) = fake_client().await?;
     let cold = rtao::primitives::AccountId([7; 32]).to_string();
-    let parsed =
-        tree()?.try_get_matches_from(["rtao", "conviction", "list", "--coldkey", cold.as_str()])?;
-    let mut ctx = context(&parsed)?;
-    let sink = captured(&mut ctx, false);
-    let request = conviction::prepare_read(
-        &mut ctx,
-        parsed.subcommand().ok_or("group")?.1,
-        &mut PromptHistory::default(),
-    )?;
-    conviction::execute_prepared_read(&ctx, &client, &request).await?;
-    let output = format!(
-        "{}{}",
-        sink.text(Stream::Stdout)?,
-        sink.text(Stream::Stderr)?
-    );
-    assert!(output.contains("none"));
-    assert!(output.contains("1 dust subnet hidden"));
-    assert!(output.contains("incoming locked alpha: accepted"));
+    let mut machine = None;
+    for show_dust in [false, true] {
+        let mut ordinary = None;
+        for quiet in [false, true] {
+            for json_mode in [false, true] {
+                let mut args = vec!["rtao", "conviction", "list", "--coldkey", cold.as_str()];
+                if show_dust {
+                    args.push("--dust");
+                }
+                if quiet {
+                    args.push("--quiet");
+                }
+                if json_mode {
+                    args.push("--json");
+                }
+                let parsed = tree()?.try_get_matches_from(args)?;
+                let mut ctx = context(&parsed)?;
+                let sink = captured(&mut ctx, json_mode);
+                let request = conviction::prepare_read(
+                    &mut ctx,
+                    parsed.subcommand().ok_or("group")?.1,
+                    &mut PromptHistory::default(),
+                )?;
+                conviction::execute_prepared_read(&ctx, &client, &request).await?;
+                let output = sink.text(Stream::Stdout)?;
+                let messages = sink.text(Stream::Stderr)?;
+                if json_mode {
+                    let records: serde_json::Value = serde_json::from_str(&output)?;
+                    assert_eq!(records.as_array().ok_or("records")?.len(), 1);
+                    assert_eq!(
+                        records[0]["hotkey"],
+                        json!(rtao::primitives::AccountId([8; 32]))
+                    );
+                    assert_eq!(
+                        records[0]["locked_amount"].as_f64().map(f64::to_bits),
+                        Some(0.0000001_f64.to_bits())
+                    );
+                    if let Some(expected) = &machine {
+                        assert_eq!(&output, expected);
+                    } else {
+                        machine = Some(output);
+                    }
+                    assert!(messages.is_empty());
+                    continue;
+                }
+                if quiet {
+                    assert_eq!(Some(&output), ordinary.as_ref());
+                    assert!(messages.is_empty());
+                } else {
+                    ordinary = Some(output.clone());
+                    assert!(messages.contains("incoming locked alpha: accepted"));
+                    assert_eq!(messages.contains("1 dust subnet hidden"), !show_dust);
+                }
+                assert!(!output.contains("incoming locked alpha"));
+                assert!(!output.contains("dust subnet hidden"));
+                assert!(!messages.contains("total locked value"));
+                if show_dust {
+                    assert!(!output.contains("  none"));
+                    assert!(output.contains("perpetual"));
+                    let total =
+                        rtao::primitives::DynBalance::from_rao(100, rtao::primitives::NetUid(0));
+                    assert!(output.contains(&format!(
+                        "total locked value {total} (spot, excl. slippage/fees)"
+                    )));
+                    assert_eq!(output.matches("total locked value").count(), 1);
+                } else {
+                    assert!(output.contains("  none"));
+                    assert!(!output.contains("total locked value"));
+                }
+            }
+        }
+    }
     assert!(chain.mutate_state(|s| s.submissions.is_empty()));
     client.close().await;
     Ok(())

@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/executor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Signed shield carriers, paired nonce accounting and canonical inner receipts.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -1416,6 +1417,109 @@ async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_m
                 || request.method == "account_nextIndex"
                 || request.method == "chain_getFinalizedHead"
         }));
+        client.close().await;
+    }
+}
+
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_recovers_from_transient_rpc_failure
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_fails_after_bounded_rpc_retries
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_fails_when_finality_stalls
+// Native P8 uses 36 finality polls; successful behind-head reads reset the
+// consecutive-RPC-failure counter without finalizing the included inner.
+#[tokio::test(start_paused = true)]
+async fn found_inner_finality_recovers_resets_and_stops_at_exact_native_bounds() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    for scenario in ["transient", "reset", "permanent", "stall"] {
+        let (client, fake, signer) = fixture().await;
+        let inner_call = call(&client, 1).await;
+        let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+        install_inner(&fake, inner_bytes, 101, false);
+        let reads = Arc::new(AtomicUsize::new(0));
+        let counted = reads.clone();
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getFinalizedHead", move |state, request| {
+                if state.submissions.is_empty() {
+                    return state.dispatch(request);
+                }
+                let attempt = counted.fetch_add(1, Ordering::SeqCst);
+                let fail = match scenario {
+                    "transient" => attempt == 0,
+                    "reset" => matches!(attempt, 0 | 2 | 4 | 6),
+                    "permanent" => true,
+                    _ => false,
+                };
+                if fail {
+                    return Reply::error(-32603, "temporary finality fixture failure", None);
+                }
+                let finalized = if scenario == "stall" || (scenario == "reset" && attempt < 7) {
+                    100
+                } else {
+                    101
+                };
+                state.set_finalized(finalized).unwrap();
+                state.dispatch(request)
+            });
+        });
+        let options = ShieldOptions {
+            wait: Wait::Finalization,
+            submit: SubmitOptions {
+                deadline: Some(Duration::from_secs(5)),
+                reconcile: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let result = tokio::time::timeout(
+            Duration::from_secs(10),
+            client.submit_shielded(inner_call, &signer, &options),
+        )
+        .await
+        .unwrap();
+        let expected_reads = match scenario {
+            "transient" => 2,
+            "reset" => 8,
+            "permanent" => 4,
+            _ => 36,
+        };
+        assert_eq!(reads.load(Ordering::SeqCst), expected_reads, "{scenario}");
+        if matches!(scenario, "transient" | "reset") {
+            let report = result.unwrap();
+            assert!(report.success, "{scenario}");
+            assert_eq!(report.inclusion, Inclusion::Finalized);
+            assert_eq!(report.hash, inner_hash);
+            assert_eq!(report.block_number, Some(101));
+            assert_eq!(report.extrinsic_index, Some(1));
+            assert_eq!(report.shield.unwrap().inner_hash, inner_hash);
+        } else {
+            let expected = if scenario == "permanent" {
+                "4 consecutive finalized-head RPC attempts"
+            } else {
+                "did not finalize after 36 polls"
+            };
+            let error = assert_unknown(result, &fake);
+            assert!(
+                matches!(error, SubmitFailure::Unresolved { ref cause, .. }
+                    if matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Protocol(message))
+                        if message.contains(expected))),
+                "{scenario}: {error}"
+            );
+        }
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        assert_eq!(
+            fake.requests()
+                .iter()
+                .filter(|request| request.method.starts_with("author_submit"))
+                .count(),
+            1,
+            "{scenario}"
+        );
+        {
+            let signed = signer.signed.lock().unwrap();
+            assert_eq!(signed.len(), 2);
+            assert_eq!(signed[0].purpose, SignPurpose::ShieldInner);
+            assert_eq!(signed[1].purpose, SignPurpose::ShieldCarrier);
+        }
         client.close().await;
     }
 }

@@ -1365,64 +1365,68 @@ async fn transfer_amount_prompt_reads_proxy_free_balance_and_records_public_repl
     let (client, chain) = client(state).await?;
     let address = keys.key.account().to_string();
     let proxy_address = proxy.to_string();
-    let parsed = tree()?.try_get_matches_from([
-        "rtao",
-        "tx",
-        "transfer",
-        "-w",
-        "chosen",
-        "--dest",
-        &address,
-        "--proxy-for",
-        &proxy_address,
-    ])?;
-    let (mut ctx, _) = context(&parsed, &generated::intent_reserved("transfer")?)?;
-    let messages = Arc::new(Mutex::new(Vec::new()));
-    ctx.terminal = Arc::new(Mutex::new(Box::new(PromptTerminal {
-        answers: VecDeque::from(["1.000000001".into()]),
-        messages: messages.clone(),
-    })));
-    let mut history = PromptHistory::default();
-    let request = TxRequest::from_matches_with_client(
-        &mut ctx,
-        &client,
-        "transfer",
-        leaf(&parsed)?,
-        &mut history,
-    )
-    .await?;
-    assert_eq!(request.args["amount_tao"], json!("1.000000001"));
-    {
-        let messages = messages.lock().map_err(|_| "messages")?;
-        let hint = messages
-            .iter()
-            .position(|s| {
-                s.starts_with(&format!(
-                    "--amount-tao: free balance of {proxy_address}: τ2,500.000000000\\n"
-                ))
-            })
-            .ok_or("live free balance hint")?;
-        assert!(!messages[hint].chars().any(char::is_control));
-        let prompt = messages
-            .iter()
-            .position(|s| s.starts_with("  amount-tao"))
-            .ok_or("amount prompt")?;
-        assert!(hint < prompt);
+    for (proxy_ref, configured) in [
+        (proxy_address.as_str(), false),
+        ("ProxyAlias", false),
+        ("ProxyAlias", true),
+    ] {
+        let mut argv = vec!["rtao", "tx", "transfer", "-w", "chosen", "--dest", &address];
+        if !configured {
+            argv.extend(["--proxy-for", proxy_ref]);
+        }
+        let parsed = tree()?.try_get_matches_from(argv)?;
+        let (mut ctx, _) = context(&parsed, &generated::intent_reserved("transfer")?)?;
+        ctx.books.addresses = vec![json!({"name":"ProxyAlias","address":proxy})];
+        if configured {
+            ctx.config.insert("proxy_for".into(), json!(proxy_ref));
+        }
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(PromptTerminal {
+            answers: VecDeque::from(["1.000000001".into()]),
+            messages: messages.clone(),
+        })));
+        let mut history = PromptHistory::default();
+        let request = TxRequest::from_matches_with_client(
+            &mut ctx,
+            &client,
+            "transfer",
+            leaf(&parsed)?,
+            &mut history,
+        )
+        .await?;
+        assert_eq!(request.args["amount_tao"], json!("1.000000001"));
+        {
+            let messages = messages.lock().map_err(|_| "messages")?;
+            let hint = messages
+                .iter()
+                .position(|s| {
+                    s.starts_with(&format!(
+                        "--amount-tao: free balance of {proxy_ref}: τ2,500.000000000\\n"
+                    ))
+                })
+                .ok_or("live free balance hint")?;
+            assert!(!messages[hint].chars().any(char::is_control));
+            let prompt = messages
+                .iter()
+                .position(|s| s.starts_with("  amount-tao"))
+                .ok_or("amount prompt")?;
+            assert!(hint < prompt);
+        }
+        assert!(
+            history
+                .replay_command(&["rtao".into(), "tx".into(), "transfer".into()])
+                .contains("--amount-tao 1.000000001")
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(
+            chain
+                .state()
+                .lock()
+                .map_err(|_| "state")?
+                .submissions
+                .is_empty()
+        );
     }
-    assert!(
-        history
-            .replay_command(&["rtao".into(), "tx".into(), "transfer".into()])
-            .contains("--amount-tao 1.000000001")
-    );
-    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
-    assert!(
-        chain
-            .state()
-            .lock()
-            .map_err(|_| "state")?
-            .submissions
-            .is_empty()
-    );
     client.close().await;
     Ok(())
 }
@@ -1954,10 +1958,16 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
             Some("wallet2")
         );
         let messages = messages.lock().map_err(|_| "query picker messages")?;
+        assert!(
+            messages
+                .iter()
+                .any(|line| line == "--account: Destination account — a coldkey, not a hotkey.")
+        );
+        assert!(messages.iter().any(|line| line == "a number above, or any account: ss58 address, address-book name, or local wallet name"));
         for expected in [
             format!("1  contact  {contact}"),
-            format!("2  wallet2  {first_wallet}"),
-            format!("3  wallet10  {second_wallet}"),
+            format!("2  wallet2  {first_wallet}  wallet"),
+            format!("3  wallet10  {second_wallet}  wallet"),
         ] {
             assert!(
                 messages.iter().any(|line| line == &expected),
@@ -2018,6 +2028,9 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
             Some(expected_name)
         );
         let messages = messages.lock().map_err(|_| "target picker messages")?;
+        assert!(messages.iter().any(|line| line == "--destination-hotkey: Validator hotkey the stake goes to — it does not have to be a local key."));
+        assert!(messages.iter().any(|line| line
+            == "a number above, or any hotkey: ss58 address, address-book name, or WALLET/HOTKEY"));
         for expected in [
             format!("1  configured/worker1  {second_wallet}"),
             format!("2  configured/worker2  {first_wallet}"),
@@ -2028,6 +2041,76 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
                 "choice {expected}"
             );
         }
+    }
+    for hotkey in [false, true] {
+        let argv = if hotkey {
+            vec![
+                "rtao",
+                "conviction",
+                "move",
+                "--netuid",
+                "3",
+                "--wallet",
+                "configured",
+            ]
+        } else {
+            vec![
+                "rtao",
+                "query",
+                "multisig",
+                "--call-hash",
+                &call_hash,
+                "--wallet",
+                "configured",
+            ]
+        };
+        let command = if hotkey {
+            application::command_tree([rtao_cli::commands::conviction::command()?])
+        } else {
+            tree()?
+        };
+        let parsed = command.try_get_matches_from(argv)?;
+        let reserved = if hotkey {
+            generated::intent_reserved("move_lock")?
+        } else {
+            generated::read_reserved(rtao::reads::ReadName::Multisig)
+        };
+        let (mut ctx, _) = context(&parsed, &reserved)?;
+        ctx.globals.wallet_path = root.path().join("absent-public-wallet-directory");
+        ctx.passwords.native_provider = None;
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(PromptTerminal {
+            answers: VecDeque::from([first_wallet.to_string()]),
+            messages: messages.clone(),
+        })));
+        let mut history = PromptHistory::default();
+        if hotkey {
+            let requests = rtao_cli::commands::conviction::tx_requests(
+                &mut ctx,
+                parsed.subcommand().ok_or("conviction group")?.1,
+                &mut history,
+            )?;
+            assert_eq!(
+                requests[0].args["destination_hotkey_ss58"],
+                json!(first_wallet)
+            );
+        } else {
+            let request = QueryRequest::from_matches(
+                &ctx,
+                rtao::reads::ReadName::Multisig,
+                leaf(&parsed)?,
+                &mut history,
+            )?;
+            assert_eq!(request.params["account_ss58"], json!(first_wallet));
+        }
+        let expected = if hotkey {
+            "wallet 'configured' has no local hotkeys — paste the validator's ss58 address or an address-book name"
+        } else {
+            "no address-book contacts or other local wallets — paste the destination ss58"
+        };
+        let messages = messages.lock().map_err(|_| "empty picker messages")?;
+        assert!(messages.iter().any(|line| line == expected));
+        assert!(!messages.iter().any(|line| line.starts_with("1  ")));
     }
     // Only public parser/request paths ran: no client, signer or private file
     // exists in this fixture. Scripted secret input refuses if reached.

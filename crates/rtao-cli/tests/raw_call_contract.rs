@@ -137,6 +137,7 @@ fn request() -> RawCallRequest {
         force_proxy_type: None,
         multisig: None,
         rounds: vec![SigningSelection {
+            display_name: None,
             wallet: "alice".into(),
             backend: "wallet".into(),
             address: None,
@@ -402,11 +403,13 @@ fn semantic_routes_resolve_public_members_without_a_raw_target_or_key_source() -
         rounds,
         vec![
             SigningSelection {
+                display_name: None,
                 wallet: "bob".into(),
                 address: Some(bob),
                 backend: "ledger".into()
             },
             SigningSelection {
+                display_name: None,
                 wallet: "alice".into(),
                 address: Some(alice),
                 backend: "vault".into()
@@ -779,11 +782,13 @@ async fn raw_round_review_lists_member_backends_before_confirmation_without_priv
             // Approval order can differ from the group's canonical member order.
             raw.rounds = vec![
                 SigningSelection {
+                    display_name: None,
                     wallet: "bob".into(),
                     backend: "ledger".into(),
                     address: Some(bob.key.account()),
                 },
                 SigningSelection {
+                    display_name: None,
                     wallet: "alice".into(),
                     backend: "vault".into(),
                     address: Some(alice.key.account()),
@@ -1132,6 +1137,7 @@ fn chained_request(keys: &[Keys]) -> RawCallRequest {
         .iter()
         .enumerate()
         .map(|(index, key)| SigningSelection {
+            display_name: None,
             wallet: format!("member{index}"),
             backend: "wallet".into(),
             address: Some(key.key.account()),
@@ -1455,6 +1461,7 @@ async fn executed_first_approval_stops_later_members_and_caches_exact_inner_call
         .iter()
         .enumerate()
         .map(|(i, key)| SigningSelection {
+            display_name: None,
             wallet: format!("member{i}"),
             backend: "wallet".into(),
             address: Some(key.key.account()),
@@ -1621,6 +1628,7 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
             .collect(),
     });
     raw.rounds = vec![SigningSelection {
+        display_name: None,
         wallet: "alice".into(),
         backend: "wallet".into(),
         address: Some(keys[0].key.account()),
@@ -1632,7 +1640,7 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
         2,
     )?;
     chain.mutate_state(|state|state.seed_python("Multisig","Multisigs",&[json!(group.address),json!(format!("0x{}",hex::encode(call.hash())))],json!({"when":{"height":10,"index":1},"deposit":0,"depositor":keys[0].key.account(),"approvals":[keys[0].key.account()]})))?;
-    let (ctx, _) = context(&["--yes", "--json"])?;
+    let (ctx, sink) = context(&["--yes"])?;
     let factory = Factory::new([("alice".into(), keys[0].clone())]);
     let receipt = call::execute_rounds_with(
         &ctx,
@@ -1658,6 +1666,32 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
             .as_str()
             .ok_or("command")?
             .contains("--multisig-threshold 2")
+    );
+    let human = sink.text(Stream::Stdout)?;
+    let command = followup["co_signer_commands"][0]["command"]
+        .as_str()
+        .ok_or("copyable command")?;
+    assert!(human.contains(rtao_cli::output::terminal_text(command).as_ref()));
+    assert_eq!(
+        human
+            .matches("--macos-password or --keychain-password")
+            .count(),
+        1
+    );
+    assert!(human.contains("--signer vault (or ledger/extension) before call"));
+    let json_sink = MemorySink::default();
+    let machine = Output::new(
+        OutputOptions {
+            json_mode: true,
+            quiet: false,
+            network: None,
+        },
+        Arc::new(json_sink.clone()),
+    );
+    assert!(machine.result(&receipt, "unused human summary")?);
+    assert_eq!(
+        serde_json::from_str::<Value>(&json_sink.text(Stream::Stdout)?)?,
+        receipt.to_json()
     );
     client.close().await;
     Ok(())
@@ -2012,5 +2046,355 @@ fn signatory_without_multisig_and_unavailable_backend_refuse_without_prompting()
             .chain(flags),
     )?;
     assert!(RawCallRequest::from_matches(&ctx, parsed.subcommand().ok_or("call")?.1).is_err());
+    Ok(())
+}
+
+#[test]
+fn multisig_alias_labels_and_rounds_use_public_natural_wallet_order() -> TestResult {
+    let alice = AccountId([7; 32]);
+    let bob = AccountId([8; 32]);
+    for aliases in [["wallet10", "wallet2"], ["wallet2", "wallet10"]] {
+        let temp = Temp::new()?;
+        let wallet_root = temp.0.join("wallets");
+        for (name, account) in [(aliases[0], alice), (aliases[1], alice), ("wallet3", bob)] {
+            let directory = wallet_root.join(name);
+            std::fs::create_dir_all(&directory)?;
+            std::fs::write(
+                directory.join("coldkeypub.txt"),
+                serde_json::to_vec(&json!({"ss58Address":account,"cryptoType":1}))?,
+            )?;
+            // Default planning inspects only file existence. This sentinel is
+            // public fixture text, never parsed or passed to a signing source.
+            std::fs::write(
+                directory.join("coldkey"),
+                b"public fixture; not a private key",
+            )?;
+        }
+        let (mut ctx, _) = context(&["--yes"])?;
+        ctx.globals.wallet_path = wallet_root;
+        ctx.globals.wallet_name = "team".into();
+        let group = RawMultisig {
+            threshold: 2,
+            signatories: vec![bob, alice],
+            preset: None,
+            refs: vec![bob.to_string(), alice.to_string()],
+        };
+        let labels = call::signatory_labels(&ctx, &group)?;
+        assert_eq!(labels.get(&alice).map(String::as_str), Some("wallet2"));
+        assert_eq!(labels.get(&bob).map(String::as_str), Some("wallet3"));
+        let rounds = call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None)?;
+        assert_eq!(
+            rounds
+                .iter()
+                .map(|round| round.wallet.as_str())
+                .collect::<Vec<_>>(),
+            vec!["wallet3", "wallet2"]
+        );
+        assert_eq!(
+            rounds
+                .iter()
+                .filter_map(|round| round.address)
+                .collect::<Vec<_>>(),
+            vec![bob, alice]
+        );
+        assert!(rounds.iter().all(|round| round.backend == "wallet"));
+        assert_eq!(
+            rounds
+                .iter()
+                .map(SigningSelection::display_wallet)
+                .collect::<Vec<_>>(),
+            vec!["wallet3", "wallet10"]
+        );
+        ctx.globals.signatories = vec![alice.to_string()];
+        assert_eq!(
+            call::select_member(&ctx, &group, SignerRole::Coldkey, None)?.wallet,
+            "wallet2"
+        );
+        ctx.globals.signatories = vec![alice.to_string(), bob.to_string()];
+        assert_eq!(
+            call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None)?
+                .iter()
+                .map(|round| round.wallet.as_str())
+                .collect::<Vec<_>>(),
+            vec!["wallet2", "wallet3"]
+        );
+        let spec = MultisigCallSpec::from(&request());
+        let replay = call::multisig_replay_command(&ctx, &spec, &group, alice, &labels)?;
+        assert!(replay.contains("--other-signatories wallet3 -w wallet2"));
+    }
+    Ok(())
+}
+
+#[test]
+fn automatic_multisig_aliases_use_last_admission_and_display_but_first_wallet_source() -> TestResult
+{
+    let alice = AccountId([7; 32]);
+    let bob = AccountId([8; 32]);
+    for equal_names in [false, true] {
+        for first_secret in [false, true] {
+            for last_secret in [false, true] {
+                let temp = Temp::new()?;
+                let wallet_root = temp.0.join("wallets");
+                let alias_names = if equal_names {
+                    ["wallet02", "wallet2"]
+                } else {
+                    ["wallet2", "wallet10"]
+                };
+                for (name, account) in [
+                    (alias_names[1], alice),
+                    ("wallet3", bob),
+                    (alias_names[0], alice),
+                ] {
+                    let directory = wallet_root.join(name);
+                    std::fs::create_dir_all(&directory)?;
+                    std::fs::write(
+                        directory.join("coldkeypub.txt"),
+                        serde_json::to_vec(&json!({"ss58Address":account,"cryptoType":1}))?,
+                    )?;
+                }
+                // Equal natural names keep incoming public directory order;
+                // no lexical tie-breaker or private key content is consulted.
+                let lookup = rtao_cli::books::FsAccountLookup::new(&wallet_root)?;
+                let candidates = rtao_cli::books::AccountLookup::candidates(&lookup);
+                let natural_aliases = if equal_names {
+                    candidates
+                        .iter()
+                        .filter(|entry| {
+                            entry.source == "wallet" && entry.address == alice.to_string()
+                        })
+                        .map(|entry| entry.name.clone())
+                        .collect::<Vec<_>>()
+                } else {
+                    alias_names
+                        .iter()
+                        .map(|name| (*name).to_owned())
+                        .collect::<Vec<_>>()
+                };
+                assert_eq!(natural_aliases.len(), 2);
+                let first = &natural_aliases[0];
+                let last = &natural_aliases[1];
+                for (name, exists) in [
+                    (first.as_str(), first_secret),
+                    (last.as_str(), last_secret),
+                    ("wallet3", true),
+                ] {
+                    if exists {
+                        std::fs::write(
+                            wallet_root.join(name).join("coldkey"),
+                            b"existence-only public fixture",
+                        )?;
+                    }
+                }
+                let (mut ctx, sink) = context(&["--yes"])?;
+                ctx.globals.wallet_path = wallet_root;
+                ctx.globals.wallet_name = "team".into();
+                let group = RawMultisig {
+                    threshold: 2,
+                    signatories: vec![alice, bob],
+                    preset: None,
+                    refs: vec![alice.to_string(), bob.to_string()],
+                };
+                assert_eq!(
+                    call::signatory_labels(&ctx, &group)?.get(&alice),
+                    Some(first)
+                );
+                let automatic = call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None);
+                if last_secret {
+                    let rounds = automatic?;
+                    assert_eq!(rounds.len(), 2);
+                    assert_eq!(rounds[0].wallet, *first);
+                    assert_eq!(rounds[0].display_wallet(), last.as_str());
+                    assert_eq!(rounds[0].address, Some(alice));
+                    assert_eq!(rounds[1].wallet, "wallet3");
+                } else {
+                    let error = automatic
+                        .err()
+                        .ok_or("last public-only alias must disable automatic local round")?;
+                    assert!(error.message.contains("multiple local signatories"));
+                    assert!(!sink.text(Stream::Stderr)?.contains("approvals planned"));
+                }
+                ctx.globals.signatories = vec![last.clone()];
+                assert_eq!(
+                    call::select_member(&ctx, &group, SignerRole::Coldkey, None)?.wallet,
+                    *last
+                );
+                ctx.globals.signatories = vec![last.clone(), bob.to_string()];
+                let chained = call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None)?;
+                assert_eq!(chained[0].wallet, *first);
+                assert_eq!(chained[0].display_wallet(), last.as_str());
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn interactive_multisig_alias_selection_keeps_chosen_wallet_source() -> TestResult {
+    let alice = AccountId([7; 32]);
+    let bob = AccountId([8; 32]);
+    for use_rounds_planner in [false, true] {
+        for collision in [
+            "none",
+            "contact-member",
+            "contact-nonmember",
+            "proxy",
+            "saved-multisig",
+        ] {
+            let temp = Temp::new()?;
+            let wallet_root = temp.0.join("wallets");
+            for name in ["wallet10", "wallet2"] {
+                let directory = wallet_root.join(name);
+                std::fs::create_dir_all(&directory)?;
+                std::fs::write(
+                    directory.join("coldkeypub.txt"),
+                    serde_json::to_vec(&json!({"ss58Address":alice,"cryptoType":1}))?,
+                )?;
+            }
+            let (mut ctx, _) = context(&[])?;
+            ctx.globals.wallet_path = wallet_root.clone();
+            ctx.globals.wallet_name = "team".into();
+            ctx.books = Books::from_values(
+                if collision.starts_with("contact") {
+                    json!([{"name":"wallet10","address":if collision == "contact-member" { bob } else { AccountId([9;32]) }}])
+                } else {
+                    json!([])
+                },
+                if collision == "proxy" {
+                    json!([{"name":"wallet10","address":bob}])
+                } else {
+                    json!([])
+                },
+                if collision == "saved-multisig" {
+                    json!([{"name":"wallet10","threshold":1,"signatories":[alice,bob]}])
+                } else {
+                    json!([])
+                },
+            );
+            ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptedTerminal {
+                answers: ["wallet10".into()].into(),
+                messages: Arc::new(Mutex::new(Vec::new())),
+            })));
+            let group = RawMultisig {
+                threshold: 1,
+                signatories: vec![alice, bob],
+                preset: None,
+                refs: vec![alice.to_string(), bob.to_string()],
+            };
+            let selected = if use_rounds_planner {
+                let rounds = call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None)?;
+                assert_eq!(rounds.len(), 1);
+                rounds.into_iter().next().ok_or("missing selected round")?
+            } else {
+                call::select_member(&ctx, &group, SignerRole::Coldkey, None)?
+            };
+            assert_eq!(selected.wallet, "wallet10");
+            assert_eq!(selected.display_wallet(), "wallet10");
+            assert_eq!(selected.address, Some(alice));
+            assert!(!wallet_root.join("wallet2").join("coldkey").exists());
+            assert!(!wallet_root.join("wallet10").join("coldkey").exists());
+            ctx.globals.signatories = vec!["wallet10".into()];
+            let explicit = call::select_member(&ctx, &group, SignerRole::Coldkey, None)?;
+            assert_eq!(explicit.wallet, "wallet10");
+            assert_eq!(explicit.address, Some(alice));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn chained_multisig_references_use_only_member_contacts_and_local_names() -> TestResult {
+    let alice = AccountId([7; 32]);
+    let bob = AccountId([8; 32]);
+    let (saved_account, _) = rtao::core::extrinsic::multisig_account_id(&[alice.0, bob.0], 1)?;
+    let saved_account = AccountId(saved_account);
+    for mode in [
+        "contact-member",
+        "contact-nonmember",
+        "proxy-shadow",
+        "saved-shadow",
+        "proxy-only",
+        "saved-only",
+    ] {
+        let temp = Temp::new()?;
+        let wallet_root = temp.0.join("wallets");
+        for (name, address) in [("wallet2", alice), ("wallet10", alice), ("wallet3", bob)] {
+            let directory = wallet_root.join(name);
+            std::fs::create_dir_all(&directory)?;
+            std::fs::write(
+                directory.join("coldkeypub.txt"),
+                serde_json::to_vec(&json!({"ss58Address":address,"cryptoType":1}))?,
+            )?;
+        }
+        let reference = if mode.ends_with("only") {
+            "book-only"
+        } else {
+            "wallet10"
+        };
+        let (mut ctx, _) = context(&["--yes"])?;
+        ctx.globals.wallet_path = wallet_root;
+        ctx.globals.wallet_name = "team".into();
+        ctx.books = Books::from_values(
+            if mode.starts_with("contact") {
+                json!([{"name":reference,"address":if mode=="contact-member" {bob} else {AccountId([9;32])}}])
+            } else {
+                json!([])
+            },
+            if mode.starts_with("proxy") {
+                json!([{"name":reference,"address":bob}])
+            } else {
+                json!([])
+            },
+            if mode.starts_with("saved") {
+                json!([{"name":reference,"threshold":1,"signatories":[alice,bob]}])
+            } else {
+                json!([])
+            },
+        );
+        // The forbidden book-only aliases resolve to actual members under the
+        // broader generic resolver, and forced signing removes backend refusal.
+        let signatories = if mode == "saved-only" {
+            vec![alice, bob, saved_account]
+        } else {
+            vec![alice, bob]
+        };
+        let group = RawMultisig {
+            threshold: 2,
+            refs: signatories.iter().map(ToString::to_string).collect(),
+            signatories,
+            preset: None,
+        };
+        let contact_first = mode == "contact-member";
+        ctx.globals.signatories = vec![
+            if mode.ends_with("only") {
+                format!("{reference}=ledger")
+            } else {
+                reference.into()
+            },
+            if contact_first || mode.ends_with("only") {
+                alice.to_string()
+            } else {
+                bob.to_string()
+            },
+        ];
+        let rounds = call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None);
+        if mode.ends_with("only") {
+            let error = rounds
+                .err()
+                .ok_or("proxy/saved-only member name must refuse")?;
+            assert!(error.message.contains("not a member"));
+        } else {
+            let rounds = rounds?;
+            assert_eq!(rounds.len(), 2);
+            assert_eq!(
+                rounds[0].address,
+                Some(if contact_first { bob } else { alice })
+            );
+            assert_eq!(
+                rounds[0].wallet,
+                if contact_first { "wallet3" } else { "wallet2" }
+            );
+            assert_eq!(rounds[0].display_wallet(), "wallet10");
+        }
+    }
     Ok(())
 }

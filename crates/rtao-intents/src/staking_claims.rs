@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_slippage_protection.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Position exits and transfers, including atomic root claims and their preview.
 
 use futures::TryStreamExt;
@@ -1024,12 +1025,35 @@ mod tests {
         sweep.extend_from_slice(HOTKEY.as_bytes());
         for (intent, follow) in [
             (
+                Box::new(remove(
+                    Balance::<Tao>::from_rao(1_000_000_000).into(),
+                    NetUid::ROOT,
+                    true,
+                    false,
+                )?) as Box<dyn DynIntent>,
+                plain_remove(NetUid::ROOT, 1_000_000_000, None),
+            ),
+            (
                 Box::new(remove(Amount::All, NetUid::ROOT, true, true)?) as Box<dyn DynIntent>,
                 plain_remove(NetUid::ROOT, u64::MAX, None),
             ),
             (
                 Box::new(remove_limit(Amount::All, NetUid::ROOT, true, 1_000_000_000)),
                 plain_remove(NetUid::ROOT, u64::MAX, None),
+            ),
+            (
+                Box::new(remove_limit(Amount::All, NetUid::ROOT, true, 0)),
+                plain_remove(NetUid::ROOT, u64::MAX, None),
+            ),
+            (
+                Box::new(moved(
+                    Balance::<Tao>::from_rao(1_000_000_000).into(),
+                    NetUid::ROOT,
+                    NetUid::ROOT,
+                    true,
+                    false,
+                )?),
+                plain_move(NetUid::ROOT, NetUid::ROOT, 1_000_000_000, None),
             ),
             (
                 Box::new(moved(Amount::All, NetUid::ROOT, NetUid::ROOT, true, true)?),
@@ -1055,6 +1079,147 @@ mod tests {
             assert_eq!(tree["call_module"], "Utility");
             assert_eq!(tree["call_function"], "batch_all");
         }
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn typed_staking_money_preserves_call_bytes_and_all_currency_mismatch_payloads()
+    -> anyhow::Result<()> {
+        use crate::AnyIntent;
+
+        fn amount(intent: &mut AnyIntent) -> anyhow::Result<&mut Amount> {
+            Ok(match intent {
+                AnyIntent::AddStake(intent) => &mut intent.amount_tao,
+                AnyIntent::AddStakeLimit(intent) => &mut intent.amount_tao,
+                AnyIntent::RemoveStake(intent) => &mut intent.amount_alpha,
+                AnyIntent::RemoveStakeLimit(intent) => &mut intent.amount_alpha,
+                AnyIntent::MoveStake(intent) => &mut intent.amount_alpha,
+                AnyIntent::MoveSwapStake(intent) => &mut intent.amount_alpha,
+                AnyIntent::SwapStake(intent) => &mut intent.amount_alpha,
+                AnyIntent::TransferStake(intent) => &mut intent.amount_alpha,
+                _ => anyhow::bail!("fixture requires a staking amount"),
+            })
+        }
+
+        let (chain, client, snapshot) = fixture(|_| Ok(())).await?;
+        for (op, field, expected_unit) in [
+            ("add_stake", "amount_tao", NetUid::ROOT),
+            ("remove_stake", "amount_alpha", NetUid(1)),
+            ("add_stake_limit", "amount_tao", NetUid::ROOT),
+            ("remove_stake_limit", "amount_alpha", NetUid(1)),
+        ] {
+            let mut args = json!({"hotkey_ss58":HOTKEY,"netuid":1});
+            args[field] = json!("1.5");
+            if op.ends_with("_limit") {
+                args["limit_price_rao"] = json!(1_000_000_000);
+            }
+            let mut plain = AnyIntent::from_tool(op, args)?;
+            let mut tagged = plain.clone();
+            *amount(&mut tagged)? = DynBalance::from_rao(1_500_000_000, expected_unit).into();
+            let resolved =
+                ResolvedAmount::Exact(DynBalance::from_rao(1_500_000_000, expected_unit));
+            assert_eq!(
+                amount(&mut plain)?.resolve(expected_unit, true)?,
+                resolved,
+                "{op}"
+            );
+            assert_eq!(
+                amount(&mut tagged)?.resolve(expected_unit, true)?,
+                resolved,
+                "{op}"
+            );
+            plain.as_dyn().validate_dyn()?;
+            tagged.as_dyn().validate_dyn()?;
+            let plain_call = build(plain.as_dyn(), &snapshot).await?.call;
+            let tagged_call = build(tagged.as_dyn(), &snapshot).await?.call;
+            assert_eq!(
+                tagged_call.as_bytes(),
+                plain_call.as_bytes(),
+                "{op} tagged and untagged money must encode identically"
+            );
+        }
+
+        for (op, expected, actual, args) in [
+            (
+                "add_stake",
+                NetUid::ROOT,
+                NetUid(1),
+                json!({"hotkey_ss58":HOTKEY,"netuid":1,"amount_tao":1}),
+            ),
+            (
+                "remove_stake",
+                NetUid(1),
+                NetUid::ROOT,
+                json!({"hotkey_ss58":HOTKEY,"netuid":1,"amount_alpha":1}),
+            ),
+            (
+                "add_stake_limit",
+                NetUid::ROOT,
+                NetUid(2),
+                json!({"hotkey_ss58":HOTKEY,"netuid":2,"amount_tao":1,"limit_price_rao":1_000_000_000}),
+            ),
+            (
+                "remove_stake_limit",
+                NetUid(2),
+                NetUid::ROOT,
+                json!({"hotkey_ss58":HOTKEY,"netuid":2,"amount_alpha":1,"limit_price_rao":1_000_000_000}),
+            ),
+            (
+                "move_stake",
+                NetUid(1),
+                NetUid::ROOT,
+                json!({"origin_hotkey_ss58":HOTKEY,"origin_netuid":1,"dest_hotkey_ss58":DESTINATION,"dest_netuid":2,"amount_alpha":1}),
+            ),
+            (
+                "move_swap_stake",
+                NetUid(1),
+                NetUid::ROOT,
+                json!({"origin_hotkey_ss58":HOTKEY,"origin_netuid":1,"dest_hotkey_ss58":DESTINATION,"dest_netuid":2,"amount_alpha":1}),
+            ),
+            (
+                "swap_stake",
+                NetUid(1),
+                NetUid(2),
+                json!({"hotkey_ss58":HOTKEY,"origin_netuid":1,"dest_netuid":2,"amount_alpha":1}),
+            ),
+            (
+                "transfer_stake",
+                NetUid(1),
+                NetUid::ROOT,
+                json!({"hotkey_ss58":HOTKEY,"dest_coldkey_ss58":RECEIVER,"origin_netuid":1,"dest_netuid":2,"amount_alpha":1}),
+            ),
+        ] {
+            let mut intent = AnyIntent::from_tool(op, args)?;
+            *amount(&mut intent)? = DynBalance::from_rao(1_000_000_000, actual).into();
+            assert!(
+                matches!(
+                    intent.as_dyn().validate_dyn(),
+                    Err(IntentError::UnitMismatch(UnitError::UnitMismatch {
+                        expected: found_expected,
+                        actual: found_actual,
+                    })) if found_expected == expected && found_actual == actual
+                ),
+                "{op} must report the consuming and supplied currencies"
+            );
+        }
+
+        let mut root = AnyIntent::from_tool(
+            "remove_stake",
+            json!({"hotkey_ss58":HOTKEY,"netuid":0,"amount_alpha":1}),
+        )?;
+        *amount(&mut root)? = Balance::<Tao>::from_rao(1_000_000_000).into();
+        root.as_dyn().validate_dyn()?;
+        assert_eq!(
+            amount(&mut root)?.resolve(NetUid::ROOT, true)?,
+            ResolvedAmount::Exact(DynBalance::from_rao(1_000_000_000, NetUid::ROOT))
+        );
+        // Native chain fields reject a negative unsigned price at input time.
+        let mut root_limit_args = json!({"hotkey_ss58":HOTKEY,"netuid":0,"amount_alpha":"all","claim":true,"limit_price_rao":0});
+        AnyIntent::from_tool("remove_stake_limit", root_limit_args.clone())?;
+        root_limit_args["limit_price_rao"] = json!(-1);
+        assert!(AnyIntent::from_tool("remove_stake_limit", root_limit_args).is_err());
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
         client.close().await;
         Ok(())

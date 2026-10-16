@@ -92,12 +92,46 @@ pub async fn owner(ctx: &AppContext) -> Result<AccountId, CliError> {
         .ok_or_else(|| CliError::input("wallet has no usable coldkey"))
 }
 
+// The label describes the selected public context; it never replaces the
+// resolved account used for reads, intents or signing policy.
+pub(crate) fn owner_label(ctx: &AppContext, account: AccountId) -> String {
+    let proxy = ctx.globals.proxy_for.clone().or_else(|| {
+        ctx.config
+            .get("proxy_for")
+            .filter(|value| crate::books::public_json_truthy(value))
+            .map(crate::globals::config_string)
+    });
+    if let Some(proxy) = proxy.filter(|value| value != "self") {
+        return proxy;
+    }
+    if ctx.books.multisig(&ctx.globals.wallet_name).is_some() {
+        return format!(
+            "multisig {}",
+            rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+        );
+    }
+    if ctx.globals.uses_external_signer() {
+        // Public external accounts are a native picker extension. Do not call
+        // them a local wallet or claim device/operator completion.
+        return format!("signer {account}");
+    }
+    format!(
+        "wallet {}",
+        rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+    )
+}
+
+pub(crate) async fn owner_with_label(ctx: &AppContext) -> Result<(AccountId, String), CliError> {
+    let account = owner(ctx).await?;
+    Ok((account, owner_label(ctx, account)))
+}
+
 /// Show the free balance before the command's ordinary amount prompt.
 /// The caller retains its normal amount parser and records its own answer.
 pub async fn free_balance(ctx: &AppContext, client: &Client) -> Result<DynBalance, CliError> {
-    let account = owner(ctx).await?;
+    let (account, label) = owner_with_label(ctx).await?;
     let balance = owner::balance(client, account).await.map_err(failure)?;
-    message(ctx, &format!("free balance of {account}: {balance}"))?;
+    message(ctx, &format!("free balance of {label}: {balance}"))?;
     Ok(balance)
 }
 
@@ -339,10 +373,11 @@ pub async fn source(
     answers: &mut Map<String, Value>,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
-    source_for_owner(
+    let (account, label) = owner_with_label(ctx).await?;
+    source_for_labeled_owner(
         ctx,
         client,
-        owner(ctx).await?,
+        (account, &label),
         hotkey_field,
         netuid_field,
         answers,
@@ -361,6 +396,29 @@ pub async fn source_for_owner(
     answers: &mut Map<String, Value>,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
+    let label = account.to_string();
+    source_for_labeled_owner(
+        ctx,
+        client,
+        (account, &label),
+        hotkey_field,
+        netuid_field,
+        answers,
+        history,
+    )
+    .await
+}
+
+pub(crate) async fn source_for_labeled_owner(
+    ctx: &AppContext,
+    client: &Client,
+    owner: (AccountId, &str),
+    hotkey_field: &str,
+    netuid_field: Option<&str>,
+    answers: &mut Map<String, Value>,
+    history: &mut PromptHistory,
+) -> Result<(), CliError> {
+    let (account, owner_label) = owner;
     let valuation = owner::stake_value_for_coldkey(client, account)
         .await
         .map_err(failure)?;
@@ -404,7 +462,7 @@ pub async fn source_for_owner(
             .map(|n| format!(" on netuid {n}"))
             .unwrap_or_default();
         return Err(
-            CliError::failure(format!("{account} has no stake{location}"))
+            CliError::failure(format!("{owner_label} has no stake{location}"))
                 .with_help("`rtao stake list` shows every position"),
         );
     }
@@ -802,10 +860,14 @@ fn pick_account(
     if choices.is_empty() {
         message(
             ctx,
-            if hotkey {
-                "no local hotkeys — paste the validator's ss58 address or an address-book name"
+            &if hotkey {
+                format!(
+                    "wallet {} has no local hotkeys — paste the validator's ss58 address or an address-book name",
+                    rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+                )
             } else {
                 "no address-book contacts or other local wallets — paste the destination ss58"
+                    .into()
             },
         )?;
     } else {
@@ -1190,7 +1252,7 @@ mod tests {
                 .lock()
                 .map_err(|_| "messages")?
                 .join("\n")
-                .contains("no local hotkeys")
+                .contains("wallet 'default' has no local hotkeys — paste the validator's ss58 address or an address-book name")
         );
         Ok(())
     }

@@ -322,7 +322,7 @@ impl PromptResolver for ArgumentResolver<'_> {
     ) -> Result<Vec<String>, PromptError> {
         let candidates = super::stake::picker::local_candidates(self.ctx)
             .map_err(|error| PromptError::InvalidValue(error.to_string()))?;
-        let mut choices = Vec::<(String, String)>::new();
+        let mut choices = Vec::<(String, String, bool)>::new();
         let mut seen = BTreeSet::new();
         if spec.flow == PromptFlow::DestinationAccount {
             for entry in &self.ctx.books.addresses {
@@ -331,14 +331,14 @@ impl PromptResolver for ArgumentResolver<'_> {
                     && !address.is_empty()
                     && seen.insert(address.to_owned())
                 {
-                    choices.push((name.into(), address.into()));
+                    choices.push((name.into(), address.into(), false));
                 }
             }
             for candidate in candidates.into_iter().filter(|candidate| {
                 candidate.source == "wallet" && candidate.name != self.ctx.globals.wallet_name
             }) {
                 if seen.insert(candidate.address.clone()) {
-                    choices.push((candidate.name, candidate.address));
+                    choices.push((candidate.name, candidate.address, true));
                 }
             }
         } else {
@@ -350,11 +350,41 @@ impl PromptResolver for ArgumentResolver<'_> {
                         .name
                         .starts_with(&format!("{}/", self.ctx.globals.wallet_name))
             }) {
-                choices.push((candidate.name, candidate.address));
+                choices.push((candidate.name, candidate.address, false));
             }
         }
-        for (index, (name, address)) in choices.iter().enumerate() {
-            terminal.message(&format!("{}  {name}  {address}", index + 1))?;
+        let hotkey = spec.flow == PromptFlow::StakeTarget;
+        terminal.message(&format!(
+            "{}: {}",
+            spec.flag,
+            if hotkey {
+                "Validator hotkey the stake goes to — it does not have to be a local key."
+            } else {
+                "Destination account — a coldkey, not a hotkey."
+            }
+        ))?;
+        for (index, (name, address, wallet)) in choices.iter().enumerate() {
+            terminal.message(&format!(
+                "{}  {name}  {address}{}",
+                index + 1,
+                if *wallet { "  wallet" } else { "" }
+            ))?;
+        }
+        if choices.is_empty() {
+            terminal.message(&if hotkey {
+                format!(
+                    "wallet {} has no local hotkeys — paste the validator's ss58 address or an address-book name",
+                    rtao::primitives::pyfmt::string_repr(&self.ctx.globals.wallet_name)
+                )
+            } else {
+                "no address-book contacts or other local wallets — paste the destination ss58".into()
+            })?;
+        } else {
+            terminal.message(if hotkey {
+                "a number above, or any hotkey: ss58 address, address-book name, or WALLET/HOTKEY"
+            } else {
+                "a number above, or any account: ss58 address, address-book name, or local wallet name"
+            })?;
         }
         let (value, _) = ask_with(&self.ctx.prompt_context(), terminal, spec, |raw| {
             let numbered = !raw.is_empty()
@@ -378,7 +408,7 @@ impl PromptResolver for ArgumentResolver<'_> {
             } else {
                 None
             };
-            if let Some((name, address)) = selected {
+            if let Some((name, address, _)) = selected {
                 // Validate before caching the selected key's name. Normal
                 // resolution may find a contact alias for the same account;
                 // Python records the numeric menu choice first.
@@ -390,7 +420,10 @@ impl PromptResolver for ArgumentResolver<'_> {
                     .name_address(address, name)
                     .map_err(|error| PromptValidation::Message(error.to_string()))?;
             }
-            self.parse(spec, selected.map_or(raw, |(_, address)| address.as_str()))
+            self.parse(
+                spec,
+                selected.map_or(raw, |(_, address, _)| address.as_str()),
+            )
         })?;
         let text = value
             .as_str()
@@ -593,10 +626,11 @@ impl TxRequest {
                         account.ok_or_else(|| input("amount prompt needs a public coldkey"))?
                     }
                 };
+                let label = super::stake::picker::owner_label(ctx, owner);
                 let free = rtao::reads::generated::interfaces::balance(client, owner)
                     .await
                     .map_err(failure)?;
-                Some(format!("free balance of {owner}: {free}"))
+                Some(format!("free balance of {label}: {free}"))
             } else {
                 None
             };

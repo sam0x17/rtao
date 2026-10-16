@@ -914,7 +914,7 @@ fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
     let netuid = NetUid(7);
     let balance = |rao| DynBalance::from_rao(rao, netuid);
     let key = AccountId([21; 32]);
-    let data = SubnetConvictions {
+    let mut data = SubnetConvictions {
         netuid,
         block: 100,
         alpha_out: balance(10_000_000_000),
@@ -961,24 +961,68 @@ fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
     assert_eq!(actual["hotkeys"][0]["locked_alpha"].to_string(), "1e-09");
     assert_eq!(actual["hotkeys"][0]["blocks_to_threshold"], Value::Null);
     assert!(actual.get("protocol_alpha").is_none());
-    let human = MemorySink::default();
+    let machine = sink.text(Stream::Stdout)?;
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    let quiet_json = MemorySink::default();
     let output = Output::new(
         OutputOptions {
-            json_mode: false,
-            quiet: false,
+            json_mode: true,
+            quiet: true,
             network: None,
         },
-        Arc::new(human.clone()),
+        Arc::new(quiet_json.clone()),
     );
     subnets::render_convictions(&output, &data, false)?;
-    let text = human.text(Stream::Stdout)?;
-    assert_eq!(
-        human.text(Stream::Stderr)?,
-        "Lock alpha with `rtao conviction add --netuid 7 --amount <alpha>`. Estimates assume constant rates and alpha accounting. Ownership also requires the one-year age gate. Unlock half-life ~0d; maturity half-life ~0d.\n1 negligible lock hidden (pass `--all` to show)\n"
-    );
-    assert!(!text.contains("negligible lock"));
-    assert!(text.contains("gate is per-hotkey"));
-    assert!(text.contains("won't clear 18%"));
+    assert_eq!(quiet_json.text(Stream::Stdout)?, machine);
+    assert!(quiet_json.text(Stream::Stderr)?.is_empty());
+    for (block, open) in [(100, false), (2_628_001, true)] {
+        data.block = block;
+        let mut ordinary = None;
+        for quiet in [false, true] {
+            let human = MemorySink::default();
+            let output = Output::new(
+                OutputOptions {
+                    json_mode: false,
+                    quiet,
+                    network: None,
+                },
+                Arc::new(human.clone()),
+            );
+            subnets::render_convictions(&output, &data, false)?;
+            let text = human.text(Stream::Stdout)?;
+            if quiet {
+                assert_eq!(Some(&text), ordinary.as_ref());
+                assert!(human.text(Stream::Stderr)?.is_empty());
+            } else {
+                ordinary = Some(text.clone());
+                assert_eq!(
+                    human.text(Stream::Stderr)?,
+                    "1 negligible lock hidden (pass `--all` to show)\n"
+                );
+            }
+            assert!(!text.contains("negligible lock"));
+            assert!(text.contains("gate is per-hotkey"));
+            assert!(text.contains("won't clear 18%"));
+            assert!(
+                text.contains("its lock always counts conviction equal to its full locked mass")
+            );
+            assert!(text.contains("conviction closes half its gap to the locked mass"));
+            assert!(text.contains("a decaying lock's mass halves every ~0d"));
+            assert!(text.contains("rtao conviction add --netuid 7 --amount <alpha>"));
+            assert!(text.contains("score that gates subnet ownership"));
+            assert!(text.contains("rates and alpha accounting stay constant"));
+            assert!(text.contains(&format!("{}/guides/conviction", rtao_catalog::py::DOCS_URL)));
+            if open {
+                assert!(text.contains("open — registered at block 1"));
+                assert!(text.contains("the one-year age gate has passed"));
+                assert!(!text.contains("d away"));
+            } else {
+                assert!(text.contains("block 2628001 — ~365d away"));
+                assert!(text.contains("a subnet must be one year old before ownership can change"));
+                assert!(!text.contains("age gate has passed"));
+            }
+        }
+    }
     let all = MemorySink::default();
     let output = Output::new(
         OutputOptions {
@@ -1050,6 +1094,60 @@ async fn subnet_list_orders_emissions_then_native_netuid_and_root_has_no_pool() 
     assert_eq!(records[1]["price_tao_per_alpha"], json!(0.5));
     assert_eq!(records[1]["emission_tao_per_day"], json!(14.4));
     assert_eq!(records[1]["url"], Value::Null);
+    let machine = sink.text(Stream::Stdout)?;
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    let mut ordinary = None;
+    for quiet in [false, true] {
+        for json_mode in [false, true] {
+            let mut args = vec!["rtao", "subnets", "list"];
+            if quiet {
+                args.push("--quiet");
+            }
+            if json_mode {
+                args.push("--json");
+            }
+            let parsed = parse(&args)?;
+            let (mut ctx, sink) = context(&parsed)?;
+            let request = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("group")?.1,
+                &mut PromptHistory::default(),
+            )?;
+            subnets::execute(
+                &mut ctx,
+                &client,
+                &request,
+                SubmissionOptions::default(),
+                None,
+                &mut PromptHistory::default(),
+            )
+            .await?;
+            let text = sink.text(Stream::Stdout)?;
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+            if json_mode {
+                assert_eq!(text, machine);
+            } else {
+                if quiet {
+                    assert_eq!(Some(&text), ordinary.as_ref());
+                } else {
+                    ordinary = Some(text.clone());
+                }
+                assert!(text.contains("3 subnets · 6 neurons · sorted by emission"));
+                assert!(text.contains("0.500000"));
+                assert!(text.contains(records[1]["symbol"].as_str().ok_or("symbol")?));
+                assert!(
+                    text.contains("spot price of one alpha token in TAO (root has no alpha pool)")
+                );
+                assert!(text.contains("TAO injected into the subnet per day at the current rate"));
+                assert!(text.contains("smoothed net TAO flow from staking"));
+                assert!(text.contains(
+                    "positive means TAO is entering the subnet, negative means it is leaving"
+                ));
+                assert!(text.contains("TAO burned to register a neuron on the subnet right now"));
+                assert!(text.contains("alpha token symbol is included with its netuid"));
+            }
+        }
+    }
     assert!(
         !chain
             .requests()

@@ -1,4 +1,6 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/{commands/stake.py,stake_exit.py} @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/stake.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_exit.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Native-amount stake records and command routes over fake chain transports.
 
 use rtao::{
@@ -26,6 +28,11 @@ use std::{
     path::Path,
     sync::{Arc, Mutex},
 };
+
+// Public-only owner fixtures use the recorded task root and owned cleanup.
+#[path = "../../rtao-wallet/tests/support/mod.rs"]
+mod support;
+use support::TempRoot;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const OWNER: AccountId = AccountId([7; 32]);
@@ -645,72 +652,251 @@ async fn bulk_exit_uses_atomic_calls_and_child_shield_default_without_acquiring_
     Ok(())
 }
 
+fn seed_list_availability(state: &mut FakeState, has_root: bool, locked: u64) -> TestResult {
+    use rtao::core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
+    use rtao_testkit::fakes::json_to_core;
+    let api = "StakeInfoRuntimeApi";
+    let method = "get_stake_availability_for_coldkeys";
+    let signature = runtime_api::runtime_api_method(&state.runtime, api, method)?;
+    let netuids = if has_root {
+        vec![0, 1, 2, 3]
+    } else {
+        vec![1, 2, 3]
+    };
+    let input = runtime_api::encode_params(
+        &state.runtime,
+        api,
+        signature,
+        &[
+            CoreValue::List(vec![CoreValue::Bytes(OWNER.0.to_vec())]),
+            CoreValue::List(netuids.into_iter().map(CoreValue::Int).collect()),
+        ],
+    )?;
+    let output = state.runtime.encode_spec(
+        &TypeSpec::Id(signature.output),
+        &CoreValue::Dict(vec![(
+            CoreValue::Bytes(OWNER.0.to_vec()),
+            CoreValue::Dict(vec![(
+                CoreValue::Int(1),
+                json_to_core(&json!({"total":101_000_000_001u64,"locked":locked,"available":101_000_000_001u64-locked}))?,
+            )]),
+        )]),
+    )?;
+    state.seed_runtime_encoded(format!("{api}_{method}"), input, output);
+    Ok(())
+}
+
 #[tokio::test]
 async fn list_keeps_all_json_positions_and_globally_sorts_the_filtered_human_rows() -> TestResult {
     const TINY: AccountId = AccountId([10; 32]);
     const DUST: AccountId = AccountId([11; 32]);
-    let mut state = FakeState::try_default()?;
-    state.seed_runtime("StakeInfoRuntimeApi","get_stake_info_for_coldkey",json!([
-        {"hotkey":HOT,"coldkey":OWNER,"netuid":1,"stake":100_000_000_000u64,"is_registered":true},
-        {"hotkey":OTHER,"coldkey":OWNER,"netuid":1,"stake":1_000_000_000u64,"is_registered":true},
-        {"hotkey":OWNER,"coldkey":OWNER,"netuid":2,"stake":50_000_000_000u64,"is_registered":true},
-        {"hotkey":TINY,"coldkey":OWNER,"netuid":1,"stake":1,"is_registered":false},
-        {"hotkey":DUST,"coldkey":OWNER,"netuid":3,"stake":1,"is_registered":false}
-    ]))?;
-    state.seed_runtime("SwapRuntimeApi","current_alpha_price_all",json!([
-        {"netuid":1,"price":1_000_000_000},{"netuid":2,"price":1_000_000_000},{"netuid":3,"price":1_000_000_000}
-    ]))?;
-    state.seed_runtime(
-        "StakeInfoRuntimeApi",
-        "get_stake_availability_for_coldkeys",
-        json!({}),
-    )?;
-    state.seed_runtime("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0))?;
-    let (client, _) = client(state).await?;
-    for (json_mode, dust) in [(true, false), (false, false), (false, true)] {
-        let mut argv = vec!["rtao", "stake", "list", "--coldkey", "Owner"];
-        if json_mode {
-            argv.push("--json");
-        }
-        if dust {
-            argv.push("--dust");
-        }
-        let parsed = parse(&argv)?;
-        let (mut ctx, sink) = context(&parsed)?;
-        ctx.books.addresses.extend([
-            json!({"name":"TinyLeaf","address":TINY}),
-            json!({"name":"DustSubnet","address":DUST}),
+    const LOCK_TARGET: AccountId = AccountId([12; 32]);
+    for (locked_rao, principal_rao, accrued_rao) in [
+        (0u64, 0u64, 0u64),
+        (900_000_000, 0, 0),
+        (0, 2_000_000_000, 0),
+        (900_000_000, 2_000_000_000, 500_000_000),
+    ] {
+        let mut state = FakeState::try_default()?;
+        let mut positions = json!([
+            {"hotkey":HOT,"coldkey":OWNER,"netuid":1,"stake":100_000_000_000u64,"is_registered":true},
+            {"hotkey":OTHER,"coldkey":OWNER,"netuid":1,"stake":1_000_000_000u64,"is_registered":true},
+            {"hotkey":OWNER,"coldkey":OWNER,"netuid":2,"stake":50_000_000_000u64,"is_registered":true},
+            {"hotkey":TINY,"coldkey":OWNER,"netuid":1,"stake":1,"is_registered":false},
+            {"hotkey":DUST,"coldkey":OWNER,"netuid":3,"stake":1,"is_registered":false}
         ]);
-        let request = request(&mut ctx, &parsed)?;
-        stake::execute(
-            &mut ctx,
-            &client,
-            &request,
-            Default::default(),
-            None,
-            &mut PromptHistory::default(),
-        )
-        .await?;
-        let output = sink.text(Stream::Stdout)?;
-        if json_mode {
-            let records: Value = serde_json::from_str(&output)?;
-            assert_eq!(records.as_array().ok_or("records")?.len(), 5);
-            assert_eq!(records[3]["hotkey"], json!(TINY));
-            assert_eq!(records[4]["registered"], false);
-        } else {
-            let large = output.find("Straße").ok_or("large position")?;
-            let middle = output.find("Owner").ok_or("middle position")?;
-            let small = output.find("Other").ok_or("small position")?;
-            assert!(large < middle && middle < small);
-            assert_eq!(output.contains("TinyLeaf"), dust);
-            assert_eq!(output.contains("DustSubnet"), dust);
-            if !dust {
-                let diagnostic = sink.text(Stream::Stderr)?;
-                assert!(diagnostic.contains("1 dust subnet and 1 dust position hidden"));
+        if principal_rao > 0 {
+            positions.as_array_mut().ok_or("positions")?.push(json!(
+                {"hotkey":HOT,"coldkey":OWNER,"netuid":0,"stake":principal_rao,"is_registered":true}
+            ));
+        }
+        state.seed_runtime(
+            "StakeInfoRuntimeApi",
+            "get_stake_info_for_coldkey",
+            positions.clone(),
+        )?;
+        state.seed_runtime(
+            "StakeInfoRuntimeApi",
+            "get_stake_info_for_coldkeys",
+            json!([[OWNER, positions]]),
+        )?;
+        state.seed_runtime("SwapRuntimeApi","current_alpha_price_all",json!([
+            {"netuid":1,"price":1_000_000_000},{"netuid":2,"price":1_000_000_000},{"netuid":3,"price":1_000_000_000}
+        ]))?;
+        seed_list_availability(&mut state, principal_rao > 0, locked_rao)?;
+        if locked_rao > 0 {
+            let lock = json!({"locked_mass":locked_rao,"conviction":{"bits":0},"last_update":0});
+            state.seed_python(
+                "SubtensorModule",
+                "Lock",
+                &[json!(OWNER), json!(1), json!(LOCK_TARGET)],
+                lock.clone(),
+            )?;
+            state.seed_python(
+                "SubtensorModule",
+                "DecayingLock",
+                &[json!(OWNER), json!(1)],
+                json!(false),
+            )?;
+            state.seed_runtime("StakeInfoRuntimeApi", "get_coldkey_lock", lock)?;
+        }
+        state.seed_runtime(
+            "BetaBasketRuntimeApi",
+            "get_root_basket_owed",
+            json!(accrued_rao),
+        )?;
+        let (client, _) = client(state).await?;
+        for (json_mode, dust, quiet, all_wallets) in [
+            (true, false, false, false),
+            (true, false, true, true),
+            (false, false, false, false),
+            (false, true, false, false),
+            (false, false, true, true),
+        ] {
+            let mut argv = vec!["rtao", "stake", "list", "--coldkey", "Owner"];
+            if json_mode {
+                argv.push("--json");
+            }
+            if dust {
+                argv.push("--dust");
+            }
+            if quiet {
+                argv.push("--quiet");
+            }
+            let parsed = parse(&argv)?;
+            let (mut ctx, sink) = context(&parsed)?;
+            ctx.books.addresses.extend([
+                json!({"name":"TinyLeaf","address":TINY}),
+                json!({"name":"DustSubnet","address":DUST}),
+                json!({"name":"LockTarget","address":LOCK_TARGET}),
+            ]);
+            let request = if all_wallets {
+                Request::List {
+                    owners: vec![(Some("wallet10".into()), OWNER)],
+                    dust,
+                    all_wallets: true,
+                }
+            } else {
+                request(&mut ctx, &parsed)?
+            };
+            stake::execute(
+                &mut ctx,
+                &client,
+                &request,
+                Default::default(),
+                None,
+                &mut PromptHistory::default(),
+            )
+            .await?;
+            let output = sink.text(Stream::Stdout)?;
+            if json_mode {
+                let records: Value = serde_json::from_str(&output)?;
+                let records = records.as_array().ok_or("records")?;
+                assert_eq!(records.len(), 5 + usize::from(principal_rao > 0));
+                assert_eq!(records[3]["hotkey"], json!(TINY));
+                assert_eq!(records[4]["registered"], false);
+                assert_eq!(records[0]["locked_amount"], json!(locked_rao as f64 / 1e9));
+                assert_eq!(
+                    records[0]["available_amount"],
+                    json!((101_000_000_001u64 - locked_rao) as f64 / 1e9)
+                );
+                for record in records {
+                    assert_eq!(record["root_staked_tao"], json!(principal_rao as f64 / 1e9));
+                    assert_eq!(
+                        record["accrued_basket_yield_tao"],
+                        json!(accrued_rao as f64 / 1e9)
+                    );
+                    assert_eq!(
+                        record["personal_yield"],
+                        if principal_rao > 0 {
+                            json!(accrued_rao as f64 / principal_rao as f64)
+                        } else {
+                            Value::Null
+                        }
+                    );
+                    assert_eq!(record["auto_claim"], false);
+                    assert_eq!(
+                        record.get("wallet"),
+                        all_wallets.then(|| json!("wallet10")).as_ref()
+                    );
+                    assert_eq!(
+                        record.get("coldkey"),
+                        all_wallets.then(|| json!(OWNER)).as_ref()
+                    );
+                    if record["netuid"] == 1 && locked_rao > 0 {
+                        assert_eq!(record["lock_hotkey"], json!(LOCK_TARGET));
+                        assert_eq!(record["is_perpetual"], true);
+                    } else {
+                        assert!(record.get("lock_hotkey").is_none());
+                        assert!(record.get("is_perpetual").is_none());
+                    }
+                }
+                assert!(sink.bytes(Stream::Stderr)?.is_empty());
+            } else {
+                let large = output.find("Straße").ok_or("large position")?;
+                let middle = output.find("Owner").ok_or("middle position")?;
+                let small = output.find("Other").ok_or("small position")?;
+                assert!(large < middle && middle < small);
+                assert_eq!(output.contains("TinyLeaf"), dust);
+                assert_eq!(output.contains("DustSubnet"), dust);
+                let header = output
+                    .lines()
+                    .find(|line| line.contains("netuid") && line.contains("spot value"))
+                    .ok_or("stake header")?;
+                assert_eq!(header.contains("wallet"), all_wallets);
+                assert_eq!(header.contains("locked"), locked_rao > 0);
+                if locked_rao > 0 {
+                    let index = if all_wallets { 4 } else { 3 };
+                    let cells = output
+                        .lines()
+                        .filter(|line| line.contains('│') && !line.contains("netuid"))
+                        .map(|line| {
+                            line.split('│')
+                                .nth(index)
+                                .ok_or("locked cell")
+                                .map(str::trim)
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let amount = DynBalance::from_rao(locked_rao, NetUid(1)).to_python_string();
+                    assert_eq!(
+                        cells
+                            .iter()
+                            .filter(|cell| !cell.is_empty())
+                            .copied()
+                            .collect::<Vec<_>>(),
+                        vec![amount.as_str()]
+                    );
+                    let largest = output
+                        .lines()
+                        .find(|line| line.contains("Straße"))
+                        .ok_or("largest row")?;
+                    assert!(largest.contains(&amount));
+                    assert!(largest.contains("lock on LockTarget"));
+                }
+                let has_yield = principal_rao > 0 || accrued_rao > 0;
+                assert_eq!(output.contains("accrued basket yield:"), has_yield);
+                assert_eq!(output.contains("root principal:"), has_yield);
+                assert_eq!(output.contains("rtao root claim"), has_yield);
+                if principal_rao > 0 {
+                    let ratio = if accrued_rao > 0 {
+                        "25.00% of root stake"
+                    } else {
+                        "0.00% of root stake"
+                    };
+                    assert!(output.contains(ratio));
+                }
+                assert_eq!(output.matches("(spot, excl. slippage/fees)").count(), 1);
+                if !dust && !quiet {
+                    let diagnostic = sink.text(Stream::Stderr)?;
+                    assert!(diagnostic.contains("1 dust subnet and 1 dust position hidden"));
+                }
+                if quiet {
+                    assert!(sink.bytes(Stream::Stderr)?.is_empty());
+                }
             }
         }
+        client.close().await;
     }
-    client.close().await;
     Ok(())
 }
 
@@ -861,6 +1047,74 @@ async fn generated_target_and_destination_pickers_record_only_public_selected_ac
 
 #[tokio::test]
 async fn empty_human_positions_still_show_accrued_yield_and_claim_guidance() -> TestResult {
+    for accrued_rao in [0u64, 500_000_000] {
+        let mut state = FakeState::try_default()?;
+        state.seed_runtime(
+            "StakeInfoRuntimeApi",
+            "get_stake_info_for_coldkey",
+            json!([]),
+        )?;
+        state.seed_runtime("SwapRuntimeApi", "current_alpha_price_all", json!([]))?;
+        state.seed_runtime(
+            "BetaBasketRuntimeApi",
+            "get_root_basket_owed",
+            json!(accrued_rao),
+        )?;
+        let (client, _) = client(state).await?;
+        for (json_mode, quiet) in [(false, false), (false, true), (true, false)] {
+            let mut argv = vec!["rtao", "stake", "list", "--coldkey", "Owner"];
+            if json_mode {
+                argv.push("--json");
+            }
+            if quiet {
+                argv.push("--quiet");
+            }
+            let parsed = parse(&argv)?;
+            let (mut ctx, sink) = context(&parsed)?;
+            let request = request(&mut ctx, &parsed)?;
+            stake::execute(
+                &mut ctx,
+                &client,
+                &request,
+                Default::default(),
+                None,
+                &mut PromptHistory::default(),
+            )
+            .await?;
+            let output = sink.text(Stream::Stdout)?;
+            if json_mode {
+                assert_eq!(serde_json::from_str::<Value>(&output)?, json!([]));
+            } else {
+                assert!(output.contains("none"));
+                assert_eq!(
+                    output.contains("accrued basket yield: τ0.500000000"),
+                    accrued_rao > 0
+                );
+                assert_eq!(output.contains("rtao root claim"), accrued_rao > 0);
+                assert_eq!(output.contains("root principal:"), accrued_rao > 0);
+                assert!(!output.contains("% of root stake"));
+                assert_eq!(output.matches("(spot, excl. slippage/fees)").count(), 1);
+                if accrued_rao == 0 {
+                    assert!(!output.contains("yield"));
+                }
+            }
+            assert!(sink.bytes(Stream::Stderr)?.is_empty());
+        }
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn source_owner_labels_keep_account_reads_and_explicit_show_context() -> TestResult {
+    use rtao_cli::commands::generated::TxRequest;
+    let root = TempRoot::new();
+    let wallet = root.path().join("chosen");
+    std::fs::create_dir(&wallet)?;
+    std::fs::write(
+        wallet.join("coldkeypub.txt"),
+        serde_json::to_vec(&json!({"ss58Address":HOT,"cryptoType":1}))?,
+    )?;
     let mut state = FakeState::try_default()?;
     state.seed_runtime(
         "StakeInfoRuntimeApi",
@@ -868,27 +1122,154 @@ async fn empty_human_positions_still_show_accrued_yield_and_claim_guidance() -> 
         json!([]),
     )?;
     state.seed_runtime("SwapRuntimeApi", "current_alpha_price_all", json!([]))?;
-    state.seed_runtime(
-        "BetaBasketRuntimeApi",
-        "get_root_basket_owed",
-        json!(500_000_000),
-    )?;
-    let (client, _) = client(state).await?;
-    let parsed = parse(&["rtao", "stake", "list", "--coldkey", "Owner"])?;
-    let (mut ctx, sink) = context(&parsed)?;
-    let request = request(&mut ctx, &parsed)?;
-    stake::execute(
-        &mut ctx,
-        &client,
-        &request,
-        Default::default(),
-        None,
-        &mut PromptHistory::default(),
-    )
-    .await?;
-    let output = sink.text(Stream::Stdout)?;
-    assert!(output.contains("accrued basket yield: τ0.500000000"));
-    assert!(output.contains("rtao root claim"));
+    let (client, chain) = client(state).await?;
+    for mode in [
+        "wallet",
+        "proxy",
+        "configured proxy",
+        "self",
+        "multisig",
+        "external",
+    ] {
+        let parsed = parse(&[
+            "rtao",
+            "stake",
+            "remove",
+            "--amount-alpha",
+            "all",
+            "--netuid",
+            "19",
+            "--wallet",
+            "chosen",
+        ])?;
+        let (mut ctx, _) = context(&parsed)?;
+        ctx.globals.wallet_path = root.path().to_owned();
+        ctx.passwords.native_provider = None;
+        interactive(&mut ctx, &[]);
+        let (expected_owner, expected_label) = match mode {
+            "proxy" => {
+                ctx.globals.proxy_for = Some("Owner".into());
+                (OWNER, "Owner".to_owned())
+            }
+            "configured proxy" => {
+                ctx.config.insert("proxy_for".into(), json!("Owner"));
+                (OWNER, "Owner".to_owned())
+            }
+            "self" => {
+                ctx.config.insert("proxy_for".into(), json!("Owner"));
+                ctx.globals.proxy_for = Some("self".into());
+                (HOT, "wallet 'chosen'".to_owned())
+            }
+            "multisig" => {
+                ctx.books.multisigs =
+                    vec![json!({"name":"chosen","threshold":2,"signatories":[HOT,OTHER]})];
+                let account = ctx
+                    .resolve_address("coldkey_ss58", None)?
+                    .ok_or("multisig owner")?;
+                assert_ne!(account, HOT);
+                (account, "multisig 'chosen'".to_owned())
+            }
+            "external" => {
+                ctx.globals.signer_backend = Some("ledger".into());
+                ctx.globals.signer_address = Some(OTHER.to_string());
+                (OTHER, format!("signer {OTHER}"))
+            }
+            _ => (HOT, "wallet 'chosen'".to_owned()),
+        };
+        let start = chain.requests().len();
+        let group = parsed.subcommand().ok_or("stake group")?.1;
+        let leaf = group.subcommand().ok_or("remove leaf")?.1;
+        let error = TxRequest::from_matches_with_client(
+            &mut ctx,
+            &client,
+            "remove_stake",
+            leaf,
+            &mut PromptHistory::default(),
+        )
+        .await
+        .err()
+        .ok_or("empty source must refuse")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(
+            error.message,
+            format!("{expected_label} has no stake on netuid 19")
+        );
+        assert_eq!(
+            error.help.as_deref(),
+            Some("`rtao stake list` shows every position")
+        );
+        let reads = chain
+            .requests()
+            .into_iter()
+            .skip(start)
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "StakeInfoRuntimeApi_get_stake_info_for_coldkey"
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(reads.len(), 1);
+        assert_eq!(
+            reads[0].params[1],
+            format!("0x{}", hex::encode(expected_owner.0))
+        );
+    }
+    let owner_address = OWNER.to_string();
+    for (raw, expected_owner, expected_label) in [
+        (Some("Owner"), OWNER, "Owner"),
+        (Some(owner_address.as_str()), OWNER, owner_address.as_str()),
+        (None, HOT, "wallet 'chosen'"),
+    ] {
+        let mut argv = vec![
+            "rtao", "stake", "show", "--netuid", "19", "--wallet", "chosen",
+        ];
+        if let Some(raw) = raw {
+            argv.extend(["--coldkey", raw]);
+        }
+        let parsed = parse(&argv)?;
+        let (mut ctx, _) = context(&parsed)?;
+        ctx.globals.wallet_path = root.path().to_owned();
+        ctx.passwords.native_provider = None;
+        interactive(&mut ctx, &[]);
+        let request = request(&mut ctx, &parsed)?;
+        let start = chain.requests().len();
+        let error = stake::execute(
+            &mut ctx,
+            &client,
+            &request,
+            Default::default(),
+            None,
+            &mut PromptHistory::default(),
+        )
+        .await
+        .err()
+        .ok_or("empty show source must refuse")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(
+            error.message,
+            format!("{expected_label} has no stake on netuid 19")
+        );
+        let reads = chain
+            .requests()
+            .into_iter()
+            .skip(start)
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "StakeInfoRuntimeApi_get_stake_info_for_coldkey"
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(reads.len(), 1);
+        assert_eq!(
+            reads[0].params[1],
+            format!("0x{}", hex::encode(expected_owner.0))
+        );
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     client.close().await;
     Ok(())
 }

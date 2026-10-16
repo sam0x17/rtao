@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_fee_filters.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Exercise the executor through the production Client and encoded FakeChain.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -939,6 +940,7 @@ async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_chan
 }
 
 #[tokio::test]
+// pyt: unit/test_intents_table.py::test_tools_catalog_matches_registry
 async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
     let (executor, _, _) = fixture().await;
     let tools = executor.tools().unwrap();
@@ -959,7 +961,27 @@ async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
         });
         // Compare every manifest field, including signer/origin/verify/wraps.
         // Only the catalog's relative docs URL is made absolute by list_tools.
-        assert_eq!(serde_json::to_value(tool).unwrap(), expected);
+        let actual = serde_json::to_value(tool).unwrap();
+        // These are independent manifest invariants, not only equality with
+        // the catalog used to construct the tools. Check every exported row.
+        assert!(
+            actual["summary"]
+                .as_str()
+                .is_some_and(|summary| !summary.is_empty()),
+            "{} tool summary is empty or not a string",
+            spec.name
+        );
+        assert_eq!(
+            actual["input_schema"]["type"], "object",
+            "{} schema",
+            spec.name
+        );
+        assert!(
+            matches!(actual["signer"].as_str(), Some("coldkey" | "hotkey")),
+            "{} tool signer is not a supported role",
+            spec.name
+        );
+        assert_eq!(actual, expected);
     }
 }
 

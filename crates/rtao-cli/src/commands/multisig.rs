@@ -77,6 +77,7 @@ fn option(id: &'static str, long: &'static str, help: &'static str) -> Arg {
 pub fn command() -> Command {
     let add = Command::new("add")
         .about("Save a named multisig signer set for pending and call --multisig.")
+        .after_help("Example: rtao multisig add finney-sudo --threshold 2 --signatories suro,triumph-a,triumph-b")
         .arg(Arg::new("name").help("Saved name; defaults to the -w wallet name."))
         .arg(
             option(
@@ -116,6 +117,7 @@ pub fn command() -> Command {
     };
     let pending = Command::new("pending")
         .about("List pending multisig operations with approval status and co-signer commands.")
+        .after_help("Example: rtao multisig pending --multisig finney-sudo --call-hash 0x1234... --call-data 0xabcd...")
         .arg(option(
             "multisig",
             "multisig",
@@ -160,6 +162,7 @@ pub fn command() -> Command {
         ));
     Command::new("multisig")
         .about("Save multisig signer sets and track pending multisig operations.")
+        .long_about(format!("Save multisig signer sets and track pending multisig operations.\n\nGuide: {}/guides/multisig", rtao_catalog::py::DOCS_URL))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommands([
@@ -1274,6 +1277,24 @@ mod tests {
         },
     };
     type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    #[test]
+    fn multisig_help_keeps_the_guide_and_both_operational_examples() -> TestResult {
+        let mut group = command();
+        let help = group.render_long_help().to_string();
+        assert!(help.contains(&format!("{}/guides/multisig", rtao_catalog::py::DOCS_URL)));
+        let add = group.find_subcommand_mut("add").ok_or("add command")?;
+        let help = add.render_long_help().to_string();
+        assert!(help.contains("rtao multisig add finney-sudo"));
+        assert!(help.contains("--threshold 2 --signatories suro,triumph-a,triumph-b"));
+        let pending = group
+            .find_subcommand_mut("pending")
+            .ok_or("pending command")?;
+        let help = pending.render_long_help().to_string();
+        assert!(help.contains("rtao multisig pending --multisig finney-sudo"));
+        assert!(help.contains("--call-hash 0x1234... --call-data 0xabcd..."));
+        Ok(())
+    }
 
     struct NoTerminal;
     impl Terminal for NoTerminal {
