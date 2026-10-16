@@ -1138,7 +1138,7 @@ async fn client_regular_commitment_refuses_raw_policy_then_submits_hotkey_and_re
             ..Default::default()
         }), ..Default::default() };
         assert!(matches!(ex.submit_call_dyn(call.clone(),&keys,SignerRole::Hotkey,&denied).await,
-            Err(TxError::Policy(violations)) if violations == ["raw call submission is disabled by policy (set allow_raw_calls=True)".to_owned()]));
+            Err(TxError::Policy(error)) if error.violations == ["raw call submission is disabled by policy (set allow_raw_calls=True)".to_owned()]));
         assert_eq!(keys.unlocks.load(Ordering::SeqCst),0);
         assert!(fake.state().lock().unwrap().submissions.is_empty());
         assert!(!fake.requests().iter().any(|request|request.method=="account_nextIndex"));

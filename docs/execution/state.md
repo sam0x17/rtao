@@ -117,6 +117,37 @@ inventory to 3,179 tests with four skips. Source review, direct formatting and
 whitespace checks pass; all changes still require a full hosted checkpoint.
 No new source mapping, runtime effect or milestone acceptance is claimed.
 
+Ordinary run [38963964395](https://github.com/sam0x17/rtao/actions/runs/38963964395)
+at `f9140e990bd4c83a441b809a6ed9dfc5648532b7` stops during Clippy compilation
+of the new regular-commitment fixture. `CommitmentRegistration` already derives
+the metadata decoder, but the client's `ReadValue` list omitted it; the fixture
+also compared `PolicyError` with its violation array. Add the missing typed
+leaf and inspect `error.violations`, preserving all refusal and storage assertions.
+Independent source/API review and formatting checks pass. All five supporting
+jobs passed, including the full feature job. Nextest, doctests and documentation
+were not reached. The bounded failure record is
+`client-f9140e9-check-failure.json`; its 83,940-byte log has SHA256
+`a62787764f740ecd2a291d9761de2a1fb136500e0dbfe15e85d7c945847dcca4`.
+
+Two additional reviewed tests are applied for the next hosted batch: actual
+queued RegisterSubnet execution with one waiting block and complete result/
+progress/receipt assertions, and production root/proxy shield wrapping with
+exact signed inner bytes and separate inner/carrier purposes. The registration
+fixture supplies subsequent heads only; it does not prove suppression of an
+initial duplicate head notification. The shield fixture asserts pool acceptance,
+without claiming inner dispatch. Both fixtures remain unexecuted.
+
+Two further source-reviewed functions run all 83 authenticated intent samples
+through the actual CLI parser and JSON dry-run handler, and all 102 authenticated
+read samples through the actual query parser, dispatcher and JSON renderer.
+The existing SDK tables share the extracted pure FakeChain seeds; catalog
+loading, exact-set assertions and deterministic public PoW seal binding remain
+in the consumers. Public-only keys refuse and count private acquisition; hooks,
+author requests and submissions must remain unused. These are in-process
+handler tests, without a new installed-process or wallet-factory claim.
+The next inventory expects 3,183 tests and four skips. Independent source review,
+direct rustfmt and whitespace checks pass; hosted execution remains pending.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded

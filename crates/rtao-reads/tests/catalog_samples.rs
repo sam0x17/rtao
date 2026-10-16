@@ -5,47 +5,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use rtao_client::{BlockRef, Client, ClientConfig, Network};
-use rtao_core::{codec::Value as CoreValue, runtime::TypeSpec};
+use rtao_core::codec::Value as CoreValue;
 use rtao_primitives::{AccountId, NetUid};
 use rtao_reads::{ReadName, dispatch, reads::owner};
-use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
+use rtao_testkit::{
+    FakeChain, FakeState, RecordingView,
+    fixtures::catalog_samples::{literal, read_state},
+    rpc::RpcClient,
+};
 use serde_json::{Map, Value, json};
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 const SAMPLE_PATH: &str = "sdk/python/tests/harness/samples.py";
-
-// Decode the extractor's lossless Python literals, retaining the one real
-// READ_SAMPLES table rather than synthesizing another argument inventory.
-fn literal(value: &Value) -> TestResult<Value> {
-    match value {
-        Value::Array(values) => values
-            .iter()
-            .map(literal)
-            .collect::<TestResult<Vec<_>>>()
-            .map(Value::Array),
-        Value::Object(tagged) if tagged.len() == 1 && tagged.contains_key("dict") => {
-            let pairs = tagged["dict"].as_array().ok_or("Python dict pairs")?;
-            let mut fields = Map::new();
-            for pair in pairs {
-                let pair = pair.as_array().ok_or("Python dict pair")?;
-                if pair.len() != 2 {
-                    return Err("Python dict pair must have two entries".into());
-                }
-                let key = pair[0].as_str().ok_or("Python sample string key")?;
-                if fields.insert(key.into(), literal(&pair[1])?).is_some() {
-                    return Err(format!("duplicate Python sample key {key}").into());
-                }
-            }
-            Ok(Value::Object(fields))
-        }
-        Value::Object(tagged) if tagged.len() == 1 && tagged.contains_key("tuple") => {
-            literal(&tagged["tuple"])
-        }
-        Value::Object(_) => Err("unknown extracted sample carrier".into()),
-        value => Ok(value.clone()),
-    }
-}
 
 fn samples() -> TestResult<BTreeMap<String, Map<String, Value>>> {
     let table = rtao_catalog::py::table(SAMPLE_PATH, "READ_SAMPLES")
@@ -104,160 +76,11 @@ fn source_samples_equal_the_complete_registry_and_only_use_declared_parameters()
 }
 
 fn seeded_state() -> TestResult<FakeState> {
-    let mut state = FakeState::try_default()?;
-    let empty_swap = json!({
-        "tao_amount":0,"alpha_amount":0,"tao_fee":0,"alpha_fee":0,
-        "tao_slippage":0,"alpha_slippage":0
-    });
-    // Exact active seeded_substrate answers from the Python module.
-    for (api, method, value) in [
-        ("NeuronInfoRuntimeApi", "get_neurons_lite", json!([])),
-        ("NeuronInfoRuntimeApi", "get_neurons", json!([])),
-        ("SubnetInfoRuntimeApi", "get_all_dynamic_info", json!([])),
-        ("SubnetInfoRuntimeApi", "get_dynamic_info", Value::Null),
-        (
-            "SubnetInfoRuntimeApi",
-            "get_subnet_hyperparams_v3",
-            Value::Null,
-        ),
-        ("SubnetInfoRuntimeApi", "get_subnet_state", Value::Null),
-        (
-            "StakeInfoRuntimeApi",
-            "get_stake_info_for_coldkey",
-            json!([]),
-        ),
-        (
-            "StakeInfoRuntimeApi",
-            "get_stake_info_for_coldkeys",
-            json!([]),
-        ),
-        (
-            "StakeInfoRuntimeApi",
-            "get_stake_info_for_hotkey_coldkey_netuid",
-            Value::Null,
-        ),
-        ("DelegateInfoRuntimeApi", "get_delegates", json!([])),
-        ("DelegateInfoRuntimeApi", "get_delegate", Value::Null),
-        ("DelegateInfoRuntimeApi", "get_delegated", json!([])),
-        (
-            "SwapRuntimeApi",
-            "sim_swap_tao_for_alpha",
-            empty_swap.clone(),
-        ),
-        ("SwapRuntimeApi", "sim_swap_alpha_for_tao", empty_swap),
-        (
-            "SwapRuntimeApi",
-            "current_alpha_price",
-            json!(1_000_000_000),
-        ),
-        ("SwapRuntimeApi", "current_alpha_price_all", json!([])),
-        (
-            "SubnetRegistrationRuntimeApi",
-            "get_network_registration_cost",
-            json!(1_000_000_000),
-        ),
-    ] {
-        state.seed_runtime(api, method, value)?;
-    }
-    // These seven Python fake answers name APIs absent from pinned metadata.
-    // Their native consumers use storage or stake-info projections instead.
-    // Retain their identities explicitly; never suppress arbitrary seed errors.
-    for (api, method) in [
-        ("StakeInfoRuntimeApi", "get_stake_value_for_coldkey"),
-        ("StakeInfoRuntimeApi", "get_stake_value_for_coldkeys"),
-        ("ColdkeySwapRuntimeApi", "get_scheduled_coldkey_swap"),
-        ("CrowdloanRuntimeApi", "get_crowdloans"),
-        ("CrowdloanRuntimeApi", "get_crowdloan"),
-        ("LeasingRuntimeApi", "get_leases"),
-        ("LeasingRuntimeApi", "get_lease"),
-    ] {
-        assert!(
-            rtao_core::ops::runtime_api::runtime_api_method(&state.runtime, api, method).is_err()
-        );
-    }
-    // Python's permissive fake returns empty values for these unseeded APIs.
-    // Supply valid empty/zero native SCALE rather than bypassing the transport.
-    for (api, method, value) in [
-        ("SubnetInfoRuntimeApi", "get_metagraph", Value::Null),
-        (
-            "SubnetInfoRuntimeApi",
-            "get_next_epoch_start_block",
-            Value::Null,
-        ),
-        (
-            "StakeInfoRuntimeApi",
-            "get_most_convicted_hotkey_on_subnet",
-            Value::Null,
-        ),
-        (
-            "StakeInfoRuntimeApi",
-            "get_hotkey_conviction",
-            json!({"bits":0}),
-        ),
-        ("BetaBasketRuntimeApi", "get_basket_position", Value::Null),
-        (
-            "BetaBasketRuntimeApi",
-            "get_root_basket_portfolio",
-            json!([]),
-        ),
-        (
-            "BetaBasketRuntimeApi",
-            "get_root_basket_positions",
-            json!([]),
-        ),
-        ("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0)),
-        ("BetaBasketRuntimeApi", "get_validator_basket", json!([])),
-        ("BetaBasketRuntimeApi", "get_validator_basket_nav", json!(0)),
-        (
-            "BetaBasketRuntimeApi",
-            "get_root_basket_total_nav",
-            json!(0),
-        ),
-        (
-            "BetaBasketRuntimeApi",
-            "get_all_validator_baskets",
-            json!([]),
-        ),
-        (
-            "BetaBasketRuntimeApi",
-            "get_all_beta_pricing",
-            json!({"pricing":[],"next":null}),
-        ),
-        (
-            "BetaBasketRuntimeApi",
-            "get_validator_basket_summary",
-            json!({}),
-        ),
-        ("BetaBasketRuntimeApi", "get_beta_pricing", Value::Null),
-        (
-            "BetaBasketRuntimeApi",
-            "get_basket_trading_status",
-            json!({}),
-        ),
-    ] {
-        state.seed_runtime(api, method, value)?;
-    }
     let samples = samples()?;
     let coldkey = samples["stake_availability"]["coldkey_ss58"]
         .as_str()
         .ok_or("availability coldkey sample")?;
-    let api = "StakeInfoRuntimeApi";
-    let method = "get_stake_availability_for_coldkeys";
-    let signature = rtao_core::ops::runtime_api::runtime_api_method(&state.runtime, api, method)?;
-    let output = state
-        .runtime
-        .encode_spec(&TypeSpec::Id(signature.output), &CoreValue::Dict(vec![]))?;
-    let input = rtao_core::ops::runtime_api::encode_params(
-        &state.runtime,
-        api,
-        signature,
-        &[
-            CoreValue::List(vec![CoreValue::Str(coldkey.into())]),
-            CoreValue::List(vec![CoreValue::Int(1)]),
-        ],
-    )?;
-    state.seed_runtime_encoded(format!("{api}_{method}"), input, output);
-    Ok(state)
+    Ok(read_state(coldkey)?)
 }
 
 async fn client(state: FakeState) -> TestResult<(Client, FakeChain)> {
