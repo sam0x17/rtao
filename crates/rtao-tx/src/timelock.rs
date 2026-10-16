@@ -2,8 +2,9 @@
 //! Portable Quicknet timelock envelopes and asynchronous beacon decryption.
 //!
 //! Encryption and decryption use the maintained core's crypto and wire format.
-//! Only decryption makes network requests. [`seal`] offloads encryption, while
-//! [`open`] waits and retries without blocking a Tokio worker thread.
+//! Only decryption makes network requests. [`seal`](crate::timelock::seal)
+//! offloads encryption, while [`open`](crate::timelock::open) waits and retries
+//! without blocking a Tokio worker thread.
 
 use std::{
     borrow::Cow,
