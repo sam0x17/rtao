@@ -76,8 +76,8 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map reaches 310/357 reconciled inputs and 47 pending after
-the three root-command dispositions. The generated matrix remains at 307/50
+The reviewed source map reaches 311/357 reconciled inputs and 46 pending after
+the three root-command and oracle-only basket-producer dispositions. The generated matrix remains at 307/50
 until the next hosted refresh. The e2e source map and generated matrix agree at
 18 pending mappings and 11 client contracts.
 There remain 68 divergences. Passing CI alone does
@@ -180,7 +180,7 @@ The multisig-safety source row stays pending.
 
 ### Compiled examples and current authentication review
 
-The next source batch wires pinned Docify 0.4.1 into the validator, miner and
+The initial source batch wires pinned Docify 0.4.1 into the validator, miner and
 owner examples and generated guides. The README template compiles to the
 existing README bytes. Explicit source dependencies keep cached excerpts fresh.
 Docify is a facade dev dependency and a dependency of unpublished xtask; it adds
@@ -208,6 +208,29 @@ Regenerated reports and hosted compilation/supply/tests remain pending. Current 
 these manifest changes. No generated lock or report is hand-edited. The successful
 `60a20ee` ordinary run validates the preceding sources only. Offline doc examples
 and broader M9 documentation completion remain separate.
+
+Hosted report run [38893835867](https://github.com/sam0x17/rtao/actions/runs/38893835867)
+at exact `7ac3c94` failed compiling Docify 0.4.1 before generating reports. Its
+open Git/SHA requirements select API-incompatible git2 0.21 and sha2 0.11.
+The correction selects published Docify 0.2.9, whose local export, embed,
+embed_run and in-memory Markdown APIs match our uses and need neither Git/SHA
+libraries nor their native build helpers. Its published macro source and
+package checksums were inspected. A new hosted candidate will preserve the
+entire pre-Docify dependency graph; no lock is hand-edited.
+
+Two independently reviewed shared offline example tests now cover checked
+native balances and Python-compatible numeric display. The generated
+getting-started chapter and LLM text embed those exact functions. Embedding
+only produces Markdown; hosted tests must execute both functions. With the
+registration fixture, the next combined main total is 3,080. These additions
+remain unexecuted. Btauth-vector, FakeChain-read and intent-plan examples remain
+separate documentation work.
+
+The upstream historical basket-index builder is now reconciled as oracle-only
+under PLAN section 8.3. All 252 producer lines and native conversion/consumer
+paths were reviewed; all frozen scalar/grid/baseline literals match. There is
+no native archive sampler and no claim of producer or historical reconstruction
+execution. Existing consumer source matches the preceding green checkpoint.
 
 A fresh reader also completed two cold reads of all five current authentication
 sources at `6fba8dc`, finding no surviving concrete implementation defect within
