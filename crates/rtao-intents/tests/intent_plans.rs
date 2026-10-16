@@ -13,11 +13,13 @@ use rtao_core::{
     runtime::{Runtime, TypeSpec},
 };
 use rtao_intents::AnyIntent;
-use rtao_primitives::{AccountId, DefaultAccount, H256, NetUid, TaoBalance};
+use rtao_primitives::{
+    AccountId, Balance, DefaultAccount, DynBalance, H256, NetUid, Spend, Tao, TaoBalance,
+};
 use rtao_runtime::{RuntimeHandle, models::CrowdloanInfo, storage::subtensor_module as st};
 use rtao_signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole};
 use rtao_testkit::{FakeChain, FakeState, fixtures::decode_fixed_hex, rpc::RpcClient};
-use rtao_tx::{Clock, Executor, PlanOptions};
+use rtao_tx::{Clock, Executor, Plan, PlanOptions, Policy};
 use serde_json::{Map, Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -422,18 +424,8 @@ fn outer_call(runtime: &RuntimeHandle, bytes: &[u8]) -> Result<(String, String)>
     Ok((pallet.name.clone(), call.name.clone()))
 }
 
-async fn plan_case(
-    runtime: Arc<Runtime>,
-    spec: &IntentSpec,
-    mut args: Value,
-    extra: Option<&Value>,
-    expected_role: Option<SignerRole>,
-) -> Result<()> {
-    let mut state = seeded_state(runtime, spec.name)?;
-    if let Some(extra) = extra {
-        apply_extra(&mut state, extra)?;
-    }
-    if spec.name == "pow_register" {
+fn bind_sample_work(state: &FakeState, op: &str, args: &mut Value) -> Result<()> {
+    if op == "pow_register" {
         // The upstream sample seal is only a placeholder. Bind one fixed nonce
         // to this public fake challenge at difficulty one; no solver is run.
         let hash = state.block_hash(state.block).context("fake work block")?;
@@ -445,6 +437,21 @@ async fn plan_case(
             rtao_core::pow::seal(&prefix, 0).map_err(anyhow::Error::msg)?
         ));
     }
+    Ok(())
+}
+
+async fn plan_case(
+    runtime: Arc<Runtime>,
+    spec: &IntentSpec,
+    mut args: Value,
+    extra: Option<&Value>,
+    expected_role: Option<SignerRole>,
+) -> Result<()> {
+    let mut state = seeded_state(runtime, spec.name)?;
+    if let Some(extra) = extra {
+        apply_extra(&mut state, extra)?;
+    }
+    bind_sample_work(&state, spec.name, &mut args)?;
     let fake = FakeChain::from_state(state);
     let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
     config.track_heads = false;
@@ -541,6 +548,68 @@ async fn plan_case(
             "planning submitted an extrinsic"
         );
         Ok(())
+    }
+    .await;
+    client.close().await;
+    result
+}
+
+// Use the same encoded state, public slots and fixed PoW proof as ordinary
+// catalog planning. A policy refusal must not be an unrelated preflight block.
+async fn policy_plan_case(
+    runtime: Arc<Runtime>,
+    spec: &IntentSpec,
+    mut args: Value,
+    policy: Policy,
+) -> Result<Plan> {
+    let state = seeded_state(runtime, spec.name)?;
+    bind_sample_work(&state, spec.name, &mut args)?;
+    let intent = AnyIntent::from_tool(spec.name, args)?;
+    let fake = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config).await?;
+    for (account, nonce) in [(COLD, 17), (HOT, 23)] {
+        client.nonces().pin(&account, nonce);
+    }
+    let keys = PublicKeys::default();
+    let result = async {
+        let plan = Executor::new(client.clone())
+            .with_clock(Arc::new(FixtureClock))
+            .plan_dyn(
+                intent.as_dyn(),
+                &keys,
+                &PlanOptions {
+                    policy: Some(policy),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        ensure!(plan.op == spec.name, "policy plan changed operation");
+        ensure!(!plan.call().as_bytes().is_empty(), "empty policy plan call");
+        ensure!(
+            keys.acquisitions.load(Ordering::SeqCst) == 0,
+            "policy planning acquired a private signer"
+        );
+        ensure!(
+            fake.requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_")),
+            "policy planning used an author RPC"
+        );
+        ensure!(
+            fake.mutate_state(|state| state.submissions.is_empty()),
+            "policy planning submitted an extrinsic"
+        );
+        for (account, nonce) in [(COLD, 17), (HOT, 23)] {
+            ensure!(
+                client.nonces().cached(&account.to_string()).await == Some(nonce),
+                "policy planning changed a cached nonce"
+            );
+        }
+        Ok(plan)
     }
     .await;
     client.close().await;
@@ -654,6 +723,217 @@ async fn all_83_catalog_operations_plan_with_fake_chain() -> Result<()> {
         failures.is_empty(),
         "all-83 planning failures:\n{}",
         failures.join("\n")
+    );
+    Ok(())
+}
+
+#[tokio::test]
+// pyt: unit/test_intents_table.py::TestPolicyEnforcement::test_spend_cap_blocks_every_spending_intent
+async fn all_83_sample_plans_enforce_declared_spend_caps_without_private_access() -> Result<()> {
+    let samples = samples()?;
+    let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
+    ensure!(names.len() == 83, "review the pinned 83-op catalog");
+    ensure!(
+        samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == names,
+        "spend policy must cover every authenticated sample"
+    );
+    let runtime = FakeState::try_default()?.runtime;
+    let policy = Policy {
+        max_spend: Some(Balance::<Tao>::from_rao(1)),
+        ..Default::default()
+    };
+    let mut bounded = BTreeSet::new();
+    let mut unbounded = BTreeSet::new();
+    let mut permitted = BTreeSet::new();
+    for spec in &INTENTS {
+        let args = scenario_args(spec.name, &samples[spec.name])?;
+        let intent = AnyIntent::from_tool(spec.name, args.clone())?;
+        let spend = intent.as_dyn().spend_dyn();
+        let expected = match spend {
+            Spend::Unbounded => {
+                unbounded.insert(spec.name);
+                vec![format!(
+                    "{} spends an amount that cannot be bounded before execution; max_spend_tao τ0.000000001 blocks it",
+                    spec.name
+                )]
+            }
+            Spend::Bounded(amount) if amount.rao() > 1 => {
+                bounded.insert(spec.name);
+                vec![format!(
+                    "spend {} exceeds max_spend_tao τ0.000000001",
+                    DynBalance::from(amount)
+                )]
+            }
+            // Native zero/one-rao bounds remain admissible. Do not turn a
+            // bounded-zero declaration into an unbounded-spend assertion.
+            Spend::None | Spend::Bounded(_) => {
+                permitted.insert(spec.name);
+                Vec::new()
+            }
+        };
+        let plan = policy_plan_case(runtime.clone(), spec, args, policy.clone())
+            .await
+            .with_context(|| format!("{} spend-cap plan", spec.name))?;
+        ensure!(plan.spend == spend, "{} changed declared spend", spec.name);
+        ensure!(
+            plan.violations == expected,
+            "{} spend-cap violations: {:?}, expected {:?}",
+            spec.name,
+            plan.violations,
+            expected
+        );
+        ensure!(
+            plan.ok() == expected.is_empty(),
+            "{} spend-cap permission",
+            spec.name
+        );
+    }
+    ensure!(
+        bounded.contains("transfer") && bounded.contains("batch"),
+        "positive sample spending declarations disappeared"
+    );
+    ensure!(
+        unbounded.contains("transfer_all") && unbounded.contains("register_subnet"),
+        "unbounded sample spending declarations disappeared"
+    );
+    ensure!(
+        permitted.contains("serve_axon") && !permitted.is_empty(),
+        "nonspending controls disappeared"
+    );
+    ensure!(
+        bounded.len() + unbounded.len() + permitted.len() == 83,
+        "spend-policy sample inventory is incomplete"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+// pyt: unit/test_intents_table.py::TestPolicyEnforcement::test_netuid_allowlist
+async fn all_83_sample_plans_enforce_subnet_allowlists_without_private_access() -> Result<()> {
+    let samples = samples()?;
+    let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
+    ensure!(names.len() == 83, "review the pinned 83-op catalog");
+    ensure!(
+        samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == names,
+        "subnet policy must cover every authenticated sample"
+    );
+    let runtime = FakeState::try_default()?.runtime;
+    // Source subnet1 maps to the existing public fixture subnet7. Source
+    // selectors exempt0/1; preserve that selection before rewriting inputs.
+    let policy = Policy {
+        allowed_netuids: Some(BTreeSet::from([SUBNET])),
+        ..Default::default()
+    };
+    let mut outside = BTreeSet::new();
+    let mut global = BTreeSet::new();
+    let mut permitted = BTreeSet::new();
+    let mut root_scoped = BTreeSet::new();
+    let mut visited = BTreeSet::new();
+    for spec in &INTENTS {
+        let original = AnyIntent::from_tool(spec.name, samples[spec.name].clone())?;
+        let original_scope = original.as_dyn().touches_netuids_dyn();
+        let declared_global = original.as_dyn().affects_all_subnets_dyn();
+        let args = scenario_args(spec.name, &samples[spec.name])?;
+        let intent = AnyIntent::from_tool(spec.name, args.clone())?;
+        let scope = intent.as_dyn().touches_netuids_dyn();
+        let mapped = original_scope
+            .iter()
+            .map(|netuid| scenario_netuid(&json!(netuid.0)))
+            .collect::<Result<Vec<_>>>()?;
+        ensure!(
+            scope
+                .iter()
+                .map(|netuid| json!(netuid.0))
+                .collect::<Vec<_>>()
+                == mapped,
+            "{} rewrote the semantic subnet scope",
+            spec.name
+        );
+        ensure!(
+            intent.as_dyn().affects_all_subnets_dyn() == declared_global,
+            "{} rewrote the declared global scope",
+            spec.name
+        );
+        // The native ID-only declaration is conservative. This fixture pins
+        // a target-only crowdloan: its raised TAO is unbounded spend, but its
+        // actual stored dispatch has no subnet effect after state inspection.
+        let affects_all = if spec.name == "finalize_crowdloan" {
+            ensure!(
+                declared_global && scope.is_empty(),
+                "review the target-only crowdloan scope adaptation"
+            );
+            false
+        } else {
+            declared_global
+        };
+        let source_outside = original_scope
+            .iter()
+            .any(|netuid| !matches!(netuid.0, 0 | 1));
+        if source_outside {
+            outside.insert(spec.name);
+        }
+        if affects_all {
+            global.insert(spec.name);
+        }
+        let mut expected = Vec::new();
+        if affects_all {
+            expected.push(format!(
+                "{} acts on all subnets, not just allowed_netuids [7]",
+                spec.name
+            ));
+        }
+        for netuid in &scope {
+            if *netuid != SUBNET {
+                expected.push(format!("netuid {} not in allowed_netuids [7]", netuid.0));
+            }
+            // Unlike the source test's selection predicate, an actual native
+            // allowlist containing only7 also excludes root0. Check it too.
+            if *netuid == NetUid::ROOT {
+                root_scoped.insert(spec.name);
+            }
+        }
+        let plan = policy_plan_case(runtime.clone(), spec, args, policy.clone())
+            .await
+            .with_context(|| format!("{} subnet-allowlist plan", spec.name))?;
+        ensure!(
+            plan.violations == expected,
+            "{} subnet-allowlist violations: {:?}, expected {:?}",
+            spec.name,
+            plan.violations,
+            expected
+        );
+        ensure!(
+            plan.ok() == expected.is_empty(),
+            "{} subnet-allowlist permission",
+            spec.name
+        );
+        if source_outside || affects_all {
+            ensure!(
+                !plan.ok(),
+                "{} escaped the source scope selector",
+                spec.name
+            );
+        }
+        if plan.ok() {
+            permitted.insert(spec.name);
+        }
+        ensure!(visited.insert(spec.name), "duplicate policy sample");
+    }
+    ensure!(
+        visited == names,
+        "subnet-policy sample inventory is incomplete"
+    );
+    ensure!(
+        outside.contains("move_swap_stake") && outside.contains("swap_basket_many"),
+        "cross-subnet controls disappeared"
+    );
+    ensure!(
+        global.contains("unstake_all") && global.contains("unstake_all_alpha"),
+        "global-subnet controls disappeared"
+    );
+    ensure!(
+        root_scoped.contains("swap_basket") && permitted.contains("transfer"),
+        "root refusal or no-subnet control disappeared"
     );
     Ok(())
 }

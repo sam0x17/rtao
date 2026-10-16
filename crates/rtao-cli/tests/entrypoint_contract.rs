@@ -25,6 +25,7 @@ impl Root {
     }
     fn command(&self) -> Command {
         let mut command = Command::new(env!("CARGO_BIN_EXE_rtao"));
+        command.env("HOME", &self.0);
         command.stdin(Stdio::null());
         for (index, file) in ConfigFile::ALL.into_iter().enumerate() {
             command.env(
@@ -54,6 +55,7 @@ fn help_version_and_missing_raw_target_have_real_statuses() -> Result<(), Box<dy
     let text = String::from_utf8(help.stdout)?;
     assert!(text.contains("doctor"));
     assert!(text.contains("call"));
+    assert!(text.contains(&format!("Docs: {}", rtao_catalog::py::DOCS_URL)));
     assert!(!text.contains("allow-raw"));
     let version = root.command().arg("--version").output()?;
     assert!(version.status.success());

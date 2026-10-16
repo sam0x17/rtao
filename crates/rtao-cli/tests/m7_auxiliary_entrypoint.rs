@@ -29,6 +29,7 @@ impl Root {
     }
     fn command(&self) -> Command {
         let mut command = Command::new(env!("CARGO_BIN_EXE_rtao"));
+        command.env("HOME", &self.0);
         command.stdin(Stdio::null());
         for (index, file) in ConfigFile::ALL.into_iter().enumerate() {
             command.env(

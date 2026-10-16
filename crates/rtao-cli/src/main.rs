@@ -65,7 +65,18 @@ fn run_doctor(mut args: impl Iterator<Item = OsString>) -> Result<(), CliError> 
 }
 
 async fn run() -> Result<(), CliError> {
-    let argv = env::args_os().collect::<Vec<_>>();
+    let mut argv = env::args_os().collect::<Vec<_>>();
+    #[allow(deprecated)]
+    if let Some(home) = env::home_dir() {
+        let paths = rtao::client::config::Paths::new(&home, |key| env::var_os(key));
+        application::warn_legacy_config(
+            &home,
+            paths.path(rtao::client::config::ConfigFile::Config),
+            &mut std::io::stderr().lock(),
+        )
+        .map_err(|error| CliError::failure(error.to_string()))?;
+    }
+    application::normalize_legacy_address_argv(&mut argv);
     if argv.get(1).is_some_and(|arg| arg == "doctor") {
         return run_doctor(argv.into_iter().skip(2));
     }

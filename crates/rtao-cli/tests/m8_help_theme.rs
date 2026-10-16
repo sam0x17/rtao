@@ -33,6 +33,7 @@ impl Root {
 
     fn command(&self) -> Command {
         let mut command = Command::new(env!("CARGO_BIN_EXE_rtao"));
+        command.env("HOME", &self.0);
         command.stdin(Stdio::null());
         command.env("NO_COLOR", "1");
         command.env("CLICOLOR_FORCE", "0");

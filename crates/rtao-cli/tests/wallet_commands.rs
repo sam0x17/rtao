@@ -1033,6 +1033,7 @@ fn fifo_json_import_and_public_listing_refuse_without_a_writer() -> TestResult {
     }
     let make_command = || {
         let mut command = Command::new(env!("CARGO_BIN_EXE_rtao"));
+        command.env("HOME", &root.0);
         command
             .env("XDG_CONFIG_HOME", root.0.join("config"))
             .env("XDG_CACHE_HOME", root.0.join("cache"));
