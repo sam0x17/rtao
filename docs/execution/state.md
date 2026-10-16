@@ -16,44 +16,44 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-16
 
-The latest full run, [38976362971](https://github.com/sam0x17/rtao/actions/runs/38976362971),
-at `550ad2579f4c1f5ac646bcc4141df863fcf5bded` finishes with **3,193 passed,
-three failed and four skipped**. All five supporting jobs pass, including
+The latest full run, [38979569522](https://github.com/sam0x17/rtao/actions/runs/38979569522),
+at `4b9d0f4ae2c14cdfb87dc5d2881a9c8955f063cd` finishes with **3,195 passed,
+one failed and four skipped**. All five supporting jobs pass, including
 supply and features. Main compilation and Clippy pass; doctests and the final
 documentation stage are not reached. The last fully green checkpoint remains
 `7997ec0` below.
 
-The failures expose two CLI gaps and one fixture setup error. Review JSON must
-escape DEL as `\\u007f`, like Python's ASCII encoder, before applying the
-160-character bound. An unknown-fate error's Display deliberately omits its
-hash; the CLI must retain that identity in inspection help when converting the
-typed error to text. The saved-Ledger notice fixture must fund its actual
-multisig members to reach signing rather than fail the carrier-funds check.
-The candidate repairs these without changing confirmation, carrier admission
-or SDK error Display. It still expects **3,196 tests and four skips**; no new
-test functions are added. Hosted execution of the corrections remains pending.
+The remaining failure is the saved Ledger signing-notice fixture. It gives a
+single member an inline backend override while selecting Vault globally.
+Both the pinned Python and native planner apply per-member backend overrides
+through repeated-member approval planning; the single external path stops
+before acquisition. The candidate supplies two explicit members (Ledger then
+extension) and asserts the exact coldkey-unavailable signing refusal. Notice,
+acquisition/release, zero-unlock and zero-submission assertions remain. No
+production selection rule changes. This correction awaits hosted execution.
 
-The next source batch preserves typed gateway retry guidance through the
+The preceding [38976362971](https://github.com/sam0x17/rtao/actions/runs/38976362971)
+at `550ad25` had three failures. The review JSON DEL encoding and unknown-fate
+inspection-help tests now pass; the saved member funding correction remains.
+The inventory still expects **3,196 tests and four skips**, with no new test
+functions in these fixes.
+
+The pushed source batch preserves typed gateway retry guidance through the
 remaining confirmed CLI read, PoW, pruning and saved-multisig boundaries.
 Raw-call and pruning followup failures also retain known submission identity
 and inspection guidance. Pruning retains its durable journal and existing
 retry refusal; secondary close errors no longer replace the primary help.
 Six existing test functions cover real public read handlers, saved account
 derivation, raw approval followup and pre/post-receipt pruning failures.
-No new test functions are added. Source review, installed rustfmt and whitespace
-checks pass; this batch has no hosted compilation or execution result yet.
-An additional source candidate registers concrete-wallet public identities
-and already-loaded contacts/proxies, then applies account/subnet names only at
-human prose boundaries. It preserves name insertion order and escapes controls
-after substitution. JSON, replay commands and transaction inputs retain their
-values. Existing preview, output-cache and confirmation tests are strengthened;
-independent review and hosted execution remain pending. The full context source
-row remains unaccepted.
+No new test functions are added. The completed run compiles this batch and
+executes its fixtures; the separate saved-notice failure still prevents a full
+pass. Pushed name handling registers concrete-wallet public identities and
+already-loaded contacts/proxies, then applies account/subnet names at human
+prose boundaries. JSON, replay commands and transaction inputs retain their
+values. Independent review found the remaining display gaps described below;
+the full context source row remains unaccepted.
 
-Ordinary [38979569522](https://github.com/sam0x17/rtao/actions/runs/38979569522)
-is validating the pushed corrections at
-`4b9d0f4ae2c14cdfb87dc5d2881a9c8955f063cd`. All five supporting jobs pass;
-the main check is still running. The next source candidate adds
+The completed run above excludes local commit `e262174`, which adds
 pre-sign root/owner notices, successful direct verification hints and bounded
 registration progress forwarding. A failed progress sink is retained until the
 submission finishes, the raw receipt hook runs and the signer is released.
@@ -67,10 +67,22 @@ the semantic registration and exercises the real saved review before source
 acquisition. Independent production and fixture source reviews, installed
 formatting and whitespace checks pass. The failing-sink fixture exercises
 completion and receipt capture; external release under that failure is
-source-reviewed only. These changes are outside the current CI run and have
+source-reviewed only. These changes are outside the completed CI run and have
 no hosted execution result yet. The full context row still requires final
 disposition of the remaining password/error presentation contracts and
 carrier-failure narration.
+
+The subsequent display review found three gaps in `4b9d0f4`: transaction
+arguments passed through name substitution twice; receipt prose bypassed it;
+and saved approval members were named only after confirmation. The next
+candidate formats review values before one rendering pass, gives receipt
+headers/rows their Python prose treatment, and seeds selected public wallet
+members before contact/proxy labels. Receipt keys merge before display-label
+normalization, preserving distinct `some_key` and `some key` fields. Existing
+fixtures cover reverse-reference labels, hostile names, canonical JSON,
+selected-name precedence and zero private acquisition. The fixture function
+inventory is unchanged. Source checks pass; hosted execution and final review
+remain pending. This candidate is also outside the completed run above.
 
 Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
 passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
