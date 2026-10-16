@@ -1242,6 +1242,131 @@ impl rtao_cli::context::ConnectionFactory for Connected {
         Box::pin(async move { Ok(self.0.clone()) })
     }
 }
+fn wallet_prompt_public_accounts(
+    root: &CacheRoot,
+) -> Result<(AccountId, AccountId), Box<dyn std::error::Error>> {
+    let cold = AccountId([7; 32]);
+    let hot = AccountId([8; 32]);
+    let wallet = root.0.join("owner");
+    std::fs::create_dir_all(wallet.join("hotkeys"))?;
+    for (path, account) in [
+        (wallet.join("coldkeypub.txt"), cold),
+        (wallet.join("hotkeys/minerpub.txt"), hot),
+    ] {
+        std::fs::write(
+            path,
+            serde_json::to_vec(&json!({"ss58Address": account, "cryptoType": 1}))?,
+        )?;
+    }
+    for path in [wallet.join("coldkey"), wallet.join("hotkeys/miner")] {
+        std::fs::write(path, b"selection must use the public companion")?;
+    }
+    Ok((cold, hot))
+}
+
+#[test]
+fn confirmed_wallet_and_hotkey_cache_the_selected_names_by_account() -> TestResult {
+    let root = CacheRoot::new()?;
+    let (cold, hot) = wallet_prompt_public_accounts(&root)?;
+    let (mut ctx, _, reads) = context(&[])?;
+    ctx.globals.wallet_path = root.0.clone();
+    ctx.globals.wallet_given = false;
+    ctx.globals.hotkey_given = false;
+    *ctx.terminal.lock().map_err(|_| "terminal")? = Box::new(TerminalFixture {
+        tty: true,
+        lines: VecDeque::from(["owner".into(), "miner".into()]),
+        reads: reads.clone(),
+    });
+    let selected = ctx.confirm_wallet(
+        &rtao_cli::prompt::WalletConfirmation {
+            hotkey_help: Some("Signing hotkey.".into()),
+            ..Default::default()
+        },
+        &mut rtao_cli::prompt::PromptHistory::default(),
+    )?;
+    assert_eq!(selected, None);
+    assert_eq!(ctx.globals.wallet_name, "owner");
+    assert_eq!(ctx.globals.hotkey_name, "miner");
+    assert!(ctx.globals.wallet_given && ctx.globals.hotkey_given);
+    assert_eq!(reads.load(Ordering::SeqCst), 2);
+    assert_eq!(
+        ctx.output.address_names()?,
+        std::collections::BTreeMap::from([
+            (cold.to_string(), "owner".to_owned()),
+            (hot.to_string(), "owner/miner".to_owned()),
+        ])
+    );
+    assert!(
+        ctx.output
+            .account_text(&cold.to_string(), None)
+            .ends_with(" (owner)")
+    );
+    assert!(
+        ctx.output
+            .account_text(&hot.to_string(), None)
+            .ends_with(" (owner/miner)")
+    );
+    Ok(())
+}
+
+#[test]
+fn confirmed_public_targets_cache_book_and_hotkey_reference_labels_without_reselecting_keys()
+-> TestResult {
+    let root = CacheRoot::new()?;
+    let (cold, hot) = wallet_prompt_public_accounts(&root)?;
+    let pasted = hot.to_string();
+    for (hotkey_target, answer, expected, label) in [
+        (false, "cold contact", cold, Some("cold contact")),
+        (true, "hot contact", hot, Some("hot contact")),
+        (true, "owner/miner", hot, Some("owner/miner")),
+        (true, pasted.as_str(), hot, None),
+    ] {
+        let (mut ctx, _, reads) = context(&[])?;
+        ctx.globals.wallet_path = root.0.clone();
+        ctx.globals.wallet_name = "owner".into();
+        ctx.globals.hotkey_name = "unchanged signing hotkey".into();
+        ctx.globals.wallet_given = hotkey_target;
+        ctx.globals.hotkey_given = false;
+        ctx.books.addresses = vec![
+            json!({"name": "cold contact", "address": cold}),
+            json!({"name": "hot contact", "address": hot}),
+        ];
+        *ctx.terminal.lock().map_err(|_| "terminal")? = Box::new(TerminalFixture {
+            tty: true,
+            lines: VecDeque::from([answer.into()]),
+            reads: reads.clone(),
+        });
+        let selected = ctx.confirm_wallet(
+            &rtao_cli::prompt::WalletConfirmation {
+                accept_address: true,
+                hotkey_help: hotkey_target.then(|| "Target hotkey.".into()),
+                ..Default::default()
+            },
+            &mut rtao_cli::prompt::PromptHistory::default(),
+        )?;
+        assert_eq!(selected, Some(expected), "{answer}");
+        assert_eq!(ctx.globals.wallet_name, "owner");
+        assert_eq!(ctx.globals.hotkey_name, "unchanged signing hotkey");
+        assert!(ctx.globals.wallet_given);
+        assert_eq!(ctx.globals.hotkey_given, hotkey_target);
+        assert_eq!(reads.load(Ordering::SeqCst), 1);
+        let expected_names = label
+            .map(|label| {
+                std::collections::BTreeMap::from([(expected.to_string(), label.to_owned())])
+            })
+            .unwrap_or_default();
+        assert_eq!(ctx.output.address_names()?, expected_names, "{answer}");
+        if let Some(label) = label {
+            assert!(
+                ctx.output
+                    .account_text(&expected.to_string(), None)
+                    .ends_with(&format!(" ({label})"))
+            );
+        }
+    }
+    Ok(())
+}
+
 struct CacheRoot(std::path::PathBuf);
 impl CacheRoot {
     fn new() -> Result<Self, std::io::Error> {

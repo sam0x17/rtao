@@ -1258,6 +1258,21 @@ pub async fn execute(
     match request {
         Request::Inspect(request) => {
             execute_inspect(ctx, client, request).await?;
+            // The pinned price command teaches the SDK form after a successful
+            // prompted read. This is the actual typed native API; no argument
+            // payloads or signer material are copied into the teaching line.
+            if request.command == "price"
+                && let Some(netuid) = request.netuid
+            {
+                let view = request.block.map_or_else(
+                    || "&client".to_owned(),
+                    |block| format!("&client.at(rtao::client::BlockRef::Number({block})).await?"),
+                );
+                history.record_sdk_hint(format!(
+                    "rtao::reads::generated::interfaces::alpha_price({view}, rtao::primitives::NetUid({})).await?",
+                    netuid.get()
+                ));
+            }
             Ok(None)
         }
         Request::Transaction(request) => {

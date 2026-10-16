@@ -1123,8 +1123,11 @@ impl PromptHistory {
     pub fn replay_command(&self, argv: &[String]) -> String {
         command_line(argv, &self.entered_tokens, true)
     }
-    /// Return public hints once after success; dry runs already show the replay.
-    pub fn flush_hint(&mut self, argv: &[String], exit_code: u8) -> Option<String> {
+    /// Return trusted hint lines once after success; dry runs show their replay.
+    ///
+    /// Each line retains any untrusted input newlines inside its string. The
+    /// output boundary escapes those characters before adding its own newline.
+    pub fn flush_hint_lines(&mut self, argv: &[String], exit_code: u8) -> Option<Vec<String>> {
         if exit_code != 0 || self.entered_tokens.is_empty() {
             return None;
         }
@@ -1134,13 +1137,17 @@ impl PromptHistory {
         }
         let command = command_line(argv, &self.entered_tokens, false);
         self.entered_tokens.clear();
-        let mut hint = format!("skip the prompts next time: {command}");
+        let mut lines = vec![format!("skip the prompts next time: {command}")];
         if let Some(sdk) = &self.sdk_hint {
-            hint.push_str(&format!(
-                "\nthe same call from the sdk: {sdk}  (sub = bt.Subtensor())"
-            ));
+            lines.push(format!("the same read from the Rust SDK: {sdk}"));
         }
-        Some(hint)
+        Some(lines)
+    }
+    /// Return public hints as text for embedding callers that own their layout.
+    /// CLI callers use separate lines so input newlines cannot become layout.
+    pub fn flush_hint(&mut self, argv: &[String], exit_code: u8) -> Option<String> {
+        self.flush_hint_lines(argv, exit_code)
+            .map(|lines| lines.join("\n"))
     }
 }
 fn command_line(argv: &[String], answers: &[String], drop_dry: bool) -> String {
