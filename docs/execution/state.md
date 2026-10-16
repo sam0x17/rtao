@@ -228,8 +228,22 @@ the CLI guide describe the shared input budgets. Direct source attribution
 is corrected for serving, rate limits and the intent-table fixture homes.
 Two new fixture functions bring the next expected inventory to 3,187/four
 skips; the existing money fixture is strengthened without a new function.
-Formatting and whitespace checks pass. Hosted lock adoption, report refresh
-and ordinary validation remain pending; no source row or milestone is accepted.
+Formatting and whitespace checks pass. Hosted report run
+[38971449966](https://github.com/sam0x17/rtao/actions/runs/38971449966) passes
+at `2a98f8b`, including source parity. Artifact 12077522768 is 59,608 bytes,
+SHA256 `00da75b6d0b6696bf3d551a89c422f55137137cfff8eab370fa4aeddabee2503`.
+Inspection and a separate authenticated refetch adopt exactly four reports.
+Only the lock dependency fingerprint and measurement context change in the
+compatibility reports; the matrix adds D-042's existing generated-money test.
+The other 22 dependency inputs, role package inventories, feature graphs,
+host flags, source/e2e counts and runtime/platform/oracle claims are unchanged.
+The inspection SHA256 is
+`9e550b806c6b69079f2abdfd823fb2457a2567ea7c1c23ba7e624cdf86536d6b`;
+adoption SHA256 is
+`be4eecc9de940dd27501c15c9c1b5a4ee8bc2a12fd2ee496190cbdbdd5051beb`.
+Ordinary 3,187-test validation remains pending. The earlier run's main check
+is still live; its old-lock supply failure prevents full acceptance. No source
+row or milestone is accepted by report generation.
 
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target

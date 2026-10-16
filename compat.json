@@ -11,7 +11,7 @@
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
         "machine": "AMD EPYC 7763 64-Core Processor",
-        "measured_unix_seconds": 1792179743,
+        "measured_unix_seconds": 1792187337,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1443,7 +1443,7 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "e0a480dde670caa762f632ebdde9d36c90c477bdf7bddcd47be5545f769b2429",
+            "Cargo.lock": "a238c541636f174aa8cd4517f31a28348e1f03477661f468fab3e6304ea4526f",
             "Cargo.toml": "d6d6414007d513e8746ef077106e1b22163e82733469ca4962ba304efeb77551",
             "crates/rtao-btauth/Cargo.toml": "2ec334a952e0632616d130577e3874270f5dd45eced88b2e1108c2ec45d85ef5",
             "crates/rtao-catalog/Cargo.toml": "477b530677c985adcb6cb5a1ddfd022c6d509b82c4f7b24c67328324ab9db566",
@@ -1467,13 +1467,13 @@
             "upstream.toml": "8d3492e1566a13307ba67a0073dee607babe320a3d56d7d040c6f2f810886192",
             "xtask/Cargo.toml": "c17a680dd0a1e0b3b50efad4fd24fee55b71a6d02a9b661df66165e6396f255e"
           },
-          "dependency_inputs_sha256": "53bda48f9a9e51b391a4877d1335e50425beba5f878086d117717e958edc1125",
+          "dependency_inputs_sha256": "94fabc9e3f595bc9c6dcbd781245da7e7f5b51ba7015dd4d0bdcb8af35c9530b",
           "dirty": false,
-          "head_commit": "9dd98921f76f052ae890ead825bdf1047b5cef9b"
+          "head_commit": "2a98f8b7261e373a0196b96b0b168a623b4eba27"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "78cbec4dad5795fd295c568d2630574570db31b7b6f18fcba0f43906950e26f4"
+      "sha256": "bcd0cb044c0ee3443a35502eb8d16dddbf45e056c36bea7b986a5b3af623a111"
     }
   ],
   "core": {

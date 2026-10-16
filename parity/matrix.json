@@ -2650,6 +2650,7 @@
         "oracle": "unverified",
         "rtao": "active",
         "tests": [
+          "rtao_cli::generated_commands::exact_money_keeps_native_u64_precision_exponents_and_all_policy",
           "rtao_cli::root_commands::root_decimal_boundary_retains_native_refusals_budgets_and_strict_money_constructors",
           "rtao_cli::books::tests::oversized_books_refuse_instead_of_redirecting_names_to_wallet_fallback",
           "rtao_cli::books::tests::acyclic_multisig_chains_have_a_bounded_refusal_and_repeated_branches_are_valid",
