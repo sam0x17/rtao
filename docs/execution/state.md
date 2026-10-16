@@ -65,8 +65,8 @@ the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 
 The reviewed source map and adopted generated matrix now agree at 306/357
 reconciled and 51 pending after the authenticated refresh below.
-The e2e source map has 19 pending mappings; its generated matrix still records
-20 until the next hosted refresh. There remain 68 divergences. Passing CI alone does
+The e2e source map and generated matrix now agree at 19 pending mappings.
+There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
 with source review and substantial validation on free hosted CI.
@@ -99,6 +99,30 @@ e2e pending count becomes 19; source-file reconciliation stays 306/357 with
 51 pending. Whole root/context/prompt rows, broader signer policy and EVM picker
 integration remain separate. Bounded patch/review identities are in
 `next-client-batch-1286faf-ready.json` under the existing recovery root.
+
+Report-only hosted run
+[38880542426](https://github.com/sam0x17/rtao/actions/runs/38880542426)
+passed source parity at exact `af2565d4cf60302d7670d7efcc07227e1fe99b0e`.
+Authenticated artifact 12037044413 is 58,405 bytes, SHA256
+`2c8bba283bf36bf31a169098ff7e210799811a49489643d1c90030f846e6e5b1`.
+Independent refetch adopted exactly four reports. The matrix changes only
+the association row and derived counts: 19 pending and ten client contracts.
+All other families, 23 dependency identities, role inventories/host flags,
+68 divergences and compatibility claims remain unchanged. Bounded adoption
+proof is `association-client-report-af2565d-adoption.json`; no archive or
+extraction tree is retained.
+
+A separate complete keyfiles-golden source review found no product defect.
+One additional Unix fixture checks replacement of a 0644 keyfile with 0600
+permissions, its new parent mode and preserved identity. Existing encrypted
+coverage now checks the NaCl prefix and post-decryption signing, with no extra
+KDF calls. Root independently reviewed the patch; execution remains pending.
+Valid legacy Fernet, the exact combined encrypted-create transcript and isolated
+umask-000 execution remain unverified. Its oracle-only source row stays pending.
+The combined checkpoint must execute all 19 newly added functions since d01830c,
+plus the extended fixtures; the expected main total is 3,070. Five supporting
+jobs passed on earlier source in run 38877875846, while its main result remains
+unconfirmed. No earlier subset validates these newer sources.
 
 ### Earlier CLI detail batch, hosted execution pending
 
