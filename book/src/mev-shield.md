@@ -45,6 +45,11 @@ carrier uses nonce `n`, the inner uses `n + 1`, and the next cached lease is
 `n + 2`. Both signatures share a finalized era anchor. Do not allocate or
 override those paired nonces yourself.
 
+The client calls `Signer::prepare_shielded` before selecting that anchor or
+reserving either nonce. Vault connects its page and requests camera startup
+through this hook; software signers need no setup. Best and finalized heights
+are read after preparation, and the existing submission deadline covers it.
+
 If `B` is the best height, `F` the finalized height and `p` the period, the
 client refuses when `B + 2 >= F + p`. Four blocks therefore tolerate at most
 one block of finality lag, and eight tolerate at most five. This guard runs
