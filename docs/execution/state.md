@@ -54,8 +54,8 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The adopted generated matrix records 298/357 reconciled and 59 pending. The
-subsequent source batch below reaches 301/357 and awaits a report refresh.
+The source map and adopted generated matrix both record 301/357 reconciled and
+56 pending after the authenticated report refresh recorded below.
 There remain 20 pending e2e mappings and 68 divergences. Passing CI does not
 reconcile the remaining source rows or accept a milestone. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -147,6 +147,45 @@ Four output/command and six wallet-order fixture functions are added; they and
 the earlier seven fixtures await hosted compile, lint and execution. Direct
 rustfmt and whitespace checks pass. Output/prompt and pytest source rows remain
 pending; source/matrix counts, strict M8 and milestone status are unchanged.
+
+### Corrected reports and the next hosted test batch
+
+Hosted [38862997033](https://github.com/sam0x17/rtao/actions/runs/38862997033)
+passed full source parity at clean `f48535dbfd3b75dcdc9511c259b322c2b9a8ab38`.
+Authenticate and independently refetch artifact 12029777947 (58,166 bytes,
+SHA256 `ebff9b28aa3c2329462ba83031580e438135c7e97e69e598a434fefe83d8a95d`)
+before adopting exactly four reports. Only the three reviewed staking, weights
+and CLI-pruning rows change in the matrix: source map/matrix now agree at 301/357
+reconciled and 56 pending. All 23 dependency inputs, role counts, host flags,
+20 pending e2e mappings, 68 divergences and other compatibility claims remain
+unchanged. Bounded proofs are `f48535d-report-inspection.json` (SHA256
+`ab3137fe89e8d2e3ca3cc865126ea1a6d278d6ca9d50d339244f6a0269ff6ed9`)
+and `f48535d-report-adoption.json` (SHA256
+`469ff440fe3b23ceae2991634b412ff20980935d86042da9b8f825a19d06c7e1`).
+
+The subsequent independently reviewed extractor repair verifies the sample
+constructor's imported native identity. Its samples-only closed producer policy
+rejects mutations, unsupported calls and imports, changed implicit callbacks or
+their builtin dependencies, failed unused declarations/defaults and unknown
+backend exports. Previously cached producer modules are rechecked. Five actual
+resolver fixtures retain all six original outputs/spans and exercise the
+refusals; no currently incorrect pinned sample value was established. The
+samples row remains pending hosted validation and final whole-source disposition.
+
+Four new pruning fixtures drive real session/Executor/FakeChain paths for the
+two-mechanism implicit target128, pending-target priority, complete 32 key-only
+queue probes and empty TWC values at the last legacy index. Python origins and
+native vector adaptations are explicit. The complete pytest row remains pending
+its admin table and integrated cooldown/recovery cases. These nine additions
+and the preceding seventeen CLI fixtures await hosted compile/lint/execution.
+Direct rustfmt and whitespace checks pass; no local build/test or retained
+archive/extraction tree was needed.
+
+A read-only 2026-10-16 06:50 UTC refresh confirms that all thirteen recorded
+upstream filings remain open, all eight PRs are unmerged at their reviewed heads,
+and their label/review-request lists are empty. Evidence is
+`upstream-state-2026-10-16.json`; this refresh did not repeat the authored-search
+census or source/test audit. No GitHub filing write occurred.
 
 ## Prior integrated client checkpoint, 2026-10-15
 

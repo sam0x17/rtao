@@ -9,6 +9,13 @@ results. All PR label and requested-reviewer/team lists remain empty. No GitHub
 write was performed. The body, source and test evidence below retains its
 13:11 audit scope; this refresh adds current filing-state evidence only.
 
+A state-only refresh on 2026-10-16 at 06:50 UTC again confirms all thirteen
+recorded filings are open, with all eight PRs unmerged at the reviewed heads
+and empty label/review-request lists. Bounded evidence is
+`.local/recovery/2026-10-15/upstream-state-2026-10-16.json`. This refresh records
+current body hashes but does not repeat the body/source/test audit or the
+authored-search census. No GitHub write was performed.
+
 GitHub's authored-issue searches (`author:sam0x17`, each repository, `created:>=2026-10-13`, all states) returned exactly eleven Subtensor filings and two Zondax filings, with `incomplete_results=false`. Each individual issue/PR endpoint resolves. Every PR is unmerged, has no labels or requested reviewers/teams, and retains the reviewed HEAD below. This is a dated inventory of these two repositories, rather than an account-wide filing census.
 
 | PR | Current HEAD | Reviewed evidence and limits |

@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_null_pruning.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Signed fake-chain batches and restart safety.
 #![allow(clippy::expect_used)]
 
@@ -1894,5 +1895,246 @@ async fn explicit_approval_binds_review_and_event_timepoint_before_pending_stora
     for replaced in [false, true] {
         first_approval_opening_case(true, replaced).await?;
     }
+    Ok(())
+}
+
+// Execute the actual guarded session action with its reviewed native executor.
+// Session-default selection is not exposed by OwnerOps::trim_null's explicit target.
+async fn execute_session_batch(
+    fixture: &Fixture,
+    session: &mut TrimNullSession,
+    action: TrimNullAction,
+) -> anyhow::Result<()> {
+    let TrimActionKind::Batch(intent) = action.kind.as_ref() else {
+        anyhow::bail!("expected a guarded Null batch");
+    };
+    let plan = fixture
+        .owner
+        .executor
+        .plan(intent, fixture.owner.keys.as_ref(), &PlanOptions::default())
+        .await?;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    session.before_attempt(&action, &plan)?;
+    let receipt = fixture
+        .owner
+        .operation()?
+        .execute_trim_reviewed(intent, &ExecuteOptions::default(), &plan)
+        .await?;
+    session.finish_action(action, &receipt).await?;
+    Ok(())
+}
+
+// pyt: test_cli_null_pruning.py::test_default_target_uses_shared_yuma_ceiling
+#[tokio::test]
+async fn test_default_target_uses_shared_yuma_ceiling() -> anyhow::Result<()> {
+    let f = fixture(192, []).await?;
+    f.chain
+        .mutate_state(|state| state.seed(&st::MECHANISM_COUNT_CURRENT, (NET,), MechId(2)))?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        None,
+        &f.recovery,
+        TrimNullConfig::default(),
+    )
+    .await?;
+    assert_eq!(session.report().target, 128);
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("the implicit two-mechanism target needs one batch");
+    };
+    assert_eq!(action.intent().to_json_dyn()["target"], json!(128));
+    execute_session_batch(&f, &mut session, action).await?;
+    let TrimNullStep::Complete(report) = session.next_action().await? else {
+        anyhow::bail!("one finalized batch must reach the implicit ceiling");
+    };
+    assert_eq!(
+        (report.target, report.population, report.batches),
+        (128, 128, 1)
+    );
+    assert_eq!(report.removed_uids, 64);
+    assert!(!report.already_yuma);
+    assert!(!report.switched_to_yuma);
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    f.owner.client().close().await;
+    Ok(())
+}
+
+// pyt: test_cli_null_pruning.py::test_restart_resumes_pending_target_without_local_progress
+#[tokio::test]
+async fn test_restart_resumes_pending_target_without_local_progress() -> anyhow::Result<()> {
+    let f = fixture(192, []).await?;
+    f.chain.mutate_state(|state| -> anyhow::Result<()> {
+        seed_target(state, Some(TARGET))?;
+        state.seed(
+            &st::TRANSACTION_KEY_LAST_BLOCK,
+            (f.owner.effective_owner()?, NET, 9u16),
+            100u64,
+        )?;
+        Ok(())
+    })?;
+    assert!(
+        !f.recovery.exists(),
+        "resume must derive progress from chain storage"
+    );
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        None,
+        &f.recovery,
+        TrimNullConfig::default(),
+    )
+    .await?;
+    // A one-mechanism ceiling is 256: the pending 128 target must win.
+    assert_eq!(session.report().target, TARGET);
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("matching pending target must resume despite initial-trim cooldown");
+    };
+    assert_eq!(action.intent().to_json_dyn()["target"], json!(TARGET));
+    execute_session_batch(&f, &mut session, action).await?;
+    let TrimNullStep::Complete(report) = session.next_action().await? else {
+        anyhow::bail!("the existing target must complete in one finalized batch");
+    };
+    assert_eq!(
+        (report.target, report.population, report.batches),
+        (TARGET, TARGET, 1)
+    );
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    f.owner.client().close().await;
+    Ok(())
+}
+
+fn assert_pruning_queue_probe_transcript(
+    chain: &FakeChain,
+    snapshot: &Snapshot,
+    first_request: usize,
+) -> anyhow::Result<()> {
+    let runtime = &snapshot.block().runtime;
+    let hash = format!("0x{}", hex::encode(snapshot.block().hash.0));
+    let mut expected = Vec::new();
+    let mut prefixes = Vec::new();
+    // Native policy probes both commitment maps at every legal legacy index.
+    // Python probes only TimelockedWeightCommits and stops at its first key.
+    for mechanism in 0..16u16 {
+        let index = NET.0 + mechanism * 4096;
+        for name in ["WeightCommits", "TimelockedWeightCommits"] {
+            let info = runtime
+                .storage_entry("SubtensorModule", name)
+                .ok_or_else(|| anyhow::anyhow!("missing queue storage {name}"))?;
+            let prefix = runtime
+                .core()
+                .storage_key(info, &[Value::Uint(u128::from(index))])?;
+            let prefix = format!("0x{}", hex::encode(prefix));
+            expected.push(json!([prefix, 1, null, hash]));
+            prefixes.push(prefix);
+        }
+    }
+    let requests = chain.requests();
+    let requests = &requests[first_request..];
+    let probes = requests
+        .iter()
+        .filter(|request| request.method == "state_getKeysPaged")
+        .map(|request| request.params.clone())
+        .collect::<Vec<_>>();
+    assert_eq!(probes.len(), 32);
+    assert_eq!(probes, expected);
+    for request in requests {
+        let keys: Vec<&str> = match request.method.as_str() {
+            "state_getStorage" | "state_getStorageAt" => {
+                request.params[0].as_str().into_iter().collect()
+            }
+            "state_queryStorageAt" => request.params[0]
+                .as_array()
+                .ok_or_else(|| anyhow::anyhow!("storage batch must contain a key vector"))?
+                .iter()
+                .filter_map(Json::as_str)
+                .collect(),
+            _ => Vec::new(),
+        };
+        for key in keys {
+            assert!(
+                !prefixes.iter().any(|prefix| key.starts_with(prefix)),
+                "{} fetched a commitment value for {key}",
+                request.method,
+            );
+        }
+    }
+    Ok(())
+}
+
+// pyt: test_cli_null_pruning.py::test_key_probe_never_loads_commit_values
+// pyt: test_cli_null_pruning.py::test_switch_probes_all_legacy_indices_and_owner_cooldown
+// The cooldown half remains separately pending; this fixture covers its complete probe contract.
+#[tokio::test]
+async fn test_key_probe_never_loads_commit_values() -> anyhow::Result<()> {
+    let f = fixture(TARGET, []).await?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            switch_to_yuma: true,
+            ..Default::default()
+        },
+    )
+    .await?;
+    let snapshot = f.owner.client().at(BlockRef::Finalized).await?;
+    let first_request = f.chain.requests().len();
+    let TrimNullStep::Submit(switch) = session.next_action().await? else {
+        anyhow::bail!("empty queues must permit the guarded Yuma setter");
+    };
+    assert_eq!(switch.operation(), "set_hyperparameter");
+    assert_pruning_queue_probe_transcript(&f.chain, &snapshot, first_request)?;
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    f.owner.client().close().await;
+    Ok(())
+}
+
+// pyt: test_cli_null_pruning.py::test_switch_queue_probe_works_through_client_backend
+#[tokio::test]
+async fn test_switch_queue_probe_works_through_client_backend() -> anyhow::Result<()> {
+    let f = fixture(TARGET, []).await?;
+    f.chain.mutate_state(|state| {
+        // The final legacy index must be scanned even with only one active mechanism.
+        // A stored empty vector still occupies a map key and requires cleanup.
+        state.seed_python(
+            "SubtensorModule",
+            "TimelockedWeightCommits",
+            &[json!(NET.0 + 15 * 4096), json!(3)],
+            json!([]),
+        )
+    })?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            switch_to_yuma: true,
+            ..Default::default()
+        },
+    )
+    .await?;
+    let snapshot = f.owner.client().at(BlockRef::Finalized).await?;
+    let first_request = f.chain.requests().len();
+    let TrimNullStep::Submit(cleanup) = session.next_action().await? else {
+        anyhow::bail!("an empty queued value still requires a bounded cleanup batch");
+    };
+    assert_eq!(cleanup.operation(), "trim_null_subnet_batch");
+    assert_pruning_queue_probe_transcript(&f.chain, &snapshot, first_request)?;
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    f.owner.client().close().await;
     Ok(())
 }
