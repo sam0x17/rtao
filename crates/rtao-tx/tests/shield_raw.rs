@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/bittensor-core/tests/e2e.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/executor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
@@ -1109,4 +1110,97 @@ async fn raw_shield_finalization_waits_for_the_distinct_signed_inner_in_both_rou
         );
         ex.client().close().await;
     }
+}
+
+// Upstream e2e.rs::test_regular_commitment_stays_readable. A supplied
+// success/storage transcript does not establish runtime persistence, admission,
+// deposit economics, a drand pulse or timelock revelation.
+#[tokio::test]
+async fn client_regular_commitment_refuses_raw_policy_then_submits_hotkey_and_reads_hello() {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        use rtao_client::{BlockRef, ViewExt};
+        use rtao_runtime::{models::{CommitmentInfo,Data}, storage::commitments::{COMMITMENT_OF,REVEALED_COMMITMENTS}};
+        use rtao_testkit::fakes::fill_defaults;
+        let (ex, fake, mut keys) = fixture().await;
+        keys.allowed = SignerRole::Hotkey;
+        let hotkey = keys.signer.account();
+        fake.mutate_state(|state|state.set_nonce(hotkey.to_string(),9));
+        let runtime = ex.client().refresh_runtime().await.unwrap();
+        let call = rtao_runtime::calls::commitments::set_commitment(NetUid(1),CommitmentInfo {
+            fields:vec![Data::Raw(b"hello".to_vec())]
+        }).compose(&runtime).unwrap();
+        let before = ex.client().at(BlockRef::Best).await.unwrap();
+        assert!(before.storage(&COMMITMENT_OF,(NetUid(1),hotkey)).await.unwrap().is_none());
+        // Native raw admission exposes the policy refusal at submit time;
+        // there is no public raw plan_with_policy counterpart.
+        let denied = ExecuteOptions { policy:Some(Policy {
+            max_spend:Some(Balance::<Tao>::from_rao(100_000_000_000)),
+            ..Default::default()
+        }), ..Default::default() };
+        assert!(matches!(ex.submit_call_dyn(call.clone(),&keys,SignerRole::Hotkey,&denied).await,
+            Err(TxError::Policy(violations)) if violations == ["raw call submission is disabled by policy (set allow_raw_calls=True)".to_owned()]));
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst),0);
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        assert!(!fake.requests().iter().any(|request|request.method=="account_nextIndex"));
+        let attempts = Arc::new(AtomicUsize::new(0));
+        for method in ["author_submitAndWatchExtrinsic","author_submitExtrinsic"] {
+            let attempts = attempts.clone();
+            let expected = call.as_bytes().to_vec();
+            fake.mutate_state(|state|state.set_handler(method,move|state,request| {
+                assert_eq!(attempts.fetch_add(1,Ordering::SeqCst),0,"one-step transcript exhausted");
+                assert_eq!(request.method,"author_submitAndWatchExtrinsic");
+                assert_eq!(request.params.as_array().unwrap().len(),1);
+                let text = request.params[0].as_str().unwrap();
+                assert!(text.len()<=256*1024);
+                let bytes = hex::decode(text.strip_prefix("0x").unwrap()).unwrap();
+                let decoded = state.runtime.decode_extrinsic(&bytes,true).unwrap();
+                assert!(bytes.ends_with(&expected));
+                assert_eq!(decoded.field("address").and_then(ValueExt::as_str),Some(hotkey.to_string().as_str()));
+                assert_eq!(decoded.field("nonce").and_then(ValueExt::as_u128),Some(9));
+                let expected_call = state.runtime.decode_spec(&rtao_core::runtime::TypeSpec::Call,&expected,true).unwrap();
+                assert_eq!(decoded.field("call"),Some(&expected_call));
+                // Only a fully checked request may consume this explicit script.
+                state.queue_submit(SubmitScript::InBlockThenFinalized {events:json!([
+                    {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicSuccess",
+                     "attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}
+                ])});
+                let reply = state.dispatch(request);
+                assert_eq!(state.submissions.len(),1);
+                let hash = state.block_hash(state.block).unwrap();
+                let entry = state.runtime.storage_entry("Commitments","CommitmentOf").unwrap();
+                let key = state.runtime.storage_key(entry,&[
+                    rtao_core::codec::Value::Int(1),rtao_core::codec::Value::Str(hotkey.to_string())
+                ]).unwrap();
+                let observed = fill_defaults(&state.runtime,entry.value_type,json!({
+                    "block":state.block,"deposit":7,"info":{"fields":[{"Raw5":"0x68656c6c6f"}]}
+                })).unwrap();
+                let encoded = state.runtime.encode_spec(&rtao_core::runtime::TypeSpec::Id(entry.value_type),&observed).unwrap();
+                state.seed_at(hash.clone(),key,Some(encoded));
+                let revealed = state.runtime.storage_entry("Commitments","RevealedCommitments").unwrap();
+                let revealed_key = state.runtime.storage_key(revealed,&[
+                    rtao_core::codec::Value::Int(1),rtao_core::codec::Value::Str(hotkey.to_string())
+                ]).unwrap();
+                state.seed_at(hash,revealed_key,None);
+                reply
+            }));
+        }
+        let result = ex.submit_call_dyn(call.clone(),&keys,SignerRole::Hotkey,&ExecuteOptions::default()).await.unwrap();
+        assert!(result.success);
+        assert_eq!(result.inclusion,Inclusion::Finalized);
+        let after = ex.client().at(BlockRef::Hash(result.block_hash.unwrap())).await.unwrap();
+        assert_ne!(before.block().hash,after.block().hash);
+        let commitment = after.storage(&COMMITMENT_OF,(NetUid(1),hotkey)).await.unwrap().unwrap();
+        assert_eq!(commitment.info.fields,[Data::Raw(b"hello".to_vec())]);
+        assert_eq!(u64::from(commitment.block),after.block().number);
+        assert!(after.storage(&REVEALED_COMMITMENTS,(NetUid(1),hotkey)).await.unwrap().is_none());
+        assert_eq!(attempts.load(Ordering::SeqCst),1);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst),1);
+        {
+            let signed = keys.signer.requests.lock().unwrap();
+            assert_eq!(signed.len(),1);
+            assert_eq!(signed[0].1,call.as_bytes());
+        }
+        assert_eq!(fake.requests().iter().filter(|request|request.method.starts_with("author_submit")).count(),1);
+        ex.client().close().await;
+    }).await.unwrap();
 }

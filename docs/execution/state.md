@@ -83,6 +83,40 @@ cleanup. MSRV, no-host and semver pass. The correction limits the guard to its
 two existing assertions without changing those assertions, production code
 or test counts. Full ordinary validation of the newer batch remains pending.
 
+The correction is pushed at `394e21b17f27902edea45b19de2da103ba4a3554`.
+[38959809427](https://github.com/sam0x17/rtao/actions/runs/38959809427)
+passes Clippy, features, supply, no-host, MSRV and semver, but Nextest reports
+3,169 passed, three failed and four skipped. The failures are the new stake-list
+and wallet-overview output assertions: table dividers were parsed as cells,
+the replacement renderer omitted normal connection-time token-symbol setup,
+and expected dust floats used Rust exponent spellings rather than Python's.
+Their local corrections preserve the complete record and visible-row checks.
+Doctests and documentation upload were not reached; this is not an accepted
+checkpoint. The bounded failure record is `client-394e21b-check-failure.json`.
+The successful feature artifact separately proves the generated owner-tool
+built and its three tests passed; it does not establish ordinary C1 success.
+
+Five further reviewed regressions are applied locally, with direct rustfmt
+and whitespace checks passing: canonical shield hash/receipt recovery,
+production hotkey SetWeights submission, proxied AddStake(All), snapshot-bound
+typed reads, and a regular commitment's raw-policy refusal, signed submission
+and typed reads. They use finite fake transports and supplied observations.
+The existing EX14 batch/root-claim hard-stop fixture was already committed in
+`e497f18`; it is not a further test addition. The five new functions await
+their own hosted run.
+Two additional regressions cover actual production Transfer proxy success and
+inner failure, and every visible installed command/group's `--help`. The latter
+exposed doctor/completions help-dispatch defects; their offline routes now keep
+Clap's successful help status, with malformed-input exit checks retained.
+Wallet listing now derives a display address from resolved multisig members,
+retains unresolved references and normalizes string thresholds to native u16
+numbers. The existing actual-list fixture checks both human/JSON output and
+continued strict saved-account refusal. Three direct helper homes receive
+canonical attribution. These seven new functions bring the expected future
+inventory to 3,179 tests with four skips. Source review, direct formatting and
+whitespace checks pass; all changes still require a full hosted checkpoint.
+No new source mapping, runtime effect or milestone acceptance is claimed.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded

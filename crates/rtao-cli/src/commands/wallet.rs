@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/wallets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/multisig_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional sources at the same commit/license: sdk/python/bittensor/wallets.py; sdk/python/bittensor/cli/helpers.py; sdk/python/bittensor/cli/multisig_helpers.py.
 //! Explicit wallet key management and public account information.
 
@@ -1161,6 +1162,10 @@ async fn list(ctx: &AppContext) -> Result<(), CliError> {
         let Some(name) = entry["name"].as_str().filter(|name| !name.is_empty()) else {
             continue;
         };
+        let threshold = entry
+            .get("threshold")
+            .and_then(crate::books::threshold_u16)
+            .unwrap_or(0);
         let refs = entry["signatories"].as_array().cloned().unwrap_or_default();
         let signatories = refs
             .iter()
@@ -1172,7 +1177,23 @@ async fn list(ctx: &AppContext) -> Result<(), CliError> {
                 json!({"name":reference,"ss58":address})
             })
             .collect::<Vec<_>>();
-        multisigs.push(json!({"name":name,"kind":"multisig","threshold":entry["threshold"],"signatory_count":refs.len(),"ss58":resolver.saved_multisig_address(name).ok().flatten(),"signatories":signatories,"note":entry.get("note").cloned().unwrap_or(json!(""))}));
+        // This read-only display derives from the resolvable subset. Signing
+        // and admission continue to require the complete saved member set.
+        let mut public_keys = signatories
+            .iter()
+            .filter_map(|member| member["ss58"].as_str()?.parse::<AccountId>().ok())
+            .map(|account| account.0)
+            .collect::<Vec<_>>();
+        public_keys.sort_unstable();
+        public_keys.dedup();
+        let address = if threshold > 0 {
+            rtao::core::extrinsic::multisig_account_id(&public_keys, threshold)
+                .ok()
+                .map(|(account, _)| AccountId(account).to_string())
+        } else {
+            None
+        };
+        multisigs.push(json!({"name":name,"kind":"multisig","threshold":threshold,"signatory_count":refs.len(),"ss58":address,"signatories":signatories,"note":entry.get("note").cloned().unwrap_or(json!(""))}));
     }
     multisigs.sort_by_key(|entry| entry["name"].as_str().unwrap_or("").to_lowercase());
     let payload = json!({"path":ctx.globals.wallet_path.to_string_lossy(),"coldkeys":records,"multisigs":multisigs,"addresses":ctx.books.addresses,"proxies":ctx.books.proxies});

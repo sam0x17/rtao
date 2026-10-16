@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/weights.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Weight intent behavior, with state checks performed before signing.
 
 use std::time::SystemTime;
@@ -791,6 +792,152 @@ mod tests {
             build(&zero, &snapshot).await.unwrap_err().to_string(),
             "All weights are zero; nothing to reveal."
         );
+    }
+
+    // pyt: unit/test_intents_table.py::TestExecuteFlow::test_hotkey_intents_sign_with_hotkey
+    #[tokio::test]
+    async fn production_set_weights_executes_with_wallet_hotkey_and_native_mechanism_call() {
+        use rtao_client::Inclusion;
+        use rtao_core::{runtime::TypeSpec, value_ext::ValueExt};
+        use rtao_primitives::CryptoType;
+        use rtao_signer::{
+            BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+        };
+        use rtao_tx::ExecuteOptions;
+        use std::sync::{Arc, Mutex};
+
+        struct Wallet {
+            coldkey: KeypairSigner,
+            hotkey: KeypairSigner,
+            acquired: Mutex<Vec<SignerRole>>,
+        }
+        impl KeyView for Wallet {
+            fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+                Ok(self.hotkey.account())
+            }
+            fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+                Ok(self.hotkey.account().0)
+            }
+            fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+                Ok(self.coldkey.account())
+            }
+        }
+        impl DynKeySource for Wallet {
+            fn signer_for<'a>(
+                &'a self,
+                role: SignerRole,
+            ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+                Box::pin(async move {
+                    self.acquired.lock().unwrap().push(role);
+                    let key = match role {
+                        SignerRole::Hotkey => &self.hotkey,
+                        SignerRole::Coldkey => &self.coldkey,
+                    };
+                    Ok(Arc::new(key.clone()) as Arc<dyn Signer>)
+                })
+            }
+        }
+
+        let wallet = Wallet {
+            coldkey: KeypairSigner::from_seed(&[5; 32], CryptoType::Ed25519).unwrap(),
+            hotkey: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
+            acquired: Mutex::new(Vec::new()),
+        };
+        assert_ne!(wallet.hotkey.account(), wallet.coldkey.account());
+        let (snapshot, fake) = fixture(false, false).await;
+        fake.mutate_state(|state| {
+            state
+                .seed_typed(
+                    "SubtensorModule",
+                    "Uids",
+                    (NETUID, wallet.hotkey.account()),
+                    2u16,
+                )
+                .unwrap();
+            state.set_nonce(wallet.hotkey.account().to_string(), 9);
+            for account in [wallet.hotkey.account(), wallet.coldkey.account()] {
+                state
+                    .seed_python(
+                        "System",
+                        "Account",
+                        &[json!(account)],
+                        json!({"data":{"free":1_000_000_000_000_u64}}),
+                    )
+                    .unwrap();
+            }
+        });
+        let executor = crate::executor(snapshot.client().clone());
+        // Keep the fixture's registration, mechanism-indexed rate limit and minimum
+        // count. These three scores satisfy that existing admission contract.
+        let intent = input(&[1.0, 2.0, 3.0]);
+        let runtime = executor.client().refresh_runtime().await.unwrap();
+        let expected = calls::set_mechanism_weights(
+            NETUID,
+            MECHID,
+            vec![0, 1, 2],
+            vec![21845, 43690, 65535],
+            123,
+        )
+        .compose(&runtime)
+        .unwrap();
+        assert_eq!(&expected.as_bytes()[..2], &[7, 119]);
+        let options = ExecuteOptions {
+            replan_owner_rate_limit: false,
+            deadline: Some(Duration::from_secs(5)),
+            ..Default::default()
+        };
+        let result = tokio::time::timeout(
+            Duration::from_secs(10),
+            executor.execute_dyn(&intent, &wallet, &options),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert!(result.success);
+        assert_eq!(result.inclusion, Inclusion::Finalized);
+        assert!(
+            result
+                .events
+                .iter()
+                .any(|event| event.matches("System", "ExtrinsicSuccess"))
+        );
+        assert_eq!(*wallet.acquired.lock().unwrap(), vec![SignerRole::Hotkey]);
+        let submitted = fake.state().lock().unwrap().submissions.clone();
+        assert_eq!(submitted.len(), 1);
+        let decoded = runtime
+            .core()
+            .decode_extrinsic(&submitted[0], true)
+            .unwrap();
+        let account = decoded
+            .field("address")
+            .and_then(ValueExt::as_str)
+            .unwrap()
+            .parse::<AccountId>()
+            .unwrap();
+        assert_eq!(account, wallet.hotkey.account());
+        assert_ne!(account, wallet.coldkey.account());
+        let call = runtime
+            .core()
+            .decode_spec(&TypeSpec::Call, expected.as_bytes(), true)
+            .unwrap();
+        assert_eq!(decoded.field("call"), Some(&call));
+        assert!(submitted[0].ends_with(expected.as_bytes()));
+        assert_eq!(decoded.field("nonce").and_then(ValueExt::as_u128), Some(9));
+        let signature = decoded
+            .field("signature")
+            .and_then(|value| value.variant("Ed25519"))
+            .and_then(ValueExt::value_bytes)
+            .unwrap();
+        assert_eq!(signature.len(), 64);
+        assert!(signature.iter().any(|byte| *byte != 0));
+        assert_eq!(
+            fake.requests()
+                .iter()
+                .filter(|request| request.method.starts_with("author_submit"))
+                .count(),
+            1
+        );
+        executor.client().close().await;
     }
 
     include!("null_weights_tests.rs");
