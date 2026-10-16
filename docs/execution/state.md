@@ -63,10 +63,9 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map has 307/357 reconciled inputs and 50 pending;
-the adopted generated matrix remains at 306/51 until the next hosted refresh.
-The e2e source map has 18 pending mappings and 11 client contracts; the generated
-matrix remains at 19/10 until that refresh.
+The reviewed source map and adopted generated matrix agree at 307/357
+reconciled inputs and 50 pending. The e2e source map and generated matrix agree
+at 18 pending mappings and 11 client contracts.
 There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -91,7 +90,7 @@ Two further client fixtures cover the exact auto-stake call/coldkey/subnet read
 and remaining transfer/Proxy/Sudo unsigned-JSON/signature-attachment paths. The
 auto-stake transcript preserves the upstream ignored execution Result and lists
 six runtime limits. Its source e2e map has 18 pending keys and 11 client-contract
-rows; generated reports remain at 19/10 until the next authenticated refresh.
+rows, now reflected in the authenticated generated reports.
 The source-file map reaches 307/357 reconciled, 50 pending. The keyfiles row
 retains oracle-only status after complete source-input review and exact hosted
 PASS evidence for its two narrow native fixtures. Valid Fernet decryption,
@@ -131,6 +130,28 @@ identities and full-run failure remain explicit; it validates none of the seven
 newer functions. No raw log is retained. Exact proposal/review identities and
 the next report-refresh steps are in `next-client-source-work-0b0bb79.json`
 under the existing recovery root.
+
+### Report adoption and next combined hosted checkpoint
+
+Report-only [38888110550](https://github.com/sam0x17/rtao/actions/runs/38888110550)
+passed at exact `3143d72`. The finalized binding authenticates all 36 source
+inputs and artifact `12040193494` (58,602 bytes, SHA256
+`33a643d7137ee0ae94a183764483926ec702056e69088bcc2aad788363bd1203`).
+Inspection and an independent refetch adopted exactly four reports. They change
+only the reviewed auto-stake client-contract row, keyfiles oracle-only source
+input, one first D-042 pinning test, derived counts and ordinary measurement
+metadata. All 23 dependency inputs, role inventories/host flags and other
+compatibility claims are unchanged. No archive or extraction directory remains.
+
+The ordinary combined checkpoint is next, with 3,077 expected tests. Report
+generation supplies no new regression execution or milestone acceptance.
+The M3 readiness audit finds represented miner/authentication/template source;
+shared compiled-example documentation wiring remains unfinished. M2's guide
+acceptance retains that shared documentation requirement. The security note's
+old live-cache claim is retired; historical review identities stay intact.
+M2-S02 remains open/unaccepted: direct owning-boundary inspection found no safe
+compatible wrapper that erases the dependency's private Ed25519 object. Existing
+upstream issue #3251 remains open, with no comments at this inspection.
 
 ### Command review and required-address follow-up, execution pending
 

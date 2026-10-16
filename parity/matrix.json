@@ -1,10 +1,10 @@
 {
   "e2e_evidence_classes": {
-    "client-contract": 10,
+    "client-contract": 11,
     "hosted-scenario-source": 6,
     "intent-plan": 72,
     "not-required": 2,
-    "pending": 19,
+    "pending": 18,
     "read-fixture": 6
   },
   "families": {
@@ -2605,6 +2605,7 @@
         "oracle": "unverified",
         "rtao": "active",
         "tests": [
+          "rtao_cli::root_commands::root_decimal_boundary_retains_native_refusals_budgets_and_strict_money_constructors",
           "rtao_cli::books::tests::oversized_books_refuse_instead_of_redirecting_names_to_wallet_fallback",
           "rtao_cli::books::tests::acyclic_multisig_chains_have_a_bounded_refusal_and_repeated_branches_are_valid",
           "rtao_cli::call_names::tests::programmatic_json_nesting_refuses_before_clone_or_name_lookup",
@@ -3663,13 +3664,20 @@
       {
         "evidence": {
           "runtime": "unverified",
-          "runtime_limits": [],
-          "scope": "pending"
+          "runtime_limits": [
+            "controlled-success-receipts",
+            "controlled-auto-stake-state",
+            "submission-outcome-intentionally-unasserted",
+            "subnet-registration-ownership-unverified",
+            "runtime-auto-stake-application-unverified",
+            "runtime-reward-routing-unverified"
+          ],
+          "scope": "client-contract"
         },
         "name": "test_auto_stake_destination",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::client_transfer_lifecycles::client_auto_stake_submits_exact_call_then_reads_supplied_coldkey_destination"
       },
       {
         "evidence": {
@@ -10628,11 +10636,11 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_keyfiles_golden.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
+          "Complete reviewed upstream pytest input; narrow native NaCl and permission counterparts in crates/rtao-wallet/tests/keyfile.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "74ceea95d5fff0af271d0534e2e691e881dac162"
       },
       {
         "kind": "oracle-only",
