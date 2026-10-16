@@ -1891,35 +1891,35 @@ miner runtime APIs, AxonPublisher, metagraph persistence, immunity read and temp
 template profiles in hosted CI; cross-language and real-chain checks are optional hosted evidence.
 **Parallel work.** M3-03 and M3-04 are independent of M3-01…M3-02.
 
-- [ ] **M3-01** `rtao-btauth` server (`BtAuthLayer`, `VerifiedCaller`, `CallerPolicy`, `MetagraphPolicy`,
+- [x] **M3-01** `rtao-btauth` server (`BtAuthLayer`, `VerifiedCaller`, `CallerPolicy`, `MetagraphPolicy`,
       `PerHotkeyLimiter`, `RedisNonceStore`, `Json<T>`): `Verifier::authenticate` and `Authenticated::commit` in the
       order authenticate → policy → commit → limit (D-032); the bounded `InMemoryNonceStore` (503 at the bound, never
       evicts); the body limit applied before buffering, with the runtime's `DefaultBodyLimit` matching it (a 3 MiB
       signed body reaches a `Json<T>` handler); `Json<T>` parses through `serde_json::Value` first
       ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #10); feature `legacy-v10`. (The client adapter landed in
       M2-16.)
-- [ ] **M3-02** Maintain btauth parser/server fuzz target source and ordinary regression tests. A targeted
+- [x] **M3-02** Maintain btauth parser/server fuzz target source and ordinary regression tests. A targeted
       fuzz run is optional hosted work with a time limit; no local or scheduled campaign.
-- [ ] **M3-03** `AxonPublisher` (IP resolution and rejection of non-global addresses, idempotence over the axon and the
+- [x] **M3-03** `AxonPublisher` (IP resolution and rejection of non-global addresses, idempotence over the axon and the
       stored `NeuronCertificate`, so a certificate rotation alone republishes through `serve_axon_tls`
       (`cert_rotation_republishes`), `ServingRateLimit` scheduling, pool-rejection mapping, TLS certificate length check
       D-017).
-- [ ] **M3-04** `MetagraphSync`'s miner preset (`Interval(600 s)`, minimum 30 s, `Preset::Miner`), the debounced
+- [x] **M3-04** `MetagraphSync`'s miner preset (`Interval(600 s)`, minimum 30 s, `Preset::Miner`), the debounced
       event-triggered refresh (`NeuronRegistered`, `AxonServed`, `HotkeySwapped*`), selective metagraph fetches, and
       `rtao_metagraph::persist::{save, load}` (feature `persist`, architecture §8.5); the validator preset landed in
       M2-15.
-- [ ] **M3-05** `Miner` trait and runtime (`router(cx, state)`, called after `on_start`, with the `StateCell` the
+- [x] **M3-05** `Miner` trait and runtime (`router(cx, state)`, called after `on_start`, with the `StateCell` the
       handlers share); `PruneRisk` monitor; read `immunity_period`.
-- [ ] **M3-06** `crates/rtao/examples/miner.rs` (the example of [§7.3](#73-a-miner)) and its line in the `features` job.
+- [x] **M3-06** `crates/rtao/examples/miner.rs` (the example of [§7.3](#73-a-miner)) and its line in the `features` job.
 - **M3-07 optional hosted integration.** Scenario 9 can check idempotent serving and 401/403/413/429 behavior
   against a pinned localnet when a specific client change needs it; ordinary publisher/admission tests use fakes.
 - **M3-08 optional hosted interop.** Target the relevant btauth, neuron, wallet or wire-byte case from lanes
   1-4 and retain reviewed keyfile vectors. Real Keychain acceptance is deferred; M4-14 tests injected process
   behavior. No cross-language container campaign is a milestone prerequisite.
-- [ ] **M3-09** Maintain validator/miner template members and compile/test them against the changed client
+- [x] **M3-09** Maintain validator/miner template members and compile/test them against the changed client
       source in hosted CI. Test setup and generated files with fixtures. Image builds and compose integration
       are optional targeted hosted checks; the generated project does not require deployment to pass ordinary CI.
-- [ ] **M3-10** The miner guide in the book ([§11](#11-documentation-plan)).
+- [x] **M3-10** The miner guide in the book ([§11](#11-documentation-plan)).
 - [ ] **M3-11** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m3.md`; focus: the
       btauth/1 verifier (freshness window, nonce-store bounds, body limit enforced before buffering, header-parsing fuzz
       target) and `PerHotkeyLimiter`.
@@ -1957,7 +1957,8 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
       per setter row.
 - [ ] **M4-03** MEV shield pipeline: `ShieldPeriod` with the era check (refuse with `TxError::ShieldEraExpired` when
       B + 2 ≥ F + p, D-025), `ShieldCiphertext`, `lease_pair` leaving the next nonce at n + 2 (D-026), inner-extrinsic
-      scan, preflight, routing and downgrade rules; shielded submissions are never retried.
+      scan, preflight, routing and downgrade rules; never retransmit the same signed shielded payload. An eligible
+      known owner `TxRateLimitExceeded` dispatch failure may trigger one fresh plan and submission (D-070).
 - [ ] **M4-04** The raw path (`submit_call`, `submit_call_dyn`, `ExecuteOptions::shielded`) and the `Multisig` account
       object with its funds preflight (`rtao_tx::multisig`); `Client::{decode_scale, estimate_weight,
       estimate_shielded_carrier_fee}`. CLI v0's `call --multisig` needs them; `call` has no `--allow-raw`, because the
@@ -3034,3 +3035,5 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-16 | Fee-contract report adoption and full client checkpoint | Hosted report run 38947563587 succeeds at exact 00c7952. Review and independently refetch both authenticated artifacts before adopting exactly five files: the additive fee_contract chain_rules section and four reports, including D-072. The other 18 generated outputs, all 23 dependency inputs, package/feature graphs and runtime/oracle/hardware claims are unchanged. Source/matrix remain 319/357 reconciled and 38 pending, with 72 divergence entries. Correct a demonstrated locale-versus-code-unit path-order bug in the private inspector after independent review; its exact five-path and semantic guards remain intact. Update the current development-state summary to the green 3,132-test result and separate its newer unexecuted source. Push these reports for ordinary hosted checks expecting 3,145 passed and four skipped. Held multisig/output/picker proposals remain separate; M2-S02 and later acceptance remain open. No local build/test, retained raw archive, service, new temporary root or upstream filing. |
 | 2026-10-16 | Green 3,145-test checkpoint and next client batch | Ordinary 38949537519 passes all six required jobs at exact 7997ec0: 3,145 tests, four skips and nine doctests across 19 suites. Authenticate 113 primary PASS records plus same-log payment/metagraph supplements. Adopt three independently reviewed source dispositions for CLI startup, metagraph output and the payment wrapper's client contract; source reaches 322/357 reconciled and 35 pending, while generated reports remain at 319/38. Integrate the separately reviewed 31-file multisig/output/pruning/staking/shield batch with 27 new test functions. Exact afterimages, formatting and whitespace checks pass; hosted generation and ordinary execution expecting 3,172/4 remain pending. No runtime debit/refund, oracle, source-row completion for the newer batch or milestone acceptance is claimed. M2-S02 stays open. No local build/test, service, new temporary root or upstream filing. |
 | 2026-10-16 | CLI entry attribution correction | Report run 38954992909 at e497f18 fails source parity because the newly reconciled CLI main row names a Rust entry file with only prompt.py attribution. Add a separate canonical main.py header, preserving every executable byte and the earlier attribution. Retain the bounded failure excerpt and 152,964-byte log identity (SHA256 c9a32d4f999e649bac39e559da90cc299e12b1572eaf0378935a083d2a09e38f); no artifacts adopted. Formatting and whitespace checks pass; repeat the bounded hosted refresh before ordinary tests. Source remains 322/35, generated matrix 319/38 and M2-S02 open. No local build/test or new filing. |
+| 2026-10-16 | Pruning inputs and matching source reports adopted | Corrected hosted refresh 38956406939 passes at exact 9dd9892. Authenticate and separately refetch both artifacts; adopt exactly the named-table pruning entry, three catalog records plus their attribution header, and four reports. Preserve every earlier named-table byte and catalog record, all 17 other generated outputs, all 23 dependency inputs and package/feature graphs. The private inspector initially rejected Rust's integral float spelling; root corrects that JavaScript-formatting assumption with exact raw-byte insertion preservation while retaining semantic checks. Source and generated matrix now agree at 322/357 reconciled, 35 pending; divergences and E2E evidence remain unchanged. The 27 newer tests still require ordinary hosted execution, expecting 3,172 passed/four skipped. No local build/test or retained raw artifact. |
+| 2026-10-16 | Eight M3 implementation steps accepted | Check M3-01 through 06, M3-09 and M3-10 using the green 7997ec0 checkpoint, its actual miner-example/native-template feature evidence and unchanged owning source/template identities. Preserve the earlier 42 selected PASS records as historical 569162e evidence; only progress documentation differs across the 62-input bundle. The newer source batch receives no ordinary execution credit. M3-11, M2-S02 and whole M2/M3 acceptance remain open. Qualify M4-03's blanket retry wording to reflect existing D-070: a known eligible owner failure may produce one fresh plan; the same signed shielded payload is never retransmitted. No behavioral change, new divergence, runtime/oracle/hardware acceptance or local build/test. |
