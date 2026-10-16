@@ -1,9 +1,15 @@
 # M4-01 hyperparameter preparation
 
+This record describes historical preparation before Q30. Source, dependency,
+fixture, security and documentation checks remain required in hosted CI.
+Fresh Python/oracle execution is optional targeted hosted evidence. Former
+local drivers, snapshots and build caches are retired.
+
 The canonical worktree now contains the reviewed hyperparameter table,
 conversion implementation and hosted oracle recipe. M4-01 is not marked
-complete: canonical integration checks are running, and hosted differential
-acceptance and a completing commit remain required.
+complete by this record: its original canonical checks and hosted differential
+execution had not established a complete exit. Q30 no longer makes a fresh
+differential run a development prerequisite.
 
 `rtao_primitives::hyperparams::HyperparamTable` implements all ten methods:
 `metadata_kind`, `kind_of`, `doc_of`, `short_of`, `normalized`, `annotate`,
@@ -40,15 +46,16 @@ Root adopted the exact 14-path author patch, SHA-256
 then the two-path scale repair, SHA-256
 `5f48121085549822a2d126823c4b3773be845cffc0c80d7ae8dc05add4507897`.
 All canonical before hashes, patch application checks and final after hashes
-matched. Bounded manifests remain under the recorded temporary root.
+matched. Bounded manifests were recorded under the former temporary root;
+only preserved repository/recovery evidence is available after Q30 cleanup.
 
 The author validated all affected packages on Rust 1.99 and 1.89, plus generator
 mutation tests, extraction, regeneration, parity and strict Clippy. The repaired
 source passes 151 affected-package tests on each toolchain, with zero failures
 and one existing hosted-oracle replay ignored. The original five generator and
 51 extraction tests pass on both compilers. Disposable author/repair targets
-were dependency-audited and removed; their bounded proof and the live snapshot
-remain until canonical adoption checks finish.
+were dependency-audited and removed. Q30 cleanup later retired the remaining
+review snapshot and shared builds; neither is a live validation dependency.
 
 The separately reviewed four-path oracle patch, SHA-256
 `4bc159adf62db3c3862d24ac79af73edf9007f770192b02ee269e86a566db473`,
@@ -65,13 +72,15 @@ Rust parses the scripts and checks image inputs; an actual local image attempt
 was rejected before Docker. These native tests produce input recipes only.
 No Python, Docker or hosted expected-output corpus was run locally. The actual
 hosted image build, dump, native differential replay and authenticated artifact
-adoption remain pending. The oracle's disposable builds were audited/removed;
-its bounded proof and review snapshot remain live until integration finishes.
+adoption were unverified at that checkpoint and remain optional targeted hosted
+coverage under Q30. The oracle's disposable builds were audited/removed; Q30
+cleanup retired the remaining review snapshot and raw logs.
 
-Canonical integration uses `tmp/root-m4-01-integration-checks.sh` under
-`target/execute-plan.6Ro0PC`, with `PYO3_NO_PYTHON=1` and the canonical compiler
-wrapper. It includes affected-package tests on both toolchains, final btauth
-and staged receipt/Unicode regressions, extraction, regeneration, parity,
+The historical canonical integration driver was
+`tmp/root-m4-01-integration-checks.sh` under `target/execute-plan.6Ro0PC`,
+with `PYO3_NO_PYTHON=1` and the then-current compiler wrapper. It ran
+affected-package tests on both toolchains, final btauth and staged
+receipt/Unicode regressions, extraction, regeneration, parity,
 dependency checks and the full `gates` command. Both canonical affected-package
 suites passed 151 tests, with zero failures and one hosted replay ignored.
 The boxed-response server regressions passed 14 on MSRV after the current
@@ -88,4 +97,7 @@ tests, doctests, no-host and MSRV checks to pass; the full run then failed in
 the no-dev feature harness. That run predates the latest owner/shield/read
 adoption. Its evidence is in `tls-roots-repair.md`; the combined M4 source
 requires fresh dependency measurement and validation (`m4-integration.md`).
-No complete gate success or milestone exit is inferred.
+No complete gate success or milestone exit is inferred. The committed
+`m4-hyperparams-validation.json` retains bounded historical counts and log
+hashes; preserve it. Its former raw log paths do not authorize restoration.
+Current source/pin/dependency guards and combined validation run in hosted CI.

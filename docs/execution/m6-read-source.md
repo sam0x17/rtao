@@ -50,9 +50,11 @@ is corrected, with no generated artifact adopted from the failed run.
 Only source inspection, rustfmt, Bash syntax checks and offline lock resolution
 ran locally. The lock adds edges to existing packages without version changes.
 No local compiler, tests, Python, node, container, service, scratch root or
-toolchain installation ran. Target output remains 534 MB and private recovery
-146 MB. All archives and logs are handled in memory, with bounded evidence
-retained under the existing recovery directory.
+toolchain installation ran. The recorded 534 MB target and 146 MB private
+recovery measurements describe that historical checkpoint. Q30 cleanup retired
+task builds; current disk state belongs in [state.md](state.md). Archives and
+logs were handled in memory, with bounded evidence retained under the existing
+recovery directory.
 
 Run `38715060741` is verified against its exact source commit, all 23 dependency
 hashes, both archive digests and fifteen regular allowlisted members. Role

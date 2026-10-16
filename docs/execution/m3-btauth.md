@@ -1,5 +1,10 @@
 # M3 signed HTTP server
 
+The local validation below describes historical preparation before Q30.
+Current client acceptance requires applicable free `ubuntu-latest` checks and
+security review. Live Redis, interop and instrumented fuzzing are optional
+targeted hosted evidence; no local service or campaign is required.
+
 `rtao-btauth/server` supplies `BtAuthLayer`, `VerifiedCaller`, caller policies,
 a bounded per-hotkey token limiter, and the Value-first `Json<T>` extractor.
 The layer caps the raw body before collection, preserves its original bytes,
@@ -45,37 +50,40 @@ still pending.
 supplies its schema-specific body hash and owns receiver, freshness and replay
 checks for that temporary bridge.
 
-`btauth_server` joins the instrumented nightly fuzz driver. It mutates headers,
+The retained `btauth_server` fuzz target mutates headers,
 body and target around genuine sr25519 and ed25519 signatures and exercises
 policy denial, overflow, successful admission and replay rejection through the
 production Tower service.
 
-Current Rust and Rust 1.89 pass all 120 tests: 34 library, 28 client, 44 core
+At the historical preparation checkpoint, current Rust and Rust 1.89 passed
+all 120 tests: 34 library, 28 client, 44 core
 conformance and 14 server tests. Strict all-feature/all-target MSRV Clippy
-passes. The server tests include a signed 3 MiB JSON body, nested
+also passed. The server tests include a signed 3 MiB JSON body, nested
 encoded targets and empty queries, untagged/flattened floats and full-width
 integers, exact refusal statuses, replay-safe limiter order, store bounds,
 and expiration during async policy and store work. A local reader reviewed
 the implementation twice; the timing, clock and nested-URI findings are fixed.
-The server-only feature passes 13 tests on Rust 1.89; separate `legacy-v10`
-and `redis` compilation also passes with defaults disabled.
+The server-only feature passed 13 tests on Rust 1.89; separate `legacy-v10`
+and `redis` compilation also passed with defaults disabled.
 
 The instrumented nightly libFuzzer server target completed 137,729 runs in
 31 seconds with address sanitizer, 3,634 coverage edges and no crash. The
-result and bounded corpus archive remain under the recorded task root; its
-disposable corpus and artifact directories were audited and removed. The
-nightly driver lists the new target and its standalone lock resolves on
-Rust 1.89. These local results cover M3 preparation. Hosted interop and a live
-Redis deployment remain pending. The local security source pass is recorded
-in `docs/security/m3.md`.
+result and corpus archive were recorded under the former task root. Its
+disposable corpus and artifact directories were audited and removed, and Q30
+cleanup later retired the shared builds, tools and raw logs. The retained fuzz
+driver lists the target; its standalone lock resolved on Rust 1.89 at that
+checkpoint. These historical results cover M3 preparation. Hosted interop and
+live Redis execution remain unverified optional coverage. The security source
+pass is recorded in `docs/security/m3.md`.
 
 The reader also identified an existing core boundary: a store configured to
 exactly `max_age + allowed_skew` expires an in-memory nonce at the inclusive
 freshness boundary. Verifier construction now requires retention strictly
 greater than that sum. D-038 records the correction; the conformance test
 rejects equality and one nanosecond below, and accepts one nanosecond above.
-Fresh full runs on current Rust and Rust 1.89 each pass all 120 tests in
-`tmp/root-resume-btauth-{current,msrv}.log`. The clock-error client test now
-uses the explicit TLS fixture instead of depending on native certificate
-discovery. Strict Clippy on the final source remains required. M3 is not
-marked complete; no Python or Docker was executed locally.
+Historical full runs on current Rust and Rust 1.89 each passed all 120 tests;
+their former log names were `tmp/root-resume-btauth-{current,msrv}.log`.
+The clock-error client test uses the explicit TLS fixture instead of depending on native certificate
+discovery. Strict Clippy, ordinary fixtures and security checks remain required
+on the final hosted checkpoint. M3 is not marked complete by this record; no
+Python or Docker was executed during that preparation.

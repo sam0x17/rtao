@@ -1,8 +1,15 @@
 # M3 subnet template execution evidence
 
-M3-09 is implemented locally, with hosted image/chain acceptance pending. The
-full gate is `cargo xtask template check`; `--native-only` is an explicit local
-preflight and does not mark milestone acceptance.
+This is historical template preparation before Q30. Current generated-project
+validation uses free `ubuntu-latest` native client checks. Container/localnet
+execution is optional targeted hosted evidence; release and deployment work
+are deferred. Former local builds, tools and raw logs are retired.
+
+At the preparation checkpoint, M3-09 had native implementation evidence while
+image/chain execution was unverified. The former full integration command was
+`cargo xtask template check`; its historical `--native-only` result did not
+establish milestone acceptance. Do not run either as a local rehearsal.
+Applicable generated-project checks remain part of hosted development validation.
 
 `templates/subnet/` contains a cargo-generate workspace with validator, miner
 and integration-test members. The validator uses the real signed fan-out
@@ -13,9 +20,11 @@ test rejects a different provider or configuration before provider installation.
 The invariant check also checks the authoritative core pin, the single BLS
 patch, no member patches and each neuron's exact no-host feature selection.
 
-The generated CI uses only free `ubuntu-latest`, caches Cargo's git database,
-checks formatting/strict Clippy, builds both binaries, runs doctor against the
-actual generated manifest, builds each image with `-p`, and runs compose. The
+The original generated CI recipe used free `ubuntu-latest`, formatting, strict
+Clippy, native binaries and doctor, followed by image builds and compose.
+The current generated workflow runs native checks by default; its localnet
+path requires explicit `workflow_dispatch` opt-in. The retained image recipe
+is described below without requiring its execution during development. The
 Dockerfile uses the same immutable Rust 1.89/bookworm manifests as the prepared
 validator image, BuildKit git/registry/target caches and no installed build
 packages. It rejects the host/alternate TLS/ledger dependency stacks. The
@@ -30,25 +39,26 @@ The integration test creates the subnet through the real `Scenario`, stakes
 the validator, waits for its validator permit, creates only deterministic
 development hotkeys under the recorded task root, and starts both actual
 images. It observes every finalized height to avoid missing an event on the
-250 ms chain. Acceptance requires the exact validator/subnet commitment and
-`TimelockedWeightsRevealed`, the exact miner weight row, a successful reply
+250 ms chain. When run as optional hosted integration, its assertions require
+the exact validator/subnet commitment and `TimelockedWeightsRevealed`, the exact miner weight row, a successful reply
 to the validator's signed request, a positive miner checkpoint request count and
 zero exit codes after graceful shutdown.
 
-The root e2e job generates with checksum-pinned cargo-generate 0.23.12. It
-patches the rtao git source to this checkout for `rtao`, `rtao-testkit` and
+The retained inactive `.github/deferred-workflows/e2e.yml` draft generates
+with checksum-pinned cargo-generate 0.23.12. It patches the rtao git source to this checkout for `rtao`, `rtao-testkit` and
 `rtao-runtime` (typed integration setup/storage). The Docker build receives this
 same checkout as the `rtao` named context and rewrites only the generated source
 overlay to its in-image path. A generated project's own CI resolves the named
 context and localnet digest from the SDK checkout Cargo actually selected.
-Template paths, including Markdown, count as code; the template job participates
-in `e2e-required`.
+Template paths, including Markdown, counted as code in that draft. Its
+`e2e-required` aggregate is inactive and is not a Q30 development gate. Any
+future integration execution needs a reviewed, bounded hosted job.
 
 No rtao release exists yet, so the scaffold currently selects `branch = "main"`
 for all SDK dependencies. Its lockfile captures the resolved commit, and its CI
-preserves an existing lockfile. The first release should replace these selectors
-with the same released `rtao-v*` tag. No generated core pins or catalogs were
-edited by this work.
+preserves an existing lockfile. Future release work may replace these selectors
+with the same released `rtao-v*` tag; Q30 defers that work. No generated core
+pins or catalogs were edited by this work.
 
 Verification performed on the Mac Studio:
 
@@ -66,7 +76,7 @@ Verification performed on the Mac Studio:
 | Both generated native binaries, Rust 1.89 | Passed |
 | Real integration executable linking and native doctor | Passed on the generated consumer workspace |
 | Both CLI help commands, no-host feature trees and generated-project cleanup | Passed |
-| Both container builds and actual compose-localnet contract | Pending: the local Docker daemon is unavailable |
+| Both container builds and actual compose-localnet contract | Not run during preparation (Docker unavailable); optional hosted coverage remains unverified under Q30 |
 
 An independent source review found and corrected three issues: dependency
 prefetch was missing before offline doctor; the Bash EXIT trap could hide a
@@ -86,15 +96,17 @@ The final three-regression logs are `m3-template/logs/xtask-tests-licenses.log`
 and `m3-template/logs/xtask-tests-msrv.log`; both report three passed tests and
 no failures. The independent final source review reports no remaining findings.
 
-All retained logs and intermediate results are beneath
+Original logs and intermediate results used
 `target/execute-plan.6Ro0PC/m3-template/` and the command's bounded
-`template-evidence-*` directories. No local Python or container Python ran.
-The xtask waits for child commands and verifies the compose ownership label,
-open-file dependencies, directory marker and absence of symlinks before removing
-its disposable generated project. It retains its bounded lock, result and public
-logs. The shared Cargo target/cache is a live dependency of other ongoing work.
-The verified generator, both licenses, release metadata and archive/binary
-checksums are retained for reuse under `target/execute-plan.6Ro0PC/tools/template/`.
+`template-evidence-*` directories. These are historical locations; Q30 cleanup
+retired the task tree and raw logs. No local Python or container Python ran.
+The historical xtask run waited for child commands and verified the compose
+ownership label, open-file dependencies, directory marker and absence of
+symlinks before removing its disposable generated project. It retained the
+bounded lock, result and public logs during that preparation. The shared Cargo target/cache is no longer live.
+The generator, licenses, release metadata and archive/binary checksums were
+recorded under `target/execute-plan.6Ro0PC/tools/template/`. Q30 cleanup retired
+those local tools; do not restore the directory or install them locally.
 Its original extraction and 5.6 MiB archive were removed after open-file,
 launchd, shell-configuration, symlink and dynamic-library checks. Only system
 libraries were linked; no virtual environment or global installation was created.
