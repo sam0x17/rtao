@@ -18,6 +18,10 @@ on:
         description: Resolve the reviewed existing dependency edges and retain the candidate lock
         type: boolean
         default: false
+      refresh_tls_provider_lock:
+        description: Generate only the isolated two-provider fixture lock for review
+        type: boolean
+        default: false
       prepare_core_patch:
         description: Prepare the reviewed Ledger core patch pins for artifact review
         type: boolean
@@ -27,7 +31,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.ref }}-${{ inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
+  group: pr-${{ github.ref }}-${{ inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
   cancel-in-progress: true
 
 env:
@@ -42,7 +46,7 @@ env:
 # Python and live Docker/hardware targets are excluded by the ci test profile.
 jobs:
   check:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -84,7 +88,7 @@ jobs:
           retention-days: 7
 
   no-host:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -104,7 +108,7 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -128,7 +132,7 @@ jobs:
           timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -159,6 +163,22 @@ jobs:
           path: target/pr-gates/template-evidence-*
           if-no-files-found: warn
           retention-days: 7
+      - name: Verify RPC TLS with two compiled crypto providers
+        env:
+          CARGO_BUILD_JOBS: "2"
+        run: |
+          git ls-files --error-unmatch ci/tls-two-providers/Cargo.lock
+          timeout 60s cargo fmt --check --manifest-path ci/tls-two-providers/Cargo.toml
+          timeout 210s node ci/tls-two-providers/verify-graph.mjs check
+          timeout 900s cargo test --locked --manifest-path ci/tls-two-providers/Cargo.toml --test two_providers -- --test-threads=1
+          git diff --exit-code -- Cargo.toml Cargo.lock fuzz/Cargo.lock ci/tls-two-providers/Cargo.lock
+      - name: Retain two-provider graph evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tls-two-providers-${{ github.sha }}
+          path: target/pr-gates/tls-two-providers/graph.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Check shipped crates against the unpatched core
         env:
           RTAO_CORE_UNPATCHED_DISPOSABLE: "1"
@@ -170,7 +190,7 @@ jobs:
         run: timeout 300s cargo test --locked -p rtao-wallet --no-default-features --test keyfile
 
   supply:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -205,7 +225,7 @@ jobs:
           retention-days: 14
 
   semver:
-    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch))
+    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -228,7 +248,7 @@ jobs:
         # Pre-1.0 comparison failures warn; comparisons from 1.0 block.
 
   core-patch-prepare:
-    if: github.event_name == 'workflow_dispatch' && inputs.prepare_core_patch
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -270,9 +290,9 @@ jobs:
           retention-days: 7
 
   lock-refresh:
-    if: github.event_name == 'workflow_dispatch' && inputs.refresh_lock
+    if: github.event_name == 'workflow_dispatch' && (inputs.refresh_lock || inputs.refresh_tls_provider_lock)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -281,9 +301,22 @@ jobs:
         with:
           cache: false
           build-warnings: ""
+      - name: Refuse combined TLS-lock and other refresh modes
+        if: inputs.refresh_tls_provider_lock && (inputs.refresh_lock || inputs.refresh_compat || inputs.refresh_codegen || inputs.prepare_core_patch)
+        run: |
+          echo 'Use refresh_tls_provider_lock without another refresh flag.' >&2
+          exit 1
+      - name: Generate the isolated two-provider candidate lock
+        if: inputs.refresh_tls_provider_lock
+        run: timeout 180s cargo generate-lockfile --manifest-path ci/tls-two-providers/Cargo.toml
+      - name: Verify the isolated two-provider candidate graph
+        if: inputs.refresh_tls_provider_lock
+        run: timeout 210s node ci/tls-two-providers/verify-graph.mjs prepare-lock
       - name: Resolve reviewed existing dependency edges without building
+        if: ${{ !inputs.refresh_tls_provider_lock }}
         run: timeout 180s node ci/resolve-existing-lock.mjs
       - name: Retain candidate dependency locks for review
+        if: ${{ !inputs.refresh_tls_provider_lock }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lock-${{ github.sha }}
@@ -292,9 +325,19 @@ jobs:
             fuzz/Cargo.lock
           if-no-files-found: error
           retention-days: 3
+      - name: Retain only the isolated TLS lock and graph proof
+        if: inputs.refresh_tls_provider_lock
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tls-two-providers-lock-${{ github.sha }}
+          path: |
+            ci/tls-two-providers/Cargo.lock
+            target/pr-gates/tls-two-providers/graph.json
+          if-no-files-found: error
+          retention-days: 3
 
   compat-refresh:
-    if: github.event_name == 'workflow_dispatch' && !inputs.refresh_lock && (inputs.refresh_compat || inputs.refresh_codegen)
+    if: github.event_name == 'workflow_dispatch' && !inputs.refresh_lock && (inputs.refresh_compat || inputs.refresh_codegen) && !inputs.refresh_tls_provider_lock
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

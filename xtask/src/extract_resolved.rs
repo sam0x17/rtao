@@ -53,6 +53,9 @@ mod legacy_runtime_api;
 #[path = "extract_root_claim_fixtures.rs"]
 mod root_claim_fixtures;
 
+#[path = "extract_rpc_test_fixtures.rs"]
+mod rpc_test_fixtures;
+
 #[path = "extract_descriptions.rs"]
 mod descriptions;
 
@@ -109,6 +112,7 @@ const RPC_NAMES: &[&str] = &[
 ];
 const NAMED_TABLES: &[(&str, &[&str])] = &[
     (precompiles::SOURCE, precompiles::NAMES),
+    (rpc_test_fixtures::SOURCE, rpc_test_fixtures::NAMES),
     ("sdk/python/bittensor/_generated/errors.py", &["ERRORS"]),
     (
         "sdk/python/bittensor/_transport/utils/receipt.py",
@@ -2391,6 +2395,9 @@ impl<'a> Resolver<'a> {
     }
 
     fn values(&mut self, path: &str, names: &[&str]) -> Result<Value> {
+        if path == rpc_test_fixtures::SOURCE {
+            return rpc_test_fixtures::values(self, names);
+        }
         if path == "sdk/python/tests/harness/samples.py" {
             if !self.sample_producer_mode {
                 self.sample_producer_mode = true;

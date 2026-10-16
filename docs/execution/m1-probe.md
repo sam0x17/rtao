@@ -1,4 +1,10 @@
-`cargo xtask probe --networks finney,testnet` passed on 2026-10-14, from
+# M1-22 probe source and historical evidence
+
+Q30 keeps offline pin and fixture checks in ordinary hosted `pr.yml`. Live
+probes are optional targeted hosted evidence. No local run, service, retired
+build root, scheduled upkeep or issue publishing is required for M1.
+
+Historically, `cargo xtask probe --networks finney,testnet` passed on 2026-10-14, from
 08:25:09 to 08:28:43 UTC. The complete observations are in
 [m1-probe.json](m1-probe.json); [m1-probe-run.md](m1-probe-run.md) is the generated
 failure-issue report format. This evidence covers the live probe in M1-22 and
@@ -66,16 +72,13 @@ signature, mode and exact runtime-API argument boundaries. The offline pin
 check passed on Rust 1.89, and `cargo clippy --locked -p xtask --all-targets -- -D warnings`
 passed. The workflow YAML parsed successfully.
 
-Reproduce the live run with:
+Ordinary hosted gates run `probe pins --check` offline. A future targeted hosted
+live check may use the recorded network/output flags with bounded timeouts and
+retain its own source/result identity; the historical result is not a current
+endpoint observation.
 
-```sh
-cargo xtask probe pins --check
-cargo xtask probe --networks finney,testnet --output target/probe.json --report target/probe.md
-```
-
-[probe.yml](../../.github/workflows/probe.yml) schedules the same Finney/testnet
-checks every six hours on free `ubuntu-latest`, using Rust 1.89. It uploads the
-JSON and Markdown observations and updates the `live-probe` issue on failure.
-All local builds and scratch files stayed under the recorded shared task root
-`target/execute-plan.6Ro0PC`. No separate disposable directory or wallet was
-created; the shared build and tool caches remain in use by the parent execution.
+The [probe workflow draft](../../.github/deferred-workflows/probe.yml) is inactive
+outside `.github/workflows`. No six-hour schedule or automatic issue update is
+installed for current development. The former `target/execute-plan.6Ro0PC`
+root is retired and absent on the laptop; its historical build/tool references
+do not authorize recreating or resuming it. No wallet was created for that run.
