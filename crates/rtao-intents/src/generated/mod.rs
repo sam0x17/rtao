@@ -31,18 +31,46 @@ pub use any_intent::AnyIntent;
     feature = "transfer",
     feature = "weights"
 ))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(
+        feature = "association",
+        feature = "batch",
+        feature = "children",
+        feature = "coldkey",
+        feature = "collateral",
+        feature = "crowdloan",
+        feature = "evm",
+        feature = "governance",
+        feature = "hyperparameters",
+        feature = "identity",
+        feature = "leasing",
+        feature = "lock",
+        feature = "multisig",
+        feature = "proxy",
+        feature = "registration",
+        feature = "root",
+        feature = "serving",
+        feature = "staking",
+        feature = "transfer",
+        feature = "weights"
+    )))
+)]
 pub use interfaces::*;
 #[cfg(feature = "association")]
+#[cfg_attr(docsrs, doc(cfg(feature = "association")))]
 /// Intent types in the `association` Python module.
 pub mod association {
     pub use super::interfaces::{AssociateEvmKey, AssociateHotkey};
 }
 #[cfg(feature = "batch")]
+#[cfg_attr(docsrs, doc(cfg(feature = "batch")))]
 /// Intent types in the `batch` Python module.
 pub mod batch {
     pub use super::interfaces::Batch;
 }
 #[cfg(feature = "children")]
+#[cfg_attr(docsrs, doc(cfg(feature = "children")))]
 /// Intent types in the `children` Python module.
 pub mod children {
     pub use super::interfaces::{
@@ -50,6 +78,7 @@ pub mod children {
     };
 }
 #[cfg(feature = "coldkey")]
+#[cfg_attr(docsrs, doc(cfg(feature = "coldkey")))]
 /// Intent types in the `coldkey` Python module.
 pub mod coldkey {
     pub use super::interfaces::{
@@ -57,11 +86,13 @@ pub mod coldkey {
     };
 }
 #[cfg(feature = "collateral")]
+#[cfg_attr(docsrs, doc(cfg(feature = "collateral")))]
 /// Intent types in the `collateral` Python module.
 pub mod collateral {
     pub use super::interfaces::{AddCollateral, SetMinCollateral};
 }
 #[cfg(feature = "crowdloan")]
+#[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
 /// Intent types in the `crowdloan` Python module.
 pub mod crowdloan {
     pub use super::interfaces::{
@@ -71,11 +102,13 @@ pub mod crowdloan {
     };
 }
 #[cfg(feature = "evm")]
+#[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
 /// Intent types in the `evm` Python module.
 pub mod evm {
     pub use super::interfaces::{EvmWithdraw, FundEvmKey};
 }
 #[cfg(feature = "governance")]
+#[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
 /// Intent types in the `governance` Python module.
 pub mod governance {
     pub use super::interfaces::{
@@ -83,26 +116,31 @@ pub mod governance {
     };
 }
 #[cfg(feature = "hyperparameters")]
+#[cfg_attr(docsrs, doc(cfg(feature = "hyperparameters")))]
 /// Intent types in the `hyperparameters` Python module.
 pub mod hyperparameters {
     pub use super::interfaces::SetHyperparameter;
 }
 #[cfg(feature = "identity")]
+#[cfg_attr(docsrs, doc(cfg(feature = "identity")))]
 /// Intent types in the `identity` Python module.
 pub mod identity {
     pub use super::interfaces::{SetIdentity, SetSubnetIdentity};
 }
 #[cfg(feature = "leasing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "leasing")))]
 /// Intent types in the `leasing` Python module.
 pub mod leasing {
     pub use super::interfaces::{RegisterLeasedNetwork, TerminateLease};
 }
 #[cfg(feature = "lock")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lock")))]
 /// Intent types in the `lock` Python module.
 pub mod lock {
     pub use super::interfaces::{LockStake, MoveLock, SetPerpetualLock, SetRejectLockedAlpha};
 }
 #[cfg(feature = "multisig")]
+#[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
 /// Intent types in the `multisig` Python module.
 pub mod multisig {
     pub use super::interfaces::{
@@ -110,6 +148,7 @@ pub mod multisig {
     };
 }
 #[cfg(feature = "proxy")]
+#[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
 /// Intent types in the `proxy` Python module.
 pub mod proxy {
     pub use super::interfaces::{
@@ -117,6 +156,7 @@ pub mod proxy {
     };
 }
 #[cfg(feature = "registration")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
 /// Intent types in the `registration` Python module.
 pub mod registration {
     pub use super::interfaces::{
@@ -125,16 +165,19 @@ pub mod registration {
     };
 }
 #[cfg(feature = "root")]
+#[cfg_attr(docsrs, doc(cfg(feature = "root")))]
 /// Intent types in the `root` Python module.
 pub mod root {
     pub use super::interfaces::{SetRootClaimThreshold, SetSubnetEmissionEnabled};
 }
 #[cfg(feature = "serving")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
 /// Intent types in the `serving` Python module.
 pub mod serving {
     pub use super::interfaces::{ResetAxon, ServeAxon, ServeAxonTls, ServePrometheus};
 }
 #[cfg(feature = "staking")]
+#[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
 /// Intent types in the `staking` Python module.
 pub mod staking {
     pub use super::interfaces::{
@@ -144,11 +187,13 @@ pub mod staking {
     };
 }
 #[cfg(feature = "transfer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "transfer")))]
 /// Intent types in the `transfer` Python module.
 pub mod transfer {
     pub use super::interfaces::{Transfer, TransferAll};
 }
 #[cfg(feature = "weights")]
+#[cfg_attr(docsrs, doc(cfg(feature = "weights")))]
 /// Intent types in the `weights` Python module.
 pub mod weights {
     pub use super::interfaces::{CommitWeights, RevealWeights, SetWeights};

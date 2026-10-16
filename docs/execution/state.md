@@ -40,21 +40,34 @@ The newer source batch completes missing book topics and connects LLM
 navigation to the book summary. It adds source-derived alias/divergence indexes,
 an agent card and transaction execution guidance; all 19 library roots include
 their crate READMEs. Feature labels cover root exports and selected child
-implementations, with three generated intent outputs awaiting hosted
-regeneration. Seven new test functions cover three shared offline examples,
+implementations. Hosted run 38901469526 regenerated and verified the three
+intent outputs; independently refetched adoption retains exactly 187 matching
+feature badges, with all other generated code bytes unchanged. Seven new test functions cover three shared offline examples,
 signature-form attachment equality and three generator regressions. The
 existing metadata-mode fixture now attaches imported enabled payloads, compares
 matching disabled payloads and rejects cross-mode signature reuse. Independent
 source reviews and direct formatting pass; this batch is outside the current
-green checkpoint and expects 3,087 tests after hosted codegen/report adoption.
+green checkpoint and expects 3,087 tests in the next ordinary hosted run.
 
 Five missing multisig pytest origins now record native input/compositional
 limits without changing executable bodies. The reviewed source mapping is
 adopted using the exact wrapped-registration PASS above. Source inputs reach
-312 reconciled and 45 pending; the generated matrix remains 311/46 until the
-hosted refresh. The complete prepare/attach source row remains pending until
+312 reconciled and 45 pending, now matching the authenticated generated matrix. The complete prepare/attach source row remains pending until
 its new attachment test and stronger metadata fixture pass. No later milestone
 exit or strict M8 acceptance follows.
+
+The source/report refresh
+[38901469526](https://github.com/sam0x17/rtao/actions/runs/38901469526)
+at `1ba30ab04fc1fefb29b18e499e1690e08f6f1e88` passed. Inspection and a
+separate refetch adopted exactly three generated intent files and four reports.
+All 16 other generated members are identical. All 23 dependency inputs match;
+only the root lint and 19 crate documentation metadata blocks changed their
+fingerprints. Role package counts and host flags remain unchanged. Runtime,
+oracle and hardware claims are unchanged. The inspection proof SHA256 is
+`887b23fcffe7c432a3242a1146e2b2d6848ddb7aeb09be6b9b7b79c34d327b2d`;
+adoption proof SHA256 is
+`0114c55ed40b31620fd241eb8a501bead49d9f06fe6b5cdc017f6e5b0dd661d7`.
+This source-only result does not execute the seven newer tests.
 
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
@@ -103,10 +116,8 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The preceding adopted matrix records 311/357 reconciled inputs and 46 pending
-after the three root-command and oracle-only basket-producer dispositions.
-The current multisig source disposition makes the source map 312/45; its
-hosted generated refresh remains pending. The e2e source map and generated matrix agree at
+The source map and adopted generated matrix agree at 312/357 reconciled inputs
+and 45 pending after the reviewed multisig-safety disposition. The e2e source map and generated matrix agree at
 18 pending mappings and 11 client contracts.
 There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
