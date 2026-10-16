@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/executor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Signed shield carriers, paired nonce accounting and canonical inner receipts.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -1192,4 +1193,190 @@ async fn runtime_upgrade_after_inner_signature_refuses_carrier_broadcast() {
         client.nonces().cached(&signer.account().to_string()).await,
         None
     );
+}
+
+#[derive(Clone, Copy)]
+enum PrepareBehavior {
+    Advance(u64),
+    Refuse,
+    Pending,
+}
+struct PreparingSigner {
+    inner: RecordingSigner,
+    fake: FakeChain,
+    behavior: PrepareBehavior,
+    entered: Arc<tokio::sync::Notify>,
+    calls: std::sync::atomic::AtomicUsize,
+}
+impl PreparingSigner {
+    fn new(inner: RecordingSigner, fake: FakeChain, behavior: PrepareBehavior) -> Self {
+        Self {
+            inner,
+            fake,
+            behavior,
+            entered: Arc::new(tokio::sync::Notify::new()),
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+}
+impl Signer for PreparingSigner {
+    fn account(&self) -> AccountId {
+        self.inner.account()
+    }
+    fn crypto_type(&self) -> CryptoType {
+        self.inner.crypto_type()
+    }
+    fn caps(&self) -> SignerCaps {
+        self.inner.caps()
+    }
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
+        Box::pin(async move {
+            self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.entered.notify_one();
+            match self.behavior {
+                PrepareBehavior::Advance(lag) => {
+                    self.fake.mutate_state(|state| {
+                        state.advance(40);
+                        state.set_nonce(self.account().to_string(), 47);
+                        state.set_finalized(state.block - lag).unwrap();
+                    });
+                    Ok(())
+                }
+                PrepareBehavior::Refuse => {
+                    Err(SignerError::Vault("fixture readiness refused".into()))
+                }
+                PrepareBehavior::Pending => std::future::pending().await,
+            }
+        })
+    }
+    fn sign<'a>(
+        &'a self,
+        request: &'a SigningRequest<'a>,
+    ) -> BoxFuture<'a, Result<MultiSignature, SignerError>> {
+        self.inner.sign(request)
+    }
+}
+
+#[tokio::test]
+async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
+    for lag in [2, 6] {
+        let (client, fake, inner) = fixture().await;
+        let signer = PreparingSigner::new(inner, fake.clone(), PrepareBehavior::Advance(lag));
+        fake.mutate_state(|state| {
+            state.set_nonce(signer.account().to_string(), 7);
+            state.set_finalized(state.block - 2).unwrap();
+        });
+        let initial_finalized = fake.state().lock().unwrap().finalized;
+        let inner_call = call(&client, 3).await;
+        let result = client
+            .submit_shielded(inner_call.clone(), &signer, &pool())
+            .await;
+        assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        if lag == 6 {
+            assert!(matches!(
+                result,
+                Err(SubmitFailure::ShieldEraExpired {
+                    period: 8,
+                    finality_lag: 6,
+                })
+            ));
+            assert!(signer.inner.signed.lock().unwrap().is_empty());
+            assert!(fake.state().lock().unwrap().submissions.is_empty());
+            assert_eq!(
+                client.nonces().cached(&signer.account().to_string()).await,
+                None
+            );
+        } else {
+            let result = result.unwrap();
+            assert_eq!(result.inclusion, Inclusion::PoolAccepted);
+            let signed = signer.inner.signed.lock().unwrap().clone();
+            let expected_anchor = fake
+                .state()
+                .lock()
+                .unwrap()
+                .block_hash(initial_finalized + 40)
+                .unwrap();
+            assert_eq!(signed.len(), 2);
+            assert_eq!(signed[0].purpose, SignPurpose::ShieldInner);
+            assert_eq!(signed[1].purpose, SignPurpose::ShieldCarrier);
+            assert_eq!(signed[0].call, inner_call.as_bytes());
+            assert_eq!(signed[0].json["nonce"], "0x00000030");
+            assert_eq!(signed[1].json["nonce"], "0x0000002f");
+            assert_eq!(signed[0].json["blockHash"], expected_anchor);
+            assert_eq!(signed[1].json["blockHash"], expected_anchor);
+            assert_eq!(signed[0].json["era"], signed[1].json["era"]);
+            assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+            let next = client.nonces().lease(&signer.account()).await.unwrap();
+            assert_eq!(next.value(), 49);
+            next.settle();
+        }
+        client.close().await;
+    }
+}
+
+#[tokio::test]
+async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_material() {
+    for case in ["refuse", "cancel", "deadline"] {
+        let (client, fake, inner) = fixture().await;
+        let behavior = if case == "refuse" {
+            PrepareBehavior::Refuse
+        } else {
+            PrepareBehavior::Pending
+        };
+        let signer = Arc::new(PreparingSigner::new(inner, fake.clone(), behavior));
+        let inner_call = call(&client, 1).await;
+        let before = fake.requests().len();
+        if case == "cancel" {
+            let task_client = client.clone();
+            let task_signer = signer.clone();
+            let task = tokio::spawn(async move {
+                task_client
+                    .submit_shielded(inner_call, task_signer.as_ref(), &pool())
+                    .await
+            });
+            tokio::time::timeout(Duration::from_secs(2), signer.entered.notified())
+                .await
+                .unwrap();
+            task.abort();
+            assert!(task.await.unwrap_err().is_cancelled());
+        } else {
+            let options = ShieldOptions {
+                submit: SubmitOptions {
+                    submit_deadline: (case == "deadline").then_some(Duration::from_secs(2)),
+                    ..Default::default()
+                },
+                ..pool()
+            };
+            let result = client
+                .submit_shielded(inner_call, signer.as_ref(), &options)
+                .await;
+            if case == "refuse" {
+                assert!(
+                    matches!(result, Err(SubmitFailure::Client(ClientError::Signing(
+                    SignerError::Vault(message)
+                ))) if message == "fixture readiness refused")
+                );
+            } else {
+                assert!(matches!(
+                    result,
+                    Err(SubmitFailure::Client(ClientError::Rpc(
+                        rtao_rpc::RpcError::Timeout { .. }
+                    )))
+                ));
+            }
+        }
+        assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(signer.inner.signed.lock().unwrap().is_empty());
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+        assert!(!fake.requests()[before..].iter().any(|request| {
+            request.method.starts_with("author_")
+                || request.method == "system_accountNextIndex"
+                || request.method == "chain_getFinalizedHead"
+        }));
+        client.close().await;
+    }
 }

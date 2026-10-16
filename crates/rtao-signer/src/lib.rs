@@ -235,6 +235,14 @@ pub trait Signer: Send + Sync + 'static {
     fn metadata_constants(&self) -> Option<(u8, String)> {
         None
     }
+    /// Prepare an interactive signer before shield nonces and mortal eras are chosen.
+    ///
+    /// Software signers require no preparation. Implementations must not sign
+    /// or submit a transaction here; the caller bounds this future by its
+    /// existing submission deadline.
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
+        Box::pin(async { Ok(()) })
+    }
     /// Sign a prepared transaction, using the relevant view of the request.
     fn sign<'a>(
         &'a self,

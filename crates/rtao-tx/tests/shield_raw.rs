@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/executor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Exercise shield and raw entry points through signed FakeChain submissions.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -31,6 +32,8 @@ type SignedRequest = (SignPurpose, Vec<u8>, rtao_signer::SignerPayloadJson);
 struct RecordingSigner {
     key: KeypairSigner,
     requests: Arc<Mutex<Vec<SignedRequest>>>,
+    preparation: Option<FakeChain>,
+    prepared: Arc<AtomicUsize>,
 }
 impl Signer for RecordingSigner {
     fn account(&self) -> AccountId {
@@ -38,6 +41,19 @@ impl Signer for RecordingSigner {
     }
     fn crypto_type(&self) -> CryptoType {
         self.key.crypto_type()
+    }
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
+        Box::pin(async move {
+            if let Some(fake) = &self.preparation {
+                self.prepared.fetch_add(1, Ordering::SeqCst);
+                fake.mutate_state(|state| {
+                    state.advance(40);
+                    state.set_nonce(self.account().to_string(), 47);
+                    state.set_finalized(state.block - 2).unwrap();
+                });
+            }
+            Ok(())
+        })
     }
     fn sign<'a>(
         &'a self,
@@ -129,6 +145,8 @@ async fn fixture() -> (Executor, FakeChain, Keys) {
             signer: RecordingSigner {
                 key: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
                 requests: Arc::new(Mutex::new(vec![])),
+                preparation: None,
+                prepared: Arc::new(AtomicUsize::new(0)),
             },
             unlocks: AtomicUsize::new(0),
             allowed: SignerRole::Coldkey,
@@ -879,5 +897,69 @@ async fn raw_admission_deadline_includes_initial_runtime_validation() {
             assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
             assert!(fake.state().lock().unwrap().submissions.is_empty());
         }
+    }
+}
+
+#[tokio::test]
+async fn executor_shield_entries_prepare_before_fresh_nonce_and_era_selection() {
+    for route in ["typed", "dynamic", "required"] {
+        let (ex, fake, mut keys) = fixture().await;
+        fake.mutate_state(|state| {
+            state.set_nonce(keys.signer.account().to_string(), 7);
+            state.set_finalized(state.block - 2).unwrap();
+        });
+        let initial_finalized = fake.state().lock().unwrap().finalized;
+        keys.signer.preparation = Some(fake.clone());
+        let intent = Required::default();
+        let options = ShieldOptions {
+            execute: pool(),
+            ..Default::default()
+        };
+        let (success, inclusion) = match route {
+            "typed" => {
+                let result = ex.submit_shielded(&intent, &keys, &options).await.unwrap();
+                (result.success, result.inclusion)
+            }
+            "dynamic" => {
+                let result = ex
+                    .submit_shielded_dyn(&intent, &keys, &options)
+                    .await
+                    .unwrap();
+                (result.success, result.inclusion)
+            }
+            _ => {
+                let result = ex.execute(&intent, &keys, &pool()).await.unwrap();
+                (result.success, result.inclusion)
+            }
+        };
+        assert!(success, "{route}");
+        assert_eq!(inclusion, Inclusion::PoolAccepted);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(keys.signer.prepared.load(Ordering::SeqCst), 1);
+        let signed = keys.signer.requests.lock().unwrap().clone();
+        let expected_anchor = fake
+            .state()
+            .lock()
+            .unwrap()
+            .block_hash(initial_finalized + 40)
+            .unwrap();
+        assert_eq!(signed.len(), 2);
+        assert_eq!(signed[0].0, SignPurpose::ShieldInner);
+        assert_eq!(signed[1].0, SignPurpose::ShieldCarrier);
+        assert_eq!(signed[0].2["nonce"], "0x00000030");
+        assert_eq!(signed[1].2["nonce"], "0x0000002f");
+        assert_eq!(signed[0].2["blockHash"], expected_anchor);
+        assert_eq!(signed[1].2["blockHash"], expected_anchor);
+        assert_eq!(signed[0].2["era"], signed[1].2["era"]);
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        let next = ex
+            .client()
+            .nonces()
+            .lease(&keys.signer.account())
+            .await
+            .unwrap();
+        assert_eq!(next.value(), 49);
+        next.settle();
+        ex.client().close().await;
     }
 }
