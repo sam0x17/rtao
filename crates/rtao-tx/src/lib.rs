@@ -1,6 +1,7 @@
 //! Bittensor execution plans, policies and transaction results.
 
 #![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
 
 mod error;
 mod executor;

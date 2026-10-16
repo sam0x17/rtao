@@ -29,6 +29,19 @@ const NUMBER_FORMATTING: &str = docify::embed_run!(
     python_compatible_number_formatting
 );
 
+const BTAUTH_VECTOR: &str = docify::embed_run!(
+    "../crates/rtao/tests/documentation_examples.rs",
+    btauth_payload_matches_committed_vector
+);
+const FAKECHAIN_READ: &str = docify::embed_run!(
+    "../crates/rtao/tests/documentation_examples.rs",
+    fakechain_balance_read_stays_on_one_snapshot
+);
+const INTENT_PLAN: &str = docify::embed_run!(
+    "../crates/rtao/tests/documentation_examples.rs",
+    transfer_plan_uses_public_keys_without_signing
+);
+
 pub(super) fn pages(root: &Path) -> Result<BTreeMap<String, String>> {
     let mut pages = BTreeMap::from([("README.md".into(), README.into())]);
     for (name, excerpts) in [
@@ -46,11 +59,27 @@ pub(super) fn pages(root: &Path) -> Result<BTreeMap<String, String>> {
     }
     let mut getting_started = fs::read_to_string(root.join("book/src/getting-started.md"))?;
     getting_started.push_str("\n## Offline examples\n\nThese examples are ordinary Rust tests in `crates/rtao/tests/documentation_examples.rs`. CI runs the same functions shown here.\n\n");
-    for (heading, excerpt) in [
-        ("Checked native balances", NATIVE_BALANCES),
-        ("Python-compatible number formatting", NUMBER_FORMATTING),
+    for (heading, feature, excerpt) in [
+        ("Checked native balances", None, NATIVE_BALANCES),
+        (
+            "Python-compatible number formatting",
+            None,
+            NUMBER_FORMATTING,
+        ),
+        ("Btauth payload vector", Some("btauth"), BTAUTH_VECTOR),
+        (
+            "A balance read through FakeChain",
+            Some("reads"),
+            FAKECHAIN_READ,
+        ),
+        ("A public transfer plan", Some("intents-all"), INTENT_PLAN),
     ] {
-        getting_started.push_str(&format!("### {heading}\n\n{excerpt}\n\n"));
+        getting_started.push_str(&format!("### {heading}\n\n"));
+        if let Some(feature) = feature {
+            getting_started.push_str(&format!("Requires the `{feature}` facade feature.\n\n"));
+        }
+        getting_started.push_str(excerpt);
+        getting_started.push_str("\n\n");
     }
     pages.insert("getting-started.md".into(), getting_started);
     Ok(pages)

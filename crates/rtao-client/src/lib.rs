@@ -1,10 +1,13 @@
 //! Asynchronous Bittensor chain access.
 
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 mod block_info;
 /// Private runtime thread used by the facade's synchronous adapters.
 #[cfg(feature = "blocking")]
+#[cfg_attr(docsrs, doc(cfg(feature = "blocking")))]
 pub mod blocking;
 pub mod bounded_file;
 /// Runtime metadata resolution, coalescing, and Python-compatible disk cache.
@@ -39,6 +42,7 @@ pub mod shield;
 pub mod submit;
 /// Optional Subxt legacy client sharing this client's authenticated RPC session.
 #[cfg(feature = "subxt")]
+#[cfg_attr(docsrs, doc(cfg(feature = "subxt")))]
 pub mod subxt;
 /// Typed and dynamic read views pinned to immutable chain state.
 pub mod view;

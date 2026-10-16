@@ -17,17 +17,44 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-16
 
 The latest successful ordinary checkpoint is
-[38889135192](https://github.com/sam0x17/rtao/actions/runs/38889135192)
-at `60a20ee6b9ae27a48bf08cee2e3f7b8ee2bb48c8`. All six jobs passed. Main
-passed 3,077 tests, zero failed, four skipped, nine doctests across 19 workspace
-suites, strict Clippy, docs and all blocking guards. The bounded
-`client-60a20ee-hosted-results.json` authenticates 30 selected PASS records;
-its SHA256 is `2205280635d13a8bb7f0dfec19ddac3a38d6dab7ce1e1fa3b54901e1996c9a22`.
-The main log was 941,073 bytes, SHA256
-`044e0eb5f9c8c9dffe62948ae593a5bfe1359ec42c9c405298d5835233c26ef3`.
-No raw log is retained. This passes the corrected picker fixture and all seven
-new root/policy/offline/auto-stake functions. Later registration and Docify
-changes are outside this checkpoint and remain unexecuted.
+[38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100)
+at `3772699612278d4592648d07232241430e96791b`. All six jobs passed. Main
+passed 3,080 tests, zero failed, four skipped and nine doctests across all 19
+workspace suites. Strict Clippy, documentation, source/pin/generated guards,
+feature profiles, MSRV, no-host, semver and supply checks passed. The bounded
+`client-3772699-hosted-results.json` authenticates 34 selected PASS records;
+its SHA256 is `fadc0d5af652d64707c474093ac6cf8c0bf2b60b647f51aab1f00360000c1eb4`.
+The 735,349-byte main log has SHA256
+`754a2eb8c31416d59ea15deac55fe9011ed9b9f1407e3f0c00615b5c4eb60b8b`.
+No raw log is retained. This executes the wrapped registration-completion
+fixture, both original shared documentation examples and the positive unsigned
+seed reconstruction/signature-attachment witness. It validates no standalone
+fuzz build or campaign.
+
+Twenty individual M2 implementation/guide steps are checked against this
+checkpoint: M2-01 through 04, 06 through 18, 21, 22 and 25. M2-26 and the M2
+milestone remain unaccepted while M2-S02 is open. Optional hosted checks and
+the waived soak retain their existing scope.
+
+The newer source batch completes missing book topics and connects LLM
+navigation to the book summary. It adds source-derived alias/divergence indexes,
+an agent card and transaction execution guidance; all 19 library roots include
+their crate READMEs. Feature labels cover root exports and selected child
+implementations, with three generated intent outputs awaiting hosted
+regeneration. Seven new test functions cover three shared offline examples,
+signature-form attachment equality and three generator regressions. The
+existing metadata-mode fixture now attaches imported enabled payloads, compares
+matching disabled payloads and rejects cross-mode signature reuse. Independent
+source reviews and direct formatting pass; this batch is outside the current
+green checkpoint and expects 3,087 tests after hosted codegen/report adoption.
+
+Five missing multisig pytest origins now record native input/compositional
+limits without changing executable bodies. The reviewed source mapping is
+adopted using the exact wrapped-registration PASS above. Source inputs reach
+312 reconciled and 45 pending; the generated matrix remains 311/46 until the
+hosted refresh. The complete prepare/attach source row remains pending until
+its new attachment test and stronger metadata fixture pass. No later milestone
+exit or strict M8 acceptance follows.
 
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
@@ -76,9 +103,10 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map and adopted generated matrix agree at 311/357
-reconciled inputs and 46 pending after the three root-command and oracle-only
-basket-producer dispositions. The e2e source map and generated matrix agree at
+The preceding adopted matrix records 311/357 reconciled inputs and 46 pending
+after the three root-command and oracle-only basket-producer dispositions.
+The current multisig source disposition makes the source map 312/45; its
+hosted generated refresh remains pending. The e2e source map and generated matrix agree at
 18 pending mappings and 11 client contracts.
 There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains

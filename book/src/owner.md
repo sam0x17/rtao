@@ -8,69 +8,16 @@ and a coldkey source; it does not start a node. Enable the `rtao` facade's
 
 ## Preview and bound a change
 
-Plan with public wallet information before unlocking the coldkey. The example
-below restricts semantic spend to zero, limits fees to 1,000,000 rao and
-permits only the selected subnet. Choose a fee cap appropriate to your
-operation. Fee estimates and owner windows can change after a preview, so
-execution performs its checks again.
+Plan with public wallet information before unlocking the coldkey. The compiled
+owner example restricts semantic spend to zero and permits only the selected
+subnet. Set `--max-fee-rao` to an appropriate fee cap, such as 1,000,000 rao;
+omitting it leaves that cap unset. Fee estimates and owner windows can change
+after a preview, so execution performs its checks again. The generated Example
+implementation section contains the exact exported configuration function.
 
-```rust
-use std::{collections::BTreeSet, sync::Arc, time::Duration};
-use rtao::{
-    client::Client,
-    intents::SetHyperparameter,
-    prelude::{Balance, NetUid, PlanOptions, Policy, Tao},
-    wallet::Wallet,
-    HparamArg, OwnerConfig, OwnerOps, WindowWait,
-};
-
-async fn set_immunity_period(
-    client: Client,
-    wallet: Arc<Wallet>,
-    netuid: NetUid,
-    execute: bool,
-) -> anyhow::Result<()> {
-    let timeout = Duration::from_secs(300);
-    let executor = rtao::intents::executor(client).with_policy(Policy {
-        max_fee: Some(Balance::<Tao>::from_rao(1_000_000)),
-        max_spend: Some(Balance::<Tao>::from_rao(0)),
-        allowed_netuids: Some(BTreeSet::from([netuid])),
-        ..Default::default()
-    });
-    let intent = SetHyperparameter {
-        netuid,
-        name: "immunity_period".into(),
-        value: serde_json::json!(5000_u64),
-    };
-    let plan = executor.plan(&intent, wallet.as_ref(), &PlanOptions {
-        deadline: Some(timeout),
-        ..Default::default()
-    }).await?;
-    println!("{}", plan.to_json());
-    if !execute {
-        return Ok(());
-    }
-    anyhow::ensure!(plan.ok(), "owner preview contains violations");
-    let owner = OwnerOps::new(executor, wallet).with_config(OwnerConfig {
-        operation_timeout: Some(timeout),
-        ..Default::default()
-    })?;
-    let result = owner.set_hparam(
-        netuid,
-        "immunity_period",
-        HparamArg::from(5000_u64),
-        WindowWait::UntilOpen {
-            deadline: tokio::time::Instant::now() + timeout,
-        },
-    ).await?;
-    result.raise_for_failure()?;
-    Ok(())
-}
-```
-
-The application supplies an existing `Wallet` and owns the client lifetime.
-This snippet also uses `anyhow`, `serde_json` and `tokio`. The source example
-defaults to preview and requires `--execute` for submission. Pass an explicit
+The executable resolves the wallet from its arguments and closes its shared
+client after the operation. It defaults to preview and requires `--execute`
+for submission. Pass an explicit
 `--network` or endpoint when using it; its default is `local`, which assumes
 an already available endpoint and does not launch one.
 

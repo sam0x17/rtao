@@ -101,6 +101,7 @@ impl Metrics {
     /// Binaries own the global recorder. An embedded runtime can instead reuse
     /// its host's recorder and export the framework's retained counters separately.
     #[cfg(feature = "prometheus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "prometheus")))]
     pub fn install_recorder(&self) -> anyhow::Result<()> {
         metrics::set_global_recorder(recorder::Recorder(self.clone()))
             .map_err(|error| anyhow::anyhow!("cannot install process metrics recorder: {error}"))

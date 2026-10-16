@@ -1,5 +1,7 @@
 //! Identifiers, amounts and shared Bittensor vocabulary.
 
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 mod account;

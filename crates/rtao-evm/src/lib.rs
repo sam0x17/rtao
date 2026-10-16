@@ -3,6 +3,7 @@
 //! EVM signing keys belong to a separate signing domain from native coldkeys
 //! and hotkeys. Network I/O is explicit; importing this crate starts no service.
 
+#![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 
 /// The two mappings between native accounts and EVM addresses.

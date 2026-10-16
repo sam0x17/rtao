@@ -8,6 +8,9 @@ license = "(MIT OR Apache-2.0) AND Apache-2.0 AND Unicode-DFS-2016"
 repository.workspace = true
 description = "Staged extensions for the upstream Bittensor core."
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+
 [lints]
 workspace = true
 

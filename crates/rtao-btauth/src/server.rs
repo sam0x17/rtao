@@ -53,6 +53,7 @@ pub trait CallerPolicy: Send + Sync {
 
 /// Admission based on one current metagraph snapshot.
 #[cfg(feature = "metagraph-policy")]
+#[cfg_attr(docsrs, doc(cfg(feature = "metagraph-policy")))]
 #[derive(Clone, Debug)]
 pub struct MetagraphPolicy {
     /// Lock-free access to the last-good metagraph.

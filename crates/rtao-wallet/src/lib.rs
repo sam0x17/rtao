@@ -1,4 +1,6 @@
 //! Btcli-compatible keyfiles, public wallet views and explicit password sources.
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 mod files;
@@ -17,6 +19,7 @@ pub use keyfile::{
     resolve_key_password,
 };
 #[cfg(feature = "encrypted")]
+#[cfg_attr(docsrs, doc(cfg(feature = "encrypted")))]
 pub use messages::{EncryptedMessage, encrypt_message};
 pub use messages::{SignedMessage, verify_message};
 pub use password::{
