@@ -320,15 +320,31 @@ pub fn parse_with_prompts(
     context: &crate::prompt::PromptContext,
     terminal: &mut dyn crate::prompt::Terminal,
 ) -> Result<Invocation, crate::error::CliError> {
-    use crate::prompt::{
-        PromptHistory, PromptResolver, PromptSpec, PromptValidation, fill_missing,
-    };
+    parse_with_prompt_history(
+        command,
+        argv,
+        context,
+        terminal,
+        crate::prompt::PromptHistory::default(),
+    )
+}
+
+/// Parse required values after earlier public prompt rounds in the invocation.
+/// The caller retains original argv separately for replay and success guidance.
+pub fn parse_with_prompt_history(
+    command: Command,
+    argv: Vec<std::ffi::OsString>,
+    context: &crate::prompt::PromptContext,
+    terminal: &mut dyn crate::prompt::Terminal,
+    mut history: crate::prompt::PromptHistory,
+) -> Result<Invocation, crate::error::CliError> {
+    use crate::prompt::{PromptResolver, PromptSpec, PromptValidation, fill_missing};
     match command.clone().try_get_matches_from(&argv) {
         Ok(matches) => {
             return Ok(Invocation {
                 matches,
                 argv,
-                history: PromptHistory::default(),
+                history,
             });
         }
         Err(error) if error.kind() != clap::error::ErrorKind::MissingRequiredArgument => {
@@ -336,24 +352,7 @@ pub fn parse_with_prompts(
         }
         Err(_) => {}
     }
-    fn relax(mut command: Command) -> Command {
-        let groups = command
-            .get_groups()
-            .map(|group| group.get_id().as_str().to_owned())
-            .collect::<Vec<_>>();
-        command = command
-            .mut_args(|arg| {
-                arg.required(false)
-                    .requires(clap::builder::Resettable::<clap::Id>::Reset)
-                    .required_unless_present(clap::builder::Resettable::<clap::Id>::Reset)
-            })
-            .mut_subcommands(relax);
-        for group in groups {
-            command = command.mut_group(group, |group| group.required(false));
-        }
-        command
-    }
-    let relaxed = relax(command.clone());
+    let relaxed = relax_required(command.clone());
     let parsed = relaxed
         .clone()
         .try_get_matches_from(&argv)
@@ -451,7 +450,6 @@ pub fn parse_with_prompts(
         parsers,
         argv: argv.clone(),
     };
-    let mut history = PromptHistory::default();
     fill_missing(
         &context,
         terminal,
@@ -495,6 +493,94 @@ pub fn finish_prompts(
         }
     }
     Ok(())
+}
+
+/// Return public partial matches only for omitted wallet-sign/decrypt inputs.
+/// Unknown/supplied-value errors retain the ordinary parser path. Noninteractive
+/// modes collect missing fields without loading wallet books or reading keys.
+pub fn pending_wallet_matches(
+    command: &Command,
+    argv: &[std::ffi::OsString],
+    context: &crate::prompt::PromptContext,
+    terminal: &dyn crate::prompt::Terminal,
+) -> Result<Option<clap::ArgMatches>, crate::error::CliError> {
+    match command.clone().try_get_matches_from(argv) {
+        Err(error) if error.kind() == clap::error::ErrorKind::MissingRequiredArgument => {}
+        _ => return Ok(None),
+    }
+    let parsed = relax_required(command.clone())
+        .try_get_matches_from(argv)
+        .map_err(clap_error)?;
+    let path = command_path(command, &parsed);
+    if !matches!(path.as_slice(), [family, operation] if family == "wallet" && matches!(operation.as_str(), "sign" | "decrypt"))
+    {
+        return Ok(None);
+    }
+    if !effective_prompt_context(context, &parsed).interactive(terminal) {
+        return Ok(None);
+    }
+    Ok(Some(parsed))
+}
+
+/// Confirm a pending local signing wallet before its required message/ciphertext.
+/// Uses the ordinary public-key-only confirmation, and injects the selected
+/// wallet into argv so the later command body does not ask for it again.
+pub fn confirm_required_wallet(
+    app: &mut crate::context::AppContext,
+    argv: &mut Vec<std::ffi::OsString>,
+    history: &mut crate::prompt::PromptHistory,
+) -> Result<(), crate::error::CliError> {
+    let context = app.prompt_context();
+    if !context.interactive(&app.terminal) {
+        return Ok(());
+    }
+    let args = argv
+        .iter()
+        .skip(1)
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    let Some(spec) = crate::prompt::signing_wallet_spec(
+        &context,
+        &app.globals.wallet_name,
+        app.globals.wallet_given,
+        "unlock",
+        true,
+        &args,
+    ) else {
+        return Ok(());
+    };
+    app.confirm_wallet(
+        &crate::prompt::WalletConfirmation {
+            help: spec
+                .help
+                .unwrap_or_else(|| "Wallet this command targets.".into()),
+            require_coldkey: false,
+            allow_multisig: false,
+            ..Default::default()
+        },
+        history,
+    )?;
+    argv.push("--wallet".into());
+    argv.push(app.globals.wallet_name.clone().into());
+    Ok(())
+}
+
+fn relax_required(mut command: Command) -> Command {
+    let groups = command
+        .get_groups()
+        .map(|group| group.get_id().as_str().to_owned())
+        .collect::<Vec<_>>();
+    command = command
+        .mut_args(|arg| {
+            arg.required(false)
+                .requires(clap::builder::Resettable::<clap::Id>::Reset)
+                .required_unless_present(clap::builder::Resettable::<clap::Id>::Reset)
+        })
+        .mut_subcommands(relax_required);
+    for group in groups {
+        command = command.mut_group(group, |group| group.required(false));
+    }
+    command
 }
 
 fn effective_prompt_context(
