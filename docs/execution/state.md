@@ -17,16 +17,18 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-16
 
 The latest completed ordinary run is
-[38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
-at `50b7239e6ec1160cc482a86be8d2a30fe737ffc1`. All six hosted jobs passed.
-The main gate passed all 3,014 executed tests (four skipped), workspace doctests,
-documentation and every selected blocking check. The exact weight-clipping
-regression passed, confirming refusal of the zero denominator and preservation
-of valid subnormal branches. The 710,339-byte main log has SHA256
-`15e295426302f686b8cef1918bf91bc2050f97588eca73028870037c2cd82357`.
-Bounded proofs are `check-38858957306.json` and `50b7239-named-results.json`;
-the latter also binds all 33 SDK and seven CLI pruning fixtures to exact PASS
-records and executed source blobs. No raw log or archive is retained.
+[38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
+at `3f1aa6731abfccb15a12c2a52da23ff08850f278`. All six hosted jobs passed.
+The main gate passed all 3,040 executed tests, zero failed, four skipped,
+workspace doctests, strict Clippy, documentation and every blocking check.
+Its 715,611-byte log has SHA256
+`55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
+Bounded proofs are `check-38865058430.json`, `3f1aa67-named-results.json` and
+`m0-3f1aa67-hosted-results.json`. The named proof binds all 26 new CLI,
+extractor and pruning fixtures, 26 existing PoW/fake-GPU fixtures and four
+actual sample consumers to exact PASS records and executed source blobs.
+The separate M0 proof binds all six jobs, 60 audited inputs and 123 exact
+foundation fixture results. No raw log or archive is retained.
 
 The following preceding security checkpoint retains its own exact source and
 review evidence. Later client work is recorded separately below.
@@ -54,8 +56,9 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The source map and adopted generated matrix both record 301/357 reconciled and
-56 pending after the authenticated report refresh recorded below.
+The latest reviewed source map records 303/357 reconciled and 54 pending after
+the samples/PoW disposition below. The adopted generated matrix remains at
+301/56 until its next authenticated hosted refresh.
 There remain 20 pending e2e mappings and 68 divergences. Passing CI does not
 reconcile the remaining source rows or accept a milestone. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -104,7 +107,10 @@ Ordinary [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
 at `50b7239` remains the weight-fix validation checkpoint. Other pending rows,
 strict M8 and milestone status are unchanged.
 
-### Current source and CLI batch, awaiting hosted validation
+### Earlier source and CLI batch
+
+The current `3f1aa67` result supersedes this batch's earlier unexecuted-fixture
+and pending-report statements. Their source scope and coverage limits remain.
 
 Complete authenticated source reviews reconcile staking (all 14 intents),
 weights (all 19 functions/methods) and the shared pruning product workflow.
@@ -205,6 +211,34 @@ directly at both calls. Formatting passes; the 26 new fixtures still require
 execution on the corrected checkpoint. Main failure evidence is
 `check-38864132855.json`, 68,704-byte log SHA256
 `0876f601d04385eb3305af03cfd868c69bd710d0869e004849f0f032617cdb95`.
+
+### Verified source dispositions and the next root-picker repair
+
+All 26 additions in the preceding batches pass at `3f1aa67`. The exact named
+proof is 24,010 bytes, SHA256
+`87b0f69da8e44828bca1d1d0d48788fcd74f60b48950e57bd0d7143ef7dc587d`.
+Independent whole-source review plus the five actual-resolver, four all83/all102
+consumer and 26 native PoW/fake-GPU PASS records reconcile `samples.py` and
+`pow_registration.py`. Canonical origins are added to their actual native homes.
+Source map reaches 303/357 reconciled and 54 pending; generated matrix remains
+301/56 pending hosted refresh. Typed public fixtures replace internal dev_wallet;
+PoW returns a typed proof and retains explicit backend, nonce-search, cleanup and
+valid-challenge policies. No arbitrary-prefix Python helper, physical GPU,
+fresh oracle, complete pytest/e2e equivalence or strict M8 claim follows.
+
+The independent M0 audit and 123 named current results supply the foundation
+completion record. Source/fixture steps are checked; the combined follow-up
+checkpoint must still pass applicable hosted checks before milestone exit.
+M1's finite source/test/documentation gaps remain recorded separately.
+
+New source review found S9-11: a root-picker display label can override another
+listed validator's full address. Restore numeric/address/label precedence and
+add one actual allocation-preparation fixture with collision and control cases.
+It checks typed intent args, exact replay and absence of author RPCs. Independent
+source/API/fixture review and direct formatting pass; this new fixture is not
+included in the `3f1aa67` execution result and awaits hosted validation. The
+whole root-helper row remains pending. [M9](../security/m9.md) records the finding;
+M2-S02 remains open/unaccepted and no new upstream filing was made.
 
 ## Prior integrated client checkpoint, 2026-10-15
 

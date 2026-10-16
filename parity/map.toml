@@ -2373,12 +2373,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/pow_registration.py"
-rs = ["`rtao_intents::pow::PowSolver` (feature `pow`; `pow-gpu`)"]
+rs = ["crates/rtao-intents/src/pow/mod.rs","crates/rtao-intents/src/pow/workers.rs","crates/rtao-intents/src/pow/gpu.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "e406e347c5a39e668c9583ca8bef8cf37c7e8c42"
 synced_tag = "v478"
 milestone = "M4–M7"
-notes = "`:18-253` (§9.6); seal and mining from core `pow`; prefix and seal are pure-oracle functions (§11.5); GPU in M7"
+notes = "Source reconciliation 2026-10-16: complete authenticated 255-line module and all seven functions reviewed against native solver, CPU workers, GPU adapter, pinned core seal/miner and actual callers. Exact valid-chain prefix bytes, little-endian nonce/target, u64 difficulty clamps, pinned public admission, capacity/reuse waits, 12-second refresh, canonical work age and current-target/CPU-seal validation have native homes. Typed PowProof replaces the Python intent return; the real CLI builds PowRegister arguments and retains original mining settings, while SyncClient deliberately returns a public proof. Ordinary solve is CPU-only; solve_with_backend exposes Auto/Cpu/Gpu with explicit IDs and visible discovery/startup failures. Deterministic disjoint 1024-attempt CPU ranges, earlier subscription-driven refresh, renewed admission and joined worker cleanup are explicit native policies. Core seal accepts valid runtime challenge prefixes, without claiming Python helper behavior for arbitrary malformed prefixes. GPU cleanup can wait for an unresponsive driver; no identical nonce schedule, performance, Python/oracle, physical GPU/live-chain or full pytest/e2e equivalence is claimed. All 26 existing native solver/fake-GPU regressions pass at exact 3f1aa67 in hosted run38865058430."
 
 [[file]]
 py = "sdk/python/bittensor/py.typed"
@@ -2886,12 +2886,12 @@ notes = "Source reconciliation 2026-10-15: xtask extract authenticates DEFAULT_S
 
 [[file]]
 py = "sdk/python/tests/harness/samples.py"
-rs = ["rtao_catalog::py::PYTHON_TABLES"]
+rs = ["rtao_catalog::py::PYTHON_TABLES","xtask/src/extract_resolved.rs","crates/rtao-intents/tests/intent_plans.rs","crates/rtao-reads/tests/catalog_samples.rs"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "f04e4a3681a9798f20bebcb44ba508561509e391"
 synced_tag = "v478"
 milestone = "M2"
-notes = "Source audit 2026-10-15: Authenticated sample declarations live in rtao_catalog::py::PYTHON_TABLES and named_tables.json, with exact declaration value/blob/span round-trip coverage in tests/specs.rs. The same per-table producer provenance gate remains required; no fresh Python oracle execution is claimed."
+notes = "Source reconciliation 2026-10-16: complete authenticated 307-line module, four native-derived development addresses and both 83-intent/102-read inventories reviewed. Native extraction retains all six declaration values, exact integers/ordered dictionaries and source spans; the samples-only producer validates the actual keyfiles/sp_core/native constructor binding, complete permitted declarations/defaults, transitive exports and the fixed import callback/dependencies, refusing unsupported mutation, calls and cached partial-module bypass. All five actual-resolver regressions and four all83/all102 consumer fixtures pass at exact 3f1aa67 in hosted run38865058430. Internal dev_wallet is deliberately represented by typed public KeyView/DynKeySource planning fixtures with private-acquisition sentinels; no identical SimpleNamespace or arbitrary-URI dev_wallet callable is claimed. Intent fixture subnet/key slots and placeholder PoW work are explicitly adapted without changing retained source values. Separate unit-test rows, fresh Python/oracle execution and milestone acceptance remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/__init__.py"
