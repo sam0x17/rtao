@@ -1,4 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py and cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 
 async fn overview_targets(
     ctx: &mut AppContext,
@@ -85,7 +86,9 @@ pub(super) async fn overview(
     let mut rows = Vec::new();
     let names = local_names(ctx).await?;
     let mut human_groups = Vec::new();
-    let mut hidden = 0usize;
+    let mut hidden_subnets = 0usize;
+    let mut hidden_positions = 0usize;
+    let mut hidden_value_tao = 0f64;
     let mut total_values = Vec::new();
     let mut accrued_values = Vec::new();
     let mut root_values = Vec::new();
@@ -218,7 +221,8 @@ pub(super) async fn overview(
                 stake.rao = sum(positions.iter().map(|p| p.stake.rao), "subnet stake")?;
                 let value = spot(&stake, valuation)?;
                 if !enabled(matches, "dust") && value.rao < DUST_RAO {
-                    hidden += positions.len();
+                    hidden_subnets += 1;
+                    hidden_value_tao += value.amount();
                     continue;
                 }
                 let availability = availability.get(&netuid).filter(|a| a.locked.rao > 0);
@@ -253,7 +257,8 @@ pub(super) async fn overview(
                 for position in positions {
                     let value = spot(&position.stake, valuation)?;
                     if !enabled(matches, "dust") && value.rao < DUST_RAO {
-                        hidden += 1;
+                        hidden_positions += 1;
+                        hidden_value_tao += value.amount();
                         continue;
                     }
                     let uid = position
@@ -346,13 +351,6 @@ pub(super) async fn overview(
             ctx.output.columns(&table).map_err(failure)?;
         }
     }
-    if hidden > 0 {
-        ctx.output
-            .value(&format!(
-                "{hidden} dust positions hidden — pass --dust to show"
-            ))
-            .map_err(failure)?;
-    }
     ctx.output
         .value(&format!(
             "total {}  (spot, excl. slippage/fees)",
@@ -369,6 +367,27 @@ pub(super) async fn overview(
             .value(&format!(
                 "accrued basket yield  {}{ratio}\nauto-claim is off → rtao root claim",
                 accrued.to_python_string()
+            ))
+            .map_err(failure)?;
+    }
+    if hidden_subnets > 0 || hidden_positions > 0 {
+        let mut parts = Vec::new();
+        if hidden_subnets > 0 {
+            parts.push(format!(
+                "{hidden_subnets} dust subnet{}",
+                if hidden_subnets == 1 { "" } else { "s" }
+            ));
+        }
+        if hidden_positions > 0 {
+            parts.push(format!(
+                "{hidden_positions} dust position{}",
+                if hidden_positions == 1 { "" } else { "s" }
+            ));
+        }
+        ctx.output
+            .message(&format!(
+                "{} hidden (each < τ0.001, ≈ τ{hidden_value_tao:.6} total) — pass --dust to show",
+                parts.join(" and ")
             ))
             .map_err(failure)?;
     }

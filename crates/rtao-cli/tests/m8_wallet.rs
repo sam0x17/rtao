@@ -1,3 +1,5 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Wallet parity exercises actual command dispatch, keyfile policy and fake RPC.
 
 use rtao::{
@@ -938,6 +940,8 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
             {"hotkey":OWNED,"coldkey":COLD,"netuid":1,"stake":2_000_000_000u64,"is_registered":false},
             {"hotkey":HOT,"coldkey":COLD,"netuid":1,"stake":3_000_000_000u64,"is_registered":true},
             {"hotkey":DUST,"coldkey":COLD,"netuid":1,"stake":1u64,"is_registered":false},
+            {"hotkey":HOT,"coldkey":COLD,"netuid":3,"stake":300_000u64,"is_registered":false},
+            {"hotkey":DUST,"coldkey":COLD,"netuid":3,"stake":300_000u64,"is_registered":false},
         ]],
         [BOB,[{"hotkey":HOT,"coldkey":BOB,"netuid":1,"stake":4_000_000_000u64,"is_registered":false}]],
     ]))?;
@@ -946,6 +950,7 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
         "current_alpha_price_all",
         json!([
             {"netuid":1,"price":500_000_000}, {"netuid":2,"price":250_000_000},
+            {"netuid":3,"price":1_000_000_000},
         ]),
     )?;
     state.seed_runtime("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0))?;
@@ -955,6 +960,7 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
         &[
             (1, 5_000_000_001, 2_000_000_000, 3_000_000_001),
             (2, 7_000_000_000, 0, 7_000_000_000),
+            (3, 600_000, 0, 600_000),
         ],
     )?;
     seed_overview_availability(&mut state, BOB, &[(1, 4_000_000_000, 0, 4_000_000_000)])?;
@@ -1027,9 +1033,18 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
         );
         assert!(!text.contains("contact-must-not-replace-local"));
         assert_eq!(first.contains("0.000000001Ω"), dust);
-        assert_eq!(text.contains("1 dust positions hidden"), !dust);
-        assert!(text.contains("total τ6.250000000  (spot, excl. slippage/fees)"));
-        assert!(sink.text(Stream::Stderr)?.is_empty());
+        assert_eq!(text.contains("alice · netuid 3"), dust);
+        assert!(!text.contains("dust subnet"));
+        assert!(!text.contains("dust position"));
+        assert!(text.contains("total τ6.250600000  (spot, excl. slippage/fees)"));
+        assert_eq!(
+            sink.text(Stream::Stderr)?,
+            if !quiet && !dust {
+                "1 dust subnet and 1 dust position hidden (each < τ0.001, ≈ τ0.000600 total) — pass --dust to show\n"
+            } else {
+                ""
+            }
+        );
     }
     assert!(
         !chain
