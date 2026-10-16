@@ -530,6 +530,195 @@ async fn unbounded_multisig_policy_checks_match_the_semantic_plan_before_unlock(
     executor.client().close().await;
 }
 
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_wrapped_registration_completion_uses_multisig_origin
+#[tokio::test]
+async fn wrapped_registration_completion_uses_group_origin_in_both_transports() {
+    for shielded in [false, true] {
+        let (executor, fake, keys) = fixture(1_000_000_000).await;
+        let group = group(&executor, &keys, 1).await;
+        let explicit_hotkey = AccountId([5; 32]);
+        let registered = NetUid(9);
+        assert_ne!(group.address, keys.signer.account());
+        assert_ne!(explicit_hotkey, group.address);
+        assert_ne!(explicit_hotkey, keys.signer.account());
+        fake.mutate_state(|state| {
+            state
+                .seed(
+                    &rtao_runtime::storage::subtensor_module::SUBNET_OWNER,
+                    (registered,),
+                    rtao_primitives::DefaultAccount::from(group.address),
+                )
+                .unwrap();
+            state
+                .seed(
+                    &rtao_runtime::storage::subtensor_module::SUBNET_OWNER_HOTKEY,
+                    (registered,),
+                    rtao_primitives::DefaultAccount::from(explicit_hotkey),
+                )
+                .unwrap();
+            state
+                .seed(
+                    &rtao_runtime::storage::subtensor_module::SUBNET_LOCKED,
+                    (registered,),
+                    rtao_primitives::TaoBalance(777),
+                )
+                .unwrap();
+            state
+                .seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])
+                .unwrap();
+        });
+        let adapter = MultisigThreshold1Adapter::new(
+            rtao_intents::RegisterSubnet {
+                hotkey_ss58: Some(explicit_hotkey.into()),
+            },
+            executor.client(),
+            group,
+            keys.signer.account(),
+            CryptoType::Ed25519,
+            None,
+        )
+        .await
+        .unwrap();
+        let plan = executor
+            .plan(&adapter, &keys, &PlanOptions::default())
+            .await
+            .unwrap();
+        assert!(plan.ok(), "{:?}", plan.violations);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        let success = |index| json!({"phase":"ApplyExtrinsic","extrinsic_idx":index,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]});
+        let later_blocks = Arc::new(AtomicUsize::new(0));
+        if shielded {
+            // Match the deterministic Ed25519 inner extrinsic to its real
+            // paired nonce and P8 era, as the shield receipt fixture does.
+            let prepared = executor
+                .client()
+                .prepare_call(
+                    plan.call().clone(),
+                    &keys.signer,
+                    &rtao_client::SubmitOptions {
+                        nonce: rtao_client::NoncePolicy::Explicit(1),
+                        mortality: rtao_client::Mortality::Mortal(rtao_client::Period::new(8)),
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+            let signature = keys
+                .signer
+                .sign(&prepared.signing_request(rtao_signer::SignPurpose::ShieldInner))
+                .await
+                .unwrap();
+            let (inner_bytes, _) = executor
+                .client()
+                .attach_signature(&prepared, signature)
+                .await
+                .unwrap();
+            let advanced = Arc::clone(&later_blocks);
+            fake.mutate_state(|state| {
+                state.set_handler("chain_getBlock", move |state, request| {
+                    let mut reply = state.dispatch(request);
+                    if let Some(Ok(raw)) = &mut reply.outcome
+                        && raw["block"]["header"]["number"] == "0x65"
+                    {
+                        raw["block"]["extrinsics"]
+                            .as_array_mut()
+                            .unwrap()
+                            .push(json!(format!("0x{}", hex::encode(&inner_bytes))));
+                        state
+                            .seed_events(
+                                request.params[0].as_str().unwrap(),
+                                json!([success(0), success(1)]),
+                            )
+                            .unwrap();
+                        if state.block == 101 {
+                            // The successful inner receipt has no registration
+                            // event. Only deferred completion can find block102.
+                            state.advance(1);
+                            let hash = state.block_hash(102).unwrap();
+                            state
+                                .seed_events(
+                                    hash,
+                                    json!([{
+                                        "phase":"Finalization","extrinsic_idx":null,
+                                        "module_id":"SubtensorModule","event_id":"NetworkAdded",
+                                        "attributes":[registered.0,0],"topics":[]
+                                    }]),
+                                )
+                                .unwrap();
+                            advanced.fetch_add(1, Ordering::SeqCst);
+                        }
+                    }
+                    reply
+                });
+            });
+        } else {
+            fake.mutate_state(|state| {
+                state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                    events: json!([
+                        {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"SubtensorModule","event_id":"NetworkAdded","attributes":[registered.0,0],"topics":[]},
+                        success(0)
+                    ]),
+                });
+            });
+        }
+        let options = ExecuteOptions {
+            wait_for_finalization: false,
+            registration_timeout: Some(std::time::Duration::from_secs(3)),
+            deadline: Some(std::time::Duration::from_secs(10)),
+            ..Default::default()
+        };
+        let result = if shielded {
+            executor
+                .submit_shielded(
+                    &adapter,
+                    &keys,
+                    &rtao_tx::ShieldOptions {
+                        execute: options,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap()
+        } else {
+            executor.execute(&adapter, &keys, &options).await.unwrap()
+        };
+        assert!(result.success, "{}", result.message);
+        assert_eq!(result.message, "Subnet 9 registered.");
+        assert_eq!(result.data["netuid"], registered.0);
+        assert_eq!(result.data["registration_mode"], "immediate");
+        assert_eq!(result.data["registration_price_rao"], 777);
+        assert_eq!(
+            result.data["registered_at_block"],
+            if shielded { 102 } else { 101 }
+        );
+        assert_eq!(
+            result.extrinsic_id.as_deref(),
+            Some(if shielded { "101-0001" } else { "101-0000" })
+        );
+        assert_eq!(result.inclusion, rtao_client::Inclusion::InBlock);
+        assert_eq!(
+            result
+                .events
+                .iter()
+                .any(|event| event.matches("SubtensorModule", "NetworkAdded")),
+            !shielded
+        );
+        assert_eq!(later_blocks.load(Ordering::SeqCst), usize::from(shielded));
+        if shielded {
+            assert_eq!(result.data["shielded"], true);
+            assert!(
+                fake.requests()
+                    .iter()
+                    .any(|request| request.method == "chain_subscribeNewHeads")
+            );
+        }
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(*keys.roles.lock().unwrap(), vec![SignerRole::Coldkey]);
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        executor.client().close().await;
+    }
+}
+
 #[tokio::test]
 async fn preflight_retains_facts_amounts_and_semantic_policy_blocks() {
     let (executor, fake, keys) = fixture(1_000_000_000).await;
