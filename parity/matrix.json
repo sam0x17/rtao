@@ -1,10 +1,10 @@
 {
   "e2e_evidence_classes": {
-    "client-contract": 9,
+    "client-contract": 10,
     "hosted-scenario-source": 6,
     "intent-plan": 72,
     "not-required": 2,
-    "pending": 20,
+    "pending": 19,
     "read-fixture": 6
   },
   "families": {
@@ -3813,13 +3813,19 @@
       {
         "evidence": {
           "runtime": "unverified",
-          "runtime_limits": [],
-          "scope": "pending"
+          "runtime_limits": [
+            "controlled-success-receipts",
+            "controlled-missing-evm-state",
+            "subnet-registration-ownership-unverified",
+            "runtime-hotkey-association-unverified",
+            "runtime-evm-association-state-unverified"
+          ],
+          "scope": "client-contract"
         },
         "name": "test_key_association",
         "oracle": "unverified",
-        "rtao": "pending",
-        "test": null
+        "rtao": "mapped",
+        "test": "rtao_intents::client_transfer_lifecycles::client_hotkey_association_submits_exact_call_then_reads_missing_uid_zero_evm_key"
       },
       {
         "evidence": {
