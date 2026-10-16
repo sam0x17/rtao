@@ -38,3 +38,9 @@ PLAN.md Q30 supersedes earlier requirements for costly local work.
   to trigger or retry CI. Investigate or report stuck CI without that label.
 - Never request or re-request review from
   `anza-xyz/community-pr-subscribers`, including toggling the review request.
+
+# Progress communication
+
+- Use ordinary commentary for progress updates. Never use user-input tools
+  for filler, status notices or messages saying no response is needed.
+- Ask a question only when its answer would materially affect the work.
