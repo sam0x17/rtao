@@ -1,5 +1,28 @@
 # M1 client read path
 
+## Current Q30 development exit
+
+The applicable M1 development exit is satisfied at
+`d01830cdf6a7e1301ca4a2629b35663617f97dab`. M1-01 through M1-21 are complete;
+M1-22 and M1-24 remain optional targeted hosted evidence, and M1-23 is deferred.
+
+[Hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
+passed all six blocking jobs: check, features, MSRV, no-host, supply and semver.
+The main job passed 3,051 tests with zero failures and four skipped tests, plus
+nine doctests across 19 crate suites, strict Clippy, documentation and the
+blocking source, pin and dependency checks. The bounded
+`m0-m1-d01830c-hosted-results.json` record retains 45 exact M1 fixture passes.
+The separate one-test RPC two-provider result and authenticated graph are
+recorded in [m1-transport-policy.md](m1-transport-policy.md).
+
+This exit covers client development under Q30. Source-row dispositions remain
+separate, and the compatibility validation range remains empty. Python/oracle,
+HTTPS two-provider, live-network, platform/device and release evidence retain
+their separate statuses. Substantial validation stays in free `ubuntu-latest`
+CI; the retired local execution root remains absent.
+
+## Client behavior and historical checks
+
 `rtao-client` now initializes a real `Session` or a supplied `RpcClient`, checks the connected genesis and ss58 format, requires a transaction version, resolves V15 metadata at the finalized head, and computes the runtime extension and surface checks. A public-network genesis mismatch keeps reads available and refuses signing with both hashes in the error. The compiled compatibility guard checks the spec range and exact raw metadata hash, algorithm, network and genesis; the current empty validation range warns without inventing evidence.
 
 The client owns the head tracker, nonce cache and runtime cache. Background workers hold the inner state without the user-facing lifetime guard. Dropping the last client clone cancels head/runtime subscriptions and closes the socket; a real loopback node test observes closure within one second. Startup uses a 30-second deadline. Runtime updates are checked through the runtime subscription, finalized heads and the 12-second poll fallback. Block-number lookups cache only finalized history, with a 12-second finality probe and a bounded 512-entry map.

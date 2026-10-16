@@ -1,11 +1,12 @@
 # M0 foundation verification
 
-M0 source and fixture completion is verified at `3f1aa67` by ordinary hosted
-run 38865058430: all six jobs pass, with 3,040 tests passed, zero failed and
-four skipped. Independent source review and 123 exact M0 PASS records cover
-the requirements below. The combined follow-up checkpoint still needs its
-applicable hosted checks before milestone exit. Q30 keeps substantial checks
-on free Ubuntu CI; releases, devices and local infrastructure remain deferred.
+M0 is accepted for client development at `d01830c` by ordinary hosted
+run 38873429391: all six jobs pass, with 3,051 tests passed, zero failed and
+four skipped, plus all 19 workspace doctest suites. Independent source review
+and 123 exact M0 PASS records cover the requirements below. The 60-input audit
+retains 55 unchanged blobs and five reviewed workflow/plan/document deltas.
+Q30 keeps substantial checks on free Ubuntu CI; releases, devices and local
+infrastructure remain deferred.
 
 | Requirement | Source and current acceptance evidence |
 |---|---|
@@ -37,9 +38,9 @@ on free Ubuntu CI; releases, devices and local infrastructure remain deferred.
 | M0-26 doctor | Real-binary success and exact missing-patch diagnostics fixtures are committed |
 | M0-27 CI | Six bounded free Ubuntu jobs cover check, no-host, MSRV, features, supply and semver |
 | M0-28 docs | README, CONTRIBUTING and execution records describe the current source and Q30 limits |
-| M0-29 completion record | Exact 3f1aa67 evidence and step completion are recorded; final combined-checkpoint acceptance remains separate |
+| M0-29 completion record | Exact d01830c evidence, active step completion and the Q30 development exit are recorded |
 
-The detailed source audit and remaining work are in
+The detailed source audit and accepted checkpoint are in
 [m0-acceptance-audit.md](m0-acceptance-audit.md). Earlier focused local test
 results are historical evidence only. The former signed arbitrary-size
 balance model was superseded by Q25; the BLS decision was approved in Q26.
@@ -47,5 +48,5 @@ Neither is a pending user decision.
 
 The current client checkpoint and exact hosted evidence are maintained in
 [state.md](state.md) and the acceptance audit. Native Mac, oracle, interoperability
-and release coverage remain unverified; current all-job success does not accept
-the later client work or bypass the final combined-checkpoint requirement.
+and release coverage remain unverified. M1 has its own read-path acceptance;
+later milestones and full source/e2e parity remain separate work.

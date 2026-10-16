@@ -17,18 +17,25 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-16
 
 The latest completed ordinary run is
-[38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
-at `3f1aa6731abfccb15a12c2a52da23ff08850f278`. All six hosted jobs passed.
-The main gate passed all 3,040 executed tests, zero failed, four skipped,
-workspace doctests, strict Clippy, documentation and every blocking check.
-Its 715,611-byte log has SHA256
-`55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
-Bounded proofs are `check-38865058430.json`, `3f1aa67-named-results.json` and
-`m0-3f1aa67-hosted-results.json`. The named proof binds all 26 new CLI,
-extractor and pruning fixtures, 26 existing PoW/fake-GPU fixtures and four
-actual sample consumers to exact PASS records and executed source blobs.
-The separate M0 proof binds all six jobs, 60 audited inputs and 123 exact
-foundation fixture results. No raw log or archive is retained.
+[38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
+at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.
+The main gate passed all 3,051 executed tests, zero failed, four skipped,
+all 19 workspace doctest suites (nine doctests), strict Clippy, documentation
+and every blocking check. Its 717,929-byte log has SHA256
+`9c5a4c537e36e27fdac9e215360db2d591d546313116ad195dc0943cadea34bc`.
+The bounded `m0-m1-d01830c-hosted-results.json` proof authenticates 175 unique
+named PASS records and 129 final source inputs. Overlapping groups retain
+123 M0, 45 M1 and 11 new-fixture memberships. Its SHA256 is
+`bef2ded037673d97f8016981ab402868776824558289fd895f96aeb53c3a33a0`.
+Separate TLS evidence verifies the real RPC exchange with both providers
+compiled for the shipped Rustls version and no process default installed.
+No raw log or archive is retained.
+
+M0 and M1 satisfy their Q30 client-development exits at this checkpoint.
+M1-01 through M1-21 are complete; M1-22/24 remain optional and M1-23 deferred.
+This establishes no fresh Python/oracle, live-node, device, native-platform or
+release result. S9-11 and the five root-helper follow-up fixtures now pass;
+full root-command and pytest reconciliation remain separate.
 
 The following preceding security checkpoint retains its own exact source and
 review evidence. Later client work is recorded separately below.
@@ -58,8 +65,8 @@ the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 
 The reviewed source map and adopted generated matrix now agree at 303/357
 reconciled and 54 pending after the authenticated refresh below.
-There remain 20 pending e2e mappings and 68 divergences. Passing CI does not
-reconcile the remaining source rows or accept a milestone. Strict M8 remains
+There remain 20 pending e2e mappings and 68 divergences. Passing CI alone does
+not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
 with source review and substantial validation on free hosted CI.
 

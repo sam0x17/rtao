@@ -1673,11 +1673,11 @@ workflows and bot setup are deferred.
 **Parallel work.** M1-01 and M1-02 are independent of each other; M1-10 and M1-11 need only M1-01; M1-15 needs nothing
 from M1; M1-20…M1-24 are independent of each other.
 
-- [ ] **M1-01** Extraction: the M0 extractor extended to `PY/settings.py` and `PY/_transport/rpc.py`, with the seven
+- [x] **M1-01** Extraction: the M0 extractor extended to `PY/settings.py` and `PY/_transport/rpc.py`, with the seven
       resolved forms of [§8.3](#83-how-parity-is-enforced) and the test `extract_check_covers_named_tables`; the
       generated settings tables of `rtao_catalog::py` and the `py_rpc.rs` constants of `rtao-rpc` come from them.
-- [ ] **M1-02** `rtao-core-ext`: `ir::MetadataIr`, `ops::{metadata, storage, runtime_api}`, `value_ext`.
-- [ ] **M1-03** `rtao-runtime` and `xtask regen` v1, whose input is finney's V15 and V16 metadata at the pinned spec
+- [x] **M1-02** `rtao-core-ext`: `ir::MetadataIr`, `ops::{metadata, storage, runtime_api}`, `value_ext`.
+- [x] **M1-03** `rtao-runtime` and `xtask regen` v1, whose input is finney's V15 and V16 metadata at the pinned spec
       (`xtask pin` fetches it into `vendor/metadata/finney/` with its `index.toml` row and the `[networks.finney]`
       metadata pin, [§10.3](#103-a-pin-bump-step-by-step) step 3): `codegen/*.toml`; generated storage, calls, runtime
       APIs, constants, events, errors, extensions, selective index, shapes; headers without `spec_version`; semantic
@@ -1685,59 +1685,59 @@ from M1; M1-20…M1-24 are independent of each other.
       metadata to every `Default` `AccountId32` entry whose default is 32 zero bytes, pinned by the offline D-001 test
       `zero_account_default_decodes_to_zero_bytes` over the vendored metadata). `core-oracle` v0 and the live D-001
       sanity check (scenario 15) move to M2, where `Localnet` and their CI jobs exist [I].
-- [ ] **M1-04** `ShapeHash` (exact and projection, with the outer `RuntimeCall`/`RuntimeEvent`/`RuntimeError` enums
+- [x] **M1-04** `ShapeHash` (exact and projection, with the outer `RuntimeCall`/`RuntimeEvent`/`RuntimeError` enums
       opaque), `verify_surface`, `SurfaceReport`; `RuntimeHandle`, `RuntimeEntry`, `MetadataLevel`, `CallBytes` and
       `ComposeError` in `rtao-runtime`; cross-check against `PY/_generated/*.py`; `regen --check` joins the `check`
       job.
-- [ ] **M1-05** `rtao-testkit`: `FakeState`, `FakeNode` with `Fault`s (also over `wss://` with a self-signed
+- [x] **M1-05** `rtao-testkit`: `FakeState`, `FakeNode` with `Fault`s (also over `wss://` with a self-signed
       certificate), `FakeChain`.
-- [ ] **M1-06** `rtao-rpc`: `Session` supervisor over tokio-tungstenite; `SessionConfig` defaults from `rpc.py`;
+- [x] **M1-06** `rtao-rpc`: `Session` supervisor over tokio-tungstenite; `SessionConfig` defaults from `rpc.py`;
       `ReadMethod` allowlist with a per-frame `sent` flag; the reconnect table of
       [architecture §3.2.2](docs/plan/architecture.md#322-reconnect-semantics-port-of-rpcpy-each-row-a-fakenode-test-315).
-- [ ] **M1-07** `rtao-rpc`: policy classifier ported from `PY/_transport/rpc.py` over the generated `py_rpc.rs`
+- [x] **M1-07** `rtao-rpc`: policy classifier ported from `PY/_transport/rpc.py` over the generated `py_rpc.rs`
       constants; `EndpointPool` and archive pool; token bucket; metrics; `impl RpcClientT`.
-- [ ] **M1-08** `rtao-rpc` TLS: the ring-only `rustls::ClientConfig` with native roots plus `SessionConfig::extra_roots`
+- [x] **M1-08** `rtao-rpc` TLS: the ring-only `rustls::ClientConfig` with native roots plus `SessionConfig::extra_roots`
       and ALPN `http/1.1`, passed as `Connector::Rustls`; `max_message_bytes` sets both the frame and the message limit
       (a 20 MiB single-frame response is accepted); the caller-gone rule: a queued frame whose caller has gone is never
       transmitted.
-- [ ] **M1-09** `rtao-testkit`: the port of `PYT/unit/test_rpc.py`; the transport rows of the §3.15 checklist; a test
+- [x] **M1-09** `rtao-testkit`: the port of `PYT/unit/test_rpc.py`; the transport rows of the §3.15 checklist; a test
       pinning the tokio-tungstenite 0.30 handshake error API (Q16).
-- [ ] **M1-10** `rtao-client`: network presets (`finney`, `test`, `devnet`, `archive`, `local`) from `rtao_catalog::py`,
+- [x] **M1-10** `rtao-client`: network presets (`finney`, `test`, `devnet`, `archive`, `local`) from `rtao_catalog::py`,
       extracted from `PY/settings.py` (`rtao-rpc` has no rtao dependencies, so presets live here).
-- [ ] **M1-11** `rtao_client::config` (port of `PY/config.py`): the seven btcli files' paths and environment overrides,
+- [x] **M1-11** `rtao_client::config` (port of `PY/config.py`): the seven btcli files' paths and environment overrides,
       `SETTABLE` (extracted with its type tags), `btcli.json` load and save, and the token-symbol and subnet-name
       caches; writes are atomic and off the reactor, and a corrupt file is renamed `.corrupt.<ts>`. `Client::connect`
       (token symbols), `NeuronConfig` (precedence, M2) and `rtao-cli` (M4) use it; the address, proxy and multisig
       books live in `rtao-cli`'s `books` module (readers in M4, writers with their commands in M5 and M8).
-- [ ] **M1-12** `rtao-client`: `HeadTracker` with gap backfill.
-- [ ] **M1-13** `rtao-client`: `Client::connect` (genesis check, ss58 42, finalized head, runtime version, extension
+- [x] **M1-12** `rtao-client`: `HeadTracker` with gap backfill.
+- [x] **M1-13** `rtao-client`: `Client::connect` (genesis check, ss58 42, finalized head, runtime version, extension
       guard, `verify_surface`, head tracker, upgrade watcher, token symbols, and the run-time compatibility guard over a
       compiled-in `compat.json` from `xtask compat` v0, which warns outside the validated spec range,
       [§10.5](#105-compatibility-matrix-and-run-time-guard)) and `Client::from_rpc` (for `FakeChain` and custom
       transports); `ClientError` with `code()` and `policy()`; dropping the last `Client` clone cancels the background
       tasks and closes the socket (`DropGuard`, a `FakeNode` test); `RuntimeCache` (V15 fetch, needle-only V14,
       `MetadataLevel`, LRU, parent-runtime resolution, Python-compatible disk cache).
-- [ ] **M1-14** `rtao-client`: `View`, `Snapshot`, `DynView`, `ViewExt` (`storage`, `fetch` coalescing at ≤256 keys per
+- [x] **M1-14** `rtao-client`: `View`, `Snapshot`, `DynView`, `ViewExt` (`storage`, `fetch` coalescing at ≤256 keys per
       chunk, `storage_iter`, `call`, `constant`, `events`, dynamic reads).
-- [ ] **M1-15** `rtao_primitives::{drand, ratio::ratio_fraction, hyperparams::proportion_to_raw}`.
-- [ ] **M1-16** Metagraph: models; `Metagraph` with `MetagraphView` (exact shape gate), the `DecodeAsType` fallback and
+- [x] **M1-15** `rtao_primitives::{drand, ratio::ratio_fraction, hyperparams::proportion_to_raw}`.
+- [x] **M1-16** Metagraph: models; `Metagraph` with `MetagraphView` (exact shape gate), the `DecodeAsType` fallback and
       `from_dynamic` (port of `PY/metagraph.py:297-403`); the three-path differential test; a fuzz target.
-- [ ] **M1-17** Reads `metagraph` (Python's raw `get_metagraph` dict, reachable through `dispatch` from M2) and
+- [x] **M1-17** Reads `metagraph` (Python's raw `get_metagraph` dict, reachable through `dispatch` from M2) and
       `token_symbols`. `xtask regen` v1 emits the `Subnets` namespace accessor on `Client` and `Snapshot`, named from
       the catalog `category`, with no inherent `metagraph` method: the read's `python` field is empty, and an inherent
       method would shadow the curated one.
-- [ ] **M1-18** `rtao_reads::commitments`: `NeuronCommitment`, `CommitmentMap`, the status machine and decoders, and
+- [x] **M1-18** `rtao_reads::commitments`: `NeuronCommitment`, `CommitmentMap`, the status machine and decoders, and
       `fetch_commitments`/`fetch_commitment_map` (`PY/metagraph.py:37-125, 258-291, 406-560`).
       `NeuronCommitment::reveals_at` uses `rtao_primitives::drand::reveal_time` over the core's `GENESIS_TIME` and
       `DRAND_PERIOD`, not `rtao_tx::timelock`, which sits above `rtao-reads`. The curated `metagraph()` is
       `rtao_metagraph::SubnetsMetagraphExt` (`metagraph`, `metagraph_with`), implemented for `rtao_reads::Subnets` and
       exported from `rtao::prelude`, with commitments included by default as in Python.
-- [ ] **M1-19** The commitments half of the port of `PYT/unit/test_v446_accounting_and_commitments.py` (the locks half
+- [x] **M1-19** The commitments half of the port of `PYT/unit/test_v446_accounting_and_commitments.py` (the locks half
       lands with its reads in M6-01).
-- [ ] **M1-20** Maintain benchmark and fuzz target source for implemented parsers/decoders. Existing regressions
+- [x] **M1-20** Maintain benchmark and fuzz target source for implemented parsers/decoders. Existing regressions
       run as ordinary hosted tests. Benchmark measurement and fuzz campaigns are optional bounded hosted checks
       for a concrete client change; do not add scheduled campaigns or local targets/toolchains.
-- [ ] **M1-21** Maintain `xtask drift diff` and its committed fixture tests. Metadata update tooling preserves
+- [x] **M1-21** Maintain `xtask drift diff` and its committed fixture tests. Metadata update tooling preserves
       source and hash identities. Automatic monitoring, bot tokens and PR generation are deferred; a targeted
       read-only hosted probe may supply evidence when needed.
 - **M1-22 optional hosted.** Select a relevant feature check, core-source canary or read-only endpoint probe
@@ -2971,3 +2971,4 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-16 | M9 samples/PoW source dispositions and root target-selection repair | Exact 3f1aa67 proof confirms all 26 new fixtures, 26 existing native PoW/fake-GPU cases and four all83/all102 consumers pass. Whole-source independent review reconciles samples.py and pow_registration.py, with precise native homes, canonical headers and explicit typed fixture/proof/backend/cleanup/valid-challenge adaptations. Source map reaches 303/357 reconciled, 54 pending; adopted matrix stays 301/56 until hosted refresh. Find S9-11 in actual root picker: an earlier display label equal to a later validator's full SS58 could override that exact address. Restore address-before-label precedence after numeric choices; add one actual allocation/typed-intent/replay fake-chain regression with collision and controls. Independent review, formatting and whitespace pass; the new regression awaits hosted execution. Whole root-helper and pytest rows stay pending, strict M8 off, M2-S02 open/unaccepted. No new filings, local builds/tests, service, Studio work or new temporary root. |
 | 2026-10-16 | M1 RPC fixture provenance and maintained TLS validation | Independent M1 audit identifies two copied pytest parameter tables, seven missing exact origins and no maintained current two-provider RPC fixture. Add a guarded Rust AST producer and three actual-resolver mutation/provenance fixtures; existing policy tests consume the generated corpus. Add a nonshipped independent TLS workspace and bounded lock-preparation mode; existing features job will exercise one real RPC/FakeNode exchange with both ring/AWS-LC compiled for shipped Rustls 0.23.46 and no process default. Shipped dependency inputs, locks and AWS-LC bans stay unchanged. Source review/formatting pass; hosted corpus generation, independent lock adoption and combined execution remain pending. Five M1 execution documents distinguish historical evidence from Q30 hosted/deferred scope and retire stale cache requirements. Source map stays 303/357, 54 pending; matrix stays 301/56 until refresh. Whole pytest/root-helper reconciliation, HTTPS coverage and M2-S02 remain separate; no milestone acceptance, local build/test, service, Studio work, new root or filing. |
 | 2026-10-16 | M1 authenticated generation and combined client follow-up | Codegen/report 38871417189 and isolated TLS-lock 38871434589 pass at exact d5132a0. Authenticate 19 generated members, four reports and two TLS members; independently refetch and adopt exactly six outputs plus the isolated lock. Old corpus/catalog bytes and 17 other generated members remain identical; matrix now agrees at 303/357 reconciled, 54 pending. All 23 shipped dependency inputs/counts/host flags, 20 e2e gaps and 68 divergences stay unchanged. Integrate reviewed root-helper F1-F5 repair with five actual command fixtures, refused-connect socket observer, batch cardinality assertion and metagraph direct-hex adapter repair using the existing shared parser plus one public fixture. Whole RPC audit traces all40 functions/91 assertions; whole metagraph/fake-node audits retain typed API and execution limits. Complete M1 resource audit of23 documents corrects17 further stale local-cache/reproduction/platform requirements. Formatting/whitespace pass; expected3051 workspace tests plus one isolated TLS test await combined hosted execution. Source rows remain pending until final disposition/results; M2-S02 open/unaccepted, strict M8 off, no milestone accepted. No local build/test, service, Studio work, new root/archive/extraction tree or filing. |
+| 2026-10-16 | M0 exit and M1 read-path exit | All six jobs pass at d01830c in hosted run 38873429391: 3,051 tests pass, zero fail, four skipped, plus nine doctests across 19 suites, strict Clippy, docs and source/dependency guards. Authenticated bounded proof binds 175 unique named PASS records and 129 final source inputs; overlapping groups retain 123 M0, 45 M1 and 11 new-fixture results. The foundation audit retains 55 unchanged inputs and five reviewed deltas. Separate exact TLS evidence verifies one real RPC test with both compiled providers and no process default. Record the M0/M1 Q30 client-development exits and check M1-01 through M1-21; M1-22/24 remain optional and M1-23 deferred. S9-11 and root-helper/metagraph repairs pass. Source/matrix remain 303/357 reconciled, 54 pending, with 20 e2e gaps and 68 divergences. Strict M8 stays off and M2-S02 open/unaccepted. No fresh oracle, live-network, platform, device or release claim; no local build/test, Studio work, service, new temporary root or filing. |
