@@ -1963,6 +1963,40 @@
     ],
     "divergences": [
       {
+        "id": "D-069",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_tx::registration::tests::receipt_event_with_wrong_owner_or_hotkey_does_not_claim_registration",
+          "rtao_tx::registration::tests::backfill_rejects_unrelated_and_later_same_identity_registration",
+          "rtao_tx::registration::tests::an_orphaned_inclusion_cannot_be_followed_as_a_new_request",
+          "rtao_tx::registration::tests::live_best_reorg_discards_queue_state_from_abandoned_blocks"
+        ]
+      },
+      {
+        "id": "D-070",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_tx::owner_execution::owner_rate_failure_rebuilds_the_real_alpha_call_once_from_fresh_state",
+          "rtao_tx::owner_execution::owner_rate_failure_gets_only_one_retry_despite_the_pool_retry_setting",
+          "rtao_tx::owner_execution::owner_replan_rechecks_the_window_before_a_second_submission",
+          "rtao_tx::owner_execution::owner_retry_keeps_the_original_total_deadline",
+          "rtao_tx::owner_execution::shield_owner_rate_failure_also_replans_once_with_a_fresh_alpha_pair",
+          "rtao_tx::owner_execution::clear_owner_rate_replan_opt_out_returns_first_included_failure",
+          "rtao_tx::owner_execution::shield_owner_rate_replan_opt_out_signs_and_submits_only_one_pair",
+          "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval"
+        ]
+      },
+      {
+        "id": "D-071",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_tx::executor::transient_pool_retry_waits_for_one_head_and_reuses_reviewed_call"
+        ]
+      },
+      {
         "id": "D-068",
         "oracle": "unverified",
         "rtao": "active",
@@ -2174,7 +2208,10 @@
         "tests": [
           "rtao_client::submission::receipt_rpc_protocol_and_event_decode_failures_keep_hash_and_cause_for_all_entries",
           "rtao_client::shield::shield_receipt_watch_and_inner_receipt_errors_retain_the_attempted_carrier_and_cause",
-          "rtao_tx::executor::receipt_rpc_failure_keeps_recovery_identity_without_retry_for_every_executor_entry"
+          "rtao_tx::executor::receipt_rpc_failure_keeps_recovery_identity_without_retry_for_every_executor_entry",
+          "rtao_client::shield::ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan",
+          "rtao_client::shield::finalized_absence_rescan_finds_an_inner_missed_on_the_orphan_branch",
+          "rtao_client::shield::stalled_chain_keeps_carrier_unresolved_and_inner_can_still_execute_later"
         ]
       },
       {
@@ -8341,11 +8378,11 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/weights.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `weights` group"
+          "crates/rtao-cli/src/commands/weights.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "538d640818772ddac7362320de21b5434a65fdad"
       },
       {
         "kind": "ported",
@@ -8363,11 +8400,12 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/globals.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` global flags"
+          "crates/rtao-cli/src/globals.rs",
+          "crates/rtao-cli/tests/globals_contract.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7d092d75f82f31449c0a9b425d01968dfbad7f73"
       },
       {
         "kind": "n/a",
@@ -10543,11 +10581,16 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_evm.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "crates/rtao-evm/src/addresses.rs",
+          "crates/rtao-evm/src/money.rs",
+          "crates/rtao-evm/src/transactions.rs",
+          "crates/rtao-evm/src/precompiles.rs",
+          "crates/rtao-evm/src/keys/tests.rs",
+          "xtask/src/extract_precompiles.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "503a7ef44e63fcf91211fc123af67262d230af8d"
       },
       {
         "kind": "oracle-only",
