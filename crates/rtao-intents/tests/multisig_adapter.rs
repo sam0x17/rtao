@@ -1802,10 +1802,12 @@ async fn pinned_proxy_layers_require_the_original_effective_semantic_origin() {
 async fn production_root_and_proxy_shield_sign_the_wrapped_semantic_call_before_the_carrier() {
     use rtao_signer::{MultiSignature, SignPurpose, SigningRequest};
 
+    type SigningRecords = Vec<(SignPurpose, Vec<u8>)>;
+
     #[derive(Clone)]
     struct Capture {
         key: KeypairSigner,
-        requests: Arc<Mutex<Vec<(SignPurpose, Vec<u8>)>>>,
+        requests: Arc<Mutex<SigningRecords>>,
     }
     impl Signer for Capture {
         fn account(&self) -> AccountId {

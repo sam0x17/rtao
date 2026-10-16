@@ -598,7 +598,7 @@ async fn all_83_sample_plans_enforce_subnet_allowlists_without_private_access() 
         let mapped = original_scope
             .iter()
             .map(|netuid| scenario_netuid(&json!(netuid.0)))
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<std::result::Result<Vec<_>, _>>()?;
         ensure!(
             scope
                 .iter()
