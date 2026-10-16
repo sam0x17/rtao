@@ -2,6 +2,7 @@
 //! Typed Bittensor reads and namespaces.
 
 #![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
 
 /// Timelock-aware commitment decoding and pinned subnet scans.
 pub mod commitments;

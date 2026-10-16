@@ -17,6 +17,7 @@ fn money_schema(allow_all: bool) -> Schema {
     json_schema!({ "anyOf": variants })
 }
 
+#[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 impl JsonSchema for Money {
     fn schema_name() -> Cow<'static, str> {
         "Money".into()
@@ -26,6 +27,7 @@ impl JsonSchema for Money {
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 impl JsonSchema for Amount {
     fn schema_name() -> Cow<'static, str> {
         "Amount".into()
@@ -37,6 +39,7 @@ impl JsonSchema for Amount {
 
 macro_rules! string_schema {
     ($($name:ty => $label:literal),+ $(,)?) => {$ (
+        #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
         impl JsonSchema for $name {
             fn schema_name() -> Cow<'static, str> { $label.into() }
             fn json_schema(generator: &mut SchemaGenerator) -> Schema { String::json_schema(generator) }

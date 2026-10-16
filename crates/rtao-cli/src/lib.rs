@@ -1,5 +1,6 @@
 //! Bittensor CLI machinery, shared by generated and hand-written commands.
 #![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
 
 /// Extensible command tree and hidden compatibility aliases.
 pub mod application;

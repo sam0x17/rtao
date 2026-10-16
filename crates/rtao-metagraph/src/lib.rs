@@ -1,10 +1,13 @@
 //! Bittensor metagraph projections and synchronization.
 
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 mod fetch;
 mod graph;
 #[cfg(feature = "persist")]
+#[cfg_attr(docsrs, doc(cfg(feature = "persist")))]
 pub mod persist;
 mod sync;
 mod view;

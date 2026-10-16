@@ -3,6 +3,8 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/contract.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Bittensor signing contracts and key sources.
 
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 use std::{fmt, future::Future, pin::Pin, sync::Arc};
@@ -12,20 +14,26 @@ mod browser;
 
 /// Ledger signing through the core device API and injected backend seam.
 #[cfg(feature = "ledger")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ledger")))]
 pub mod ledger;
 mod roles;
 #[cfg(feature = "ledger")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ledger")))]
 pub use ledger::{LedgerError, LedgerOptions, LedgerSigner};
 #[cfg(feature = "extension")]
+#[cfg_attr(docsrs, doc(cfg(feature = "extension")))]
 pub mod extension;
 #[cfg(feature = "extension")]
+#[cfg_attr(docsrs, doc(cfg(feature = "extension")))]
 pub use extension::ExtensionSigner;
 #[cfg(feature = "vault")]
+#[cfg_attr(docsrs, doc(cfg(feature = "vault")))]
 pub mod vault;
 pub use roles::{
     Coldkey, DynKeySource, Hotkey, IntentKeyView, KeySource, KeyView, Role, SignerRole,
 };
 #[cfg(feature = "vault")]
+#[cfg_attr(docsrs, doc(cfg(feature = "vault")))]
 pub use vault::VaultSigner;
 
 use rtao_core::keyfile_json::{SecretInput, redacted_derivation_error};

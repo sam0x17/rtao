@@ -70,6 +70,7 @@ impl IntoVisitor for AccountId {
 }
 
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl serde::Serialize for AccountId {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_str(self)
@@ -77,6 +78,7 @@ impl serde::Serialize for AccountId {
 }
 
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl<'de> serde::Deserialize<'de> for AccountId {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = <String as serde::Deserialize>::deserialize(deserializer)?;
@@ -85,6 +87,7 @@ impl<'de> serde::Deserialize<'de> for AccountId {
 }
 
 #[cfg(feature = "schemars")]
+#[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 impl schemars::JsonSchema for AccountId {
     fn schema_name() -> std::borrow::Cow<'static, str> {
         "AccountId".into()
@@ -157,12 +160,14 @@ impl fmt::Display for Ss58Address {
     }
 }
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl serde::Serialize for Ss58Address {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(self.as_str())
     }
 }
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl<'de> serde::Deserialize<'de> for Ss58Address {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Self::try_from(<String as serde::Deserialize>::deserialize(deserializer)?)
@@ -170,6 +175,7 @@ impl<'de> serde::Deserialize<'de> for Ss58Address {
     }
 }
 #[cfg(feature = "schemars")]
+#[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 impl schemars::JsonSchema for Ss58Address {
     fn schema_name() -> std::borrow::Cow<'static, str> {
         "Ss58Address".into()

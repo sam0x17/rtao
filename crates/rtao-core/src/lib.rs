@@ -3,6 +3,8 @@
 //! Chain-defined encoding and cryptography stay upstream. This crate selects
 //! the portable surface, maps errors, and contains the optional async offload.
 
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 mod error;
@@ -92,6 +94,7 @@ pub mod timelock {
 
 /// Core-compatible encrypted keyfiles, available only to host applications.
 #[cfg(feature = "host")]
+#[cfg_attr(docsrs, doc(cfg(feature = "host")))]
 pub mod keyfiles {
     pub use bittensor_core::keyfiles::{
         decrypt_keyfile_data, deserialize_keypair_from_keyfile_data, encrypt_keyfile_data,
@@ -103,6 +106,7 @@ pub mod keyfiles {
 
 /// Chain-compatible proof-of-work primitives for host applications.
 #[cfg(feature = "host")]
+#[cfg_attr(docsrs, doc(cfg(feature = "host")))]
 pub mod pow {
     pub use bittensor_core::pow::{MAX_BATCH, PREFIX_LEN, mine_cpu, seal};
 
@@ -114,6 +118,7 @@ pub mod pow {
 
 /// Ledger signing through the upstream hardware implementation.
 #[cfg(feature = "ledger")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ledger")))]
 pub mod ledger {
     pub use bittensor_core::signers::ledger::{LedgerAddress, LedgerDevice};
 }
@@ -124,6 +129,7 @@ pub mod ledger {
 /// Like `spawn_blocking`, this requires an entered Tokio runtime and does not
 /// cancel blocking work that has already started when its caller is dropped.
 #[cfg(feature = "offload")]
+#[cfg_attr(docsrs, doc(cfg(feature = "offload")))]
 pub async fn offload<T, F>(work: F) -> Result<T, tokio::task::JoinError>
 where
     T: Send + 'static,

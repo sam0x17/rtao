@@ -2,6 +2,8 @@
 //! Bittensor transaction intents.
 
 #![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod arguments;
 #[cfg(any(
@@ -36,68 +38,93 @@ impl rtao_tx::IntentRegistry for Registry {
 }
 
 #[cfg(feature = "serving")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
 pub mod serving;
 #[cfg(feature = "transfer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "transfer")))]
 pub mod transfer;
 
 #[cfg(feature = "weights")]
+#[cfg_attr(docsrs, doc(cfg(feature = "weights")))]
 pub mod weights;
 
 #[cfg(feature = "hyperparameters")]
+#[cfg_attr(docsrs, doc(cfg(feature = "hyperparameters")))]
 pub mod hyperparameters;
 
 #[cfg(feature = "pow")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pow")))]
 pub mod pow;
 
 #[cfg(feature = "association")]
+#[cfg_attr(docsrs, doc(cfg(feature = "association")))]
 pub mod association;
 #[cfg(feature = "batch")]
+#[cfg_attr(docsrs, doc(cfg(feature = "batch")))]
 pub mod batch;
 #[cfg(feature = "children")]
+#[cfg_attr(docsrs, doc(cfg(feature = "children")))]
 pub mod children;
 #[cfg(feature = "coldkey")]
+#[cfg_attr(docsrs, doc(cfg(feature = "coldkey")))]
 pub mod coldkey;
 #[cfg(feature = "collateral")]
+#[cfg_attr(docsrs, doc(cfg(feature = "collateral")))]
 pub mod collateral;
 #[cfg(feature = "crowdloan")]
+#[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
 pub mod crowdloan;
 #[cfg(feature = "evm")]
+#[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
 pub mod evm;
 #[cfg(feature = "governance")]
+#[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
 pub mod governance;
 #[cfg(feature = "identity")]
+#[cfg_attr(docsrs, doc(cfg(feature = "identity")))]
 pub mod identity;
 #[cfg(feature = "identity")]
 mod identity_account;
 #[cfg(feature = "leasing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "leasing")))]
 pub mod leasing;
 #[cfg(feature = "lock")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lock")))]
 pub mod lock;
 #[cfg(feature = "multisig")]
+#[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
 pub mod multisig;
 #[cfg(feature = "multisig")]
+#[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
 pub mod multisig_adapter;
 #[cfg(feature = "multisig")]
+#[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
 pub use multisig_adapter::{MultisigAdapter, MultisigContinuation, MultisigThreshold1Adapter};
 #[cfg(feature = "proxy")]
+#[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
 pub mod proxy;
 #[cfg(feature = "registration")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
 pub mod registration;
 #[cfg(feature = "registration")]
 mod registration_pow;
 #[cfg(feature = "registration")]
 mod registration_swap;
 #[cfg(feature = "root")]
+#[cfg_attr(docsrs, doc(cfg(feature = "root")))]
 pub mod root;
 #[cfg(any(feature = "registration", feature = "staking"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "registration", feature = "staking"))))]
 pub mod root_claim;
 #[cfg(feature = "staking")]
 mod staking_baskets;
 #[cfg(feature = "governance")]
 mod staking_burn;
 #[cfg(feature = "staking")]
+#[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
 pub mod staking_claims;
 #[cfg(feature = "staking")]
+#[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
 pub mod staking_trades;
 
 // The generated records contain only infallibly serializable primitive values.

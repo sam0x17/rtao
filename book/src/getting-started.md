@@ -33,28 +33,17 @@ Pass an existing endpoint or a named network such as `finney` or `test` to
 all its reads to one block hash; separate reads through a live client can see
 different heads.
 
-This helper takes a connected client and a public coldkey address. It needs no
-wallet or private key:
+The generated Offline examples section includes the actual repository test
+for a finalized balance read. It seeds encoded `System.Account` state through
+`FakeChain`, reads with the public namespace and checks the snapshot hash.
+That example uses no wallet or endpoint.
 
-```rust
-use rtao::prelude::*;
-
-async fn finalized_free_rao(
-    client: &Client,
-    coldkey: AccountId,
-) -> anyhow::Result<u64> {
-    let snapshot = client.at(BlockRef::Finalized).await?;
-    let balance = snapshot.balances().balance(coldkey).await?;
-    Ok(balance.rao)
-}
-```
-
-Create the client with
-`Client::connect(ClientConfig::for_network("finney")?).await?` and call
-`client.close().await` when the application is finished. Client clones share
-the connection, so closing one closes that shared client. Applications using
-the helper need an async runtime and their chosen error type; this example
-uses `anyhow`.
+For an existing endpoint, connect through `Client::connect` with the resolved
+`ClientConfig`, obtain a finalized snapshot with `Client::at`, then use
+`snapshot.balances().balance(coldkey)`. The returned balance keeps exact
+integer rao. Call `client.close().await` when finished, including when a read
+fails. Client clones share the connection, so closing one closes that shared
+client.
 
 Balances use checked native `u64` rao. Keep TAO and subnet alpha units distinct;
 negative amounts and values above the chain's balance range are rejected.

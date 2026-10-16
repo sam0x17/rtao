@@ -113,6 +113,7 @@ impl Wallet {
     /// strings. Encrypted-hotkey sources remain the hotkey's own policy.
     #[cfg(feature = "encrypted")]
     #[doc(alias = "bittensor.wallets.decrypt_message")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "encrypted")))]
     pub async fn decrypt_message(
         &self,
         ciphertext_hex: &str,

@@ -904,6 +904,7 @@ mod serde_impl {
     use super::*;
     use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl Serialize for DynBalance {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             let text = self.to_python_string();
@@ -911,12 +912,14 @@ mod serde_impl {
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<U: Unit> Serialize for Balance<U> {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             serializer.serialize_str(&decimal_string(self.rao))
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl Serialize for Money {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             self.rao().map_err(serde::ser::Error::custom)?;
@@ -924,6 +927,7 @@ mod serde_impl {
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<'de> Deserialize<'de> for Money {
         fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
             // Value-first is required with serde_json's arbitrary_precision;
@@ -941,6 +945,7 @@ mod serde_impl {
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl Serialize for Amount {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             match self {
@@ -950,6 +955,7 @@ mod serde_impl {
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<'de> Deserialize<'de> for Amount {
         fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
             let value = serde_json::Value::deserialize(deserializer)?;
@@ -965,6 +971,7 @@ mod serde_impl {
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl Serialize for ResolvedAmount {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             match self {

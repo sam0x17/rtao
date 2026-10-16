@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Multisig approvals through the production executor and metadata-backed chain.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -609,6 +610,9 @@ async fn composition_checks_stamps_and_refuses_batch_inside_origin_wrappers() {
     );
 }
 
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_shielded_approval_propagates_finalization_request
+// Owned receipt fields replace Python Mock identity; finalization is observed
+// on threshold-one and threshold-two wrapper submissions through FakeChain.
 #[tokio::test]
 async fn shielded_approval_preserves_full_wrapper_and_propagates_finalization() {
     for threshold in [1, 2] {

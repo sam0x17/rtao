@@ -8,41 +8,15 @@ mempool; its execution becomes visible on chain.
 
 ## Select shielding explicitly in Rust
 
-Use `Executor::submit_shielded` for a typed intent or
+Use [`Executor::submit_shielded`](api/rtao_tx/struct.Executor.html#method.submit_shielded) for a typed intent or
 `submit_shielded_dyn` for a dynamically parsed intent. They retain semantic
 policy, origin and preflight checks before resolving the private signer.
-The facade's `owner` feature enables the registration intent used below:
-
-```rust
-use std::time::Duration;
-use rtao::{
-    intents::BurnedRegister,
-    primitives::{Balance, NetUid, Tao},
-    signer::{Coldkey, KeySource},
-    tx::{ExecuteOptions, ExtrinsicResult, ShieldOptions, ShieldPeriod},
-    Executor,
-};
-
-async fn register_shielded<K: KeySource<Coldkey>>(
-    executor: &Executor,
-    keys: &K,
-    netuid: NetUid,
-) -> Result<ExtrinsicResult<()>, rtao::tx::TxError> {
-    let intent = BurnedRegister {
-        netuid,
-        hotkey_ss58: None,
-    };
-    executor.submit_shielded(&intent, keys, &ShieldOptions {
-        period: ShieldPeriod::P8,
-        max_fee: Some(Balance::<Tao>::from_rao(1_000_000)),
-        execute: ExecuteOptions {
-            deadline: Some(Duration::from_secs(90)),
-            wait_for_finalization: true,
-            ..Default::default()
-        },
-    }).await
-}
-```
+The facade's `owner` feature enables `BurnedRegister`. Its fields select the
+subnet and an optional public hotkey. Supply transaction-layer
+[`ShieldOptions`](api/rtao_tx/struct.ShieldOptions.html) to select the short era,
+inner fee cap and execution settings. `execute.deadline` bounds the overall
+operation; `execute.wait_for_finalization` requests a finalized result. The
+linked API reference is generated from the compiled implementation.
 
 The caller supplies a policy-bearing executor, an existing key source and a
 fee cap appropriate to the operation. A missing hotkey argument uses the key
