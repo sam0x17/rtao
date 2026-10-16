@@ -1,6 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/tx.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
@@ -1082,7 +1083,7 @@ async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_acce
                 spec.name.replace('_', "-"),
             ];
             argv.extend(argv_from_sample(&args, true)?);
-            let parsed = commands::command_tree()?.try_get_matches_from(argv)?;
+            let parsed = commands::command_tree()?.try_get_matches_from(argv.clone())?;
             let (mut ctx, sink) = context(&parsed, &generated::intent_reserved(spec.name)?)?;
             // JSON/non-TTY policy retains the real confirmation stage without
             // --yes, private key material, or a secret-bearing test signer.
@@ -1127,6 +1128,56 @@ async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_acce
                     spec.name
                 )
                 .into());
+            }
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+            // Root and owner origin disclosures are live human narration as
+            // well as help text. Keep the same real parser and public source.
+            if spec.origin == "root" || spec.name == "set_mechanism_count" {
+                let mut human_argv = argv;
+                human_argv.retain(|argument| argument != "--json");
+                let parsed = commands::command_tree()?.try_get_matches_from(human_argv)?;
+                let (mut ctx, sink) = context(&parsed, &generated::intent_reserved(spec.name)?)?;
+                let request = TxRequest::from_matches(
+                    &mut ctx,
+                    spec.name,
+                    leaf(&parsed)?,
+                    &mut PromptHistory::default(),
+                )?;
+                let keys = SamplePublicKeys::default();
+                let hooks = Hooks::default();
+                let (human_client, chain) =
+                    self::client(intent_state(runtime.clone(), spec.name)?).await?;
+                let result = generated::execute_tx_with_keys(
+                    &ctx,
+                    &human_client,
+                    &request,
+                    &keys,
+                    SubmissionOptions {
+                        hooks: Some(&hooks),
+                        ..Default::default()
+                    },
+                )
+                .await;
+                human_client.close().await;
+                assert!(result?.is_none());
+                let stderr = sink.text(Stream::Stderr)?;
+                let expected = if spec.origin == "root" {
+                    "requires: chain sudo key (call wrapped in Sudo.sudo)"
+                } else {
+                    "requires: subnet owner coldkey"
+                };
+                assert_eq!(stderr.matches(expected).count(), 1, "{}", spec.name);
+                assert!(!stderr.contains("verify:"), "a preview has not submitted");
+                assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+                assert_eq!(hooks.before.load(Ordering::SeqCst), 0);
+                assert_eq!(hooks.results.load(Ordering::SeqCst), 0);
+                assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+                assert!(
+                    chain
+                        .requests()
+                        .iter()
+                        .all(|request| !request.method.starts_with("author_"))
+                );
             }
             Ok(())
         }
@@ -1341,6 +1392,78 @@ async fn generated_transfer_submits_real_semantic_bytes_hooks_and_requested_peri
         receipt.to_json()
     );
     client.close().await;
+    for mode in [None, Some("--quiet"), Some("--json")] {
+        let keys = Keys::new()?;
+        let mut state = funded(&keys)?;
+        state.seed_python("Sudo", "Key", &[], json!(keys.key.account()))?;
+        let (client, chain) = self::client(state).await?;
+        let mut args = vec![
+            "rtao",
+            "tx",
+            "set-root-claim-threshold",
+            "--threshold",
+            "0.001",
+            "--yes",
+            "--no-mev-shield",
+        ];
+        if let Some(mode) = mode {
+            args.push(mode);
+        }
+        let parsed = tree()?.try_get_matches_from(args)?;
+        let (mut ctx, sink) = context(
+            &parsed,
+            &generated::intent_reserved("set_root_claim_threshold")?,
+        )?;
+        let request = TxRequest::from_matches(
+            &mut ctx,
+            "set_root_claim_threshold",
+            leaf(&parsed)?,
+            &mut PromptHistory::default(),
+        )?;
+        let hooks = Hooks::default();
+        let receipt = generated::execute_tx_with_keys(
+            &ctx,
+            &client,
+            &request,
+            &keys,
+            SubmissionOptions {
+                hooks: Some(&hooks),
+                ..Default::default()
+            },
+        )
+        .await?
+        .ok_or("root receipt")?;
+        assert!(receipt.success);
+        let stderr = sink.text(Stream::Stderr)?;
+        if mode.is_none() {
+            assert_eq!(
+                stderr
+                    .matches("requires: chain sudo key (call wrapped in Sudo.sudo)")
+                    .count(),
+                1
+            );
+            assert_eq!(
+                stderr
+                    .matches("verify: `rtao query root-claim-threshold ...`")
+                    .count(),
+                1
+            );
+        } else {
+            assert!(stderr.is_empty());
+        }
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(hooks.before.load(Ordering::SeqCst), 1);
+        assert_eq!(hooks.results.load(Ordering::SeqCst), 1);
+        let submitted = chain.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submitted.len(), 1);
+        let runtime = View::runtime(&client).await?;
+        let decoded =
+            rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submitted[0], true)?)
+                .to_json();
+        assert_eq!(decoded["call"]["call_module"], "Sudo");
+        assert_eq!(decoded["call"]["call_function"], "sudo");
+        client.close().await;
+    }
     Ok(())
 }
 

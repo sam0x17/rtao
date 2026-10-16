@@ -593,6 +593,16 @@ impl AppContext {
         {
             return Err(CliError::failure(""));
         }
+        if let Some(verify) = intent.spec().verify.filter(|verify| !verify.is_empty()) {
+            self.output
+                .message(&format!(
+                    "verify: `rtao query {} ...`",
+                    verify.replace('_', "-")
+                ))
+                .map_err(|error| {
+                    known_receipt_error(CliError::failure(error.to_string()), &result)
+                })?;
+        }
         Ok(Some(result))
     }
     fn shield_signing_notice(&self, backend: Option<&str>) -> Result<(), CliError> {
@@ -639,6 +649,15 @@ impl AppContext {
         }
         let executor = rtao::Executor::new(client.clone());
         let spec = intent.semantic_intent_dyn().spec();
+        // py: sdk/python/bittensor/cli/context.py:1155-1161
+        match spec.origin {
+            "root" => self
+                .output
+                .message("requires: chain sudo key (call wrapped in Sudo.sudo)"),
+            "subnet_owner" => self.output.message("requires: subnet owner coldkey"),
+            _ => Ok(()),
+        }
+        .map_err(|error| CliError::failure(error.to_string()))?;
         let required_shield = intent
             .semantic_intent_dyn()
             .safety_dyn()
@@ -1069,6 +1088,15 @@ impl AppContext {
         } else if let Some(factory) = control.external {
             factory.set_summary(signing, &signing_summary);
         }
+        let (progress, progress_receiver) = if spec.name == "register_subnet"
+            && !self.output.options.json_mode
+            && !self.output.options.quiet
+        {
+            let (sender, receiver) = tokio::sync::mpsc::channel(16);
+            (Some(sender), Some(receiver))
+        } else {
+            (None, None)
+        };
         let opts = ExecuteOptions {
             expected_call: control.bind_reviewed_call.then(|| plan.call().clone()),
             period: control.period.or(ExecuteOptions::default().period),
@@ -1081,9 +1109,10 @@ impl AppContext {
             // attempts are introduced by the CLI execution wrapper.
             retries: 0,
             shielded: choice.enabled,
+            progress,
             ..Default::default()
         };
-        let result = async {
+        let operation = async {
             if acquired.is_some() {
                 let actual = match role {
                     SignerRole::Hotkey => signing.hotkey_address(),
@@ -1126,15 +1155,21 @@ impl AppContext {
                 executor.execute_dyn(intent, signing, &opts).await
             }
             .map_err(CliError::transaction)
-        }
-        .await;
+        };
+        let (result, progress_error) = match progress_receiver {
+            Some(receiver) => registration::with_progress(&self.output, receiver, operation).await,
+            None => (operation.await, None),
+        };
         // The raw receipt must reach durable storage before releasing an
         // external signer or performing fallible follow-up work. A failed
         // journal write still releases the source and retains the receipt.
         let hook_error = match (&result, control.hooks) {
             (Ok(receipt), Some(hooks)) => hooks.on_result(receipt).await.err(),
             _ => None,
-        };
+        }
+        // A broken progress sink never skips the raw receipt hook or signer
+        // release. Report it through the known-receipt path only afterward.
+        .or(progress_error);
         let release_error = if let (Some(binding), Some(acquired)) = (&control.factory, &acquired) {
             binding
                 .factory

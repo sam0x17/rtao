@@ -1,6 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Live registration cost disclosure at the application boundary.
+//! Live registration costs and bounded progress at the application boundary.
 
 use futures::TryStreamExt;
 use rtao::{
@@ -10,7 +10,100 @@ use rtao::{
 };
 use rtao_runtime::{runtime_apis as api, storage::subtensor_module as st};
 
-use crate::error::CliError;
+use crate::{
+    error::CliError,
+    output::{Output, StepState},
+};
+
+// py: sdk/python/bittensor/cli/context.py:1405-1433
+fn progress(output: &Output, progress: rtao::tx::Progress) -> Result<(), CliError> {
+    let fields = &progress.data;
+    let deregistered = fields
+        .get("deregistered_netuid")
+        .and_then(serde_json::Value::as_u64);
+    let cleanup = deregistered.filter(|netuid| *netuid != 0).or_else(|| {
+        fields
+            .get("cleanup_netuid")
+            .and_then(serde_json::Value::as_u64)
+    });
+    let (text, state) = match progress.stage.as_str() {
+        "queued" if deregistered.is_some() => (
+            format!(
+                "capacity is full · deregistering subnet {} before registration",
+                cleanup.map_or_else(|| "None".into(), |netuid| netuid.to_string()),
+            ),
+            StepState::Running,
+        ),
+        "queued" => (
+            cleanup.map_or_else(
+                || "registration queued · waiting for deregistration cleanup".into(),
+                |netuid| format!("registration queued · waiting for subnet {netuid} cleanup"),
+            ),
+            StepState::Running,
+        ),
+        "waiting" => {
+            let elapsed = fields
+                .get("blocks_since_call")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
+            let subject = cleanup.map_or_else(
+                || "cleanup".into(),
+                |netuid| format!("subnet {netuid} cleanup"),
+            );
+            let unit = if elapsed == 1 { "block" } else { "blocks" };
+            (
+                format!("{subject} · {elapsed} {unit} since call · waiting for NetworkAdded"),
+                StepState::Fact,
+            )
+        }
+        "registered" => {
+            let number = |key| {
+                fields
+                    .get(key)
+                    .and_then(serde_json::Value::as_u64)
+                    .map_or_else(|| "None".into(), |value| value.to_string())
+            };
+            (
+                format!(
+                    "NetworkAdded · subnet {} · block {}",
+                    number("netuid"),
+                    number("block")
+                ),
+                StepState::Done,
+            )
+        }
+        _ => return Ok(()),
+    };
+    output
+        .step("registration", &text, state)
+        .map_err(|error| CliError::failure(error.to_string()))
+}
+
+/// Drain bounded progress while preserving the submission future and its receipt.
+pub(super) async fn with_progress<F: std::future::Future>(
+    output: &Output,
+    mut receiver: tokio::sync::mpsc::Receiver<rtao::tx::Progress>,
+    operation: F,
+) -> (F::Output, Option<CliError>) {
+    let mut render_error = None;
+    let mut render = |value| {
+        if render_error.is_none() {
+            render_error = progress(output, value).err();
+        }
+    };
+    tokio::pin!(operation);
+    let result = loop {
+        tokio::select! {
+            result = &mut operation => break result,
+            Some(value) = receiver.recv() => render(value),
+        }
+    };
+    // A final stage may already be queued when the operation becomes ready.
+    while let Ok(value) = receiver.try_recv() {
+        render(value);
+    }
+    (result, render_error)
+}
 
 pub(super) struct RegistrationReview {
     pub suffix: String,
@@ -24,7 +117,7 @@ pub(super) async fn live<V: View + ?Sized>(
     assume_yes: bool,
 ) -> Result<Option<RegistrationReview>, CliError> {
     let semantic = intent.semantic_intent_dyn();
-    if intent.spec().name == "register_subnet" {
+    if semantic.spec().name == "register_subnet" {
         return subnet_creation(view, assume_yes).await.map(Some);
     }
     let recycled = match semantic.spec().name {
