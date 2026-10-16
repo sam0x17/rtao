@@ -4172,9 +4172,10 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
    - drop zeros;
    - enforce `len ≥ min(MinAllowedWeights, SubnetworkN)`, with the self-weight exemption.
 
-   Every float operation keeps Python's order and associativity (`sum()` is left-to-right; `total` is computed exactly
-   as Python computes it). **Oracle vectors pin u16 outputs bit for bit**: 200 seeded rows, `.5` ties, the clip cutoff
-   path, `n·limit ≤ 1` (uniform), single self-weight, and 2,500-entry rows (§11.5).
+   Float operations retain the pinned CPython 3.12 order: total and clipped-total sums use Neumaier compensation,
+   while `itertools.accumulate` remains a left fold. Native fixtures cover ties, cutoff, uniform fallback, self
+   weights, large raw rows and zero-denominator refusal. The optional pure-oracle recorder defines 192 vectors;
+   these sources establish no fresh Python execution or exact exception-class comparison (§11.5).
 
    `RawU16` requires Null consensus: the preflight mints a `NullProof` only when `SubnetEpochConsensus == Null` and this
    hotkey is the sole permit holder. The framework preserves every supplied UID/value pair, including zeros and

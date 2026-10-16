@@ -1,4 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/_money.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/weights.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! JSON input carriers shared by generated intent fields.
 
 use rtao_primitives::{Ratio, Uid};

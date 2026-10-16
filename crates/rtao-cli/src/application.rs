@@ -475,6 +475,28 @@ pub fn parse_with_prompts(
     })
 }
 
+/// Finish public prompt guidance after the actual command's result is known.
+///
+/// Pass the original argv, because the parsed invocation already contains the
+/// generic prompt answers that history records. Failed commands retain their
+/// error outcome and emit no success guidance; JSON and quiet suppress hints.
+pub fn finish_prompts(
+    output: &crate::output::Output,
+    history: &mut crate::prompt::PromptHistory,
+    original_argv: &[String],
+    success: bool,
+) -> Result<(), crate::error::CliError> {
+    let exit_code = if success { 0 } else { 1 };
+    if let Some(lines) = history.flush_hint_lines(original_argv, exit_code) {
+        for line in lines {
+            output
+                .message(&line)
+                .map_err(|error| crate::error::CliError::failure(error.to_string()))?;
+        }
+    }
+    Ok(())
+}
+
 fn effective_prompt_context(
     context: &crate::prompt::PromptContext,
     parsed: &clap::ArgMatches,
