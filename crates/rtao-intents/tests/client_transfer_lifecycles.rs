@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/bittensor-core/tests/e2e.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Client transfer, batch, association and auto-stake contracts over finite RPC.
 //!
 //! Balances, EVM keys and stake destinations are supplied observations, not effects.
@@ -975,5 +976,120 @@ async fn client_auto_stake_submits_exact_call_then_reads_supplied_coldkey_destin
     );
     assert_consumed(&fixture, &expected)?;
     fixture.executor.client().close().await;
+    Ok(())
+}
+
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_proxy_wraps_call_and_detects_inner_failure
+#[tokio::test]
+async fn client_proxied_transfer_returns_success_or_the_inner_proxy_dispatch_error() -> Result<()> {
+    for inner_success in [true, false] {
+        let fixture = fixture().await?;
+        let result = async {
+            let runtime = fixture.executor.client().refresh_runtime().await?;
+            let inner = expected_transfer(&runtime, BOB, TAO)?;
+            let expected = rtao_runtime::calls::proxy::proxy(
+                DynValue::new(CoreValue::Bytes(BOB.0.to_vec())),
+                None,
+                inner.clone(),
+            )
+            .compose(&runtime)?;
+            // Pinned Proxy.proxy, MultiAddress::Id(real), no forced proxy type,
+            // then the independently composed native transfer bytes.
+            let mut wire = vec![16, 0, 0];
+            wire.extend_from_slice(&BOB.0);
+            wire.push(0);
+            wire.extend_from_slice(inner.as_bytes());
+            assert_eq!(expected.as_bytes(), wire);
+            let failure = MODULE_ERRORS
+                .iter()
+                .find(|error| error.pallet == "Balances" && error.name == "InsufficientBalance")
+                .context("pinned nested Balances error")?;
+            assert_eq!((failure.pallet_index, failure.error_index), (5, 2));
+            let nested = if inner_success {
+                json!({"Ok":null})
+            } else {
+                json!({"Err":{"Module":{"index":failure.pallet_index,"error":[failure.error_index,0,0,0]}}})
+            };
+            let mut rows = events(true)?
+                .as_array()
+                .context("outer success event list")?
+                .clone();
+            rows.insert(0, json!({"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"Proxy","event_id":"ProxyExecuted","attributes":{"result":nested},"topics":[]}));
+            install_step(
+                &fixture.chain,
+                &fixture.script,
+                Step {
+                    expected: expected.clone(),
+                    account: fixture.keys.signer.account(),
+                    nonce: NONCE,
+                    events: Value::Array(rows),
+                    post: Vec::new(),
+                },
+            )?;
+            let intent = transfer(BOB, TAO);
+            let mut opts = options();
+            opts.proxy_for = Some(BOB);
+            let receipt = tokio::time::timeout(
+                Duration::from_secs(10),
+                fixture.executor.execute_dyn(&intent, &fixture.keys, &opts),
+            )
+            .await??;
+            assert_eq!(receipt.success, inner_success);
+            assert_eq!(receipt.inclusion, Inclusion::Finalized);
+            assert!(receipt.fate_unknown.is_none());
+            assert_eq!(receipt.events.len(), 2);
+            assert!(
+                receipt
+                    .events
+                    .iter()
+                    .any(|event| event.matches("System", "ExtrinsicSuccess"))
+            );
+            assert!(
+                receipt
+                    .events
+                    .iter()
+                    .any(|event| event.matches("Proxy", "ProxyExecuted"))
+            );
+            assert!(
+                !receipt
+                    .events
+                    .iter()
+                    .any(|event| event.matches("System", "ExtrinsicFailed"))
+            );
+            if inner_success {
+                assert_eq!(receipt.message, "Success");
+                assert!(receipt.error.is_none());
+                assert_eq!(receipt.data["proxy_for"], json!(BOB));
+            } else {
+                // Native four-byte Module errors resolve against the executing
+                // block's metadata, yielding named docs rather than mock text.
+                let error = receipt.error.as_ref().context("nested proxy failure")?;
+                assert_eq!(error.name.as_deref(), Some("InsufficientBalance"));
+                assert_eq!(error.code, rtao_catalog::ErrorCode::InsufficientBalance);
+                assert_eq!(error.message, failure.docs);
+                assert_eq!(receipt.message, failure.docs);
+                assert!(receipt.data.is_empty());
+            }
+            let snapshot = fixture
+                .executor
+                .client()
+                .at(BlockRef::Hash(
+                    receipt.block_hash.context("proxy receipt hash")?,
+                ))
+                .await?;
+            assert_eq!(
+                receipt.extrinsic_id,
+                Some(format!("{}-0000", snapshot.block().number))
+            );
+            assert_eq!(
+                receipt.events.as_slice(),
+                snapshot.events().await?.records()
+            );
+            assert_consumed(&fixture, &expected)?;
+            Ok::<(), anyhow::Error>(())
+        }.await;
+        fixture.executor.client().close().await;
+        result?;
+    }
     Ok(())
 }

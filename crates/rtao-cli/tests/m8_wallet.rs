@@ -825,6 +825,10 @@ async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_
     )
     .await?;
     let rows = value(&sink)?;
+    // The machine formatter uses Python's two-digit exponents. With
+    // arbitrary_precision, serde_json Number equality retains that spelling.
+    let dust_amount: Value = serde_json::from_str("2e-09")?;
+    let dust_value: Value = serde_json::from_str("1e-09")?;
     let yields = json!({
         "accrued_basket_yield":"τ0.250000000", "accrued_basket_yield_tao":0.25,
         "root_staked":"τ2.000000000", "root_staked_tao":2.0,
@@ -846,8 +850,8 @@ async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_
                 "available":"1.000000000Ω", "available_amount":1.0,
             },
             {
-                "netuid":1, "hotkey":OWNED, "stake":"0.000000002Ω", "stake_amount":2e-9,
-                "stake_unit":"alpha (netuid 1)", "value":"τ0.000000001", "value_tao":1e-9,
+                "netuid":1, "hotkey":OWNED, "stake":"0.000000002Ω", "stake_amount":dust_amount,
+                "stake_unit":"alpha (netuid 1)", "value":"τ0.000000001", "value_tao":dust_value,
                 "registered":false, "uid":null,
                 "locked":"2.000000000Ω", "locked_amount":2.0,
                 "available":"1.000000000Ω", "available_amount":1.0,
@@ -976,6 +980,15 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
             },
             Arc::new(sink.clone()),
         );
+        // run_with_client bypasses AppContext::run_with's output setup.
+        // Install the same client-loaded symbols on this replacement renderer.
+        ctx.output.update_token_symbols(
+            client
+                .token_symbols()
+                .await
+                .into_iter()
+                .map(|(netuid, symbol)| (netuid.get(), rtao::primitives::Symbol::new(symbol))),
+        )?;
         wallet::run_with_client(
             &mut ctx,
             &client,

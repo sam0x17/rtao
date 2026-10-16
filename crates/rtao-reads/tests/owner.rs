@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/bittensor-core/tests/e2e.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! M4 owner reads through actual pinned metadata, SCALE state and dispatch.
 #![allow(clippy::unwrap_used, clippy::panic)] // Invalid authenticated fixtures must fail these assertions.
 
@@ -1141,4 +1142,111 @@ async fn m5_two_reads_observe_exact_descriptor_sets_at_pinned_hashes() {
         }
     }
     client.close().await;
+}
+
+// Upstream e2e.rs::test_typed_reads. All values below are supplied state,
+// not live subnet/registration/ownership or runtime availability evidence.
+#[tokio::test]
+async fn client_typed_reads_keep_all_five_core_assertions_at_one_snapshot() {
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        use rtao_reads::generated::interfaces as reads;
+        let mut state = seed();
+        state
+            .seed_runtime(
+                "SubnetInfoRuntimeApi",
+                "get_subnet_hyperparams_v3",
+                json!([
+                    {"name":"tempo","value":{"U16":20}},
+                    {"name":"burn_half_life","value":{"U64":123}}
+                ]),
+            )
+            .unwrap();
+        state
+            .seed_runtime(
+                "SubnetInfoRuntimeApi",
+                "get_metagraph",
+                json!({
+                    "netuid":1,"hotkeys":[HOT],"name":[],"symbol":[]
+                }),
+            )
+            .unwrap();
+        state
+            .seed_python(
+                "SubtensorModule",
+                "WeightsSetRateLimit",
+                &[json!(1)],
+                json!(7),
+            )
+            .unwrap();
+        state
+            .seed_python(
+                "SubtensorModule",
+                "ChildKeys",
+                &[json!(HOT), json!(1)],
+                json!([[u64::MAX, OTHER]]),
+            )
+            .unwrap();
+        let (client, chain) = client(state).await;
+        let snapshot = client.at(BlockRef::Best).await.unwrap();
+        let hash = format!("0x{}", hex::encode(snapshot.block().hash.0));
+        let start = chain.requests().len();
+        let hyperparameters = reads::subnet_hyperparameters(&snapshot, NetUid(1))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(hyperparameters["tempo"], json!(20));
+        assert_eq!(hyperparameters["burn_half_life"], json!(123));
+        let rate = reads::weights_rate_limit(&snapshot, Some(NetUid(1)))
+            .await
+            .unwrap();
+        assert_eq!(rate, 7);
+        let metagraph = reads::metagraph(&snapshot, NetUid(1)).await.unwrap();
+        assert_eq!(metagraph["hotkeys"], json!([HOT]));
+        let positions = reads::stake_for_coldkey(&snapshot, COLD).await.unwrap();
+        assert_eq!(positions.len(), 2);
+        assert_eq!(
+            (
+                positions[0].coldkey,
+                positions[0].hotkey,
+                positions[0].netuid
+            ),
+            (COLD, HOT, NetUid(1))
+        );
+        let children = reads::children(&snapshot, HOT, NetUid(1)).await.unwrap();
+        assert_eq!(children, [(u64::MAX, OTHER)]);
+        let requests = chain.requests();
+        let observed = &requests[start..];
+        let methods = observed
+            .iter()
+            .filter(|request| request.method == "state_call")
+            .map(|request| request.params[0].as_str().unwrap().to_owned())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            methods,
+            BTreeSet::from([
+                "SubnetInfoRuntimeApi_get_subnet_hyperparams_v3".to_owned(),
+                "SubnetInfoRuntimeApi_get_metagraph".to_owned(),
+                "StakeInfoRuntimeApi_get_stake_info_for_coldkey".to_owned()
+            ])
+        );
+        for request in observed.iter().filter(|request| {
+            matches!(
+                request.method.as_str(),
+                "state_call" | "state_queryStorageAt" | "state_getStorage"
+            )
+        }) {
+            assert_eq!(
+                request.params.as_array().unwrap().last(),
+                Some(&json!(hash))
+            );
+        }
+        assert!(
+            !observed
+                .iter()
+                .any(|request| request.method.starts_with("author_"))
+        );
+        client.close().await;
+    })
+    .await
+    .unwrap();
 }

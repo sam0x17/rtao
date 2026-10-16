@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/help_theme.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! No-argument group help is informational; actual usage errors remain failures.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+//! Installed help is informational; actual usage errors remain failures.
 
 use rtao::client::config::ConfigFile;
 use std::{
@@ -81,6 +82,22 @@ fn group_paths(command: &clap::Command, prefix: &[String], result: &mut Vec<Vec<
     }
 }
 
+fn visible_command_paths(
+    command: &clap::Command,
+    prefix: &[String],
+    result: &mut Vec<Vec<String>>,
+) {
+    result.push(prefix.to_vec());
+    for child in command
+        .get_subcommands()
+        .filter(|child| !child.is_hide_set())
+    {
+        let mut path = prefix.to_vec();
+        path.push(child.get_name().into());
+        visible_command_paths(child, &path, result);
+    }
+}
+
 #[test]
 fn bare_installed_groups_and_historical_aliases_print_help_and_exit_zero() -> TestResult {
     let root = Root::new()?;
@@ -143,12 +160,67 @@ fn bare_installed_groups_and_historical_aliases_print_help_and_exit_zero() -> Te
 }
 
 #[test]
+// pyt: unit/test_cli_commands.py::test_help_exits_zero
+fn every_visible_installed_command_and_group_help_exits_zero() -> TestResult {
+    let root = Root::new()?;
+    let mut command = rtao_cli::commands::command_tree()?;
+    command.build();
+    let mut paths = Vec::new();
+    visible_command_paths(&command, &[], &mut paths);
+    let invocations = paths.into_iter().map(|path| (path, "--help")).chain([
+        (vec!["doctor".into()], "-h"),
+        (vec!["completions".into()], "-h"),
+    ]);
+    for (path, flag) in invocations {
+        let result = root.command().args(&path).arg(flag).output()?;
+        assert_eq!(
+            result.status.code(),
+            Some(0),
+            "{path:?} {flag}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(!result.stdout.is_empty(), "{path:?} {flag} has no output");
+        let help = String::from_utf8(result.stdout)?;
+        assert!(help.contains("Usage:"), "{path:?} {flag}: {help}");
+        assert!(
+            result.stderr.is_empty(),
+            "{path:?} {flag}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(
+            !root.0.join("wallets").exists(),
+            "{path:?} {flag} created a wallet directory"
+        );
+    }
+    for (args, code) in [
+        (&["doctor", "--unknown"][..], 1),
+        (&["doctor", "--manifest-path"][..], 1),
+        (&["completions"][..], 2),
+        (&["completions", "unknown-shell"][..], 2),
+    ] {
+        let result = root.command().args(args).output()?;
+        assert_eq!(
+            result.status.code(),
+            Some(code),
+            "{args:?}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(result.stdout.is_empty(), "{args:?}");
+        assert!(!result.stderr.is_empty(), "{args:?}");
+    }
+    assert!(!root.0.join("wallets").exists());
+    Ok(())
+}
+
+#[test]
 fn malformed_input_and_missing_required_leaf_values_still_exit_two() -> TestResult {
     let root = Root::new()?;
     for args in [
         &["--unknown"][..],
         &["addr", "unknown"][..],
         &["addr", "--unknown"][..],
+        &["completions", "--unknown"][..],
+        &["completions", "invalid-shell"][..],
         &["addr", "show"][..],
         &["addr", "remove"][..],
         &["config", "set", "network"][..],

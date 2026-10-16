@@ -75,6 +75,16 @@ impl DynKeySource for PublicKeys {
     }
 }
 
+impl rtao_signer::KeySource<rtao_signer::Coldkey> for PublicKeys {
+    fn address(&self) -> Result<AccountId, SignerError> {
+        self.coldkey_address()
+    }
+
+    async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
+        self.signer_for(SignerRole::Coldkey).await
+    }
+}
+
 // The extractor preserves Python dictionaries as ordered key/value pairs.
 // Decode those literal carriers, including nested batch and multisig calls;
 // never manufacture a second handwritten copy of INTENT_SAMPLES.
@@ -1029,4 +1039,119 @@ async fn root_denominations_and_hotkey_batch_plan_with_fake_chain() -> Result<()
     .await
     .context("hotkey-selected batch")?;
     Ok(())
+}
+
+#[tokio::test]
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_proxy_all_reads_proxied_account_balance
+async fn proxied_all_stake_plan_reads_treasury_balance_without_private_access() -> Result<()> {
+    const TREASURY: AccountId = AccountId([4; 32]);
+    let runtime = FakeState::try_default()?.runtime;
+    let mut state = seeded_state(runtime, "add_stake")?;
+    state.seed_constant("Balances", "ExistentialDeposit", json!(500))?;
+    for (account, free) in [(TREASURY, 10_000_000_000u64), (COLD, 0)] {
+        state.seed_python(
+            "System",
+            "Account",
+            &[json!(account.to_string())],
+            json!({"data":{"free":free}}),
+        )?;
+    }
+    let fake = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config).await?;
+    let keys = PublicKeys::default();
+    let result = async {
+        // Preserve AddStake's default price protection and the existing
+        // sample fixture's source subnet1 -> native subnet7 adaptation.
+        let intent: rtao_intents::AddStake = serde_json::from_value(json!({
+            "hotkey_ss58": OTHER_HOT.to_string(),
+            "netuid": SUBNET.0,
+            "amount_tao": "all"
+        }))?;
+        let plan = Executor::new(client.clone())
+            .with_clock(Arc::new(FixtureClock))
+            .plan(
+                &intent,
+                &keys,
+                &PlanOptions {
+                    proxy_for: Some(TREASURY),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        ensure!(
+            plan.ok(),
+            "proxied all-stake violations: {:?}",
+            plan.violations
+        );
+        ensure!(plan.signer == SignerRole::Coldkey, "wrong delegate role");
+        ensure!(plan.signer_address == COLD, "wrong delegate account");
+        ensure!(
+            plan.extras["proxy_for"] == json!(TREASURY),
+            "proxy metadata"
+        );
+        let runtime = client.refresh_runtime().await?;
+        let outer = rtao_core::DynValue::new(
+            runtime
+                .core()
+                .decode_spec(&TypeSpec::Call, plan.call().as_bytes(), true)
+                .map_err(rtao_core::CoreError::from)?,
+        )
+        .to_json();
+        ensure!(
+            outer["call_module"] == "Proxy" && outer["call_function"] == "proxy",
+            "missing real proxy wrapper"
+        );
+        let args = outer["call_args"].as_array().context("proxy arguments")?;
+        let real = args
+            .iter()
+            .find(|arg| arg["name"] == "real")
+            .context("proxy real")?;
+        ensure!(
+            real["value"] == json!(TREASURY),
+            "proxy targets the wrong account"
+        );
+        let inner = &args
+            .iter()
+            .find(|arg| arg["name"] == "call")
+            .context("proxy inner call")?["value"];
+        ensure!(
+            inner["call_module"] == "SubtensorModule"
+                && inner["call_function"] == "add_stake_limit",
+            "default protected AddStake call changed"
+        );
+        let amount = inner["call_args"]
+            .as_array()
+            .context("stake arguments")?
+            .iter()
+            .find(|arg| arg["name"] == "amount_staked")
+            .context("stake amount")?;
+        // Independent upstream vector: treasury free minus ED500 and
+        // 500000 rao fee headroom, never the zero-free delegate balance.
+        ensure!(
+            amount["value"] == json!(9_999_499_500u64),
+            "wrong treasury drain amount"
+        );
+        ensure!(
+            keys.acquisitions.load(Ordering::SeqCst) == 0,
+            "private signer acquisition"
+        );
+        ensure!(
+            fake.requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_")),
+            "planning used an author RPC"
+        );
+        ensure!(
+            fake.mutate_state(|state| state.submissions.is_empty()),
+            "planning submitted an extrinsic"
+        );
+        Ok(())
+    }
+    .await;
+    client.close().await;
+    result
 }
