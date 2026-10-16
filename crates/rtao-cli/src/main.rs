@@ -66,6 +66,14 @@ fn run_doctor(mut args: impl Iterator<Item = OsString>) -> Result<(), CliError> 
     Ok(())
 }
 
+fn fast_path_parse_error(error: clap::Error) -> CliError {
+    CliError {
+        code: if error.use_stderr() { 2 } else { 0 },
+        message: error.to_string(),
+        help: None,
+    }
+}
+
 async fn run() -> Result<(), CliError> {
     let mut argv = env::args_os().collect::<Vec<_>>();
     #[allow(deprecated)]
@@ -80,6 +88,17 @@ async fn run() -> Result<(), CliError> {
     }
     application::normalize_legacy_address_argv(&mut argv);
     if argv.get(1).is_some_and(|arg| arg == "doctor") {
+        // Use the installed help definition without loading configuration or
+        // running doctor. All other argv retains the original offline parser.
+        if argv
+            .iter()
+            .skip(2)
+            .any(|arg| arg == "--help" || arg == "-h")
+            && let Err(error) = rtao_cli::commands::command_tree()?.try_get_matches_from(&argv)
+            && !error.use_stderr()
+        {
+            return Err(fast_path_parse_error(error));
+        }
         return run_doctor(argv.into_iter().skip(2));
     }
     if argv
@@ -102,7 +121,7 @@ async fn run() -> Result<(), CliError> {
         let matches = command
             .clone()
             .try_get_matches_from(&argv)
-            .map_err(|error| CliError::input(error.to_string()))?;
+            .map_err(fast_path_parse_error)?;
         let (_, leaf) = matches
             .subcommand()
             .ok_or_else(|| CliError::input("missing completion command"))?;

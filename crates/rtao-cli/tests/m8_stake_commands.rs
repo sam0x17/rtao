@@ -846,17 +846,24 @@ async fn list_keeps_all_json_positions_and_globally_sorts_the_filtered_human_row
                 assert_eq!(header.contains("wallet"), all_wallets);
                 assert_eq!(header.contains("locked"), locked_rao > 0);
                 if locked_rao > 0 {
-                    let index = if all_wallets { 4 } else { 3 };
+                    let index = if all_wallets { 3 } else { 2 };
+                    let columns = if all_wallets { 7 } else { 6 };
                     let cells = output
                         .lines()
-                        .filter(|line| line.contains('│') && !line.contains("netuid"))
-                        .map(|line| {
-                            line.split('│')
-                                .nth(index)
-                                .ok_or("locked cell")
-                                .map(str::trim)
+                        .filter_map(|line| {
+                            // UTF8_FULL uses outer │ borders and internal ┆
+                            // cell separators. Divider lines are not data rows.
+                            let row = line.trim().strip_prefix('│')?.strip_suffix('│')?;
+                            let cells = row.split('┆').map(str::trim).collect::<Vec<_>>();
+                            (cells.len() == columns && !cells.contains(&"netuid")).then_some(cells)
                         })
-                        .collect::<Result<Vec<_>, _>>()?;
+                        .map(|cells| cells[index])
+                        .collect::<Vec<_>>();
+                    assert_eq!(
+                        cells.len(),
+                        3 + usize::from(principal_rao > 0) + 2 * usize::from(dust),
+                        "visible stake rows: {output}"
+                    );
                     let amount = DynBalance::from_rao(locked_rao, NetUid(1)).to_python_string();
                     assert_eq!(
                         cells

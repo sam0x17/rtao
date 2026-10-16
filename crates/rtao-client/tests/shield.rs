@@ -1523,3 +1523,172 @@ async fn found_inner_finality_recovers_resets_and_stops_at_exact_native_bounds()
         client.close().await;
     }
 }
+
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_recovers_from_canonical_hash_rpc_failure
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_bounds_hung_canonical_hash_rpc
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_recovers_from_canonical_receipt_rpc_failure
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_finalization_bounds_hung_canonical_receipt_rpc
+// Native P8 uses signed carrier/inner bytes and a FakeChain fork. A failed
+// wait retains the carrier identity; public read-only recovery resolves the
+// same inner from its independently finalized canonical block without resending.
+#[tokio::test(start_paused = true)]
+async fn canonical_inner_hash_and_receipt_reads_recover_or_stop_without_retransmission() {
+    use blake2::{Blake2b, Digest, digest::consts::U32};
+
+    for (method, hung) in [
+        ("chain_getBlockHash", false),
+        ("chain_getBlockHash", true),
+        ("chain_getBlock", false),
+        ("chain_getBlock", true),
+    ] {
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| state.set_finalized(99).unwrap());
+        let inner_call = call(&client, 1).await;
+        let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+        install_inner(&fake, inner_bytes, 101, false);
+        let branch = Arc::new(Mutex::new(None::<(String, String, usize)>));
+        let forked = branch.clone();
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getFinalizedHead", move |state, request| {
+                if !state.submissions.is_empty() && forked.lock().unwrap().is_none() {
+                    let orphan = state.block_hash(101).unwrap();
+                    let parent = state.block_hash(100).unwrap();
+                    assert_eq!(state.finalized, 100);
+                    let canonical = state.fork(&parent).unwrap();
+                    state.set_best(&canonical).unwrap();
+                    state.set_finalized(101).unwrap();
+                    // Arm faults only after the orphan's signed inner was found.
+                    // The queue precedes install_inner's unchanged block handler.
+                    for _ in 0..if hung { 4 } else { 1 } {
+                        state.queue_reply(
+                            method,
+                            if hung {
+                                Reply::silent()
+                            } else {
+                                Reply::error(-32603, "canonical read temporarily unavailable", None)
+                            },
+                        );
+                    }
+                    *forked.lock().unwrap() = Some((orphan, canonical, state.requests.len()));
+                }
+                state.dispatch(request)
+            });
+        });
+        let options = ShieldOptions {
+            wait: Wait::Finalization,
+            submit: SubmitOptions {
+                deadline: Some(Duration::from_secs(5)),
+                reconcile: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let started = tokio::time::Instant::now();
+        let result = tokio::time::timeout(
+            Duration::from_secs(10),
+            client.submit_shielded(inner_call.clone(), &signer, &options),
+        )
+        .await
+        .unwrap();
+        let (orphan, canonical, first_canonical_read) = branch.lock().unwrap().clone().unwrap();
+        assert_ne!(canonical, orphan);
+        let canonical_hash = H256(
+            hex::decode(canonical.trim_start_matches("0x"))
+                .unwrap()
+                .try_into()
+                .unwrap(),
+        );
+        assert_eq!(
+            fake.state().lock().unwrap().block_hash(101),
+            Some(canonical.clone())
+        );
+        assert_eq!(fake.state().lock().unwrap().finalized, 101);
+        let requests = fake.requests();
+        assert!(requests[..first_canonical_read].iter().any(|request| {
+            request.method == "chain_getBlock" && request.params == json!([orphan])
+        }));
+        let canonical_params = if method == "chain_getBlockHash" {
+            json!([101])
+        } else {
+            json!([canonical])
+        };
+        let reads = requests[first_canonical_read..]
+            .iter()
+            .filter(|request| request.method == method && request.params == canonical_params)
+            .count();
+        // Receipt recovery makes one additional block read to decode the result.
+        assert_eq!(
+            reads,
+            if hung {
+                4
+            } else if method == "chain_getBlockHash" {
+                2
+            } else {
+                3
+            }
+        );
+        let submitted = fake.state().lock().unwrap().submissions.clone();
+        assert_eq!(submitted.len(), 1);
+        let carrier_hash = H256(Blake2b::<U32>::digest(&submitted[0]).into());
+        let returned = if hung {
+            assert!(started.elapsed() >= Duration::from_millis(400));
+            assert!(started.elapsed() < Duration::from_secs(5));
+            let expected = if method == "chain_getBlockHash" {
+                "after 4 canonical block-hash RPC attempts"
+            } else {
+                "after 4 canonical receipt RPC attempts"
+            };
+            let error = assert_unknown(result, &fake);
+            assert!(
+                matches!(error, SubmitFailure::Unresolved { hash, ref cause, reconciliation: None }
+                    if hash == carrier_hash
+                        && matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Protocol(message))
+                            if message.contains(expected))),
+                "{method}: {error}"
+            );
+            assert_eq!(
+                client.nonces().cached(&signer.account().to_string()).await,
+                None
+            );
+            None
+        } else {
+            let report = result.unwrap();
+            let paired = report.shield.unwrap();
+            assert_eq!(paired.carrier_hash, carrier_hash);
+            assert_eq!(paired.inner_hash, inner_hash);
+            Some(report)
+        };
+        // This public API consumes the caller's canonical hash/finality flag;
+        // it performs receipt lookup, not another submission or finality wait.
+        let recovered = client
+            .resolve_extrinsic(inner_hash, canonical_hash, true)
+            .await
+            .unwrap();
+        for report in returned.iter().chain(std::iter::once(&recovered)) {
+            assert!(report.success);
+            assert_eq!(report.inclusion, Inclusion::Finalized);
+            assert_eq!(report.hash, inner_hash);
+            assert_eq!(report.block_hash, Some(canonical_hash));
+            assert_eq!(report.block_number, Some(101));
+            assert_eq!(report.extrinsic_index, Some(0));
+            assert_eq!(report.extrinsic_id.as_deref(), Some("101-0000"));
+            assert_eq!(report.events.len(), 1);
+        }
+        assert_eq!(fake.state().lock().unwrap().submissions, submitted);
+        assert_eq!(
+            fake.requests()
+                .iter()
+                .filter(|request| request.method.starts_with("author_submit"))
+                .count(),
+            1
+        );
+        {
+            let signed = signer.signed.lock().unwrap();
+            assert_eq!(signed.len(), 2);
+            assert_eq!(signed[0].purpose, SignPurpose::ShieldInner);
+            assert_eq!(signed[0].call, inner_call.as_bytes());
+            assert_eq!(signed[1].purpose, SignPurpose::ShieldCarrier);
+        }
+        client.close().await;
+    }
+}

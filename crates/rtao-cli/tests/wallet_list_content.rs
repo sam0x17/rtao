@@ -3,7 +3,7 @@
 use rtao::primitives::AccountId;
 use rtao_cli::{
     application,
-    books::Books,
+    books::{Books, FsAccountLookup, NameResolver},
     commands::wallet,
     context::AppContext,
     globals::Globals,
@@ -61,8 +61,16 @@ async fn actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_
             {"name":"first-proxy","address":proxy},
             {"name":"second-proxy","address":bob,"proxy_type":"Governance","delay":99,"spawner":alice,"note":"second-proxy-note"},
         ]),
-        json!([{"name":"safe","threshold":2,"signatories":["member-a","member-b"],"note":"safe member set"}]),
+        json!([
+            {"name":"safe","threshold":2,"signatories":["member-a","member-b"],"note":"safe member set"},
+            {"name":"safe-partial","threshold":"2","signatories":["member-a","member-b","missing"],"note":"partial member set"},
+        ]),
     );
+    let (expected_account, _) = rtao::core::extrinsic::multisig_account_id(&[[7; 32], [8; 32]], 2)?;
+    let expected_address = AccountId(expected_account).to_string();
+    let lookup = FsAccountLookup::new(absent.clone())?;
+    let resolver = NameResolver::new(&books, &lookup, "default", "default");
+    assert!(resolver.saved_multisig_address("safe-partial").is_err());
     for json_mode in [false, true] {
         let matches = application::command_tree([wallet::command()])
             .try_get_matches_from(["rtao", "wallet", "list"])?;
@@ -103,6 +111,20 @@ async fn actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_
                     .as_array()
                     .ok_or("expected members")?
             );
+            assert_eq!(payload["multisigs"][0]["ss58"], expected_address);
+            assert_eq!(
+                payload["multisigs"][1],
+                json!({
+                    "name":"safe-partial", "kind":"multisig", "threshold":2,
+                    "signatory_count":3, "ss58":expected_address,
+                    "signatories":[
+                        {"name":"member-a","ss58":alice},
+                        {"name":"member-b","ss58":bob},
+                        {"name":"missing","ss58":null}
+                    ],
+                    "note":"partial member set"
+                })
+            );
         } else {
             let member_end = text.find("addresses").ok_or("addresses section")?;
             let multisig_section = &text[..member_end];
@@ -113,6 +135,10 @@ async fn actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_
                 &bob,
                 "signatories",
                 "safe member set",
+                "safe-partial",
+                "missing",
+                "partial member set",
+                &expected_address,
             ] {
                 assert!(
                     multisig_section.contains(expected),
@@ -136,7 +162,7 @@ async fn actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_
             assert!(!text.contains("unrecognized-private-sentinel"));
             assert!(!text.contains('\x1b'));
             assert!(text.contains(
-                "0 coldkeys  ·  0 hotkeys  ·  1 multisigs  ·  2 addresses  ·  2 proxies"
+                "0 coldkeys  ·  0 hotkeys  ·  2 multisigs  ·  2 addresses  ·  2 proxies"
             ));
         }
         assert!(sink.bytes(Stream::Stderr)?.is_empty());
