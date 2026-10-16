@@ -2,8 +2,8 @@
   "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
   "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
   "host": "x86_64-unknown-linux-gnu",
-  "machine": "INTEL(R) XEON(R) PLATINUM 8573C",
-  "measured_unix_seconds": 1792133197,
+  "machine": "AMD EPYC 7763 64-Core Processor",
+  "measured_unix_seconds": 1792138186,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1461,7 +1461,7 @@
     },
     "dependency_inputs_sha256": "7218a60d1a3333c361745dc0ea14efa66efc7c733630bd26fec69f6f48e32c25",
     "dirty": false,
-    "head_commit": "f48535dbfd3b75dcdc9511c259b322c2b9a8ab38"
+    "head_commit": "d5132a014bf28dfe5fbaa7b569389bf7b475af92"
   },
   "target": "aarch64-apple-darwin"
 }

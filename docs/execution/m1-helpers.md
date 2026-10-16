@@ -39,7 +39,9 @@ The complete license is retained in `crates/rtao-primitives/LICENSE-PSF`
 (SHA-256 `3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf`),
 with attribution and a modification description in `drand.rs`.
 
-Validation used the recorded task root and shared Cargo target:
+Historical validation used the recorded task root and shared Cargo target.
+Current substantial checks belong in free `ubuntu-latest` CI under Q30; no local
+proptest/MSRV campaign is required:
 
 - `PROPTEST_CASES=10000 cargo test -p rtao-primitives --all-features`:
   41 unit, 1 compact-text, 11 JSON, 8 primitive integration and 4 doc tests pass.
@@ -52,6 +54,6 @@ Validation used the recorded task root and shared Cargo target:
 
 The fetched C source was removed after checking open files/processes, launchd,
 configuration references, symlinks and virtual-environment dependencies. The
-shared build root remains live for the parent execution task; bounded test
-logs remain under its `tmp` directory. No task-specific scratch directory or
-live dependency was retained by this helper task.
+former shared build root is retired and absent, including its historical
+`tmp` log paths. No task-specific scratch directory or live dependency was
+retained by this helper task. Preserve shared global Cargo/toolchain caches.

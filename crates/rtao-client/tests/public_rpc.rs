@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! The six client-boundary transport cases from the pinned Python source.
+//! Client-boundary transport cases from the pinned Python source.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -71,6 +71,51 @@ async fn rpc_substrate_exposes_public_policy_error() {
     assert!(display.starts_with("RPC endpoint refused the request under its traffic policy: "));
     assert!(!display.contains(['\0', '\u{1b}']));
     assert!(!display.contains(&"x".repeat(600)));
+}
+
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_exposes_public_policy_error
+#[tokio::test]
+async fn rpc_substrate_policy_error_during_connect_closes_its_socket() {
+    use rtao_testkit::FakeNode;
+    use std::time::Duration;
+
+    let mut node = FakeNode::start().await.unwrap();
+    node.mutate_state(|state| {
+        state.queue_reply(
+            "chain_getBlockHash",
+            Reply::error(
+                -32005,
+                "request rate exceeded",
+                Some(json!({"retry_after": "60"})),
+            ),
+        );
+    });
+    let mut cfg = ClientConfig::new(Network::resolve_with(node.url(), |_| None).unwrap()).unwrap();
+    cfg.track_heads = false;
+    cfg.runtime_cache_dir = None;
+    cfg.config_store = None;
+    cfg.startup_timeout = Duration::from_secs(5);
+    cfg.session.rate_limit = None;
+    cfg.session.retry_forever = true;
+    cfg.session.silence_timeout = Duration::from_secs(30);
+
+    let error = Client::connect(cfg).await.unwrap_err();
+    assert_eq!(error.policy().unwrap().retry_after.as_deref(), Some("60"));
+    assert!(
+        node.requests().iter().any(|request| {
+            request.method == "chain_getBlockHash" && request.params == json!([0])
+        })
+    );
+    // The server sent only a JSON-RPC error and remains alive here. Neither
+    // node shutdown nor an explicit successful-client close can satisfy this.
+    tokio::time::timeout(Duration::from_secs(1), node.wait_for_closed(1))
+        .await
+        .unwrap();
+    assert_eq!(node.connect_attempts(), 1);
+    let connections = node.connections();
+    assert_eq!(connections.len(), 1);
+    assert!(connections[0].accepted && connections[0].closed);
+    node.shutdown().await;
 }
 
 // pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_exposes_public_blank_timeout_error

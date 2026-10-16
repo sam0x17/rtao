@@ -1,5 +1,10 @@
 # M1-22 disposable core canary
 
+Q30 makes a fresh core-canary run optional targeted hosted work. Current M1
+requires source/fixture review and ordinary free `ubuntu-latest` checks, with
+no local canary, rehearsal workspace or additional toolchain installation.
+The implementation description and validation below record the historical run.
+
 `cargo xtask pin --core-branch main --no-commit` resolves the authenticated
 monorepo's `main` branch to a full Git commit. It rewrites every monorepo Git
 dependency in the copied root manifest, including the downstream BLS patch, to
@@ -30,17 +35,17 @@ and refuses unsupported source forms or ambiguous identities. Cargo metadata's
 resolve graph includes a dormant optional registry BLS edge in this workspace;
 the activated dependency tree excludes it.
 
-The mandatory core lock integration test retains its literal assertion that
-the complete raw lockfile contains exactly one BLS package. Canary preparation
-does not waive that test. The CI test invocation uses `--no-fail-fast` so its
-failure does not suppress semantic cases. Canonical production pin and
-dependency gates retain their existing requirements.
+At that historical checkpoint, the core lock integration test still asserted
+that the complete raw lockfile contained exactly one BLS package. Canary
+preparation did not waive it, and `--no-fail-fast` kept that failure from
+suppressing semantic cases. Current pin/BLS checks follow the approved Q26
+built-dependency policy in [bls-lock.md](bls-lock.md); this record does not
+restore the former literal-lock criterion.
 
-Validation uses the recorded task root
-`target/execute-plan.6Ro0PC`, with `build` as the Cargo target and `tmp` for
-disposable files. The rehearsal copies sources to
-`tmp/core-canary-rehearsal`; the original manifest, lockfile, and pin file are
-never rewritten by this command. The actual resolved main commit was
+Historical validation used `target/execute-plan.6Ro0PC`, with `build` as the
+Cargo target and `tmp` for disposable files. The rehearsal copied sources to
+`tmp/core-canary-rehearsal`; the original manifest, lockfile, and pin file were
+not rewritten by that run. The actual resolved main commit was
 `850f2755bb05a3851f948489f0ab27b0645cebce`. The command completed its source and
 graph audits successfully.
 
@@ -71,6 +76,7 @@ diagnostic. No failing case was filtered out.
 The rehearsal directory and temporary metadata/tree dumps were removed after
 checking running processes, launchd/configuration references, symlinks and virtual
 environment dependencies. No live dependency referenced the rehearsal. Bounded
-logs remain under the parent's recorded temporary root; the shared Cargo and
-upstream source caches remain live for ongoing plan execution. No wallet or
-private state was changed.
+logs were recorded under the parent's former temporary root. That root is
+retired and absent; its build, rehearsal and log paths are historical. Preserve
+shared global Cargo/source caches and unrelated work. No wallet or private
+state was changed.

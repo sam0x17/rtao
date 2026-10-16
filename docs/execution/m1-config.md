@@ -23,8 +23,9 @@ preserves Python's integer-key and string-value coercions. Raw cache keys use
 `BigInt`; `CacheMap::chain_values` returns checked `NetUid` entries and an explicit
 list of rejected keys for client diagnostics.
 
-Validation on 2026-10-14 used the complete workspace product, without substitute
-modules or local Python:
+Historical validation on 2026-10-14 used the complete workspace product, without
+substitute modules or local Python. Current substantial checks run in free
+`ubuntu-latest` CI under Q30; the commands below require no local rerun:
 
 ```text
 cargo test -p rtao-client config:: --lib --all-features --locked
@@ -47,13 +48,14 @@ collisions, Python rendering and checked chain identifiers. A current-thread
 runtime test verifies that the store's clock and filesystem operation execute on
 a blocking worker.
 
-Strict all-target clippy must be rerun after the concurrent test changes settle.
-Its latest attempt found only `items_after_test_module` in `view.rs`, where the
-dynamic `View` implementation follows its test module. The full library passes
-strict clippy, including the config module.
+At that checkpoint, the strict all-target Clippy attempt found only
+`items_after_test_module` in `view.rs`, where the dynamic `View` implementation
+followed its test module. The full library passed strict Clippy, including the
+config module. Any required integrated rerun belongs in hosted CI.
 
 All tests ran with `RTAO_TEMP_ROOT`, `CARGO_TARGET_DIR` and `TMPDIR` beneath
 `target/execute-plan.6Ro0PC`. Test-owned configuration directories were removed
 after their blocking tasks completed. No process, launchd unit, symlink or
 virtual environment was created or given a dependency on those fixtures. A
-post-test directory check found no remaining `tmp/config-*` fixtures.
+post-test directory check found no remaining `tmp/config-*` fixtures. That
+execution root is retired and absent; do not recreate it or resume its commands.

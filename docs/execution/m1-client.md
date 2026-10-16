@@ -8,7 +8,7 @@ Snapshots stamp one block hash, height and parent-selected runtime. Typed and dy
 
 The six higher client-boundary cases from pinned `test_rpc.py` run against these public production wrappers: connection policy metadata, blank timeout wording, strict-stream policy metadata, extrinsic lookup policy metadata, submission policy metadata with nonce clearing, and submission retry exhaustion with nonce clearing. No test is ignored and no alternate test wrapper stands in for the client.
 
-Verification at this checkpoint:
+Historical verification at this checkpoint:
 
 - Full all-feature product suite: 83 unit tests, 7 connection integration tests and 6 source-parity integration tests passed.
 - Full no-default product suite passed with the same 96 tests.
@@ -18,7 +18,7 @@ Verification at this checkpoint:
 
 Configuration evidence is in `m1-config.md`; metadata caching evidence is in `m1-runtime-cache.md`. The 22 runtime-cache tests use actual pinned V15 metadata and derived V14 metadata, with exact Python `STMD` bytes and fetch-path flags, four-runtime/512-block LRU bounds, shared-future cancellation, corrupt cache recovery and eight-file pruning. The 13 head tests include real independently retrieved header hashes, reconnect backfill, best-chain forks, strict subscription loss, slow-consumer recovery and cancellation. Test fixtures use injected task-root paths and disable user disk caches.
 
-Build outputs and bounded verification logs remain under the recorded execution root as live dependencies of the continuing plan. This work creates no disposable directories outside that root and does not run Python locally.
+Historical build outputs and verification logs used the former execution root. That root is retired and absent; no current build/log dependency remains there. Current substantial validation uses free `ubuntu-latest` CI under Q30, with no local build or Python execution. Shared global Cargo/toolchain caches remain preserved.
 
 `FakeState` now includes its explicit arbitrary hash in emitted headers, so the production tracker can resolve fake ancestry consistently. The client integration test follows advances from height 100 through 102 with matching finalized identities. The combined client/testkit suites and strict Clippy passed after this correction.
 

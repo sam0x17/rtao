@@ -65,9 +65,10 @@ implementation record; the root executor owns external filings.
 
 ## Validation
 
-Validation uses the recorded task root
-`target/execute-plan.6Ro0PC`, its shared `build` directory, and its `tmp`
-directory. No local Python was executed.
+Historical validation used `target/execute-plan.6Ro0PC`, its shared `build`
+directory, and its `tmp` directory. That root is retired and absent. Current
+substantial checks run in free `ubuntu-latest` CI under Q30, with no local
+build, toolchain installation or Python execution required.
 
 - Eight IR tests cover explicit synthetic V15 field identities, indices,
   constants, key tuples/hashers/defaults, unnamed event fields, serde
@@ -88,8 +89,8 @@ both the previously validated `ci/runner/xtask` binary and a final direct
 
 `cargo +1.89.0 check -p rtao-core-ext --lib --locked` passed. Rustup installed
 the normalized `1.89.0` alias; the workspace already had a `1.89` alias. The
-new toolchain is retained as useful MSRV tooling, rather than treating a
-live developer tool as disposable build output.
+new toolchain was retained as useful MSRV tooling. This historical installation
+creates no current setup requirement; existing shared toolchains are preserved.
 
 All 32 crate tests passed under `--locked`; strict Clippy and the exact upstream
 source lint passed after final changes. The normal/build dependency graph has
@@ -111,8 +112,8 @@ The protocol fixture's outer enum types were corrected to avoid registering
 the unit output type as an outer event enum. The protocol worker's offline
 invocation also refreshed the shared lock for a concurrent btauth dependency;
 the root executor was notified and retains lockfile ownership.
-The staged gate updated the executor's shared `staged-probe` directory. Those
-probe crates remain in use by subsequent whole-workspace gates and their
-cleanup belongs to the root executor. No separate temporary root or private
-build cache was created by this implementation; shared build and tooling
-caches remain in use by the plan executor.
+The historical staged gate updated the executor's shared `staged-probe`
+directory. Those probe/build paths are under the retired execution root and
+are not current live dependencies. No separate temporary root or private build
+cache was created by this implementation. Current staged and workspace checks
+belong in hosted CI; shared global Cargo/toolchain caches remain preserved.
