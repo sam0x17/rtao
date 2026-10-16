@@ -773,7 +773,7 @@ async fn client_hotkey_association_submits_exact_call_then_reads_missing_uid_zer
 -> Result<()> {
     use rtao_intents::AssociateHotkey;
     use rtao_primitives::{NetUid, Uid};
-    use rtao_reads::reads::associated_evm_key;
+    use rtao_reads::reads::m6_accounts::associated_evm_key;
     use rtao_runtime::calls::subtensor_module;
 
     const NETUID: NetUid = NetUid(1);
