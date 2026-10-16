@@ -51,7 +51,11 @@ fn weighted(name: &'static str, description: &'static str) -> Command {
             ))
             .arg(csv(
                 "weights",
-                "Comma-separated relative weights, parallel to --uids.",
+                if name == "set" {
+                    "Comma-separated relative weights, parallel to --uids. Clipped to the subnet's max-weight limit, normalized, and quantized before submission."
+                } else {
+                    "Comma-separated relative weights, parallel to --uids."
+                },
             ))
             .arg(
                 Arg::new("raw_u16")
@@ -82,20 +86,49 @@ fn weighted(name: &'static str, description: &'static str) -> Command {
 pub fn command() -> Command {
     Command::new("weights")
         .about("Validator weight commands.")
+        .long_about(format!(
+            "Validator weight commands.\n\nGuide: {}/guides/validating",
+            rtao_catalog::py::DOCS_URL
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .subcommand(weighted(
-            "set",
-            "Set weights using the subnet's plaintext or timelocked commit path.",
-        ))
-        .subcommand(weighted(
-            "commit",
-            "Force a timelocked commit; the chain reveals it automatically.",
-        ))
+        .subcommand(
+            weighted(
+                "set",
+                "Set weights using the subnet's plaintext or timelocked commit path.",
+            )
+            .long_about(concat!(
+                "Set validator weights (auto-selects plaintext or commit-reveal).\n\n",
+                "Signed by the hotkey, which must be registered on the subnet. Weights are ",
+                "conformed to the subnet's hyperparameters, and the submission path ",
+                "(plaintext or timelocked commit) follows the subnet's on-chain ",
+                "configuration; registration and rate limits are checked before signing."
+            ))
+            .after_help("Example: rtao weights set --netuid 1 --uids 0,1,2 --weights 0.5,0.3,0.2"),
+        )
+        .subcommand(
+            weighted(
+                "commit",
+                "Force a timelocked commit; the chain reveals it automatically.",
+            )
+            .long_about(concat!(
+                "Commit timelock-encrypted weights (forces the commit-reveal path).\n\n",
+                "Unlike `weights set`, this always submits a timelocked commit even if the ",
+                "subnet runs plaintext weights. The chain auto-reveals the commit at the ",
+                "drand reveal round; no manual reveal is needed."
+            )),
+        )
         .subcommand(with_globals(
             Command::new("reveal")
                 .about("Reveal a legacy salt-based commit using its original inputs.")
-                .arg(subnet())
+                .long_about(concat!(
+                    "Reveal previously committed weights.\n\n",
+                    "Legacy salt-based commit-reveal: the uids, weights, salt, and version key ",
+                    "must reproduce the earlier commit exactly or the reveal fails. Timelocked ",
+                    "commits made by `weights set`/`weights commit` reveal automatically and do ",
+                    "not need this command."
+                ))
+                .arg(subnet().help("Subnet the commit was made on."))
                 .arg(
                     csv("uids", "Comma-separated miner UIDs, exactly as committed.").required(true),
                 )
@@ -103,7 +136,7 @@ pub fn command() -> Command {
                     csv("weights", "Comma-separated weights, exactly as committed.").required(true),
                 )
                 .arg(csv("salt", "Comma-separated salt values used at commit time.").required(true))
-                .arg(version_key())
+                .arg(version_key().help("Weights version key used at commit time."))
                 .arg(period()),
             Tier::Tx,
         ))
