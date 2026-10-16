@@ -19,6 +19,8 @@ use toml_edit::DocumentMut;
 
 use super::{Resolver, header, pretty, rust_string, rustfmt};
 
+#[path = "extract_fee_contract.rs"]
+mod fee_contract;
 #[path = "extract_proxy_contract.rs"]
 mod proxy_contract;
 #[path = "extract_reveal_contract.rs"]
@@ -824,6 +826,7 @@ pub(super) fn outputs(
     rules["mortality"] = mortality.clone();
     let proxy_contract = proxy_contract::output(root, pins, tables)?;
     let reveal_contract = reveal_contract::output(root, pins)?;
+    rules["fee_contract"] = fee_contract::output(root, pins)?;
     rules["proxy_contract"] = proxy_contract;
     rules["reveal_contract"] = reveal_contract;
     let (pool_rust, pool_outputs) = super::pool_rpc::outputs(root)?;
