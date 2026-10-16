@@ -442,6 +442,87 @@ async fn allocation_retains_all_for_fee_and_existential_deposit_planning() -> Te
 }
 
 #[tokio::test]
+async fn allocation_picker_keeps_selected_quote_without_an_individual_summary_rpc() -> TestResult {
+    let mut state = seed()?;
+    // Root baskets remains available, but decoding an individual summary is
+    // deliberately unavailable. Python's selected-record path needs no such call.
+    state.seed_runtime_encoded(
+        "BetaBasketRuntimeApi_get_validator_basket_summary",
+        HOT.0.to_vec(),
+        vec![],
+    );
+    let (client, chain) = client(state).await?;
+    let args = ["rtao", "root", "allocate", "--amount", "2", "--yes"];
+    let parsed = parse(&args)?;
+    let (mut ctx, sink) = context(&parsed)?;
+    ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptTerminal {
+        answers: VecDeque::from(["1".into()]),
+        messages: Arc::new(Mutex::new(Vec::new())),
+    })));
+    let request = parse_request(&mut ctx, &parsed)?;
+    let mut history = PromptHistory::default();
+    let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut history)
+        .await?
+        .ok_or("picked allocation")?;
+    assert_eq!(tx.op, "stake_into_basket");
+    assert_eq!(tx.args["hotkey_ss58"], json!(HOT));
+    assert_eq!(tx.args["amount_tao"], "2");
+    assert_eq!(
+        tx.intent()?.as_dyn().to_json_dyn()["hotkey_ss58"],
+        json!(HOT)
+    );
+    assert_eq!(
+        history.replay_command(&args.map(str::to_owned)),
+        format!("rtao root allocate --amount 2 --yes --hotkey {HOT}")
+    );
+    let stdout = sink.text(Stream::Stdout)?;
+    assert!(stdout.contains("Straße"));
+    assert!(stdout.contains("2.0000 τ/β"));
+    assert!(stdout.contains("~1.0000 β"));
+    assert!(stdout.contains("entry slippage and swap fees"));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| request.method != "state_call"
+                || request.params[0] != "BetaBasketRuntimeApi_get_validator_basket_summary")
+    );
+    // An explicit target still attempts its display quote and may plan without
+    // that optional context, matching the original guarded direct-target path.
+    let before = chain.requests().len();
+    let hotkey = HOT.to_string();
+    let parsed = parse(&[
+        "rtao", "root", "allocate", "--hotkey", &hotkey, "--amount", "2", "--yes",
+    ])?;
+    let (mut ctx, sink) = context(&parsed)?;
+    let request = parse_request(&mut ctx, &parsed)?;
+    let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+        .await?
+        .ok_or("unquoted direct allocation")?;
+    assert_eq!(tx.args["hotkey_ss58"], json!(HOT));
+    assert_eq!(tx.args["amount_tao"], "2");
+    assert!(!sink.text(Stream::Stdout)?.contains("τ/β"));
+    assert_eq!(
+        chain
+            .requests()
+            .iter()
+            .skip(before)
+            .filter(|request| request.method == "state_call"
+                && request.params[0] == "BetaBasketRuntimeApi_get_validator_basket_summary")
+            .count(),
+        1
+    );
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn terminal_fund_picker_pages_past_twenty_and_records_the_exact_hotkey() -> TestResult {
     let mut state = seed()?;
     let funds: Vec<_> = (0..21u8)
@@ -1074,6 +1155,101 @@ async fn claim_checks_accrued_yield_and_move_claims_then_moves_all_root_stake() 
             .ok_or("no accrued yield")?;
     assert_eq!(error.code, 1);
     assert!(error.message.contains("no accrued yield"));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn swap_confirms_signing_wallet_before_binding_local_hotkey_names() -> TestResult {
+    let wallets = WalletRoot::new()?;
+    wallets.add("A", OWNER)?;
+    wallets.add("B", OTHER)?;
+    wallets.add_hotkey("A", "hk", HOT)?;
+    wallets.add_hotkey("B", "hk", OTHER)?;
+    let hotkey = HOT.to_string();
+    let (client, chain) = client(seed()?).await?;
+    for (target, answers, flags, expected, signing_wallet) in [
+        (Some("hk"), vec!["B"], vec![], OTHER, "B"),
+        (Some(hotkey.as_str()), vec!["B"], vec![], HOT, "B"),
+        (None, vec!["B", "hk"], vec![], OTHER, "B"),
+        (Some("hk"), vec![], vec!["--yes"], HOT, "A"),
+        (Some("hk"), vec![], vec!["--json"], HOT, "A"),
+        (Some("hk"), vec![], vec!["--wallet", "B"], OTHER, "B"),
+    ] {
+        let mut argv = vec![
+            "rtao", "root", "swap", "--from", "1", "--to", "2", "--amount", "1",
+        ];
+        if let Some(target) = target {
+            argv.extend(["--hotkey", target]);
+        }
+        argv.extend(flags);
+        let parsed = parse(&argv)?;
+        let (mut ctx, _) = context(&parsed)?;
+        ctx.globals.wallet_path = wallets.0.clone();
+        if !ctx.globals.wallet_given {
+            ctx.globals.wallet_name = "A".into();
+        }
+        ctx.globals.hotkey_name = "hk".into();
+        ctx.globals.hotkey_given = false;
+        let prompted = !answers.is_empty();
+        ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptTerminal {
+            answers: answers.into_iter().map(str::to_owned).collect(),
+            messages: Arc::new(Mutex::new(Vec::new())),
+        })));
+        let mut history = PromptHistory::default();
+        let start = chain.requests().len();
+        let request = Request::from_matches(
+            &mut ctx,
+            parsed.subcommand().ok_or("root group")?.1,
+            &mut history,
+        )?;
+        let Request::Swap {
+            hotkey: selected, ..
+        } = &request
+        else {
+            return Err("swap request".into());
+        };
+        assert_eq!(*selected, expected);
+        assert_eq!(ctx.globals.wallet_name, signing_wallet);
+        assert!(ctx.globals.wallet_given);
+        assert_eq!(chain.requests().len(), start);
+        let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut history)
+            .await?
+            .ok_or("wallet-bound swap")?;
+        assert_eq!(tx.op, "swap_basket");
+        assert_eq!(tx.args["hotkey_ss58"], json!(expected));
+        let intent = tx.intent()?.to_json();
+        assert_eq!(intent["hotkey_ss58"], json!(expected));
+        assert_eq!(intent["origin_netuid"], 1);
+        assert_eq!(intent["dest_netuid"], 2);
+        assert_eq!(intent["amount"], "1");
+        assert_eq!(intent["min_amount_out"], "6.930000002");
+        let holding_calls: Vec<_> = chain
+            .requests()
+            .into_iter()
+            .skip(start)
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "BetaBasketRuntimeApi_get_validator_basket"
+            })
+            .collect();
+        assert_eq!(holding_calls.len(), 1);
+        assert_eq!(
+            holding_calls[0].params[1],
+            format!("0x{}", hex::encode(expected.0))
+        );
+        if prompted {
+            let replay = history
+                .replay_command(&argv.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>());
+            assert!(replay.contains("--wallet B"));
+        }
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
     client.close().await;
     Ok(())
 }

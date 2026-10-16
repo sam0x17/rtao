@@ -74,6 +74,26 @@ Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
 No local build/test, service, Mac Studio work, new temporary root or upstream
 filing was needed. Preserve wallets, recovery material and unrelated work.
 
+### Reviewed follow-up awaiting hosted execution
+
+The next source batch confirms the signing wallet before resolving a relative
+root-swap hotkey, and retains an allocation picker's selected name and rate
+without another individual quote RPC. Human wallet lists retain multisig
+members, later optional contact/proxy fields and effective proxy defaults.
+Pending multisig output retains member labels and full co-signer commands.
+Mnemonic-clear guidance appears once on stdout in normal and quiet human
+sessions; JSON remains a single document. Five new test functions and extended
+actual-command fixtures await hosted compilation and execution. Direct rustfmt,
+whitespace checks and independent source reviews pass.
+
+Complete source reviews and exact d01830c results reconcile the metagraph,
+FakeNode harness and test_rpc.py rows. The source map is now 306/357 reconciled,
+51 pending; the generated matrix remains 303/54 until hosted refresh and review.
+Only those three rows change. Root command summaries and generic required-address
+picker integration remain incomplete, so their whole source rows stay pending.
+Strict M8 remains off and M2-S02 stays open/unaccepted. No local builds/tests or
+new upstream filings were used for this batch.
+
 ### Verified weight-clipping repair
 
 Source review found a public-helper result mismatch for finite minimum-subnormal

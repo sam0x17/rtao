@@ -1840,13 +1840,13 @@ mod tests {
             &pending(100, vec![]),
         )?;
         let (client, chain) = client(state).await?;
-        let (ctx, _, sink) = context(&["pending", "--multisig", "team"], books())?;
+        let (mut ctx, _, sink) = context(&["pending", "--multisig", "team"], books())?;
         let fetch = Fetch::default();
         execute_with_fetch(
             &ctx,
             &files.paths,
             &Request::Pending {
-                group,
+                group: group.clone(),
                 call_hash: None,
                 call_data: Some("not hex and intentionally ignored without a filter".into()),
             },
@@ -1896,6 +1896,49 @@ mod tests {
                 .ok_or("replay")?
                 .contains("--signatory bob")
         );
+        let human_sink = MemorySink::default();
+        ctx.output = Output::new(
+            OutputOptions {
+                json_mode: false,
+                quiet: false,
+                network: Some("local".into()),
+            },
+            Arc::new(human_sink.clone()),
+        );
+        execute_with_fetch(
+            &ctx,
+            &files.paths,
+            &Request::Pending {
+                group,
+                call_hash: None,
+                call_data: None,
+            },
+            Some(&client),
+            &fetch,
+        )
+        .await?;
+        let human = human_sink.text(Stream::Stdout)?;
+        for row in rows {
+            for command in row["co_signer_commands"].as_array().into_iter().flatten() {
+                let command = command["command"].as_str().ok_or("public replay command")?;
+                assert!(
+                    human.contains(crate::output::terminal_text(command).as_ref()),
+                    "missing copyable replay command"
+                );
+            }
+            for key in ["approval_labels", "remaining_labels"] {
+                for label in row[key].as_array().into_iter().flatten() {
+                    assert!(
+                        human.contains(label.as_str().ok_or("member label")?),
+                        "missing public member label"
+                    );
+                }
+            }
+        }
+        assert!(human.contains("--signatory bob") && human.contains("--signatory carol"));
+        assert!(human.contains("--call-data"));
+        assert!(!human.contains('\u{1}') && !human.contains('\u{2}'));
+        assert!(human_sink.bytes(Stream::Stderr)?.is_empty());
         assert!(fetch.requests.lock().map_err(|_| "fetches")?.is_empty());
         assert!(
             chain

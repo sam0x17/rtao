@@ -15,9 +15,10 @@ nine doctests across 19 crate suites. This supplies current adapter execution
 for the applicable [M1 Q30 development exit](m1-client.md#current-q30-development-exit).
 Canonical chain text uses byte lists; this case demonstrates no wire-path
 failure. Typed row access, `Option` and Rust `Debug` are explicit native API
-choices. The whole source row retains its separate final disposition; these
-Rust results establish no fresh Python/oracle, live-network, benchmark, fuzz,
-platform or release coverage.
+choices. Complete source review and exact hosted evidence now reconcile the
+whole source row; the generated matrix awaits hosted refresh. These Rust results
+establish no fresh Python/oracle, live-network, benchmark, fuzz, platform or
+release coverage.
 
 The graph has one row projector shared by the borrowed parser, by-name typed
 models and the core's dynamic values. Fixed-width key, axon and boolean columns
