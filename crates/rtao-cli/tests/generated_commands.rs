@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/tx.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional sources at the same commit/license: sdk/python/bittensor/cli/query.py and cli/stake_picker.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
 use rtao::{
@@ -31,6 +32,11 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
 };
+// Public-only picker fixtures use the recorded task root and owned cleanup.
+#[path = "../../rtao-wallet/tests/support/mod.rs"]
+mod support;
+use support::TempRoot;
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
 struct NoTerminal;
@@ -1865,5 +1871,165 @@ async fn pow_fresh_pool_rejection_does_not_retry_even_when_name_matches() -> Tes
     );
     assert_eq!(attempts.load(Ordering::SeqCst), 1);
     client.close().await;
+    Ok(())
+}
+
+#[test]
+fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_python_numbers()
+-> TestResult {
+    let root = TempRoot::new();
+    let first_wallet = AccountId([61; 32]);
+    let second_wallet = AccountId([62; 32]);
+    let contact = AccountId([63; 32]);
+    for (name, account) in [
+        ("wallet10", second_wallet),
+        ("wallet2", first_wallet),
+        ("configured", AccountId([64; 32])),
+    ] {
+        let directory = root.path().join(name);
+        std::fs::create_dir(&directory)?;
+        std::fs::write(
+            directory.join("coldkeypub.txt"),
+            serde_json::to_vec(&json!({"ss58Address":account,"cryptoType":1}))?,
+        )?;
+    }
+    let hotkeys = root.path().join("configured/hotkeys");
+    std::fs::create_dir(&hotkeys)?;
+    for (name, account) in [
+        ("worker10", first_wallet),
+        ("worker2", first_wallet),
+        ("worker1", second_wallet),
+    ] {
+        std::fs::write(
+            hotkeys.join(name),
+            serde_json::to_vec(&json!({"ss58Address":account,"cryptoType":1}))?,
+        )?;
+    }
+    let call_hash = format!("0x{}", "ab".repeat(32));
+    for answer in ["2", "٢"] {
+        let argv = [
+            "rtao",
+            "query",
+            "multisig",
+            "--call-hash",
+            &call_hash,
+            "--wallet",
+            "configured",
+        ];
+        let parsed = tree()?.try_get_matches_from(argv)?;
+        let (mut ctx, _) = context(
+            &parsed,
+            &generated::read_reserved(rtao::reads::ReadName::Multisig),
+        )?;
+        ctx.globals.wallet_path = root.path().to_owned();
+        ctx.passwords.native_provider = None;
+        ctx.books.addresses = vec![
+            json!({"name":"empty must not consume a number","address":""}),
+            json!({"name":"contact","address":contact}),
+            json!({"name":"duplicate contact","address":contact}),
+        ];
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(PromptTerminal {
+            answers: VecDeque::from([answer.into()]),
+            messages: messages.clone(),
+        })));
+        let mut history = PromptHistory::default();
+        let request = QueryRequest::from_matches(
+            &ctx,
+            rtao::reads::ReadName::Multisig,
+            leaf(&parsed)?,
+            &mut history,
+        )?;
+        assert_eq!(request.params["account_ss58"], json!(first_wallet));
+        assert_eq!(request.params["call_hash"], call_hash);
+        assert_eq!(
+            history.replay_command(&argv.map(str::to_owned)),
+            format!("{} --account {first_wallet}", argv.join(" "))
+        );
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&first_wallet.to_string())
+                .map(String::as_str),
+            Some("wallet2")
+        );
+        let messages = messages.lock().map_err(|_| "query picker messages")?;
+        for expected in [
+            format!("1  contact  {contact}"),
+            format!("2  wallet2  {first_wallet}"),
+            format!("3  wallet10  {second_wallet}"),
+        ] {
+            assert!(
+                messages.iter().any(|line| line == &expected),
+                "choice {expected}"
+            );
+        }
+        assert!(
+            !messages
+                .iter()
+                .any(|line| line.contains("empty must") || line.contains("duplicate contact"))
+        );
+    }
+    for (answer, expected_name) in [("3", "configured/worker10"), ("２", "configured/worker2")] {
+        let argv = [
+            "rtao",
+            "conviction",
+            "move",
+            "--netuid",
+            "3",
+            "--wallet",
+            "configured",
+        ];
+        let parsed = application::command_tree([rtao_cli::commands::conviction::command()?])
+            .try_get_matches_from(argv)?;
+        let (mut ctx, _) = context(&parsed, &generated::intent_reserved("move_lock")?)?;
+        ctx.globals.wallet_path = root.path().to_owned();
+        ctx.passwords.native_provider = None;
+        ctx.books.addresses =
+            vec![json!({"name":"contact-cannot-shadow-local-key","address":first_wallet})];
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(PromptTerminal {
+            answers: VecDeque::from([answer.into()]),
+            messages: messages.clone(),
+        })));
+        let mut history = PromptHistory::default();
+        let requests = rtao_cli::commands::conviction::tx_requests(
+            &mut ctx,
+            parsed.subcommand().ok_or("conviction group")?.1,
+            &mut history,
+        )?;
+        assert_eq!(requests.len(), 1);
+        let request = &requests[0];
+        assert_eq!(request.op, "move_lock");
+        assert_eq!(request.args["destination_hotkey_ss58"], json!(first_wallet));
+        assert_eq!(
+            request.intent()?.as_dyn().to_json_dyn()["destination_hotkey_ss58"],
+            json!(first_wallet)
+        );
+        assert_eq!(
+            history.replay_command(&argv.map(str::to_owned)),
+            format!("{} --destination-hotkey {first_wallet}", argv.join(" "))
+        );
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&first_wallet.to_string())
+                .map(String::as_str),
+            Some(expected_name)
+        );
+        let messages = messages.lock().map_err(|_| "target picker messages")?;
+        for expected in [
+            format!("1  configured/worker1  {second_wallet}"),
+            format!("2  configured/worker2  {first_wallet}"),
+            format!("3  configured/worker10  {first_wallet}"),
+        ] {
+            assert!(
+                messages.iter().any(|line| line == &expected),
+                "choice {expected}"
+            );
+        }
+    }
+    // Only public parser/request paths ran: no client, signer or private file
+    // exists in this fixture. Scripted secret input refuses if reached.
     Ok(())
 }
