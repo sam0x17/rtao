@@ -1,5 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/tx.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional sources at the same commit/license: sdk/python/bittensor/cli/query.py and sdk/python/bittensor/cli/stake_picker.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/intent_prompts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Real schema-built command dispatch over implemented SDK intents and reads.
 
 use super::{
@@ -632,15 +634,6 @@ impl TxRequest {
                 }
             }
         }
-        ctx.confirm_wallet(
-            &WalletConfirmation {
-                require_coldkey: spec.signer == "coldkey",
-                hotkey_help: (spec.signer == "hotkey")
-                    .then(|| "Hotkey signing this transaction.".into()),
-                ..Default::default()
-            },
-            history,
-        )?;
         let context = ctx.prompt_context();
         let mut terminal = ctx.terminal.clone();
         let missing = apply_intent_prompt_policy(
@@ -651,6 +644,15 @@ impl TxRequest {
             &answers,
         )
         .map_err(prompt_error)?;
+        ctx.confirm_wallet(
+            &WalletConfirmation {
+                require_coldkey: spec.signer == "coldkey",
+                hotkey_help: (spec.signer == "hotkey")
+                    .then(|| "Hotkey signing this transaction.".into()),
+                ..Default::default()
+            },
+            history,
+        )?;
         let period = matches
             .try_get_one::<u32>("__period")
             .ok()
@@ -701,7 +703,9 @@ impl PreparedTx {
         .map_err(prompt_error)
     }
     fn finish(self, ctx: &AppContext) -> Result<TxRequest, CliError> {
-        validate_intent_prompt_policy(self.spec.name, &self.answers).map_err(prompt_error)?;
+        validate_intent_prompt_policy(self.spec.name, &self.answers).map_err(|error| {
+            prompt_error(error).with_help("pass it explicitly, or run on a terminal to pick one")
+        })?;
         let mut answers = names(ctx, &self.fields, self.answers)?;
         answers.retain(|_, value| !value.is_null());
         let request = TxRequest {
