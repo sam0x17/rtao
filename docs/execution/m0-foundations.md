@@ -1,10 +1,11 @@
 # M0 foundation verification
 
-M0 acceptance remains pending a successful normal hosted run on the final
-source and the C1-C7 completion record. The implementations below exist;
-their presence alone does not establish passing tests. Q30 requires bounded
-free Ubuntu CI for substantial validation. Release tags, device runs and
-local infrastructure campaigns are deferred.
+M0 source and fixture completion is verified at `3f1aa67` by ordinary hosted
+run 38865058430: all six jobs pass, with 3,040 tests passed, zero failed and
+four skipped. Independent source review and 123 exact M0 PASS records cover
+the requirements below. The combined follow-up checkpoint still needs its
+applicable hosted checks before milestone exit. Q30 keeps substantial checks
+on free Ubuntu CI; releases, devices and local infrastructure remain deferred.
 
 | Requirement | Source and current acceptance evidence |
 |---|---|
@@ -36,7 +37,7 @@ local infrastructure campaigns are deferred.
 | M0-26 doctor | Real-binary success and exact missing-patch diagnostics fixtures are committed |
 | M0-27 CI | Six bounded free Ubuntu jobs cover check, no-host, MSRV, features, supply and semver |
 | M0-28 docs | README, CONTRIBUTING and execution records describe the current source and Q30 limits |
-| M0-29 acceptance | Pending final hosted evidence, checkboxes and the milestone record; publication is deferred |
+| M0-29 completion record | Exact 3f1aa67 evidence and step completion are recorded; final combined-checkpoint acceptance remains separate |
 
 The detailed source audit and remaining work are in
 [m0-acceptance-audit.md](m0-acceptance-audit.md). Earlier focused local test
@@ -44,6 +45,7 @@ results are historical evidence only. The former signed arbitrary-size
 balance model was superseded by Q25; the BLS decision was approved in Q26.
 Neither is a pending user decision.
 
-The current client checkpoint and exact hosted run links are maintained in
-[state.md](state.md). No current all-job success, milestone exit, native Mac
-coverage, oracle refresh, interoperability run or release readiness is claimed.
+The current client checkpoint and exact hosted evidence are maintained in
+[state.md](state.md) and the acceptance audit. Native Mac, oracle, interoperability
+and release coverage remain unverified; current all-job success does not accept
+the later client work or bypass the final combined-checkpoint requirement.

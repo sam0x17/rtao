@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/root.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/root_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional sources at the same commit/license: sdk/python/bittensor/cli/commands/root_move.py, sdk/python/bittensor/cli/commands/root_swap.py, sdk/python/bittensor/cli/root_helpers.py.
 //! Root baskets, accrued-yield claims and root position moves.
 
@@ -646,9 +647,13 @@ fn choose(
         {
             return Ok(Some(*key));
         }
+        // Every listed address is reserved before display aliases are added.
+        if let Some(key) = hotkeys.iter().find(|key| key.to_string() == raw) {
+            return Ok(Some(*key));
+        }
         if let Some(key) = hotkeys
             .iter()
-            .find(|key| key.to_string() == raw || names.get(key).is_some_and(|name| name == raw))
+            .find(|key| names.get(key).is_some_and(|name| name == raw))
         {
             return Ok(Some(*key));
         }
