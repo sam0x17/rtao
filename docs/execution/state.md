@@ -238,6 +238,13 @@ paths were reviewed; all frozen scalar/grid/baseline literals match. There is
 no native archive sampler and no claim of producer or historical reconstruction
 execution. Existing consumer source matches the preceding green checkpoint.
 
+Report run [38895327494](https://github.com/sam0x17/rtao/actions/runs/38895327494)
+at `2f6d585` compiled the corrected tool and generated reports, then failed the
+source-attribution guard. Root move/swap were listed in an additional-sources
+comment rather than explicit derived-source headers. Both now have full headers
+at the authenticated commit/license; production bodies are unchanged. No reports
+from the failed run were adopted. The corrected hosted report check follows.
+
 A fresh reader also completed two cold reads of all five current authentication
 sources at `6fba8dc`, finding no surviving concrete implementation defect within
 their stated contracts. All five hashes match the preceding hosted checkpoint's
