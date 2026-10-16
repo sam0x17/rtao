@@ -2711,6 +2711,20 @@ impl AppContext {
         {
             self.output.message(&format!("note: {} runs with the multisig account as its hotkey — {} ({}) must be the registered hotkey on-chain",intent.spec().name,self.globals.wallet_name,group.address)).map_err(|error|CliError::failure(error.to_string()))?;
         }
+        // Selected members already carry their public identity. Register every
+        // wallet-backed round before books can claim a later member's name;
+        // previews never need a signing source or a counterpart hotkey lookup.
+        for selection in &rounds {
+            if crate::globals::normalize_signer_backend(&selection.backend) == "wallet"
+                && let Some(member) = selection.address
+            {
+                let address = member.to_string();
+                let _ = self.output.name_address(&address, &selection.wallet);
+                let _ = self
+                    .output
+                    .classify_address(&address, crate::books::AccountKind::Coldkey);
+            }
+        }
         let mut inner: Option<crate::multisig::ReviewedInnerCall> = None;
         let mut opening: Option<rtao_runtime::models::MultisigTimepoint> = None;
         let mut last: Option<rtao::tx::ExtrinsicResult> = None;

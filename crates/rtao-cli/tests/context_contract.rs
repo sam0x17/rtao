@@ -2048,6 +2048,8 @@ async fn saved_semantic_dry_run_and_refusal_do_not_acquire_any_source() -> TestR
     let plan: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
     assert_eq!(plan["op"], json!("multisig_execute"));
     assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+    assert!(ctx.output.address_names()?.is_empty());
+    assert!(ctx.output.address_kinds()?.is_empty());
     let (ctx, _) = saved_context(&keys, &["--json", "--no-mev-shield"], 2)?;
     let error = ctx
         .submit_saved_with_factory(
@@ -2070,6 +2072,120 @@ async fn saved_semantic_dry_run_and_refusal_do_not_acquire_any_source() -> TestR
             .map_err(|_| "chain")?
             .submissions
             .is_empty()
+    );
+    let root = CacheRoot::new()?;
+    let wallet_names = ["member-a", "member-b"];
+    let mut sentinels = Vec::new();
+    let mut hotkeys = Vec::new();
+    for (index, name) in wallet_names.iter().enumerate() {
+        let wallet = root.0.join(name);
+        std::fs::create_dir_all(wallet.join("hotkeys"))?;
+        std::fs::write(
+            wallet.join("coldkeypub.txt"),
+            serde_json::to_vec(&json!({
+                "ss58Address":keys[index].key.account(),
+                "cryptoType":u8::from(keys[index].key.crypto_type()),
+            }))?,
+        )?;
+        let hotkey = AccountId([u8::try_from(80 + index)?; 32]);
+        hotkeys.push(hotkey);
+        std::fs::write(
+            wallet.join("hotkeys/unusedpub.txt"),
+            serde_json::to_vec(&json!({"ss58Address":hotkey,"cryptoType":1}))?,
+        )?;
+        for path in [wallet.join("coldkey"), wallet.join("hotkeys/unused")] {
+            let bytes = b"public approval review must not unlock this key".to_vec();
+            std::fs::write(&path, &bytes)?;
+            sentinels.push((path, bytes));
+        }
+    }
+    for existing_name in [None, Some("already selected")] {
+        let (mut ctx, sink) = saved_context(&keys, &["--dry-run", "--no-mev-shield"], 2)?;
+        ctx.globals.wallet_path = root.0.clone();
+        ctx.globals.hotkey_name = "unused".into();
+        ctx.globals.signatories = wallet_names
+            .iter()
+            .map(|name| format!("{name}=wallet"))
+            .collect();
+        if let Some(name) = existing_name {
+            ctx.output
+                .name_address(&keys[0].key.account().to_string(), name)?;
+        }
+        ctx.books.addresses = vec![
+            json!({"address":keys[0].key.account(),"name":"first contact"}),
+            json!({"address":keys[1].key.account(),"name":"later contact"}),
+            json!({"address":keys[2].key.account(),"name":"unused contact"}),
+        ];
+        ctx.books.proxies = vec![
+            json!({"address":keys[1].key.account(),"name":"later proxy"}),
+            json!({"address":keys[2].key.account(),"name":"later proxy alias"}),
+        ];
+        assert!(
+            ctx.submit_saved_with_factory(
+                &client,
+                &Preview { blocked: false },
+                false,
+                Some("rtao tx fixture"),
+                &factory,
+                &cache,
+            )
+            .await?
+            .is_none()
+        );
+        let first_name = existing_name.unwrap_or(wallet_names[0]);
+        assert_eq!(
+            ctx.output.address_names()?,
+            std::collections::BTreeMap::from([
+                (keys[0].key.account().to_string(), first_name.to_owned()),
+                (
+                    keys[1].key.account().to_string(),
+                    wallet_names[1].to_owned()
+                ),
+                (
+                    keys[2].key.account().to_string(),
+                    "unused contact".to_owned()
+                ),
+            ])
+        );
+        assert_eq!(
+            ctx.output.address_kinds()?,
+            std::collections::BTreeMap::from([
+                (
+                    keys[0].key.account().to_string(),
+                    rtao_cli::books::AccountKind::Coldkey
+                ),
+                (
+                    keys[1].key.account().to_string(),
+                    rtao_cli::books::AccountKind::Coldkey
+                ),
+            ])
+        );
+        let names = ctx.output.address_names()?;
+        assert!(
+            hotkeys
+                .iter()
+                .all(|hotkey| !names.contains_key(&hotkey.to_string()))
+        );
+        assert!(
+            sink.text(Stream::Stdout)?
+                .contains(&format!("{first_name} ({})", keys[0].key.account()))
+        );
+        assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+        assert!(factory.releases.lock().map_err(|_| "release")?.is_empty());
+    }
+    for (path, bytes) in sentinels {
+        assert_eq!(std::fs::read(path)?, bytes);
+    }
+    assert!(
+        keys.iter()
+            .all(|key| key.unlocks.load(Ordering::SeqCst) == 0)
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
     );
     client.close().await;
     Ok(())
@@ -2729,7 +2845,8 @@ async fn shield_signing_notices_use_actual_backends_and_respect_machine_quiet_an
             client.close().await;
         }
     }
-    // A saved member's backend wins over the invocation-wide Vault setting.
+    // Repeated approvals use each member's backend rather than the invocation's
+    // Vault setting. A single reference follows the ordinary external route.
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     chain.mutate_state(|state| {
@@ -2746,11 +2863,14 @@ async fn shield_signing_notices_use_actual_backends_and_respect_machine_quiet_an
     })?;
     let (mut ctx, sink) = saved_context(&keys, &["--yes", "--mev-shield"], 1)?;
     ctx.globals.signer_backend = Some("vault".into());
-    ctx.globals.signatories = vec![format!("{}=ledger", keys[0].key.account())];
+    ctx.globals.signatories = vec![
+        format!("{}=ledger", keys[0].key.account()),
+        format!("{}=extension", keys[1].key.account()),
+    ];
     let inner = factory(&keys);
     let source = NoticeMemberFactory(&inner);
-    assert!(
-        ctx.submit_saved_with_factory(
+    let error = ctx
+        .submit_saved_with_factory(
             &client,
             &Preview { blocked: false },
             false,
@@ -2759,14 +2879,19 @@ async fn shield_signing_notices_use_actual_backends_and_respect_machine_quiet_an
             &CallCache::default(),
         )
         .await
-        .is_err()
+        .err()
+        .ok_or("public-only approval must refuse private signing")?;
+    assert_eq!(
+        error.message,
+        SignerError::KeyUnavailable(SignerRole::Coldkey).to_string()
     );
     let stderr = sink.text(Stream::Stderr)?;
     assert_eq!(
         stderr
             .matches("MEV-shielded Ledger signing: two approvals on the device")
             .count(),
-        1
+        1,
+        "saved notice missing before {error:?}"
     );
     assert!(!stderr.contains("MEV-shielded vault signing"));
     assert_eq!(inner.acquired.load(Ordering::SeqCst), 1);
@@ -4499,6 +4624,64 @@ async fn command_review_human_final_card_and_question_precede_refusal_and_unlock
     assert!(!card.contains('\x1b'));
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+
+    // The context formats transaction arguments before the output renders
+    // them. A later label containing an earlier address detects two prose
+    // passes even though each ordinary name is guarded against decoration.
+    let earlier = AccountId([61; 32]).to_string();
+    let destination = AccountId([62; 32]).to_string();
+    let transfer = rtao_intents::AnyIntent::from_tool(
+        "transfer",
+        json!({"dest_ss58":destination,"amount_tao":"0.1"}),
+    )?;
+    let original_arguments = transfer.as_dyn().to_json_dyn();
+    let (mut composed, sink, _) = context(&["--no-mev-shield"])?;
+    composed.output.name_address(&earlier, "Earlier")?;
+    composed.output.name_address(&destination, &earlier)?;
+    let questions = Arc::new(Mutex::new(Vec::new()));
+    composed.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation {
+        questions: questions.clone(),
+    })));
+    let error = composed
+        .submit_with_keys_options(
+            &client,
+            transfer.as_dyn(),
+            &keys,
+            SubmissionOptions::default(),
+        )
+        .await
+        .err()
+        .ok_or("composed transfer review was not declined")?;
+    assert_eq!(error.message, "aborted.");
+    let decorated = format!("{earlier} ({destination})");
+    let card = sink.text(Stream::Stdout)?;
+    let transaction = review_stage_rows(&card, "Transaction")?;
+    assert_eq!(
+        transaction
+            .iter()
+            .find(|(key, _)| key == "dest")
+            .map(|(_, value)| value.as_str()),
+        Some(decorated.as_str())
+    );
+    assert!(!card.contains(&format!("Earlier ({earlier}) ({destination})")));
+    assert_eq!(questions.lock().map_err(|_| "composed questions")?.len(), 1);
+    assert!(
+        questions
+            .lock()
+            .map_err(|_| "composed questions")?
+            .as_slice()
+            .iter()
+            .any(|question| question.contains(&decorated))
+    );
+    assert_eq!(transfer.as_dyn().to_json_dyn(), original_arguments);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
     client.close().await;
     Ok(())
 }
