@@ -161,6 +161,29 @@ and source checks pass; the expected inventory remains 3,183/four skips and
 still awaits successful hosted execution. The bounded failure record is
 `client-f84be4c-check-failure.json`; no raw log is retained.
 
+The small compiler/leaf correction is pushed at
+`8b0ffbd21f26da8b77baebd40ac43b0461e7fa70`; ordinary run
+[38966898387](https://github.com/sam0x17/rtao/actions/runs/38966898387)
+is active. Its result does not cover the following later source batch.
+
+The next source batch shares the naturally ordered, nonempty-contact public
+name lookup between stake views and pickers. It fixes duplicate local aliases
+and empty contacts hiding chain names. Wallet overview now counts hidden
+subnets separately from hidden positions, includes the hidden value/threshold,
+and emits its ordinary notice on stderr with quiet suppression. Canonical
+helpers attribution is separated from wallet-command attribution. A real
+stake-list fixture covers local alias precedence and chain fallback; the
+existing overview fixture now covers a whole hidden subnet, one hidden position,
+quiet suppression and explicit dust display.
+
+The same batch adds the reviewed four-family embedded root-claim public
+plan/shield refusal fixture and strengthens actual proxy fee-payer planning
+and exact per-family warnings. Its independent source review is retained in
+`intents-embedded-claims-f84be4c-handoff.txt`. These two additional functions
+bring the future inventory to 3,185/four skips. All source changes remain
+unexecuted; formatting and whitespace checks pass. No source row or milestone
+is promoted by these changes.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded
