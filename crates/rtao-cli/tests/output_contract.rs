@@ -658,6 +658,8 @@ fn cloned_outputs_share_display_updates_without_rewriting_machine_records() -> T
     // themselves contain another registered address.
     output.name_address("5z", "5a")?;
     clone.name_address("5a", "ordered")?;
+    output.name_address("5old", "older")?;
+    clone.name_address("5new", "5old")?;
     let address = rtao::primitives::AccountId([31; 32]).to_string();
     output.name_address(&address, "\x1b[31mEve\n")?;
     output.name_address("ignored", "")?;
@@ -682,6 +684,7 @@ fn cloned_outputs_share_display_updates_without_rewriting_machine_records() -> T
         title: "Named review".into(),
         rows: vec![
             ("ordered".into(), json!("5z")),
+            ("reverse reference".into(), json!("5new")),
             ("already named".into(), json!("ordered (5a) (5z)")),
             (
                 "subnets".into(),
@@ -697,15 +700,29 @@ fn cloned_outputs_share_display_updates_without_rewriting_machine_records() -> T
     assert!(human.contains("credit alice (5raw) on subnet 4 (four)"));
     assert!(human.contains("alice (5raw) has a low balance"));
     assert_eq!(human.matches("ordered (5a) (5z)").count(), 2);
+    assert!(human.contains("5old (5new)"));
+    assert!(!human.contains("older (5old)"));
     assert!(human.contains("netuid 4 (four); subnet 004 (four); subnet ٤ (four); subnet 0 (root)"));
     assert!(human.contains("subnet 4 (already); subnet 4); netuid 4x; xnetuid 4; subnet 400000"));
     assert!(human.contains(&format!("run for real  {command}")));
     assert!(!human.contains('\x1b'));
     output.step("review", "pay 5raw on netuid 4", StepState::Fact)?;
     output.message("literal 5raw on netuid 4")?;
+    output.error("Generic 5raw on netuid 4.", DiagnosticContext::default())?;
+    clone.detail(
+        Some("Generic detail"),
+        &[("literal".into(), json!("5raw on netuid 4"))],
+        None,
+    )?;
     let diagnostic = sink.text(Stream::Stderr)?;
     assert!(diagnostic.contains("pay alice (5raw) on netuid 4 (four)"));
     assert!(diagnostic.contains("literal 5raw on netuid 4"));
+    assert!(diagnostic.contains("error: generic 5raw on netuid 4 (four)"));
+    assert!(
+        sink.text(Stream::Stdout)?
+            .lines()
+            .any(|line| line.trim() == "literal  5raw on netuid 4")
+    );
     Ok(())
 }
 
@@ -775,6 +792,93 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
         );
         assert!(sink.text(Stream::Stderr)?.is_empty());
     }
+    let address = rtao::primitives::AccountId([32; 32]).to_string();
+    let name = hostile("receipt-name");
+    let subnet_name = hostile("receipt-subnet");
+    let message = format!("Transfer 5new and {address} on subnet 4.");
+    let expected_message = terminal_text(&format!(
+        "Transfer 5old (5new) and {name} ({address}) on subnet 4 ({subnet_name})."
+    ))
+    .into_owned();
+    let blob = format!("0x{}", "abcd".repeat(128));
+    for (json_mode, quiet) in [(false, false), (false, true), (true, false), (true, true)] {
+        let (output, sink) = capture(json_mode, quiet);
+        for (address, name) in [("5old", "older"), ("5new", "5old"), (&address, &name)] {
+            output.name_address(address, name)?;
+        }
+        output.update_subnet_names([(4, subnet_name.clone())])?;
+        let mut result = outcome(true);
+        result.explorer_url = Some("https://example.invalid/extrinsic/12-3".into());
+        result.data.extend([
+            ("message".into(), json!(message)),
+            ("some_key".into(), json!("underscore key")),
+            ("some key".into(), json!("space key")),
+            ("nested".into(), json!({"account":"5new","enabled":true})),
+            ("empty".into(), json!([])),
+            ("enabled".into(), json!(true)),
+            ("blank".into(), json!("")),
+            ("call_data".into(), json!(blob)),
+            ("long_values".into(), json!([blob])),
+            ("small_float".into(), json!(1e-5)),
+            ("float_values".into(), json!([1e-5, 1e16, "1e-5"])),
+        ]);
+        let original = result.to_json();
+        assert!(output.result(&result, &message)?);
+        let stdout = sink.text(Stream::Stdout)?;
+        if json_mode {
+            rtao::primitives::json::compare(&original, &serde_json::from_str::<Value>(&stdout)?)?;
+        } else {
+            assert!(stdout.starts_with(&format!("✓ {expected_message}\n")));
+            assert!(stdout.contains(&expected_message));
+            assert!(stdout.contains(r#"{"account": "5old (5new)", "enabled": true}"#));
+            assert!(stdout.contains(&format!("[\"{blob}\"]")));
+            assert!(stdout.contains(r#"[1e-05, 1e+16, "1e-5"]"#));
+            assert!(stdout.lines().any(|line| {
+                line.trim_start().starts_with("small float ") && line.ends_with("  1e-05")
+            }));
+            for expected in ["underscore key", "space key", "[]", "True", &blob, "12-3"] {
+                assert!(
+                    stdout.contains(expected),
+                    "receipt lost {expected}: {stdout}"
+                );
+            }
+            assert_eq!(
+                stdout
+                    .lines()
+                    .filter(|line| line.trim_start().starts_with("some key "))
+                    .count(),
+                2
+            );
+            assert!(stdout.lines().any(|line| line.trim() == "blank"));
+            assert!(!stdout.contains("older (5old)"));
+            assert_safe_human_text(&stdout, &["receipt-name", "receipt-subnet"]);
+        }
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+        assert_eq!(result.to_json(), original);
+        // An unclassified receipt failure names its header without changing
+        // generic diagnostics or the copyable explorer identity.
+        let mut failed = result;
+        failed.success = false;
+        failed.error = None;
+        failed.message.clone_from(&message);
+        let start = sink.bytes(Stream::Stdout)?.len();
+        assert!(!output.result(&failed, "unused success")?);
+        let stdout = sink.bytes(Stream::Stdout)?;
+        if json_mode {
+            rtao::primitives::json::compare(
+                &failed.to_json(),
+                &serde_json::from_slice::<Value>(&stdout[start..])?,
+            )?;
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+        } else {
+            assert_eq!(stdout.len(), start);
+            let stderr = sink.text(Stream::Stderr)?;
+            assert!(stderr.contains(&format!("error: {}", diagnostic(&expected_message))));
+            assert!(stderr.contains("https://example.invalid/extrinsic/12-3"));
+            assert!(!stderr.contains("older (5old)"));
+            assert_safe_human_text(&stderr, &["receipt-name", "receipt-subnet"]);
+        }
+    }
     for (mode, prior, explanation) in [
         ("immediate", None, "immediate · no deregistration needed"),
         (
@@ -819,6 +923,30 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
             }
             assert!(!text.contains("registration price rao"));
             assert!(sink.text(Stream::Stderr)?.is_empty());
+            let subnet_name = hostile("registered-subnet");
+            human.update_subnet_names([
+                (4, subnet_name.clone()),
+                (7, "seven".into()),
+                (9, "nine".into()),
+            ])?;
+            let start = sink.bytes(Stream::Stdout)?.len();
+            assert!(human.registration_result(&result)?);
+            let text = sink.text(Stream::Stdout)?;
+            let named = &text[start..];
+            assert!(
+                named.contains(
+                    terminal_text(&format!("subnet 4 ({subnet_name}) registered")).as_ref()
+                )
+            );
+            if mode == "after_deregistration" {
+                let prior = if prior.is_some() {
+                    "7 (seven)"
+                } else {
+                    "9 (nine)"
+                };
+                assert!(named.contains(&format!("after deregistration of subnet {prior}")));
+            }
+            assert_safe_human_text(named, &["registered-subnet"]);
             let (machine, sink) = capture(true, quiet);
             assert!(machine.registration_result(&result)?);
             assert_eq!(
@@ -847,8 +975,14 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
 #[test]
 fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> TestResult {
     let result = outcome(false);
-    let error = result.error.ok_or("missing fixture error")?;
+    let mut error = result.error.ok_or("missing fixture error")?;
+    let address = rtao::primitives::AccountId([33; 32]).to_string();
+    let name = hostile("chain-name");
+    let subnet_name = hostile("chain-subnet");
+    error.message = format!("The account 5new and {address} on netuid 4 is not registered.");
     let (output, sink) = capture(true, true);
+    output.name_address(&address, &name)?;
+    output.update_subnet_names([(4, subnet_name.clone())])?;
     output.chain_error(&error, Some("https://example.invalid/12-3"))?;
     let mut expected = error.to_json();
     expected["explorer_url"] = json!("https://example.invalid/12-3");
@@ -858,11 +992,20 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
     );
     assert!(sink.text(Stream::Stdout)?.is_empty());
     let (human, sink) = capture(false, true);
+    human.name_address("5old", "older")?;
+    human.name_address("5new", "5old")?;
+    human.name_address(&address, &name)?;
+    human.update_subnet_names([(4, subnet_name.clone())])?;
     human.chain_error(&error, None)?;
     let text = sink.text(Stream::Stderr)?;
     assert!(text.contains("error["));
     assert!(text.contains("HotKeyNotRegisteredInSubNet"));
     assert!(text.contains("help:"));
+    assert!(text.contains(terminal_text(&format!(
+        "the account 5old (5new) and {name} ({address}) on netuid 4 ({subnet_name}) is not registered"
+    )).as_ref()));
+    assert!(!text.contains("older (5old)"));
+    assert_safe_human_text(&text, &["chain-name", "chain-subnet"]);
     Ok(())
 }
 

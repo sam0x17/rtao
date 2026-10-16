@@ -1165,7 +1165,10 @@ impl Output {
                 let padding = " ".repeat(width.saturating_sub(key.chars().count()));
                 self.line(
                     Stream::Stdout,
-                    &format!("  {key}{padding}  {}", self.review_value(&key, value)),
+                    &format!(
+                        "  {key}{padding}  {}",
+                        self.prose(&self.review_value(&key, value))
+                    ),
                 )?;
             }
         }
@@ -1173,9 +1176,9 @@ impl Output {
     }
 
     // py: sdk/python/bittensor/cli/context.py:716-734
-    // Values on a review card are human text; machine payloads remain untouched.
+    // Format first; transaction_card substitutes names once after composition.
     pub(crate) fn review_value(&self, key: &str, value: &Value) -> String {
-        let text = match value {
+        match value {
             Value::String(text) if crate::prompt::python_strip(text).is_empty() => "—".into(),
             Value::Bool(value) => if *value { "yes" } else { "no" }.into(),
             Value::Number(number) if key.contains("netuid") => number
@@ -1200,8 +1203,7 @@ impl Output {
                 }
             }
             _ => python_value(value),
-        };
-        self.prose(&text)
+        }
     }
 
     /// Render a progress step without contaminating JSON data.
@@ -1361,17 +1363,20 @@ impl Output {
             if let Some(error) = &result.error {
                 self.chain_error(error, result.explorer_url.as_deref())?;
             } else {
-                self.error(
-                    &result.message,
-                    DiagnosticContext {
-                        see: result.explorer_url.as_deref(),
-                        ..DiagnosticContext::default()
-                    },
+                self.line(
+                    Stream::Stderr,
+                    &format!("error: {}", diagnostic(&self.prose(&result.message))),
                 )?;
+                if let Some(url) = result.explorer_url.as_deref().filter(|url| !url.is_empty()) {
+                    self.sub_diag(Stream::Stderr, "see", url)?;
+                }
             }
             return Ok(false);
         }
-        self.line(Stream::Stdout, &format!("✓ {success_message}"))?;
+        self.line(
+            Stream::Stdout,
+            &format!("✓ {}", self.prose(success_message)),
+        )?;
         let mut fields = Vec::new();
         if let Some(fee) = result.fee {
             fields.push(("fee".into(), json!(PythonBalance(fee.into()))));
@@ -1390,17 +1395,14 @@ impl Output {
             .iter()
             .filter(|(key, _)| key.as_str() != "multisig_followup")
         {
-            let label = key.replace('_', " ");
-            if let Some((_, existing)) =
-                fields.iter_mut().find(|(candidate, _)| *candidate == label)
-            {
+            if let Some((_, existing)) = fields.iter_mut().find(|(candidate, _)| candidate == key) {
                 *existing = value.clone();
             } else {
-                fields.push((label, value.clone()));
+                fields.push((key.clone(), value.clone()));
             }
         }
         if !fields.is_empty() {
-            self.detail(Some("Result"), &fields, None)?;
+            self.result_fields(&fields)?;
         }
         if let Some(followup) = result.data.get("multisig_followup") {
             self.multisig_followup(followup)?;
@@ -1468,9 +1470,40 @@ impl Output {
         if let Some(url) = result.explorer_url.as_ref().filter(|url| !url.is_empty()) {
             fields.push(("explorer".into(), json!(url)));
         }
-        self.line(Stream::Stdout, &format!("✓ subnet {netuid} registered"))?;
-        self.detail(Some("Result"), &fields, None)?;
+        self.line(
+            Stream::Stdout,
+            &format!("✓ {}", self.prose(&format!("subnet {netuid} registered"))),
+        )?;
+        self.result_fields(&fields)?;
         Ok(true)
+    }
+
+    // py: sdk/python/bittensor/cli/output.py:2240-2262
+    // Receipt rows use card prose; generic detail fields retain their own format.
+    fn result_fields(&self, fields: &[(String, Value)]) -> Result<(), OutputError> {
+        let fields = fields
+            .iter()
+            .map(|(key, value)| (key.replace('_', " "), value))
+            .collect::<Vec<_>>();
+        let width = fields
+            .iter()
+            .map(|(key, _)| terminal_text(key).chars().count())
+            .max()
+            .unwrap_or(0);
+        self.line(Stream::Stdout, "Result")?;
+        for (key, value) in &fields {
+            let key = terminal_text(key);
+            let padding = " ".repeat(width.saturating_sub(key.chars().count()));
+            let value = match value {
+                Value::Array(_) | Value::Object(_) | Value::Number(_) => result_json(value)?,
+                _ => python_value(value),
+            };
+            self.line(
+                Stream::Stdout,
+                &format!("  {key}{padding}  {}", self.prose(&value)),
+            )?;
+        }
+        Ok(())
     }
 
     /// A classified chain diagnostic uses the domain's existing JSON contract.
@@ -1491,7 +1524,7 @@ impl Output {
             &format!(
                 "error[{}]: {}",
                 error.code.as_str(),
-                diagnostic(&error.message)
+                diagnostic(&self.prose(&error.message))
             ),
         )?;
         if let Some(name) = error.name.as_deref().filter(|name| !name.is_empty()) {
@@ -1830,12 +1863,29 @@ pub fn diagnostic(text: &str) -> String {
 
 // Python json.dumps defaults used by the context card: spaces and ASCII escapes.
 fn review_json(value: &Value) -> String {
+    compact_ascii_json(&value.to_string())
+}
+
+// Receipt scalars use Python str and containers use Python json.dumps.
+// Their shared number spelling comes from the existing Python JSON formatter.
+fn result_json(value: &Value) -> Result<String, OutputError> {
+    let mut serialized = Vec::new();
+    PyJsonFormatter::to_writer(&mut serialized, value)?;
+    let serialized =
+        std::str::from_utf8(&serialized).map_err(|error| OutputError::Render(error.to_string()))?;
+    Ok(compact_ascii_json(serialized))
+}
+
+fn compact_ascii_json(serialized: &str) -> String {
     let mut text = String::new();
     let mut quoted = false;
     let mut escaped = false;
-    for character in value.to_string().chars() {
+    for character in serialized.chars() {
         if character == '"' && !escaped {
             quoted = !quoted;
+        }
+        if !quoted && character.is_ascii_whitespace() {
+            continue;
         }
         if character.is_ascii() && character != '\u{7f}' {
             text.push(character);
