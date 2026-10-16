@@ -391,6 +391,16 @@ fn required(fields: &[Field], answers: &Map<String, Value>) -> Vec<PromptSpec> {
         .map(|field| {
             let mut prompt = PromptSpec::new(field.name, field.flag());
             prompt.help = Some(field.help.clone());
+            if field.query {
+                prompt.placeholder = match field.kind.as_str() {
+                    "integer" => Some("integer"),
+                    "number" => Some("number"),
+                    "boolean" => Some("y/n"),
+                    "array" => Some("comma-separated"),
+                    _ => None,
+                }
+                .map(str::to_owned);
+            }
             if field.name.ends_with("_ss58") {
                 prompt.flow = if field.name.contains("hotkey") {
                     PromptFlow::StakeTarget

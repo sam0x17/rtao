@@ -69,6 +69,28 @@ adoption proof SHA256 is
 `0114c55ed40b31620fd241eb8a501bead49d9f06fe6b5cdc017f6e5b0dd661d7`.
 This source-only result does not execute the seven newer tests.
 
+The subsequent ordinary run
+[38902988661](https://github.com/sam0x17/rtao/actions/runs/38902988661)
+at `b3d6e8bdf37efa5cc67062bb01bb17eb4e5c2c96` failed in
+`core-surface --check` before Nextest. Its blanket refusal of conditional
+module/export attributes also rejected the new documentation feature labels.
+The bounded `client-b3d6e8b-check-failure.json` records the 83,215-byte job-log
+identity, SHA256
+`dd527d8b08962fd9bbdeb611345ed5848f80be5950aae277d34e336285f05a4e`,
+and actual failure excerpt; the raw log is not retained. This run supplies no
+new test result or source-row acceptance. The green checkpoint above remains
+the latest verified ordinary success.
+
+All five other ordinary jobs passed. The follow-up source batch admits only
+the documentation feature-label attribute in the surface generator and adds
+two guard regressions, retaining refusal of conditional exports and paths.
+It also adds five real query-request/dispatch fixtures, eight Null-weight
+fixtures, a public blocking PoW-to-plan fixture and an unchanged-sample schema/
+constructor fixture. The query prompt fix supplies the missing input-format
+hints. These 17 new functions expect 3,104 passed tests and four skipped in
+the next ordinary run; they are not executed evidence yet. Query, Null, PoW,
+EVM and prepare/attach source-row proposals remain unapplied.
+
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.

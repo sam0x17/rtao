@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_pow_registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Host-verified, public-identity PoW registration.
 
 pub use crate::generated::PowRegister;
@@ -281,6 +282,7 @@ mod tests {
         assert_eq!(error.name.as_deref(), Some(expected));
     }
 
+    // pyt: unit/test_pow_registration.py::test_intent_rejects_bad_seals_and_root
     #[test]
     fn python_seal_syntax_and_exact_length() {
         for input in [

@@ -48,8 +48,16 @@ statuses, chapter links and strict retention condition against the sources.
 The fix-slop pattern pass and manual prose review found no remaining flags;
 the whitespace check passes. The original guide edit used source checks only;
 the later rendered-book check is recorded above. No fresh Rust build was run
-for the documentation edit. Section 11's eventual
-docify integration still needs an export annotation on the existing example.
+for the documentation edit. At that checkpoint, section 11's Docify integration
+still needed an export annotation on the existing example.
+
+The later client documentation batch exports the actual miner example and
+embeds those items through Docify in the book. The original compiled example
+remains the implementation. Hosted checkpoint
+[38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100)
+at `3772699612278d4592648d07232241430e96791b` passed the applicable
+example, template and documentation checks. This closes the source embedding
+gap; it establishes no live miner or endpoint-routing result.
 
 The guide edit and later rendering do not mark a milestone complete, commit
 or push files, run Python or Docker, or touch wallets. The original guide edit

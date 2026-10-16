@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/harness/samples.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Ordinary M5 planning coverage from the authenticated upstream sample table.
 //! Every operation uses the real executor and encoded FakeChain state.
 #![cfg(all(feature = "all", feature = "pow"))]
@@ -544,6 +545,83 @@ async fn plan_case(
     .await;
     client.close().await;
     result
+}
+
+#[test]
+// pyt: unit/test_intents_table.py::test_json_schema_is_wellformed
+// pyt: unit/test_intents_table.py::test_serialization_roundtrip
+// pyt: unit/test_intents_table.py::test_rejects_unknown_argument
+fn authenticated_samples_preserve_schemas_roundtrip_and_unknown_field_refusal() -> Result<()> {
+    let samples = samples()?;
+    let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
+    ensure!(
+        expected.len() == 83,
+        "review changes to the pinned 83-op catalog"
+    );
+    ensure!(
+        samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == expected,
+        "INTENT_SAMPLES and the complete catalog must have identical operations"
+    );
+    for spec in &INTENTS {
+        let original = &samples[spec.name];
+        let sample = original.as_object().context("sample arguments object")?;
+        let catalog: Value = serde_json::from_str(spec.catalog_json)?;
+        let schema = &catalog["input_schema"];
+        ensure!(schema["type"] == "object", "{} schema type", spec.name);
+        ensure!(
+            schema["additionalProperties"] == false,
+            "{} allows unknown schema arguments",
+            spec.name
+        );
+        let properties = schema["properties"]
+            .as_object()
+            .context("schema properties")?;
+        for field in schema["required"]
+            .as_array()
+            .context("schema required array")?
+        {
+            let field = field.as_str().context("required field name")?;
+            ensure!(
+                properties.contains_key(field) && sample.contains_key(field),
+                "{}.{} must exist in both schema properties and the original sample",
+                spec.name,
+                field
+            );
+        }
+        // These are the unchanged authenticated sample arguments: no subnet,
+        // hotkey or work-proof rewrite used by the planning fixture is needed.
+        let intent = AnyIntent::from_tool(spec.name, original.clone())
+            .with_context(|| format!("{} original sample constructor", spec.name))?;
+        let encoded = intent.to_json();
+        ensure!(encoded["op"] == spec.name, "{} serialized op", spec.name);
+        let mut arguments = encoded.clone();
+        ensure!(
+            arguments
+                .as_object_mut()
+                .context("encoded intent object")?
+                .remove("op")
+                .is_some(),
+            "{} serialized operation missing",
+            spec.name
+        );
+        let rebuilt = AnyIntent::from_tool(spec.name, arguments)?;
+        ensure!(
+            rebuilt.to_json() == encoded,
+            "{} original sample roundtrip changed normalized arguments",
+            spec.name
+        );
+        let mut unknown = original.clone();
+        unknown
+            .as_object_mut()
+            .context("sample arguments object")?
+            .insert("definitely_not_a_field".into(), json!(1));
+        ensure!(
+            AnyIntent::from_tool(spec.name, unknown).is_err(),
+            "{} accepted an unknown argument in its original sample",
+            spec.name
+        );
+    }
+    Ok(())
 }
 
 #[tokio::test]
