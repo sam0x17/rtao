@@ -1,4 +1,47 @@
 {
+  "fee_contract": {
+    "format": 1,
+    "provenance": {
+      "blob": "1d9f3cb8d00c601eb76fde8aa27db24add6f0d10",
+      "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "path": "runtime/src/transaction_payment_wrapper.rs",
+      "tag": "v478"
+    },
+    "scope": "Reviewed validate-time payer/priority/tip policy and fee-dispatch projection only. Concrete priority values, discount implementations, preparation, account debits/refunds and runtime admission are runtime-owned and unexecuted; the client's any-leaf coldkey warning is not a payer resolver.",
+    "values": {
+      "dispatch_origin": "original_origin",
+      "fee_pricing": "call_weight.saturating_sub(runtime_fee_weight_discount)",
+      "metadata": "ChargeTransactionPayment::metadata",
+      "payer_precedence": [
+        "proxy_real_pays_fee_opt_in",
+        "allowlisted_hotkey_owner",
+        "signer"
+      ],
+      "priority": {
+        "Mandatory": "NORMAL_DISPATCH_BASE_PRIORITY",
+        "Normal": "NORMAL_DISPATCH_BASE_PRIORITY",
+        "Operational": "OPERATIONAL_DISPATCH_PRIORITY",
+        "tip_increases_priority": false
+      },
+      "proxy": {
+        "batch_calls": [
+          "Utility.batch",
+          "Utility.batch_all",
+          "Utility.force_batch"
+        ],
+        "batch_members": "all direct proxies with the same real and shared opt-in",
+        "batch_nonempty": true,
+        "call": "Proxy.proxy",
+        "maximum_layers": 2,
+        "outer_opt_in_required": true,
+        "proxy_announced": false
+      },
+      "tip": {
+        "no_payer_override": "signer_selected",
+        "payer_override": 0
+      }
+    }
+  },
   "format": 1,
   "mortality": {
     "format": 1,

@@ -17,6 +17,59 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-16
 
 The latest successful ordinary checkpoint is
+[38944089487](https://github.com/sam0x17/rtao/actions/runs/38944089487)
+at `569162e324faf5f54346f9b9d7298919e10fd5fc`. All six required jobs
+passed: 3,132 tests, four skips and nine doctests across 19 workspace suites,
+plus strict Clippy, documentation, source/generated guards, feature profiles,
+MSRV, no-host, semver and supply checks. Feature validation also passed the
+native template gate, both TLS crypto providers, unpatched-core compilation
+and generic keyfiles without encryption support. No local build ran.
+
+The bounded primary proof is `client-569162e-hosted-results.json`, SHA256
+`16406e49a3233ef397556c774201ae8cbc8b16bacd6e62dd7863e488f19bc078`.
+It retains 93 qualified PASS records and 84 source identities. Same-log
+supplements retain 23 raw-call witnesses and 42 miner-related witnesses.
+The main log was 739,644 bytes, SHA256
+`c380cc8e94242d29988d818112030db4957661fed7e90e6438fe2a25082692b7`;
+no raw log or archive is retained.
+
+Source and generated matrix both record 319 of 357 files reconciled, with
+38 pending. M0/M1 and twenty individual M2 implementation/guide steps remain
+accepted. M2-26 and the M2 milestone remain open because M2-S02 is unaccepted;
+no later milestone or strict M8 acceptance follows from this checkpoint.
+
+The subsequent source batch at
+`00c7952f4cf084ea696a255abb1c9f3a1a1c1d28` adds startup compatibility,
+83-operation policy loops, generic prompt acquisition/diagnostics, authenticated
+fee-policy extraction, stake-exit guidance and synchronous picker corrections.
+Its 13 new test functions require a later ordinary checkpoint, expecting
+3,145 tests with four skips. Report run
+[38947563587](https://github.com/sam0x17/rtao/actions/runs/38947563587)
+passed at that exact source. Inspection and an independent refetch adopted
+exactly five files: the fee-contract extraction and four reports, including
+the D-072 matrix entry. The other 18 generated outputs are byte-identical.
+All 23 dependency inputs and the package/feature graphs are unchanged.
+The inspection proof SHA256 is
+`f40cc18f073e3e142886a0146d2674721e9eff871cc9e5b78f533ad5e8f78c33`;
+the adoption proof SHA256 is
+`f0ac385e6d4bb0d12dee770da0710fbd847e84748b1ee0e89639ef21812cc291`.
+This report-only success does not execute the 13 newer tests; full ordinary
+hosted validation remains pending.
+
+Multisig alias/followup, owner-label and specialized human-output proposals
+remain held for a separate reviewed batch. They have no execution credit from
+the green checkpoint. Additional source reconciliation, security dispositions
+and exact milestone evidence remain required through M9. The laptop target
+folder remains absent; temporary source/review work stays in the recorded
+bounded recovery root. No node, testnet, soak or hardware work is scheduled.
+
+## Earlier 2026-10-16 client checkpoints
+
+The following entries are historical results and execution-pending statements
+at their recorded source commits. The current checkpoint above supersedes
+oldest-result wording and obsolete next-test counts below.
+
+The latest successful ordinary checkpoint is
 [38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100)
 at `3772699612278d4592648d07232241430e96791b`. All six jobs passed. Main
 passed 3,080 tests, zero failed, four skipped and nine doctests across all 19

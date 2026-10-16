@@ -1963,6 +1963,14 @@
     ],
     "divergences": [
       {
+        "id": "D-072",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::generic_wallet_prompts::required_conviction_boolean_choices_preserve_signer_order_real_intents_and_canonical_flags"
+        ]
+      },
+      {
         "id": "D-069",
         "oracle": "unverified",
         "rtao": "active",
