@@ -819,7 +819,7 @@ fn effective_prompt_context(
             context.external_signer = true;
             context.extension_signer = false;
         } else if let Some(backend) = backend {
-            let backend = backend.trim().to_ascii_lowercase();
+            let backend = crate::globals::normalize_signer_backend(backend);
             context.external_signer = ["ledger", "vault", "extension"].contains(&backend.as_str());
             context.extension_signer = backend == "extension";
         }
@@ -1141,6 +1141,16 @@ mod parsing_tests {
         ])?;
         let context = effective_prompt_context(&PromptContext::default(), &parsed);
         assert!(context.assume_yes && context.external_signer && context.extension_signer);
+        let parsed = command.clone().try_get_matches_from([
+            "rtao",
+            "choose",
+            "--netuid",
+            "12",
+            "--signer",
+            "\u{1c}\u{1d}ExTeNsIoN\u{1e}\u{1f}",
+        ])?;
+        let context = effective_prompt_context(&PromptContext::default(), &parsed);
+        assert!(context.external_signer && context.extension_signer);
         let parsed = command.try_get_matches_from([
             "rtao",
             "choose",

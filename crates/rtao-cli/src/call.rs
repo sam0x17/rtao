@@ -777,7 +777,7 @@ impl RawSignerFactory for WalletSignerFactory {
         selection: &'a SigningSelection,
     ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
         Box::pin(async move {
-            if selection.backend != "wallet" {
+            if crate::globals::normalize_signer_backend(&selection.backend) != "wallet" {
                 return Err(CliError::input(format!(
                     "{} signing backend has no installed CLI factory",
                     selection.backend
@@ -1553,9 +1553,10 @@ fn signing_rounds(
     let backend = backend_override
         .or(ctx.globals.signer_backend.as_deref())
         .unwrap_or("wallet");
+    let normalized_backend = crate::globals::normalize_signer_backend(backend);
     let explicit = &ctx.globals.signatories;
     let Some(group) = group else {
-        let address = if backend.trim().eq_ignore_ascii_case("extension")
+        let address = if normalized_backend == "extension"
             && ctx
                 .globals
                 .signer_address
@@ -1566,7 +1567,7 @@ fn signing_rounds(
             // A saved extension account is a preference for the public picker,
             // not an explicit member pin that bypasses source filtering.
             None
-        } else if backend != "wallet" {
+        } else if normalized_backend != "wallet" {
             signer_address_for_backend(ctx, backend)?
         } else {
             ctx.globals
@@ -1614,14 +1615,18 @@ fn signing_rounds(
             .or_else(|| ctx.books.address_entry(&address.to_string()))
             .and_then(|entry| entry.get("signer"))
             .and_then(Json::as_str)
-            .map(str::trim)
-            .map(str::to_ascii_lowercase)
+            .map(crate::globals::normalize_signer_backend)
             .filter(|backend| ["vault", "ledger", "extension"].contains(&backend.as_str()))
     };
     let member = |reference: &str| -> Result<SigningSelection, CliError> {
         let (reference, forced) = reference
             .split_once('=')
-            .map(|(reference, forced)| (reference, Some(forced.trim().to_ascii_lowercase())))
+            .map(|(reference, forced)| {
+                (
+                    reference,
+                    Some(crate::globals::normalize_signer_backend(forced)),
+                )
+            })
             .unwrap_or((reference, None));
         if let Some(forced) = &forced
             && !["wallet", "vault", "ledger", "extension"].contains(&forced.as_str())
@@ -1691,7 +1696,7 @@ fn signing_rounds(
         }
         return Ok(rounds);
     }
-    if backend != "wallet" {
+    if normalized_backend != "wallet" {
         let address = signer_address_for_backend(ctx, backend)?.ok_or_else(|| {
             CliError::input("external multisig signer needs --signer-address or --signatory")
         })?;
@@ -1714,7 +1719,7 @@ fn signing_rounds(
     }
     if automatic
         && role == SignerRole::Coldkey
-        && backend == "wallet"
+        && normalized_backend == "wallet"
         && ctx.globals.signer_address.is_none()
         && group.threshold >= 2
     {
@@ -2343,11 +2348,8 @@ fn raw_display_member(account: AccountId, name: &str) -> String {
 
 fn raw_contact_backend(ctx: &AppContext, reference: &str) -> Option<String> {
     let entry = ctx.books.address_entry(reference)?;
-    let backend = entry
-        .get("signer")
-        .and_then(Json::as_str)?
-        .trim()
-        .to_lowercase();
+    let backend =
+        crate::globals::normalize_signer_backend(entry.get("signer").and_then(Json::as_str)?);
     ["vault", "ledger", "extension"]
         .contains(&backend.as_str())
         .then_some(backend)

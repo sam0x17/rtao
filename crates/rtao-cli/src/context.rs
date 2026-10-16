@@ -1554,13 +1554,9 @@ impl AppContext {
         role: SignerRole,
         external: Option<&dyn ExternalSignerFactory>,
     ) -> Result<Arc<dyn DynKeySource>, CliError> {
-        let backend = self
-            .globals
-            .signer_backend
-            .as_deref()
-            .unwrap_or("wallet")
-            .trim()
-            .to_lowercase();
+        let backend = crate::globals::normalize_signer_backend(
+            self.globals.signer_backend.as_deref().unwrap_or("wallet"),
+        );
         if backend == "wallet" {
             return Ok(Arc::new(CliWalletKeys::new(
                 self.wallet()?,
@@ -1605,7 +1601,7 @@ impl AppContext {
                 .globals
                 .signer_backend
                 .as_deref()
-                .is_some_and(|v| v.trim().eq_ignore_ascii_case("extension")),
+                .is_some_and(|v| crate::globals::normalize_signer_backend(v) == "extension"),
         }
     }
 }
@@ -2036,7 +2032,7 @@ impl AppContext {
             .globals
             .signer_backend
             .as_deref()
-            .is_some_and(|backend| backend.trim().eq_ignore_ascii_case("vault"))
+            .is_some_and(|backend| crate::globals::normalize_signer_backend(backend) == "vault")
         {
             return Ok(
                 crate::books::AccountLookup::coldkey(&lookup, &self.globals.wallet_name)
@@ -2108,7 +2104,7 @@ impl crate::call::RawSignerFactory for ExternalRoundFactory<'_> {
         keys: &dyn DynKeySource,
         summary: &str,
     ) {
-        if selection.backend != "wallet"
+        if crate::globals::normalize_signer_backend(&selection.backend) != "wallet"
             && let Some(factory) = self.external
         {
             factory.set_summary(keys, summary);
@@ -2120,7 +2116,7 @@ impl crate::call::RawSignerFactory for ExternalRoundFactory<'_> {
         selection: &'a crate::call::SigningSelection,
     ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
         Box::pin(async move {
-            if selection.backend == "wallet" {
+            if crate::globals::normalize_signer_backend(&selection.backend) == "wallet" {
                 return crate::call::RawSignerFactory::source(
                     &crate::call::WalletSignerFactory,
                     ctx,
@@ -2244,19 +2240,20 @@ impl AppContext {
                 round.globals.assume_yes = self.globals.assume_yes || index > 0;
                 // Scheme is public companion data. Non-file test/external sources
                 // use the same sr25519 fee-probe default as the transaction layer.
-                let crypto = if selection.backend == "wallet" {
-                    Wallet::new(
-                        &selection.wallet,
-                        &self.globals.hotkey_name,
-                        &self.globals.wallet_path,
-                    )
-                    .ok()
-                    .and_then(|wallet| wallet.public_info(SignerRole::Coldkey).ok())
-                    .map(|info| info.crypto_type)
-                    .unwrap_or(rtao::primitives::CryptoType::Sr25519)
-                } else {
-                    rtao::primitives::CryptoType::Sr25519
-                };
+                let crypto =
+                    if crate::globals::normalize_signer_backend(&selection.backend) == "wallet" {
+                        Wallet::new(
+                            &selection.wallet,
+                            &self.globals.hotkey_name,
+                            &self.globals.wallet_path,
+                        )
+                        .ok()
+                        .and_then(|wallet| wallet.public_info(SignerRole::Coldkey).ok())
+                        .map(|info| info.crypto_type)
+                        .unwrap_or(rtao::primitives::CryptoType::Sr25519)
+                    } else {
+                        rtao::primitives::CryptoType::Sr25519
+                    };
                 let adapter = crate::multisig::SemanticMultisig::new(
                     intent,
                     client,

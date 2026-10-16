@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/metagraph_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Registration routing and metagraph output preserve real SDK semantics.
 
 use rtao::{
@@ -19,10 +20,17 @@ use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
+    fs,
     path::Path,
     sync::{Arc, Mutex},
     time::Duration,
 };
+
+// Public fixture files live in the recorded test root and have no process,
+// service, symlink, configuration or private-wallet dependencies.
+#[path = "../../rtao-wallet/tests/support/mod.rs"]
+mod support;
+use support::TempRoot;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 struct NoTerminal;
@@ -413,6 +421,16 @@ fn human_metagraph_sorts_exact_stake_and_prefers_local_names_with_ipv4_and_ipv6_
     let local = BTreeMap::from([(AccountId([22; 32]).to_string(), "higher-stake-local".into())]);
     let mut graph = graph();
     graph["subnet_volume"] = json!(u128::MAX);
+    graph["identity"] = json!({
+        "description":"subnet-details", "true_flag":true,
+        "nested_value":{"key":["quoted",true]},
+        "false_flag":false,"zero_value":0,"empty_string":"",
+        "empty_array":[],"empty_object":{},"null_value":null,
+    });
+    graph["burn"] = json!(1_500_000_000u64);
+    graph["min_burn"] = json!(1u64);
+    graph["max_burn"] = json!(u64::MAX);
+    graph["moving_price"] = json!({"bits":-6_442_450_944i128});
     subnets::render_metagraph(&output, NetUid(1), &graph, &local)?;
     let text = sink.text(Stream::Stdout)?;
     assert!(
@@ -424,8 +442,184 @@ fn human_metagraph_sorts_exact_stake_and_prefers_local_names_with_ipv4_and_ipv6_
     assert!(text.contains("[::1]:8092"));
     assert!(text.contains("1 validator permits · 2 active"));
     assert!(text.contains("340282366920938463463374607431.768211455"));
+    assert!(text.contains("registered_at"));
+    assert!(text.contains("1  1 blocks ago"));
+    assert!(text.contains("subnet-details"));
+    assert!(text.contains("true_flag"));
+    assert!(text.contains("{'key': ['quoted', True]}"));
+    for omitted in [
+        "false_flag",
+        "zero_value",
+        "empty_string",
+        "empty_array",
+        "empty_object",
+        "null_value",
+    ] {
+        assert!(!text.contains(omitted), "false identity field {omitted}");
+    }
+    assert!(text.contains("-1.500000"));
+    for key in [
+        "subnet_emission",
+        "tao_in_emission",
+        "alpha_in_emission",
+        "alpha_out_emission",
+    ] {
+        assert!(
+            text.lines()
+                .any(|line| line.contains(key) && line.ends_with("per block"))
+        );
+    }
+    for key in ["pending_alpha_emission", "pending_root_emission"] {
+        assert!(
+            text.lines()
+                .any(|line| line.contains(key) && line.ends_with("undistributed"))
+        );
+    }
+    for reading in [
+        "1500000000  = τ1.500000000",
+        "1  = τ0.000000001",
+        "18446744073709551615  = τ18,446,744,073.709552765",
+    ] {
+        assert!(text.contains(reading), "burn reading {reading}");
+    }
+    assert!(text.contains("rtao subnets hyperparameters 1"));
     graph["total_stake"][0] = json!(u128::from(u64::MAX) + 1);
     assert!(subnets::render_metagraph(&output, NetUid(1), &graph, &local).is_err());
+    Ok(())
+}
+
+#[tokio::test]
+async fn human_metagraph_execution_uses_first_natural_hotkey_then_contacts() -> TestResult {
+    // py: sdk/python/bittensor/cli/metagraph_view.py:154-198 (_neurons)
+    let root = TempRoot::new();
+    for (wallet, hotkey) in [
+        ("wallet10", "worker1"),
+        ("wallet2", "worker10"),
+        ("wallet2", "worker2"),
+    ] {
+        let directory = root.path().join(wallet).join("hotkeys");
+        fs::create_dir_all(&directory)?;
+        fs::write(
+            directory.join(hotkey),
+            serde_json::to_vec(&json!({"ss58Address":AccountId([21;32]),"cryptoType":1}))?,
+        )?;
+    }
+    let mut state = FakeState::try_default()?;
+    let mut wire = graph();
+    wire["name"] = json!("τ subnet".as_bytes());
+    wire["symbol"] = json!("β".as_bytes());
+    state.seed_runtime("SubnetInfoRuntimeApi", "get_metagraph", wire)?;
+    let chain = FakeChain::from_state(state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+    let parsed = parse(&["rtao", "subnets", "metagraph", "1"])?;
+    let (mut ctx, sink) = context(&parsed)?;
+    ctx.globals.wallet_path = root.path().to_owned();
+    ctx.books.addresses = vec![
+        json!({"address":AccountId([21;32]),"name":"contact-cannot-replace-hotkey"}),
+        json!({"address":AccountId([22;32]),"name":"first-contact"}),
+        json!({"address":AccountId([22;32]),"name":"second-contact"}),
+        json!({"address":AccountId([22;32]),"name":""}),
+    ];
+    let request = Request::from_matches(
+        &mut ctx,
+        parsed.subcommand().ok_or("group")?.1,
+        &mut PromptHistory::default(),
+    )?;
+    assert!(
+        subnets::execute(
+            &mut ctx,
+            &client,
+            &request,
+            SubmissionOptions::default(),
+            None,
+            &mut PromptHistory::default(),
+        )
+        .await?
+        .is_none()
+    );
+    let text = sink.text(Stream::Stdout)?;
+    assert!(text.contains("(worker2)"));
+    assert!(text.contains("(first-contact)"));
+    for overridden in [
+        "wallet2/",
+        "wallet10/",
+        "worker10",
+        "worker1)",
+        "second-contact",
+        "contact-cannot-replace-hotkey",
+    ] {
+        assert!(!text.contains(overridden), "unexpected name {overridden}");
+    }
+    assert!(
+        text.find("first-contact").ok_or("contact")?
+            < text.find("worker2").ok_or("wallet hotkey")?
+    );
+    let requests = chain.requests();
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|request| request.method == "state_call"
+                && request.params[0] == "SubnetInfoRuntimeApi_get_metagraph")
+            .count(),
+        1
+    );
+    assert!(
+        !requests
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[test]
+fn human_metagraph_empty_and_short_columns_keep_summary_and_native_endpoints() -> TestResult {
+    // py: sdk/python/bittensor/cli/metagraph_view.py:28-49,154-211
+    let sink = MemorySink::default();
+    let output = Output::new(
+        OutputOptions {
+            json_mode: false,
+            quiet: false,
+            network: None,
+        },
+        Arc::new(sink.clone()),
+    );
+    let mut graph = graph();
+    graph["hotkeys"] = json!([]);
+    graph["num_uids"] = json!(0);
+    graph["max_uids"] = json!(12);
+    graph["alpha_in"] = json!(0);
+    subnets::render_metagraph(&output, NetUid(1), &graph, &BTreeMap::new())?;
+    let text = sink.text(Stream::Stdout)?;
+    assert!(text.contains("neurons 0/12"));
+    assert!(text.contains("0 uids · 0 validator permits · 0 active"));
+    assert!(text.contains("rtao subnets hyperparameters 1"));
+    assert!(!text.contains("τ per alpha (spot)"));
+    let mut sparse = self::graph();
+    for key in [
+        "total_stake",
+        "emission",
+        "incentives",
+        "dividends",
+        "last_update",
+        "validator_permit",
+        "active",
+        "identities",
+        "axons",
+    ] {
+        sparse[key] = json!([]);
+    }
+    subnets::render_metagraph(&output, NetUid(1), &sparse, &BTreeMap::new())?;
+    assert!(
+        sink.text(Stream::Stdout)?
+            .contains("2 uids · 0 validator permits · 0 active")
+    );
+    sparse["axons"] = json!([{"ip":u64::from(u32::MAX)+1,"ip_type":4,"port":80}]);
+    assert!(subnets::render_metagraph(&output, NetUid(1), &sparse, &BTreeMap::new()).is_err());
     Ok(())
 }
 

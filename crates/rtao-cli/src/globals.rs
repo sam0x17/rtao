@@ -172,8 +172,9 @@ fn tx() -> Vec<Arg> {
             .alias("no-prompt"),
         flag("dry_run", "dry-run", "Preview without submitting."),
         flag("mev_shield", "mev-shield", "Encrypt via the MEV shield.")
-            .conflicts_with("no_mev_shield"),
-        flag("no_mev_shield", "no-mev-shield", "Submit in the clear.").conflicts_with("mev_shield"),
+            .overrides_with_all(["mev_shield", "no_mev_shield"]),
+        flag("no_mev_shield", "no-mev-shield", "Submit in the clear.")
+            .overrides_with_all(["mev_shield", "no_mev_shield"]),
         option(
             "proxy_for",
             "proxy-for",
@@ -183,7 +184,8 @@ fn tx() -> Vec<Arg> {
             "force_proxy_type",
             "force-proxy-type",
             "Require this proxy permission category.",
-        ),
+        )
+        .value_parser(rtao_intents::proxy::PROXY_TYPES),
         option(
             "signatory",
             "signatory",
@@ -286,6 +288,13 @@ fn yes(matches: &ArgMatches, id: &str) -> bool {
         .copied()
         .unwrap_or(false)
 }
+
+/// Normalize a backend selector as Python's `str.strip().lower()` does.
+/// Callers retain the original spelling for stored input and diagnostics.
+pub(crate) fn normalize_signer_backend(value: &str) -> String {
+    crate::prompt::python_strip(value).to_lowercase()
+}
+
 /// Python's `str` conversion for config defaults, preserving plain strings.
 pub(crate) fn config_string(value: &Value) -> String {
     use rtao::primitives::pyfmt;
@@ -515,7 +524,7 @@ impl Globals {
             if self.signatories.len() == 1
                 && let Some((name, backend)) = self.signatories[0].clone().split_once('=')
             {
-                let backend = backend.trim().to_lowercase();
+                let backend = normalize_signer_backend(backend);
                 if !["wallet", "vault", "ledger", "extension"].contains(&backend.as_str()) {
                     return Err(format!(
                         "unknown backend {backend:?} in --signatory; use wallet, vault, ledger, or extension"
@@ -584,7 +593,7 @@ impl Globals {
     fn validate_signer(&self, override_backend: Option<&str>) -> Result<(), String> {
         if let Some(backend) = override_backend.or(self.signer_backend.as_deref())
             && !["wallet", "ledger", "vault", "extension"]
-                .contains(&backend.trim().to_lowercase().as_str())
+                .contains(&normalize_signer_backend(backend).as_str())
         {
             return Err(format!(
                 "unknown signing backend {backend:?}; use wallet, extension, ledger, or vault"
@@ -596,7 +605,7 @@ impl Globals {
     /// Whether the private key lives outside local wallet files.
     pub fn uses_external_signer(&self) -> bool {
         self.signer_backend.as_deref().is_some_and(|v| {
-            ["ledger", "vault", "extension"].contains(&v.trim().to_lowercase().as_str())
+            ["ledger", "vault", "extension"].contains(&normalize_signer_backend(v).as_str())
         })
     }
 }
@@ -709,7 +718,14 @@ mod tests {
         globals.apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)?;
         assert_eq!(globals.signatories, ["alice"]);
         assert_eq!(globals.signer_backend.as_deref(), Some("extension"));
-        assert!(parse(&["rtao", "submit", "--mev-shield", "--no-mev-shield"]).is_err());
+        for (flags, expected) in [
+            (["--mev-shield", "--no-mev-shield"], false),
+            (["--no-mev-shield", "--mev-shield"], true),
+        ] {
+            let parsed = parse(&["rtao", "submit", flags[0], flags[1]])?;
+            globals.apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)?;
+            assert_eq!(globals.mev_shield, Some(expected));
+        }
         Ok(())
     }
 
@@ -807,7 +823,7 @@ mod tests {
     }
 
     #[test]
-    fn explicit_empty_proxy_options_and_python_signatory_whitespace_survive()
+    fn explicit_empty_proxy_target_and_python_signatory_whitespace_survive()
     -> Result<(), Box<dyn std::error::Error>> {
         let parsed = parse(&[
             "rtao",
@@ -815,14 +831,14 @@ mod tests {
             "--proxy-for",
             "",
             "--force-proxy-type",
-            "",
+            "Any",
             "--signatory",
             "a\u{1c}b\u{1d}c\u{1e}d\u{1f}e\u{85}f\u{a0}g,h",
         ])?;
         let mut globals = Globals::resolve(&parsed, &Map::new(), Path::new("/injected"), |_| None)?;
         globals.apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)?;
         assert_eq!(globals.proxy_for.as_deref(), Some(""));
-        assert_eq!(globals.force_proxy_type.as_deref(), Some(""));
+        assert_eq!(globals.force_proxy_type.as_deref(), Some("Any"));
         assert_eq!(
             globals.signatories,
             ["a", "b", "c", "d", "e", "f", "g", "h"]
