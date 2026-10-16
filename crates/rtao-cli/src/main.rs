@@ -246,6 +246,8 @@ async fn run() -> Result<(), CliError> {
         .map_err(|e| CliError::failure(e.to_string()))?;
     let replay = invocation.history.replay_command(&replay_args);
     let result = async {
+        // Async handlers borrow argv; final success guidance still needs it.
+        let replay_args = replay_args.as_slice();
         match name {
             "call" => rtao_cli::call::run(&mut app, matches, &replay).await,
             "completions" => rtao_cli::completions::run(&completion_tree, matches, &app.output),
@@ -322,7 +324,7 @@ async fn run() -> Result<(), CliError> {
                 let history = &mut invocation.history;
                 runner
                     .run(|client| async move {
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         proxy::execute(
                             app_ref,
                             &client,
@@ -347,7 +349,7 @@ async fn run() -> Result<(), CliError> {
                 let history = &mut invocation.history;
                 runner
                     .run(|client| async move {
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         subnets::execute(
                             app_ref,
                             &client,
@@ -389,7 +391,7 @@ async fn run() -> Result<(), CliError> {
                         else {
                             return Ok(());
                         };
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         generated::execute_tx(
                             app_ref,
                             &client,
@@ -448,7 +450,7 @@ async fn run() -> Result<(), CliError> {
                                 }
                             };
                         }
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         for request in requests {
                             generated::execute_tx(
                                 app_ref,
@@ -518,7 +520,7 @@ async fn run() -> Result<(), CliError> {
                                 .await?
                             }
                         };
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         hparams::execute(
                             app_ref,
                             &client,
@@ -546,7 +548,7 @@ async fn run() -> Result<(), CliError> {
                 let history = &mut invocation.history;
                 runner
                     .run(|client| async move {
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         stake::execute(
                             app_ref,
                             &client,
@@ -593,7 +595,7 @@ async fn run() -> Result<(), CliError> {
                                 .await?
                             }
                         };
-                        let replay = history.replay_command(&replay_args);
+                        let replay = history.replay_command(replay_args);
                         generated::execute_tx(
                             app_ref,
                             &client,
