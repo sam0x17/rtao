@@ -2715,12 +2715,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/codegen/check.py"
-rs = ["rtao_catalog::py::PYTHON_TABLES"]
+rs = ["rtao_catalog::py::PYTHON_TABLES", "xtask/src/parity_catalog.rs"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "a859b70612e8b92d0ae14e51c657e996ab9052e2"
 synced_tag = "v478"
 milestone = "M2"
-notes = "Source audit 2026-10-15: complete authenticated 534-line file independently reviewed. Coverage, namespace, unit and native regeneration/drift contracts have actual tooling homes beyond the two extracted declarations; the generated py.rs origin is present. Add production parity_catalog guards bridging classified names to pinned metadata, rejecting Unknown metadata classifications and Python-strip-blank chain/dispatch prose, with targeted stale/new/heuristic/Unknown/Unicode fixtures. These new guards and fixtures await hosted execution and follow-up source review, so this whole-file row remains pending. Native pinned Rust regeneration replaces Python text emission; optional live drift and fresh Python/oracle execution remain unclaimed."
+notes = "Source reconciliation 2026-10-16: complete authenticated 534-line module, all six functions, declarations, production tooling callers and substantive fixtures reviewed. Exact covered/raw declarations drive pinned-metadata call coverage; actual registries enforce verify-read/root contracts. Metadata names must exist and classify to non-Unknown, including heuristic names; chain/dispatch prose uses Python-strip nonblank semantics. Both new guards have exact PASS records at 7bb8c0b. Authenticated extraction enforces description and semantic-documentation sets; authoritative Rust custom-code projection and complete native custom/invalid conversion fixtures retain every declared name. Native units and namespace producers validate all entries/categories and exact checked-in output. Native xtask parity/regen Result and pinned metadata generation replace Python CLI/stdout, live dump and Python text/stub emission; those reused producers retain separate origins. Source reconciliation does not claim fresh Python/oracle/live drift execution, exhaustive pytest port or milestone acceptance."
 
 [[file]]
 py = "sdk/python/codegen/emit_namespaces.py"
