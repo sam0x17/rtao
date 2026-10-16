@@ -2307,19 +2307,19 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
       its filter, which excludes the `e2e`, `interop`, `core_oracle` and `ledger_emu` targets, lands in M0-08 with the
       targets it names.
 - [x] **M0-05** `rust-toolchain.toml` (current stable), `.cargo/config.toml` alias `xtask = "run -p xtask --"`.
-- [ ] **M0-06** `upstream.toml` with `[monorepo]`, `[core]` and `[parity]` at the M0 tag, the newest final monorepo
+- [x] **M0-06** `upstream.toml` with `[monorepo]`, `[core]` and `[parity]` at the M0 tag, the newest final monorepo
       release that finney runs and whose `:vS` localnet image is published ([§10.3](#103-a-pin-bump-step-by-step)
       step 1): `v478` / `850f2755…` on 2026-10-13, the commit this plan's evidence was checked at, whose `sdk/` equals
       `v477`'s. Also `toolchain = "1.89"`, `spec_version` = that tag's spec, `python_package_version = "11.3.1.dev0"`
       (the in-tree source version), `[networks.finney]` genesis, `[localnet]` image tags `pinned`, `mainnet`,
       `testnet`, `devnet` and `main` (digests written by `xtask pin --parity <tag> --check` once M0-09 exists; without
       `--parity`, `--check` only verifies), and the `[artifacts]` list.
-- [ ] **M0-07** `[workspace.dependencies] bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git",
+- [x] **M0-07** `[workspace.dependencies] bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git",
       tag = "<core_tag>", default-features = false }` at the M0 tag (every monorepo git dependency is declared in this
       table and inherited with `workspace = true`, so a core bump rewrites one manifest), the ring-only `rustls`
       (`default-features = false`, features `ring`, `std`, `tls12`, `logging`), `serde_json` with `arbitrary_precision`
       ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #10), and the `[patch.crates-io] w3f-bls` line.
-- [ ] **M0-08** Skeletons of the other 18 crates (19 with the facade), each with one-line crate docs and the layering of
+- [x] **M0-08** Skeletons of the other 18 crates (19 with the facade), each with one-line crate docs and the layering of
       [§4.2](#42-layers) in its manifest; `cargo build -p rtao-core` succeeds (for reference, the core alone at this tag
       locked 241 packages and built in 12.9 s wall, 84.6 s CPU, clean release:
       [bench/tagpin](docs/plan/bench/tagpin/tagpin.log)). `rtao-testkit` declares its four `[[test]]` targets (`e2e`,
@@ -2331,54 +2331,54 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
 
 **xtask**
 
-- [ ] **M0-09** `xtask pin --check`: partial clone (`git clone --filter=blob:none`) cached under `target/upstream.git`;
+- [x] **M0-09** `xtask pin --check`: partial clone (`git clone --filter=blob:none`) cached under `target/upstream.git`;
       the core-input fingerprint over the core's path-dependency closure, written into `upstream.toml` as `fingerprint`;
       `--check` reads the `[localnet]` digests from GHCR. Without `--parity`, `--check` only verifies the committed
       pins against the root manifest and `Cargo.lock`, offline apart from git (the `pr-gates` step of M0-27, which
       gains the core-patch rules in M7-09).
-- [ ] **M0-10** `xtask import-upstream`: copy `[artifacts]` from `parity.commit`, record sha256; also vendor every
+- [x] **M0-10** `xtask import-upstream`: copy `[artifacts]` from `parity.commit`, record sha256; also vendor every
       extraction and chain-source input under `vendor/upstream/src/` and the watched-tree listing
       `vendor/upstream/tree.txt`; `--verify-only` for CI.
-- [ ] **M0-11** `xtask deps-check` over `cargo metadata` and `cargo tree`: rules 1-8 of [§4.2](#42-layers) and
+- [x] **M0-11** `xtask deps-check` over `cargo metadata` and `cargo tree`: rules 1-8 of [§4.2](#42-layers) and
       `--profile no-host` (both profiles, `cargo tree -e normal,build`).
-- [ ] **M0-12** `xtask extract` v0: the literal-subset extractor on `ruff_python_parser` (git, pinned rev; fall back to
+- [x] **M0-12** `xtask extract` v0: the literal-subset extractor on `ruff_python_parser` (git, pinned rev; fall back to
       `rustpython-parser` if needed); its first run extracts the btauth/1 goldens of `PYT/unit/test_http_auth.py:19-36`
       (`FIXED_NONCE`, `BODY`, `METHOD`, `PATH`, `GOLDEN_SR25519_PAYLOAD`, `GOLDEN_ED25519_SIGNATURE`).
-- [ ] **M0-13** `xtask parity check`, file layer only, over `vendor/upstream/tree.txt`: seed `parity/map.toml` with all
+- [x] **M0-13** `xtask parity check`, file layer only, over `vendor/upstream/tree.txt`: seed `parity/map.toml` with all
       357 rows of [python-module-map.md](docs/plan/python-module-map.md) as `pending`; presence is checked for every
       row, blob equality for blessed rows; the license rule of M0-02 is checked too.
 
 **The seam and its guards**
 
-- [ ] **M0-14** `rtao-core` re-exports (`keys`, `codec`, `runtime`, `extrinsic`, `digest`, `mlkem`, `timelock`),
+- [x] **M0-14** `rtao-core` re-exports (`keys`, `codec`, `runtime`, `extrinsic`, `digest`, `mlkem`, `timelock`),
       `CoreError` mapping, `DynValue`, `offload`, `BITTENSOR_CORE_TAG`/`BITTENSOR_CORE_COMMIT` generated from
       `upstream.toml`, features `host` and `ledger`; `tests/lock.rs`.
-- [ ] **M0-15** `clippy.toml` with the ten `disallowed-methods` entries, `allow-invalid = true` on the seven host-gated
+- [x] **M0-15** `clippy.toml` with the ten `disallowed-methods` entries, `allow-invalid = true` on the seven host-gated
       ones ([§5.4](#54-not-used-on-runtime-paths)).
-- [ ] **M0-16** `deny.toml` (license allowlist, advisories, SCALE-stack `multiple-versions = "deny"`, bans on
+- [x] **M0-16** `deny.toml` (license allowlist, advisories, SCALE-stack `multiple-versions = "deny"`, bans on
       `aws-lc-rs`, `aws-lc-sys` and `native-tls`).
-- [ ] **M0-17** `rtao-core-ext` skeleton (no tokio, monorepo deny lints) with `verify_strict` as its first module.
-- [ ] **M0-18** `xtask core-surface`: generate `crates/rtao-core/tests/core_surface.rs` for every re-exported core item
+- [x] **M0-17** `rtao-core-ext` skeleton (no tokio, monorepo deny lints) with `verify_strict` as its first module.
+- [x] **M0-18** `xtask core-surface`: generate `crates/rtao-core/tests/core_surface.rs` for every re-exported core item
       and the ten `disallowed-methods` paths ([§5.4](#54-not-used-on-runtime-paths)).
-- [ ] **M0-19** `xtask staged --check`: parse the three `UPSTREAM-*` header lines, generate one probe crate per module
+- [x] **M0-19** `xtask staged --check`: parse the three `UPSTREAM-*` header lines, generate one probe crate per module
       (its own workspace, the patch line, a copy of `Cargo.lock`), and classify failures as in
       [§5.3](#53-staged-in-rtao-core-ext).
-- [ ] **M0-20** `xtask lint-upstream`: the monorepo's `subtensor-linting` (git dependency at `core_tag`, declared in
+- [x] **M0-20** `xtask lint-upstream`: the monorepo's `subtensor-linting` (git dependency at `core_tag`, declared in
       the root `[workspace.dependencies]`, M0-07) over `rtao-core-ext` only.
 
 **Primitives, JSON and goldens**
 
-- [ ] **M0-21** `rtao-primitives`: ids with checked `NetUidStorageIndex`, `AccountId` (ss58 through the core),
+- [x] **M0-21** `rtao-primitives`: ids with checked `NetUidStorageIndex`, `AccountId` (ss58 through the core),
       `DefaultAccount`, wire amounts, `Balance<U>` (no `Add`/`Sub`, `try_sum`), `Money`, `Amount`, `ResolvedAmount`,
       `Spend`, `DynBalance`, `IntoCoreValue`, scale-decode visitors, `pyfmt`, `json::{from_slice, from_str}`;
       proptests, including the properties of the hypothesis suite `test_balance_properties.py` adapted to the
       chain-native domain (`RAO` 0..=u64::MAX, `NETUID` 0..=4095), with checked underflow/overflow and rejection of
       negative/oversized inputs, and `// pyt:` provenance (Q25 supersedes the full signed strategy bounds; D-035).
       The suite has no literal cases to extract; the `str(Balance)` oracle vectors arrive in M2.
-- [ ] **M0-22** The `serde_json/arbitrary_precision` decision of [§5.8](#58-known-core-defects-and-how-rtao-handles-them)
+- [x] **M0-22** The `serde_json/arbitrary_precision` decision of [§5.8](#58-known-core-defects-and-how-rtao-handles-them)
       #10 with its M0 tests: direct versus `Value`-first parsing of untagged and flatten floats, a u128/U256
       `to_corpus_json` round trip, and the oracle comparator's integer and float vectors.
-- [ ] **M0-23** `rtao-testkit::fixtures`: the `golden.json` and shape-corpus loaders; the replay tests `golden_calls`,
+- [x] **M0-23** `rtao-testkit::fixtures`: the `golden.json` and shape-corpus loaders; the replay tests `golden_calls`,
       `golden_storage_keys`, `golden_signature_payloads`, `golden_extrinsics`, `golden_multisig` and `golden_ss58`, one
       per `golden.json` section (`calls`, `storage_keys`, `signature_payloads`, `extrinsics`, `multisig`, `ss58`), through
       `IntoCoreValue` and `compose_call` by name (typed builders arrive with M1's regen); the shape-corpus replay test
@@ -2386,19 +2386,19 @@ M0-14…M0-17 (the seam); M0-21 and M0-24 need only M0-14.
 
 **btauth/1, doctor, CI and docs**
 
-- [ ] **M0-24** `rtao-signer`: `Signer`, `MultiSignature`, `KeypairSigner`, in M0 because `btauth::sign` takes a
+- [x] **M0-24** `rtao-signer`: `Signer`, `MultiSignature`, `KeypairSigner`, in M0 because `btauth::sign` takes a
       `&dyn Signer`.
-- [ ] **M0-25** `rtao-btauth` core with every vector and negative case.
-- [ ] **M0-26** `rtao-cli` with `rtao doctor` (lock check that prints the exact patch line); its `[[bin]] name = "rtao"`
+- [x] **M0-25** `rtao-btauth` core with every vector and negative case.
+- [x] **M0-26** `rtao-cli` with `rtao doctor` (lock check that prints the exact patch line); its `[[bin]] name = "rtao"`
       sets `doc = false` ([§11](#11-documentation-plan)).
-- [ ] **M0-27** `.github/workflows/pr.yml` with bounded free `ubuntu-latest` jobs for `check`, `no-host`, `msrv`,
+- [x] **M0-27** `.github/workflows/pr.yml` with bounded free `ubuntu-latest` jobs for `check`, `no-host`, `msrv`,
       relevant `features` and `supply`, with actions pinned by SHA. Keep source/pin/extraction/parity/dependency
       checks, units, goldens, doctests and supply guards in hosted CI. `cargo xtask gates` is a hosted command;
       Q30 removes the full local run before every push. Cancel superseded runs and avoid unnecessary matrices.
 
-- [ ] **M0-28** README (approach, patch line, `rtao doctor`), CONTRIBUTING (xtask commands, bless workflow, the
+- [x] **M0-28** README (approach, patch line, `rtao doctor`), CONTRIBUTING (xtask commands, bless workflow, the
       attribution rule of M0-02).
-- [ ] **M0-29** Record M0 client checks and hosted results. Version changes, release tagging and binary publication
+- [x] **M0-29** Record M0 client checks and hosted results. Version changes, release tagging and binary publication
       are deferred by Q30.
 
 ## 13. Risks
@@ -2967,3 +2967,5 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-16 | M9 corrected report adoption and producer/pruning regressions | Corrected report-only 38862997033 passes full source parity at clean f48535d. Authenticate and independently refetch artifact 12029777947 (58166 bytes, SHA256 ebff9b28aa3c2329462ba83031580e438135c7e97e69e598a434fefe83d8a95d); adopt exactly four reports, promoting only the three reviewed staking/weights/CLI-pruning rows to reach source/matrix 301/357 reconciled and 56 pending. All 23 dependency inputs, role counts, host flags, 20 e2e gaps, 68 divergences and other claims unchanged. Integrate independently reviewed sample-only producer binding/effects/declaration guards and five actual-resolver fixtures preserving six original outputs; no incorrect pinned value established, whole samples row stays pending. Add four real pruning-session/client fixtures for implicit mechanism2 target128, pending-target priority and complete key-only legacy queue probes including empty TWC values. Exact Python origins/native adaptations remain explicit; full pytest row stays pending. Nine additions join seventeen CLI fixtures awaiting hosted execution; source review, rustfmt and whitespace pass. Read-only 06:50 UTC refresh confirms thirteen recorded upstream filings remain open and eight PRs unmerged at unchanged heads with empty labels/review requests; no new census/source-test claim. No local build/test, service, Mac Studio work, extra root, archive/extraction tree, new filing or milestone acceptance. |
 | 2026-10-16 | M9 prompt argv ownership correction | Ordinary 38863766724 at 9bd2d02 exposes MSRV E0382: a move handler consumes the original argv vector before success guidance borrows it. Bind a shared argv slice inside dispatch and pass it to all seven async handlers, retaining the owned original for final hints. Record exact bounded MSRV log evidence (58981 bytes, SHA256 c776d6f6862cc8b4af9ba8737660b973258c7269eed3f15c3e51ab6088b5d935). Direct rustfmt and whitespace pass; all 26 newly authored fixture results remain pending the corrected hosted checkpoint. Source/matrix counts and strict/milestone state unchanged; no local build/test or new filing. |
 | 2026-10-16 | M9 wallet fixture lint correction | Ordinary 38864132855 at 8211420 passes MSRV/no-host/semver; main stops before tests on two needless_borrows_for_generic_args findings in the new wallet fixture. Pass the Copy environment closure directly at both existing calls, preserving the strict lint policy. Retain bounded main log identity (68704 bytes, SHA256 0876f601d04385eb3305af03cfd868c69bd710d0869e004849f0f032617cdb95). Direct formatting/whitespace pass; all 26 new fixture executions remain pending the corrected hosted run. Complete PoW module/solver/worker/GPU and fixture source review found no supported-domain defect; its proposed disposition stays ignored pending exact hosted evidence. Source/map and milestone states unchanged, no local builds/tests or filings. |
+| 2026-10-16 | M0 source and fixture completion record | Ordinary 38865058430 passes all six jobs at exact 3f1aa67: 3040 tests pass, zero fail, four skipped, with strict Clippy, docs, doctests and blocking source/dependency checks. Independent current audit finds no missing M0 implementation and binds 60 exact inputs. Authenticate 123 named M0 PASS records, including all six goldens, corpus, 44 btauth tests, native money/JSON, signers, strict verification, BLS and both real-binary doctor cases. Retain bounded m0-3f1aa67-hosted-results.json (60592 bytes, SHA256 2f9256ef73b49321c0b74ea1ed7c3d4c8b19bbeba783f8ea73c497412e0094ff); main log 715611 bytes/SHA256 55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975. Check applicable M0 source/fixture steps and record M0-29; update current M0 docs. Final milestone exit still requires applicable hosted checks on the combined follow-up checkpoint. Q30 deferred/optional evidence, M1 gaps and M2-S02 remain separate; no local execution, release or milestone claim from this record alone. |
+| 2026-10-16 | M9 samples/PoW source dispositions and root target-selection repair | Exact 3f1aa67 proof confirms all 26 new fixtures, 26 existing native PoW/fake-GPU cases and four all83/all102 consumers pass. Whole-source independent review reconciles samples.py and pow_registration.py, with precise native homes, canonical headers and explicit typed fixture/proof/backend/cleanup/valid-challenge adaptations. Source map reaches 303/357 reconciled, 54 pending; adopted matrix stays 301/56 until hosted refresh. Find S9-11 in actual root picker: an earlier display label equal to a later validator's full SS58 could override that exact address. Restore address-before-label precedence after numeric choices; add one actual allocation/typed-intent/replay fake-chain regression with collision and controls. Independent review, formatting and whitespace pass; the new regression awaits hosted execution. Whole root-helper and pytest rows stay pending, strict M8 off, M2-S02 open/unaccepted. No new filings, local builds/tests, service, Studio work or new temporary root. |

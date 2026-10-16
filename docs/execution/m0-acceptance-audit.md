@@ -1,4 +1,47 @@
-# M0 acceptance audit, 2026-10-15
+# M0 acceptance audit
+
+## Current completion checkpoint, 2026-10-16
+
+Ordinary hosted [38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
+passed all six jobs at `3f1aa6731abfccb15a12c2a52da23ff08850f278`.
+The main gate passed 3,040 tests, zero failed, four skipped, followed by
+workspace doctests. Strict Clippy, source/pin/extraction, dependency, staged,
+core-surface, upstream lint and documentation checks passed. The 715,611-byte
+main log has SHA256
+`55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
+
+A new independent source audit found no missing M0 implementation obligation.
+It binds 60 exact inputs and maps every active step and exit. Authenticated
+hosted evidence confirms 123 named M0 PASS records: six golden sections,
+additional golden/corpus/loaders, all 44 btauth conformance tests, native money
+properties, JSON regressions, signer/role checks, strict verification, BLS and
+provenance checks, and both actual-binary doctor cases. The static inventory
+and executed records are separate evidence; no source count substitutes for a
+test result.
+
+Bounded local evidence under `.local/recovery/2026-10-15/` is
+`m0-current-source-audit-3f1aa67.{txt,json}` and
+`m0-3f1aa67-hosted-results.json`. The executed proof is 60,592 bytes, SHA256
+`2f9256ef73b49321c0b74ea1ed7c3d4c8b19bbeba783f8ea73c497412e0094ff`.
+It authenticates the exact run, six job results, input blobs and each named
+fixture. No raw log or archive is retained.
+
+This record supplies the M0 source/fixture completion evidence and M0-29.
+Applicable step boxes record that work. The combined follow-up source, map and
+documentation checkpoint must also pass its applicable hosted checks before
+the M0 milestone exit is claimed. M1's two-provider/provenance/extraction gaps,
+the remaining M8 source/e2e mappings, S9-11 and M2-S02 remain separate work.
+
+C2/C7 limits remain explicit: no fresh independent Python/oracle, localnet,
+interop, macOS/ARM, Keychain, hardware, release or deployment acceptance follows.
+Q25 native balances, Q26 built-BLS and the existing guarded dormant supply
+exceptions are unchanged. All thirteen existing filings were rechecked open
+at unchanged PR heads; no new filing or GitHub notification action was needed.
+
+## Earlier source and failure history
+
+The remaining sections retain earlier snapshots. Their execution-pending and
+unchecked-step statements are superseded by the current checkpoint above.
 
 Source inspection at `2331a32166520d6b7de49eea3316e79abaae056e` found the
 applicable M0 fixtures and hosted checks represented. That snapshot failed

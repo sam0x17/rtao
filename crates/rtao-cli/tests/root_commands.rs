@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/root.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/root_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional sources at the same commit/license: sdk/python/bittensor/cli/commands/root_move.py, sdk/python/bittensor/cli/commands/root_swap.py, sdk/python/bittensor/cli/root_helpers.py.
 //! Root commands prepare real intents over metadata-backed fake transports.
 
@@ -497,6 +498,54 @@ async fn terminal_fund_picker_pages_past_twenty_and_records_the_exact_hotkey() -
             .any(|request| request.method.starts_with("author_"))
     );
     client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_picker_prefers_reserved_numbers_and_exact_hotkeys_over_labels() -> TestResult {
+    let other = OTHER.to_string();
+    for (answer, first_label, second_label, expected) in [
+        (other.as_str(), other.as_str(), "destination", OTHER),
+        ("2", "2", "destination", OTHER),
+        ("duplicate", "duplicate", "duplicate", HOT),
+        ("destination", "source", "destination", OTHER),
+    ] {
+        let (client, chain) = client(seed()?).await?;
+        let argv = ["rtao", "root", "allocate", "--amount", "all", "--yes"];
+        let parsed = parse(&argv)?;
+        let (mut ctx, _) = context(&parsed)?;
+        ctx.books.addresses = vec![
+            json!({"address":HOT,"name":first_label}),
+            json!({"address":OTHER,"name":second_label}),
+        ];
+        ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptTerminal {
+            answers: VecDeque::from([answer.to_owned()]),
+            messages: Arc::new(Mutex::new(Vec::new())),
+        })));
+        let request = parse_request(&mut ctx, &parsed)?;
+        let mut history = PromptHistory::default();
+        let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut history)
+            .await?
+            .ok_or("selected fund")?;
+        assert_eq!(tx.op, "stake_into_basket");
+        assert_eq!(tx.args["hotkey_ss58"], json!(expected));
+        assert_eq!(
+            tx.intent()?.as_dyn().to_json_dyn()["hotkey_ss58"],
+            json!(expected)
+        );
+        assert_eq!(tx.args["amount_tao"], "all");
+        assert_eq!(
+            history.replay_command(&argv.map(str::to_owned)),
+            format!("rtao root allocate --amount all --yes --hotkey {expected}"),
+        );
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        client.close().await;
+    }
     Ok(())
 }
 

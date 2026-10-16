@@ -1,9 +1,16 @@
 # M4-12: sequential Null pruning
 
-Status: source implemented and the earlier fixture checkpoint passed hosted CI;
-four new fixtures await execution. Milestone acceptance and the complete pytest
+Status: source implemented and all four recent fixtures passed hosted CI.
+Milestone acceptance and the complete pytest
 mapping remain separate. No local build,
 test, mining operation or chain service was run for this follow-up.
+
+Current ordinary [38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
+passes all six jobs at exact `3f1aa67`: 3,040 tests passed, zero failed and four
+skipped, plus doctests and documentation. `3f1aa67-named-results.json` binds the
+four additions below to exact PASS records and source blobs. Its authenticated
+715,611-byte log has SHA256
+`55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
 
 Hosted [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
 passed at `50b7239e6ec1160cc482a86be8d2a30fe737ffc1`: all 3,014 executed tests
@@ -100,6 +107,6 @@ all32 ordered native key-only probes and empty TWC values at the final legacy
 index. The default/resume cases execute one real reviewed signed FakeChain
 batch. Probe cases stop before signing and assert no commitment value reads.
 The pending128 and final-index vectors are explicit native adaptations; the
-cooldown half of the shared T19 provenance remains pending. Formatting passes,
-but these additions have not yet compiled or executed in hosted CI. The exact
+cooldown half of the shared T19 provenance remains pending. All four additions
+now pass compilation, strict Clippy and execution at exact `3f1aa67`. The exact
 admin table, integrated cooldown/recovery and full pytest mapping remain open.

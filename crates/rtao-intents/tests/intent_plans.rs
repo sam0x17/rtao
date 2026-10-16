@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/harness/samples.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Ordinary M5 planning coverage from the authenticated upstream sample table.
 //! Every operation uses the real executor and encoded FakeChain state.
 #![cfg(all(feature = "all", feature = "pow"))]
