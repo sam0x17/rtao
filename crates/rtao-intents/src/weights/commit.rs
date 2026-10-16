@@ -130,11 +130,37 @@ impl TimelockCommitter {
     }
 }
 
+#[cfg(test)]
+type TestEncryptor =
+    dyn Fn(TimelockCommitRequest) -> Result<PreparedWeightCommit, CommitError> + Send + Sync;
+
+#[cfg(test)]
+tokio::task_local! {
+    static TEST_ENCRYPTOR: Box<TestEncryptor>;
+}
+
+// Scope the fake to this async task, including its cancellation boundary. Other
+// tests continue through the real encryptor even when they run concurrently.
+#[cfg(test)]
+pub(super) async fn with_test_encryptor<F: std::future::Future>(
+    encrypt: impl Fn(TimelockCommitRequest) -> Result<PreparedWeightCommit, CommitError>
+    + Send
+    + Sync
+    + 'static,
+    future: F,
+) -> F::Output {
+    TEST_ENCRYPTOR.scope(Box::new(encrypt), future).await
+}
+
 // Standalone intents preserve Python's build-time reads. The validator's
 // TimelockCommitter applies its explicit consensus bound to this same crypto.
 pub(super) async fn encrypt_at(
     request: TimelockCommitRequest,
 ) -> Result<PreparedWeightCommit, CommitError> {
+    #[cfg(test)]
+    if let Ok(result) = TEST_ENCRYPTOR.try_with(|encrypt| encrypt(request.clone())) {
+        return result;
+    }
     let TimelockCommitRequest {
         now,
         hotkey,

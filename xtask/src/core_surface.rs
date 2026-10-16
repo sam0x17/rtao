@@ -37,6 +37,44 @@ fn use_paths(tree: &UseTree, prefix: &str, paths: &mut Vec<String>) -> Result<()
     Ok(())
 }
 
+/// Recognize only the docs.rs feature label, which cannot change Rust exports.
+fn documentation_only_cfg_attr(attribute: &syn::Attribute) -> bool {
+    let syn::Meta::List(conditional) = &attribute.meta else {
+        return false;
+    };
+    if !conditional.path.is_ident("cfg_attr")
+        || !matches!(&conditional.delimiter, syn::MacroDelimiter::Paren(_))
+    {
+        return false;
+    }
+    let parser = syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated;
+    let Ok(arguments) = conditional.parse_args_with(parser) else {
+        return false;
+    };
+    let mut arguments = arguments.iter();
+    let (Some(syn::Meta::Path(condition)), Some(syn::Meta::List(documentation)), None) =
+        (arguments.next(), arguments.next(), arguments.next())
+    else {
+        return false;
+    };
+    if !condition.is_ident("docsrs")
+        || !documentation.path.is_ident("doc")
+        || !matches!(&documentation.delimiter, syn::MacroDelimiter::Paren(_))
+    {
+        return false;
+    }
+    let Ok(labels) = documentation.parse_args_with(parser) else {
+        return false;
+    };
+    let mut labels = labels.iter();
+    matches!(
+        (labels.next(), labels.next()),
+        (Some(syn::Meta::List(label)), None)
+            if label.path.is_ident("cfg")
+                && matches!(&label.delimiter, syn::MacroDelimiter::Paren(_))
+    )
+}
+
 /// Resolve a Rust module file, rejecting conditional or escaping paths that
 /// these source guards cannot audit reliably.
 pub(crate) fn module_file(
@@ -48,7 +86,7 @@ pub(crate) fn module_file(
         !module
             .attrs
             .iter()
-            .any(|attr| attr.path().is_ident("cfg_attr")),
+            .any(|attr| attr.path().is_ident("cfg_attr") && !documentation_only_cfg_attr(attr)),
         "conditional module attributes require an explicit audited module: {}",
         module.ident
     );
@@ -143,9 +181,9 @@ fn exports(
             _ => continue,
         };
         ensure!(
-            !attributes
-                .iter()
-                .any(|attribute| attribute.path().is_ident("cfg_attr")),
+            !attributes.iter().any(|attribute| {
+                attribute.path().is_ident("cfg_attr") && !documentation_only_cfg_attr(attribute)
+            }),
             "conditional module/export attributes must be explicit before surface generation"
         );
         let mut cfg = inherited_cfg.to_vec();
@@ -438,6 +476,58 @@ mod tests {
     }
 
     #[test]
+    fn documentation_cfg_attrs_leave_exports_and_feature_guards_unchanged() -> Result<()> {
+        let plain = inline_exports(
+            "#[cfg(feature = \"host\")] pub mod keys { pub use bittensor_core::keys::Keypair; } pub use bittensor_core::codec::value::Value;",
+        )?;
+        let documented = inline_exports(
+            r#"
+            #[cfg(feature = "host")]
+            #[cfg_attr(docsrs, doc(cfg(feature = "host")))]
+            pub mod keys {
+                #[cfg_attr(docsrs, doc(cfg(any(feature = "host", feature = "ledger"))))]
+                pub use bittensor_core::keys::Keypair;
+            }
+            #[cfg_attr(docsrs, doc(cfg(feature = "host")),)]
+            pub use bittensor_core::codec::value::Value;
+            "#,
+        )?;
+        ensure!(plain == documented);
+        Ok(())
+    }
+
+    #[test]
+    fn conditional_cfg_attrs_still_refuse_surface_generation() -> Result<()> {
+        for attribute in [
+            "#[cfg_attr(docsrs, cfg(feature = \"host\"))]",
+            "#[cfg_attr(docsrs, path = \"keys.rs\")]",
+            "#[cfg_attr(feature = \"host\", doc(cfg(feature = \"host\")))]",
+            "#[cfg_attr(any(docsrs), doc(cfg(feature = \"host\")))]",
+            "#[cfg_attr(docsrs, doc(cfg(feature = \"host\")), cfg(feature = \"host\"))]",
+            "#[cfg_attr(docsrs, doc(cfg(feature = \"host\"), hidden))]",
+            "#[cfg_attr(docsrs, doc(hidden))]",
+            "#[cfg_attr(docsrs, cfg_attr(docsrs, doc(cfg(feature = \"host\"))))]",
+            "#[cfg_attr(docsrs, doc(cfg(feature = \"host\")))] #[cfg_attr(docsrs, cfg(feature = \"host\"))]",
+        ] {
+            ensure!(
+                inline_exports(&format!(
+                    "{attribute} pub use bittensor_core::keys::Keypair;"
+                ))
+                .is_err(),
+                "conditional export was accepted: {attribute}"
+            );
+            ensure!(
+                inline_exports(&format!(
+                    "{attribute} mod keys {{ pub use bittensor_core::keys::Keypair; }}"
+                ))
+                .is_err(),
+                "conditional module was accepted: {attribute}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
     fn new_guard_and_glob_require_a_reviewed_probe() -> Result<()> {
         ensure!(guard_signature("bittensor_core::keys::unreviewed").is_err());
         ensure!(inline_exports("pub use bittensor_core::keys::*;").is_err());
@@ -454,7 +544,7 @@ mod tests {
         let result = (|| -> Result<()> {
             fs::write(
                 fixture.join("lib.rs"),
-                "#[cfg(feature = \"host\")] pub mod keys; #[path = \"renamed.rs\"] pub mod alternate; pub mod nested { pub mod child; }",
+                "#[cfg(feature = \"host\")] #[cfg_attr(docsrs, doc(cfg(feature = \"host\")))] pub mod keys; #[path = \"renamed.rs\"] #[cfg_attr(docsrs, doc(cfg(feature = \"host\")))] pub mod alternate; pub mod nested { pub mod child; }",
             )?;
             fs::write(
                 fixture.join("keys.rs"),
@@ -490,6 +580,13 @@ mod tests {
                     .iter()
                     .any(|(cfg, path)| !cfg.is_empty() && path.ends_with("Keypair"))
             );
+            for attribute in [
+                "#[cfg_attr(feature = \"host\", path = \"keys.rs\")]",
+                "#[cfg_attr(docsrs, doc(cfg(feature = \"host\")), path = \"keys.rs\")]",
+            ] {
+                let module: syn::ItemMod = syn::parse_str(&format!("{attribute} mod keys;"))?;
+                ensure!(module_file(&module, &root, &root).is_err());
+            }
             fs::remove_file(root.join("keys.rs"))?;
             ensure!(
                 exports(

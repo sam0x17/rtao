@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::*;
@@ -317,6 +318,7 @@ fn paths_reject_escape_and_list_sorted_metadata_without_unlocking() {
 }
 
 #[test]
+// pyt: tests/unit/test_evm.py::TestKeystorePermissions::test_write_keystore_file_is_owner_only
 fn atomic_write_never_clobbers_without_permission_and_removes_temporary_files() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("nested/evmkeys/account");

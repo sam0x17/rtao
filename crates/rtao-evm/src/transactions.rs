@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/transactions.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Legacy EIP-155 transactions and EIP-191 hotkey association proofs.
 
 use crate::{
@@ -367,6 +368,7 @@ mod tests {
     }
 
     #[test]
+    // pyt: tests/unit/test_evm.py::TestAssociationProof::test_block_hash_matches_scale_u64_le
     fn association_uses_scale_u64_then_sixty_four_byte_eip191_domain() -> Result<()> {
         let account = account()?;
         let hotkey = AccountId([0xab; 32]);
