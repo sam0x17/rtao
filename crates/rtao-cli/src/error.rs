@@ -22,7 +22,7 @@ impl CliError {
             help: None,
         }
     }
-    /// Preserve typed chain remediation and gateway help before a receipt.
+    /// Preserve typed chain remediation, gateway help and submission recovery.
     pub(crate) fn transaction(error: rtao::tx::TxError) -> Self {
         let help = match &error {
             rtao::tx::TxError::Chain(error)
@@ -33,9 +33,10 @@ impl CliError {
             | rtao::tx::TxError::Rpc(rtao_rpc::RpcError::Policy(policy)) => {
                 Some(rpc_policy_help(policy))
             }
-            rtao::tx::TxError::Intent(rtao::tx::IntentError::Client(error)) => {
-                error.policy().map(rpc_policy_help)
+            rtao::tx::TxError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
+                Some(unknown_fate_help(hash))
             }
+            rtao::tx::TxError::Intent(rtao::tx::IntentError::Client(error)) => client_help(error),
             _ => None,
         };
         Self {
@@ -82,9 +83,25 @@ fn rpc_policy_help(policy: &rtao_rpc::PolicyRefusal) -> String {
     }
 }
 
+fn unknown_fate_help(hash: &rtao_rpc::H256) -> String {
+    format!(
+        "inspect transaction 0x{} on chain before retrying; do not resubmit until its outcome is known",
+        hex::encode(hash.0),
+    )
+}
+
+fn client_help(error: &rtao::client::ClientError) -> Option<String> {
+    match error {
+        rtao::client::ClientError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
+            Some(unknown_fate_help(hash))
+        }
+        error => error.policy().map(rpc_policy_help),
+    }
+}
+
 impl From<rtao::client::ClientError> for CliError {
     fn from(error: rtao::client::ClientError) -> Self {
-        let help = error.policy().map(rpc_policy_help);
+        let help = client_help(&error);
         Self {
             help,
             ..Self::failure(error.to_string())

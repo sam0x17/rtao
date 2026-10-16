@@ -53,6 +53,16 @@ pub struct AppContext {
     pub terminal: Arc<Mutex<Box<dyn Terminal>>>,
 }
 impl AppContext {
+    // py: sdk/python/bittensor/cli/context.py:711-714
+    fn register_book_names(&self) {
+        for entry in self.books.addresses.iter().chain(&self.books.proxies) {
+            if let (Some(address), Some(name)) = (entry["address"].as_str(), entry["name"].as_str())
+            {
+                let _ = self.output.name_address(address, name);
+            }
+        }
+    }
+
     /// Construct an application boundary without connecting or unlocking.
     pub fn new(
         globals: Globals,
@@ -208,6 +218,8 @@ impl AppContext {
             return Err(CliError::failure("refusing to submit without confirmation")
                 .with_help("pass `--yes` to skip the prompt in non-interactive sessions"));
         }
+        let rendered = self.output.prose(question);
+        let question = crate::output::terminal_text(&rendered);
         let mut terminal = self
             .terminal
             .lock()
@@ -611,6 +623,7 @@ impl AppContext {
         if let Some(review) = control.review {
             review.validate(intent)?;
         }
+        self.register_book_names();
         let proxy_for = self.dispatch_proxy(None)?;
         let force_proxy_type = self
             .globals
@@ -734,7 +747,7 @@ impl AppContext {
         }
         for warning in &plan.warnings {
             self.output
-                .message(warning)
+                .message(&self.output.prose(warning))
                 .map_err(|e| CliError::failure(e.to_string()))?;
         }
         if !plan.ok() {
@@ -1906,6 +1919,27 @@ pub struct CliWalletKeys {
 impl CliWalletKeys {
     /// Attach the CLI renderer without unlocking a private key.
     pub fn new(wallet: Wallet, output: Output) -> Self {
+        // py: sdk/python/bittensor/cli/context.py:696-710
+        // Only the concrete wallet path discovers both public identities.
+        // Injected and role-only key sources never receive counterpart probes.
+        for (role, name, kind) in [
+            (
+                SignerRole::Coldkey,
+                wallet.name().to_owned(),
+                crate::books::AccountKind::Coldkey,
+            ),
+            (
+                SignerRole::Hotkey,
+                format!("{}/{}", wallet.name(), wallet.reference().hotkey_name()),
+                crate::books::AccountKind::Hotkey,
+            ),
+        ] {
+            if let Ok(info) = wallet.public_info(role) {
+                let address = info.account.to_string();
+                let _ = output.name_address(&address, &name);
+                let _ = output.classify_address(&address, kind);
+            }
+        }
         let cold_sources = wallet.coldkey_file().password_sources();
         let sources = PasswordSources {
             prompt: cold_sources.prompt,

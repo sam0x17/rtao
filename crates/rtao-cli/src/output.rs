@@ -473,6 +473,7 @@ pub struct Output {
     sink: Arc<dyn OutputSink>,
     registry: RenderRegistry,
     address_names: Arc<RwLock<BTreeMap<String, String>>>,
+    address_name_order: Arc<RwLock<Vec<String>>>,
     address_kinds: Arc<RwLock<BTreeMap<String, AccountKind>>>,
     subnet_names: Arc<RwLock<BTreeMap<u16, String>>>,
     token_symbols: Arc<RwLock<BTreeMap<u16, Symbol>>>,
@@ -493,6 +494,7 @@ impl Output {
             sink,
             registry: RenderRegistry::default(),
             address_names: Arc::new(RwLock::new(BTreeMap::new())),
+            address_name_order: Arc::new(RwLock::new(Vec::new())),
             address_kinds: Arc::new(RwLock::new(BTreeMap::new())),
             subnet_names: Arc::new(RwLock::new(BTreeMap::from([(0, "root".into())]))),
             token_symbols: Arc::new(RwLock::new(BTreeMap::new())),
@@ -524,12 +526,114 @@ impl Output {
     /// Remember the first local name for an address; never alter machine data.
     pub fn name_address(&self, address: &str, name: &str) -> Result<(), OutputError> {
         if !address.is_empty() && !name.is_empty() && address != name {
-            self.address_names
-                .write()
-                .entry(address.into())
-                .or_insert_with(|| name.into());
+            let mut names = self.address_names.write();
+            if !names.contains_key(address) {
+                names.insert(address.into(), name.into());
+                self.address_name_order.write().push(address.into());
+            }
         }
         Ok(())
+    }
+
+    // py: sdk/python/bittensor/cli/output.py:425-446
+    /// Substitute local account and subnet names in human prose only.
+    pub(crate) fn prose(&self, text: &str) -> String {
+        // Python's dict follows registration order, including when one name
+        // contains another known address. Snapshots still expose sorted maps.
+        let registered = {
+            let names = self.address_names.read();
+            self.address_name_order
+                .read()
+                .iter()
+                .filter_map(|address| {
+                    names
+                        .get(address)
+                        .map(|name| (address.clone(), name.clone()))
+                })
+                .collect::<Vec<_>>()
+        };
+        let mut text = text.to_owned();
+        for (address, name) in registered {
+            if text.contains(&address) && !text.contains(&format!("({address})")) {
+                text = text.replace(&address, &format!("{name} ({address})"));
+            }
+        }
+        self.with_subnets(&text)
+    }
+
+    /// Add cached subnet names to bare `netuid N` and `subnet N` references.
+    pub(crate) fn with_subnets(&self, text: &str) -> String {
+        use unicode_general_category::{GeneralCategory, get_general_category};
+        let word = |character: char| {
+            character == '_'
+                || matches!(
+                    get_general_category(character),
+                    GeneralCategory::UppercaseLetter
+                        | GeneralCategory::LowercaseLetter
+                        | GeneralCategory::TitlecaseLetter
+                        | GeneralCategory::ModifierLetter
+                        | GeneralCategory::OtherLetter
+                        | GeneralCategory::DecimalNumber
+                        | GeneralCategory::LetterNumber
+                        | GeneralCategory::OtherNumber
+                )
+        };
+        let whitespace =
+            |character: char| character.is_whitespace() || matches!(character, '\u{1c}'..='\u{1f}');
+        let names = self.subnet_names.read();
+        let mut output = String::with_capacity(text.len());
+        let mut copied = 0;
+        for (start, _) in text.char_indices() {
+            if text[..start].chars().next_back().is_some_and(word) {
+                continue;
+            }
+            let keyword = if text[start..].starts_with("netuid") {
+                "netuid"
+            } else if text[start..].starts_with("subnet") {
+                "subnet"
+            } else {
+                continue;
+            };
+            let after_keyword = start + keyword.len();
+            let rest = &text[after_keyword..];
+            let digits_start =
+                after_keyword + rest.len() - rest.trim_start_matches(whitespace).len();
+            if digits_start == after_keyword {
+                continue;
+            }
+            let rest = &text[digits_start..];
+            let digits_len = rest
+                .char_indices()
+                .take_while(|(_, character)| {
+                    get_general_category(*character) == GeneralCategory::DecimalNumber
+                })
+                .map(|(index, character)| index + character.len_utf8())
+                .last()
+                .unwrap_or(0);
+            let end = digits_start + digits_len;
+            if digits_len == 0
+                || text[end..].chars().next().is_some_and(word)
+                || text[end..]
+                    .trim_start_matches(whitespace)
+                    .starts_with(['(', ')'])
+            {
+                continue;
+            }
+            let digits = &text[digits_start..end];
+            let Some(netuid) = rtao::primitives::pyfmt::parse_integer(digits)
+                .and_then(|value| value.to_string().parse::<u16>().ok())
+            else {
+                continue;
+            };
+            let Some(name) = names.get(&netuid).filter(|name| !name.is_empty()) else {
+                continue;
+            };
+            output.push_str(&text[copied..start]);
+            output.push_str(&format!("{keyword} {digits} ({name})"));
+            copied = end;
+        }
+        output.push_str(&text[copied..]);
+        output
     }
 
     /// Remember the first account kind for human account rendering.
@@ -1071,7 +1175,7 @@ impl Output {
     // py: sdk/python/bittensor/cli/context.py:716-734
     // Values on a review card are human text; machine payloads remain untouched.
     pub(crate) fn review_value(&self, key: &str, value: &Value) -> String {
-        match value {
+        let text = match value {
             Value::String(text) if crate::prompt::python_strip(text).is_empty() => "—".into(),
             Value::Bool(value) => if *value { "yes" } else { "no" }.into(),
             Value::Number(number) if key.contains("netuid") => number
@@ -1096,7 +1200,8 @@ impl Output {
                 }
             }
             _ => python_value(value),
-        }
+        };
+        self.prose(&text)
     }
 
     /// Render a progress step without contaminating JSON data.
@@ -1112,7 +1217,7 @@ impl Output {
             if value.is_empty() {
                 String::new()
             } else {
-                format!("  {value}")
+                format!("  {}", self.prose(value))
             }
         ))
     }
@@ -1132,7 +1237,10 @@ impl Output {
             }
             return self.json(Stream::Stderr, &Value::Object(payload));
         }
-        self.line(Stream::Stderr, &format!("error: {}", diagnostic(text)))?;
+        self.line(
+            Stream::Stderr,
+            &format!("error: {}", diagnostic(&self.with_subnets(text))),
+        )?;
         for (label, value) in [
             ("note", context.note),
             ("help", context.help),
@@ -1177,7 +1285,7 @@ impl Output {
         }
         self.line(
             Stream::Stdout,
-            &format!("dry run: {}", text_field(plan, "summary")),
+            &format!("dry run: {}", self.prose(text_field(plan, "summary"))),
         )?;
         let mut rows = Vec::new();
         let signer = text_field(plan, "signer");
@@ -1210,7 +1318,14 @@ impl Output {
             ("violations", "policy"),
         ] {
             if let Some(items) = plan.get(field).and_then(Value::as_array) {
-                rows.extend(items.iter().map(|item| (label.into(), item.clone())));
+                rows.extend(items.iter().map(|item| {
+                    (
+                        label.into(),
+                        item.as_str()
+                            .map(|text| Value::String(self.prose(text)))
+                            .unwrap_or_else(|| item.clone()),
+                    )
+                }));
             }
         }
         self.fields(&rows, 2)?;
@@ -1722,7 +1837,7 @@ fn review_json(value: &Value) -> String {
         if character == '"' && !escaped {
             quoted = !quoted;
         }
-        if character.is_ascii() {
+        if character.is_ascii() && character != '\u{7f}' {
             text.push(character);
         } else {
             let mut units = [0; 2];

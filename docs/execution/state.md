@@ -16,25 +16,22 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-16
 
-The latest full run, [38970331580](https://github.com/sam0x17/rtao/actions/runs/38970331580)
-at `edefe85`, finishes with **3,182 passed, three failed and four skipped**.
-MSRV, no-host, semver and features pass. Supply fails on newly yanked
-`inout 0.2.3`; hosted Cargo resolution and report refresh have since adopted
-`0.2.4`. The main failures are two CLI argument fixtures and an acknowledgment
-fixture whose wall-clock admission budget can expire before fake-node receipt.
-The latter assertion does not inspect the returned error and proves no false
-unknown-fate classification. Fixes retain complete help/sample traversal and
-exact transmitted-byte/hash checks; deadline coverage uses controlled time and
-observed author acceptance.
+The latest full run, [38976362971](https://github.com/sam0x17/rtao/actions/runs/38976362971),
+at `550ad2579f4c1f5ac646bcc4141df863fcf5bded` finishes with **3,193 passed,
+three failed and four skipped**. All five supporting jobs pass, including
+supply and features. Main compilation and Clippy pass; doctests and the final
+documentation stage are not reached. The last fully green checkpoint remains
+`7997ec0` below.
 
-Ordinary [38976362971](https://github.com/sam0x17/rtao/actions/runs/38976362971)
-at `550ad2579f4c1f5ac646bcc4141df863fcf5bded` is running the combined
-candidate, which expects **3,196 tests and four skips**. It includes the nine
-CLI context fixtures and the three existing-fixture corrections. At this
-source checkpoint, supply, no-host, MSRV and semver have passed; check and
-features remain live. No full success is claimed. The earlier planned
-standalone 3,187-test checkpoint is superseded by these failure corrections.
-The last fully green checkpoint remains `7997ec0` below.
+The failures expose two CLI gaps and one fixture setup error. Review JSON must
+escape DEL as `\\u007f`, like Python's ASCII encoder, before applying the
+160-character bound. An unknown-fate error's Display deliberately omits its
+hash; the CLI must retain that identity in inspection help when converting the
+typed error to text. The saved-Ledger notice fixture must fund its actual
+multisig members to reach signing rather than fail the carrier-funds check.
+The candidate repairs these without changing confirmation, carrier admission
+or SDK error Display. It still expects **3,196 tests and four skips**; no new
+test functions are added. Hosted execution of the corrections remains pending.
 
 The next source batch preserves typed gateway retry guidance through the
 remaining confirmed CLI read, PoW, pruning and saved-multisig boundaries.
@@ -45,7 +42,13 @@ Six existing test functions cover real public read handlers, saved account
 derivation, raw approval followup and pre/post-receipt pruning failures.
 No new test functions are added. Source review, installed rustfmt and whitespace
 checks pass; this batch has no hosted compilation or execution result yet.
-The full context source row still needs local name/prose reconciliation.
+An additional source candidate registers concrete-wallet public identities
+and already-loaded contacts/proxies, then applies account/subnet names only at
+human prose boundaries. It preserves name insertion order and escapes controls
+after substitution. JSON, replay commands and transaction inputs retain their
+values. Existing preview, output-cache and confirmation tests are strengthened;
+independent review and hosted execution remain pending. The full context source
+row remains unaccepted.
 
 Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
 passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
@@ -58,7 +61,8 @@ claims remain unchanged. Inspection SHA256 is
 `8bd944e0b1469c0d848895d8206848e6a8a6b7a3cbab662d24188e44ed2da6a0`;
 adoption SHA256 is
 `b58b2200d1879ceff8ee7dfda89e9c6cd26d1e5707a75fcfc7a7498dbdbbb55d`.
-No raw archive is retained. The ordinary run above validates these reports.
+No raw archive is retained. Complete client validation remains pending after
+the failed ordinary run above.
 
 Source reconciliation remains 322/357, with 35 pending. The source divergence
 register and adopted matrix now both contain 73 entries. M0/M1,

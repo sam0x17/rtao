@@ -654,6 +654,58 @@ fn cloned_outputs_share_display_updates_without_rewriting_machine_records() -> T
         serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
         payload
     );
+    // Human prose uses the shared insertion order, including labels that
+    // themselves contain another registered address.
+    output.name_address("5z", "5a")?;
+    clone.name_address("5a", "ordered")?;
+    let address = rtao::primitives::AccountId([31; 32]).to_string();
+    output.name_address(&address, "\x1b[31mEve\n")?;
+    output.name_address("ignored", "")?;
+    let summary = format!("pay 5raw and {address} on netuid 4");
+    let plan = json!({
+        "summary":summary,"signer":"coldkey","signer_address":"5raw",
+        "effects":["credit 5raw on subnet 4"],"warnings":["5raw has a low balance"],
+        "violations":[],"ok":true,
+    });
+    let command = "rtao tx transfer --dest 5raw --netuid 4";
+    let start = sink.text(Stream::Stdout)?.len();
+    machine.plan_payload(&plan, Some(command))?;
+    let mut expected_machine = plan.clone();
+    expected_machine["command"] = json!(command);
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?[start..])?,
+        expected_machine
+    );
+    let start = sink.text(Stream::Stdout)?.len();
+    clone.plan_payload(&plan, Some(command))?;
+    clone.transaction_card(&[ReviewSection {
+        title: "Named review".into(),
+        rows: vec![
+            ("ordered".into(), json!("5z")),
+            ("already named".into(), json!("ordered (5a) (5z)")),
+            (
+                "subnets".into(),
+                json!("netuid 4; subnet\t004; subnet ٤; subnet 0; subnet 4 (already); subnet 4); netuid 4x; xnetuid 4; subnet 400000"),
+            ),
+        ],
+    }])?;
+    let text = sink.text(Stream::Stdout)?;
+    let human = &text[start..];
+    assert!(human.contains("dry run: pay alice (5raw)"));
+    assert!(human.contains(terminal_text(&format!("\x1b[31mEve\n ({address})")).as_ref()));
+    assert!(human.contains("on netuid 4 (four)"));
+    assert!(human.contains("credit alice (5raw) on subnet 4 (four)"));
+    assert!(human.contains("alice (5raw) has a low balance"));
+    assert_eq!(human.matches("ordered (5a) (5z)").count(), 2);
+    assert!(human.contains("netuid 4 (four); subnet 004 (four); subnet ٤ (four); subnet 0 (root)"));
+    assert!(human.contains("subnet 4 (already); subnet 4); netuid 4x; xnetuid 4; subnet 400000"));
+    assert!(human.contains(&format!("run for real  {command}")));
+    assert!(!human.contains('\x1b'));
+    output.step("review", "pay 5raw on netuid 4", StepState::Fact)?;
+    output.message("literal 5raw on netuid 4")?;
+    let diagnostic = sink.text(Stream::Stderr)?;
+    assert!(diagnostic.contains("pay alice (5raw) on netuid 4 (four)"));
+    assert!(diagnostic.contains("literal 5raw on netuid 4"));
     Ok(())
 }
 
