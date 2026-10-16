@@ -17,6 +17,19 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-16
 
 The latest successful ordinary checkpoint is
+[38889135192](https://github.com/sam0x17/rtao/actions/runs/38889135192)
+at `60a20ee6b9ae27a48bf08cee2e3f7b8ee2bb48c8`. All six jobs passed. Main
+passed 3,077 tests, zero failed, four skipped, nine doctests across 19 workspace
+suites, strict Clippy, docs and all blocking guards. The bounded
+`client-60a20ee-hosted-results.json` authenticates 30 selected PASS records;
+its SHA256 is `2205280635d13a8bb7f0dfec19ddac3a38d6dab7ce1e1fa3b54901e1996c9a22`.
+The main log was 941,073 bytes, SHA256
+`044e0eb5f9c8c9dffe62948ae593a5bfe1359ec42c9c405298d5835233c26ef3`.
+No raw log is retained. This passes the corrected picker fixture and all seven
+new root/policy/offline/auto-stake functions. Later registration and Docify
+changes are outside this checkpoint and remain unexecuted.
+
+The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.
 The main gate passed all 3,051 executed tests, zero failed, four skipped,
@@ -63,9 +76,10 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map and adopted generated matrix agree at 307/357
-reconciled inputs and 50 pending. The e2e source map and generated matrix agree
-at 18 pending mappings and 11 client contracts.
+The reviewed source map reaches 310/357 reconciled inputs and 47 pending after
+the three root-command dispositions. The generated matrix remains at 307/50
+until the next hosted refresh. The e2e source map and generated matrix agree at
+18 pending mappings and 11 client contracts.
 There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -75,7 +89,7 @@ Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
 No local build/test, service, Mac Studio work, new temporary root or upstream
 filing was needed. Preserve wallets, recovery material and unrelated work.
 
-### Next reviewed client source batch, execution pending
+### Reviewed root and policy client batch
 
 Seven additional regression functions are integrated after independent source
 review. Root allocate/swap normalize exact decimal spellings to checked u64 rao
@@ -111,8 +125,8 @@ instructions and mandatory infrastructure requirements are retired. This
 resource audit grants no source-step or milestone acceptance.
 
 Direct rustfmt, whitespace, exact patch/source reviews and all 26 documentation
-after-image identities pass. None of the seven new functions is executed yet;
-the expected combined main total is 3,077.
+after-image identities pass. All seven new functions pass at `60a20ee`, with
+the corrected picker fixture, in the successful 3,077-test checkpoint above.
 
 Hosted run [38883630624](https://github.com/sam0x17/rtao/actions/runs/38883630624)
 at exact `0b0bb79` completed with five supporting jobs passed and main failed:
@@ -122,7 +136,8 @@ failure was `canonical_picker_answers_use_real_clap_parser_retries_and_final_rel
 its supplied conflicting option waived Clap's required address, so the fixture
 never entered the expected public prompt context. The corrected fixture first
 asserts that behavior, then omits both conflicting fields and checks collection
-followed by final conflict rejection. This correction awaits hosted execution.
+followed by final conflict rejection. The corrected fixture now passes at
+`60a20ee`; the earlier failed run retains its own source identity and result.
 
 The bounded `client-0b0bb79-partial-hosted-results.json` authenticates 22 selected
 PASS records, including both keyfile fixtures, and the sole failure. Its source
@@ -144,11 +159,11 @@ metadata. All 23 dependency inputs, role inventories/host flags and other
 compatibility claims are unchanged. No archive or extraction directory remains.
 
 Ordinary combined [38889135192](https://github.com/sam0x17/rtao/actions/runs/38889135192)
-is running at exact `60a20ee`, with 3,077 expected tests. Report generation
-supplies no new regression execution or milestone acceptance.
-The M3 readiness audit finds represented miner/authentication/template source;
-shared compiled-example documentation wiring remains unfinished. M2's guide
-acceptance retains that shared documentation requirement. The security note's
+passes at exact `60a20ee`, with 3,077 tests and the doctest/docs results above.
+Report generation alone supplies no regression execution or milestone acceptance.
+The M3 readiness audit finds represented miner/authentication/template source.
+Compiled-example wiring is now implemented below, awaiting hosted execution;
+shared offline examples remain unfinished and also limit M2 guide acceptance. The security note's
 old live-cache claim is retired; historical review identities stay intact.
 M2-S02 remains open/unaccepted: direct owning-boundary inspection found no safe
 compatible wrapper that erases the dependency's private Ed25519 object. Existing
@@ -177,9 +192,15 @@ comparison issue; the root correction compares resolved identities so Cargo's
 qualification of unchanged references does not invent an edge change.
 
 All 13 adopted source after-images, direct formatting and script syntax checks
-pass. Lock resolution, candidate dependency review, regenerated reports and
-hosted compilation/tests remain pending. Current compatibility reports predate
-these manifest changes. No generated lock or report is hand-edited. The current
+pass. First lock run [38891932293](https://github.com/sam0x17/rtao/actions/runs/38891932293)
+at `0f68970` resolved ten additions but failed because the guard omitted the
+`jobserver` build helper (and `termcolor`). No candidate lock was adopted.
+The corrected guard pins all ten observed versions/checksums and permits only
+the existing `cc` build tool's optional `libc`/`jobserver` edges within Docify's
+closure. Old identities, metadata and resolved edges remain protected. Candidate
+locks are retained even after guard failure for review. Exact candidate review,
+regenerated reports and hosted compilation/tests remain pending. Current compatibility reports predate
+these manifest changes. No generated lock or report is hand-edited. The successful
 `60a20ee` ordinary run validates the preceding sources only. Offline doc examples
 and broader M9 documentation completion remain separate.
 
