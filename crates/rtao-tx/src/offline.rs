@@ -117,6 +117,6 @@ impl Executor {
             .client()
             .submit_signature(unsigned, signature, &opts.submit_options())
             .await;
-        self.lift_submission(result, serde_json::Map::new(), false)
+        self.lift_submission(result, serde_json::Map::new())
     }
 }

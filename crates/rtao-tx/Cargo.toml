@@ -37,7 +37,7 @@ zeroize.workspace = true
 
 [dev-dependencies]
 rtao-testkit = { workspace = true, features = ["core-policy"] }
-rtao-intents = { workspace = true, features = ["serving", "transfer", "registration", "hyperparameters", "staking", "children", "evm"] }
+rtao-intents = { workspace = true, features = ["serving", "transfer", "registration", "hyperparameters", "staking", "children", "evm", "proxy"] }
 tokio = { workspace = true, features = ["test-util"] }
 rcgen.workspace = true
 tokio-rustls.workspace = true

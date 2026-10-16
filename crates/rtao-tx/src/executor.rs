@@ -782,7 +782,7 @@ impl Executor {
             }
             None => self.client.submit(call, signer.as_ref(), &submit).await,
         };
-        self.lift_submission(result, Map::new(), false)
+        self.lift_submission(result, Map::new())
     }
 
     async fn submit_shielded_with_keys<F, Fut>(
@@ -882,11 +882,9 @@ impl Executor {
                     .await?;
                 continue;
             }
-            let result = self.lift_submission(
-                result,
-                reviewed.built.extras,
-                intent.semantic_intent_dyn().spec().name == "create_pure_proxy",
-            )?;
+            // Python's explicit shield path keeps creation coordinates in the
+            // receipt; only ordinary execute enriches pure-proxy result data.
+            let result = self.lift_submission(result, reviewed.built.extras)?;
             if opts.execute.replan_owner_rate_limit
                 && owner_rate_replan(intent, &result)
                 && !owner_replanned
@@ -904,7 +902,6 @@ impl Executor {
         &self,
         result: Result<rtao_client::ExtrinsicReport, SubmitFailure>,
         extras: Map<String, Value>,
-        pure_created: bool,
     ) -> Result<ExtrinsicResult, TxError> {
         match result {
             Ok(report) => {
@@ -914,9 +911,6 @@ impl Executor {
                 let mut result =
                     ExtrinsicResult::from_report(report, self.client.network().label(), Map::new());
                 if result.success || shield.is_some() {
-                    if result.success && pure_created {
-                        pure_created_data(&mut result);
-                    }
                     result.data.extend(extras);
                     if let Some(shield) = shield {
                         result.data.insert("shielded".into(), json!(true));
