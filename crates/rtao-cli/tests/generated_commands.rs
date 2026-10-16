@@ -1074,7 +1074,7 @@ async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_acce
                 root.path().to_str().ok_or("fixture wallet path")?.into(),
                 "--wallet".into(),
                 "sample".into(),
-                "--hotkey".into(),
+                "--wallet-hotkey".into(),
                 "sample".into(),
                 "--json".into(),
                 "--dry-run".into(),

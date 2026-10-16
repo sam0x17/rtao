@@ -354,65 +354,67 @@ async fn pinned_previews_and_preflight_refusal_never_acquire_or_discover() -> Re
 
 #[tokio::test]
 async fn confirmation_and_durable_plan_precede_acquisition_receipt_precedes_release() -> Result {
-    let (client, chain) = chain_fixture().await?;
-    let trace = Trace::default();
-    let account = key(19)?.account().to_string();
-    let (mut ctx, _) = context(
-        &[
-            "--no-mev-shield",
-            "--signer",
-            "ledger",
-            "--signer-address",
-            &account,
-        ],
-        &trace,
-    )?;
-    let backend = Arc::new(TestBackend::new(&trace, 19)?);
-    let factory = NativeSignerFactory::with_backend(&ctx, backend.clone());
-    let hooks = Hooks {
-        trace: trace.clone(),
-        fail: false,
-    };
-    let outcome = ctx
-        .submit_with_options(
-            &client,
-            &Remark {
-                blocked: false,
-                trace: trace.clone(),
-            },
-            SubmissionOptions {
-                hooks: Some(&hooks),
-                ..Default::default()
-            },
-            Some(&factory),
-            &mut PromptHistory::default(),
-        )
-        .await?;
-    assert!(outcome.is_some_and(|result| result.success));
-    let phases = phases(&trace);
-    let position = |event| {
-        phases
-            .iter()
-            .position(|phase| *phase == event)
-            .expect("phase")
-    };
-    assert!(position("preflight") < position("confirm"));
-    assert!(position("confirm") < position("durable-plan"));
-    assert!(position("durable-plan") < position("acquire"));
-    assert!(position("acquire") < position("sign"));
-    assert!(position("sign") < position("durable-receipt"));
-    assert!(position("durable-receipt") < position("release-ok"));
-    assert_eq!(
-        phases.iter().filter(|phase| **phase == "dispose").count(),
-        1
-    );
-    assert_eq!(chain.state().lock().expect("chain").submissions.len(), 1);
-    {
-        let requests = backend.requests.lock().expect("requests");
-        assert_eq!(requests.len(), 1);
-        assert_eq!(requests[0].summary.as_deref(), Some("M7 reviewed remark"));
+    for backend_name in ["ledger", "extension"] {
+        let (client, chain) = chain_fixture().await?;
+        let trace = Trace::default();
+        let account = key(19)?.account().to_string();
+        let (mut ctx, _) = context(
+            &[
+                "--no-mev-shield",
+                "--signer",
+                backend_name,
+                "--signer-address",
+                &account,
+            ],
+            &trace,
+        )?;
+        let backend = Arc::new(TestBackend::new(&trace, 19)?);
+        let factory = NativeSignerFactory::with_backend(&ctx, backend.clone());
+        let hooks = Hooks {
+            trace: trace.clone(),
+            fail: false,
+        };
+        let outcome = ctx
+            .submit_with_options(
+                &client,
+                &Remark {
+                    blocked: false,
+                    trace: trace.clone(),
+                },
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+                Some(&factory),
+                &mut PromptHistory::default(),
+            )
+            .await?;
+        assert!(outcome.is_some_and(|result| result.success));
+        let phases = phases(&trace);
+        let position = |event| {
+            phases
+                .iter()
+                .position(|phase| *phase == event)
+                .expect("phase")
+        };
+        assert!(position("preflight") < position("confirm"));
+        assert!(position("confirm") < position("durable-plan"));
+        assert!(position("durable-plan") < position("acquire"));
+        assert!(position("acquire") < position("sign"));
+        assert!(position("sign") < position("durable-receipt"));
+        assert!(position("durable-receipt") < position("release-ok"));
+        assert_eq!(
+            phases.iter().filter(|phase| **phase == "dispose").count(),
+            1
+        );
+        assert_eq!(chain.state().lock().expect("chain").submissions.len(), 1);
+        {
+            let requests = backend.requests.lock().expect("requests");
+            assert_eq!(requests.len(), 1);
+            assert_eq!(requests[0].summary.as_deref(), Some("M7 reviewed remark"));
+        }
+        client.close().await;
     }
-    client.close().await;
     Ok(())
 }
 

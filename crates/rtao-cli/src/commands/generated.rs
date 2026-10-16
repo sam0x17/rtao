@@ -873,13 +873,17 @@ pub async fn execute_query(
     output: &Output,
 ) -> Result<Value, CliError> {
     let payload = if let Some(block) = request.block {
-        let snapshot = client.at(BlockRef::Number(block)).await.map_err(failure)?;
+        let snapshot = client
+            .at(BlockRef::Number(block))
+            .await
+            .map_err(CliError::from)?;
         rtao::reads::dispatch(&snapshot, request.name, &request.params).await
     } else {
         rtao::reads::dispatch(client, request.name, &request.params).await
     }
     .map_err(|error| match error {
         rtao::reads::ReadError::InvalidParam { .. } => input(error),
+        rtao::reads::ReadError::Client(error) => CliError::from(error),
         _ => failure(error),
     })?;
     render_query(output, request.name, &payload)?;
