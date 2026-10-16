@@ -3,6 +3,20 @@
 schema = 1
 
 [[divergences]]
+id = "D-072"
+upstream_symbol = "bittensor.cli.prompt.run_app required dual-boolean acquisition"
+python_behavior = "The generic prompt path appends the primary option followed by the original answer text, including for the required perpetual/decaying and allow/reject boolean pairs."
+rtao_behavior = "Prompts for the same boolean choice, then appends exactly one actual no-value flag: perpetual or decaying, allow or reject. The final parser constructs the chosen intent, and successful public replay retains that canonical flag once. Other alternative groups keep their existing parser behavior."
+rationale = "Native paired clap switches have no value slot. Preserve the explicit answer's transaction semantics and executable replay rather than copy a flag-plus-value token sequence. This records a native argv adaptation, without claiming a Python reproduction or identical error behavior."
+decision = "PLAN.md execution rule 5 design-gap resolution; complete prompt source and actual conviction constructors reviewed on 2026-10-16"
+status = "active"
+class = "improved"
+milestone = "M8"
+pinning_tests = ["rtao_cli::generic_wallet_prompts::required_conviction_boolean_choices_preserve_signer_order_real_intents_and_canonical_flags"]
+upstream_report = "Native source and actual parser/intent fixture independently reviewed. Hosted execution remains pending. No Python process, upstream defect reproduction or new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/prompt.py#L680-L702"
+
+[[divergences]]
 id = "D-069"
 upstream_symbol = "Executor._complete_subnet_registration"
 python_behavior = "The immediate fast path trusts NetworkAdded in the receipt. Best-chain following has no canonical inclusion/reorg reset guards, and later matching queue events can overwrite registration_block."
