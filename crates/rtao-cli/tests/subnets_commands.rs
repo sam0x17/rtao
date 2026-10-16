@@ -558,6 +558,60 @@ async fn human_metagraph_execution_uses_first_natural_hotkey_then_contacts() -> 
         text.find("first-contact").ok_or("contact")?
             < text.find("worker2").ok_or("wallet hotkey")?
     );
+    // Natural-equal wallet names retain their directory order as complete
+    // groups. Flattening both groups would wrongly prefer worker1 over worker9.
+    let tied_root = TempRoot::new();
+    for wallet in ["wallet2", "wallet02"] {
+        fs::create_dir(tied_root.path().join(wallet))?;
+    }
+    let order = fs::read_dir(tied_root.path())?
+        .map(|entry| entry.map(|entry| entry.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(order.len(), 2);
+    for (wallet, hotkey) in [
+        (order[0].as_str(), "worker9"),
+        (order[1].as_str(), "worker1"),
+    ] {
+        let directory = tied_root.path().join(wallet).join("hotkeys");
+        fs::create_dir(&directory)?;
+        fs::write(
+            directory.join(hotkey),
+            serde_json::to_vec(&json!({"ss58Address":AccountId([21;32]),"cryptoType":1}))?,
+        )?;
+    }
+    let (mut tied_ctx, tied_sink) = context(&parsed)?;
+    tied_ctx.globals.wallet_path = tied_root.path().to_owned();
+    tied_ctx.books.addresses = ctx.books.addresses.clone();
+    assert!(
+        subnets::execute(
+            &mut tied_ctx,
+            &client,
+            &request,
+            SubmissionOptions::default(),
+            None,
+            &mut PromptHistory::default(),
+        )
+        .await?
+        .is_none()
+    );
+    let tied_text = tied_sink.text(Stream::Stdout)?;
+    assert!(tied_text.contains("(worker9)"));
+    assert!(tied_text.contains("(first-contact)"));
+    for overridden in [
+        "worker1)",
+        "second-contact",
+        "contact-cannot-replace-hotkey",
+        "chain-only-name",
+    ] {
+        assert!(
+            !tied_text.contains(overridden),
+            "unexpected name {overridden}"
+        );
+    }
+    assert!(
+        tied_text.find("first-contact").ok_or("contact")?
+            < tied_text.find("worker9").ok_or("group-first hotkey")?
+    );
     let requests = chain.requests();
     assert_eq!(
         requests
@@ -565,7 +619,7 @@ async fn human_metagraph_execution_uses_first_natural_hotkey_then_contacts() -> 
             .filter(|request| request.method == "state_call"
                 && request.params[0] == "SubnetInfoRuntimeApi_get_metagraph")
             .count(),
-        1
+        2
     );
     assert!(
         !requests

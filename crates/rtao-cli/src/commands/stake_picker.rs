@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional source at the same commit/license: sdk/python/bittensor/cli/root_helpers.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/root_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Public-only stake source, validator target and destination pickers.
 
 use crate::{
@@ -234,10 +234,22 @@ fn local_candidates(ctx: &AppContext) -> Result<Vec<NameCandidate>, CliError> {
     Ok(candidates)
 }
 fn sort_candidates(candidates: &mut [NameCandidate]) {
+    // Python stably sorts whole wallet groups before each wallet's hotkeys.
+    // Natural-equal wallet spellings must not interleave their hotkey names.
+    let mut wallet_rank = BTreeMap::new();
+    for candidate in candidates.iter() {
+        let (wallet, _) = candidate
+            .name
+            .split_once('/')
+            .unwrap_or((&candidate.name, ""));
+        let next = wallet_rank.len();
+        wallet_rank.entry(wallet.to_owned()).or_insert(next);
+    }
     candidates.sort_by(|a, b| {
         let (aw, ah) = a.name.split_once('/').unwrap_or((&a.name, ""));
         let (bw, bh) = b.name.split_once('/').unwrap_or((&b.name, ""));
         crate::commands::wallet::natural_cmp(aw, bw)
+            .then_with(|| wallet_rank.get(aw).cmp(&wallet_rank.get(bw)))
             .then_with(|| crate::commands::wallet::natural_cmp(ah, bh))
     });
 }
@@ -934,6 +946,38 @@ mod tests {
             candidates.map(|row| row.name),
             ["a/hk1", "a/hk2", "a/hk10", "a2/hk1"]
         );
+        for (first, second) in [("wallet2", "wallet02"), ("wallet02", "wallet2")] {
+            let mut grouped = [
+                first.to_owned(),
+                format!("{first}/hot9"),
+                format!("{first}/hot2"),
+                second.to_owned(),
+                format!("{second}/hot1"),
+                format!("{second}/hot3"),
+            ]
+            .map(|name| NameCandidate {
+                source: if name.contains('/') {
+                    "hotkey"
+                } else {
+                    "wallet"
+                }
+                .into(),
+                name,
+                address: A.to_string(),
+            });
+            sort_candidates(&mut grouped);
+            assert_eq!(
+                grouped.map(|row| row.name),
+                [
+                    first.to_owned(),
+                    format!("{first}/hot2"),
+                    format!("{first}/hot9"),
+                    second.to_owned(),
+                    format!("{second}/hot1"),
+                    format!("{second}/hot3"),
+                ]
+            );
+        }
     }
 
     #[test]

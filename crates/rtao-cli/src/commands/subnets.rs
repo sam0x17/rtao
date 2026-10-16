@@ -1351,12 +1351,28 @@ pub async fn execute(
                     .collect::<Vec<_>>();
                 // Python walks naturally sorted wallets, then naturally sorted
                 // hotkeys, retaining the first name for a duplicate address.
+                // Keep naturally equal wallet spellings in their original
+                // complete groups instead of sorting their hotkeys together.
+                let mut wallet_rank = BTreeMap::new();
+                for candidate in &candidates {
+                    let (wallet, _) = candidate
+                        .name
+                        .split_once('/')
+                        .unwrap_or((&candidate.name, ""));
+                    let next = wallet_rank.len();
+                    wallet_rank.entry(wallet.to_owned()).or_insert(next);
+                }
                 candidates.sort_by(|left, right| {
                     let (left_wallet, left_hotkey) =
                         left.name.split_once('/').unwrap_or((&left.name, ""));
                     let (right_wallet, right_hotkey) =
                         right.name.split_once('/').unwrap_or((&right.name, ""));
                     super::wallet::natural_cmp(left_wallet, right_wallet)
+                        .then_with(|| {
+                            wallet_rank
+                                .get(left_wallet)
+                                .cmp(&wallet_rank.get(right_wallet))
+                        })
                         .then_with(|| super::wallet::natural_cmp(left_hotkey, right_hotkey))
                 });
                 let mut names = BTreeMap::new();
