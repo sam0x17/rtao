@@ -65,7 +65,8 @@ the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 
 The reviewed source map and adopted generated matrix now agree at 306/357
 reconciled and 51 pending after the authenticated refresh below.
-There remain 20 pending e2e mappings and 68 divergences. Passing CI alone does
+The e2e source map has 19 pending mappings; its generated matrix still records
+20 until the next hosted refresh. There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
 with source review and substantial validation on free hosted CI.
@@ -74,7 +75,32 @@ Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
 No local build/test, service, Mac Studio work, new temporary root or upstream
 filing was needed. Preserve wallets, recovery material and unrelated work.
 
-### Reviewed follow-up awaiting hosted execution
+### Command review and required-address follow-up, execution pending
+
+The current source batch carries root command summaries and stages through the
+actual preview, final confirmation, external signer label and every saved
+approval. Display context is bound to the semantic intent before RPC or signer
+acquisition. Saved approvals retain their outer transaction labels and effects.
+Existing diagnostic preparation remains available.
+
+Ten non-EVM routes now use the existing public address pickers for missing
+required fields. Signing-wallet selection precedes local hotkey choices; real
+clap validation, field order, proxy reservations and positional replay remain
+intact. Independent review corrected three fixture setup errors without changing
+production code. Six review-carrier fixtures, six required-address fixtures and
+one association fixture are authored, formatted and independently source-reviewed;
+all 13 still require hosted compilation and execution.
+
+The association fixture uses the real intent/executor, a finite signed-call
+transcript and an exact receipt-pinned UID0 EVM-key read. Its one e2e mapping
+has client-contract scope and five explicit runtime limits; registration,
+ownership, association effects and real EVM state remain unverified. Source
+e2e pending count becomes 19; source-file reconciliation stays 306/357 with
+51 pending. Whole root/context/prompt rows, broader signer policy and EVM picker
+integration remain separate. Bounded patch/review identities are in
+`next-client-batch-1286faf-ready.json` under the existing recovery root.
+
+### Earlier CLI detail batch, hosted execution pending
 
 The next source batch confirms the signing wallet before resolving a relative
 root-swap hotkey, and retains an allocation picker's selected name and rate
@@ -88,8 +114,8 @@ whitespace checks and independent source reviews pass.
 
 Complete source reviews and exact d01830c results reconcile the metagraph,
 FakeNode harness and test_rpc.py rows. The source map and generated matrix now
-agree at 306/357 reconciled, 51 pending. Root command summaries and generic required-address
-picker integration remain incomplete, so their whole source rows stay pending.
+agree at 306/357 reconciled, 51 pending. Its subsequent command-summary and
+required-address source repairs are recorded above; whole source rows stay pending.
 Strict M8 remains off and M2-S02 stays open/unaccepted. No local builds/tests or
 new upstream filings were used for this batch.
 

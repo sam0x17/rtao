@@ -336,9 +336,43 @@ pub fn parse_with_prompt_history(
     argv: Vec<std::ffi::OsString>,
     context: &crate::prompt::PromptContext,
     terminal: &mut dyn crate::prompt::Terminal,
+    history: crate::prompt::PromptHistory,
+) -> Result<Invocation, crate::error::CliError> {
+    parse_required(command, argv, context, terminal, history, None)
+}
+
+/// Acquire supported required addresses with the invocation's public context.
+/// Confirm applicable signing wallets before any wallet-relative target choice.
+pub fn parse_with_context(
+    command: Command,
+    mut argv: Vec<std::ffi::OsString>,
+    app: &mut crate::context::AppContext,
     mut history: crate::prompt::PromptHistory,
 ) -> Result<Invocation, crate::error::CliError> {
-    use crate::prompt::{PromptResolver, PromptSpec, PromptValidation, fill_missing};
+    let mut terminal = app.terminal.clone();
+    if let Some(partial) =
+        pending_prompt_matches(&command, &argv, &app.prompt_context(), &terminal)?
+    {
+        let path = command_path(&command, &partial);
+        if let Some(tier) = required_wallet_tier(&path) {
+            confirm_required_wallet_tier(app, &mut argv, &mut history, tier)?;
+        }
+    }
+    let context = app.prompt_context();
+    parse_required(command, argv, &context, &mut terminal, history, Some(app))
+}
+
+fn parse_required(
+    command: Command,
+    argv: Vec<std::ffi::OsString>,
+    context: &crate::prompt::PromptContext,
+    terminal: &mut dyn crate::prompt::Terminal,
+    mut history: crate::prompt::PromptHistory,
+    app: Option<&crate::context::AppContext>,
+) -> Result<Invocation, crate::error::CliError> {
+    use crate::prompt::{
+        PromptError, PromptFlow, PromptResolver, PromptSpec, PromptValidation, fill_missing,
+    };
     match command.clone().try_get_matches_from(&argv) {
         Ok(matches) => {
             return Ok(Invocation {
@@ -357,6 +391,7 @@ pub fn parse_with_prompt_history(
         .clone()
         .try_get_matches_from(&argv)
         .map_err(clap_error)?;
+    let path = command_path(&command, &parsed);
     let mut required = Vec::new();
     let mut parsers = Vec::new();
     let mut selected_command = &command;
@@ -382,6 +417,11 @@ pub fn parse_with_prompt_history(
             );
             spec.positional = arg.is_positional();
             spec.help = arg.get_help().map(ToString::to_string);
+            if app.is_some()
+                && let Some(flow) = required_address_flow(&path, &spec.field)
+            {
+                spec.flow = flow;
+            }
             // Validate the actual value type in isolation. Relationships such
             // as a.requires(b) belong to the final complete invocation and
             // must not reject a while b is still waiting for its prompt.
@@ -419,11 +459,13 @@ pub fn parse_with_prompt_history(
                 })?,
         ));
     }
-    struct Parser {
+    struct Parser<'a> {
         parsers: Vec<(String, Command)>,
         argv: Vec<std::ffi::OsString>,
+        app: Option<&'a crate::context::AppContext>,
+        picker_error: Option<crate::error::CliError>,
     }
-    impl PromptResolver for Parser {
+    impl PromptResolver for Parser<'_> {
         fn parse(
             &mut self,
             spec: &PromptSpec,
@@ -445,24 +487,89 @@ pub fn parse_with_prompt_history(
             self.argv.push(raw.into());
             Ok(serde_json::Value::String(raw.into()))
         }
+        fn custom(
+            &mut self,
+            spec: &PromptSpec,
+            terminal: &mut dyn crate::prompt::Terminal,
+            answers: &mut serde_json::Map<String, serde_json::Value>,
+        ) -> Result<Vec<String>, PromptError> {
+            let app = self.app.ok_or(PromptError::UnsupportedFlow)?;
+            loop {
+                // The existing pickers always record option tokens. Keep those
+                // isolated: this parser owns the actual positional/option form.
+                let mut picked = serde_json::Map::new();
+                let mut scratch = crate::prompt::PromptHistory::default();
+                let result = match spec.flow {
+                    PromptFlow::StakeTarget => crate::commands::stake::picker::target(
+                        app,
+                        &spec.field,
+                        &mut picked,
+                        &mut scratch,
+                    ),
+                    PromptFlow::DestinationAccount => crate::commands::stake::picker::destination(
+                        app,
+                        &spec.field,
+                        &mut picked,
+                        &mut scratch,
+                    ),
+                    _ => return Err(PromptError::UnsupportedFlow),
+                };
+                if let Err(error) = result {
+                    let signal = if error.code == 130 {
+                        PromptError::Aborted
+                    } else {
+                        PromptError::InvalidValue(error.message.clone())
+                    };
+                    self.picker_error = Some(error);
+                    return Err(signal);
+                }
+                let raw = picked
+                    .get(&spec.field)
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| {
+                        PromptError::InvalidValue("picker returned no account".into())
+                    })?;
+                // Preserve the command's exact value parser, including retries,
+                // before committing dispatch argv or public replay history.
+                match self.parse(spec, raw) {
+                    Ok(value) => {
+                        answers.insert(spec.field.clone(), value);
+                        return Ok(if spec.positional {
+                            vec![raw.into()]
+                        } else {
+                            vec![spec.flag.clone(), raw.into()]
+                        });
+                    }
+                    Err(PromptValidation::Message(error)) => terminal.message(&error)?,
+                    Err(PromptValidation::Reported) => {}
+                }
+            }
+        }
     }
     let mut parser = Parser {
         parsers,
         argv: argv.clone(),
+        app,
+        picker_error: None,
     };
-    fill_missing(
+    let acquisition = fill_missing(
         &context,
         terminal,
         &required,
         &mut serde_json::Map::new(),
         &mut parser,
         &mut history,
-    )
-    .map_err(|error| crate::error::CliError {
-        code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
-    })?;
+    );
+    if let Err(error) = acquisition {
+        return Err(parser
+            .picker_error
+            .take()
+            .unwrap_or_else(|| crate::error::CliError {
+                code: error.exit_code(),
+                message: error.to_string(),
+                help: None,
+            }));
+    }
     let matches = command
         .try_get_matches_from(&parser.argv)
         .map_err(clap_error)?;
@@ -493,6 +600,99 @@ pub fn finish_prompts(
         }
     }
     Ok(())
+}
+
+// This bounded policy covers the reviewed non-EVM required-address callers.
+// Own-key defaults, optional addresses and stored-EVM-key callbacks stay separate.
+fn required_address_fields(path: &[String]) -> &'static [(&'static str, bool)] {
+    let route = path.iter().map(String::as_str).collect::<Vec<_>>();
+    match route.as_slice() {
+        ["addr", "save"] | ["wallet", "regen-coldkeypub" | "regen-hotkeypub" | "verify"] => {
+            &[("ss58", false)]
+        }
+        ["wallet", "swap-hotkey"] => &[("new_hotkey_ss58", true)],
+        ["wallet", "swap-coldkey" | "announce-coldkey-swap"] => &[("new_coldkey_ss58", false)],
+        ["proxy", "add"] => &[("delegate_ss58", false)],
+        ["proxy", "execute"] => &[("delegate_ss58", false), ("real_ss58", false)],
+        ["proxy", "book", "add"] => &[("address", false)],
+        _ => &[],
+    }
+}
+
+fn required_address_flow(path: &[String], field: &str) -> Option<crate::prompt::PromptFlow> {
+    required_address_fields(path)
+        .iter()
+        .find(|(name, _)| *name == field)
+        .map(|(_, hotkey)| {
+            if *hotkey {
+                crate::prompt::PromptFlow::StakeTarget
+            } else {
+                crate::prompt::PromptFlow::DestinationAccount
+            }
+        })
+}
+
+fn required_wallet_tier(path: &[String]) -> Option<&'static str> {
+    let route = path.iter().map(String::as_str).collect::<Vec<_>>();
+    match route.as_slice() {
+        ["wallet", "sign" | "decrypt"] => Some("unlock"),
+        [
+            "wallet",
+            "swap-hotkey" | "swap-coldkey" | "announce-coldkey-swap",
+        ]
+        | ["proxy", "add" | "execute"] => Some("tx"),
+        _ => None,
+    }
+}
+
+/// Partial matches needing a public wallet/address context before acquisition.
+/// Malformed, supplied and noninteractive input never loads early wallet books.
+pub fn pending_prompt_matches(
+    command: &Command,
+    argv: &[std::ffi::OsString],
+    context: &crate::prompt::PromptContext,
+    terminal: &dyn crate::prompt::Terminal,
+) -> Result<Option<clap::ArgMatches>, crate::error::CliError> {
+    match command.clone().try_get_matches_from(argv) {
+        Err(error) if error.kind() == clap::error::ErrorKind::MissingRequiredArgument => {}
+        _ => return Ok(None),
+    }
+    let parsed = relax_required(command.clone())
+        .try_get_matches_from(argv)
+        .map_err(clap_error)?;
+    let path = command_path(command, &parsed);
+    let mut selected_command = command;
+    let mut selected_matches = &parsed;
+    while let Some((name, child)) = selected_matches.subcommand() {
+        selected_command = selected_command
+            .find_subcommand(name)
+            .ok_or_else(|| crate::error::CliError::input("unknown command path"))?;
+        selected_matches = child;
+    }
+    let missing_address = selected_command.get_arguments().any(|arg| {
+        arg.is_required_set()
+            && selected_matches
+                .value_source(arg.get_id().as_str())
+                .is_none()
+            && required_address_flow(&path, arg.get_id().as_str()).is_some()
+    });
+    if (!missing_address && required_wallet_tier(&path).is_none())
+        || !effective_prompt_context(context, &parsed).interactive(terminal)
+    {
+        return Ok(None);
+    }
+    Ok(Some(parsed))
+}
+
+/// Use the same route-owned global reservations as final command dispatch.
+pub fn pending_prompt_reserved(
+    parsed: &clap::ArgMatches,
+) -> Result<Vec<&'static str>, crate::error::CliError> {
+    match parsed.subcommand() {
+        Some(("proxy", group)) => crate::commands::proxy::reserved(group),
+        Some(("addr", group)) => Ok(crate::commands::addresses::reserved(group)),
+        _ => Ok(Vec::new()),
+    }
 }
 
 /// Return public partial matches only for omitted wallet-sign/decrypt inputs.
@@ -530,6 +730,15 @@ pub fn confirm_required_wallet(
     argv: &mut Vec<std::ffi::OsString>,
     history: &mut crate::prompt::PromptHistory,
 ) -> Result<(), crate::error::CliError> {
+    confirm_required_wallet_tier(app, argv, history, "unlock")
+}
+
+fn confirm_required_wallet_tier(
+    app: &mut crate::context::AppContext,
+    argv: &mut Vec<std::ffi::OsString>,
+    history: &mut crate::prompt::PromptHistory,
+    tier: &str,
+) -> Result<(), crate::error::CliError> {
     let context = app.prompt_context();
     if !context.interactive(&app.terminal) {
         return Ok(());
@@ -543,7 +752,7 @@ pub fn confirm_required_wallet(
         &context,
         &app.globals.wallet_name,
         app.globals.wallet_given,
-        "unlock",
+        tier,
         true,
         &args,
     ) else {
@@ -555,7 +764,7 @@ pub fn confirm_required_wallet(
                 .help
                 .unwrap_or_else(|| "Wallet this command targets.".into()),
             require_coldkey: false,
-            allow_multisig: false,
+            allow_multisig: tier == "tx",
             ..Default::default()
         },
         history,

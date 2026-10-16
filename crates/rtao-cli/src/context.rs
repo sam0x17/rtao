@@ -397,6 +397,7 @@ impl AppContext {
                     deadline: options.deadline,
                     replay: options.replay,
                     hooks: options.hooks,
+                    review: options.review,
                     period: options.period,
                     execution: options.execution,
                     factory: None,
@@ -431,6 +432,9 @@ impl AppContext {
         keys: &dyn DynKeySource,
         control: SubmissionControl<'_>,
     ) -> Result<Option<SubmissionOutcome>, CliError> {
+        if let Some(review) = control.review {
+            review.validate(intent)?;
+        }
         let proxy_for = self.dispatch_proxy(None)?;
         let force_proxy_type = self
             .globals
@@ -513,10 +517,25 @@ impl AppContext {
             None
         };
         let intent = prepared.as_deref().unwrap_or(intent);
+        if let Some(review) = control.review {
+            review.validate(intent)?;
+        }
         let (mut plan, preflight) = executor
             .plan_and_preflight_dyn(intent, keys, &plan_options)
             .await
             .map_err(CliError::transaction)?;
+        // A saved approval signs an outer multisig operation. Keep that round's
+        // summary and effects, while its command context stays semantic below.
+        if control.factory.is_none()
+            && let Some(review) = control.review
+        {
+            let original = std::mem::replace(&mut plan.summary, review.summary.clone());
+            for effect in &mut plan.effects {
+                if *effect == original {
+                    effect.clone_from(&review.summary);
+                }
+            }
+        }
         if let Some(period) = control.period {
             plan.effects
                 .push(format!("mortal transaction period: {period} blocks"));
@@ -600,36 +619,47 @@ impl AppContext {
                     .collect()
             })
             .unwrap_or_default();
+        let mut sections = control
+            .review
+            .map_or_else(Vec::new, |review| review.sections.clone());
+        sections.extend([
+            ReviewSection {
+                title: review_summary.clone(),
+                rows: args,
+            },
+            ReviewSection {
+                title: "Transaction".into(),
+                rows: transaction,
+            },
+            ReviewSection {
+                title: preflight.facts_title.as_str().into(),
+                rows: preflight
+                    .facts
+                    .into_iter()
+                    .map(|(name, value)| (name, Value::String(value)))
+                    .collect(),
+            },
+            ReviewSection {
+                title: "Effects".into(),
+                rows: plan
+                    .effects
+                    .iter()
+                    .enumerate()
+                    .map(|(i, effect)| ((i + 1).to_string(), serde_json::json!(effect)))
+                    .collect(),
+            },
+        ]);
         self.output
-            .transaction_card(&[
-                ReviewSection {
-                    title: review_summary.clone(),
-                    rows: args,
-                },
-                ReviewSection {
-                    title: "Transaction".into(),
-                    rows: transaction,
-                },
-                ReviewSection {
-                    title: preflight.facts_title.as_str().into(),
-                    rows: preflight
-                        .facts
-                        .into_iter()
-                        .map(|(name, value)| (name, Value::String(value)))
-                        .collect(),
-                },
-                ReviewSection {
-                    title: "Effects".into(),
-                    rows: plan
-                        .effects
-                        .iter()
-                        .enumerate()
-                        .map(|(i, effect)| ((i + 1).to_string(), serde_json::json!(effect)))
-                        .collect(),
-                },
-            ])
+            .transaction_card(&sections)
             .map_err(|error| CliError::failure(error.to_string()))?;
-        self.confirm(&format!("{review_summary}?"))?;
+        let question = if control.factory.is_some() {
+            control
+                .review
+                .map_or(review_summary.as_str(), |review| review.summary.as_str())
+        } else {
+            review_summary.as_str()
+        };
+        self.confirm(&format!("{question}?"))?;
         if let Some(hooks) = control.hooks {
             hooks.before_submit_with_plan(&plan).await?;
         }
@@ -749,6 +779,7 @@ struct SubmissionControl<'a> {
     wait_for_finalization: bool,
     replay: Option<&'a str>,
     hooks: Option<&'a dyn SubmissionHooks>,
+    review: Option<&'a CommandReview>,
     factory: Option<ApprovalFactory<'a>>,
     external: Option<&'a dyn ExternalSignerFactory>,
 }
@@ -814,6 +845,40 @@ pub trait SubmissionHooks: Send + Sync {
         Box::pin(async { Ok(()) })
     }
 }
+/// Command display context bound to the semantic transaction it describes.
+///
+/// Kept beside the intent: these facts never enter call arguments or signed bytes.
+#[derive(Clone, Debug)]
+pub struct CommandReview {
+    semantic: Value,
+    /// Plain-language semantic action for direct previews and confirmation.
+    pub summary: String,
+    /// Ordered human stages prepended to every actual approval's review card.
+    pub sections: Vec<ReviewSection>,
+}
+impl CommandReview {
+    /// Bind command facts to the unwrapped semantic transaction's public JSON.
+    pub fn new(
+        intent: &dyn DynIntent,
+        summary: impl Into<String>,
+        sections: Vec<ReviewSection>,
+    ) -> Self {
+        Self {
+            semantic: intent.semantic_intent_dyn().to_json_dyn(),
+            summary: summary.into(),
+            sections,
+        }
+    }
+    fn validate(&self, intent: &dyn DynIntent) -> Result<(), CliError> {
+        if self.semantic != intent.semantic_intent_dyn().to_json_dyn() {
+            return Err(CliError::input(
+                "command review does not match the semantic transaction",
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Shared command submission settings, including durable recovery callbacks.
 #[derive(Clone, Copy, Default)]
 pub struct SubmissionOptions<'a> {
@@ -836,6 +901,8 @@ pub struct SubmissionOptions<'a> {
     pub wait_for_finalization: bool,
     /// Optional command displayed with a preview.
     pub replay: Option<&'a str>,
+    /// Semantic command display facts, preserved through saved approval rounds.
+    pub review: Option<&'a CommandReview>,
     /// Hooks applied to every submitted approval, but never to a preview.
     pub hooks: Option<&'a dyn SubmissionHooks>,
 }
@@ -1812,6 +1879,9 @@ impl AppContext {
         external: Option<&dyn ExternalSignerFactory>,
         history: &mut crate::prompt::PromptHistory,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+        if let Some(review) = options.review {
+            review.validate(intent)?;
+        }
         let native = crate::signer_backends::NativeSignerFactory::new(self);
         let external = Some(external.unwrap_or(&native));
         let role = intent
@@ -1877,6 +1947,7 @@ impl AppContext {
                     deadline: options.deadline,
                     replay: options.replay,
                     hooks: options.hooks,
+                    review: options.review,
                     factory: None,
                     external: self
                         .globals
@@ -2128,6 +2199,9 @@ impl AppContext {
         cache: &dyn crate::call::RawCallCache,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
         use crate::call::MultisigFollowup;
+        if let Some(review) = options.review {
+            review.validate(intent)?;
+        }
         let raw = crate::call::resolve_preset(self, &self.globals.wallet_name)?;
         let rounds = crate::call::plan_rounds(self, Some(&raw), SignerRole::Coldkey, None)?;
         let group = rtao::Executor::new(client.clone())
@@ -2220,6 +2294,7 @@ impl AppContext {
                             deadline: options.deadline,
                             replay: options.replay,
                             hooks: options.hooks,
+                            review: options.review,
                             factory: Some(ApprovalFactory { factory, selection }),
                             external: None,
                         },

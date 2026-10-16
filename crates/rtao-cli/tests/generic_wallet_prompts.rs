@@ -4,7 +4,7 @@ use rtao::primitives::AccountId;
 use rtao_cli::{
     application,
     books::Books,
-    commands::{misc, wallet},
+    commands::{addresses, generated::TxRequest, misc, proxy, wallet},
     context::AppContext,
     globals::Globals,
     output::{MemorySink, Output, OutputOptions},
@@ -129,7 +129,8 @@ fn public_context(
     while let Some((_, child)) = leaf.subcommand() {
         leaf = child;
     }
-    globals.apply_with_env(leaf, &[], env)?;
+    let reserved = application::pending_prompt_reserved(parsed)?;
+    globals.apply_with_env(leaf, &reserved, env)?;
     let mut app = AppContext::new(globals, config, books, terminal);
     app.output = Output::new(OutputOptions::default(), Arc::new(MemorySink::default()));
     Ok(app)
@@ -391,6 +392,505 @@ fn actual_wallet_leaf_and_root_json_quiet_flags_never_start_early_confirmation()
         assert_eq!(error.code, 2);
         assert!(error.message.contains(field));
         assert!(trace.lock().map_err(|_| "trace")?.is_empty());
+    }
+    Ok(())
+}
+
+fn picker_tree() -> Result<clap::Command, rtao_cli::error::CliError> {
+    let command =
+        application::command_tree([wallet::command(), addresses::command(), proxy::command()?]);
+    #[cfg(feature = "evm")]
+    let command = command.subcommand(rtao_cli::commands::evm::command()?);
+    Ok(command)
+}
+fn picker_books() -> Books {
+    Books::from_values(
+        json!([
+            {"name":"first-contact","address":AccountId([41;32])},
+            {"name":"second-contact","address":AccountId([42;32])},
+        ]),
+        json!([]),
+        json!([]),
+    )
+}
+fn pending_context(
+    root: &Root,
+    command: &clap::Command,
+    argv: &[OsString],
+    terminal: SharedTerminal,
+    books: Books,
+) -> Result<AppContext, Box<dyn std::error::Error>> {
+    let partial =
+        application::pending_prompt_matches(command, argv, &PromptContext::default(), &terminal)?
+            .ok_or("expected public context round")?;
+    public_context(root, &partial, terminal, books, "configured", None)
+}
+fn invocation_leaf(matches: &clap::ArgMatches) -> &clap::ArgMatches {
+    let mut leaf = matches;
+    while let Some((_, child)) = leaf.subcommand() {
+        leaf = child;
+    }
+    leaf
+}
+fn public_hotkey(root: &Root, wallet: &str, account: AccountId) -> TestResult {
+    let path = root.0.join(wallet).join("hotkeys");
+    std::fs::create_dir_all(&path)?;
+    // Picker menus inspect the keyfile address; neither file contains secrets.
+    let public_data = serde_json::to_vec(&json!({"ss58Address":account,"cryptoType":1}))?;
+    std::fs::write(path.join("workerpub.txt"), &public_data)?;
+    std::fs::write(path.join("worker"), public_data)?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn required_positional_address_keeps_declaration_order_retries_and_actual_save_handler()
+-> TestResult {
+    let root = Root::new()?;
+    let command = picker_tree()?;
+    let argv = original(&["rtao", "addr", "save"]);
+    let (input, trace) = terminal(&["saved", "unknown-contact", "1"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+    let invocation =
+        application::parse_with_context(command, argv.clone(), &mut app, PromptHistory::default())?;
+    let canonical = AccountId([41; 32]).to_string();
+    let leaf = invocation_leaf(&invocation.matches);
+    assert_eq!(
+        leaf.get_one::<String>("name").map(String::as_str),
+        Some("saved")
+    );
+    assert_eq!(leaf.get_one::<String>("ss58"), Some(&canonical));
+    let reads = trace.lock().map_err(|_| "trace")?.clone();
+    assert_eq!(reads.len(), 3);
+    assert!(reads[0].contains("name"));
+    assert!(reads[1].contains("ss58") && reads[2].contains("ss58"));
+    assert_eq!(
+        invocation.history.replay_command(&strings(&argv)),
+        format!("rtao addr save saved {canonical}")
+    );
+    assert!(
+        !strings(&invocation.argv)
+            .iter()
+            .any(|token| token == "--ss58")
+    );
+    let paths = rtao::client::config::Paths::new(&root.0, |_| None);
+    addresses::run(
+        &app,
+        &paths,
+        invocation.matches.subcommand().ok_or("addr group")?.1,
+    )
+    .await?;
+    let saved: Value = serde_json::from_slice(&std::fs::read(
+        paths.path(rtao::client::config::ConfigFile::Addresses),
+    )?)?;
+    let record = saved
+        .as_array()
+        .ok_or("saved contacts")?
+        .iter()
+        .find(|row| row["name"] == "saved")
+        .ok_or("saved row")?;
+    assert_eq!(record["address"], canonical);
+    assert_eq!(trace.lock().map_err(|_| "trace")?.len(), reads.len());
+    Ok(())
+}
+
+#[test]
+fn required_hotkey_target_binds_to_confirmed_wallet_before_actual_typed_request() -> TestResult {
+    let root = Root::new()?;
+    let configured = AccountId([21; 32]);
+    let chosen = AccountId([22; 32]);
+    let old = AccountId([23; 32]).to_string();
+    public_hotkey(&root, "configured", configured)?;
+    public_hotkey(&root, "chosen", chosen)?;
+    let command = picker_tree()?;
+    let argv = original(&["rtao", "w", "swap-hotkey", "--hotkey", &old]);
+    let (input, trace) = terminal(&["chosen", "1"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+    let mut invocation =
+        application::parse_with_context(command, argv.clone(), &mut app, PromptHistory::default())?;
+    assert_eq!(app.globals.wallet_name, "chosen");
+    assert!(app.globals.wallet_given);
+    let leaf = invocation_leaf(&invocation.matches);
+    assert_eq!(
+        leaf.get_one::<String>("new_hotkey_ss58"),
+        Some(&chosen.to_string())
+    );
+    let request = TxRequest::from_matches(&mut app, "swap_hotkey", leaf, &mut invocation.history)?;
+    assert_eq!(request.args["new_hotkey_ss58"], json!(chosen));
+    assert_eq!(request.args["hotkey_ss58"], old);
+    request.intent()?;
+    let reads = trace.lock().map_err(|_| "trace")?.clone();
+    assert_eq!(reads.len(), 2);
+    assert!(reads[0].contains("wallet [configured]"));
+    assert!(reads[1].contains("new-hotkey"));
+    assert_eq!(
+        invocation.history.replay_command(&strings(&argv)),
+        format!("rtao w swap-hotkey --hotkey {old} --wallet chosen --new-hotkey {chosen}")
+    );
+    assert!(!reads.iter().any(|line| line.contains("PRIVATE")));
+    Ok(())
+}
+
+#[test]
+fn reviewed_required_address_routes_keep_real_option_spellings_and_canonical_replay() -> TestResult
+{
+    let root = Root::new()?;
+    let address = AccountId([41; 32]).to_string();
+    let public_key = hex::encode([41u8; 32]);
+    for (words, field, flag) in [
+        (
+            vec![
+                "rtao",
+                "wallet",
+                "regen-coldkeypub",
+                "--public-key",
+                &public_key,
+            ],
+            "ss58",
+            "--ss58",
+        ),
+        (
+            vec![
+                "rtao",
+                "wallet",
+                "regen-hotkeypub",
+                "--public-key",
+                &public_key,
+            ],
+            "ss58",
+            "--ss58",
+        ),
+        (
+            vec![
+                "rtao",
+                "wallet",
+                "verify",
+                "--message",
+                "payload",
+                "--signature",
+                "00",
+            ],
+            "ss58",
+            "--ss58",
+        ),
+        (
+            vec!["rtao", "wallet", "swap-coldkey", "--wallet", "configured"],
+            "new_coldkey_ss58",
+            "--new-coldkey",
+        ),
+        (
+            vec![
+                "rtao",
+                "wallet",
+                "announce-coldkey-swap",
+                "--wallet",
+                "configured",
+            ],
+            "new_coldkey_ss58",
+            "--new-coldkey",
+        ),
+        (
+            vec!["rtao", "proxy", "add", "--wallet", "configured"],
+            "delegate_ss58",
+            "--delegate",
+        ),
+        (
+            vec![
+                "rtao",
+                "proxy",
+                "execute",
+                "--wallet",
+                "configured",
+                "--real",
+                &address,
+                "--inner-op",
+                "transfer",
+            ],
+            "delegate_ss58",
+            "--delegate",
+        ),
+        (
+            vec![
+                "rtao",
+                "proxy",
+                "execute",
+                "--wallet",
+                "configured",
+                "--delegate",
+                &address,
+                "--inner-op",
+                "transfer",
+            ],
+            "real_ss58",
+            "--real",
+        ),
+        (
+            vec!["rtao", "proxy", "book", "add", "--name", "saved"],
+            "address",
+            "--address",
+        ),
+    ] {
+        let command = picker_tree()?;
+        let argv = original(&words);
+        let (input, trace) = terminal(&["first-contact"], true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        let invocation = application::parse_with_context(
+            command,
+            argv.clone(),
+            &mut app,
+            PromptHistory::default(),
+        )?;
+        assert_eq!(
+            invocation_leaf(&invocation.matches).get_one::<String>(field),
+            Some(&address)
+        );
+        let tokens = strings(&invocation.argv);
+        assert_eq!(
+            &tokens[tokens.len() - 2..],
+            &[flag.to_owned(), address.clone()]
+        );
+        assert!(
+            invocation
+                .history
+                .replay_command(&strings(&argv))
+                .ends_with(&format!(" {flag} {address}"))
+        );
+        assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 1);
+    }
+    Ok(())
+}
+
+#[test]
+fn canonical_picker_answers_use_real_clap_parser_retries_and_final_relationships() -> TestResult {
+    fn only_second(raw: &str) -> Result<String, String> {
+        if raw == AccountId([42; 32]).to_string() {
+            Ok(raw.into())
+        } else {
+            Err("this command fixture accepts only the second account".into())
+        }
+    }
+    let root = Root::new()?;
+    let command = picker_tree()?.mut_subcommand("wallet", |wallet| {
+        wallet.mut_subcommand("verify", |verify| {
+            verify.mut_arg("ss58", |arg| arg.value_parser(only_second))
+        })
+    });
+    let argv = original(&[
+        "rtao",
+        "wallet",
+        "verify",
+        "--message",
+        "payload",
+        "--signature",
+        "00",
+    ]);
+    let (input, trace) = terminal(&["1", "2"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+    let invocation =
+        application::parse_with_context(command, argv.clone(), &mut app, PromptHistory::default())?;
+    let accepted = AccountId([42; 32]).to_string();
+    assert_eq!(
+        invocation_leaf(&invocation.matches).get_one::<String>("ss58"),
+        Some(&accepted)
+    );
+    assert_eq!(
+        invocation.history.replay_command(&strings(&argv)),
+        format!("rtao wallet verify --message payload --signature 00 --ss58 {accepted}")
+    );
+    assert!(!strings(&invocation.argv).contains(&AccountId([41; 32]).to_string()));
+    assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 2);
+    let command = picker_tree()?.mut_subcommand("wallet", |wallet| {
+        wallet.mut_subcommand("verify", |verify| {
+            verify.mut_arg("ss58", |arg| arg.conflicts_with("message"))
+        })
+    });
+    let (input, trace) = terminal(&["1"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+    let error = application::parse_with_context(command, argv, &mut app, PromptHistory::default())
+        .err()
+        .ok_or("final relationship rejection")?;
+    assert_eq!(error.code, 2);
+    assert!(error.message.contains("cannot be used with"));
+    assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 1);
+    Ok(())
+}
+
+#[test]
+fn required_tx_context_confirms_all_coldkey_routes_and_preserves_inner_proxy_reservations()
+-> TestResult {
+    let root = Root::new()?;
+    for words in [
+        vec!["rtao", "wallet", "swap-coldkey"],
+        vec!["rtao", "wallet", "announce-coldkey-swap"],
+        vec!["rtao", "proxy", "add"],
+    ] {
+        let command = picker_tree()?;
+        let argv = original(&words);
+        let (input, trace) = terminal(&["chosen", "1"], true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        application::parse_with_context(command, argv, &mut app, PromptHistory::default())?;
+        assert_eq!(app.globals.wallet_name, "chosen");
+        let reads = trace.lock().map_err(|_| "trace")?.clone();
+        assert_eq!(reads.len(), 2);
+        assert!(reads[0].contains("wallet [configured]"));
+        assert!(!reads.iter().any(|line| line.contains("PRIVATE")));
+    }
+    let delegate = AccountId([41; 32]).to_string();
+    let real = AccountId([42; 32]).to_string();
+    for outer in [None, Some("Any")] {
+        let words = vec![
+            "rtao",
+            "proxy",
+            "execute",
+            "--delegate",
+            &delegate,
+            "--real",
+            &real,
+            "--force-proxy-type",
+            "Staking",
+        ];
+        let argv = original(&words);
+        let command = picker_tree()?;
+        let (input, trace) = terminal(&["chosen", "transfer"], true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        assert_eq!(app.globals.force_proxy_type, None);
+        // Root grammar excludes this flag. Model an already chosen outer
+        // route, as in the generated-command collision fixture.
+        app.globals.force_proxy_type = outer.map(str::to_owned);
+        let invocation = application::parse_with_context(
+            command,
+            argv.clone(),
+            &mut app,
+            PromptHistory::default(),
+        )?;
+        assert_eq!(app.globals.force_proxy_type.as_deref(), outer);
+        assert_eq!(app.globals.wallet_name, "chosen");
+        assert_eq!(
+            invocation_leaf(&invocation.matches)
+                .get_one::<String>("force_proxy_type")
+                .map(String::as_str),
+            Some("Staking")
+        );
+        let reads = trace.lock().map_err(|_| "trace")?.clone();
+        assert_eq!(reads.len(), 2);
+        assert!(reads[0].contains("wallet [configured]") && reads[1].contains("inner-op"));
+        assert!(
+            invocation
+                .history
+                .replay_command(&strings(&argv))
+                .ends_with("--wallet chosen --inner-op transfer")
+        );
+    }
+    for extra in [vec!["--yes"], vec!["--signer", "ledger"]] {
+        let mut words = vec!["rtao", "proxy", "add"];
+        words.extend(extra);
+        let argv = original(&words);
+        let command = picker_tree()?;
+        let (input, trace) = terminal(&["1"], true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        application::parse_with_context(command, argv, &mut app, PromptHistory::default())?;
+        assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 1);
+        assert_eq!(app.globals.wallet_name, "configured");
+    }
+    let mut books = picker_books();
+    books.multisigs = vec![json!({"name":"saved-group","threshold":1,"signatories":[delegate]})];
+    let command = picker_tree()?;
+    let argv = original(&["rtao", "proxy", "add"]);
+    let (input, trace) = terminal(&["saved-group", "1"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, books)?;
+    application::parse_with_context(command, argv, &mut app, PromptHistory::default())?;
+    assert_eq!(app.globals.wallet_name, "saved-group");
+    assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 2);
+    Ok(())
+}
+
+#[test]
+fn generic_address_machine_abort_and_excluded_routes_keep_existing_boundaries() -> TestResult {
+    for (words, tty, err_tty) in [
+        (vec!["rtao", "proxy", "execute", "--json"], true, true),
+        (vec!["rtao", "--json", "proxy", "execute"], true, true),
+        (vec!["rtao", "wallet", "swap-hotkey", "--quiet"], true, true),
+        (vec!["rtao", "wallet", "swap-hotkey"], false, true),
+        (vec!["rtao", "wallet", "swap-hotkey"], true, false),
+    ] {
+        let command = picker_tree()?;
+        let argv = original(&words);
+        let (input, trace) = terminal(&[], tty, err_tty);
+        assert!(
+            application::pending_prompt_matches(
+                &command,
+                &argv,
+                &PromptContext::default(),
+                &input
+            )?
+            .is_none()
+        );
+        let mut parser_input = input;
+        let error = application::parse_with_prompts(
+            command,
+            argv,
+            &PromptContext::default(),
+            &mut parser_input,
+        )
+        .err()
+        .ok_or("missing-input error")?;
+        assert_eq!(error.code, 2);
+        assert!(error.message.contains("missing required"));
+        if words.contains(&"execute") {
+            for field in ["--delegate", "--real", "--inner-op"] {
+                assert!(error.message.contains(field));
+            }
+        }
+        assert!(trace.lock().map_err(|_| "trace")?.is_empty());
+    }
+    let root = Root::new()?;
+    for words in [
+        vec!["rtao", "addr", "save", "new"],
+        vec!["rtao", "wallet", "swap-hotkey"],
+    ] {
+        let command = picker_tree()?;
+        let argv = original(&words);
+        let (input, trace) = terminal(&[], true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        let error =
+            application::parse_with_context(command, argv, &mut app, PromptHistory::default())
+                .err()
+                .ok_or("abort")?;
+        assert_eq!(error.code, 130);
+        assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 1);
+    }
+    let address = AccountId([41; 32]).to_string();
+    for words in [
+        vec!["rtao", "wallet", "swap-hotkey", "--new-hotkey", &address],
+        vec!["rtao", "wallet", "encrypt"],
+        vec!["rtao", "wallet", "associate-hotkey"],
+        vec!["rtao", "addr", "save", "--unknown"],
+    ] {
+        let command = picker_tree()?;
+        let (input, trace) = terminal(&[], true, true);
+        assert!(
+            application::pending_prompt_matches(
+                &command,
+                &original(&words),
+                &PromptContext::default(),
+                &input
+            )?
+            .is_none()
+        );
+        assert!(trace.lock().map_err(|_| "trace")?.is_empty());
+    }
+    #[cfg(feature = "evm")]
+    {
+        let command = picker_tree()?;
+        let (input, _) = terminal(&[], true, true);
+        assert!(
+            application::pending_prompt_matches(
+                &command,
+                &original(&["rtao", "evm", "pubkey"]),
+                &PromptContext::default(),
+                &input
+            )?
+            .is_none()
+        );
     }
     Ok(())
 }

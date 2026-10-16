@@ -279,7 +279,10 @@ rtao = "e2e::test_generic_accessors_over_generated_descriptors"
 pending = "M5"
 
 [tests."test_key_association"]
-pending = "M5"
+rtao = "rtao_intents::client_transfer_lifecycles::client_hotkey_association_submits_exact_call_then_reads_missing_uid_zero_evm_key"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["controlled-success-receipts", "controlled-missing-evm-state", "subnet-registration-ownership-unverified", "runtime-hotkey-association-unverified", "runtime-evm-association-state-unverified"]
 
 [tests."test_leases_read"]
 rtao = "rtao_reads::m6_delegation::leases_preserve_cost_precision_perpetual_expiry_and_map_order"
