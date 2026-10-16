@@ -1,10 +1,10 @@
 // Derived from RaoFoundation/subtensor sdk/bittensor-core/tests/e2e.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Client transfer and batch lifecycles over a finite, explicit RPC transcript.
+//! Client transfer, batch and association contracts over a finite RPC transcript.
 //!
-//! Post-state balances below are supplied observations, not calculated effects.
+//! Balances and absent EVM keys are supplied observations, not calculated effects.
 //! These fixtures exercise signing, exact submitted calls, receipt decoding and
 //! pinned reads. They do not prove runtime economics, atomic application,
-//! rollback, fee calibration or consensus.
+//! rollback, registration/ownership, association effects, fees or consensus.
 #![cfg(all(feature = "transfer", feature = "batch"))]
 
 use std::{
@@ -761,6 +761,96 @@ async fn finite_author_script_refuses_exhaustion_instead_of_fake_default_success
             .await?,
         10
     );
+    fixture.executor.client().close().await;
+    Ok(())
+}
+
+// upstream e2e.rs::test_key_association. This fixed subnet represents the
+// source's already-owned registration context; no registration is simulated.
+#[cfg(feature = "association")]
+#[tokio::test]
+async fn client_hotkey_association_submits_exact_call_then_reads_missing_uid_zero_evm_key()
+-> Result<()> {
+    use rtao_intents::AssociateHotkey;
+    use rtao_primitives::{NetUid, Uid};
+    use rtao_reads::reads::associated_evm_key;
+    use rtao_runtime::calls::subtensor_module;
+
+    const NETUID: NetUid = NetUid(1);
+    const UID: Uid = Uid(0);
+    let fixture = fixture().await?;
+    let runtime = fixture.executor.client().refresh_runtime().await?;
+    let hotkey = fixture.keys.hotkey_address()?;
+    assert_eq!(hotkey, AccountId([2; 32]));
+    assert_ne!(hotkey, fixture.keys.signer.account());
+    let intent = AssociateHotkey {
+        hotkey_ss58: Some(hotkey.into()),
+    };
+    assert_eq!(intent.spec().name, "associate_hotkey");
+    assert_eq!(intent.signer_role_dyn()?, SignerRole::Coldkey);
+    let expected = subtensor_module::try_associate_hotkey(hotkey).compose(&runtime)?;
+    // Pin the independent expectation to the exact metadata call indices and
+    // 32-byte hotkey, rather than building it through the intent under test.
+    assert_eq!(expected.as_bytes(), [&[7, 91][..], &hotkey.0].concat());
+    install(&fixture, expected.clone(), true, &[]).await?;
+    let before = fixture.executor.client().at(BlockRef::Best).await?;
+    let entry = runtime
+        .core()
+        .storage_entry("SubtensorModule", "AssociatedEvmAddress")
+        .context("AssociatedEvmAddress metadata")?;
+    let key = runtime.core().storage_key(
+        entry,
+        &[
+            CoreValue::Uint(u128::from(NETUID.0)),
+            CoreValue::Uint(u128::from(UID.0)),
+        ],
+    )?;
+    // The miss is a supplied observation before submission, inherited by the
+    // receipt snapshot. It is not a computed hotkey-association state effect.
+    fixture.chain.mutate_state(|state| {
+        state.seed_at(
+            format!("0x{}", hex::encode(before.block().hash.0)),
+            key.clone(),
+            None,
+        );
+    });
+    let result = execute(&fixture, &intent).await?;
+    let receipt = receipt_snapshot(&fixture, &result, &before, true).await?;
+    let view = RecordingView::new(receipt.clone());
+    let start = fixture.chain.requests().len();
+    let associated = associated_evm_key(&view, NETUID, UID).await?;
+    assert_eq!(associated, None);
+    let touches = view.touches();
+    assert_eq!(touches.len(), 1);
+    let touch = touches.first().context("EVM association descriptor read")?;
+    assert_eq!(touch.kind, ReadKind::Storage);
+    assert_eq!(
+        (&*touch.pallet_or_api, &*touch.item),
+        ("SubtensorModule", "AssociatedEvmAddress")
+    );
+    assert_eq!(touch.at, Some(receipt.block().hash));
+    assert_eq!(view.block_hashes(), BTreeSet::from([receipt.block().hash]));
+    let requests = fixture.chain.requests();
+    let reads = requests
+        .get(start..)
+        .context("EVM association request window")?
+        .iter()
+        .filter(|request| {
+            request.method.starts_with("state_getStorage")
+                || request.method == "state_queryStorageAt"
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(reads.len(), 1);
+    let read = reads.first().context("EVM association storage request")?;
+    assert_eq!(read.method, "state_queryStorageAt");
+    assert_eq!(
+        read.params,
+        json!([
+            [format!("0x{}", hex::encode(key))],
+            format!("0x{}", hex::encode(receipt.block().hash.0))
+        ])
+    );
+    assert_consumed(&fixture, &expected)?;
     fixture.executor.client().close().await;
     Ok(())
 }

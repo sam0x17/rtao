@@ -10,7 +10,10 @@ use rtao::{
 use rtao_cli::{
     application,
     books::Books,
-    commands::root::{self, Request},
+    commands::{
+        generated,
+        root::{self, Request},
+    },
     context::{AppContext, SubmissionOptions},
     globals::Globals,
     output::{MemorySink, Output, OutputOptions, Stream},
@@ -412,6 +415,126 @@ fn interactive_explicit_position_owner_selects_its_local_signing_wallet() -> Tes
         assert_eq!(ctx.globals.wallet_name, "B");
         assert!(ctx.globals.wallet_given);
     }
+    Ok(())
+}
+
+struct PublicReviewKeys(AtomicU64);
+impl rtao::signer::KeyView for PublicReviewKeys {
+    fn coldkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+        Ok(OWNER)
+    }
+    fn hotkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+        Ok(HOT)
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao::signer::SignerError> {
+        Ok(HOT.0)
+    }
+}
+impl rtao::signer::DynKeySource for PublicReviewKeys {
+    fn signer_for<'a>(
+        &'a self,
+        _: rtao::signer::SignerRole,
+    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn rtao::signer::Signer>, rtao::signer::SignerError>>
+    {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async {
+            Err(rtao::signer::SignerError::KeyUnavailable(
+                rtao::signer::SignerRole::Coldkey,
+            ))
+        })
+    }
+}
+
+#[tokio::test]
+async fn allocation_actual_preview_route_keeps_fund_context_and_never_acquires_keys() -> TestResult
+{
+    let mut state = seed()?;
+    state.seed_python(
+        "System",
+        "Account",
+        &[json!(OWNER)],
+        json!({"data":{"free":u64::MAX}}),
+    )?;
+    let (client, chain) = client(state).await?;
+    let hotkey = HOT.to_string();
+    let keys = PublicReviewKeys(AtomicU64::new(0));
+    for machine in [false, true] {
+        let mut args = vec![
+            "rtao",
+            "root",
+            "allocate",
+            "--hotkey",
+            &hotkey,
+            "--amount",
+            "1",
+            "--dry-run",
+            "--no-mev-shield",
+        ];
+        if machine {
+            args.push("--json");
+        }
+        let parsed = parse(&args)?;
+        let (mut ctx, sink) = context(&parsed)?;
+        let request = parse_request(&mut ctx, &parsed)?;
+        let mut history = PromptHistory::default();
+        let prepared = root::prepare_submission(&mut ctx, &client, &request, &mut history)
+            .await?
+            .ok_or("prepared root submission")?;
+        assert!(
+            sink.text(Stream::Stdout)?.is_empty(),
+            "actual preparation must leave review rendering to shared submission"
+        );
+        let replay = history.replay_command(
+            &args
+                .iter()
+                .map(|value| (*value).to_owned())
+                .collect::<Vec<_>>(),
+        );
+        let generic = prepared.request.intent()?.as_dyn().summary_dyn();
+        assert!(
+            generated::execute_tx_with_keys(
+                &ctx,
+                &client,
+                &prepared.request,
+                &keys,
+                SubmissionOptions {
+                    review: prepared.review.as_ref(),
+                    replay: Some(&replay),
+                    ..Default::default()
+                }
+            )
+            .await?
+            .is_none()
+        );
+        let expected = "allocate τ1.000000000 into Straße's fund at 2.0000 τ/β for ~0.5000 β";
+        let stdout = sink.text(Stream::Stdout)?;
+        if machine {
+            let payload: Value = serde_json::from_str(&stdout)?;
+            assert_eq!(payload["op"], "stake_into_basket");
+            assert_eq!(payload["summary"], expected);
+            assert_eq!(payload["args"]["hotkey_ss58"], json!(HOT));
+            assert_eq!(payload["args"]["amount_tao"], "1");
+            assert_eq!(payload["command"], replay);
+            let effects = payload["effects"].as_array().ok_or("preview effects")?;
+            assert!(effects.iter().any(|value| value == expected));
+            assert!(
+                effects
+                    .iter()
+                    .all(|value| value != &Value::String(generic.clone()))
+            );
+        } else {
+            assert!(stdout.contains(&format!("dry run: {expected}")));
+            assert!(!stdout.lines().any(|line| line == "Allocate"));
+        }
+        assert_eq!(keys.0.load(Ordering::SeqCst), 0);
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+    }
+    client.close().await;
     Ok(())
 }
 
