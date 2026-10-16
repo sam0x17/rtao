@@ -1182,6 +1182,137 @@ async fn root_local_names_follow_natural_wallet_and_hotkey_order_before_contacts
 }
 
 #[tokio::test]
+async fn generated_root_claim_preserves_natural_equal_wallet_groups_and_first_alias_target()
+-> TestResult {
+    let wallets = WalletRoot::new()?;
+    wallets.add("wallet2", OWNER)?;
+    wallets.add("wallet02", OWNER)?;
+    let order = fs::read_dir(&wallets.0)?
+        .map(|entry| entry.map(|entry| entry.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(order.len(), 2);
+    // The naturally equal directories stay complete groups in Python. The
+    // directory-first label must win for this account, even though hot1 sorts
+    // before hot9 when flattened. A second held validator shares hot9, making
+    // a changed display label select a different actual generated intent.
+    wallets.add_hotkey(&order[0], "hot9", HOT)?;
+    wallets.add_hotkey(&order[1], "hot1", HOT)?;
+    let mut state = seed()?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_info_for_coldkey",
+        json!([
+            {"hotkey":HOT,"coldkey":OWNER,"netuid":0,"stake":3_000_000,"is_registered":true},
+            {"hotkey":OTHER,"coldkey":OWNER,"netuid":0,"stake":2_000_000,"is_registered":true}
+        ]),
+    )?;
+    state.seed_runtime(
+        "BetaBasketRuntimeApi",
+        "get_root_basket_positions",
+        json!([]),
+    )?;
+    let (client, chain) = client(state).await?;
+    let other = OTHER.to_string();
+    for (answer, expected) in [("hot9", HOT), ("2", OTHER), (other.as_str(), OTHER)] {
+        let argv = vec![
+            "rtao",
+            "tx",
+            "claim-root-with-hotkey",
+            "--wallet",
+            order[0].as_str(),
+        ];
+        let parsed = application::command_tree([generated::tx_command()?])
+            .try_get_matches_from(argv.clone())?;
+        let leaf = parsed
+            .subcommand()
+            .ok_or("generated tx group")?
+            .1
+            .subcommand()
+            .ok_or("generated root claim")?
+            .1;
+        let config = serde_json::Map::from_iter([("wallet_path".into(), json!(wallets.0))]);
+        let mut globals = Globals::resolve(
+            &parsed,
+            &config,
+            Path::new("/isolated/generated-root-claim-no-user-home"),
+            |_| None,
+        )?;
+        globals.apply_with_env(
+            leaf,
+            &generated::intent_reserved("claim_root_with_hotkey")?,
+            |_| None,
+        )?;
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        let mut ctx = AppContext::new(
+            globals,
+            config,
+            Books::default(),
+            Arc::new(Mutex::new(Box::new(ScriptTerminal {
+                answers: VecDeque::from([answer.to_owned()]),
+                messages: messages.clone(),
+            }))),
+        );
+        ctx.output = Output::new(OutputOptions::default(), Arc::new(MemorySink::default()));
+        ctx.passwords.native_provider = None;
+        ctx.books.addresses = vec![json!({"address":OTHER,"name":"hot9"})];
+        let mut history = PromptHistory::default();
+        let request = generated::TxRequest::from_matches_with_client(
+            &mut ctx,
+            &client,
+            "claim_root_with_hotkey",
+            leaf,
+            &mut history,
+        )
+        .await?;
+        assert_eq!(request.op, "claim_root_with_hotkey");
+        assert_eq!(request.args["hotkey_ss58"], json!(expected));
+        assert_eq!(
+            request.intent()?.as_dyn().to_json_dyn()["hotkey_ss58"],
+            json!(expected)
+        );
+        assert_eq!(
+            history.replay_command(
+                &argv
+                    .iter()
+                    .map(|word| (*word).to_owned())
+                    .collect::<Vec<_>>()
+            ),
+            format!("{} --hotkey {expected}", argv.join(" "))
+        );
+        {
+            let messages = messages
+                .lock()
+                .map_err(|_| "generated root claim messages")?;
+            assert!(
+                messages
+                    .iter()
+                    .any(|line| line.starts_with("  1  hot9  total "))
+            );
+            assert!(
+                messages
+                    .iter()
+                    .any(|line| line.starts_with("  2  hot9  total "))
+            );
+            assert!(!messages.iter().any(|line| line.contains("hot1")));
+            assert!(
+                !messages
+                    .iter()
+                    .any(|line| line == "enter a list number or hotkey")
+            );
+        }
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn root_pickers_count_alias_prefix_keys_and_reprompt_before_recording() -> TestResult {
     let hotkey = HOT.to_string();
     let other = OTHER.to_string();
