@@ -187,6 +187,16 @@ and their label/review-request lists are empty. Evidence is
 `upstream-state-2026-10-16.json`; this refresh did not repeat the authored-search
 census or source/test audit. No GitHub filing write occurred.
 
+Ordinary [38863766724](https://github.com/sam0x17/rtao/actions/runs/38863766724)
+at `9bd2d02788ebf22c546f8c59099386f9ab976524` exposes E0382 in the MSRV
+CLI binary check: an async move handler consumed original replay argv before
+the newly wired finish boundary borrowed it. Retain the owned vector outside
+dispatch and give the seven handler closures a shared slice. No replay value
+or prompt behavior changes. Direct formatting and whitespace checks pass;
+the corrected ordinary checkpoint must establish compilation and the 26 new
+fixture results. Bounded MSRV evidence is `check-38863766724.json`, 58,981-byte
+log SHA256 `c776d6f6862cc8b4af9ba8737660b973258c7269eed3f15c3e51ab6088b5d935`.
+
 ## Prior integrated client checkpoint, 2026-10-15
 
 The following records describe earlier checkpoints. Their pending execution
