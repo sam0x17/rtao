@@ -1,7 +1,8 @@
 # M4-12: sequential Null pruning
 
-Status: source implemented and current fixtures passed hosted CI. Milestone
-acceptance and the complete pytest mapping remain separate. No local build,
+Status: source implemented and the earlier fixture checkpoint passed hosted CI;
+four new fixtures await execution. Milestone acceptance and the complete pytest
+mapping remain separate. No local build,
 test, mining operation or chain service was run for this follow-up.
 
 Hosted [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
@@ -92,3 +93,13 @@ cooldown/queue transcripts, recovery cases and `// pyt:` provenance still need
 completion. Native D-062 closed-window preview refusal and stronger canonical
 receipt/journal requirements are explicit policies, not identical Python tests.
 Passing current fixtures does not establish milestone acceptance.
+
+Four subsequent independently reviewed fixtures add actual session coverage for
+mechanism2/implicit target128, pending-target priority without a local record,
+all32 ordered native key-only probes and empty TWC values at the final legacy
+index. The default/resume cases execute one real reviewed signed FakeChain
+batch. Probe cases stop before signing and assert no commitment value reads.
+The pending128 and final-index vectors are explicit native adaptations; the
+cooldown half of the shared T19 provenance remains pending. Formatting passes,
+but these additions have not yet compiled or executed in hosted CI. The exact
+admin table, integrated cooldown/recovery and full pytest mapping remain open.
