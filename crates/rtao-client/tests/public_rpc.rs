@@ -29,6 +29,7 @@ fn policy(message: &str, retry: &str) -> subxt_rpcs::Error {
     subxt_rpcs::Error::Client(Box::new(RpcError::Policy(Box::new(refusal))))
 }
 
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_exposes_public_policy_error
 #[tokio::test]
 async fn rpc_substrate_exposes_public_policy_error() {
     let raw = FakeChain::from_state(FakeState::default());
@@ -72,6 +73,7 @@ async fn rpc_substrate_exposes_public_policy_error() {
     assert!(!display.contains(&"x".repeat(600)));
 }
 
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_exposes_public_blank_timeout_error
 #[tokio::test]
 async fn rpc_substrate_exposes_public_blank_timeout_error() {
     let raw = FakeChain::from_state(FakeState::default());
@@ -90,6 +92,7 @@ async fn rpc_substrate_exposes_public_blank_timeout_error() {
     );
 }
 
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_stream_preserves_public_policy_metadata
 #[tokio::test]
 async fn rpc_substrate_stream_preserves_public_policy_metadata() {
     let raw = FakeChain::from_state(FakeState::default());
@@ -125,6 +128,7 @@ async fn rpc_substrate_stream_preserves_public_policy_metadata() {
     );
 }
 
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_write_helper_preserves_public_policy_metadata
 #[tokio::test]
 async fn rpc_substrate_write_helper_preserves_public_policy_metadata() {
     let raw = FakeChain::from_state(FakeState::default());
@@ -139,6 +143,7 @@ async fn rpc_substrate_write_helper_preserves_public_policy_metadata() {
     assert_eq!(error.policy().unwrap().retry_after.as_deref(), Some("9"));
 }
 
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_submit_preserves_policy_metadata_and_clears_nonce
 #[tokio::test]
 async fn rpc_substrate_submit_preserves_policy_metadata_and_clears_nonce() {
     let raw = FakeChain::from_state(FakeState::default());
@@ -155,6 +160,7 @@ async fn rpc_substrate_submit_preserves_policy_metadata_and_clears_nonce() {
     assert_eq!(client.nonces().cached("5Signer").await, None);
 }
 
+// pyt: sdk/python/tests/unit/test_rpc.py::test_rpc_substrate_submit_timeout_is_a_public_connection_error
 #[tokio::test]
 async fn rpc_substrate_submit_timeout_is_a_public_connection_error() {
     let raw = FakeChain::from_state(FakeState::default());

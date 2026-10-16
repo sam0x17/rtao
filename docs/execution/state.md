@@ -240,6 +240,34 @@ included in the `3f1aa67` execution result and awaits hosted validation. The
 whole root-helper row remains pending. [M9](../security/m9.md) records the finding;
 M2-S02 remains open/unaccepted and no new upstream filing was made.
 
+### M1 source-extracted RPC fixtures and maintained TLS check
+
+The current M1 audit identifies two hand-copied pytest input tables, seven
+missing exact test origins and a two-provider check retained only as historical
+evidence. Replace the tables with a guarded Rust AST producer over the pinned
+`test_rpc.py`, preserving bytes/tuple carriers, signed codes, ordering and
+source/decorator spans. Three actual-resolver fixtures exercise literal updates
+and refusal of changed bindings, executable defaults and unsupported shapes.
+Existing policy tests consume the generated corpus directly. Independent source
+review and formatting pass; generation, compilation and execution are pending.
+Whole pytest source reconciliation and refused-connect cleanup coverage remain
+separate obligations.
+
+Prepare an isolated, nonshipped `ci/tls-two-providers` workspace for the actual
+RPC/FakeNode TLS exchange with both ring and AWS-LC compiled for Rustls 0.23.46.
+The existing features job will run one serialized test after an independent
+lock is generated/reviewed through the bounded hosted preparation mode. Shipped
+locks and dependency policies remain unchanged. Neither preparation nor source
+review establishes compiled-provider execution or SignedClient HTTPS coverage.
+
+Five M1 execution documents now distinguish historical results from Q30's
+current hosted-only checks, deferred infrastructure and absent retired caches.
+The next source checkpoint skips ordinary CI until its generated corpus,
+four reports and isolated lock are authenticated and adopted. The subsequent
+combined checkpoint must pass before milestone acceptance. Source map stays
+303/357 reconciled, 54 pending; adopted matrix stays 301/56 pending generation.
+No local Cargo/build/test, service, Studio work, new temporary root or filing.
+
 ## Prior integrated client checkpoint, 2026-10-15
 
 The following records describe earlier checkpoints. Their pending execution

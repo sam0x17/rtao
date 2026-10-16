@@ -1,10 +1,11 @@
 # M1 release automation
 
-The release implementation is ready for review. M1-23 is not complete: no
-milestone tag or hosted release run was created, and local release key approval
-and authenticated tagged Mac artifacts remain pending.
+M1-23 is **deferred by Q30**. No release tag, local key approval, Mac/ARM build,
+full local gate, draft publication or replacement rehearsal is required for
+client development. The implementation and results below are historical design
+and evidence, with no current release acceptance. Only `pr.yml` is active.
 
-`release.yml` prepares Linux x86_64 and ARM CLI archives on free
+The archived `release.yml` design prepares Linux x86_64 and ARM CLI archives on free
 `ubuntu-latest`, using the exact Ubuntu 22.04 amd64 manifest
 `sha256:08ea48a03a3e78ebc7cd526e6a275053223aadd88bfc09cc49b06d5281525fde`.
 Jammy ARM target libraries, cross compilers and QEMU preserve the glibc 2.35
@@ -12,26 +13,24 @@ floor. The binary's imported GLIBC versions are checked; toolchain, package
 inventory, elapsed time and target storage are recorded. Hosted resource use
 and cross/QEMU execution still need a real run.
 
-The hosted docs job generates exact compatibility checks, pin-based notes,
+The archived release docs job generates exact compatibility checks, pin-based notes,
 strict rustdoc, a first mdBook skeleton with the 357-row parity index, and LLM
 text containing public Rust signatures. Both jobs retain GitHub attestation
-bundles for only their actual build outputs. Complete draft assembly happens
-locally after both Mac targets, ten check logs, signatures, checksums and every
-hosted artifact/provenance pass verification. A separate read-only dispatch
-checks the complete draft; publishing repeats verification immediately before
-changing its draft state. No Pages, paid or hosted Mac/ARM runners are used.
+bundles for only their actual build outputs. Its draft-assembly/provenance and
+publishing branches are deferred; do not run the former local Mac/key steps.
+Current docs are downloadable from ordinary hosted checks without Pages.
 
 `cargo xtask release verify` binds records to the exact clean source tag/commit/
 tree and pinned Rust/Cargo versions. It authenticates GitHub attestations against
 the repository, release workflow, source ref and source/signer commit, and
 rejects self-hosted attestations. It separately authenticates the local Mac
 record with an approved Ed25519 OpenSSH signature in namespace `rtao-release`.
-The trust-anchor file is intentionally absent until the user approves the key
-design. Missing keys, targets, logs, hashes or provenance fail verification.
+The trust-anchor file is absent. Its future setup is outside this goal and is
+not a pending user prerequisite. Missing keys, targets, logs, hashes or provenance fail verification.
 Archive verification rejects links and paths outside the extraction directory.
 No script or xtask mutates the user's Keychain.
 
-`release-plz.yml` exits unless upkeep is enabled or a read-only dry-run is
+The archived `release-plz.yml` exits unless upkeep is enabled or a read-only dry-run is
 dispatched. Its isolated rehearsal runs the pinned updater and SemVer checker,
 regenerates compatibility, and executes full gates. The live upkeep path uses
 the App token, tags only the facade, and regenerates/checks compatibility in
@@ -39,7 +38,7 @@ the actual release PR before pushing generated files. Git-only mode disables
 crates.io; release-plz's GitHub release creation is disabled. This path has not
 been dispatched or used to create a PR.
 
-Validation on the Mac Studio worktree:
+Historical validation on the Mac Studio worktree:
 
 - All eight release verification tests pass on Rust 1.99 and 1.89, including
   authentic ephemeral Ed25519 signature verification, record tampering, wrong
@@ -74,7 +73,8 @@ Intel binary SHA-256 was
 `f84c83a20d28f131864b62a48b676049cb251b020aea6775efcd2f2f66434caf`.
 Source HEAD was `7efef6f68eedc7cfb85e6e9d0a5ae3da7c8d442a` with a dirty shared
 implementation worktree. These hashes describe rehearsals, not assets built
-from a release tag. Final tagged artifacts must be rebuilt and authenticated.
+from a release tag. A future separately requested distribution task would need
+new tagged artifacts and verification; current development requires neither.
 
 An isolated checksum-verified Intel standard library was provisioned under the
 recorded task root for the cross build; the user's installed Rust targets and
@@ -85,7 +85,8 @@ audited and removed. Bounded logs are retained alongside this report as
 One mdBook rehearsal initially interpreted a relative output path against the
 workspace parent; that newly-created output was audited, removed immediately,
 and the build repeated with the absolute task-root path used by the shipped
-script. The shared build and gate/source caches remain live for
-root and other workers. Full root gates, hosted Linux/resource evidence,
-authenticated final-tag Mac checks, approval of the local trust anchor, and
-actual draft verification/publication remain prerequisites.
+script. The old shared-cache references describe that historical run. They do
+not authorize using or recreating the retired `target/execute-plan.6Ro0PC` root.
+Current development preserves shared global caches and unrelated work, and
+requires no local release/gate work or publication prerequisite. Both workflow
+drafts remain in `.github/deferred-workflows` with inactive triggers.

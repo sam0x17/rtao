@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/errors.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Terminal gateway refusals and bounded upstream diagnostics.
 
 use std::{
@@ -506,20 +507,32 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    fn python_parameter_cases(name: &str) -> Vec<Value> {
+        let corpus: Value = serde_json::from_str(include_str!(
+            "../../../vendor/upstream/extracted/named_tables.json"
+        ))
+        .expect("generated named-table corpus");
+        assert_eq!(corpus["format"], 1);
+        let source = "sdk/python/tests/unit/test_rpc.py";
+        let document = &corpus["tables"][source];
+        assert_eq!(document["provenance"]["path"], source);
+        let rows = document["values"][name]["value"]
+            .as_array()
+            .expect("extracted RPC parametrization rows");
+        assert!(!rows.is_empty(), "RPC parametrization must exercise cases");
+        rows.clone()
+    }
+
     // pyt: sdk/python/tests/unit/test_rpc.py::test_response_detail_shapes
     #[test]
     fn response_detail_shapes() {
-        for (body, expected) in [
-            (b"".as_slice(), ""),
-            (
-                b"temporarily unavailable".as_slice(),
-                "temporarily unavailable",
-            ),
-            (b"\"busy\"".as_slice(), "busy"),
-            (b"{\"message\":\"try later\"}".as_slice(), "try later"),
-            (b"{\"other\":\"detail\"}".as_slice(), "{'other': 'detail'}"),
-        ] {
-            assert_eq!(response_detail(body), expected);
+        for row in python_parameter_cases("test_response_detail_shapes.parametrize") {
+            let pair = row["tuple"].as_array().expect("bytes/string tuple");
+            assert_eq!(pair.len(), 2);
+            let body = hex::decode(pair[0]["bytes_hex"].as_str().expect("Python bytes carrier"))
+                .expect("canonical bytes hex");
+            let expected = pair[1].as_str().expect("Python expected text");
+            assert_eq!(response_detail(&body), expected);
         }
     }
 
@@ -534,7 +547,10 @@ mod tests {
     // pyt: sdk/python/tests/unit/test_rpc.py::test_provider_defined_code_without_policy_contract_is_not_terminal
     #[test]
     fn provider_defined_code_without_policy_contract_is_not_terminal() {
-        for code in [-32004, -32005] {
+        for row in python_parameter_cases(
+            "test_provider_defined_code_without_policy_contract_is_not_terminal.parametrize",
+        ) {
+            let code = row.as_i64().expect("provider code fits signed i64");
             assert!(classify_rpc_error(&json!({"code": code, "message": "provider-specific server error", "data": {"detail": "not a traffic policy"}})).is_none());
         }
     }
