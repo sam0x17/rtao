@@ -50,6 +50,28 @@ values. Existing preview, output-cache and confirmation tests are strengthened;
 independent review and hosted execution remain pending. The full context source
 row remains unaccepted.
 
+Ordinary [38979569522](https://github.com/sam0x17/rtao/actions/runs/38979569522)
+is validating the pushed corrections at
+`4b9d0f4ae2c14cdfb87dc5d2881a9c8955f063cd`. All five supporting jobs pass;
+the main check is still running. The next source candidate adds
+pre-sign root/owner notices, successful direct verification hints and bounded
+registration progress forwarding. A failed progress sink is retained until the
+submission finishes, the raw receipt hook runs and the signer is released.
+The fixture keeps an actual executor call pending until the failing sink is
+observed, then checks completion and receipt recovery. Quiet/JSON registration
+cases and the original complete 83-intent preview traversal remain covered.
+
+Source review also found that saved-multisig subnet registration skipped its
+live cost disclosure by checking the outer approval name. The candidate checks
+the semantic registration and exercises the real saved review before source
+acquisition. Independent production and fixture source reviews, installed
+formatting and whitespace checks pass. The failing-sink fixture exercises
+completion and receipt capture; external release under that failure is
+source-reviewed only. These changes are outside the current CI run and have
+no hosted execution result yet. The full context row still requires final
+disposition of the remaining password/error presentation contracts and
+carrier-failure narration.
+
 Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
 passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
 Artifact 12078644250 is 59,739 bytes, SHA256
