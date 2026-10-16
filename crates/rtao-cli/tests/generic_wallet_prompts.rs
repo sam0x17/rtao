@@ -124,12 +124,12 @@ fn public_context(
             None
         }
     };
-    let mut globals = Globals::resolve(parsed, &config, Path::new("/fixture/no-user-home"), &env)?;
+    let mut globals = Globals::resolve(parsed, &config, Path::new("/fixture/no-user-home"), env)?;
     let mut leaf = parsed;
     while let Some((_, child)) = leaf.subcommand() {
         leaf = child;
     }
-    globals.apply_with_env(leaf, &[], &env)?;
+    globals.apply_with_env(leaf, &[], env)?;
     let mut app = AppContext::new(globals, config, books, terminal);
     app.output = Output::new(OutputOptions::default(), Arc::new(MemorySink::default()));
     Ok(app)
