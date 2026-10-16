@@ -136,6 +136,24 @@ formatting and Node syntax checks pass; the source commit skips ordinary CI
 until the required candidate inputs are reviewed and adopted. Ordinary hosted
 validation follows adoption. No EVM row or milestone acceptance follows now.
 
+Canonical candidate run
+[38930971428](https://github.com/sam0x17/rtao/actions/runs/38930971428)
+passed at `0dc258bba254b9a39e1a7d49005b2313adf0954a`. The normal
+import/extraction checks and all 21 focused tests passed. The 63,793-byte
+artifact `12059321729` has SHA256
+`7db7d069d9165c6c4e7b4c5871836e121dd2a1711b4920bcc24e581811b0ca88`.
+In-memory inspection verified all 21 canonical blobs against the pinned SDK
+bytes/hashes, reproduced every previous manifest/NOTICE byte after removing
+the 21 additions, and authenticated every named test against the job log.
+A separate refetch adopted exactly 21 ABI files, `upstream.toml` and `NOTICE`.
+The 181,888 ABI bytes are source inputs; no archive, extraction or raw log is
+retained. Inspection proof SHA256 is
+`c2c4f3b8ea0c21d71f1016802858d4dd68b6e5872cd2dd3ae0e4207d50bc201e`;
+adoption proof SHA256 is
+`5376363084a936e6d1dd1c148cb210d2007c66a723429225c489257279aeb6ab`.
+The full ordinary suite and report refresh remain required. Current EVM source
+mapping and milestone acceptance remain pending.
+
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.
