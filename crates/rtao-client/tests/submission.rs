@@ -813,30 +813,58 @@ async fn admission_deadline_bounds_pool_and_watch_acknowledgment_for_external_si
             } else {
                 "author_submitAndWatchExtrinsic"
             };
+            let accepted = Arc::new(AtomicBool::new(false));
+            let author_accepted = accepted.clone();
             fake.mutate_state(|state| {
-                state.set_handler(method, |state, request| {
+                state.set_handler(method, move |state, request| {
                     // Preserve node-side acceptance while withholding its acknowledgment.
-                    let _accepted = state.dispatch(request);
+                    let reply = state.dispatch(request);
+                    assert!(matches!(reply.outcome, Some(Ok(_))));
+                    author_accepted.store(true, Ordering::SeqCst);
                     Reply::silent()
                 });
             });
+            tokio::time::pause();
             let opts = SubmitOptions {
                 wait,
                 submit_deadline: Some(Duration::from_millis(50)),
                 deadline: Some(Duration::from_secs(1)),
                 ..Default::default()
             };
-            let result = if external_signature {
-                client.submit_signature(&prepared, signature, &opts).await
-            } else {
-                client.submit(call, &signer, &opts).await
+            let started = tokio::time::Instant::now();
+            let operation = async {
+                if external_signature {
+                    client.submit_signature(&prepared, signature, &opts).await
+                } else {
+                    client.submit(call, &signer, &opts).await
+                }
             };
-            assert_exact_unknown_fate(result, &fake);
+            tokio::pin!(operation);
+            // Keep the runtime runnable while preparation finishes. Paused
+            // time must not auto-advance during an offloaded preparation step.
+            let wall_started = std::time::Instant::now();
+            while !accepted.load(Ordering::SeqCst) {
+                if let std::task::Poll::Ready(result) = futures::poll!(&mut operation) {
+                    panic!("submission finished before author acceptance: {result:?}");
+                }
+                assert!(
+                    wall_started.elapsed() < Duration::from_secs(10),
+                    "fixture never reached author acceptance"
+                );
+                tokio::task::yield_now().await;
+            }
+            tokio::time::advance(Duration::from_millis(49)).await;
+            assert!(futures::poll!(&mut operation).is_pending());
+            tokio::time::advance(Duration::from_millis(2)).await;
+            assert_exact_unknown_fate(operation.await, &fake);
+            assert_eq!(started.elapsed(), Duration::from_millis(51));
             assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
             assert_eq!(
                 client.nonces().cached(&signer.account().to_string()).await,
                 None
             );
+            client.close().await;
+            tokio::time::resume();
         }
     }
 }

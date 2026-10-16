@@ -4679,6 +4679,11 @@ fn tx_command() -> clap::Command {
   - missing required options exit 2;
   - JSON goes to stdout and diagnostics to stderr;
   - `-v` is INFO, `-vv` DEBUG, `-vvv` raw frames; `BITTENSOR_LOG` overrides.
+- **Extension transaction confirmation (D-068).** The shared CLI review and terminal confirmation also apply to
+  extension-backed mutations. They precede lazy signing-session acquisition and wallet payload approval; `--yes`
+  skips the terminal prompt only. Python instead treats the extension popup as its approval surface and skips
+  terminal confirmation (`PY/cli/context.py:1292-1323`). This existing stricter native rule is an explicit exception
+  to prompt parity below. Public account discovery remains separate and can contact the extension before review.
 - **Required boolean choices (D-072).** For conviction mode and acceptance,
   an interactive answer selects the actual `--perpetual`/`--decaying` or
   `--allow`/`--reject` flag. Dispatch and public replay contain the selected

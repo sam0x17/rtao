@@ -406,14 +406,21 @@ impl AppContext {
                 },
             )
             .await?;
-        self.finish_direct_submission(client, intent, options.hooks, outcome)
-            .await
+        self.finish_direct_submission(
+            client,
+            intent,
+            options.hooks,
+            RootClaimSource::Keys(keys),
+            outcome,
+        )
+        .await
     }
     async fn finish_direct_submission(
         &self,
         client: &Client,
         intent: &dyn DynIntent,
         hooks: Option<&dyn SubmissionHooks>,
+        claim_source: RootClaimSource<'_>,
         mut outcome: Option<SubmissionOutcome>,
     ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
         if let Some(outcome) = &mut outcome
@@ -440,7 +447,119 @@ impl AppContext {
                 outcome.hook_error = hooks.after_followup(&outcome.receipt).await.err();
             }
         }
-        self.finish_submission(intent, outcome).await
+        let route = outcome
+            .as_ref()
+            .map(|outcome| (outcome.dispatch_owner, outcome.dispatch_proxy));
+        let receipt = self.finish_submission(intent, outcome).await?;
+        if let (Some((owner, proxy)), Some(receipt)) = (route, &receipt)
+            && let Some(hotkey) = self
+                .offer_root_claim(client, intent, owner, proxy)
+                .await
+                .map_err(|error| known_receipt_error(error, receipt))?
+        {
+            let claim = rtao_intents::AnyIntent::from_tool(
+                "claim_root_with_hotkey",
+                serde_json::json!({"hotkey_ss58": hotkey}),
+            )
+            .map_err(|error| known_receipt_error(CliError::input(error.to_string()), receipt))?;
+            // An accepted offer starts a separate, normally reviewed mutation.
+            // Never reuse the original operation's durable hooks or display
+            // binding; external sources have already been released above.
+            let followup = match claim_source {
+                RootClaimSource::Keys(keys) => {
+                    Box::pin(self.submit_with_keys_options(
+                        client,
+                        claim.as_dyn(),
+                        keys,
+                        SubmissionOptions::default(),
+                    ))
+                    .await
+                }
+                RootClaimSource::Factory(factory) => {
+                    let mut fresh = self.clone();
+                    Box::pin(fresh.submit_with_options(
+                        client,
+                        claim.as_dyn(),
+                        SubmissionOptions::default(),
+                        factory,
+                        &mut crate::prompt::PromptHistory::default(),
+                    ))
+                    .await
+                }
+            };
+            let _ = followup.map_err(|error| known_receipt_error(error, receipt))?;
+        }
+        Ok(receipt)
+    }
+    async fn offer_root_claim(
+        &self,
+        client: &Client,
+        intent: &dyn DynIntent,
+        owner: AccountId,
+        proxy: Option<AccountId>,
+    ) -> Result<Option<AccountId>, CliError> {
+        use rtao::client::ViewExt;
+
+        let args = intent.to_json_dyn();
+        let op = intent.spec().name;
+        if args.get("claim").and_then(Value::as_bool) == Some(true)
+            || !["remove_stake", "remove_stake_limit", "unstake_all"].contains(&op)
+            || (op != "unstake_all" && args.get("netuid").and_then(Value::as_u64) != Some(0))
+        {
+            return Ok(None);
+        }
+        let Some(hotkey) = args
+            .get("hotkey_ss58")
+            .and_then(Value::as_str)
+            .and_then(|value| value.parse::<AccountId>().ok())
+        else {
+            return Ok(None);
+        };
+        // This is an advisory post-receipt probe. A failed/empty payout read
+        // cannot turn the completed unstake into a failed transaction.
+        let payout = match client
+            .call(
+                &rtao_runtime::runtime_apis::beta_basket_runtime_api::GET_BASKET_PAYOUT,
+                (hotkey, owner),
+            )
+            .await
+        {
+            Ok(payout) if payout.0 > 0 => payout.0,
+            _ => return Ok(None),
+        };
+        let amount = rtao::primitives::DynBalance::from_rao(payout, rtao::primitives::NetUid::ROOT);
+        let proxy_flag = proxy.map_or_else(|| "self".to_owned(), |proxy| proxy.to_string());
+        let command =
+            format!("rtao root claim --hotkey {hotkey} --coldkey {owner} --proxy-for {proxy_flag}");
+        let hint = format!(
+            "{amount} remains claimable via `{command}` (unstaking root principal does not claim basket yield). A claim pays this validator's whole entitlement, not a slice of the unstake. Use the same signing wallet, backend and proxy type as this unstake."
+        );
+        let interactive = {
+            let terminal = self
+                .terminal
+                .lock()
+                .map_err(|_| CliError::failure("terminal lock poisoned"))?;
+            self.prompt_context().interactive(&**terminal)
+        };
+        if self.globals.assume_yes || !interactive {
+            self.output
+                .message(&hint)
+                .map_err(|error| CliError::failure(error.to_string()))?;
+            return Ok(None);
+        }
+        let question = format!(
+            "{amount} remains claimable. Claim this validator's whole basket entitlement now?"
+        );
+        match self.confirm(&question) {
+            Ok(()) => Ok(Some(hotkey)),
+            Err(error) if error.code == 1 && error.message == "aborted." => {
+                self.output
+                    .message(&hint)
+                    .map_err(|error| CliError::failure(error.to_string()))?;
+                Ok(None)
+            }
+            Err(error) => Err(error),
+        }
     }
     async fn finish_submission(
         &self,
@@ -464,6 +583,24 @@ impl AppContext {
         }
         Ok(Some(result))
     }
+    fn shield_signing_notice(&self, backend: Option<&str>) -> Result<(), CliError> {
+        let text = match crate::globals::normalize_signer_backend(backend.unwrap_or("")).as_str() {
+            "vault" => {
+                "MEV-shielded vault signing: two scans, ~90 seconds total — have the phone unlocked with Vault's scanner open"
+            }
+            "extension" => {
+                "MEV-shielded extension signing: two approvals, ~90 seconds total — have the extension unlocked"
+            }
+            "ledger" => {
+                "MEV-shielded Ledger signing: two approvals on the device, ~90 seconds total — keep the Polkadot app open"
+            }
+            _ => return Ok(()),
+        };
+        self.output
+            .message(text)
+            .map_err(|error| CliError::failure(error.to_string()))
+    }
+
     async fn perform_submission(
         &self,
         client: &Client,
@@ -652,75 +789,240 @@ impl AppContext {
                 }
             }
         }
-        let mut transaction = vec![
-            ("signer".into(), serde_json::json!(plan.signer_address)),
-            ("role".into(), serde_json::json!(plan.signer.as_str())),
-            ("MEV shield".into(), serde_json::json!(choice.enabled)),
+        let semantic = intent.semantic_intent_dyn();
+        let mut sections = control
+            .review
+            .map_or_else(Vec::new, |review| review.sections.clone());
+        if sections.is_empty() {
+            let wallet = control.factory.as_ref().map_or_else(
+                || {
+                    keys.coldkey_address()
+                        .map(|account| account.to_string())
+                        .unwrap_or_else(|_| self.globals.wallet_name.clone())
+                },
+                |binding| binding.multisig.address.to_string(),
+            );
+            sections.push(ReviewSection {
+                title: review_title(semantic.spec().name),
+                rows: vec![
+                    ("wallet".into(), Value::String(wallet)),
+                    (
+                        "summary".into(),
+                        Value::String(if control.factory.is_none() {
+                            review_summary.clone()
+                        } else {
+                            control.review.map_or_else(
+                                || semantic.summary_dyn(),
+                                |review| review.summary.clone(),
+                            )
+                        }),
+                    ),
+                ],
+            });
+        }
+        // Keep additional native review facts before the universal fee/routing
+        // stages. The command's own rows and semantic JSON stay unchanged.
+        let effects = plan
+            .effects
+            .iter()
+            .filter(|effect| **effect != plan.summary && **effect != semantic.summary_dyn())
+            .map(|effect| ("effect".into(), Value::String(effect.clone())))
+            .collect::<Vec<_>>();
+        if !effects.is_empty() {
+            sections.push(ReviewSection {
+                title: "Effects".into(),
+                rows: effects,
+            });
+        }
+        let facts = preflight
+            .facts
+            .iter()
+            .map(|(name, value)| (name.clone(), Value::String(value.clone())))
+            .collect::<Vec<_>>();
+        if !facts.is_empty() && preflight.facts_title.as_str() != "Fees" {
+            sections.push(ReviewSection {
+                title: preflight.facts_title.as_str().into(),
+                rows: facts.clone(),
+            });
+        }
+        sections.push(ReviewSection {
+            title: "Fees".into(),
+            rows: if !facts.is_empty() && preflight.facts_title.as_str() == "Fees" {
+                facts
+            } else {
+                vec![(
+                    "estimated fee".into(),
+                    Value::String(plan.fee.map_or_else(
+                        || "unavailable".into(),
+                        |fee| {
+                            format!(
+                                "~{}",
+                                self.output
+                                    .balance(fee.rao(), rtao::primitives::NetUid::ROOT)
+                                    .0
+                                    .to_python_string()
+                            )
+                        },
+                    )),
+                )]
+            },
+        });
+        let backend = self.globals.signer_backend.as_deref().unwrap_or("wallet");
+        let mut signer = vec![
+            (
+                "signer".into(),
+                Value::String(if self.globals.uses_external_signer() {
+                    format!("{} via {backend}", plan.signer_address)
+                } else {
+                    plan.signer_address.to_string()
+                }),
+            ),
+            ("role".into(), Value::String(plan.signer.as_str().into())),
         ];
         if let Some(binding) = &control.factory {
-            transaction.push((
-                "approval member".into(),
-                serde_json::json!(format!(
-                    "{} via {}",
-                    binding.selection.display_wallet(),
-                    binding.selection.backend,
-                )),
-            ));
-        }
-        if let Some(registration) = &registration {
-            transaction.push(("cost".into(), serde_json::json!(registration.cost)));
+            signer.extend([
+                (
+                    "approval member".into(),
+                    Value::String(format!(
+                        "{} via {}",
+                        binding.selection.display_wallet(),
+                        binding.selection.backend
+                    )),
+                ),
+                (
+                    "multisig".into(),
+                    Value::String(format!(
+                        "{} ({})",
+                        binding.wallet_name, binding.multisig.address
+                    )),
+                ),
+                (
+                    "threshold".into(),
+                    Value::String(if binding.multisig.threshold == 1 {
+                        format!(
+                            "1 of {} — executes immediately",
+                            binding.multisig.signatories.len()
+                        )
+                    } else {
+                        format!(
+                            "{} of {}",
+                            binding.multisig.threshold,
+                            binding.multisig.signatories.len()
+                        )
+                    }),
+                ),
+                // Each approval still authorizes the actual outer round.
+                ("approval".into(), Value::String(plan.summary.clone())),
+            ]);
         }
         if let Some(proxy) = proxy_for {
-            transaction.push(("proxy for".into(), serde_json::json!(proxy)));
+            signer.push(("proxy for".into(), serde_json::json!(proxy)));
+        }
+        signer.push((
+            "mev shield".into(),
+            Value::String(if choice.enabled {
+                "on — encrypted in the mempool until executed".into()
+            } else {
+                "off — no protection (call is visible in the mempool)".into()
+            }),
+        ));
+        sections.push(ReviewSection {
+            title: "Signer".into(),
+            rows: signer,
+        });
+        let mut transaction = vec![(
+            "operation".into(),
+            Value::String(semantic.spec().name.into()),
+        )];
+        if let Some(registration) = &registration {
+            transaction.push(("cost".into(), serde_json::json!(registration.cost)));
         }
         if let Some(period) = control.period {
             transaction.push(("period (blocks)".into(), serde_json::json!(period)));
         }
-        if let Some(fee) = plan.fee {
-            transaction.push((
-                "estimated fee (TAO)".into(),
-                serde_json::json!(fee.to_decimal_string()),
-            ));
-        }
-        let args = plan
-            .args
-            .as_object()
-            .map(|args| {
-                args.iter()
-                    .map(|(name, value)| (name.clone(), value.clone()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        let mut sections = control
-            .review
-            .map_or_else(Vec::new, |review| review.sections.clone());
-        sections.extend([
-            ReviewSection {
-                title: review_summary.clone(),
-                rows: args,
-            },
-            ReviewSection {
-                title: "Transaction".into(),
-                rows: transaction,
-            },
-            ReviewSection {
-                title: preflight.facts_title.as_str().into(),
-                rows: preflight
-                    .facts
-                    .into_iter()
-                    .map(|(name, value)| (name, Value::String(value)))
-                    .collect(),
-            },
-            ReviewSection {
-                title: "Effects".into(),
-                rows: plan
-                    .effects
+        let arguments = semantic.to_json_dyn();
+        if semantic.spec().name == "batch" {
+            if let Some(children) = arguments.get("intents").and_then(Value::as_array) {
+                for (index, child) in children.iter().enumerate() {
+                    let op = child
+                        .get("op")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| CliError::input("batched review child has no operation"))?;
+                    let child = rtao_intents::AnyIntent::from_tool(op, child.clone())
+                        .map_err(|error| CliError::input(error.to_string()))?;
+                    transaction.push((
+                        format!("call {}", index + 1),
+                        Value::String(child.as_dyn().summary_dyn()),
+                    ));
+                }
+            }
+        } else if let Some(fields) = arguments.as_object() {
+            // Dataclass declaration order is part of the Python card. JSON's
+            // machine key ordering does not choose the human review order.
+            let names = semantic.spec().fields.iter().map(|field| field.name).chain(
+                fields
+                    .keys()
+                    .filter(|name| {
+                        !semantic
+                            .spec()
+                            .fields
+                            .iter()
+                            .any(|field| field.name == name.as_str())
+                    })
+                    .map(String::as_str),
+            );
+            for name in names.filter(|name| *name != "op") {
+                let Some(value) = fields.get(name).filter(|value| !value.is_null()) else {
+                    continue;
+                };
+                let money = semantic
+                    .spec()
+                    .fields
                     .iter()
-                    .enumerate()
-                    .map(|(i, effect)| ((i + 1).to_string(), serde_json::json!(effect)))
-                    .collect(),
-            },
-        ]);
+                    .find(|field| field.name == name)
+                    .and_then(|field| field.annotation)
+                    .is_some_and(|annotation| annotation.contains("Money"));
+                let display = if money {
+                    let subnet = if name.ends_with("_tao") || name == "threshold" {
+                        Some(0)
+                    } else if name == "min_amount_out" {
+                        arguments.get("dest_netuid").and_then(Value::as_u64)
+                    } else {
+                        arguments
+                            .get("origin_netuid")
+                            .or_else(|| arguments.get("netuid"))
+                            .and_then(Value::as_u64)
+                    }
+                    .and_then(|netuid| u16::try_from(netuid).ok())
+                    .map(rtao::primitives::NetUid);
+                    subnet
+                        .and_then(|netuid| {
+                            serde_json::from_value::<rtao::primitives::Amount>(value.clone())
+                                .ok()
+                                .and_then(|amount| amount.resolve(netuid, true).ok())
+                                .map(|amount| match amount {
+                                    rtao::primitives::ResolvedAmount::All => "all".into(),
+                                    rtao::primitives::ResolvedAmount::Exact(amount) => self
+                                        .output
+                                        .balance(amount.rao, amount.netuid)
+                                        .0
+                                        .to_python_string(),
+                                })
+                        })
+                        .unwrap_or_else(|| self.output.review_value(name, value))
+                } else {
+                    self.output.review_value(name, value)
+                };
+                transaction.push((
+                    name.strip_suffix("_ss58").unwrap_or(name).replace('_', " "),
+                    Value::String(display),
+                ));
+            }
+        }
+        sections.push(ReviewSection {
+            title: "Transaction".into(),
+            rows: transaction,
+        });
         self.output
             .transaction_card(&sections)
             .map_err(|error| CliError::failure(error.to_string()))?;
@@ -783,6 +1085,13 @@ impl AppContext {
                 }
             }
             if choice.enabled {
+                let backend = control
+                    .factory
+                    .as_ref()
+                    .map_or(self.globals.signer_backend.as_deref(), |binding| {
+                        Some(binding.selection.backend.as_str())
+                    });
+                self.shield_signing_notice(backend)?;
                 executor
                     .submit_shielded_dyn(
                         intent,
@@ -831,6 +1140,8 @@ impl AppContext {
         let result = result?;
         Ok(Some(SubmissionOutcome {
             signer_address: plan.signer_address,
+            dispatch_owner: proxy_for.unwrap_or(plan.signer_address),
+            dispatch_proxy: proxy_for,
             receipt: result,
             release_error,
             hook_error,
@@ -838,9 +1149,47 @@ impl AppContext {
     }
 }
 
+// py: sdk/python/bittensor/cli/context.py:86-120
+fn review_title(op: &str) -> String {
+    match op {
+        "claim_root" | "claim_root_with_hotkey" => "Claim",
+        "stake_into_basket" => "Allocate",
+        "swap_basket" | "swap_stake" => "Swap",
+        "add_stake" | "add_stake_limit" => "Stake",
+        "remove_stake" | "remove_stake_limit" | "unstake_all" | "unstake_all_alpha" => "Unstake",
+        "transfer" | "transfer_all" => "Transfer",
+        "move_stake" | "move_swap_stake" => "Move",
+        "transfer_stake" => "Transfer stake",
+        "root_register" | "burned_register" | "register_subnet" => "Register",
+        "set_weights" | "commit_weights" | "reveal_weights" => "Weights",
+        "stake_burn" => "Burn",
+        "fund_evm_key" => "Fund",
+        "associate_evm_key" => "Associate",
+        _ => {
+            let words = op.replace('_', " ");
+            let mut letters = words.chars();
+            return letters.next().map_or_else(String::new, |first| {
+                format!(
+                    "{}{}",
+                    first.to_uppercase(),
+                    letters.as_str().to_lowercase()
+                )
+            });
+        }
+    }
+    .into()
+}
+
+enum RootClaimSource<'a> {
+    Keys(&'a dyn DynKeySource),
+    Factory(Option<&'a dyn ExternalSignerFactory>),
+}
+
 struct ApprovalFactory<'a> {
     factory: &'a dyn crate::call::RawSignerFactory,
     selection: &'a crate::call::SigningSelection,
+    wallet_name: &'a str,
+    multisig: &'a rtao::tx::Multisig,
 }
 struct SubmissionControl<'a> {
     mev_shield_default: Option<bool>,
@@ -858,6 +1207,8 @@ struct SubmissionControl<'a> {
 }
 struct SubmissionOutcome {
     signer_address: AccountId,
+    dispatch_owner: AccountId,
+    dispatch_proxy: Option<AccountId>,
     receipt: rtao::tx::ExtrinsicResult,
     release_error: Option<CliError>,
     hook_error: Option<CliError>,
@@ -1697,11 +2048,7 @@ impl ConnectionFactory for NetworkConnector {
         &'a self,
         config: ClientConfig,
     ) -> rtao::signer::BoxFuture<'a, Result<Client, CliError>> {
-        Box::pin(async move {
-            Client::connect(config)
-                .await
-                .map_err(|e| CliError::failure(e.to_string()))
-        })
+        Box::pin(async move { Client::connect(config).await.map_err(CliError::from) })
     }
 }
 impl AppContext {
@@ -2052,8 +2399,14 @@ impl AppContext {
                 None => return Err(error),
             }
         }
-        self.finish_direct_submission(client, intent, options.hooks, outcome)
-            .await
+        self.finish_direct_submission(
+            client,
+            intent,
+            options.hooks,
+            RootClaimSource::Factory(external),
+            outcome,
+        )
+        .await
     }
 }
 
@@ -2376,7 +2729,12 @@ impl AppContext {
                             replay: options.replay,
                             hooks: options.hooks,
                             review: options.review,
-                            factory: Some(ApprovalFactory { factory, selection }),
+                            factory: Some(ApprovalFactory {
+                                factory,
+                                selection,
+                                wallet_name: &self.globals.wallet_name,
+                                multisig: &group,
+                            }),
                             external: None,
                         },
                     )

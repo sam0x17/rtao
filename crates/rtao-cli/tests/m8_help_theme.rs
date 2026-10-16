@@ -85,16 +85,19 @@ fn group_paths(command: &clap::Command, prefix: &[String], result: &mut Vec<Vec<
 fn visible_command_paths(
     command: &clap::Command,
     prefix: &[String],
-    result: &mut Vec<Vec<String>>,
+    help_path: bool,
+    result: &mut Vec<(Vec<String>, bool)>,
 ) {
-    result.push(prefix.to_vec());
+    result.push((prefix.to_vec(), help_path));
     for child in command
         .get_subcommands()
         .filter(|child| !child.is_hide_set())
     {
         let mut path = prefix.to_vec();
         path.push(child.get_name().into());
-        visible_command_paths(child, &path, result);
+        let child_help_path =
+            help_path || (child.get_name() == "help" && !command.is_disable_help_subcommand_set());
+        visible_command_paths(child, &path, child_help_path, result);
     }
 }
 
@@ -166,13 +169,15 @@ fn every_visible_installed_command_and_group_help_exits_zero() -> TestResult {
     let mut command = rtao_cli::commands::command_tree()?;
     command.build();
     let mut paths = Vec::new();
-    visible_command_paths(&command, &[], &mut paths);
+    visible_command_paths(&command, &[], false, &mut paths);
+    assert!(paths.contains(&(vec!["config".into(), "help".into(), "set".into()], true)));
+    assert!(paths.contains(&(vec!["config".into(), "set".into()], false)));
     let invocations = paths
         .into_iter()
-        .map(|path| {
-            // Clap's generated `help` subcommand accepts a command path;
-            // `help --help` treats the flag as that path instead.
-            let flag = (path.last().map(String::as_str) != Some("help")).then_some("--help");
+        .map(|(path, help_path)| {
+            // Clap's generated `help` consumes every following component as
+            // a command path, including any appended `--help` flag.
+            let flag = (!help_path).then_some("--help");
             (path, flag)
         })
         .chain([

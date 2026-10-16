@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/output.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Stream and value contracts from the pinned Python output machinery.
 
 use std::sync::Arc;
@@ -344,6 +345,10 @@ fn semantic_and_raw_review_cards_keep_signer_and_operation_visible_with_hostile_
                     json!({(hostile("argument-key")): hostile("argument-value")}),
                 ),
                 ("encoded call".into(), json!(call_hex)),
+                (
+                    "short arguments".into(),
+                    json!({"argument-key\x1b": "argument-value\x1b"}),
+                ),
             ],
         },
         ReviewSection {
@@ -364,8 +369,6 @@ fn semantic_and_raw_review_cards_keep_signer_and_operation_visible_with_hostile_
             "description",
             "identity-value",
             "Balances.transfer_keep_alive",
-            "argument-key",
-            "argument-value",
         ],
     );
     for expected in [
@@ -378,6 +381,18 @@ fn semantic_and_raw_review_cards_keep_signer_and_operation_visible_with_hostile_
     ] {
         assert!(rendered.contains(expected), "review lost {expected}");
     }
+    assert!(rendered.contains(r"argument-key\u001b"));
+    assert!(rendered.contains(r"argument-value\u001b"));
+    // Keep the original full control/bidi payload through the JSON/truncation
+    // path as well as the short key/value visibility control above.
+    let arguments = rendered
+        .lines()
+        .find_map(|line| line.trim_start().strip_prefix("arguments  "))
+        .ok_or("nested arguments review row")?
+        .trim_start();
+    assert_eq!(arguments.chars().count(), 160);
+    assert!(arguments.starts_with(r#"{"argument-key\u001b[2J\u001b]0;owned"#));
+    assert!(arguments.ends_with('…'));
     assert!(sink.text(Stream::Stderr)?.is_empty());
     let (machine, sink) = capture(true, false);
     machine.transaction_card(&sections)?;
@@ -1115,5 +1130,83 @@ fn pending_multisigs_keep_structured_commands_members_and_unique_decode_guidance
         sink.text(Stream::Stdout)?,
         "custom registered pending view\n"
     );
+    Ok(())
+}
+
+#[test]
+fn review_card_values_and_cross_stage_alignment_preserve_semantic_payloads() -> TestResult {
+    let long = json!(["日".repeat(170)]);
+    let sections = vec![
+        ReviewSection {
+            title: "Quote".into(),
+            rows: vec![("receive".into(), json!("~1.2 α"))],
+        },
+        ReviewSection {
+            title: "Fees".into(),
+            rows: vec![("estimated fee".into(), json!("unavailable"))],
+        },
+        ReviewSection {
+            title: "Signer".into(),
+            rows: vec![("signer".into(), json!("5PublicAccount"))],
+        },
+        ReviewSection {
+            title: "Transaction".into(),
+            rows: vec![
+                ("empty".into(), json!(" \u{1c} ")),
+                ("enabled".into(), json!(false)),
+                ("origin_netuid".into(), json!(7)),
+                ("slippage_tolerance".into(), json!(0.025)),
+                ("nested".into(), json!({"key":[1,true]})),
+                ("long".into(), long.clone()),
+            ],
+        },
+    ];
+    let original = sections
+        .iter()
+        .map(|stage| stage.rows.clone())
+        .collect::<Vec<_>>();
+    let (out, sink) = capture(false, false);
+    out.update_subnet_names([(7, "seven".to_owned())])?;
+    out.transaction_card(&sections)?;
+    let text = sink.text(Stream::Stdout)?;
+    for (key, value) in [
+        ("receive", "~1.2 α"),
+        ("estimated fee", "unavailable"),
+        ("signer", "5PublicAccount"),
+        ("empty", "—"),
+        ("enabled", "no"),
+        ("origin_netuid", "7 (seven)"),
+        ("slippage_tolerance", "2.50%"),
+        ("nested", r#"{"key": [1, true]}"#),
+    ] {
+        let line = text
+            .lines()
+            .find(|line| line.trim_start().starts_with(key))
+            .ok_or("card row")?;
+        assert_eq!(&line[..2], "  ");
+        assert_eq!(&line[22..], value);
+    }
+    let line = text
+        .lines()
+        .find(|line| line.trim_start().starts_with("long "))
+        .ok_or("long row")?;
+    let value = &line[22..];
+    assert_eq!(value.chars().count(), 160);
+    assert!(value.starts_with(r#"["\u65e5"#));
+    assert!(value.ends_with('…'));
+    for (json_mode, quiet) in [(true, false), (false, true)] {
+        let (out, sink) = capture(json_mode, quiet);
+        out.transaction_card(&sections)?;
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+    }
+    assert_eq!(
+        sections
+            .iter()
+            .map(|stage| stage.rows.clone())
+            .collect::<Vec<_>>(),
+        original
+    );
+    assert_eq!(sections[3].rows[5].1, long);
     Ok(())
 }
