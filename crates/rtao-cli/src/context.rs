@@ -1708,7 +1708,7 @@ impl AppContext {
         self.globals.hotkey_name = selection.hotkey_name;
         self.globals.wallet_given = selection.wallet_given;
         self.globals.hotkey_given = selection.hotkey_given;
-        for (address, name) in selection.selected_accounts {
+        for (name, address) in selection.selected_accounts {
             self.output
                 .name_address(&address, &name)
                 .map_err(|e| CliError::failure(e.to_string()))?;

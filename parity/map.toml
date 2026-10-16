@@ -1365,12 +1365,12 @@ notes = "saved multisigs, approvals, pending operations (§10.5)"
 
 [[file]]
 py = "sdk/python/bittensor/cli/null_pruning.py"
-rs = ["`rtao-cli` `hparams trim-null`; `rtao_neuron::OwnerOps::trim_null`"]
+rs = ["crates/rtao-cli/src/commands/hparams.rs", "crates/rtao-neuron/src/owner_ops/trim.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "c85a57d552b50b3445dff75022909425cc8d320e"
 synced_tag = "v478"
 milestone = "M4"
-notes = "resumable ≤ 64-uid batches (§9.7)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 392-line module, all ten outer and three nested definitions, loop branches and actual CLI/shared-session consumers reviewed. TrimNullSession owns typed finalized state, pending/Yuma target defaults, bounded sequential batches, first-wait/reset deadlines, progress/stall counts and opt-in switch; AppContext retains ordinary review, proxy/multisig/external signing and output. Already-Yuma no-op precedes Null target bounds. Native canonical finalized inclusion, exact bounded progress/storage checks and durable reviewed-call journals retain uncertain or semantically incomplete evidence; authenticated same-opening approvals follow D-041 and failed events follow D-023. Both legacy commitment maps receive bounded key-only probes and final pre-sign rechecks. Typed decoded state, native counters/u64 balances, snapshot/best freshness, sibling lock naming, shield refusal and D-062 owner/window admission including closed-window preview refusal are explicit native policies. The separate 23-function/30-case pytest row remains pending exact table/cooldown/queue/restart vectors and provenance. Source review establishes no complete pytest/Python-oracle equivalence, live-chain behavior or milestone acceptance; fixture execution is recorded separately."
 
 [[file]]
 py = "sdk/python/bittensor/cli/output.py"
@@ -2274,12 +2274,12 @@ notes = "Source reconciliation 2026-10-15: all four intents compared with the ex
 
 [[file]]
 py = "sdk/python/bittensor/intents/staking.py"
-rs = ["`rtao_intents::staking` (feature `staking`)"]
+rs = ["crates/rtao-intents/src/staking_trades.rs", "crates/rtao-intents/src/staking_claims.rs", "crates/rtao-intents/src/staking_baskets.rs", "crates/rtao-intents/src/lock.rs", "crates/rtao-intents/src/arguments.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "82e885a8820b62d6d43dcf0ce278c6eea9886121"
 synced_tag = "v478"
 milestone = "M5"
-notes = "14 intents (3 generated `build()`, 11 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 1925-line, 14-intent module, all helpers/defaults/metadata and actual generated/native consumers reviewed. Three generated and eleven handwritten builds retain semantic arguments, effective origin, observed-ALL resolution, atomic claim/MAX/hold behavior, slippage math, move dust, lock-transfer warnings, basket normalization and scope/spend. Native checked-u64/typed-address/netuid domains and nonoptional runtime price API are explicit adaptations; source quotes remain best-effort and transport/decode failures propagate where required. Shared stakeable_amount has a direct arguments.rs home; reused generated builders and vocabulary retain separate producer origins. Complete fixture bodies and independent basket source review support this mapping. Hosted execution, full Python differential behavior and milestone acceptance remain separate."
 
 [[file]]
 py = "sdk/python/bittensor/intents/transfer.py"
@@ -2292,12 +2292,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated Python module,
 
 [[file]]
 py = "sdk/python/bittensor/intents/weights.py"
-rs = ["`rtao_intents::weights` (feature `weights`)"]
+rs = ["crates/rtao-intents/src/weights/math.rs", "crates/rtao-intents/src/weights/intents.rs", "crates/rtao-intents/src/arguments.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c"
 synced_tag = "v478"
 milestone = "M2"
-notes = "3 intents (0 generated `build()`, 3 ported); see [parity-inventory.md section 3](parity-inventory.md#3-intents-83); `normalize`/`clip_to_max_weight` `:54-114`, `_conform` `:218-258` → `rtao_intents::weights::conform` (§9.3); `DEFAULT_COMMIT_REVEAL_VERSION` `:33`"
+notes = "Source reconciliation 2026-10-16: complete authenticated 563-line module and all 19 functions/methods re-reviewed against direct math/input/intent homes, generated declarations/defaults/dispatch and actual consumers. normalize retains ordering, ties-even and zero removal; clipping retains CPython 3.12 compensated sums and left-fold cumulative sums. Repair 50b7239 refuses zero clipped totals with Python's message; native WeightsError/IntentError replace exception classes. Mapping/list parsing, numeric UID order/duplicates, weight text/bool conversion and canonical tool JSON are retained; direct typed fields resolve/validate pairs when used. Typed UID/mechanism/salt/version and finite Ratio replace arbitrary Python object coercions. Registration/Null-permit/rate ordering and codes, raw Null gate, ordinary positive-only raw ratios/count/share checks, adaptive commit/default 4, forced explicit protocol, legacy reveal, summaries/effects/warnings and reveal_round extras have production homes. Private preflight is split native state; catalog/interfaces retain help/defaults/hotkey role/wraps. One pinned BuildCx view and explicit clock/offload replace Python head reacquisition/wall clock. D-006 scheduling, framework D-016 admission and D-058 raw-vector contracts remain separate. Encryption, metadata descriptors, vocabulary, CLI and scheduler retain independent origins. No further supported-input defect survived independent source review. Warning/effects boundaries, custom forced version and large encrypted-payload observations remain coverage limits; test_null_weights and CLI pytest rows remain independently pending. Fresh Python/oracle execution, exception-class differential equality and new-repair execution remain unclaimed by this source review."
 
 [[file]]
 py = "sdk/python/bittensor/keyfiles.py"

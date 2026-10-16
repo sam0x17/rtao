@@ -117,6 +117,10 @@ async fn run() -> Result<(), CliError> {
     let terminal: SharedTerminal = Arc::new(Mutex::new(Box::new(LiveTerminal)));
     let mut prompting = terminal.clone();
     let completion_tree = command.clone();
+    let replay_args = argv
+        .iter()
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
     let mut invocation = application::parse_with_prompts(command, argv, &context, &mut prompting)?;
     let command_path = application::command_path(&completion_tree, &invocation.matches);
     let Some((name, matches)) = invocation.matches.subcommand() else {
@@ -197,11 +201,6 @@ async fn run() -> Result<(), CliError> {
     .await?;
     rtao_cli::logs::setup_logging(app.globals.verbosity, app.globals.quiet)
         .map_err(|e| CliError::failure(e.to_string()))?;
-    let replay_args = invocation
-        .argv
-        .iter()
-        .map(|arg| arg.to_string_lossy().into_owned())
-        .collect::<Vec<_>>();
     let replay = invocation.history.replay_command(&replay_args);
     let result = async {
         match name {
@@ -609,6 +608,12 @@ async fn run() -> Result<(), CliError> {
             )
             .map_err(|e| CliError::failure(e.to_string()))?;
     }
+    application::finish_prompts(
+        &app.output,
+        &mut invocation.history,
+        &replay_args,
+        result.is_ok(),
+    )?;
     // Rendering has already emitted structured diagnostics for command errors.
     result.map_err(|mut error| {
         error.message.clear();

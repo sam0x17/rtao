@@ -1,7 +1,16 @@
 # M4-12: sequential Null pruning
 
-Status: source implemented. Hosted compilation, tests and acceptance
-remain pending. No local build, test, mining operation or chain service was run.
+Status: source implemented and current fixtures passed hosted CI. Milestone
+acceptance and the complete pytest mapping remain separate. No local build,
+test, mining operation or chain service was run for this follow-up.
+
+Hosted [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
+passed at `50b7239e6ec1160cc482a86be8d2a30fe737ffc1`: all 3,014 executed tests
+passed (four skipped), alongside docs, doctests and all six jobs. Bounded evidence
+`50b7239-named-results.json` authenticates all 33 SDK pruning fixture identities
+and seven CLI pruning fixtures at that source. The main log is 710,339 bytes,
+SHA256 `15e295426302f686b8cef1918bf91bc2050f97588eca73028870037c2cd82357`.
+These are FakeChain/client results; live runtime execution is unverified.
 
 `hparams trim-null` uses the same `TrimNullSession` as `OwnerOps::trim_null`.
 The CLI drives each guarded action through `AppContext::submit_with_options`,
@@ -74,8 +83,12 @@ runtime state.
 Final source review replaced a fixed 32-attempt journal limit with the validated
 multisig group's signatory count, preserving the pinned runtime's support for
 100 members. Journal reads reuse the bounded nonblocking wallet reader and
-refuse content over two MiB before decoding. These source corrections also
-await hosted validation.
+refuse content over two MiB before decoding. The `50b7239` source and fixture
+suite passed hosted compilation and execution. No dedicated exact 100-member
+approval or oversized-journal boundary fixture is claimed.
 
-Formatting and source review do not establish milestone acceptance; the new
-fixtures require hosted compilation and test results.
+The separate Python test row remains pending: exact admin-window table,
+cooldown/queue transcripts, recovery cases and `// pyt:` provenance still need
+completion. Native D-062 closed-window preview refusal and stronger canonical
+receipt/journal requirements are explicit policies, not identical Python tests.
+Passing current fixtures does not establish milestone acceptance.

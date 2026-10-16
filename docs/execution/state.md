@@ -16,6 +16,21 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-16
 
+The latest completed ordinary run is
+[38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
+at `50b7239e6ec1160cc482a86be8d2a30fe737ffc1`. All six hosted jobs passed.
+The main gate passed all 3,014 executed tests (four skipped), workspace doctests,
+documentation and every selected blocking check. The exact weight-clipping
+regression passed, confirming refusal of the zero denominator and preservation
+of valid subnormal branches. The 710,339-byte main log has SHA256
+`15e295426302f686b8cef1918bf91bc2050f97588eca73028870037c2cd82357`.
+Bounded proofs are `check-38858957306.json` and `50b7239-named-results.json`;
+the latter also binds all 33 SDK and seven CLI pruning fixtures to exact PASS
+records and executed source blobs. No raw log or archive is retained.
+
+The following preceding security checkpoint retains its own exact source and
+review evidence. Later client work is recorded separately below.
+
 Ordinary hosted
 [38832708259](https://github.com/sam0x17/rtao/actions/runs/38832708259)
 passed at `7bb8c0b888b5e634c8ca1236f05ceb9b6f81a48a`. All six jobs
@@ -39,8 +54,9 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The published source map and generated matrix agree at 298/357 reconciled,
-59 pending, with 20 pending e2e mappings and 68 divergences. Passing CI does not
+The adopted generated matrix records 298/357 reconciled and 59 pending. The
+subsequent source batch below reaches 301/357 and awaits a report refresh.
+There remain 20 pending e2e mappings and 68 divergences. Passing CI does not
 reconcile the remaining source rows or accept a milestone. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
 with source review and substantial validation on free hosted CI.
@@ -49,7 +65,7 @@ Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
 No local build/test, service, Mac Studio work, new temporary root or upstream
 filing was needed. Preserve wallets, recovery material and unrelated work.
 
-### Subsequent weight-clipping repair, awaiting hosted validation
+### Verified weight-clipping repair
 
 Source review found a public-helper result mismatch for finite minimum-subnormal
 scores: clipping can underflow its final denominator to zero. Python raises;
@@ -59,11 +75,11 @@ already rejected those NaNs before call composition; no invalid submission was
 established. The regression exercises both helper and conform, plus valid
 subnormal normalization, unclipped output and uniform fallback branches.
 
-Independent source review, direct rustfmt and whitespace checks pass.
-Compilation and regression execution remain pending hosted CI. The complete
-weights source row stays pending; native checked u64 balances and raw-weight
-semantics are unchanged. Bounded proposal/review evidence remains under the
-existing recovery root, with no build output or extra temporary directory.
+Independent source review, direct rustfmt and whitespace checks pass. Hosted
+run 38858957306 now verifies compilation and this regression. The later complete
+source review reconciles weights in the batch below; native checked u64 balances
+and raw-weight semantics are unchanged. Bounded proposal/review evidence remains
+under the existing recovery root, with no build output or extra temporary directory.
 
 ### Subsequent source disposition and verified report refresh
 
@@ -87,6 +103,26 @@ unchanged. Bounded proofs are `6c4f82c-report-inspection.json` and
 Ordinary [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
 at `50b7239` remains the weight-fix validation checkpoint. Other pending rows,
 strict M8 and milestone status are unchanged.
+
+### Current source and CLI batch, awaiting hosted validation
+
+Complete authenticated source reviews reconcile staking (all 14 intents),
+weights (all 19 functions/methods) and the shared pruning product workflow.
+Direct native homes and secondary attributions are recorded, with explicit
+typed/native policies and separate pytest/oracle limits. Correct the architecture's
+stale summation claim: CPython 3.12 sums are compensated; cumulative sums remain
+left folds. Source map: 301/357 reconciled, 56 pending. The adopted matrix remains
+at 298/59 until the next authenticated hosted refresh.
+
+Repair the reversed account-name cache at the actual AppContext confirmation
+boundary. Two fixtures check local wallet/hotkey choices, contacts, qualified
+references, pasted addresses and unchanged selected identities. Also finish
+public prompt guidance after successful commands using original argv, with
+JSON/quiet/dry-run suppression and escaped input line breaks. The price command
+teaches its actual native SDK read. Five parser/handler/finish and fake-client
+fixtures cover these behaviors. Independent source reviews and formatting pass;
+these seven new fixture functions remain unexecuted. Prompt/output source rows
+stay pending their remaining caller/content reviews. No local builds or tests ran.
 
 ## Prior integrated client checkpoint, 2026-10-15
 
