@@ -64,7 +64,7 @@ impl SubmissionExecution for Execution {
             // Unlock after the reviewed plan and confirmation. Cache that signer
             // so executor acquisition cannot introduce another password delay.
             let role = intent.as_dyn().signer_role_dyn().map_err(failure)?;
-            let signer = keys.signer_for(role).await.map_err(failure)?;
+            let signer = keys.signer_for(role).await.map_err(CliError::from)?;
             let unlocked = UnlockedKeys { keys, signer, role };
             // The signing delegate pays and signs; work still authenticates the
             // reviewed dispatch owner, exactly as the SDK's proxy build does.

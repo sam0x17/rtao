@@ -1279,14 +1279,18 @@ pub(crate) fn known_receipt_error(
     mut error: CliError,
     receipt: &rtao::tx::ExtrinsicResult,
 ) -> CliError {
-    let recovery = format!(
-        "the transaction was already submitted{}; inspect that result before retrying",
+    let identity = format!(
+        "the transaction was already submitted{}",
         receipt
             .extrinsic_id
             .as_ref()
             .map(|id| format!(" as {id}"))
             .unwrap_or_default(),
     );
+    let recovery = match receipt.fate_unknown.as_ref() {
+        Some(hash) => format!("{identity}; {}", crate::error::unknown_fate_help(&hash.0)),
+        None => format!("{identity}; inspect that result before retrying"),
+    };
     error.help = Some(match error.help.take() {
         Some(help) => format!("{help}; {recovery}"),
         None => recovery,
@@ -2005,14 +2009,9 @@ impl CliWalletKeys {
                 Err(rtao::wallet::WalletError::WrongPassword {
                     source: rtao::wallet::PasswordSource::Prompt,
                 }) if role == SignerRole::Coldkey && attempts_left > 0 => {
-                    self.output
-                        .error(
-                            "wrong password",
-                            crate::output::DiagnosticContext::default(),
-                        )
-                        .map_err(|_| {
-                            rtao::wallet::WalletError::NativePassword("password diagnostic failed")
-                        })?;
+                    self.output.message("error: wrong password").map_err(|_| {
+                        rtao::wallet::WalletError::NativePassword("password diagnostic failed")
+                    })?;
                 }
                 result => return result,
             }
@@ -2040,10 +2039,47 @@ impl DynKeySource for CliWalletKeys {
         Box::pin(async move {
             self.unlock(role)
                 .await
-                .map_err(|e| rtao::signer::SignerError::KeyView(e.to_string()))
+                .map_err(|error| wallet_key_error(error, role))
         })
     }
 }
+
+// py: sdk/python/bittensor/cli/context.py:1900-1945
+// Resolve remediation before the typed password source crosses the signer seam.
+pub(crate) fn wallet_key_error(
+    error: rtao::wallet::WalletError,
+    role: SignerRole,
+) -> rtao::signer::SignerError {
+    use rtao::wallet::{PasswordSource, WalletError};
+
+    let WalletError::WrongPassword { source } = &error else {
+        return rtao::signer::SignerError::KeyView(error.to_string());
+    };
+    let help = match source {
+        PasswordSource::Prompt => {
+            format!("re-run and enter the {role} password used when the key was created")
+        }
+        PasswordSource::Keychain => "re-save with `rtao wallet keychain save`".into(),
+        PasswordSource::WalletEnvironment => {
+            "correct or unset BT_WALLET_PASSWORD, then retry".into()
+        }
+        PasswordSource::KeyfileEnvironment => {
+            "correct or remove the encoded password variable for this keyfile, then retry".into()
+        }
+        PasswordSource::PasswordFile => "correct the selected password file, then retry".into(),
+        PasswordSource::MacosDialog => {
+            format!("re-run and enter the {role} password in the macOS password dialog")
+        }
+        PasswordSource::Explicit => {
+            format!("supply the {role} password used when the key was created")
+        }
+    };
+    rtao::signer::SignerError::WithHelp {
+        message: error.to_string(),
+        help,
+    }
+}
+
 impl AppContext {
     /// Resolve signing keys lazily through injected or native external backends.
     pub async fn signing_keys(
