@@ -77,6 +77,12 @@ adoption SHA256 is
 `645c5d25a167529e95a4efee38a70bc3df08aeb524723cb0970a4a91319b598c`.
 This report-only success does not execute the 27 newer test functions.
 
+Ordinary run 38958405135 at `f13dd4c` stops in strict Clippy before Nextest:
+the new direct-multisig fixture holds a mutex guard through asynchronous client
+cleanup. MSRV, no-host and semver pass. The correction limits the guard to its
+two existing assertions without changing those assertions, production code
+or test counts. Full ordinary validation of the newer batch remains pending.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded

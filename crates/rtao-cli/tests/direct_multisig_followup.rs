@@ -412,9 +412,11 @@ async fn generated_approve_and_execute_attach_saved_book_followup_after_raw_rece
             receipt.data["multisig_call_data"]
         );
         assert_eq!(cache[&hash]["multisig_preset"], "team");
-        let raw = hooks.raw.lock().map_err(|_| "raw")?;
-        assert_eq!(raw.len(), 1);
-        assert!(!raw[0].data.contains_key("multisig_followup"));
+        {
+            let raw = hooks.raw.lock().map_err(|_| "raw")?;
+            assert_eq!(raw.len(), 1);
+            assert!(!raw[0].data.contains_key("multisig_followup"));
+        }
         assert_eq!(hooks.enriched.lock().map_err(|_| "enriched")?.len(), 1);
         assert_eq!(
             *fixture.keys.trace.lock().map_err(|_| "trace")?,
