@@ -203,12 +203,18 @@ Ordinary run [38970331580](https://github.com/sam0x17/rtao/actions/runs/38970331
 is active with an expected 3,185 tests and four skips. Its supply job failed
 after `inout 0.2.3` was yanked on 2026-10-16 at 21:27 UTC. The upstream
 `0.2.4` release restores a missing output-buffer length check, keeps the same
-dependencies and requires Rust 1.85, below this workspace's MSRV. The lock
-candidate will be resolved in the existing hosted lock lane. Its guard permits
-only that package's version/checksum and sole versioned dependency reference
-to change; the fuzz lock and all remaining bytes must stay unchanged. No new
-advisory exception or manual lockfile edit is proposed. The raw failure
-identity and registry/source comparison are retained under the recovery root.
+dependencies and requires Rust 1.85, below this workspace's MSRV.
+Hosted lock run [38971146218](https://github.com/sam0x17/rtao/actions/runs/38971146218)
+passes at `9624b92`. Artifact 12077076702 is 81,871 bytes, SHA256
+`1daf8ece5ca0faf292c5cf2e7438ffdcfd09b9de31dccb9ba7a84ab57bdcf901`.
+Inspection and a separate refetch adopt only that package's version/checksum
+and sole versioned dependency reference. Reversing those three lines reproduces
+the earlier lock byte for byte; the fuzz lock is unchanged. No new advisory
+exception or manual lockfile edit was used. The inspection proof is
+`inout-9624b92-lock-inspection.json`, SHA256
+`3ea612f0d6e15438a87d30a3e9a291df35395a701944cb23db290c5571afe071`.
+The raw failure identity and registry/source comparison remain under the
+recovery root. The lock-only job establishes no ordinary test success.
 
 The following client repairs are separate from that active run. Weight
 activity alarms now use the chain's minimum one-block cutoff, including
