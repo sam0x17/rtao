@@ -108,7 +108,8 @@ pub(super) fn python_sum(values: impl IntoIterator<Item = f64>) -> f64 {
 ///
 /// An impossible limit (`len * limit <= 1`) produces a uniform row, preserving
 /// Python's branch order. This helper retains the arithmetic of the Python
-/// helper; [`normalize`] validates the resulting weights before encoding.
+/// helper, returning an error where its final division would divide by zero;
+/// [`normalize`] validates the resulting weights before encoding.
 #[doc(alias = "bittensor.intents.weights.clip_to_max_weight")]
 pub fn clip_to_max_weight(weights: &[f64], limit: f64) -> Result<Vec<f64>, WeightsError> {
     let n = weights.len();
@@ -153,6 +154,11 @@ pub fn clip_to_max_weight(weights: &[f64], limit: f64) -> Result<Vec<f64>, Weigh
         .map(|&weight| if cutoff < weight { cutoff } else { weight })
         .collect();
     let clipped_total = python_sum(clipped.iter().copied());
+    // Python float division refuses both positive and negative zero. A finite
+    // subnormal input can underflow the cutoff and reach this denominator.
+    if clipped_total == 0.0 {
+        return Err(WeightsError::validation("float division by zero"));
+    }
     Ok(clipped
         .iter()
         .map(|weight| weight / clipped_total)
@@ -335,6 +341,47 @@ mod tests {
         assert_eq!(python_sum([1e16, 1.0, 1.0]), 1e16 + 2.0);
         assert_eq!(python_sum([f64::MAX, f64::MAX]), f64::INFINITY);
         assert_eq!(python_sum([-0.0]).to_bits(), 0.0_f64.to_bits());
+    }
+
+    #[test]
+    fn subnormal_clipping_refuses_zero_division_but_preserves_valid_branches()
+    -> Result<(), WeightsError> {
+        let smallest = f64::from_bits(1);
+        let uids = [Uid(1), Uid(2), Uid(3)];
+        let weights = [0.0, 0.0, smallest];
+        let limit = f64::from(32768) / U16_MAX;
+
+        // All scores are finite and nonnegative, with a positive total. The
+        // sparse row's negative cutoff rounds to -0.0; Python's final division
+        // raises rather than returning successful NaNs.
+        let clipped = clip_to_max_weight(&weights, limit)
+            .err()
+            .map(|error| (error.to_string(), error.code()));
+        assert_eq!(clipped, Some(("float division by zero".into(), None)));
+        let conformed = conform(
+            &uids,
+            &weights,
+            ConformState {
+                max_weight_limit: 32768,
+                ..state()
+            },
+            NetUid(1),
+            false,
+        )
+        .err()
+        .map(|error| (error.to_string(), error.code()));
+        assert_eq!(conformed, Some(("float division by zero".into(), None)));
+
+        // Subnormal scores remain valid for max-normalization, unclipped
+        // shares, and Python's impossible-limit uniform fallback.
+        assert_eq!(normalize(&uids, &weights)?, (vec![Uid(3)], vec![u16::MAX]));
+        assert_eq!(clip_to_max_weight(&weights, 1.0)?, vec![0.0, 0.0, 1.0]);
+        assert_eq!(
+            clip_to_max_weight(&[smallest; 3], limit)?,
+            vec![1.0 / 3.0; 3]
+        );
+        assert_eq!(clip_to_max_weight(&weights, 0.25)?, vec![1.0 / 3.0; 3]);
+        Ok(())
     }
 
     #[test]
