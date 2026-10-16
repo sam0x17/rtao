@@ -703,14 +703,25 @@ fn canonical_picker_answers_use_real_clap_parser_retries_and_final_relationships
             verify.mut_arg("ss58", |arg| arg.conflicts_with("message"))
         })
     });
-    let (input, trace) = terminal(&["1"], true, true);
+    // A supplied conflict waives Clap's required argument, so leave both
+    // values missing to exercise collection before final relationship checks.
+    let supplied = command.clone().try_get_matches_from(&argv)?;
+    assert!(
+        invocation_leaf(&supplied)
+            .get_one::<String>("ss58")
+            .is_none()
+    );
+    let argv = original(&["rtao", "wallet", "verify", "--signature", "00"]);
+    let (input, trace) = terminal(&["payload", "1"], true, true);
     let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
     let error = application::parse_with_context(command, argv, &mut app, PromptHistory::default())
         .err()
         .ok_or("final relationship rejection")?;
     assert_eq!(error.code, 2);
     assert!(error.message.contains("cannot be used with"));
-    assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 1);
+    let reads = trace.lock().map_err(|_| "trace")?;
+    assert_eq!(reads.len(), 2);
+    assert!(reads[0].contains("message"));
     Ok(())
 }
 
