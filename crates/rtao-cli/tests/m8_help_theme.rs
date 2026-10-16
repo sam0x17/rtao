@@ -167,29 +167,37 @@ fn every_visible_installed_command_and_group_help_exits_zero() -> TestResult {
     command.build();
     let mut paths = Vec::new();
     visible_command_paths(&command, &[], &mut paths);
-    let invocations = paths.into_iter().map(|path| (path, "--help")).chain([
-        (vec!["doctor".into()], "-h"),
-        (vec!["completions".into()], "-h"),
-    ]);
+    let invocations = paths
+        .into_iter()
+        .map(|path| {
+            // Clap's generated `help` subcommand accepts a command path;
+            // `help --help` treats the flag as that path instead.
+            let flag = (path.last().map(String::as_str) != Some("help")).then_some("--help");
+            (path, flag)
+        })
+        .chain([
+            (vec!["doctor".into()], Some("-h")),
+            (vec!["completions".into()], Some("-h")),
+        ]);
     for (path, flag) in invocations {
-        let result = root.command().args(&path).arg(flag).output()?;
+        let result = root.command().args(&path).args(flag).output()?;
         assert_eq!(
             result.status.code(),
             Some(0),
-            "{path:?} {flag}: {}",
+            "{path:?} {flag:?}: {}",
             String::from_utf8_lossy(&result.stderr)
         );
-        assert!(!result.stdout.is_empty(), "{path:?} {flag} has no output");
+        assert!(!result.stdout.is_empty(), "{path:?} {flag:?} has no output");
         let help = String::from_utf8(result.stdout)?;
-        assert!(help.contains("Usage:"), "{path:?} {flag}: {help}");
+        assert!(help.contains("Usage:"), "{path:?} {flag:?}: {help}");
         assert!(
             result.stderr.is_empty(),
-            "{path:?} {flag}: {}",
+            "{path:?} {flag:?}: {}",
             String::from_utf8_lossy(&result.stderr)
         );
         assert!(
             !root.0.join("wallets").exists(),
-            "{path:?} {flag} created a wallet directory"
+            "{path:?} {flag:?} created a wallet directory"
         );
     }
     for (args, code) in [

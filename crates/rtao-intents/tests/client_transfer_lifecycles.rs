@@ -1006,7 +1006,7 @@ async fn client_proxied_transfer_returns_success_or_the_inner_proxy_dispatch_err
                 .context("pinned nested Balances error")?;
             assert_eq!((failure.pallet_index, failure.error_index), (5, 2));
             let nested = if inner_success {
-                json!({"Ok":null})
+                json!({"Ok":[]})
             } else {
                 json!({"Err":{"Module":{"index":failure.pallet_index,"error":[failure.error_index,0,0,0]}}})
             };
