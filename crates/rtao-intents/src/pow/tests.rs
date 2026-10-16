@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_pow_registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing)]
 
 use std::sync::{
@@ -95,6 +96,9 @@ async fn mine(client: &Client) -> Result<PowProof, PowError> {
         .await
 }
 
+// pyt: unit/test_pow_registration.py::test_challenge_encoding_binds_both_keys_subnet_block_and_nonce
+// The exact vector and valid typed runtime challenge are retained; the Python
+// helper's 2^256 difficulty input is outside the native u64 difficulty API.
 #[test]
 fn runtime_prefix_and_authenticated_reference_vector() {
     let mut hot = [0; 32];
@@ -139,6 +143,8 @@ fn runtime_prefix_and_authenticated_reference_vector() {
     assert!(registration_prefix(NetUid(u16::MAX), H256([1; 32]), HOT, COLD).is_ok());
 }
 
+// pyt: unit/test_pow_registration.py::test_effective_difficulty_preserves_team_floor
+// Python's None storage defaults become the native metadata's typed defaults.
 #[test]
 fn config_and_effective_bounds() {
     for workers in [0, 33, u8::MAX] {
@@ -192,6 +198,8 @@ fn config_and_effective_bounds() {
     }
 }
 
+// pyt: unit/test_pow_registration.py::test_public_miner_returns_fresh_intent_without_a_signing_key
+// PowProof replaces the Python intent return; the facade bridge has its own test.
 #[tokio::test]
 async fn public_cpu_proof_and_snapshot_pinned_admission() {
     let (client, fake) = fixture().await;
@@ -223,6 +231,7 @@ async fn public_cpu_proof_and_snapshot_pinned_admission() {
     );
 }
 
+// pyt: unit/test_pow_registration.py::test_miner_refuses_disabled_or_already_registered_subnets
 #[tokio::test]
 async fn rejects_disabled_uid_zero_and_zero_limit_before_workers() {
     let (client, fake) = fixture().await;
@@ -273,6 +282,9 @@ async fn rejects_disabled_uid_zero_and_zero_limit_before_workers() {
     ));
 }
 
+// pyt: unit/test_pow_registration.py::test_miner_waits_for_next_block_when_registration_capacity_is_used
+// The native test observes noncompletion and the newly admitted block rather
+// than replacing asyncio.sleep and asserting its exact call list.
 #[tokio::test(start_paused = true)]
 async fn waits_for_capacity_and_last_registration_block() {
     let _clock = ManualClock::new();
@@ -311,6 +323,7 @@ async fn waits_for_capacity_and_last_registration_block() {
     }
 }
 
+// pyt: unit/test_pow_registration.py::test_miner_rechecks_solution_at_pool_age_boundary
 #[tokio::test]
 async fn pool_age_four_accepted_five_remined() {
     for advance in [4, 5] {
@@ -430,6 +443,9 @@ async fn winning_proof_rechecks_admission_and_cpu_seal() {
     }
 }
 
+// pyt: unit/test_pow_registration.py::test_long_gpu_search_refreshes_at_twelve_seconds_without_batch_head_polls
+// CPU/fake-GPU pools share this search loop. Subscription-driven early refresh
+// and the native final same-head read intentionally change Python's RPC count.
 #[tokio::test(start_paused = true)]
 async fn refreshes_after_twelve_seconds_without_polling_empty_batches() {
     let _clock = ManualClock::new();
@@ -588,6 +604,7 @@ async fn native_high_difficulty_timeout_and_pre_cancel() {
     assert_eq!(fake.requests().len(), before);
 }
 
+// pyt: unit/test_pow_registration.py::test_miner_does_not_return_solution_after_deadline
 #[tokio::test]
 async fn validation_cannot_return_after_timeout_or_cancellation() {
     for cancel in [false, true] {
@@ -716,6 +733,11 @@ mod gpu_tests {
             .await
     }
 
+    // pyt: unit/test_pow_registration.py::test_miner_rejects_duplicate_or_cpu_device_selection
+    // pyt: unit/test_pow_registration.py::test_auto_discovers_all_gpus_and_explicit_selection_is_forwarded
+    // Device IDs are usize, so a negative ID cannot enter this typed API.
+    // None selects every discovered GPU in the pinned core; the factory test
+    // below separately observes forwarding of an explicit device list.
     #[test]
     fn gpu_configuration_rejects_invalid_selections_and_unbounded_batches() {
         for (backend, ids, attempts) in [
@@ -736,7 +758,10 @@ mod gpu_tests {
                 .is_err()
             );
         }
-        assert!(GpuOptions::default().validate().is_ok());
+        let defaults = GpuOptions::default();
+        assert_eq!(defaults.backend, PowBackend::Auto);
+        assert_eq!(defaults.device_ids, None);
+        assert!(defaults.validate().is_ok());
         assert!(
             GpuOptions {
                 backend: PowBackend::Gpu,
@@ -748,6 +773,7 @@ mod gpu_tests {
         );
     }
 
+    // pyt: unit/test_pow_registration.py::test_explicit_gpu_requires_hardware_and_cpu_skips_discovery
     #[test]
     fn automatic_fallback_does_not_hide_explicit_selection_or_driver_failure() {
         let options = GpuOptions::default();
@@ -808,6 +834,9 @@ mod gpu_tests {
         );
     }
 
+    // pyt: unit/test_pow_registration.py::test_gpu_miner_preserves_device_selection_and_pow_only_admission
+    // Proof output excludes Python intent mining settings; the explicit options
+    // reach the selected factory, while the CLI retains its constructor fields.
     #[tokio::test]
     async fn gpu_worker_initializes_and_mines_off_runtime_with_exact_public_challenge() {
         let (client, fake) = fixture().await;
@@ -877,6 +906,7 @@ mod gpu_tests {
         assert_eq!(dropped.load(Ordering::SeqCst), 1);
     }
 
+    // pyt: unit/test_pow_registration.py::test_gpu_driver_cannot_return_a_corrupt_proof
     #[tokio::test]
     async fn gpu_proofs_still_reject_wrong_seals_and_out_of_range_nonces() {
         for mode in 0..2 {
@@ -910,6 +940,7 @@ mod gpu_tests {
         }
     }
 
+    // pyt: unit/test_pow_registration.py::test_gpu_solution_is_remined_when_difficulty_increases
     #[tokio::test]
     async fn gpu_winners_recheck_difficulty_and_canonical_hash() {
         for reorg in [false, true] {

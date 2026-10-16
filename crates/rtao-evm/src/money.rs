@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Exact EVM wei to native rao conversion.
 
 use crate::{EvmError, Result};
@@ -33,6 +34,8 @@ mod tests {
     use super::*;
 
     #[test]
+    // pyt: tests/unit/test_evm.py::TestWeiConversion::test_balance_to_wei_and_back
+    // pyt: tests/unit/test_evm.py::TestWeiConversion::test_wei_to_balance_truncates_sub_rao_dust
     fn conversions_truncate_only_sub_rao_dust_and_check_native_limits() -> Result<()> {
         let balance = DynBalance::from_rao(1_500_000_000, NetUid::ROOT);
         assert_eq!(

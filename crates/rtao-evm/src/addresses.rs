@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/addresses.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Native account mirrors and truncated EVM origins.
 
 use crate::{EvmError, Result};
@@ -71,6 +72,9 @@ mod tests {
     use super::*;
 
     #[test]
+    // pyt: tests/unit/test_evm.py::TestAddressMath::test_h160_to_ss58
+    // pyt: tests/unit/test_evm.py::TestAddressMath::test_ss58_to_pubkey_round_trip
+    // pyt: tests/unit/test_evm.py::TestAddressMath::test_ss58_to_h160_truncated_is_twenty_bytes
     fn pinned_python_mirrors_and_native_truncation() -> Result<()> {
         for (address, expected) in [
             (

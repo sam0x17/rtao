@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/evm/precompiles.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! The pinned Bittensor precompile catalog and dynamic Solidity ABI helpers.
 //!
 //! ABI JSON is embedded directly from the reviewed upstream vendor directory.
@@ -1159,6 +1160,7 @@ mod tests {
     }
 
     #[test]
+    // pyt: tests/unit/test_evm.py::TestVendoredAbiSync::test_every_registered_abi_file_is_vendored
     fn catalog_embeds_every_registered_abi_and_runtime_index() {
         let expected = [
             ("balance-transfer", 2048),

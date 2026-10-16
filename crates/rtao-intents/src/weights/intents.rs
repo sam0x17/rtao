@@ -792,4 +792,6 @@ mod tests {
             "All weights are zero; nothing to reveal."
         );
     }
+
+    include!("null_weights_tests.rs");
 }
