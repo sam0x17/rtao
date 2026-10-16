@@ -10,8 +10,8 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "machine": "AMD EPYC 9V74 80-Core Processor",
-        "measured_unix_seconds": 1792169650,
+        "machine": "AMD EPYC 7763 64-Core Processor",
+        "measured_unix_seconds": 1792173125,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1461,19 +1461,19 @@
             "crates/rtao-runtime/Cargo.toml": "cc16de476efe18f5248642e954cc8205220cee9efa573a7bd0c1b77daf5d4c89",
             "crates/rtao-signer/Cargo.toml": "460670e226377cee712f242ccb4b9a64e91488b381cf9fc070f14402e04e8fcc",
             "crates/rtao-testkit/Cargo.toml": "55e5981296eb14f4bf5292024c605e74d7cfb4b71fee863bf4b2ca5f5c609837",
-            "crates/rtao-tx/Cargo.toml": "cced832ba99005d13450d3611b9254c2d1e832d5427fe18dbb4dc8a80313d6ec",
+            "crates/rtao-tx/Cargo.toml": "e52989ec886ebe9c951c8ef6e90c9cab8e9881ecdfe41ca110bb681b4477e8bf",
             "crates/rtao-wallet/Cargo.toml": "83d6a456e2c159f029f1bc628373f5e5b36fc75d422ca388cbf0641a22841146",
             "crates/rtao/Cargo.toml": "aa67a88fc1148cca1f054992f1f54c1f54f3074b68c5374c16692d5e0001f2c6",
             "upstream.toml": "8d3492e1566a13307ba67a0073dee607babe320a3d56d7d040c6f2f810886192",
             "xtask/Cargo.toml": "c17a680dd0a1e0b3b50efad4fd24fee55b71a6d02a9b661df66165e6396f255e"
           },
-          "dependency_inputs_sha256": "a0e236e541f7f0115ad13d7c1b230c1b2e71992040ca773ce4e04994ae3dd847",
+          "dependency_inputs_sha256": "53bda48f9a9e51b391a4877d1335e50425beba5f878086d117717e958edc1125",
           "dirty": false,
-          "head_commit": "eebc9a368eccf63f7e8b47825c006d773f6cfe4c"
+          "head_commit": "cf051182598e33c05f4c814e87fe1f98ffa162f4"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "2e043340ddf8e7cf34292be82b625779825270d119ef12573eb06f74708444b9"
+      "sha256": "5c0386fb2256ccc4d6ea1ca2d22622706e9f8e9a5cb445d4277f9629d7b8f81d"
     }
   ],
   "core": {
