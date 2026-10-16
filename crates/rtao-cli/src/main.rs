@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/prompt.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! The rtao command line application.
 
 #![deny(missing_docs)]
@@ -159,7 +160,7 @@ async fn run() -> Result<(), CliError> {
         .await?;
         prepared_context = Some(app);
     }
-    let mut invocation = match prepared_context.as_mut() {
+    let parsed_invocation = match prepared_context.as_mut() {
         Some(app) => application::parse_with_context(command, argv, app, prompt_history),
         None => application::parse_with_prompt_history(
             command,
@@ -168,7 +169,39 @@ async fn run() -> Result<(), CliError> {
             &mut prompting,
             prompt_history,
         ),
-    }?;
+    };
+    let mut invocation = match parsed_invocation {
+        Ok(invocation) => invocation,
+        Err(mut error) => {
+            if error.help.is_some() {
+                // Missing-input acquisition owns a diagnostic, including JSON
+                // before any AppContext exists. Other clap errors keep their
+                // original rendering and exit status.
+                let output = rtao_cli::output::Output::new(
+                    rtao_cli::output::OutputOptions {
+                        json_mode: context.json || replay_args.iter().any(|arg| arg == "--json"),
+                        quiet: context.quiet
+                            || replay_args
+                                .iter()
+                                .any(|arg| arg == "--quiet" || arg == "-q"),
+                        network: None,
+                    },
+                    Arc::new(rtao_cli::output::ProcessSink),
+                );
+                output
+                    .error(
+                        &error.message,
+                        DiagnosticContext {
+                            help: error.help.as_deref(),
+                            ..Default::default()
+                        },
+                    )
+                    .map_err(|failure| CliError::failure(failure.to_string()))?;
+                error.message.clear();
+            }
+            return Err(error);
+        }
+    };
     let command_path = application::command_path(&completion_tree, &invocation.matches);
     let Some((name, matches)) = invocation.matches.subcommand() else {
         return Err(CliError::input("missing command"));

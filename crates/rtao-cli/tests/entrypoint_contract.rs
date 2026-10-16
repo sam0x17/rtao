@@ -60,15 +60,48 @@ fn help_version_and_missing_raw_target_have_real_statuses() -> Result<(), Box<dy
     let version = root.command().arg("--version").output()?;
     assert!(version.status.success());
     assert!(String::from_utf8(version.stdout)?.contains(rtao::core::BITTENSOR_CORE_TAG));
-    let missing = root.command().args(["call", "--json"]).output()?;
+    let help = "pass the options explicitly, or run on a terminal to be prompted";
+    for (args, message) in [
+        (vec!["call", "--json"], "missing required option: `target`"),
+        (vec!["--json", "call"], "missing required option: `target`"),
+        (
+            vec!["wallet", "decrypt", "--json"],
+            "missing required option: `--ciphertext`",
+        ),
+        (
+            vec!["misc", "weights", "reveal", "--json"],
+            "missing required options: `--netuid`, `--uids`, `--weights`, `--salt`",
+        ),
+    ] {
+        let missing = root.command().args(args).output()?;
+        assert_eq!(missing.status.code(), Some(2));
+        assert!(missing.stdout.is_empty());
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&missing.stderr)?,
+            serde_json::json!({"error":message,"help":help})
+        );
+    }
+    let missing = root.command().args(["call", "--quiet"]).output()?;
     assert_eq!(missing.status.code(), Some(2));
     assert!(missing.stdout.is_empty());
-    assert!(
-        String::from_utf8(missing.stderr)?
-            .to_ascii_lowercase()
-            .contains("target")
-    );
+    let diagnostic = String::from_utf8(missing.stderr)?;
+    assert!(diagnostic.contains("error: missing required option: `target`"));
+    assert!(diagnostic.contains(help));
+    assert!(!diagnostic.contains("skip the prompts"));
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
+
+    // Configured machine output follows the same path without a CLI flag.
+    let config = root.0.join("shared-0.json");
+    std::fs::write(&config, br#"{"json":true}"#)?;
+    let missing = root.command().arg("call").output()?;
+    assert_eq!(missing.status.code(), Some(2));
+    assert!(missing.stdout.is_empty());
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&missing.stderr)?,
+        serde_json::json!({"error":"missing required option: `target`","help":help})
+    );
+    assert_eq!(std::fs::read(&config)?, br#"{"json":true}"#);
+    std::fs::remove_file(config)?;
     Ok(())
 }
 

@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/main.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/prompt.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Extensible command-tree construction and hidden compatibility spellings.
 
 use crate::globals::root_globals;
@@ -487,6 +488,7 @@ fn parse_required(
             );
             spec.positional = arg.is_positional();
             spec.help = arg.get_help().map(ToString::to_string);
+            spec.placeholder = required_value_placeholder(arg);
             if app.is_some()
                 && let Some(flow) = required_address_flow(&path, &spec.field)
             {
@@ -518,6 +520,18 @@ fn parse_required(
             break;
         }
     }
+    let required_switch = required_boolean_switch(&path)
+        .filter(|(yes, no)| !selected_matches.get_flag(yes) && !selected_matches.get_flag(no));
+    if let Some((yes, _)) = required_switch {
+        let mut spec = PromptSpec::new(yes, format!("--{yes}"));
+        spec.placeholder = Some("y/n".into());
+        spec.help = selected_command
+            .get_arguments()
+            .find(|arg| arg.get_id().as_str() == yes)
+            .and_then(Arg::get_help)
+            .map(ToString::to_string);
+        required.push(spec);
+    }
     if required.is_empty() {
         return Err(clap_error(
             command
@@ -534,6 +548,7 @@ fn parse_required(
         argv: Vec<std::ffi::OsString>,
         app: Option<&'a crate::context::AppContext>,
         picker_error: Option<crate::error::CliError>,
+        required_switch: Option<(&'static str, &'static str)>,
     }
     impl PromptResolver for Parser<'_> {
         fn parse(
@@ -541,6 +556,18 @@ fn parse_required(
             spec: &PromptSpec,
             raw: &str,
         ) -> Result<serde_json::Value, PromptValidation> {
+            if let Some((yes, no)) = self.required_switch
+                && spec.field == yes
+            {
+                let enabled = match raw.to_ascii_lowercase().as_str() {
+                    "y" | "yes" | "t" | "true" | "on" | "1" => true,
+                    "n" | "no" | "f" | "false" | "off" | "0" => false,
+                    _ => return Err(PromptValidation::Message("expected y or n".into())),
+                };
+                self.argv
+                    .push(format!("--{}", if enabled { yes } else { no }).into());
+                return Ok(serde_json::Value::Bool(enabled));
+            }
             let command = &self
                 .parsers
                 .iter()
@@ -621,14 +648,16 @@ fn parse_required(
         argv: argv.clone(),
         app,
         picker_error: None,
+        required_switch,
     };
+    let mut acquired_history = crate::prompt::PromptHistory::default();
     let acquisition = fill_missing(
         &context,
         terminal,
         &required,
         &mut serde_json::Map::new(),
         &mut parser,
-        &mut history,
+        &mut acquired_history,
     );
     if let Err(error) = acquisition {
         return Err(parser
@@ -637,12 +666,22 @@ fn parse_required(
             .unwrap_or_else(|| crate::error::CliError {
                 code: error.exit_code(),
                 message: error.to_string(),
-                help: None,
+                help: matches!(&error, PromptError::MissingRequired(_)).then(|| {
+                    "pass the options explicitly, or run on a terminal to be prompted".into()
+                }),
             }));
     }
     let matches = command
         .try_get_matches_from(&parser.argv)
         .map_err(clap_error)?;
+    // Dispatch argv owns exact canonical flags, including the selected half
+    // of required bool pairs. Rejects never enter public replay history.
+    history.record_answers(
+        parser.argv[argv.len()..]
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect(),
+    );
     Ok(Invocation {
         matches,
         argv: parser.argv,
@@ -672,8 +711,8 @@ pub fn finish_prompts(
     Ok(())
 }
 
-// This bounded policy covers the reviewed non-EVM required-address callers.
-// Own-key defaults, optional addresses and stored-EVM-key callbacks stay separate.
+// Required destination addresses use public pickers, including the read-only
+// EVM pubkey route. Own-key defaults and optional addresses stay separate.
 fn required_address_fields(path: &[String]) -> &'static [(&'static str, bool)] {
     let route = path.iter().map(String::as_str).collect::<Vec<_>>();
     match route.as_slice() {
@@ -685,6 +724,7 @@ fn required_address_fields(path: &[String]) -> &'static [(&'static str, bool)] {
         ["proxy", "add"] => &[("delegate_ss58", false)],
         ["proxy", "execute"] => &[("delegate_ss58", false), ("real_ss58", false)],
         ["proxy", "book", "add"] => &[("address", false)],
+        ["evm", "pubkey"] => &[("ss58", false)],
         _ => &[],
     }
 }
@@ -702,6 +742,9 @@ fn required_address_flow(path: &[String], field: &str) -> Option<crate::prompt::
         })
 }
 
+// Exact installed routes with promptable required arguments and local wallet
+// signing. Generated intent fields have their own signer-first acquisition.
+// Stored-EVM-key callbacks deliberately do not confirm a native signing wallet.
 fn required_wallet_tier(path: &[String]) -> Option<&'static str> {
     let route = path.iter().map(String::as_str).collect::<Vec<_>>();
     match route.as_slice() {
@@ -710,7 +753,17 @@ fn required_wallet_tier(path: &[String]) -> Option<&'static str> {
             "wallet",
             "swap-hotkey" | "swap-coldkey" | "announce-coldkey-swap",
         ]
-        | ["proxy", "add" | "execute"] => Some("tx"),
+        | ["proxy", "add" | "execute"]
+        | ["call"]
+        | ["root", "swap"]
+        | ["stake", "set-auto"]
+        | ["stake", "child", "set" | "revoke" | "take"]
+        | ["conviction", "mode" | "accept"]
+        | ["hparams", "stake-burn" | "trim-null"]
+        | ["misc", "weights", "set" | "commit" | "reveal"]
+        | ["misc", "axon", "set" | "reset"]
+        | ["misc", "collateral", "add" | "set-min"]
+        | ["evm", "associate"] => Some("tx"),
         _ => None,
     }
 }
@@ -759,8 +812,20 @@ pub fn pending_prompt_reserved(
     parsed: &clap::ArgMatches,
 ) -> Result<Vec<&'static str>, crate::error::CliError> {
     match parsed.subcommand() {
+        Some(("call", _)) => Ok(vec!["signer_backend"]),
         Some(("proxy", group)) => crate::commands::proxy::reserved(group),
         Some(("addr", group)) => Ok(crate::commands::addresses::reserved(group)),
+        Some(("stake", group)) => crate::commands::stake::reserved(group),
+        Some(("root", group)) => crate::commands::root::reserved(group),
+        Some(("hparams", group)) => crate::commands::hparams::reserved(group),
+        Some(("conviction", group)) => crate::commands::conviction::reserved(group),
+        Some(("collateral", group)) => crate::commands::collateral::reserved(group),
+        Some(("misc" | "utils", group)) => match group.subcommand() {
+            Some(("collateral", group)) => crate::commands::collateral::reserved(group),
+            _ => Ok(Vec::new()),
+        },
+        #[cfg(feature = "evm")]
+        Some(("evm", group)) => crate::commands::evm::reserved(group),
         _ => Ok(Vec::new()),
     }
 }
@@ -842,6 +907,56 @@ fn confirm_required_wallet_tier(
     argv.push("--wallet".into());
     argv.push(app.globals.wallet_name.clone().into());
     Ok(())
+}
+
+// These source-required Python booleans use paired no-value flags in clap.
+// Other alternative groups remain owned by the final command parser.
+fn required_boolean_switch(path: &[String]) -> Option<(&'static str, &'static str)> {
+    let route = path.iter().map(String::as_str).collect::<Vec<_>>();
+    match route.as_slice() {
+        ["conviction", "mode"] => Some(("perpetual", "decaying")),
+        ["conviction", "accept"] => Some(("allow", "reject")),
+        _ => None,
+    }
+}
+
+// Describe the concrete value parser that validates and ultimately constructs
+// the typed answer. Custom string parsers retain their own validation messages.
+fn required_value_placeholder(arg: &Arg) -> Option<String> {
+    use std::any::TypeId;
+    let value_type = arg.get_value_parser().type_id();
+    if value_type == TypeId::of::<bool>() {
+        Some("y/n".into())
+    } else if [
+        TypeId::of::<u8>(),
+        TypeId::of::<u16>(),
+        TypeId::of::<u32>(),
+        TypeId::of::<u64>(),
+        TypeId::of::<u128>(),
+        TypeId::of::<usize>(),
+        TypeId::of::<i8>(),
+        TypeId::of::<i16>(),
+        TypeId::of::<i32>(),
+        TypeId::of::<i64>(),
+        TypeId::of::<i128>(),
+        TypeId::of::<isize>(),
+    ]
+    .iter()
+    .any(|candidate| value_type == *candidate)
+    {
+        Some("integer".into())
+    } else if value_type == TypeId::of::<f32>() || value_type == TypeId::of::<f64>() {
+        Some("number".into())
+    } else {
+        let choices = arg.get_possible_values();
+        (!choices.is_empty()).then(|| {
+            choices
+                .iter()
+                .map(|choice| choice.get_name())
+                .collect::<Vec<_>>()
+                .join("|")
+        })
+    }
 }
 
 fn relax_required(mut command: Command) -> Command {
