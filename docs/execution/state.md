@@ -39,8 +39,8 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The published source map and generated matrix agree at 297/357 reconciled,
-60 pending, with 20 pending e2e mappings and 68 divergences. Passing CI does not
+The published source map and generated matrix agree at 298/357 reconciled,
+59 pending, with 20 pending e2e mappings and 68 divergences. Passing CI does not
 reconcile the remaining source rows or accept a milestone. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
 with source review and substantial validation on free hosted CI.
@@ -65,16 +65,28 @@ weights source row stays pending; native checked u64 balances and raw-weight
 semantics are unchanged. Bounded proposal/review evidence remains under the
 existing recovery root, with no build output or extra temporary directory.
 
-### Subsequent source disposition, reports awaiting hosted refresh
+### Subsequent source disposition and verified report refresh
 
 Complete independent review reconciles `codegen/check.py`: all six functions,
 declarations, native producers/consumers and gate callers have explicit homes.
 The metadata-name/Unknown-classification and Python-strip-nonblank repairs both
 have exact PASS records on `7bb8c0b`. Native pinned regeneration and Result/CLI
 errors replace Python live generation and stdout conventions; fresh Python,
-oracle and live drift remain unverified. The source map reaches 298/357
-reconciled, 59 pending; the generated matrix remains at 297/60 until authenticated
-hosted refresh. Other pending rows, strict M8 and milestone status are unchanged.
+oracle and live drift remain unverified.
+
+Hosted [38859189354](https://github.com/sam0x17/rtao/actions/runs/38859189354)
+passed full source parity at clean `6c4f82c0618c81b12784eefb97875b2ad379f724`.
+Artifact 12029210729 is 58,018 bytes, SHA256
+`da3e79b71704bf997cc96d26aa544949de9330f4a1f47dc0d8d5e736c8802159`.
+Authenticated inspection and independent refetch supply exactly four adopted
+reports. The only matrix change is the reviewed check.py row, reaching 298/357
+reconciled and 59 pending. All 23 dependency inputs, role counts, host flags,
+20 pending e2e mappings, 68 divergences and other compatibility claims remain
+unchanged. Bounded proofs are `6c4f82c-report-inspection.json` and
+`6c4f82c-report-adoption.json`; no archive or extraction tree is retained.
+Ordinary [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
+at `50b7239` remains the weight-fix validation checkpoint. Other pending rows,
+strict M8 and milestone status are unchanged.
 
 ## Prior integrated client checkpoint, 2026-10-15
 
