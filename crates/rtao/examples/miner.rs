@@ -13,6 +13,7 @@ struct Args {
     neuron: NeuronConfig,
 }
 struct EchoMiner;
+#[docify::export(miner_implementation)]
 impl Miner for EchoMiner {
     type State = serde_json::Value;
     async fn on_start(&self, _cx: &NeuronCx, state: &StateCell<Self::State>) -> anyhow::Result<()> {
@@ -27,6 +28,7 @@ impl Miner for EchoMiner {
             .layer(Extension(state))
     }
 }
+#[docify::export(miner_handler)]
 async fn echo(
     VerifiedCaller(_caller): VerifiedCaller,
     Extension(state): Extension<StateCell<serde_json::Value>>,

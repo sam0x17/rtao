@@ -163,6 +163,33 @@ Formatting and applicability pass. This function is outside the `60a20ee`
 checkpoint and remains unexecuted; the next combined total becomes 3,078.
 The multisig-safety source row stays pending.
 
+### Compiled examples and current authentication review
+
+The next source batch wires pinned Docify 0.4.1 into the validator, miner and
+owner examples and generated guides. The README template compiles to the
+existing README bytes. Explicit source dependencies keep cached excerpts fresh.
+Docify is a facade dev dependency and a dependency of unpublished xtask; it adds
+no normal dependency to shipped client profiles. The existing free lock-refresh
+lane has a bounded first-Docify resolver preserving old package identities,
+metadata and resolved dependency edges while allowing only the two Docify edges
+and their reviewed candidate closure. Independent review found a raw-reference
+comparison issue; the root correction compares resolved identities so Cargo's
+qualification of unchanged references does not invent an edge change.
+
+All 13 adopted source after-images, direct formatting and script syntax checks
+pass. Lock resolution, candidate dependency review, regenerated reports and
+hosted compilation/tests remain pending. Current compatibility reports predate
+these manifest changes. No generated lock or report is hand-edited. The current
+`60a20ee` ordinary run validates the preceding sources only. Offline doc examples
+and broader M9 documentation completion remain separate.
+
+A fresh reader also completed two cold reads of all five current authentication
+sources at `6fba8dc`, finding no surviving concrete implementation defect within
+their stated contracts. All five hashes match the preceding hosted checkpoint's
+source. [M3](../security/m3.md#current-authentication-source-review-2026-10-16)
+records the exact identities and API/deployment limits. This review runs no
+validation and does not accept M3 or resolve M2-S02.
+
 ### Command review and required-address follow-up, execution pending
 
 The current source batch carries root command summaries and stages through the
@@ -1756,8 +1783,11 @@ template preflight passes: real generation, Rust 1.89 Clippy, both binaries,
 integration-executable linking, consumer doctor, and audited project cleanup.
 Its result explicitly records native_only=true and milestone_acceptance=false.
 The complete book also renders with checksum-pinned mdbook 0.5.4. Generated
-localnet/image and hosted acceptance remain required. The local security source review is recorded
-in `docs/security/m3.md`. No M3 completion checkbox or release is claimed.
+localnet/image coverage was unverified at that preparation checkpoint and is
+optional under Q30. Applicable hosted client checks remain required. The local
+security source review is recorded in `docs/security/m3.md`; the current
+source review and hosted evidence are tracked separately above. No M3
+completion checkbox or release is claimed.
 
 The independent filing audit found three required code corrections. Ledger #296
 now contains the price-unit correction at 8645ebdc31d188a722e22396d26fb52144246da4,

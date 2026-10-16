@@ -8,6 +8,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+docify.workspace = true
 anyhow = "1.0"
 blake2 = "0.10"
 blake3 = "1.8"

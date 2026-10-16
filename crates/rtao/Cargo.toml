@@ -63,6 +63,7 @@ serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
+docify.workspace = true
 rtao-testkit.workspace = true
 anyhow.workspace = true
 axum.workspace = true
