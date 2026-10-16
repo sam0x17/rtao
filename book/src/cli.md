@@ -18,6 +18,12 @@ review; unattended JSON or piped sessions must supply it for a mutation.
 approval can leave an operation pending, so inspect the result before treating
 the underlying call as executed.
 
+`--signer extension` still uses terminal transaction review and confirmation
+before requesting a signature in the wallet popup. `--yes` skips that terminal
+prompt; it does not approve the wallet signature request. JSON or piped
+mutations need `--yes` as well. This native confirmation rule is stricter than
+btcli's popup-only transaction approval (D-068).
+
 Balances use checked native `u64` rao. Amounts below one rao, negative amounts
 and values outside that range are refused. EVM contract integers and public
 book recovery coordinates have their own domains.
@@ -61,6 +67,14 @@ can select a source position and fill both its hotkey and subnet. Destination
 selection happens before an amount prompt. `rtao stake wizard` prints the
 movement guide without connecting to a node. An exit across multiple hotkeys
 uses one atomic batch and the ordinary shielding policy.
+
+After a successful root unstake with an explicit hotkey and without `--claim`,
+rtao checks for remaining basket yield. A claim pays that validator's whole
+entitlement. Interactive sessions can offer a separate claim, which still
+requires its ordinary transaction review. `--yes` and unattended sessions
+never claim automatically; visible human output gives guidance. The lookup
+and guidance use the account that dispatched the unstake, including proxy
+routing (D-073).
 
 ## Other groups
 

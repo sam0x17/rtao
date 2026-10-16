@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Shared mutation context through a real Client, SCALE metadata and executor.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use rtao::{
@@ -2333,6 +2334,367 @@ async fn saved_semantic_identity_error_stays_primary_when_source_close_also_fail
     client.close().await;
     Ok(())
 }
+// These public-only sources exercise context/executor ordering without opening
+// a device, browser, camera or external signing transport.
+struct NoticeMemberFactory<'a>(&'a MemberFactory);
+impl rtao_cli::call::RawSignerFactory for NoticeMemberFactory<'_> {
+    fn source<'a>(
+        &'a self,
+        ctx: &'a AppContext,
+        selection: &'a rtao_cli::call::SigningSelection,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            let public = rtao_cli::call::RawSignerFactory::source(self.0, ctx, selection).await?;
+            Ok(Arc::new(LabelOnlyKeys { public }) as Arc<dyn DynKeySource>)
+        })
+    }
+    fn release<'a>(
+        &'a self,
+        selection: &'a rtao_cli::call::SigningSelection,
+        keys: &'a dyn DynKeySource,
+        success: bool,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        rtao_cli::call::RawSignerFactory::release(self.0, selection, keys, success)
+    }
+}
+
+#[tokio::test]
+async fn shield_signing_notices_use_actual_backends_and_respect_machine_quiet_and_preview()
+-> TestResult {
+    for (backend, expected) in [
+        (
+            "vault",
+            "MEV-shielded vault signing: two scans, ~90 seconds total — have the phone unlocked with Vault's scanner open",
+        ),
+        (
+            "extension",
+            "MEV-shielded extension signing: two approvals, ~90 seconds total — have the extension unlocked",
+        ),
+        (
+            "ledger",
+            "MEV-shielded Ledger signing: two approvals on the device, ~90 seconds total — keep the Polkadot app open",
+        ),
+        (
+            "\u{1c}\u{85}LeDgEr\u{1f}",
+            "MEV-shielded Ledger signing: two approvals on the device, ~90 seconds total — keep the Polkadot app open",
+        ),
+    ] {
+        for (mode, shield, dry, visible) in [
+            (None, true, false, true),
+            (Some("--json"), true, false, false),
+            (Some("--quiet"), true, false, false),
+            (Some("--dry-run"), true, true, false),
+            (None, false, false, false),
+        ] {
+            let (client, chain, keys) = fixture(1_000_000_000).await?;
+            chain.mutate_state(|state| {
+                state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))
+            })?;
+            let mut flags = vec![
+                "--yes",
+                "--signer",
+                backend,
+                if shield {
+                    "--mev-shield"
+                } else {
+                    "--no-mev-shield"
+                },
+            ];
+            if let Some(mode) = mode {
+                flags.push(mode);
+            }
+            let (ctx, sink, reads) = context(&flags)?;
+            let public = Arc::new(Keys {
+                key: keys.key.clone(),
+                unlocks: keys.unlocks.clone(),
+            });
+            let source = LabelOnlyKeys { public };
+            let result = ctx
+                .submit_with_keys_options(
+                    &client,
+                    &Preview { blocked: false },
+                    &source,
+                    Default::default(),
+                )
+                .await;
+            if dry {
+                assert!(result?.is_none());
+            } else {
+                assert!(result.is_err());
+            }
+            let stderr = sink.text(Stream::Stderr)?;
+            assert_eq!(
+                stderr.matches(expected).count(),
+                usize::from(visible),
+                "{backend} {mode:?}"
+            );
+            assert_eq!(
+                stderr.matches("~90 seconds total").count(),
+                usize::from(visible)
+            );
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+            assert_eq!(reads.load(Ordering::SeqCst), 0);
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(
+                chain
+                    .requests()
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            client.close().await;
+        }
+    }
+    // A saved member's backend wins over the invocation-wide Vault setting.
+    let keys = members()?;
+    let (client, chain, _) = fixture(1_000_000_000).await?;
+    chain.mutate_state(|state| {
+        state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))
+    })?;
+    let (mut ctx, sink) = saved_context(&keys, &["--yes", "--mev-shield"], 1)?;
+    ctx.globals.signer_backend = Some("vault".into());
+    ctx.globals.signatories = vec![format!("{}=ledger", keys[0].key.account())];
+    let inner = factory(&keys);
+    let source = NoticeMemberFactory(&inner);
+    assert!(
+        ctx.submit_saved_with_factory(
+            &client,
+            &Preview { blocked: false },
+            false,
+            None,
+            &source,
+            &CallCache::default(),
+        )
+        .await
+        .is_err()
+    );
+    let stderr = sink.text(Stream::Stderr)?;
+    assert_eq!(
+        stderr
+            .matches("MEV-shielded Ledger signing: two approvals on the device")
+            .count(),
+        1
+    );
+    assert!(!stderr.contains("MEV-shielded vault signing"));
+    assert_eq!(inner.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(*inner.releases.lock().map_err(|_| "release")?, vec![false]);
+    assert!(
+        keys.iter()
+            .all(|key| key.unlocks.load(Ordering::SeqCst) == 0)
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_without_retry()
+-> TestResult {
+    for (retry, expected) in [
+        (Some("12"), "wait 12 seconds, then retry"),
+        (
+            Some("Wed, 21 Oct 2037 07:28:00 GMT"),
+            "retry after Wed, 21 Oct 2037 07:28:00 GMT",
+        ),
+        (
+            Some(""),
+            "reduce the request or connection rate, then retry",
+        ),
+        (None, "reduce the request or connection rate, then retry"),
+    ] {
+        let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+            "code":-32005,"message":"slow down",
+            "data":{"policy":"rate","retry_after":retry},
+        }))
+        .ok_or("typed gateway policy")?;
+        let message = policy.to_string();
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        chain.queue_transport_error(
+            "chain_getBlockHash",
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                policy.clone(),
+            )))),
+        );
+        let (ctx, _, reads) = context(&["--yes", "--no-mev-shield"])?;
+        let error = ctx
+            .submit_with(&client, &Preview { blocked: false }, &keys, false, None)
+            .await
+            .err()
+            .ok_or("typed planning policy refusal")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(error.message, message);
+        assert_eq!(error.help.as_deref(), Some(expected));
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        client.close().await;
+
+        // These public execute_query calls distinguish the outer historical
+        // Client::at mapping from the dispatched ReadError::Client mapping.
+        for (block, method) in [
+            (Some(42), "chain_getBlockHash"),
+            (None, "state_queryStorageAt"),
+        ] {
+            let (client, chain, keys) = fixture(1_000_000_000).await?;
+            let start = chain.requests().len();
+            chain.queue_transport_error(
+                method,
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                    policy.clone(),
+                )))),
+            );
+            let (ctx, sink, reads) = context(&["--json"])?;
+            let request = rtao_cli::commands::generated::QueryRequest {
+                name: "balance".parse()?,
+                params: serde_json::Map::from_iter([(
+                    "coldkey_ss58".into(),
+                    json!(keys.key.account()),
+                )]),
+                block,
+            };
+            let error =
+                rtao_cli::commands::generated::execute_query(&client, &request, &ctx.output)
+                    .await
+                    .err()
+                    .ok_or("public query policy refusal")?;
+            assert_eq!(error.code, 1);
+            assert_eq!(error.message, message);
+            assert_eq!(error.help.as_deref(), Some(expected));
+            let requests = chain.requests();
+            let attempts = requests
+                .iter()
+                .skip(start)
+                .filter(|request| request.method == method)
+                .collect::<Vec<_>>();
+            assert_eq!(attempts.len(), 1, "{block:?}: {method}");
+            if block.is_some() {
+                assert_eq!(attempts[0].params, json!([42]));
+                assert!(
+                    requests
+                        .iter()
+                        .skip(start)
+                        .all(|request| request.method != "state_queryStorageAt")
+                );
+            } else {
+                // Typed View::storage goes through fetch and the snapshot's
+                // one-key state_queryStorageAt batch, even for a single account.
+                assert_eq!(
+                    attempts[0].params[0]
+                        .as_array()
+                        .ok_or("storage batch")?
+                        .len(),
+                    1
+                );
+                assert!(
+                    attempts[0].params[1]
+                        .as_str()
+                        .is_some_and(|hash| hash.starts_with("0x") && hash.len() == 66)
+                );
+                assert!(
+                    requests
+                        .iter()
+                        .skip(start)
+                        .all(|request| request.method != "state_getStorage")
+                );
+            }
+            assert!(
+                requests
+                    .iter()
+                    .skip(start)
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            assert_eq!(reads.load(Ordering::SeqCst), 0);
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(sink.text(Stream::Stdout)?.is_empty());
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+            client.close().await;
+        }
+
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        chain.queue_transport_error(
+            "system_health",
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                policy,
+            )))),
+        );
+        let (ctx, sink, _) = context(&["--json"])?;
+        let error = ctx
+            .run_with(&Connected(client.clone()), |client| async move {
+                client
+                    .request::<Value>("system_health", json!([]))
+                    .await
+                    .map_err(rtao_cli::error::CliError::from)
+            })
+            .await
+            .err()
+            .ok_or("typed read policy refusal")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(error.message, message);
+        assert_eq!(error.help.as_deref(), Some(expected));
+        assert!(client.is_closed());
+        assert_eq!(
+            chain
+                .requests()
+                .iter()
+                .filter(|request| request.method == "system_health")
+                .count(),
+            1
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+    }
+    // Unknown-fate metadata is distinct from gateway refusal. Keep the submitted
+    // hash and its caution, without introducing wait-and-retry guidance.
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let hash = rtao_rpc::H256::from([29; 32]);
+    let cause = rtao_rpc::RpcError::FateUnknown { hash };
+    let message = cause.to_string();
+    chain.queue_transport_error(
+        "system_health",
+        rtao_testkit::rpc::Error::Client(Box::new(cause)),
+    );
+    let (ctx, _, _) = context(&[])?;
+    let error = ctx
+        .run_with(&Connected(client.clone()), |client| async move {
+            client
+                .request::<Value>("system_health", json!([]))
+                .await
+                .map_err(rtao_cli::error::CliError::from)
+        })
+        .await
+        .err()
+        .ok_or("unknown fate")?;
+    assert_eq!(error.message, message);
+    assert!(error.message.contains(&hex::encode(hash.0)));
+    assert!(error.help.is_none());
+    assert!(client.is_closed());
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert_eq!(
+        chain
+            .requests()
+            .iter()
+            .filter(|request| request.method == "system_health")
+            .count(),
+        1
+    );
+    Ok(())
+}
+
 struct DirectExternalFactory {
     key: KeypairSigner,
     unlocks: Arc<AtomicUsize>,
@@ -3560,7 +3922,9 @@ async fn durable_saved_binding_keeps_reviewed_plan_and_refuses_drift_before_priv
 // This transport probe deliberately builds a remark rather than a root trade.
 // Actual root preparation is covered by root_commands; here independent effect
 // strings discriminate exact-summary replacement from substring/blanket rewriting.
-struct CommandFactsFixture;
+struct CommandFactsFixture {
+    fee_facts: bool,
+}
 impl IntentInterface for CommandFactsFixture {
     const SPEC: &'static rtao_catalog::IntentSpec = Preview::SPEC;
     type Role = Coldkey;
@@ -3591,6 +3955,16 @@ impl Intent for CommandFactsFixture {
                 "prefix generic semantic action suffix".into(),
             ],
             warnings: vec!["keep independent warning".into()],
+            facts_title: if self.fee_facts {
+                rtao::tx::FactsTitle::Fees
+            } else {
+                rtao::tx::FactsTitle::Quote
+            },
+            facts: if self.fee_facts {
+                vec![("inclusion".to_owned(), "τ0.000020000".to_owned())]
+            } else {
+                vec![("expected receive".to_owned(), "~1.0000 β".to_owned())]
+            },
             ..Default::default()
         })
     }
@@ -3617,7 +3991,7 @@ fn command_review(intent: &dyn rtao::tx::DynIntent) -> CommandReview {
 async fn command_review_direct_json_replaces_only_matching_effect_and_keeps_plan_identity()
 -> TestResult {
     let (client, chain, keys) = fixture(1_000_000_000).await?;
-    let intent = CommandFactsFixture;
+    let intent = CommandFactsFixture { fee_facts: false };
     let review = command_review(&intent);
     let (ctx, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
     let replay = "rtao root allocate --hotkey exact --amount 2 --dry-run";
@@ -3668,7 +4042,7 @@ async fn command_review_direct_json_replaces_only_matching_effect_and_keeps_plan
 #[tokio::test]
 async fn command_review_human_final_card_and_question_precede_refusal_and_unlock() -> TestResult {
     let (client, chain, keys) = fixture(1_000_000_000).await?;
-    let intent = CommandFactsFixture;
+    let intent = CommandFactsFixture { fee_facts: false };
     let review = command_review(&intent);
     let (mut ctx, sink, _) = context(&["--no-mev-shield"])?;
     let questions = Arc::new(Mutex::new(Vec::new()));
@@ -3698,7 +4072,30 @@ async fn command_review_human_final_card_and_question_precede_refusal_and_unlock
     assert!(card.contains("Chosen Fund"));
     assert!(card.contains("~1.0000 β"));
     assert!(card.contains("you bear entry slippage and swap fees"));
-    assert!(card.contains("Transaction"));
+    assert_eq!(
+        review_stage_titles(&card),
+        [
+            "Allocate",
+            "Effects",
+            "Quote",
+            "Fees",
+            "Signer",
+            "Transaction"
+        ]
+    );
+    assert_eq!(
+        review_stage_rows(&card, "Quote")?,
+        [("expected receive".to_owned(), "~1.0000 β".to_owned())]
+    );
+    assert_eq!(
+        review_stage_rows(&card, "Transaction")?,
+        [("operation".to_owned(), "add_stake".to_owned())]
+    );
+    assert!(
+        review_stage_rows(&card, "Fees")?
+            .iter()
+            .any(|(key, value)| key == "estimated fee" && value.starts_with("~τ"))
+    );
     assert!(card.contains(&keys.key.account().to_string()));
     assert!(card.contains("keep unrelated semantic fact"));
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
@@ -3801,7 +4198,7 @@ async fn command_review_external_label_retains_custom_action_proxy_and_shield_su
         let (mut ctx, _, _) = context(&flags)?;
         let proxy = AccountId([77; 32]);
         ctx.globals.proxy_for = Some(proxy.to_string());
-        let intent = CommandFactsFixture;
+        let intent = CommandFactsFixture { fee_facts: false };
         let review = command_review(&intent);
         let outcome = ctx
             .submit_with_options(
@@ -3990,6 +4387,36 @@ async fn command_review_repeats_semantic_stages_but_preserves_saved_outer_round_
         2
     );
     assert!(card.contains("multisig 3-of-3 execute"));
+    let transactions = card.split("Transaction\n").skip(1).collect::<Vec<_>>();
+    assert_eq!(transactions.len(), 2);
+    for transaction in transactions {
+        let rows = transaction
+            .lines()
+            .take_while(|line| line.starts_with("  "))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            rows.len(),
+            1,
+            "saved approval must show semantic fields only"
+        );
+        assert!(rows[0].contains("operation") && rows[0].ends_with("add_stake"));
+    }
+    let signers = card.split("Signer\n").skip(1).collect::<Vec<_>>();
+    assert_eq!(signers.len(), 2);
+    for signer in signers {
+        let text = signer
+            .lines()
+            .take_while(|line| line.starts_with("  "))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains(&format!("team ({})", group.address)));
+        assert!(text.contains("3 of 3"));
+        assert!(text.contains("approval member") && text.contains("via extension"));
+        assert!(text.contains("approval") && text.contains("multisig 3-of-3 execute"));
+    }
+    let titles = review_stage_titles(&card);
+    assert_eq!(titles.iter().filter(|title| **title == "Fees").count(), 2);
+    assert_eq!(titles.iter().filter(|title| **title == "Signer").count(), 2);
     assert_eq!(
         questions.lock().map_err(|_| "questions")?.as_slice(),
         [format!("{}? [y/N]: ", review.summary)]
@@ -4372,5 +4799,798 @@ async fn external_carrier_shortfall_downgrades_default_refuses_forced_and_keeps_
         }
         client.close().await;
     }
+    Ok(())
+}
+
+// Inspect actual human stages without depending on renderer padding widths.
+fn review_stage_titles(card: &str) -> Vec<&str> {
+    card.lines()
+        .filter(|line| !line.is_empty() && !line.starts_with(' '))
+        .collect()
+}
+fn review_stage_rows(
+    card: &str,
+    title: &str,
+) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+    card.lines()
+        .skip_while(|line| *line != title)
+        .skip(1)
+        .take_while(|line| line.starts_with("  "))
+        .map(|line| {
+            let (key, value) = line
+                .trim_start()
+                .split_once("  ")
+                .ok_or("review row separator")?;
+            Ok((key.trim_end().to_owned(), value.trim_start().to_owned()))
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn universal_review_stages_keep_real_semantics_and_fee_failures_public_before_refusal()
+-> TestResult {
+    for unavailable in [false, true] {
+        for batch in [false, true] {
+            let (client, chain, keys) = fixture(1_000_000_000).await?;
+            chain.mutate_state(|state| {
+                state.fee = 100_000;
+                if unavailable {
+                    state.set_handler("state_call", |state, request| {
+                        if request.params[0] == "TransactionPaymentApi_query_info" {
+                            rtao_testkit::Reply::error(
+                                -32603,
+                                "review fee fixture unavailable",
+                                None,
+                            )
+                        } else {
+                            state.dispatch(request)
+                        }
+                    });
+                }
+            });
+            let dest = AccountId([91; 32]);
+            let first =
+                json!({"op":"transfer","dest_ss58":dest,"amount_tao":"0.1","keep_alive":true});
+            let second =
+                json!({"op":"transfer","dest_ss58":dest,"amount_tao":"0.2","keep_alive":false});
+            let op = if batch { "batch" } else { "transfer" };
+            let intent = rtao_intents::AnyIntent::from_tool(
+                op,
+                if batch {
+                    json!({"intents":[first,second]})
+                } else {
+                    first
+                },
+            )?;
+            let original = intent.to_json();
+            let (mut ctx, sink, _) = context(&["--no-mev-shield"])?;
+            let proxy = AccountId([55; 32]);
+            ctx.globals.proxy_for = Some(proxy.to_string());
+            let questions = Arc::new(Mutex::new(Vec::new()));
+            ctx.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation {
+                questions: questions.clone(),
+            })));
+            let error = ctx
+                .submit_with(&client, intent.as_dyn(), &keys, false, None)
+                .await
+                .err()
+                .ok_or("declined review")?;
+            assert_eq!(error.message, "aborted.");
+            let card = sink.text(Stream::Stdout)?;
+            assert_eq!(
+                review_stage_titles(&card),
+                [
+                    if batch { "Batch" } else { "Transfer" },
+                    "Effects",
+                    "Fees",
+                    "Signer",
+                    "Transaction"
+                ]
+            );
+            assert_eq!(
+                review_stage_rows(&card, "Fees")?,
+                [(
+                    "estimated fee".to_owned(),
+                    if unavailable {
+                        "unavailable".to_owned()
+                    } else {
+                        "~τ0.000100000".to_owned()
+                    }
+                )]
+            );
+            let signer = review_stage_rows(&card, "Signer")?;
+            assert!(signer.contains(&("signer".into(), keys.key.account().to_string())));
+            assert!(signer.contains(&("role".into(), "coldkey".into())));
+            assert!(signer.contains(&("proxy for".into(), proxy.to_string())));
+            assert!(signer.contains(&(
+                "mev shield".into(),
+                "off — no protection (call is visible in the mempool)".into()
+            )));
+            let transaction = review_stage_rows(&card, "Transaction")?;
+            assert!(transaction.contains(&("operation".into(), op.into())));
+            if batch {
+                assert_eq!(
+                    transaction,
+                    vec![
+                        ("operation".into(), "batch".into()),
+                        ("call 1".into(), format!("transfer τ0.100000000 to {dest}")),
+                        ("call 2".into(), format!("transfer τ0.200000000 to {dest}")),
+                    ]
+                );
+            } else {
+                assert!(transaction.contains(&("dest".into(), dest.to_string())));
+                assert!(transaction.contains(&("amount tao".into(), "τ0.100000000".into())));
+                assert!(transaction.contains(&("keep alive".into(), "yes".into())));
+                assert_eq!(transaction.len(), 4);
+            }
+            let stderr = sink.text(Stream::Stderr)?;
+            assert_eq!(stderr.contains("could not estimate fee"), unavailable);
+            if unavailable {
+                assert!(stderr.contains("review fee fixture unavailable"));
+            }
+            assert!(
+                chain
+                    .requests()
+                    .iter()
+                    .any(|request| request.method == "state_call"
+                        && request.params[0] == "TransactionPaymentApi_query_info")
+            );
+            assert_eq!(questions.lock().map_err(|_| "questions")?.len(), 1);
+            assert_eq!(intent.to_json(), original);
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(
+                !chain
+                    .requests()
+                    .iter()
+                    .any(|request| request.method.starts_with("author_"))
+            );
+            assert_eq!(
+                client
+                    .nonces()
+                    .cached(&keys.key.account().to_string())
+                    .await,
+                None
+            );
+            client.close().await;
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn command_fee_facts_replace_estimate_without_suppressing_failed_probe_warnings() -> TestResult
+{
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    chain.mutate_state(|state| {
+        state.set_handler("state_call", |state, request| {
+            if request.params[0] == "TransactionPaymentApi_query_info" {
+                rtao_testkit::Reply::error(-32603, "structured fee probe unavailable", None)
+            } else {
+                state.dispatch(request)
+            }
+        })
+    });
+    let intent = CommandFactsFixture { fee_facts: true };
+    let review = command_review(&intent);
+    let (mut ctx, sink, _) = context(&["--no-mev-shield"])?;
+    let questions = Arc::new(Mutex::new(Vec::new()));
+    ctx.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation { questions })));
+    let error = ctx
+        .submit_with_keys_options(
+            &client,
+            &intent,
+            &keys,
+            SubmissionOptions {
+                review: Some(&review),
+                ..Default::default()
+            },
+        )
+        .await
+        .err()
+        .ok_or("declined structured fees")?;
+    assert_eq!(error.message, "aborted.");
+    let card = sink.text(Stream::Stdout)?;
+    assert_eq!(
+        review_stage_titles(&card),
+        ["Allocate", "Effects", "Fees", "Signer", "Transaction"]
+    );
+    assert_eq!(
+        review_stage_rows(&card, "Fees")?,
+        [("inclusion".to_owned(), "τ0.000020000".to_owned())]
+    );
+    assert!(!card.contains("estimated fee"));
+    assert!(
+        sink.text(Stream::Stderr)?
+            .contains("could not estimate fee")
+    );
+    assert!(
+        sink.text(Stream::Stderr)?
+            .contains("structured fee probe unavailable")
+    );
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+struct RootYieldHooks {
+    chain: FakeChain,
+    hotkey: AccountId,
+    owner: AccountId,
+    payout: Option<u64>,
+    before: AtomicUsize,
+    after: AtomicUsize,
+    payout_reads_at_receipt: AtomicUsize,
+    raw: Mutex<Option<Value>>,
+}
+impl RootYieldHooks {
+    fn new(chain: &FakeChain, hotkey: AccountId, owner: AccountId, payout: Option<u64>) -> Self {
+        Self {
+            chain: chain.clone(),
+            hotkey,
+            owner,
+            payout,
+            before: AtomicUsize::new(0),
+            after: AtomicUsize::new(0),
+            payout_reads_at_receipt: AtomicUsize::new(0),
+            raw: Mutex::new(None),
+        }
+    }
+    fn payout_reads(&self) -> usize {
+        self.chain
+            .requests()
+            .iter()
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "BetaBasketRuntimeApi_get_basket_payout"
+            })
+            .count()
+    }
+    fn assert_original(&self, result: &rtao::tx::ExtrinsicResult) -> TestResult {
+        assert_eq!(self.before.load(Ordering::SeqCst), 1);
+        assert_eq!(self.after.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            *self.raw.lock().map_err(|_| "root raw")?,
+            Some(result.to_json())
+        );
+        Ok(())
+    }
+}
+impl rtao_cli::context::SubmissionHooks for RootYieldHooks {
+    fn before_submit(&self) -> BoxFuture<'_, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            self.before.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        })
+    }
+    fn on_result<'a>(
+        &'a self,
+        result: &'a rtao::tx::ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            self.after.fetch_add(1, Ordering::SeqCst);
+            self.payout_reads_at_receipt
+                .store(self.payout_reads(), Ordering::SeqCst);
+            *self
+                .raw
+                .lock()
+                .map_err(|_| rtao_cli::error::CliError::failure("root raw"))? =
+                Some(result.to_json());
+            let input = [self.hotkey.0.as_slice(), self.owner.0.as_slice()].concat();
+            let output = self
+                .payout
+                .map_or_else(|| vec![255], |value| value.to_le_bytes().to_vec());
+            self.chain.mutate_state(|state| {
+                state.seed_runtime_encoded("BetaBasketRuntimeApi_get_basket_payout", input, output)
+            });
+            Ok(())
+        })
+    }
+}
+fn seed_root_yield(chain: &FakeChain) -> TestResult {
+    chain.mutate_state(|state| -> TestResult {
+        state.seed_runtime("BetaBasketRuntimeApi", "get_basket_payout", json!(0u64))?;
+        state.seed_runtime("BetaBasketRuntimeApi", "get_validator_basket", json!([]))?;
+        state.seed_python("SubtensorModule", "NetworksAdded", &[json!(0)], json!(true))?;
+        state.seed_python(
+            "SubtensorModule",
+            "RootStakeUnlockInterval",
+            &[],
+            json!(0u64),
+        )?;
+        Ok(())
+    })
+}
+fn root_exit_intent(
+    op: &str,
+    hotkey: AccountId,
+    claim: bool,
+    netuid: u16,
+) -> Result<rtao_intents::AnyIntent, Box<dyn std::error::Error>> {
+    let mut args = json!({"hotkey_ss58":hotkey,"claim":claim});
+    if matches!(op, "remove_stake" | "remove_stake_limit") {
+        args["netuid"] = json!(netuid);
+        args["amount_alpha"] = json!("1.0");
+        if op == "remove_stake" {
+            args["slippage_protection"] = json!(false);
+        } else {
+            args["limit_price_rao"] = json!(0u64);
+        }
+    }
+    Ok(rtao_intents::AnyIntent::from_tool(op, args)?)
+}
+fn assert_submitted_root_claim(
+    bytes: &[u8],
+    runtime: &rtao_runtime::RuntimeHandle,
+    hotkey: AccountId,
+) -> TestResult {
+    let decoded =
+        rtao::core::DynValue::new(runtime.core().decode_extrinsic(bytes, true)?).to_json();
+    assert_eq!(decoded["call"]["call_module"], "SubtensorModule");
+    assert_eq!(decoded["call"]["call_function"], "claim_root_with_hotkey");
+    let args = decoded["call"]["call_args"]
+        .as_array()
+        .ok_or("root claim args")?;
+    assert_eq!(
+        args.iter()
+            .find(|a| a["name"] == "hotkey")
+            .ok_or("hotkey")?["value"],
+        json!(hotkey)
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn post_root_unstake_hints_use_fresh_yield_without_automatic_claims() -> TestResult {
+    for op in ["remove_stake", "remove_stake_limit", "unstake_all"] {
+        for mode in ["yes", "json", "quiet", "piped"] {
+            let (client, chain, keys) = fixture(1_000_000_000_000).await?;
+            seed_root_yield(&chain)?;
+            let mut flags = vec!["--yes", "--no-mev-shield"];
+            if mode == "json" {
+                flags.push("--json");
+            }
+            if mode == "quiet" {
+                flags.push("--quiet");
+            }
+            let (mut ctx, sink, reads) = context(&flags)?;
+            if mode == "piped" {
+                ctx.terminal = Arc::new(Mutex::new(Box::new(TerminalFixture {
+                    tty: false,
+                    lines: VecDeque::new(),
+                    reads: reads.clone(),
+                })));
+            }
+            let hotkey = AccountId([79; 32]);
+            let intent = root_exit_intent(op, hotkey, false, 0)?;
+            let hooks = RootYieldHooks::new(&chain, hotkey, keys.key.account(), Some(900_000));
+            let result = ctx
+                .submit_with_keys_options(
+                    &client,
+                    intent.as_dyn(),
+                    &keys,
+                    SubmissionOptions {
+                        hooks: Some(&hooks),
+                        ..Default::default()
+                    },
+                )
+                .await?
+                .ok_or("root receipt")?;
+            assert!(result.success);
+            hooks.assert_original(&result)?;
+            assert_eq!(
+                hooks.payout_reads() - hooks.payout_reads_at_receipt.load(Ordering::SeqCst),
+                1
+            );
+            let stderr = sink.text(Stream::Stderr)?;
+            if mode == "json" || mode == "quiet" {
+                assert!(stderr.is_empty());
+            } else {
+                assert!(stderr.contains(&format!("τ0.000900000 remains claimable via \u{0060}rtao root claim --hotkey {hotkey} --coldkey {} --proxy-for self\u{0060}",keys.key.account())));
+                assert!(stderr.contains("unstaking root principal does not claim basket yield"));
+                assert!(stderr.contains("whole entitlement, not a slice of the unstake"));
+            }
+            if mode == "json" {
+                assert_eq!(
+                    serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+                    result.to_json()
+                );
+            }
+            assert_eq!(reads.load(Ordering::SeqCst), 0);
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+            assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+            client.close().await;
+        }
+    }
+    Ok(())
+}
+
+struct RootYieldTerminal {
+    inner: TerminalFixture,
+    questions: Arc<Mutex<Vec<String>>>,
+}
+impl Terminal for RootYieldTerminal {
+    fn stdin_is_tty(&self) -> bool {
+        self.inner.stdin_is_tty()
+    }
+    fn stderr_is_tty(&self) -> bool {
+        self.inner.stderr_is_tty()
+    }
+    fn read_line(&mut self, question: &str) -> Result<String, PromptError> {
+        self.questions
+            .lock()
+            .map_err(|_| PromptError::Unavailable)?
+            .push(question.into());
+        self.inner.read_line(question)
+    }
+    fn read_secret(&mut self, prompt: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        self.inner.read_secret(prompt)
+    }
+    fn message(&mut self, message: &str) -> Result<(), PromptError> {
+        self.inner.message(message)
+    }
+}
+
+#[tokio::test]
+async fn post_root_unstake_offer_keeps_the_original_receipt_and_requires_normal_claim_review()
+-> TestResult {
+    for (answers, claimed, error_code) in [
+        (vec!["yes", "no"], false, None),
+        (vec!["yes", "yes", "no"], false, Some(1)),
+        (vec!["yes", "yes", "yes"], true, None),
+        (vec!["yes"], false, Some(130)),
+    ] {
+        let (client, chain, keys) = fixture(1_000_000_000_000).await?;
+        seed_root_yield(&chain)?;
+        let (mut ctx, sink, reads) = context(&["--no-mev-shield"])?;
+        let questions = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(RootYieldTerminal {
+            inner: TerminalFixture {
+                tty: true,
+                lines: answers.iter().map(|s| (*s).to_owned()).collect(),
+                reads: reads.clone(),
+            },
+            questions: questions.clone(),
+        })));
+        let hotkey = AccountId([79; 32]);
+        let intent = root_exit_intent("remove_stake", hotkey, false, 0)?;
+        let hooks = RootYieldHooks::new(&chain, hotkey, keys.key.account(), Some(900_000));
+        let outcome = ctx
+            .submit_with_keys_options(
+                &client,
+                intent.as_dyn(),
+                &keys,
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+            )
+            .await;
+        if let Some(code) = error_code {
+            let error = outcome.err().ok_or("followup refusal")?;
+            assert_eq!(error.code, code);
+            assert!(
+                error
+                    .help
+                    .as_deref()
+                    .is_some_and(|help| help.contains("transaction was already submitted"))
+            );
+        } else {
+            let original = outcome?.ok_or("original unstake receipt")?;
+            hooks.assert_original(&original)?;
+        }
+        assert_eq!(
+            hooks.before.load(Ordering::SeqCst),
+            1,
+            "claim must not reuse the unstake journal"
+        );
+        assert_eq!(hooks.after.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            keys.unlocks.load(Ordering::SeqCst),
+            1 + usize::from(claimed)
+        );
+        assert_eq!(
+            reads.load(Ordering::SeqCst),
+            if answers.len() == 1 { 2 } else { answers.len() }
+        );
+        assert_eq!(
+            questions.lock().map_err(|_| "questions")?[1],
+            "τ0.000900000 remains claimable. Claim this validator's whole basket entitlement now? [y/N]: "
+        );
+        let submissions = chain.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submissions.len(), 1 + usize::from(claimed));
+        if claimed {
+            assert_submitted_root_claim(&submissions[1], &client.refresh_runtime().await?, hotkey)?;
+        } else if error_code.is_none() {
+            assert!(
+                sink.text(Stream::Stderr)?
+                    .contains("whole entitlement, not a slice of the unstake")
+            );
+        }
+        client.close().await;
+    }
+    Ok(())
+}
+
+struct ReleasedBeforeRootClaim<'a> {
+    inner: &'a DirectExternalFactory,
+}
+impl rtao_cli::context::ExternalSignerFactory for ReleasedBeforeRootClaim<'_> {
+    fn keys<'a>(
+        &'a self,
+        globals: &'a Globals,
+        role: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            if self.inner.acquired.load(Ordering::SeqCst) > 0 {
+                assert_eq!(
+                    *self
+                        .inner
+                        .released
+                        .lock()
+                        .map_err(|_| rtao_cli::error::CliError::failure("release"))?,
+                    vec![true]
+                );
+            }
+            rtao_cli::context::ExternalSignerFactory::keys(self.inner, globals, role).await
+        })
+    }
+    fn release<'a>(
+        &'a self,
+        globals: &'a Globals,
+        keys: &'a dyn DynKeySource,
+        success: bool,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        rtao_cli::context::ExternalSignerFactory::release(self.inner, globals, keys, success)
+    }
+}
+#[tokio::test]
+async fn external_root_claim_reacquires_after_release_and_uses_the_effective_proxy_owner()
+-> TestResult {
+    for (proxy, automatic) in [(false, false), (true, false), (false, true), (true, true)] {
+        let (client, chain, keys) = fixture(1_000_000_000_000).await?;
+        seed_root_yield(&chain)?;
+        let mut flags = vec!["--no-mev-shield", "--signer", "extension"];
+        if automatic {
+            flags.push("--yes");
+        }
+        let (mut ctx, sink, reads) = context(&flags)?;
+        ctx.terminal = Arc::new(Mutex::new(Box::new(TerminalFixture {
+            tty: true,
+            lines: VecDeque::from(["yes".into(), "yes".into(), "yes".into()]),
+            reads: reads.clone(),
+        })));
+        let owner = if proxy {
+            AccountId([88; 32])
+        } else {
+            keys.key.account()
+        };
+        if proxy {
+            ctx.globals.proxy_for = Some(owner.to_string());
+        }
+        let hotkey = AccountId([79; 32]);
+        let intent = root_exit_intent("remove_stake", hotkey, false, 0)?;
+        let inner = DirectExternalFactory::new(&keys, false);
+        let factory = ReleasedBeforeRootClaim { inner: &inner };
+        let hooks = RootYieldHooks::new(&chain, hotkey, owner, Some(900_000));
+        let result = ctx
+            .submit_with_options(
+                &client,
+                intent.as_dyn(),
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+                Some(&factory),
+                &mut rtao_cli::prompt::PromptHistory::default(),
+            )
+            .await?
+            .ok_or("external original receipt")?;
+        hooks.assert_original(&result)?;
+        let expected = if automatic { 1 } else { 2 };
+        assert_eq!(inner.acquired.load(Ordering::SeqCst), expected);
+        assert_eq!(
+            *inner.released.lock().map_err(|_| "released")?,
+            vec![true; expected]
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), expected);
+        assert_eq!(reads.load(Ordering::SeqCst), if automatic { 0 } else { 3 });
+        let submissions = chain.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submissions.len(), expected);
+        if automatic {
+            let proxy_flag = if proxy {
+                owner.to_string()
+            } else {
+                "self".to_owned()
+            };
+            let command = format!(
+                "rtao root claim --hotkey {hotkey} --coldkey {owner} --proxy-for {proxy_flag}"
+            );
+            let stderr = sink.text(Stream::Stderr)?;
+            assert!(stderr.contains(&command));
+            assert!(stderr.contains("same signing wallet, backend and proxy type"));
+            // Use the real installed tree and Request::Claim parser. A wrong
+            // configured proxy must not override this hint's explicit route.
+            let parsed = rtao_cli::commands::command_tree()?
+                .try_get_matches_from(command.split_ascii_whitespace())?;
+            let group = parsed.subcommand().ok_or("root group")?.1;
+            let leaf = group.subcommand().ok_or("claim leaf")?.1;
+            let mut replay = ctx.clone();
+            replay.globals.proxy_for = None;
+            replay
+                .config
+                .insert("proxy_for".into(), json!(AccountId([99; 32])));
+            replay
+                .globals
+                .apply(leaf, &rtao_cli::commands::root::reserved(group)?)?;
+            let request = rtao_cli::commands::root::Request::from_matches(
+                &mut replay,
+                group,
+                &mut rtao_cli::prompt::PromptHistory::default(),
+            )?;
+            let rtao_cli::commands::root::Request::Claim {
+                hotkey: replay_hotkey,
+                owner: replay_owner,
+            } = request
+            else {
+                return Err("hint is not a root claim request".into());
+            };
+            assert_eq!(replay_hotkey, Some(hotkey));
+            assert_eq!(replay_owner, owner);
+            assert_eq!(replay.dispatch_proxy(None)?, proxy.then_some(owner));
+            client.close().await;
+            continue;
+        }
+        let runtime = client.refresh_runtime().await?;
+        let decoded =
+            rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[1], true)?)
+                .to_json();
+        let call = if proxy {
+            assert_eq!(decoded["call"]["call_module"], "Proxy");
+            let args = decoded["call"]["call_args"]
+                .as_array()
+                .ok_or("proxy args")?;
+            assert_eq!(
+                args.iter().find(|a| a["name"] == "real").ok_or("real")?["value"],
+                json!(owner)
+            );
+            args.iter().find(|a| a["name"] == "call").ok_or("inner")?["value"].clone()
+        } else {
+            decoded["call"].clone()
+        };
+        assert_eq!(call["call_function"], "claim_root_with_hotkey");
+        let args = call["call_args"].as_array().ok_or("claim args")?;
+        assert_eq!(
+            args.iter()
+                .find(|a| a["name"] == "hotkey")
+                .ok_or("claim hotkey")?["value"],
+            json!(hotkey)
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn post_root_yield_skips_empty_failed_nontrigger_and_saved_approval_outcomes() -> TestResult {
+    for (op, claim, netuid, payout, failed) in [
+        ("remove_stake", false, 0, Some(0), false),
+        ("remove_stake", false, 0, None, false),
+        ("remove_stake", true, 0, Some(900_000), false),
+        ("remove_stake_limit", false, 1, Some(900_000), false),
+        ("remove_stake", false, 0, Some(900_000), true),
+    ] {
+        let (client, chain, keys) = fixture(1_000_000_000_000).await?;
+        seed_root_yield(&chain)?;
+        if failed {
+            chain.mutate_state(|state|state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized{
+            events:json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"BadOrigin":null},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}]),
+        }));
+        }
+        let (ctx, sink, reads) = context(&["--yes", "--no-mev-shield"])?;
+        let hotkey = AccountId([79; 32]);
+        let intent = root_exit_intent(op, hotkey, claim, netuid)?;
+        let hooks = RootYieldHooks::new(&chain, hotkey, keys.key.account(), payout);
+        let outcome = ctx
+            .submit_with_keys_options(
+                &client,
+                intent.as_dyn(),
+                &keys,
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+            )
+            .await;
+        if failed {
+            assert!(outcome.is_err());
+        } else {
+            hooks.assert_original(&outcome?.ok_or("original")?)?;
+        }
+        assert_eq!(
+            hooks.payout_reads() - hooks.payout_reads_at_receipt.load(Ordering::SeqCst),
+            usize::from(!claim && netuid == 0 && !failed)
+        );
+        assert!(
+            !sink
+                .text(Stream::Stderr)?
+                .contains("via \u{0060}rtao root claim --hotkey")
+        );
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+        client.close().await;
+    }
+    let (client, chain, keys) = fixture(1_000_000_000_000).await?;
+    seed_root_yield(&chain)?;
+    let (ctx, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
+    let hotkey = AccountId([79; 32]);
+    let intent = root_exit_intent("remove_stake", hotkey, false, 0)?;
+    let hooks = RootYieldHooks::new(&chain, hotkey, keys.key.account(), Some(900_000));
+    assert!(
+        ctx.submit_with_keys_options(
+            &client,
+            intent.as_dyn(),
+            &keys,
+            SubmissionOptions {
+                hooks: Some(&hooks),
+                ..Default::default()
+            },
+        )
+        .await?
+        .is_none()
+    );
+    assert_eq!(hooks.before.load(Ordering::SeqCst), 0);
+    assert_eq!(hooks.after.load(Ordering::SeqCst), 0);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?["op"],
+        "remove_stake"
+    );
+    client.close().await;
+    // A successful approval has not executed the root unstake. Preserve the
+    // saved multisig driver without interpreting a pending round as success.
+    let keys = members()?;
+    let (client, chain, _) = fixture(1_000_000_000_000).await?;
+    seed_root_yield(&chain)?;
+    let (ctx, sink) = saved_context(&keys, &["--yes", "--json", "--no-mev-shield"], 1)?;
+    let group = saved_group(&client, &keys).await?;
+    let hotkey = AccountId([79; 32]);
+    let hooks = RootYieldHooks::new(&chain, hotkey, group.address, Some(900_000));
+    let intent = root_exit_intent("remove_stake", hotkey, false, 0)?;
+    let factory = factory(&keys);
+    let result = ctx
+        .submit_saved_with_options(
+            &client,
+            intent.as_dyn(),
+            SubmissionOptions {
+                hooks: Some(&hooks),
+                ..Default::default()
+            },
+            &factory,
+            &CallCache::default(),
+        )
+        .await?
+        .ok_or("saved approval")?;
+    assert!(result.success);
+    assert_eq!(
+        hooks.payout_reads(),
+        hooks.payout_reads_at_receipt.load(Ordering::SeqCst)
+    );
+    assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        result.to_json()
+    );
+    client.close().await;
     Ok(())
 }

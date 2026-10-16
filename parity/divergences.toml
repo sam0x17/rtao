@@ -3,6 +3,20 @@
 schema = 1
 
 [[divergences]]
+id = "D-073"
+upstream_symbol = "bittensor.cli.context.AppContext._maybe_offer_root_claim"
+python_behavior = "Reads leftover root yield for the configured wallet's public coldkey, even when an external signer or proxy dispatched the unstake for another account."
+rtao_behavior = "Reads leftover yield for the reviewed effective dispatch owner and explicit hotkey after a successful unstake. A positive-yield hint identifies that owner and preserves proxy routing; an accepted interactive offer retains the original signing context but starts a separately reviewed claim with fresh external-source acquisition. The original receipt and recovery hooks remain bound to the unstake."
+rationale = "An advisory payout lookup must describe the account whose unstake completed. The runtime API takes the hotkey and coldkey explicitly; using the configured wallet can query a different entitlement. This records a source-verified account-selection correction without claiming runtime payout execution or an executed Python reproduction."
+decision = "PLAN.md execution rule 5; pinned Python payout lookup, native effective-origin planning and actual CLI claim arguments reviewed on 2026-10-16"
+status = "active"
+class = "improved"
+milestone = "M8"
+pinning_tests = ["rtao_cli::context_contract::external_root_claim_reacquires_after_release_and_uses_the_effective_proxy_owner"]
+upstream_report = "Native fixture and independent source review cover owner-bound lookup, proxy-preserving guidance, separate claim confirmation and source lifecycle. Hosted execution remains pending; no new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L1658-L1705"
+
+[[divergences]]
 id = "D-072"
 upstream_symbol = "bittensor.cli.prompt.run_app required dual-boolean acquisition"
 python_behavior = "The generic prompt path appends the primary option followed by the original answer text, including for the required perpetual/decaying and allow/reject boolean pairs."
@@ -74,11 +88,11 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-068"
-upstream_symbol = "bittensor.extension bridge/client/session/signer local I/O policy"
-python_behavior = "Permits configured non-loopback hosts/URLs, implicit ensure_bridge launch, PID-based daemon termination and permissive raw signature bytes; its request waits do not implement the native aggregate resource policy."
-rtao_behavior = "Admits numeric loopback targets only, requires explicit daemon/browser permission, and bounds transport requests including serialized lock acquisition. Private token/PID publication and daemon termination verify ownership, process identity and unchanged cleanup contents. Selection validates public identity and negotiated signature shape/scheme; reviewed CLI identity never falls back to another account. Native session progress observers run inline and are not a separately timed operation."
-rationale = "Record the existing client-owned local transport, process and signature-admission policy separately from Python behavior. Preserve exact supported protocol messages and manual session guidance without claiming an upstream exploit or a new authorization finding."
-decision = "PLAN.md execution rule 5 design-gap reconciliation; complete pinned extension modules and actual native consumers source-reviewed on 2026-10-15"
+upstream_symbol = "bittensor.extension bridge/client/session/signer local I/O policy and bittensor.cli.context.AppContext.submit extension confirmation"
+python_behavior = "Permits configured non-loopback hosts/URLs, implicit ensure_bridge launch, PID-based daemon termination and permissive raw signature bytes; its request waits do not implement the native aggregate resource policy. For extension-backed transactions, AppContext.submit uses wallet popup approval and skips terminal confirmation (cli/context.py:1292-1323)."
+rtao_behavior = "Admits numeric loopback targets only, requires explicit daemon/browser permission, and bounds transport requests including serialized lock acquisition. Private token/PID publication and daemon termination verify ownership, process identity and unchanged cleanup contents. Selection validates public identity and negotiated signature shape/scheme; reviewed CLI identity never falls back to another account. Native session progress observers run inline and are not a separately timed operation. Extension-backed CLI mutations retain shared review and terminal confirmation before signing-session acquisition and wallet payload approval. --yes skips the terminal prompt; JSON or non-TTY mutations without it refuse with status 1."
+rationale = "Record the existing client-owned transport, process and signature-admission policy together with the shared CLI confirmation contract in architecture sections 10.1 and 10.3. Extension popup approval remains separate from terminal confirmation in rtao. Supported protocol messages, public identity checks and manual session guidance remain intact. This records an existing native policy, with no upstream exploit claim."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; extension source review 2026-10-15 and CX05 confirmation reconciliation 2026-10-16 retain the existing native CLI authorization policy in architecture sections 10.1 and 10.3"
 status = "active"
 class = "stricter"
 milestone = "M9"
@@ -88,8 +102,12 @@ pinning_tests = [
   "rtao_signer::extension::tests::request_deadline_includes_waiting_behind_an_approval",
   "rtao_signer::extension::tests::expired_startup_refuses_spawn_without_touching_state",
   "rtao_signer::extension::tests::signatures_are_bounded_and_never_change_negotiated_crypto",
+  "rtao_cli::m7_signers::confirmation_and_durable_plan_precede_acquisition_receipt_precedes_release",
+  "rtao_cli::m7_signers::durable_storage_failure_and_confirmation_refusal_leave_backend_untouched",
+  "rtao_cli::context_contract::direct_external_confirmation_refusal_releases_without_unlock_or_submission",
+  "rtao_cli::context_contract::direct_external_success_releases_once_and_preserves_the_receipt",
 ]
-upstream_report = "Existing native policy and unconditional pinning fixtures reviewed in source. Conditional Unix publication/foreground-reuse fixtures remain in the test suite as supplementary platform coverage; the portable divergence gate does not admit them as pinning identities. Current hosted and real browser/device/platform execution unverified. Device work remains deferred; no new filing."
+upstream_report = "Existing native policy and unconditional pinning fixtures reviewed in source. Conditional Unix publication/foreground-reuse fixtures remain supplementary platform coverage. The CLI ordering fixture includes Ledger and extension through an injected backend; separate extension refusal and --yes success cases retain the public-factory boundary. Added ordering coverage awaits current hosted execution. Real browser/device/platform approval remains unverified; no new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/extension/session.py"
 
 [[divergences]]

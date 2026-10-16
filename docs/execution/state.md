@@ -16,6 +16,32 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-16
 
+The latest full run, [38970331580](https://github.com/sam0x17/rtao/actions/runs/38970331580)
+at `edefe85`, finishes with **3,182 passed, three failed and four skipped**.
+MSRV, no-host, semver and features pass. Supply fails on newly yanked
+`inout 0.2.3`; hosted Cargo resolution and report refresh have since adopted
+`0.2.4`. The main failures are two CLI argument fixtures and an acknowledgment
+fixture whose wall-clock admission budget can expire before fake-node receipt.
+The latter assertion does not inspect the returned error and proves no false
+unknown-fate classification. Fixes retain complete help/sample traversal and
+exact transmitted-byte/hash checks; deadline coverage uses controlled time and
+observed author acceptance.
+
+The next combined source candidate expects **3,196 tests and four skips**.
+It includes the nine CLI context fixtures and the three existing-fixture
+corrections. Formatting and source review are complete; hosted compilation,
+execution and divergence report refresh remain pending. The earlier planned
+standalone 3,187-test checkpoint is superseded by these failure corrections.
+The last fully green checkpoint remains `7997ec0` below.
+
+Source reconciliation remains 322/357, with 35 pending. D-073 brings the source
+divergence register to 73 while the adopted matrix still has 72. M0/M1,
+twenty M2 steps and eight M3 steps are accepted; whole M2/M3 and all later
+milestones remain open. M2-S02 remains unresolved under its existing decision
+request. The local target directory is absent, and validation remains hosted.
+
+### Prior checkpoint details
+
 The latest successful ordinary checkpoint is
 [38949537519](https://github.com/sam0x17/rtao/actions/runs/38949537519)
 at `7997ec0c5c3352746c887ea974f92d8471b32054`. All six required jobs
@@ -200,7 +226,7 @@ is promoted by these changes.
 
 Those changes and the three fixture corrections are pushed at `edefe85`.
 Ordinary run [38970331580](https://github.com/sam0x17/rtao/actions/runs/38970331580)
-is active with an expected 3,185 tests and four skips. Its supply job failed
+finishes with 3,182 passed, three failed and four skipped. Its supply job failed
 after `inout 0.2.3` was yanked on 2026-10-16 at 21:27 UTC. The upstream
 `0.2.4` release restores a missing output-buffer length check, keeps the same
 dependencies and requires Rust 1.85, below this workspace's MSRV.
@@ -241,9 +267,39 @@ The inspection SHA256 is
 `9e550b806c6b69079f2abdfd823fb2457a2567ea7c1c23ba7e624cdf86536d6b`;
 adoption SHA256 is
 `be4eecc9de940dd27501c15c9c1b5a4ee8bc2a12fd2ee496190cbdbdd5051beb`.
-Ordinary 3,187-test validation remains pending. The earlier run's main check
-is still live; its old-lock supply failure prevents full acceptance. No source
-row or milestone is accepted by report generation.
+The main job also fails: the all-83 CLI harness passes a nonexistent root
+`--hotkey` flag, the help traversal appends `--help` inside generated help
+paths, and the acknowledgment-timeout fixture observes no fake submission
+before its 50 ms admission deadline. The last failure does not prove a false
+unknown-fate result: the submission-count assertion runs first. MSRV, no-host,
+semver and features pass; doctests are not reached. Bounded evidence is
+`client-edefe85-check-failure.json`; the 838,125-byte log has SHA256
+`98b20e6f81bddb75395c5fcdc70298e17f952f3b149edb31b8d788eb4e20af69`.
+No raw log is retained. Fix these failures before the next ordinary run,
+superseding the planned standalone 3,187-test checkpoint. Report generation
+accepts no source row or milestone.
+
+The following CLI source batch is separate from that 3,187-test checkpoint.
+Successful root unstakes can report remaining yield or offer a separately
+confirmed claim. The probe and copied guidance retain the effective owner and
+proxy route (D-073); external sources are released before reacquisition, and
+the original receipt and recovery hooks stay with the unstake. Human review
+cards now retain command context, always show Fees, identify signing/routing
+in Signer and show semantic fields in the final Transaction stage, including
+saved multisig approvals. Full hostile nested arguments remain covered beside
+a short escaping control. Shielded external signing prints the backend's
+two-step notice using the shared backend normalizer.
+
+Typed gateway refusals preserve retry help at the connection, transaction and
+generated-query boundaries; the public query fixture covers both historical
+lookup and dispatched storage errors. Other command-owned string conversions
+remain a CX06 source obligation. D-068 explicitly records native extension
+terminal confirmation; the existing acquisition-order fixture now covers both
+Ledger and extension. No authorization bypass or device execution is added.
+Nine new fixture functions expect a later 3,196-test/four-skip checkpoint.
+Independent source review, combined-source formatting and whitespace checks
+pass; compilation, fixture execution and updated divergence reports remain
+pending. The full context row, source acceptance and milestones stay open.
 
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target

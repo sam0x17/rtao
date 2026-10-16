@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/output.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! CLI data and diagnostics, with injectable streams and human renderers.
 //!
 //! Machine values bypass human rendering. Domain objects supply their existing
@@ -1046,12 +1047,56 @@ impl Output {
         if self.options.json_mode || self.options.quiet {
             return Ok(());
         }
-        for section in sections {
-            if !section.rows.is_empty() {
-                self.detail(Some(&section.title), &section.rows, None)?;
+        let width = sections
+            .iter()
+            .filter(|section| !section.rows.is_empty())
+            .flat_map(|section| &section.rows)
+            .map(|(key, _)| terminal_text(key).chars().count())
+            .max()
+            .unwrap_or(0);
+        for section in sections.iter().filter(|section| !section.rows.is_empty()) {
+            self.line(Stream::Stdout, &section.title)?;
+            for (key, value) in &section.rows {
+                let key = terminal_text(key);
+                let padding = " ".repeat(width.saturating_sub(key.chars().count()));
+                self.line(
+                    Stream::Stdout,
+                    &format!("  {key}{padding}  {}", self.review_value(&key, value)),
+                )?;
             }
         }
         Ok(())
+    }
+
+    // py: sdk/python/bittensor/cli/context.py:716-734
+    // Values on a review card are human text; machine payloads remain untouched.
+    pub(crate) fn review_value(&self, key: &str, value: &Value) -> String {
+        match value {
+            Value::String(text) if crate::prompt::python_strip(text).is_empty() => "—".into(),
+            Value::Bool(value) => if *value { "yes" } else { "no" }.into(),
+            Value::Number(number) if key.contains("netuid") => number
+                .as_u64()
+                .and_then(|number| u16::try_from(number).ok())
+                .map_or_else(
+                    || number.to_string(),
+                    |number| self.subnet_text(NetUid(number), false),
+                ),
+            Value::Number(number) if key.ends_with("tolerance") && number.is_f64() => {
+                number.as_f64().map_or_else(
+                    || number.to_string(),
+                    |number| format!("{:.2}%", number * 100.0),
+                )
+            }
+            Value::Array(_) | Value::Object(_) => {
+                let text = review_json(value);
+                if text.chars().count() > 160 {
+                    format!("{}…", text.chars().take(159).collect::<String>())
+                } else {
+                    text
+                }
+            }
+            _ => python_value(value),
+        }
     }
 
     /// Render a progress step without contaminating JSON data.
@@ -1666,6 +1711,31 @@ pub fn diagnostic(text: &str) -> String {
             .collect(),
         _ => text.into(),
     }
+}
+
+// Python json.dumps defaults used by the context card: spaces and ASCII escapes.
+fn review_json(value: &Value) -> String {
+    let mut text = String::new();
+    let mut quoted = false;
+    let mut escaped = false;
+    for character in value.to_string().chars() {
+        if character == '"' && !escaped {
+            quoted = !quoted;
+        }
+        if character.is_ascii() {
+            text.push(character);
+        } else {
+            let mut units = [0; 2];
+            for unit in character.encode_utf16(&mut units) {
+                text.push_str(&format!("\\u{:04x}", *unit));
+            }
+        }
+        if !quoted && matches!(character, ',' | ':') {
+            text.push(' ');
+        }
+        escaped = quoted && character == '\\' && !escaped;
+    }
+    text
 }
 
 fn python_value(value: &Value) -> String {
