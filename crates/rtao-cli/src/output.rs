@@ -1355,13 +1355,34 @@ impl Output {
         result: &ExtrinsicResult<O>,
         success_message: &str,
     ) -> Result<bool, OutputError> {
+        let recovery = result
+            .fate_unknown
+            .as_ref()
+            .filter(|_| !result.success)
+            .map(|hash| crate::error::unknown_fate_help(&hash.0));
         if self.options.json_mode {
             self.json(Stream::Stdout, &result.to_json())?;
+            if let Some(help) = recovery.as_deref() {
+                // D-023 keeps the canonical receipt unchanged. Native recovery
+                // identity belongs in a separate CLI diagnostic on stderr.
+                self.error(
+                    &result.message,
+                    DiagnosticContext {
+                        help: Some(help),
+                        see: result.explorer_url.as_deref(),
+                        ..Default::default()
+                    },
+                )?;
+            }
             return Ok(result.success);
         }
         if !result.success {
             if let Some(error) = &result.error {
-                self.chain_error(error, result.explorer_url.as_deref())?;
+                self.chain_error_with_help(
+                    error,
+                    result.explorer_url.as_deref(),
+                    recovery.as_deref(),
+                )?;
             } else {
                 self.line(
                     Stream::Stderr,
@@ -1369,6 +1390,9 @@ impl Output {
                 )?;
                 if let Some(url) = result.explorer_url.as_deref().filter(|url| !url.is_empty()) {
                     self.sub_diag(Stream::Stderr, "see", url)?;
+                }
+                if let Some(help) = recovery.as_deref() {
+                    self.sub_diag(Stream::Stderr, "help", help)?;
                 }
             }
             return Ok(false);
@@ -1512,6 +1536,15 @@ impl Output {
         error: &ChainError,
         explorer_url: Option<&str>,
     ) -> Result<(), OutputError> {
+        self.chain_error_with_help(error, explorer_url, None)
+    }
+
+    fn chain_error_with_help(
+        &self,
+        error: &ChainError,
+        explorer_url: Option<&str>,
+        help: Option<&str>,
+    ) -> Result<(), OutputError> {
         if self.options.json_mode {
             let mut payload = error.to_json();
             if let Some(url) = explorer_url.filter(|url| !url.is_empty()) {
@@ -1540,7 +1573,11 @@ impl Output {
         {
             self.sub_diag(Stream::Stderr, "note", description)?;
         }
-        self.sub_diag(Stream::Stderr, "help", error.remediation())?;
+        self.sub_diag(
+            Stream::Stderr,
+            "help",
+            help.unwrap_or_else(|| error.remediation()),
+        )?;
         if let Some(url) = error.docs_url() {
             self.sub_diag(Stream::Stderr, "see", &url)?;
         }

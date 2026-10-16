@@ -22,7 +22,7 @@ impl CliError {
             help: None,
         }
     }
-    /// Preserve typed chain remediation, gateway help and submission recovery.
+    /// Preserve typed chain, signer, gateway and submission recovery help.
     pub(crate) fn transaction(error: rtao::tx::TxError) -> Self {
         let help = match &error {
             rtao::tx::TxError::Chain(error)
@@ -34,7 +34,11 @@ impl CliError {
                 Some(rpc_policy_help(policy))
             }
             rtao::tx::TxError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
-                Some(unknown_fate_help(hash))
+                Some(unknown_fate_help(&hash.0))
+            }
+            rtao::tx::TxError::Signer(error)
+            | rtao::tx::TxError::Intent(rtao::tx::IntentError::Signer(error)) => {
+                error.help().map(str::to_owned)
             }
             rtao::tx::TxError::Intent(rtao::tx::IntentError::Client(error)) => client_help(error),
             _ => None,
@@ -83,19 +87,30 @@ fn rpc_policy_help(policy: &rtao_rpc::PolicyRefusal) -> String {
     }
 }
 
-fn unknown_fate_help(hash: &rtao_rpc::H256) -> String {
+pub(crate) fn unknown_fate_help(hash: &[u8; 32]) -> String {
     format!(
         "inspect transaction 0x{} on chain before retrying; do not resubmit until its outcome is known",
-        hex::encode(hash.0),
+        hex::encode(hash),
     )
 }
 
 fn client_help(error: &rtao::client::ClientError) -> Option<String> {
     match error {
+        rtao::client::ClientError::Signing(error) => error.help().map(str::to_owned),
         rtao::client::ClientError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
-            Some(unknown_fate_help(hash))
+            Some(unknown_fate_help(&hash.0))
         }
         error => error.policy().map(rpc_policy_help),
+    }
+}
+
+impl From<rtao::signer::SignerError> for CliError {
+    fn from(error: rtao::signer::SignerError) -> Self {
+        let help = error.help().map(str::to_owned);
+        Self {
+            help,
+            ..Self::failure(error.to_string())
+        }
     }
 }
 

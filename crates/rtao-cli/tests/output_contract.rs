@@ -792,6 +792,48 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
         );
         assert!(sink.text(Stream::Stderr)?.is_empty());
     }
+    // Native unknown-fate identity is deliberately absent from canonical JSON.
+    // Both classified and unclassified receipt paths must disclose it separately,
+    // including in quiet mode, without inviting another submission.
+    let hash = rtao::primitives::H256([73; 32]);
+    let identity = format!("0x{}", hex::encode(hash.0));
+    for classified in [false, true] {
+        for (json_mode, quiet) in [(false, false), (false, true), (true, false), (true, true)] {
+            let (output, sink) = capture(json_mode, quiet);
+            let mut result = outcome(false);
+            result.message = "Connection lost after submission.".into();
+            result.error = classified.then(|| ChainError::new(result.message.clone(), None));
+            result.fate_unknown = Some(hash);
+            result.extrinsic_id = None;
+            result.fee = None;
+            result.data.clear();
+            let canonical = result.to_json();
+            assert!(!canonical.to_string().contains(&identity));
+            assert!(!output.result(&result, "unused success")?);
+            let stderr = sink.text(Stream::Stderr)?;
+            assert_eq!(stderr.matches(&identity).count(), 1);
+            assert!(stderr.contains("do not resubmit until its outcome is known"));
+            assert!(!stderr.contains("--no-mev-shield"));
+            assert!(!stderr.contains("reduce the request"));
+            if json_mode {
+                assert_eq!(
+                    serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+                    canonical
+                );
+                let diagnostic: Value = serde_json::from_str(&stderr)?;
+                assert_eq!(diagnostic["error"], result.message);
+                assert!(
+                    diagnostic["help"]
+                        .as_str()
+                        .ok_or("recovery help")?
+                        .contains(&identity)
+                );
+            } else {
+                assert!(sink.text(Stream::Stdout)?.is_empty());
+            }
+            assert_eq!(result.to_json(), canonical);
+        }
+    }
     let address = rtao::primitives::AccountId([32; 32]).to_string();
     let name = hostile("receipt-name");
     let subnet_name = hostile("receipt-subnet");

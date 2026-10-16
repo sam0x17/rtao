@@ -1,13 +1,21 @@
 //! Actual required-argument parsing confirms local signing wallets first.
 
-use rtao::primitives::AccountId;
+use rtao::{
+    primitives::{AccountId, CryptoType},
+    signer::{DynKeySource, SignerRole},
+    wallet::{
+        NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSources,
+        PromptPolicy, RegenerateFrom, SecretString, Wallet, WalletError, WriteOptions,
+    },
+};
 use rtao_cli::{
     application,
     books::Books,
     commands::{addresses, generated::TxRequest, misc, proxy, wallet},
-    context::AppContext,
+    context::{AppContext, CliWalletKeys},
+    error::CliError,
     globals::Globals,
-    output::{MemorySink, Output, OutputOptions},
+    output::{DiagnosticContext, MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptContext, PromptError, PromptHistory, SharedTerminal, Terminal},
 };
 use serde_json::{Map, Value, json};
@@ -17,12 +25,49 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
     },
 };
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type Trace = Arc<Mutex<Vec<String>>>;
+const WRONG_PASSWORD: &str = "wrong-password-private-sentinel";
+#[derive(Default)]
+struct WrongPasswords {
+    prompts: AtomicUsize,
+    keychain: AtomicUsize,
+    dialogs: AtomicUsize,
+}
+impl PasswordPrompt for WrongPasswords {
+    fn prompt(&self, _: &str) -> Result<SecretString, WalletError> {
+        self.prompts.fetch_add(1, Ordering::SeqCst);
+        Ok(SecretString::new(WRONG_PASSWORD.into()))
+    }
+}
+impl NativePasswordProvider for WrongPasswords {
+    fn keychain_load<'a>(
+        &'a self,
+        wallet: &'a str,
+    ) -> NativePasswordFuture<'a, Option<SecretString>> {
+        Box::pin(async move {
+            assert_eq!(wallet, "encrypted");
+            self.keychain.fetch_add(1, Ordering::SeqCst);
+            Ok(Some(SecretString::new(WRONG_PASSWORD.into())))
+        })
+    }
+    fn macos_prompt<'a>(
+        &'a self,
+        title: &'a str,
+        message: &'a str,
+    ) -> NativePasswordFuture<'a, SecretString> {
+        Box::pin(async move {
+            assert_eq!(title, "Unlock encrypted coldkey");
+            assert_eq!(message, "Enter the password for wallet 'encrypted'.");
+            self.dialogs.fetch_add(1, Ordering::SeqCst);
+            Ok(SecretString::new(WRONG_PASSWORD.into()))
+        })
+    }
+}
 struct Input {
     tty: bool,
     err_tty: bool,
@@ -148,6 +193,176 @@ fn strings(words: &[OsString]) -> Vec<String> {
 #[tokio::test]
 async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_repeat_it()
 -> TestResult {
+    // Run the real resolver with a clean child environment; mutating process
+    // variables would race other tests and the wallet's blocking workers.
+    if let Some(root) = std::env::var_os("RTAO_PASSWORD_CONTRACT_ROOT") {
+        let root = PathBuf::from(root);
+        for (source, role, json_mode, quiet, prompts, keychain, dialogs, expected_help) in [
+            (
+                "prompt",
+                SignerRole::Coldkey,
+                false,
+                false,
+                3,
+                0,
+                0,
+                "re-run and enter the coldkey password used when the key was created",
+            ),
+            (
+                "prompt",
+                SignerRole::Coldkey,
+                true,
+                false,
+                3,
+                0,
+                0,
+                "re-run and enter the coldkey password used when the key was created",
+            ),
+            (
+                "prompt",
+                SignerRole::Coldkey,
+                false,
+                true,
+                3,
+                0,
+                0,
+                "re-run and enter the coldkey password used when the key was created",
+            ),
+            (
+                "prompt",
+                SignerRole::Hotkey,
+                false,
+                false,
+                1,
+                0,
+                0,
+                "re-run and enter the hotkey password used when the key was created",
+            ),
+            (
+                "keychain",
+                SignerRole::Coldkey,
+                false,
+                false,
+                0,
+                1,
+                0,
+                "re-save with `rtao wallet keychain save`",
+            ),
+            (
+                "dialog",
+                SignerRole::Coldkey,
+                false,
+                false,
+                0,
+                0,
+                1,
+                "re-run and enter the coldkey password in the macOS password dialog",
+            ),
+            (
+                "explicit",
+                SignerRole::Coldkey,
+                false,
+                false,
+                0,
+                0,
+                0,
+                "supply the coldkey password used when the key was created",
+            ),
+            (
+                "file",
+                SignerRole::Coldkey,
+                false,
+                false,
+                0,
+                0,
+                0,
+                "correct the selected password file, then retry",
+            ),
+        ] {
+            let attempts = Arc::new(WrongPasswords::default());
+            let sources = PasswordSources {
+                password: (source == "explicit").then(|| SecretString::new(WRONG_PASSWORD.into())),
+                password_file: (source == "file").then(|| root.join("password.txt")),
+                keychain: matches!(source, "keychain" | "explicit" | "file")
+                    || role == SignerRole::Hotkey,
+                macos_prompt: matches!(source, "dialog" | "explicit" | "file")
+                    || role == SignerRole::Hotkey,
+                prompt: PromptPolicy::Always,
+                prompt_callback: Some(attempts.clone()),
+                native_provider: Some(attempts.clone()),
+            };
+            let sink = MemorySink::default();
+            let output = Output::new(
+                OutputOptions {
+                    json_mode,
+                    quiet,
+                    ..Default::default()
+                },
+                Arc::new(sink.clone()),
+            );
+            let keys = CliWalletKeys::new(
+                Wallet::new("encrypted", "worker", &root)?.with_password_sources(sources),
+                output.clone(),
+            );
+            let error = keys
+                .signer_for(role)
+                .await
+                .err()
+                .ok_or("wrong password accepted")?;
+            assert!(error.to_string().starts_with("wrong password ("));
+            assert_eq!(error.help(), Some(expected_help));
+            assert!(!format!("{error:?}").contains(WRONG_PASSWORD));
+            assert_eq!(attempts.prompts.load(Ordering::SeqCst), prompts);
+            assert_eq!(attempts.keychain.load(Ordering::SeqCst), keychain);
+            assert_eq!(attempts.dialogs.load(Ordering::SeqCst), dialogs);
+            let before = sink.text(Stream::Stderr)?;
+            let notices = if prompts == 3 && !json_mode && !quiet {
+                2
+            } else {
+                0
+            };
+            assert_eq!(before.lines().count(), notices);
+            assert!(before.lines().all(|line| line == "error: wrong password"));
+            let client_error = CliError::from(rtao::client::ClientError::Signing(error.clone()));
+            assert_eq!(client_error.code, 1);
+            assert_eq!(client_error.message, error.to_string());
+            assert_eq!(client_error.help.as_deref(), Some(expected_help));
+            let transaction =
+                rtao::tx::TxError::from(rtao::client::ClientError::Signing(error.clone()));
+            assert!(matches!(
+                transaction,
+                rtao::tx::TxError::Signer(ref signer) if signer.help() == Some(expected_help)
+            ));
+            let error = CliError::from(error);
+            assert_eq!(error.code, 1);
+            assert!(!error.message.is_empty());
+            assert_eq!(error.help.as_deref(), Some(expected_help));
+            output.error(
+                &error.message,
+                DiagnosticContext {
+                    help: error.help.as_deref(),
+                    ..Default::default()
+                },
+            )?;
+            let rendered = sink.text(Stream::Stderr)?;
+            if json_mode {
+                let diagnostic: Value = serde_json::from_str(&rendered)?;
+                assert_eq!(
+                    diagnostic,
+                    json!({"error":error.message,"help":expected_help})
+                );
+            } else {
+                assert_eq!(
+                    rendered.matches("error: wrong password").count(),
+                    notices + 1
+                );
+                assert!(rendered.contains(expected_help));
+            }
+            assert!(sink.bytes(Stream::Stdout)?.is_empty());
+            assert!(!rendered.contains(WRONG_PASSWORD));
+        }
+        return Ok(());
+    }
     let root = Root::new()?;
     for (family, command, field, use_hotkey) in [
         ("wallet", "sign", "message", false),
@@ -215,6 +430,158 @@ async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_
         );
         assert_eq!(*trace.lock().map_err(|_| "trace")?, reads);
     }
+    // Encrypt once, then reuse the actual keyfile through fresh, uncached
+    // wallet handles. The same task root owns every subprocess fixture.
+    let correct = "fixture-password-private-correct";
+    let encrypted = Wallet::new("encrypted", "worker", &root.0)?;
+    let account = encrypted
+        .regenerate_coldkey(
+            RegenerateFrom::Seed(zeroize::Zeroizing::new(vec![71; 32])),
+            CryptoType::Ed25519,
+            WriteOptions {
+                password: Some(SecretString::new(correct.into())),
+                ..WriteOptions::coldkey()
+            },
+        )
+        .await?;
+    let ciphertext = rtao::wallet::encrypt_message("private-message-fixture", &account.to_string())
+        .await?
+        .ciphertext;
+    let private = std::fs::read(encrypted.reference().coldkey_path())?;
+    assert!(rtao::core::keyfile_json::keyfile_data_is_encrypted_nacl(
+        &private
+    ));
+    std::fs::create_dir_all(root.0.join("encrypted/hotkeys"))?;
+    std::fs::write(encrypted.reference().hotkey_path(), &private)?;
+    std::fs::write(
+        encrypted.reference().hotkeypub_path(),
+        std::fs::read(encrypted.reference().coldkeypub_path())?,
+    )?;
+    let password_file = root.0.join("password.txt");
+    std::fs::write(&password_file, WRONG_PASSWORD)?;
+    let cold_env = rtao::wallet::env_var_name(&encrypted.reference().coldkey_path());
+    let hot_env = rtao::wallet::env_var_name(&encrypted.reference().hotkey_path());
+    let mut child = std::process::Command::new(std::env::current_exe()?);
+    child
+        .args([
+            "--exact",
+            "actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_repeat_it",
+            "--nocapture",
+        ])
+        .env("RTAO_PASSWORD_CONTRACT_ROOT", &root.0)
+        .env_remove("BT_WALLET_PASSWORD")
+        .env_remove("BT_WALLET_PASSWORD_FILE")
+        .env_remove(&cold_env)
+        .env_remove(&hot_env)
+        .stdin(std::process::Stdio::null());
+    let result = child.output()?;
+    let stdout = String::from_utf8(result.stdout)?;
+    let stderr = String::from_utf8(result.stderr)?;
+    for text in [&stdout, &stderr] {
+        assert!(!text.contains(WRONG_PASSWORD) && !text.contains(correct));
+    }
+    assert!(result.status.success(), "{stdout}\n{stderr}");
+    assert!(
+        stdout.contains("1 passed;"),
+        "password child did not run: {stdout}"
+    );
+
+    // Exercise the installed command's final error renderer as well as the
+    // public signer conversion. Earlier env/file sources must beat both native
+    // flags even on hosts where those native services are unavailable.
+    let encoded =
+        rtao::core::keyfile_env::encode_password_for_environment(&cold_env, WRONG_PASSWORD)?;
+    let file_value = password_file.to_string_lossy();
+    for (operation, mode, variable, value, source, expected_help) in [
+        (
+            "sign",
+            "--json",
+            "BT_WALLET_PASSWORD",
+            WRONG_PASSWORD,
+            "BT_WALLET_PASSWORD",
+            "correct or unset BT_WALLET_PASSWORD, then retry",
+        ),
+        (
+            "sign",
+            "--quiet",
+            cold_env.as_str(),
+            encoded.as_str(),
+            "keyfile environment",
+            "correct or remove the encoded password variable for this keyfile, then retry",
+        ),
+        (
+            "decrypt",
+            "--json",
+            "BT_WALLET_PASSWORD_FILE",
+            file_value.as_ref(),
+            "password file",
+            "correct the selected password file, then retry",
+        ),
+    ] {
+        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_rtao"));
+        command
+            .args([
+                "wallet",
+                operation,
+                "--wallet",
+                "encrypted",
+                "--wallet-hotkey",
+                "worker",
+                "--keychain-password",
+                "--macos-password",
+                mode,
+                "--wallet-path",
+            ])
+            .arg(&root.0)
+            .args(if operation == "sign" {
+                ["--message", "public-payload"]
+            } else {
+                ["--ciphertext", ciphertext.as_str()]
+            })
+            // Startup's legacy-config warning also consults the child home.
+            .env("HOME", &root.0)
+            .env_remove("BT_WALLET_PASSWORD")
+            .env("BT_WALLET_PASSWORD_FILE", &password_file)
+            .env_remove(&cold_env)
+            .env_remove(&hot_env)
+            .env_remove("RTAO_PASSWORD_CONTRACT_ROOT")
+            .env(variable, value)
+            .stdin(std::process::Stdio::null());
+        for (index, file) in rtao::client::config::ConfigFile::ALL.iter().enumerate() {
+            command.env(
+                file.environment(),
+                root.0.join(format!("config-{index}.json")),
+            );
+        }
+        let result = command.output()?;
+        assert_eq!(result.status.code(), Some(1));
+        assert!(result.stdout.is_empty());
+        let stderr = String::from_utf8(result.stderr)?;
+        let expected_error = format!("wrong password ({source})");
+        if mode == "--json" {
+            let diagnostic: Value = serde_json::from_str(&stderr)?;
+            assert_eq!(
+                diagnostic,
+                json!({"error":expected_error,"help":expected_help})
+            );
+        } else {
+            assert_eq!(stderr.matches("error: wrong password").count(), 1);
+            assert!(stderr.contains(&expected_error) && stderr.contains(expected_help));
+        }
+        for secret in [
+            WRONG_PASSWORD,
+            correct,
+            "private-message-fixture",
+            encoded.as_str(),
+        ] {
+            assert!(!stderr.contains(secret));
+        }
+    }
+    assert_eq!(
+        std::fs::read(encrypted.reference().coldkey_path())?,
+        private
+    );
+    assert_eq!(std::fs::read(encrypted.reference().hotkey_path())?, private);
     Ok(())
 }
 

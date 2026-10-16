@@ -391,6 +391,7 @@ impl From<ClientError> for TxError {
             ClientError::Rpc(RpcError::Policy(policy)) => Self::RpcPolicy(policy),
             ClientError::Rpc(RpcError::Closed) => Self::ConnectionNotReady,
             ClientError::Rpc(error) => Self::Rpc(error),
+            ClientError::Signing(error) => Self::Signer(error),
             ClientError::SigningDisabled { reason } => Self::SigningDisabled { reason },
             ClientError::SurfaceChanged { descriptor, detail } => {
                 let (pallet, call) = descriptor.split_once('.').unwrap_or((descriptor, ""));

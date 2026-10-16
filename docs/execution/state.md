@@ -84,6 +84,31 @@ selected-name precedence and zero private acquisition. The fixture function
 inventory is unchanged. Source checks pass; hosted execution and final review
 remain pending. This candidate is also outside the completed run above.
 
+Ordinary [38982324536](https://github.com/sam0x17/rtao/actions/runs/38982324536)
+is validating the pushed narration/display corrections at
+`28f00a53c9d6776fe3dce4dc7601f3a7d4ed7878`. It remains live; no full pass is
+established. The separate uncommitted password candidate retains actual
+password-source remediation through an owned signer diagnostic, SDK signing
+errors and CLI conversion. Only prompted coldkeys retry twice. Quiet/JSON
+sessions suppress intermediate errors; the final nonempty error reaches the
+ordinary renderer once. Existing wallet fixtures reuse one encrypted keyfile,
+count prompt/native attempts and isolate real environment/file CLI cases in
+child processes. No child, cryptography or test ran locally.
+
+The native unknown-fate receipt path also needs the retained recovery hash at
+the CLI boundary. Some SDK failure messages already include it; others omit
+it, and D-023 deliberately omits the native field from canonical JSON. The
+candidate preserves stdout and emits separate stderr inspection help, including
+quiet mode. Human classified errors keep their code/notes/docs with recovery
+help; receipt-output failures retain that hash in the returned error. Existing
+fixtures cover classified/unclassified output plus actual SDK watched
+submissions, raw receipt hooks, one submission/unlock and a failed output sink.
+RPC and primitive hash wrappers remain distinct; shared formatting accepts
+their exact 32 bytes. Source review and installed formatting/whitespace checks
+pass; hosted execution of this candidate remains pending. No new test functions,
+source rows or milestones are accepted. Connection context, raised classified
+diagnostics, safe carrier-failure narration and signal disposition remain open.
+
 Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
 passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
 Artifact 12078644250 is 59,739 bytes, SHA256

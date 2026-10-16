@@ -18,6 +18,11 @@ review; unattended JSON or piped sessions must supply it for a mutation.
 approval can leave an operation pending, so inspect the result before treating
 the underlying call as executed.
 
+JSON transaction receipts stay on stdout. If a submitted transaction's outcome
+is unknown, stderr also carries a JSON diagnostic with its hash and inspection
+guidance. Check that transaction on chain before resubmitting. Quiet mode
+retains this recovery information.
+
 `--signer extension` still uses terminal transaction review and confirmation
 before requesting a signature in the wallet popup. `--yes` skips that terminal
 prompt; it does not approve the wallet signature request. JSON or piped
@@ -60,6 +65,11 @@ registrations and history, message signing and verification, sealed message
 encryption and decryption, transfers, identity and key swaps. Message decryption
 prints plaintext unless a requested clipboard destination succeeds. Protect its
 output as you would the original message.
+
+Wrong-password errors identify the selected password source and explain how
+to correct it. Prompted coldkeys allow three attempts. Hotkeys and explicit,
+environment, file, Keychain or macOS-dialog passwords attempt once. JSON and
+quiet mode suppress intermediate retry errors and retain the final diagnostic.
 
 `rtao stake --help` includes add/remove/move/transfer/swap, whole-position exits,
 position views, auto-stake and child-key settings. Interactive stake commands
