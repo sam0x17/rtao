@@ -1200,6 +1200,8 @@ enum PrepareBehavior {
     Advance(u64),
     Refuse,
     Pending,
+    ChangeAccount,
+    ChangeAlgorithm,
 }
 struct PreparingSigner {
     inner: RecordingSigner,
@@ -1221,10 +1223,22 @@ impl PreparingSigner {
 }
 impl Signer for PreparingSigner {
     fn account(&self) -> AccountId {
-        self.inner.account()
+        if matches!(self.behavior, PrepareBehavior::ChangeAccount)
+            && self.calls.load(std::sync::atomic::Ordering::SeqCst) > 0
+        {
+            AccountId([19; 32])
+        } else {
+            self.inner.account()
+        }
     }
     fn crypto_type(&self) -> CryptoType {
-        self.inner.crypto_type()
+        if matches!(self.behavior, PrepareBehavior::ChangeAlgorithm)
+            && self.calls.load(std::sync::atomic::Ordering::SeqCst) > 0
+        {
+            CryptoType::Sr25519
+        } else {
+            self.inner.crypto_type()
+        }
     }
     fn caps(&self) -> SignerCaps {
         self.inner.caps()
@@ -1246,6 +1260,7 @@ impl Signer for PreparingSigner {
                     Err(SignerError::Vault("fixture readiness refused".into()))
                 }
                 PrepareBehavior::Pending => std::future::pending().await,
+                PrepareBehavior::ChangeAccount | PrepareBehavior::ChangeAlgorithm => Ok(()),
             }
         })
     }
@@ -1316,14 +1331,16 @@ async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
 
 #[tokio::test]
 async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_material() {
-    for case in ["refuse", "cancel", "deadline"] {
+    for case in ["refuse", "cancel", "deadline", "account", "algorithm"] {
         let (client, fake, inner) = fixture().await;
-        let behavior = if case == "refuse" {
-            PrepareBehavior::Refuse
-        } else {
-            PrepareBehavior::Pending
+        let behavior = match case {
+            "refuse" => PrepareBehavior::Refuse,
+            "account" => PrepareBehavior::ChangeAccount,
+            "algorithm" => PrepareBehavior::ChangeAlgorithm,
+            _ => PrepareBehavior::Pending,
         };
         let signer = Arc::new(PreparingSigner::new(inner, fake.clone(), behavior));
+        let reviewed_account = signer.account();
         let inner_call = call(&client, 1).await;
         let before = fake.requests().len();
         if case == "cancel" {
@@ -1356,6 +1373,12 @@ async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_m
                     SignerError::Vault(message)
                 ))) if message == "fixture readiness refused")
                 );
+            } else if matches!(case, "account" | "algorithm") {
+                assert!(
+                    matches!(result, Err(SubmitFailure::Client(ClientError::Signing(
+                        SignerError::InvalidSignature(message)
+                    ))) if message == "signer identity changed during shield preparation")
+                );
             } else {
                 assert!(matches!(
                     result,
@@ -1368,6 +1391,10 @@ async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_m
         assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
         assert!(signer.inner.signed.lock().unwrap().is_empty());
         assert!(fake.state().lock().unwrap().submissions.is_empty());
+        assert_eq!(
+            client.nonces().cached(&reviewed_account.to_string()).await,
+            None
+        );
         assert_eq!(
             client.nonces().cached(&signer.account().to_string()).await,
             None
