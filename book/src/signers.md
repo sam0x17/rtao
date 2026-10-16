@@ -40,7 +40,8 @@ signature scans still need to finish within the signed era.
 Custom interactive signers can implement `prepare_shielded` for setup that
 should precede the short era. Its default does nothing, and the submission
 deadline also bounds preparation. This hook must not sign or broadcast a
-transaction.
+transaction. Keep its account and signature algorithm fixed throughout
+preparation; the client refuses either identity change before reserving nonces.
 
 Vault and extension browser opening share the explicit browser choice,
 environment fallback and executable aliases. Launching returns after spawning;
