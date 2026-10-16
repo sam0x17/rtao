@@ -316,7 +316,7 @@ jobs:
         if: ${{ !inputs.refresh_tls_provider_lock }}
         run: timeout 180s node ci/resolve-existing-lock.mjs
       - name: Retain candidate dependency locks for review
-        if: ${{ !inputs.refresh_tls_provider_lock }}
+        if: ${{ always() && !inputs.refresh_tls_provider_lock }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lock-${{ github.sha }}
