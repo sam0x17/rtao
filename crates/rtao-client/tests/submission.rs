@@ -134,46 +134,160 @@ async fn preparation_anchors_finalized_era_and_does_not_reserve_nonce() {
 
 #[tokio::test]
 async fn fee_probe_uses_public_identity_fresh_nonce_and_runtime_api_without_signing() {
+    use rtao_core::{codec::Value, runtime::TypeSpec, value_ext::ValueExt};
+    use rtao_primitives::{IntoCoreValue, NetUid};
+
     let (client, fake, signer) = fixture().await;
-    client.nonces().pin(&signer.account(), 40);
-    let estimate = client
-        .estimate_weight(
-            call(&client, vec![]).await,
-            signer.account(),
-            signer.crypto_type(),
+    let runtime = client.refresh_runtime().await.unwrap();
+    let weights =
+        rtao_runtime::calls::subtensor_module::set_weights(NetUid(1), vec![2], vec![65535], 0)
+            .compose(&runtime)
+            .unwrap();
+    let proxy = |real: AccountId, call| {
+        rtao_runtime::calls::proxy::proxy(
+            rtao_core::DynValue::new(real.into_core_value()),
+            None,
+            call,
         )
-        .await
-        .unwrap();
-    assert_eq!(estimate.partial_fee, fake.state().lock().unwrap().fee);
-    assert_eq!(
-        client.nonces().cached(&signer.account().to_string()).await,
-        Some(40)
+        .compose(&runtime)
+        .unwrap()
+    };
+    let real = AccountId([8; 32]);
+    let outer_real = AccountId([9; 32]);
+    let ordinary = call(&client, vec![1, 2]).await;
+    let nested_proxy = proxy(outer_real, proxy(real, weights.clone()));
+    let proxy_batch = proxy(
+        outer_real,
+        rtao_runtime::calls::utility::batch_all(vec![
+            proxy(real, ordinary.clone()),
+            proxy(real, weights.clone()),
+        ])
+        .compose(&runtime)
+        .unwrap(),
     );
-    let request = fake
-        .requests()
-        .into_iter()
-        .find(|request| {
-            request.method == "state_call"
-                && request.params[0] == "TransactionPaymentApi_query_info"
-        })
-        .unwrap();
-    let args = hex::decode(
-        request.params[1]
-            .as_str()
-            .unwrap()
-            .strip_prefix("0x")
-            .unwrap(),
+    let announced = rtao_runtime::calls::proxy::proxy_announced(
+        rtao_core::DynValue::new(outer_real.into_core_value()),
+        rtao_core::DynValue::new(real.into_core_value()),
+        None,
+        weights,
     )
+    .compose(&runtime)
     .unwrap();
-    let encoded_len = u32::from_le_bytes(args[args.len() - 4..].try_into().unwrap()) as usize;
-    assert_eq!(encoded_len, args.len() - 4);
-    assert!(fake.state().lock().unwrap().submissions.is_empty());
-    assert!(
-        !fake
-            .requests()
+    client.nonces().pin(&signer.account(), 40);
+    // The fake supplies independent fees/weights/classes. These are client
+    // transport witnesses, not a simulation of runtime opt-ins or account debits.
+    for (index, (call, class)) in [
+        (ordinary, "Normal"),
+        (nested_proxy, "Operational"),
+        (proxy_batch, "Mandatory"),
+        (announced, "Normal"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let nonce = 7 + u64::try_from(index).unwrap();
+        let fee = 1_000 + u64::try_from(index).unwrap();
+        let weight = json!({"ref_time": 42 + index, "proof_size": 9 + index});
+        fake.mutate_state(|state| {
+            state.set_nonce(signer.account().to_string(), nonce);
+            state
+                .seed_runtime(
+                    "TransactionPaymentApi",
+                    "query_info",
+                    json!({
+                        "weight":weight, "class":class, "partial_fee":fee,
+                    }),
+                )
+                .unwrap();
+        });
+        let first_request = fake.requests().len();
+        let estimate = client
+            .estimate_weight(call.clone(), signer.account(), signer.crypto_type())
+            .await
+            .unwrap();
+        assert_eq!(estimate.partial_fee, fee);
+        assert_eq!(
+            rtao_core::codec::value::to_corpus_json(&estimate.weight),
+            weight
+        );
+        assert_eq!(estimate.class.as_str(), Some(class));
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            Some(40)
+        );
+        let requests = fake.requests();
+        let requests = &requests[first_request..];
+        let fee_requests = requests
             .iter()
-            .any(|request| request.method == "payment_queryInfo")
-    );
+            .filter(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "TransactionPaymentApi_query_info"
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(fee_requests.len(), 1);
+        let request = fee_requests[0];
+        assert!(request.params[2].is_null());
+        let args = hex::decode(
+            request.params[1]
+                .as_str()
+                .unwrap()
+                .strip_prefix("0x")
+                .unwrap(),
+        )
+        .unwrap();
+        let encoded_len = u32::from_le_bytes(args[args.len() - 4..].try_into().unwrap()) as usize;
+        assert_eq!(encoded_len, args.len() - 4);
+        let decoded = runtime
+            .core()
+            .decode_extrinsic(&args[..encoded_len], true)
+            .unwrap();
+        let expected_call = runtime
+            .core()
+            .decode_spec(&TypeSpec::Call, call.as_bytes(), true)
+            .unwrap();
+        assert_eq!(decoded.field("call"), Some(&expected_call));
+        assert_eq!(
+            decoded.field("address").and_then(ValueExt::as_str),
+            Some(signer.account().to_string().as_str())
+        );
+        assert_eq!(
+            decoded.field("nonce").and_then(ValueExt::as_u128),
+            Some(u128::from(nonce))
+        );
+        assert_eq!(decoded.field("era").and_then(ValueExt::as_str), Some("00"));
+        assert_eq!(decoded.field("tip").and_then(ValueExt::as_u128), Some(0));
+        assert!(decoded.field("asset_id").is_none());
+        assert_eq!(
+            decoded
+                .field("mode")
+                .and_then(|mode| mode.field("mode"))
+                .and_then(ValueExt::as_str),
+            Some("Disabled")
+        );
+        assert_eq!(
+            decoded
+                .field("signature")
+                .and_then(|signature| signature.variant("Ed25519"))
+                .and_then(Value::value_bytes),
+            Some(vec![0; 64])
+        );
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|request| request.method == "account_nextIndex")
+                .count(),
+            1
+        );
+        assert!(
+            !requests
+                .iter()
+                .any(|request| request.method.starts_with("author_")
+                    || request.method == "payment_queryInfo"
+                    || request.method.starts_with("state_getStorage"))
+        );
+    }
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
 }
 
 #[tokio::test]
