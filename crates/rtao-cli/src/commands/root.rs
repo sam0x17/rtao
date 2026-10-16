@@ -519,7 +519,7 @@ async fn names(
         .collect();
     for (hotkey, identity) in owner::hotkey_identities(client, missing)
         .await
-        .map_err(failure)?
+        .map_err(CliError::from)?
     {
         if let Some(name) = identity["name"].as_str().filter(|name| !name.is_empty()) {
             names.entry(hotkey).or_insert_with(|| name.to_owned());
@@ -562,7 +562,7 @@ async fn selector(ctx: &AppContext, client: &Client, value: &str) -> Result<Acco
         let result = client
             .storage(&st::KEYS, (NetUid::ROOT, uid))
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         // The descriptor has a Default modifier. Python's raw query returns
         // its all-zero account on a missing entry, rather than Option::None.
         return Ok(*result.raw());
@@ -573,13 +573,15 @@ async fn selector(ctx: &AppContext, client: &Client, value: &str) -> Result<Acco
             return Ok(hotkey);
         }
     }
-    let funds = m6_root::root_baskets(client).await.map_err(failure)?;
+    let funds = m6_root::root_baskets(client)
+        .await
+        .map_err(CliError::from)?;
     // Selection accepts the chain name even when a different local alias
     // wins display precedence. Do not reuse display-name filtering here.
     let identities =
         owner::hotkey_identities(client, funds.iter().map(|fund| fund.hotkey).collect())
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
     // The identity read returns a lookup map; selection must retain the funds'
     // descending NAV order, including stable ties, rather than account-byte order.
     for fund in &funds {
@@ -770,7 +772,9 @@ async fn pick_fund(
     flag: &str,
     history: &mut PromptHistory,
 ) -> Result<Option<PickedFund>, CliError> {
-    let mut funds = m6_root::root_baskets(client).await.map_err(failure)?;
+    let mut funds = m6_root::root_baskets(client)
+        .await
+        .map_err(CliError::from)?;
     let normalized = basket_index::normalize_positions(
         &funds
             .iter()
@@ -1098,7 +1102,7 @@ async fn prepare_transaction_inner(
             }
             let fund = owner::validator_basket_summary(client, hotkey)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let names = names(ctx, client, &[hotkey]).await?;
             let mut rows = vec![
                 ("wallet", json!(account)),
@@ -1606,7 +1610,9 @@ async fn execute_list(
         let summaries = if positions.is_empty() {
             vec![]
         } else {
-            m6_root::root_baskets(client).await.map_err(failure)?
+            m6_root::root_baskets(client)
+                .await
+                .map_err(CliError::from)?
         };
         let normalized = basket_index::normalize_positions(
             &summaries
@@ -1743,7 +1749,7 @@ async fn execute_list(
         .await?;
         let summary = owner::validator_basket_summary(client, hotkey)
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         if ctx.output.options().json_mode {
             return ctx.output.value(&json!(summary)).map_err(failure);
         }
@@ -1807,8 +1813,10 @@ async fn execute_list(
         }
         return Ok(());
     }
-    let snapshot = client.at(BlockRef::Best).await.map_err(failure)?;
-    let summaries = m6_root::root_baskets(&snapshot).await.map_err(failure)?;
+    let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
+    let summaries = m6_root::root_baskets(&snapshot)
+        .await
+        .map_err(CliError::from)?;
     let mut plan = ReadPlan::new();
     for row in &summaries {
         plan.push(
@@ -1816,7 +1824,7 @@ async fn execute_list(
             vec![DynValue::Str(row.hotkey.to_string()), DynValue::Uint(0)],
         );
     }
-    let stakes = snapshot.fetch(plan).await.map_err(failure)?;
+    let stakes = snapshot.fetch(plan).await.map_err(CliError::from)?;
     let (level, fields) = basket_index::normalize_positions(
         &summaries
             .iter()

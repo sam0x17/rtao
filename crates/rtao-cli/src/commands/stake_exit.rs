@@ -176,7 +176,7 @@ pub async fn execute(
         let owner = picker::owner(ctx).await?;
         let positions = m6_staking::stake_for_coldkey(client, owner)
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         let hotkeys = live_hotkeys(&positions, request.include_root);
         if hotkeys.is_empty() {
             let kind = if request.include_root {

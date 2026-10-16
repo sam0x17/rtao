@@ -420,6 +420,65 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
             );
             assert!(payload["policy"].is_object());
         }
+        // Exercise the real read handlers, including their ReadError wrapper,
+        // with a typed refusal at the snapshot boundary before any data output.
+        for (retry, expected) in [
+            (Some("12"), "wait 12 seconds, then retry"),
+            (None, "reduce the request or connection rate, then retry"),
+        ] {
+            let (refused_client, refused_chain) = fake_client().await?;
+            let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+                "code":-32005,"message":"slow down",
+                "data":{"policy":"rate","retry_after":retry},
+            }))
+            .ok_or("typed policy fixture")?;
+            let expected_message = policy.to_string();
+            let start = refused_chain.requests().len();
+            refused_chain.queue_transport_error(
+                "chain_getBlockHash",
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                    policy,
+                )))),
+            );
+            let mut refused_ctx = context(&parsed)?;
+            let sink = captured(&mut refused_ctx, true);
+            let outcome = if family == "conviction" {
+                let request = conviction::prepare_read(
+                    &mut refused_ctx,
+                    group,
+                    &mut PromptHistory::default(),
+                )?;
+                conviction::execute_prepared_read(&refused_ctx, &refused_client, &request).await
+            } else {
+                let request = collateral::prepare_read(
+                    &mut refused_ctx,
+                    group,
+                    &mut PromptHistory::default(),
+                )?;
+                collateral::execute_prepared_read(&refused_ctx, &refused_client, &request).await
+            };
+            let error = outcome.err().ok_or("policy refusal was accepted")?;
+            assert_eq!(error.code, 1);
+            assert_eq!(error.message, expected_message);
+            assert_eq!(error.help.as_deref(), Some(expected), "{family} {command}");
+            let requests = refused_chain.requests();
+            assert_eq!(
+                requests[start..]
+                    .iter()
+                    .filter(|request| request.method == "chain_getBlockHash")
+                    .count(),
+                1
+            );
+            assert!(
+                requests[start..]
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            assert!(refused_chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(sink.bytes(Stream::Stdout)?.is_empty());
+            assert!(sink.bytes(Stream::Stderr)?.is_empty());
+            refused_client.close().await;
+        }
     }
     assert!(chain.mutate_state(|s| s.submissions.is_empty()));
     client.close().await;

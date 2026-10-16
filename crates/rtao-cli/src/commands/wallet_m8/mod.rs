@@ -242,10 +242,10 @@ async fn identity_request(
             .resolve_address("coldkey_ss58", None)?
             .ok_or_else(|| input("missing coldkey"))?,
     };
-    let view = client.pin().await.map_err(failure)?;
+    let view = client.pin().await.map_err(CliError::from)?;
     let current = rtao::reads::reads::owner::identity(&view, owner)
         .await
-        .map_err(failure)?
+        .map_err(CliError::from)?
         .unwrap_or_else(|| json!({}));
     if !ctx.globals.json {
         if current.as_object().is_some_and(|fields| !fields.is_empty()) {
@@ -310,10 +310,10 @@ pub(super) async fn get_identity(
         Some(block) => client.at(BlockRef::Number(*block)).await,
         None => client.pin().await,
     }
-    .map_err(failure)?;
+    .map_err(CliError::from)?;
     let identity = rtao::reads::reads::owner::identity(&view, owner)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     if ctx.globals.json {
         return ctx.output.value(&identity).map_err(failure);
     }
@@ -338,11 +338,11 @@ pub(super) async fn swap_check(
     let owner = ctx
         .resolve_target("coldkey_ss58", text(matches, "coldkey_ss58"), history)?
         .ok_or_else(|| input("missing coldkey"))?;
-    let view = client.pin().await.map_err(failure)?;
+    let view = client.pin().await.map_err(CliError::from)?;
     let Some(announcement) =
         rtao::reads::reads::m6_accounts::coldkey_swap_announcement(&view, owner)
             .await
-            .map_err(failure)?
+            .map_err(CliError::from)?
     else {
         return ctx
             .output

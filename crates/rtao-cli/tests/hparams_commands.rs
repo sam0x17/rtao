@@ -738,6 +738,7 @@ mod null_pruning {
     struct Factory {
         keys: Arc<Keys>,
         fail_release: std::sync::atomic::AtomicBool,
+        refuse_finalized_after_release: Mutex<Option<rtao_rpc::PolicyRefusal>>,
     }
     impl ExternalSignerFactory for Factory {
         fn keys<'a>(
@@ -751,9 +752,23 @@ mod null_pruning {
             &'a self,
             _: &'a Globals,
             _: &'a dyn DynKeySource,
-            _: bool,
+            success: bool,
         ) -> BoxFuture<'a, Result<(), CliError>> {
             Box::pin(async move {
+                let refusal = self
+                    .refuse_finalized_after_release
+                    .lock()
+                    .map_err(|_| CliError::failure("release refusal lock"))?
+                    .take();
+                if let Some(policy) = refusal {
+                    assert!(success, "refuse only after a successful pruning receipt");
+                    self.keys.signer.chain.queue_transport_error(
+                        "chain_getFinalizedHead",
+                        rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(
+                            Box::new(policy),
+                        ))),
+                    );
+                }
                 if self.fail_release.load(Ordering::SeqCst) {
                     Err(CliError::failure("external session release failed"))
                 } else {
@@ -1038,6 +1053,7 @@ mod null_pruning {
                 unlocks: Arc::new(AtomicUsize::new(0)),
             }),
             fail_release: std::sync::atomic::AtomicBool::new(false),
+            refuse_finalized_after_release: Mutex::new(None),
         };
         Ok(Fixture {
             _temp: temp,
@@ -1256,6 +1272,58 @@ mod null_pruning {
                 .is_empty()
         );
         f.client.close().await;
+
+        for (retry, expected_help) in [
+            (Some("12"), "wait 12 seconds, then retry"),
+            (None, "reduce the request or connection rate, then retry"),
+        ] {
+            let mut f = fixture(260, vec![], false, true, false).await?;
+            let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+                "code":-32005,"message":"slow down",
+                "data":{"policy":"rate","retry_after":retry},
+            }))
+            .ok_or("typed pruning policy")?;
+            let expected_message = policy.to_string();
+            let start = f.chain.requests().len();
+            f.chain.queue_transport_error(
+                "chain_getFinalizedHead",
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                    policy,
+                )))),
+            );
+            let error = run(&mut f).await.err().ok_or("pruning refusal accepted")?;
+            assert_eq!(error.code, 1);
+            assert_eq!(error.message, expected_message);
+            assert_eq!(error.help.as_deref(), Some(expected_help));
+            assert_eq!(f.factory.keys.unlocks.load(Ordering::SeqCst), 0);
+            assert!(
+                f.factory
+                    .keys
+                    .signer
+                    .calls
+                    .lock()
+                    .map_err(|_| "calls")?
+                    .is_empty()
+            );
+            assert!(!f.journal.exists());
+            assert!(
+                f.chain
+                    .state()
+                    .lock()
+                    .map_err(|_| "state")?
+                    .submissions
+                    .is_empty()
+            );
+            assert_eq!(
+                f.chain.requests()[start..]
+                    .iter()
+                    .filter(|request| request.method == "chain_getFinalizedHead")
+                    .count(),
+                1
+            );
+            assert!(f.sink.bytes(Stream::Stdout)?.is_empty());
+            f.client.close().await;
+        }
         Ok(())
     }
 
@@ -1347,6 +1415,127 @@ mod null_pruning {
             3
         );
         f.client.close().await;
+
+        // Arm the finalized lookup refusal only after the successful receipt
+        // and release, so it exercises finish_action's recovery boundary.
+        for fail_release in [false, true] {
+            let mut f = fixture(260, vec![], false, false, false).await?;
+            let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+                "code":-32005,"message":"slow down",
+                "data":{"policy":"rate","retry_after":"12"},
+            }))
+            .ok_or("typed post-receipt policy")?;
+            let expected_message = policy.to_string();
+            *f.factory
+                .refuse_finalized_after_release
+                .lock()
+                .map_err(|_| "release refusal")? = Some(policy);
+            f.factory.fail_release.store(fail_release, Ordering::SeqCst);
+            let error = run(&mut f)
+                .await
+                .err()
+                .ok_or("post-receipt refusal accepted")?;
+            assert_eq!(error.code, 1);
+            assert_eq!(error.message, expected_message);
+            let help = error.help.as_deref().ok_or("pruning recovery help")?;
+            assert!(help.contains("wait 12 seconds, then retry"));
+            assert_eq!(
+                help.contains("submission also reported: external session release failed"),
+                fail_release
+            );
+            let journal_bytes = fs::read(&f.journal)?;
+            let journal: Value = serde_json::from_slice(&journal_bytes)?;
+            let receipt = &journal["receipt"];
+            assert_eq!(receipt["success"], true);
+            assert_eq!(receipt["inclusion"], "Finalized");
+            assert!(receipt["fate_unknown"].is_null());
+            let id = receipt["extrinsic_id"].as_str().ok_or("receipt id")?;
+            assert!(!id.is_empty());
+            assert!(help.contains(&format!("the transaction was already submitted as {id}")));
+            assert!(help.contains("inspect that result before retrying"));
+            assert!(help.contains(&format!("retain {}", f.journal.display())));
+            assert!(
+                help.contains(
+                    "reconcile its recorded inclusion, expiry or pending multisig approval"
+                )
+            );
+            assert_eq!(journal["attempts"].as_array().ok_or("attempts")?.len(), 1);
+            assert_eq!(journal["attempts"][0]["receipt"], *receipt);
+            assert_eq!(f.factory.keys.unlocks.load(Ordering::SeqCst), 1);
+            assert_eq!(
+                f.factory
+                    .keys
+                    .signer
+                    .calls
+                    .lock()
+                    .map_err(|_| "calls")?
+                    .len(),
+                1
+            );
+            assert_eq!(f.factory.keys.signer.population.load(Ordering::SeqCst), 196);
+            assert_eq!(
+                f.chain
+                    .state()
+                    .lock()
+                    .map_err(|_| "state")?
+                    .submissions
+                    .len(),
+                1
+            );
+            assert_eq!(
+                f.chain
+                    .requests()
+                    .iter()
+                    .filter(|request| request.method.starts_with("author_submit"))
+                    .count(),
+                1
+            );
+            assert!(
+                !machine_records(&f.sink)?
+                    .iter()
+                    .any(|value| value["status"] == "complete")
+            );
+
+            let restart = run(&mut f)
+                .await
+                .err()
+                .ok_or("unresolved restart accepted")?;
+            assert!(
+                restart
+                    .message
+                    .contains("unresolved submission recorded in")
+            );
+            assert_eq!(fs::read(&f.journal)?, journal_bytes);
+            assert_eq!(f.factory.keys.unlocks.load(Ordering::SeqCst), 1);
+            assert_eq!(
+                f.factory
+                    .keys
+                    .signer
+                    .calls
+                    .lock()
+                    .map_err(|_| "calls")?
+                    .len(),
+                1
+            );
+            assert_eq!(
+                f.chain
+                    .state()
+                    .lock()
+                    .map_err(|_| "state")?
+                    .submissions
+                    .len(),
+                1
+            );
+            assert_eq!(
+                f.chain
+                    .requests()
+                    .iter()
+                    .filter(|request| request.method.starts_with("author_submit"))
+                    .count(),
+                1
+            );
+            f.client.close().await;
+        }
         Ok(())
     }
 

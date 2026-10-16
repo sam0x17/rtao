@@ -131,7 +131,7 @@ pub(super) async fn followup(
         Some(hash) => client.at(BlockRef::Hash(hash)).await,
         None => client.pin().await,
     }
-    .map_err(failure)?;
+    .map_err(CliError::from)?;
     let runtime = &snapshot.block().runtime;
     let call = CallBytes::decode(&bytes, runtime).map_err(failure)?;
     if call.hash() != hash.0 {

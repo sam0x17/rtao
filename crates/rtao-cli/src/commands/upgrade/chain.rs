@@ -63,7 +63,7 @@ pub(super) async fn sudo_layer(
     snapshot
         .storage(&st::multisig::MULTISIGS, (sudo, call_hash))
         .await
-        .map_err(failure)
+        .map_err(CliError::from)
 }
 
 pub(super) async fn discover(snapshot: &Snapshot, sudo: AccountId) -> Result<Vec<Value>, CliError> {
@@ -99,7 +99,7 @@ pub(super) async fn verify(
     let sudo = snapshot
         .storage(&st::sudo::KEY, ())
         .await
-        .map_err(failure)?
+        .map_err(CliError::from)?
         .ok_or_else(|| failure("chain has no sudo key"))?;
     let hash = bundle.call_hash()?;
     let pending = discover(snapshot, sudo).await?.into_iter().find(|record| {
