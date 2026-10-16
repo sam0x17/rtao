@@ -16,7 +16,8 @@ for the applicable [M1 Q30 development exit](m1-client.md#current-q30-developmen
 Canonical chain text uses byte lists; this case demonstrates no wire-path
 failure. Typed row access, `Option` and Rust `Debug` are explicit native API
 choices. Complete source review and exact hosted evidence now reconcile the
-whole source row; the generated matrix awaits hosted refresh. These Rust results
+whole source row; hosted report run 38876950939 refreshed its generated matrix
+entry at `82d82d7`. These Rust results
 establish no fresh Python/oracle, live-network, benchmark, fuzz, platform or
 release coverage.
 

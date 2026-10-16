@@ -9699,11 +9699,15 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/metagraph.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_metagraph::{Metagraph, MetagraphNeuron, MetagraphView, SubnetsMetagraphExt}`; the commitment parts → `rtao_reads::commitments`"
+          "crates/rtao-metagraph/src/graph.rs",
+          "crates/rtao-metagraph/src/fetch.rs",
+          "crates/rtao-reads/src/commitments.rs",
+          "crates/rtao-primitives/src/axon.rs",
+          "crates/rtao-primitives/src/pyfmt.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "80f0f0c9016c8f379254d9a880cef4afac4fc921"
       },
       {
         "kind": "ported",
@@ -10397,11 +10401,12 @@
         "milestone": "M1",
         "oracle": "unverified",
         "python": "sdk/python/tests/harness/fake_node.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-testkit::FakeNode` (§11.3)"
+          "crates/rtao-testkit/src/fakes/node.rs",
+          "rtao_testkit::fakes::{FakeState,Reply,FakeChain}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "46c7bd2b41774ac1757bf499f62db4b2fea81c21"
       },
       {
         "kind": "extracted",
@@ -10727,11 +10732,15 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_rpc.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "crates/rtao-testkit/tests/rpc.rs",
+          "crates/rtao-rpc/src/policy.rs",
+          "crates/rtao-client/tests/public_rpc.rs",
+          "xtask/src/extract_rpc_test_fixtures.rs",
+          "crates/rtao-catalog/src/py.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "655aa3ba498aeae6e061e73f8db6fb4f12e7e743"
       },
       {
         "kind": "ported",
