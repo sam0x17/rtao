@@ -1,4 +1,6 @@
-// Derived from RaoFoundation/subtensor pallets/subtensor/src/utils/{misc,rate_limiting}.rs and pallets/admin-utils/src/lib.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/utils/misc.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/utils/rate_limiting.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor pallets/admin-utils/src/lib.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Owner-only hyperparameter planning at one pinned chain state.
 
 use super::{owner_call, owner_parameter, owner_value};

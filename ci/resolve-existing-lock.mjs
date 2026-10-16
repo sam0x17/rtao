@@ -1,4 +1,4 @@
-// Resolve newly declared edges on the hosted runner without changing versions.
+// Resolve reviewed dependency candidates on the hosted runner.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -13,6 +13,12 @@ if (process.env.GITHUB_ACTIONS !== 'true'
 if (readFileSync('Cargo.toml', 'utf8').includes('\ndocify = "=0.2.9"\n')
     && !/name = "docify"\nversion = "0.2.9"/.test(readFileSync('Cargo.lock', 'utf8'))) {
   execFileSync(process.execPath, ['ci/resolve-docify-lock.mjs'], {stdio:'inherit',timeout:170000});
+  process.exit(0);
+}
+
+// This precise compatible update removes the release yanked on 2026-10-16.
+if (/name = "inout"\nversion = "0.2.3"\n/.test(readFileSync('Cargo.lock', 'utf8'))) {
+  execFileSync(process.execPath, ['ci/resolve-inout-lock.mjs'], {stdio:'inherit',timeout:170000});
   process.exit(0);
 }
 

@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/utils/misc.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Coherent best-head weight preparation and actual-epoch reveal tracking.
 
 mod reveal;
@@ -344,6 +345,13 @@ impl WeightPreflight {
             .copied()
             .unwrap_or(0)
     }
+    fn activity_alarm_cutoff(&self, uid: Uid, activity_factor: u32) -> Option<u64> {
+        let cutoff =
+            u64::from(activity_factor).saturating_mul(u64::from(self.schedule.tempo)) / 1000;
+        let cutoff = cutoff.max(1);
+        (self.at.number.saturating_sub(self.last_update(uid)) >= cutoff.saturating_mul(4) / 5)
+            .then_some(cutoff)
+    }
 }
 
 #[derive(Default)]
@@ -563,10 +571,7 @@ impl WeightScheduler {
                 "last-good stake is below the chain threshold; chain checks remain authoritative"
             );
         }
-        let last = preflight.last_update(uid);
-        let cutoff =
-            u64::from(activity_factor).saturating_mul(u64::from(preflight.schedule.tempo)) / 1000;
-        if cutoff > 0 && preflight.at.number.saturating_sub(last) >= cutoff.saturating_mul(4) / 5 {
+        if let Some(cutoff) = preflight.activity_alarm_cutoff(uid, activity_factor) {
             cx.metrics.increment("rtao_weights_activity_alarm_total");
             tracing::warn!(
                 mechanism = mech.0,

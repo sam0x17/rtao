@@ -9,7 +9,10 @@ use crate::{
     prompt::python_strip,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command, parser::ValueSource};
-use rtao::{primitives::Amount, reads::ReadName};
+use rtao::{
+    primitives::{DynBalance, Money, NetUid},
+    reads::ReadName,
+};
 use rtao_catalog::{IntentSpec, ParamSpec};
 use serde_json::{Map, Value, json};
 
@@ -288,41 +291,112 @@ fn number(raw: &str) -> Result<Value, CliError> {
     Ok(json!(number))
 }
 
+const MONEY_TEXT_BUDGET: usize = 4096;
+
+/// Normalize Decimal-compatible CLI text while keeping Money/Amount strict.
+/// Text and exponent budgets also bound Unicode and redundant-zero scratch work.
+/// Callers enforce whether their field permits the returned all sentinel.
+pub(super) fn normalize_money_text(raw: &str, netuid: NetUid) -> Result<String, CliError> {
+    const EXPONENT_BUDGET: u64 = 4096;
+    if raw.len() > MONEY_TEXT_BUDGET {
+        return Err(CliError::input(
+            "amount exceeds its 4096-byte normalization budget",
+        ));
+    }
+    let text = crate::prompt::python_strip(raw);
+    if text.eq_ignore_ascii_case("all") {
+        return Ok("all".into());
+    }
+    let invalid = || CliError::input("amount must be a finite non-negative decimal or 'all'");
+    // Decimal(string) ignores underscores and accepts Unicode decimal digits.
+    let text = text
+        .chars()
+        .filter(|character| *character != '_')
+        .collect::<String>();
+    let (negative, text) = match text.strip_prefix('-') {
+        Some(unsigned) => (true, unsigned),
+        None => (false, text.strip_prefix('+').unwrap_or(&text)),
+    };
+    let decimal_digits = |value: &str| {
+        value.chars().all(|character| {
+            unicode_general_category::get_general_category(character)
+                == unicode_general_category::GeneralCategory::DecimalNumber
+        })
+    };
+    let (mantissa, exponent) = match text.find(['e', 'E']) {
+        Some(index) => {
+            let (mantissa, suffix) = text.split_at(index);
+            let exponent = &suffix[1..];
+            let unsigned = exponent.strip_prefix(['+', '-']).unwrap_or(exponent);
+            if unsigned.is_empty() || !decimal_digits(unsigned) {
+                return Err(invalid());
+            }
+            let exponent = rtao::primitives::pyfmt::parse_integer(exponent)
+                .ok_or_else(invalid)?
+                .to_string()
+                .parse::<i64>()
+                .map_err(|_| CliError::input("amount exponent exceeds its normalization budget"))?;
+            if exponent.unsigned_abs() > EXPONENT_BUDGET {
+                return Err(CliError::input(
+                    "amount exponent exceeds its normalization budget",
+                ));
+            }
+            (mantissa, exponent)
+        }
+        None => (text, 0),
+    };
+    let (integer, fraction) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    if (integer.is_empty() && fraction.is_empty())
+        || !decimal_digits(integer)
+        || !decimal_digits(fraction)
+    {
+        return Err(invalid());
+    }
+    let coefficient = rtao::primitives::pyfmt::parse_integer(&format!("{integer}{fraction}"))
+        .ok_or_else(invalid)?
+        .to_string();
+    if negative && coefficient != "0" {
+        return Err(CliError::input("amount must be non-negative"));
+    }
+    // Remove redundant zero precision before the exact native constructor.
+    // This admits e.g. 10e-10 as one rao without admitting 1e-10 or rounding.
+    let significant = coefficient.trim_end_matches('0');
+    let (significant, power) = if significant.is_empty() {
+        ("0", 0)
+    } else {
+        let fraction_digits = i64::try_from(fraction.chars().count())
+            .map_err(|error| CliError::failure(error.to_string()))?;
+        let trailing_zeros = i64::try_from(coefficient.len() - significant.len())
+            .map_err(|error| CliError::failure(error.to_string()))?;
+        let power = exponent
+            .checked_sub(fraction_digits)
+            .and_then(|power| power.checked_add(trailing_zeros))
+            .ok_or_else(|| CliError::input("amount exponent exceeds its normalization budget"))?;
+        (significant, power)
+    };
+    let balance = DynBalance::from_amount(format!("{significant}e{power}"), netuid)
+        .map_err(|error| CliError::input(error.to_string()))?;
+    Ok(Money::from_rao(balance.rao).to_decimal_string())
+}
+
 /// Coerce one scalar/list/object without a floating-point conversion for money.
 pub fn coerce(field: &Field, raw: &str) -> Result<Value, CliError> {
     let annotation = base(field.annotation);
     if annotation == "Money" {
         let text = python_strip(raw);
-        if text.is_empty() && field.allow_all {
+        if text.is_empty() && field.allow_all && raw.len() <= MONEY_TEXT_BUDGET {
             return Ok(json!(""));
         }
-        let amount = match Amount::parse(text) {
-            Ok(amount) => amount,
-            Err(_) => {
-                // Native Money's JSON-number path accepts an exact exponent;
-                // no intermediate f64 or unchecked rao conversion is involved.
-                let mut numeric = text.strip_prefix('+').unwrap_or(text).to_owned();
-                if numeric.starts_with('.') {
-                    numeric.insert(0, '0');
-                }
-                if numeric.ends_with('.') {
-                    numeric.push('0');
-                }
-                rtao::primitives::json::from_str::<Amount>(&numeric)
-                    .map_err(|error| CliError::input(error.to_string()))?
-            }
-        };
-        if matches!(amount, Amount::All) && !field.allow_all {
+        let amount = normalize_money_text(raw, NetUid::ROOT)?;
+        if amount == "all" && !field.allow_all {
             return Err(CliError::input(format!(
                 "{} does not accept all",
                 field.flag()
             )));
         }
-        return Ok(json!(match amount {
-            Amount::All => "all".to_owned(),
-            Amount::Exact(money) => money.to_decimal_string(),
-        }));
+        return Ok(json!(amount));
     }
+
     match field.kind.as_str() {
         "boolean" => match python_strip(raw).to_ascii_lowercase().as_str() {
             "y" | "yes" | "true" | "1" => Ok(json!(true)),
