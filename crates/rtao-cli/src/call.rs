@@ -1320,6 +1320,14 @@ fn show_raw_review(
     call.push(("summary".into(), json!(raw_label(request, shield))));
     let mut signer = vec![("signer".into(), json!(ctx.globals.wallet_name))];
     for (index, selection) in request.rounds.iter().enumerate() {
+        signer.push((
+            if request.rounds.len() == 1 {
+                "member".into()
+            } else {
+                format!("approval {}", index + 1)
+            },
+            json!(format!("{} ({})", selection.wallet, selection.backend)),
+        ));
         if let Some(account) = selection.address {
             signer.push((
                 if request.rounds.len() == 1 {
@@ -1742,6 +1750,9 @@ fn signing_rounds(
         if rounds.len() >= 2 {
             rounds.sort_by_key(|round| round.backend != "wallet");
             rounds.truncate(usize::from(group.threshold));
+            ctx.output
+                .message("no --signatory given — approvals planned from local wallets and address-book signer tags")
+                .map_err(public_failure)?;
             return Ok(rounds);
         }
     }

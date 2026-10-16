@@ -1,4 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/call.py and cli/multisig_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/call.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/multisig_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Raw-call composition and signing discipline through real production paths.
 
 use std::{
@@ -44,6 +45,45 @@ impl Terminal for NoTerminal {
     }
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
+    }
+    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        Err(PromptError::Unavailable)
+    }
+    fn message(&mut self, _: &str) -> Result<(), PromptError> {
+        Ok(())
+    }
+}
+
+struct ReviewedQuestion {
+    question: String,
+    review: String,
+}
+
+struct ReviewRefusal {
+    sink: MemorySink,
+    questions: Arc<Mutex<Vec<ReviewedQuestion>>>,
+}
+
+impl Terminal for ReviewRefusal {
+    fn stdin_is_tty(&self) -> bool {
+        true
+    }
+    fn stderr_is_tty(&self) -> bool {
+        true
+    }
+    fn read_line(&mut self, question: &str) -> Result<String, PromptError> {
+        let review = self
+            .sink
+            .text(Stream::Stdout)
+            .map_err(|_| PromptError::Io)?;
+        self.questions
+            .lock()
+            .map_err(|_| PromptError::Io)?
+            .push(ReviewedQuestion {
+                question: question.into(),
+                review,
+            });
+        Ok("n".into())
     }
     fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
@@ -337,7 +377,7 @@ fn programmatic_raw_call_json_depth_refuses_before_runtime_encoding() -> TestRes
 fn semantic_routes_resolve_public_members_without_a_raw_target_or_key_source() -> TestResult {
     let alice = AccountId([7; 32]);
     let bob = AccountId([8; 32]);
-    let (mut ctx, _) = context(&["--yes", "--signatory", "bob=ledger", "--signatory", "alice"])?;
+    let (mut ctx, sink) = context(&["--yes", "--signatory", "bob=ledger", "--signatory", "alice"])?;
     ctx.books = Books::from_values(
         json!([{"name":"alice","address":alice,"signer":"vault"}, {"name":"bob","address":bob,"signer":"extension"}]),
         json!([]),
@@ -370,8 +410,13 @@ fn semantic_routes_resolve_public_members_without_a_raw_target_or_key_source() -
     );
     ctx.globals.signatories = vec!["alice".into(), "alice=ledger".into()];
     assert!(call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None).is_err());
+    assert!(sink.text(Stream::Stderr)?.is_empty());
     ctx.globals.signatories.clear();
     let defaults = call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None)?;
+    assert_eq!(
+        sink.text(Stream::Stderr)?,
+        "no --signatory given — approvals planned from local wallets and address-book signer tags\n"
+    );
     assert_eq!(
         defaults
             .iter()
@@ -617,6 +662,112 @@ async fn dry_run_validates_composition_without_acquiring_or_unlocking_a_signer()
     );
     assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
     client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+// py: cli/call.py::call (ordered name/backend review before show_review and confirmation)
+async fn raw_round_review_lists_member_backends_before_confirmation_without_private_sources()
+-> TestResult {
+    for flags in [vec![], vec!["--quiet"], vec!["--json"]] {
+        let alice = Keys::new(7)?;
+        let bob = Keys::new(8)?;
+        let (client, chain) = fixture(&[alice.clone(), bob.clone()]).await?;
+        let checked: TestResult = async {
+            let (mut ctx, sink) = context(&flags)?;
+            let questions = Arc::new(Mutex::new(Vec::new()));
+            ctx.terminal = Arc::new(Mutex::new(Box::new(ReviewRefusal {
+                sink: sink.clone(),
+                questions: questions.clone(),
+            })));
+            let mut raw = request();
+            raw.multisig = Some(RawMultisig {
+                threshold: 2,
+                signatories: vec![alice.key.account(), bob.key.account()],
+                preset: Some("team".into()),
+                refs: vec!["alice".into(), "bob".into()],
+            });
+            // Approval order can differ from the group's canonical member order.
+            raw.rounds = vec![
+                SigningSelection {
+                    wallet: "bob".into(),
+                    backend: "ledger".into(),
+                    address: Some(bob.key.account()),
+                },
+                SigningSelection {
+                    wallet: "alice".into(),
+                    backend: "vault".into(),
+                    address: Some(alice.key.account()),
+                },
+            ];
+            let factory =
+                Factory::new([("alice".into(), alice.clone()), ("bob".into(), bob.clone())]);
+            let cache = Cache::default();
+            let error =
+                call::execute_rounds_with(&ctx, &client, &raw, "rtao call", &factory, &cache)
+                    .await
+                    .err()
+                    .ok_or("confirmation must refuse")?;
+            assert_eq!(error.code, 1);
+            let questions = questions.lock().map_err(|_| "question capture")?;
+            if ctx.globals.json {
+                assert!(questions.is_empty());
+                assert!(sink.text(Stream::Stdout)?.is_empty());
+                assert_eq!(error.message, "refusing to submit without confirmation");
+            } else {
+                assert_eq!(questions.len(), 1);
+                let captured = questions.first().ok_or("confirmation question")?;
+                assert!(captured.question.contains("2 approvals"));
+                assert!(captured.question.contains("System.remark"));
+                assert_eq!(error.message, "aborted.");
+                if ctx.globals.quiet {
+                    assert!(captured.review.is_empty());
+                } else {
+                    let bob = captured.review.find("bob (ledger)").ok_or("first member")?;
+                    let alice = captured
+                        .review
+                        .find("alice (vault)")
+                        .ok_or("second member")?;
+                    assert!(bob < alice);
+                    assert!(captured.review.contains("approval 1 account"));
+                    assert!(captured.review.contains("approval 2 account"));
+                    assert!(
+                        captured
+                            .review
+                            .contains(&raw.rounds[0].address.ok_or("bob account")?.to_string())
+                    );
+                    assert!(
+                        captured
+                            .review
+                            .contains(&raw.rounds[1].address.ok_or("alice account")?.to_string())
+                    );
+                }
+            }
+            assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+            assert!(factory.released.lock().map_err(|_| "releases")?.is_empty());
+            assert_eq!(alice.unlocks.load(Ordering::SeqCst), 0);
+            assert_eq!(bob.unlocks.load(Ordering::SeqCst), 0);
+            assert!(cache.0.lock().map_err(|_| "cache")?.is_empty());
+            assert!(
+                chain
+                    .state()
+                    .lock()
+                    .map_err(|_| "state")?
+                    .submissions
+                    .is_empty()
+            );
+            assert!(
+                chain
+                    .requests()
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            Ok(())
+        }
+        .await;
+        client.close().await;
+        checked?;
+    }
     Ok(())
 }
 
