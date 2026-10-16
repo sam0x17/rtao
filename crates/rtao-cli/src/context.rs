@@ -612,9 +612,32 @@ impl AppContext {
         }
         .or_else(|error| keys.bare_signer_account().ok_or(error))
         .map_err(|e| CliError::failure(e.to_string()))?;
-        let choice = self
+        let mut choice = self
             .honor_shield(client, payer, choice, required_shield, spec.name)
             .await?;
+        // External discovery has already bound this public payer. Repeat the
+        // carrier check for live external submissions, before any private
+        // acquisition; previews keep their warning-only behavior above.
+        if choice.enabled
+            && self.globals.uses_external_signer()
+            && self.shield_fee_shortfall(client, payer).await.is_some()
+        {
+            if choice.forced || required_shield {
+                return Err(CliError::failure(
+                    "MEV-shielded submission needs free TAO for the outer carrier fee",
+                )
+                .with_help(if required_shield {
+                    format!("{} cannot submit unshielded", spec.name)
+                } else {
+                    "pass --no-mev-shield to submit unshielded (alpha fees work on the bare call)"
+                        .into()
+                }));
+            }
+            choice.enabled = false;
+            self.output
+                .message("MEV shield skipped: free TAO cannot cover the outer carrier fee (alpha fees only work on the unshielded call) — submitting unshielded")
+                .map_err(|error| CliError::failure(error.to_string()))?;
+        }
         // A live quote is disclosure only; it never changes the reviewed call
         // or the SDK's dry-run summary and output schema.
         let registration = registration::live(client, intent, self.globals.assume_yes).await?;

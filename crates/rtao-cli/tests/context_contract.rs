@@ -4216,3 +4216,161 @@ async fn saved_automatic_alias_display_preserves_the_canonical_source_and_json_r
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn external_carrier_shortfall_downgrades_default_refuses_forced_and_keeps_preview_public()
+-> TestResult {
+    // Exercise the real context/factory/executor with production intents.
+    // Fake inclusion does not assert runtime fee payment or stake admission.
+    for (case, required, flag_forced, config_forced, dry_run) in [
+        ("default", false, false, false, false),
+        ("flag", false, true, false, false),
+        ("config", false, false, true, false),
+        ("required", true, false, false, false),
+        ("flag preview", false, true, false, true),
+        ("required preview", true, false, false, true),
+    ] {
+        let (client, chain, keys) = fixture(0).await?;
+        chain.mutate_state(|state| -> TestResult {
+            state.fee = 100_000;
+            state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))?;
+            state.seed_python("SubtensorModule", "Burn", &[json!(3)], json!(1u64))?;
+            state.seed_python(
+                "SubtensorModule",
+                "CollateralLockShare",
+                &[json!(3)],
+                json!(0u16),
+            )?;
+            Ok(())
+        })?;
+        let mut flags = vec!["--yes", "--signer", "extension"];
+        if flag_forced {
+            flags.push("--mev-shield");
+        }
+        if dry_run {
+            flags.extend(["--dry-run", "--json"]);
+        }
+        let (mut ctx, sink, reads) = context(&flags)?;
+        if config_forced {
+            ctx.config.insert("mev_shield".into(), json!(true));
+        }
+        let intent = if required {
+            rtao_intents::AnyIntent::from_tool(
+                "burned_register",
+                json!({"netuid":3,"hotkey_ss58":keys.key.account()}),
+            )?
+        } else {
+            rtao_intents::AnyIntent::from_tool(
+                "swap_stake",
+                json!({
+                    "hotkey_ss58":keys.key.account(),"origin_netuid":1,"dest_netuid":2,
+                    "amount_alpha":"1.0","slippage_protection":false
+                }),
+            )?
+        };
+        let factory = DirectExternalFactory::new(&keys, false);
+        let hooks = Hooks {
+            before: AtomicUsize::new(0),
+            after: AtomicUsize::new(0),
+            failed: AtomicUsize::new(0),
+        };
+        let outcome = ctx
+            .submit_with_options(
+                &client,
+                intent.as_dyn(),
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+                Some(&factory),
+                &mut rtao_cli::prompt::PromptHistory::default(),
+            )
+            .await;
+        let submits = chain.mutate_state(|state| state.submissions.clone());
+        let author_calls = chain
+            .requests()
+            .iter()
+            .filter(|request| request.method.starts_with("author_"))
+            .count();
+        if dry_run {
+            assert!(outcome?.is_none(), "{case}");
+            let plan: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+            assert_eq!(plan["op"], intent.as_dyn().spec().name);
+            assert_eq!(plan["ok"], true);
+            for (field, text) in [
+                ("effects", "submitted MEV-shielded"),
+                ("warnings", "cannot cover the MEV-shield outer carrier fee"),
+            ] {
+                assert!(
+                    plan[field]
+                        .as_array()
+                        .ok_or("preview list")?
+                        .iter()
+                        .any(|value| value.as_str().is_some_and(|value| value.contains(text))),
+                    "{case}: {field}"
+                );
+            }
+        } else if required || flag_forced || config_forced {
+            let error = outcome.err().ok_or("external carrier refusal")?;
+            assert_eq!(error.code, 1, "{case}");
+            assert_eq!(
+                error.message,
+                "MEV-shielded submission needs free TAO for the outer carrier fee"
+            );
+            assert_eq!(
+                error.help.as_deref(),
+                Some(if required {
+                    "burned_register cannot submit unshielded"
+                } else {
+                    "pass --no-mev-shield to submit unshielded (alpha fees work on the bare call)"
+                })
+            );
+        } else {
+            let receipt = outcome?.ok_or("default downgraded receipt")?;
+            assert!(receipt.success);
+            assert_eq!(submits.len(), 1);
+            assert_eq!(
+                chain
+                    .requests()
+                    .iter()
+                    .filter(|request| matches!(
+                        request.method.as_str(),
+                        "author_submitExtrinsic" | "author_submitAndWatchExtrinsic"
+                    ))
+                    .count(),
+                1,
+            );
+            let runtime = client.refresh_runtime().await?;
+            let decoded =
+                rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submits[0], true)?)
+                    .to_json();
+            assert_eq!(decoded["call"]["call_module"], "SubtensorModule");
+            assert_eq!(decoded["call"]["call_function"], "swap_stake");
+            assert!(
+                sink.text(Stream::Stderr)?
+                    .contains("MEV shield skipped: free TAO cannot cover the outer carrier fee")
+            );
+        }
+        let submitted = case == "default";
+        assert_eq!(
+            factory.acquired.load(Ordering::SeqCst),
+            1,
+            "one public source: {case}"
+        );
+        assert_eq!(
+            *factory.released.lock().map_err(|_| "release")?,
+            vec![submitted]
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), usize::from(submitted));
+        assert_eq!(hooks.before.load(Ordering::SeqCst), usize::from(submitted));
+        assert_eq!(hooks.after.load(Ordering::SeqCst), usize::from(submitted));
+        assert_eq!(hooks.failed.load(Ordering::SeqCst), 0);
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        if !submitted {
+            assert!(submits.is_empty(), "{case}");
+            assert_eq!(author_calls, 0, "{case}");
+        }
+        client.close().await;
+    }
+    Ok(())
+}

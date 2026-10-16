@@ -592,6 +592,8 @@ fn tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata() -
 
 #[test]
 fn exact_money_keeps_native_u64_precision_exponents_and_all_policy() -> TestResult {
+    use rtao::primitives::{Amount, Money, ResolvedAmount};
+
     let spec = rtao_catalog::INTENTS
         .iter()
         .find(|spec| spec.name == "transfer")
@@ -601,14 +603,156 @@ fn exact_money_keeps_native_u64_precision_exponents_and_all_policy() -> TestResu
         .iter()
         .find(|field| field.name == "amount_tao")
         .ok_or("amount")?;
-    assert_eq!(
-        schema::coerce(money, "18446744073.709551615")?,
-        json!("18446744073.709551615")
-    );
-    assert_eq!(schema::coerce(money, "1e-9")?, json!("0.000000001"));
-    for value in ["18446744073.709551616", "-1", "NaN", "Infinity", "1e100"] {
-        assert!(schema::coerce(money, value).is_err(), "{value}");
+    let command = tree()?;
+    let dest = AccountId([7; 32]).to_string();
+    let reserved = generated::intent_reserved("transfer")?;
+    let mut cases = [
+        ("18446744073.709551615", u64::MAX),
+        ("18446744073709551615e-9", u64::MAX),
+        ("1_0", 10_000_000_000),
+        ("١_٢.٥", 12_500_000_000),
+        ("１.０", 1_000_000_000),
+        ("١e+٠", 1_000_000_000),
+        ("1_e_+_0", 1_000_000_000),
+        ("+1.", 1_000_000_000),
+        ("\u{1c}\u{85}\u{a0}١\u{202f}\u{1f}", 1_000_000_000),
+        ("1.00000000000000000000000000000", 1_000_000_000),
+        (".٥", 500_000_000),
+        ("1e-9", 1),
+        ("10e-10", 1),
+        ("-0", 0),
+        ("-0.000", 0),
+        ("-0e4096", 0),
+        ("-0e-4096", 0),
+    ]
+    .into_iter()
+    .map(|(raw, rao)| (raw.to_owned(), rao))
+    .collect::<Vec<_>>();
+    cases.push(("0".repeat(4096), 0));
+    for (raw, expected_rao) in cases {
+        let attached = format!("--amount={raw}");
+        let parsed = command.clone().try_get_matches_from([
+            "rtao", "tx", "transfer", "--dest", &dest, &attached, "--yes", "--json",
+        ])?;
+        let (mut ctx, sink) = context(&parsed, &reserved)?;
+        let request = TxRequest::from_matches(
+            &mut ctx,
+            "transfer",
+            leaf(&parsed)?,
+            &mut PromptHistory::default(),
+        )?;
+        let canonical = Money::from_rao(expected_rao).to_decimal_string();
+        assert_eq!(request.args["amount_tao"], json!(canonical), "{raw:?}");
+        let intent = request.intent()?;
+        assert_eq!(intent.to_json()["amount_tao"], json!(canonical), "{raw:?}");
+        let rtao_intents::AnyIntent::Transfer(transfer) = intent else {
+            return Err("unexpected money intent".into());
+        };
+        let ResolvedAmount::Exact(balance) = transfer.amount_tao.resolve(NetUid::ROOT, false)?
+        else {
+            return Err("exact CLI amount became all".into());
+        };
+        assert_eq!(balance.rao, expected_rao, "{raw:?}");
+        assert!(sink.text(Stream::Stdout)?.is_empty());
     }
+    let mut refused = [
+        "18446744073.709551616",
+        "-1",
+        "-1e0",
+        "--0",
+        "-+0",
+        "NaN",
+        "Infinity",
+        "1e100",
+        "1e-10",
+        "0.0000000001",
+        "1.0000000001",
+        "0.00000000101",
+        "",
+        ".",
+        "+",
+        "_",
+        "1..0",
+        "1e",
+        "1ee0",
+        "1e+-1",
+        "1e--1",
+        "1e1.0",
+        "1 0",
+        "0x1",
+        "+-1",
+        "1\u{200b}",
+        "all_",
+        "0e4097",
+        "-0e-4097",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect::<Vec<_>>();
+    refused.extend([
+        "0".repeat(4097),
+        " ".repeat(4097),
+        format!("1e{}", "9".repeat(32)),
+    ]);
+    for raw in refused {
+        let attached = format!("--amount={raw}");
+        let budget = raw.len() > 4096 || raw.contains("4097") || raw.starts_with("1e999");
+        match command.clone().try_get_matches_from([
+            "rtao", "tx", "transfer", "--dest", &dest, &attached, "--yes", "--json",
+        ]) {
+            Err(error) => {
+                assert_eq!(error.exit_code(), 2, "{raw:?}");
+                if budget {
+                    assert!(error.to_string().contains("budget"), "{raw:?}: {error}");
+                }
+            }
+            Ok(parsed) => {
+                let (mut ctx, sink) = context(&parsed, &reserved)?;
+                let error = TxRequest::from_matches(
+                    &mut ctx,
+                    "transfer",
+                    leaf(&parsed)?,
+                    &mut PromptHistory::default(),
+                )
+                .err()
+                .ok_or_else(|| format!("invalid amount accepted: {raw:?}"))?;
+                assert_eq!(error.code, 2, "{raw:?}");
+                if budget {
+                    assert!(error.message.contains("budget"), "{raw:?}: {error}");
+                }
+                assert!(sink.text(Stream::Stdout)?.is_empty());
+            }
+        }
+    }
+    for raw in [" ALL ", "", "  "] {
+        let attached = format!("--amount={raw}");
+        let parsed = command.clone().try_get_matches_from([
+            "rtao", "tx", "transfer", "--dest", &dest, &attached, "--all", "--yes",
+        ])?;
+        let (mut ctx, _) = context(&parsed, &reserved)?;
+        let request = TxRequest::from_matches(
+            &mut ctx,
+            "transfer",
+            leaf(&parsed)?,
+            &mut PromptHistory::default(),
+        )?;
+        assert_eq!(request.args["amount_tao"], json!("all"));
+        assert_eq!(request.intent()?.to_json()["amount_tao"], json!("all"));
+    }
+    let parsed = command.try_get_matches_from([
+        "rtao", "tx", "transfer", "--dest", &dest, "--amount", "1", "--all", "--yes",
+    ])?;
+    let (mut ctx, _) = context(&parsed, &reserved)?;
+    let conflict = TxRequest::from_matches(
+        &mut ctx,
+        "transfer",
+        leaf(&parsed)?,
+        &mut PromptHistory::default(),
+    )
+    .err()
+    .ok_or("amount/all conflict")?;
+    assert_eq!(conflict.code, 2);
+    assert!(conflict.message.contains("not both"));
     let mut allowed = money.clone();
     allowed.allow_all = true;
     assert_eq!(schema::coerce(&allowed, " ALL ")?, json!("all"));
@@ -624,7 +768,12 @@ fn exact_money_keeps_native_u64_precision_exponents_and_all_policy() -> TestResu
         .ok_or("alpha")?;
     assert!(alpha.help.contains("alpha"));
     assert!(money.help.contains("TAO"));
-    assert_eq!(schema::coerce(&alpha, "0.000000001")?, json!("0.000000001"));
+    assert_eq!(schema::coerce(&alpha, "١e-٩")?, json!("0.000000001"));
+    // CLI normalization must not broaden the public exact constructors.
+    for raw in ["1_0", "١", "1e0", "+1", ".5", "1.", " 1 ", "-0"] {
+        assert!(Money::parse(raw).is_err(), "{raw:?}");
+        assert!(Amount::parse(raw).is_err(), "{raw:?}");
+    }
     Ok(())
 }
 

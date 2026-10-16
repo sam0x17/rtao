@@ -4,7 +4,10 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/root_swap.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Root baskets, accrued-yield claims and root position moves.
 
-use super::generated::{self, TxRequest};
+use super::{
+    generated::{self, TxRequest},
+    schema::normalize_money_text,
+};
 use crate::{
     books::{AccountLookup, FsAccountLookup},
     context::{AppContext, CommandReview, ExternalSignerFactory, SubmissionOptions},
@@ -260,96 +263,6 @@ fn target(
     ctx.resolve_target(param, value, history)?
         .ok_or_else(|| CliError::input(format!("missing public {param}")))
 }
-// Python's root CLI accepts Decimal text before constructing an intent.
-// Keep that grammar at this boundary; Money/Amount constructors remain strict.
-// Raw text and exponent magnitude are capped independently to bound all scratch
-// work, including Unicode digit normalization and irrelevant zero exponents.
-fn normalize_root_amount(raw: &str, netuid: NetUid) -> Result<String, CliError> {
-    const TEXT_BUDGET: usize = 4096;
-    const EXPONENT_BUDGET: u64 = 4096;
-    if raw.len() > TEXT_BUDGET {
-        return Err(CliError::input(
-            "root amount exceeds its 4096-byte normalization budget",
-        ));
-    }
-    let text = crate::prompt::python_strip(raw);
-    if text.eq_ignore_ascii_case("all") {
-        return Ok("all".into());
-    }
-    let invalid = || CliError::input("root amount must be a finite non-negative decimal or 'all'");
-    // Decimal(string) ignores underscores and accepts Unicode decimal digits.
-    let text = text
-        .chars()
-        .filter(|character| *character != '_')
-        .collect::<String>();
-    let (negative, text) = match text.strip_prefix('-') {
-        Some(unsigned) => (true, unsigned),
-        None => (false, text.strip_prefix('+').unwrap_or(&text)),
-    };
-    let decimal_digits = |value: &str| {
-        value.chars().all(|character| {
-            unicode_general_category::get_general_category(character)
-                == unicode_general_category::GeneralCategory::DecimalNumber
-        })
-    };
-    let (mantissa, exponent) = match text.find(['e', 'E']) {
-        Some(index) => {
-            let (mantissa, suffix) = text.split_at(index);
-            let exponent = &suffix[1..];
-            let unsigned = exponent.strip_prefix(['+', '-']).unwrap_or(exponent);
-            if unsigned.is_empty() || !decimal_digits(unsigned) {
-                return Err(invalid());
-            }
-            let exponent = rtao::primitives::pyfmt::parse_integer(exponent)
-                .ok_or_else(invalid)?
-                .to_string()
-                .parse::<i64>()
-                .map_err(|_| {
-                    CliError::input("root amount exponent exceeds its normalization budget")
-                })?;
-            if exponent.unsigned_abs() > EXPONENT_BUDGET {
-                return Err(CliError::input(
-                    "root amount exponent exceeds its normalization budget",
-                ));
-            }
-            (mantissa, exponent)
-        }
-        None => (text, 0),
-    };
-    let (integer, fraction) = mantissa.split_once('.').unwrap_or((mantissa, ""));
-    if (integer.is_empty() && fraction.is_empty())
-        || !decimal_digits(integer)
-        || !decimal_digits(fraction)
-    {
-        return Err(invalid());
-    }
-    let coefficient = rtao::primitives::pyfmt::parse_integer(&format!("{integer}{fraction}"))
-        .ok_or_else(invalid)?
-        .to_string();
-    if negative && coefficient != "0" {
-        return Err(CliError::input("amount must be non-negative"));
-    }
-    // Remove redundant zero precision before the exact native constructor.
-    // This admits e.g. 10e-10 as one rao without admitting 1e-10 or rounding.
-    let significant = coefficient.trim_end_matches('0');
-    let (significant, power) = if significant.is_empty() {
-        ("0", 0)
-    } else {
-        let fraction_digits = i64::try_from(fraction.chars().count()).map_err(failure)?;
-        let trailing_zeros =
-            i64::try_from(coefficient.len() - significant.len()).map_err(failure)?;
-        let power = exponent
-            .checked_sub(fraction_digits)
-            .and_then(|power| power.checked_add(trailing_zeros))
-            .ok_or_else(|| {
-                CliError::input("root amount exponent exceeds its normalization budget")
-            })?;
-        (significant, power)
-    };
-    let balance = DynBalance::from_amount(format!("{significant}e{power}"), netuid)
-        .map_err(|error| CliError::input(error.to_string()))?;
-    Ok(Money::from_rao(balance.rao).to_decimal_string())
-}
 fn position_wallet(ctx: &mut AppContext, owner: AccountId) -> Result<(), CliError> {
     if let Some((name, _)) = local_wallets(ctx)?
         .into_iter()
@@ -442,7 +355,7 @@ impl Request {
                 }
                 amount = amount
                     .as_deref()
-                    .map(|raw| normalize_root_amount(raw, NetUid::ROOT))
+                    .map(|raw| normalize_money_text(raw, NetUid::ROOT))
                     .transpose()?;
                 if amount.is_none() && !interactive(ctx) {
                     return Err(CliError::input("missing required option: `--amount`"));
@@ -492,7 +405,7 @@ impl Request {
                         .get_one::<u16>("dest_netuid")
                         .ok_or_else(|| CliError::input("missing --to"))?,
                 );
-                let amount = normalize_root_amount(
+                let amount = normalize_money_text(
                     optional(leaf, "amount").ok_or_else(|| CliError::input("missing --amount"))?,
                     origin,
                 )?;
@@ -1241,7 +1154,7 @@ async fn prepare_transaction_inner(
                         &mut terminal,
                         &PromptSpec::new("amount", "--amount"),
                         |raw| {
-                            normalize_root_amount(raw, NetUid::ROOT)
+                            normalize_money_text(raw, NetUid::ROOT)
                                 .map_err(|error| PromptValidation::Message(error.to_string()))
                         },
                     )

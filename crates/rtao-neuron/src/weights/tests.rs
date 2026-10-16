@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/utils/misc.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Production preflight and scheduling checks against encoded FakeChain state.
 
 #![allow(clippy::expect_used)]
@@ -199,6 +200,54 @@ async fn cadence_honors_each_mechanism_slot_rate_limit_and_actual_epoch() -> any
         Uid(0)
     ));
     client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn activity_alarm_clamps_zero_tempo_and_keeps_nonzero_boundaries() -> anyhow::Result<()> {
+    for (tempo, factor, last, expected) in [
+        (0u16, 1_000u32, 99u64, Some(1u64)),
+        (0, 1_000, 100, Some(1)),
+        (1, 1_000, 100, Some(1)),
+        (10, 1_000, 93, None),
+        (10, 1_000, 92, Some(10)),
+        (10, 1_000, 91, Some(10)),
+        (10, 2_501, 81, None),
+        (10, 2_501, 80, Some(25)),
+    ] {
+        let (chain, client) = fixture().await?;
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            seed_at(state, 100, "SubtensorModule", "Tempo", (NetUid(1),), tempo)?;
+            seed_at(
+                state,
+                100,
+                "SubtensorModule",
+                "ActivityCutoffFactorMilli",
+                (NetUid(1),),
+                factor,
+            )?;
+            seed_at(
+                state,
+                100,
+                "SubtensorModule",
+                "LastUpdate",
+                (NetUidStorageIndex(1),),
+                vec![last],
+            )?;
+            Ok(())
+        })?;
+        let best = client.at(BlockRef::Best).await?;
+        let preflight = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        let factor = best
+            .storage(&st::ACTIVITY_CUTOFF_FACTOR_MILLI, (NetUid(1),))
+            .await?;
+        assert_eq!(
+            preflight.activity_alarm_cutoff(preflight.check(0)?, factor),
+            expected,
+            "{tempo}/{factor}/{last}"
+        );
+        client.close().await;
+    }
     Ok(())
 }
 
