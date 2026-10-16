@@ -142,7 +142,7 @@ pub async fn execute(
     };
     let payload = rtao::reads::dispatch(client, name, &params)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     match request {
         Request::Info(id) => {
             if payload.is_null() {

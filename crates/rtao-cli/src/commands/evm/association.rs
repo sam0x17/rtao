@@ -75,7 +75,10 @@ pub(super) async fn run(
     let hotkey = rtao::core::offload(move || proof_hotkey(&public))
         .await
         .map_err(failure)??;
-    let block = client.at(BlockRef::Finalized).await.map_err(failure)?;
+    let block = client
+        .at(BlockRef::Finalized)
+        .await
+        .map_err(CliError::from)?;
     let request = ProofRequest {
         netuid,
         evm_address: info.address,

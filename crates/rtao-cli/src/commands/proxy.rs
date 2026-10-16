@@ -528,7 +528,7 @@ async fn list(ctx: &AppContext, client: &Client, owner: AccountId) -> Result<(),
     }
     let data = rtao::reads::generated::interfaces::proxies(client, owner)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let records = serde_json::to_value(&data.proxies).map_err(failure)?;
     let payload = json!({"account":owner,"proxies":records,"deposit":data.deposit.to_string()});
     if ctx.output.options.json_mode {
@@ -832,7 +832,7 @@ async fn book_status(client: &Client, entry: &Value) -> Result<String, CliError>
     let account = address.parse::<AccountId>().map_err(failure)?;
     let data = rtao::reads::generated::interfaces::proxies(client, account)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     if data.proxies.is_empty() {
         return Ok("stale: account has no on-chain delegations".into());
     }

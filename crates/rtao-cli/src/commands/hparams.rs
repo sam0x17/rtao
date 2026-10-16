@@ -336,7 +336,7 @@ impl SubmissionHooks for PruningHooks<'_> {
         Box::pin(async move {
             self.session
                 .before_attempt(self.action, plan)
-                .map_err(failure)?;
+                .map_err(CliError::transaction)?;
             if let Some(hooks) = self.forwarded {
                 hooks.before_submit_with_plan(plan).await?;
             }
@@ -351,7 +351,9 @@ impl SubmissionHooks for PruningHooks<'_> {
         Box::pin(async move {
             *self.receipt.lock() = Some(receipt.clone());
             let result = async {
-                self.session.record_result(receipt).map_err(failure)?;
+                self.session
+                    .record_result(receipt)
+                    .map_err(CliError::transaction)?;
                 if let Some(hooks) = self.forwarded {
                     hooks.on_result(receipt).await?;
                 }
@@ -375,7 +377,7 @@ impl SubmissionHooks for PruningHooks<'_> {
                 self.session
                     .record_reviewed_result(self.action, receipt)
                     .await
-                    .map_err(failure)?;
+                    .map_err(CliError::transaction)?;
                 if let Some(hooks) = self.forwarded {
                     hooks.after_followup(receipt).await?;
                 }
@@ -450,12 +452,12 @@ async fn execute_null_pruning(
         },
     )
     .await
-    .map_err(failure)?;
+    .map_err(CliError::transaction)?;
     ctx.output.message(&format!("Pruning deregisters participants and may change survivor UIDs. Target {}. Each transaction uses the normal confirmation and signing flow.", session.report().target)).map_err(failure)?;
     let saved_multisig = ctx.books.multisig(&ctx.globals.wallet_name).is_some();
     let mut last = None;
     loop {
-        match session.next_action().await.map_err(failure)? {
+        match session.next_action().await.map_err(CliError::transaction)? {
             TrimNullStep::Complete(report) => {
                 let payload = if report.already_yuma {
                     json!({"status":"already Yuma", "population": report.population})
@@ -478,7 +480,10 @@ async fn execute_null_pruning(
                 ctx.output
                     .step("waiting", &reason, StepState::Fact)
                     .map_err(failure)?;
-                session.wait(&reason, delay).await.map_err(failure)?;
+                session
+                    .wait(&reason, delay)
+                    .await
+                    .map_err(CliError::transaction)?;
             }
             TrimNullStep::Submit(action) => {
                 let hooks = PruningHooks {
@@ -531,13 +536,21 @@ async fn execute_null_pruning(
                 let before_cleared = session.report().cleared_commits;
                 let finished = session.finish_action(action, &receipt).await;
                 if let Err(error) = finished {
-                    let mut error = failure(error);
+                    let mut error = CliError::transaction(error);
                     if let Some(submission_error) =
                         submission_error.filter(|error| !error.message.is_empty())
                     {
-                        error.help = Some(format!("submission also reported: {submission_error}"));
+                        let submission_help =
+                            format!("submission also reported: {submission_error}");
+                        error.help = Some(match error.help.take() {
+                            Some(help) => format!("{help}; {submission_help}"),
+                            None => submission_help,
+                        });
                     }
-                    return Err(retain_recovery(error, &recovery));
+                    return Err(retain_recovery(
+                        crate::context::known_receipt_error(error, &receipt),
+                        &recovery,
+                    ));
                 }
                 if let Some(error) = submission_error
                     && !retry_window
@@ -763,7 +776,7 @@ impl Request {
             let hotkey = take_hotkey(ctx, args, history)?;
             let record = rtao::reads::reads::owner::delegate_take(client, hotkey)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             ctx.output
                 .detail(
                     None,
@@ -831,10 +844,10 @@ pub async fn fetch_hyperparameters<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
 ) -> Result<Option<Map<String, Value>>, CliError> {
-    let snapshot = view.pin().await.map_err(failure)?;
+    let snapshot = view.pin().await.map_err(CliError::from)?;
     let Some(params) = rtao::reads::reads::owner::subnet_hyperparameters(&snapshot, netuid)
         .await
-        .map_err(failure)?
+        .map_err(CliError::from)?
     else {
         return Ok(None);
     };
@@ -855,7 +868,7 @@ pub async fn fetch_hyperparameters<V: View + ?Sized>(
                 &[CoreValue::Uint(u128::from(netuid.0))],
             )
             .await
-            .map_err(failure)?
+            .map_err(CliError::from)?
             .to_json();
         if value.as_object().is_some_and(|fields| fields.len() == 1)
             && let Some(bits) = value.get("bits")
@@ -1146,7 +1159,7 @@ pub async fn execute(
             let snapshot = client
                 .at(query.block.map_or(BlockRef::Best, BlockRef::Number))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let netuid = netuid(query)?;
             let params = fetch_hyperparameters(&snapshot, netuid).await?;
             render_hyperparameters(&ctx.output, netuid, &params, name.as_deref())?;
@@ -1156,10 +1169,10 @@ pub async fn execute(
             let snapshot = client
                 .at(query.block.map_or(BlockRef::Best, BlockRef::Number))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let payload = rtao::reads::dispatch(&snapshot, query.name, &query.params)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             render_read(&ctx.output, query, payload)?;
             Ok(None)
         }

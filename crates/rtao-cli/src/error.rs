@@ -91,3 +91,24 @@ impl From<rtao::client::ClientError> for CliError {
         }
     }
 }
+
+impl From<rtao::reads::ReadError> for CliError {
+    fn from(error: rtao::reads::ReadError) -> Self {
+        match error {
+            rtao::reads::ReadError::Client(error) => Self::from(error),
+            error => Self::failure(error.to_string()),
+        }
+    }
+}
+
+impl From<rtao_intents::pow::PowError> for CliError {
+    fn from(error: rtao_intents::pow::PowError) -> Self {
+        match error {
+            rtao_intents::pow::PowError::Client(error) => Self::from(error),
+            rtao_intents::pow::PowError::Head(rtao::client::HeadError::Rpc(error)) => {
+                Self::from(rtao::client::ClientError::from(error))
+            }
+            error => Self::failure(error.to_string()),
+        }
+    }
+}

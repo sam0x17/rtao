@@ -615,7 +615,7 @@ async fn execute_saved(
         _ => {}
     }
     let client = client.ok_or_else(|| failure("this multisig command requires a client"))?;
-    let snapshot = client.at(BlockRef::Best).await.map_err(failure)?;
+    let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
     let group = match request {
         Request::Add { group, .. }
         | Request::Show { group, .. }
@@ -631,7 +631,7 @@ async fn execute_saved(
     let sudo = snapshot
         .storage(&st::sudo::KEY, ())
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     match request {
         Request::Add { entry, .. } => {
             let name = entry
@@ -687,7 +687,7 @@ async fn list_pending(
     tokio::pin!(rows);
     let mut result = Vec::new();
     while let Some(row) = rows.next().await {
-        let (keys, pending) = row.map_err(failure)?;
+        let (keys, pending) = row.map_err(CliError::from)?;
         let key = keys
             .first()
             .filter(|_| keys.len() == 1)
@@ -1006,7 +1006,7 @@ pub(crate) async fn discover_pending_upgrades(
     let (proxies, _) = snapshot
         .storage(&st::proxy::PROXIES, (sudo,))
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let mut records = Vec::new();
     for proxy in proxies {
         if proxy.proxy_type != ProxyType::SudoUncheckedSetCode || proxy.delay != 0 {
@@ -1122,7 +1122,7 @@ pub(crate) async fn load_pending_upgrades_from_repo(
         let pending = snapshot
             .storage(&st::multisig::MULTISIGS, (sudo, finalizing.hash()))
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         record["sudo_layer"] = pending.map_or(Value::Null,|pending|json!({"call_hash":hex_hash(finalizing.hash()),"timepoint":pending.when,"approvals":pending.approvals,"depositor":pending.depositor}));
     }
     Ok(records)

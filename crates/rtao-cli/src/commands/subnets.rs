@@ -421,7 +421,7 @@ async fn execute_inspect(
     let at = client
         .at(request.block.map_or(BlockRef::Best, BlockRef::Number))
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let output = &ctx.output;
     let netuid = || {
         request
@@ -437,7 +437,7 @@ async fn execute_inspect(
         "price" => {
             let price = m6_staking::alpha_price(&at, netuid()?)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let payload = serde_json::to_value(price).map_err(failure)?;
             let fields = payload
                 .as_object()
@@ -455,21 +455,24 @@ async fn execute_inspect(
                     "create_cost",
                     m6_root::subnet_registration_cost(&at)
                         .await
-                        .map_err(failure)?,
+                        .map_err(CliError::from)?,
                 )
             } else {
                 let netuid = netuid()?;
                 if !at
                     .storage(&st::NETWORKS_ADDED, (netuid,))
                     .await
-                    .map_err(failure)?
+                    .map_err(CliError::from)?
                 {
                     return Err(failure(format!("subnet {netuid} does not exist")));
                 }
                 (
                     "burn_cost",
                     rtao::primitives::DynBalance::from_rao(
-                        at.storage(&st::BURN, (netuid,)).await.map_err(failure)?.0,
+                        at.storage(&st::BURN, (netuid,))
+                            .await
+                            .map_err(CliError::from)?
+                            .0,
                         NetUid::ROOT,
                     ),
                 )
@@ -490,28 +493,30 @@ async fn execute_inspect(
             if !at
                 .storage(&st::NETWORKS_ADDED, (netuid,))
                 .await
-                .map_err(failure)?
+                .map_err(CliError::from)?
             {
                 return Err(failure(format!("subnet {netuid} does not exist")));
             }
-            let info = m6_root::subnet(&at, netuid).await.map_err(failure)?;
-            let identity = owner::subnet_identity(&at, netuid).await.map_err(failure)?;
+            let info = m6_root::subnet(&at, netuid).await.map_err(CliError::from)?;
+            let identity = owner::subnet_identity(&at, netuid)
+                .await
+                .map_err(CliError::from)?;
             let owner = at
                 .storage(&st::SUBNET_OWNER, (netuid,))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let hotkey = at
                 .storage(&st::SUBNET_OWNER_HOTKEY, (netuid,))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let registered = at
                 .storage(&st::NETWORK_REGISTERED_AT, (netuid,))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let max = at
                 .storage(&st::MAX_ALLOWED_UIDS, (netuid,))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let name = identity
                 .as_ref()
                 .and_then(|i| i.get("subnet_name"))
@@ -596,23 +601,27 @@ async fn execute_inspect(
             Ok(())
         }
         "list" => {
-            let mut infos = m6_root::subnets(&at).await.map_err(failure)?;
-            let names = owner::subnet_names(&at).await.map_err(failure)?;
+            let mut infos = m6_root::subnets(&at).await.map_err(CliError::from)?;
+            let names = owner::subnet_names(&at).await.map_err(CliError::from)?;
             output
                 .update_subnet_names(names.iter().map(|(id, name)| (id.0, name.clone())))
                 .map_err(failure)?;
-            let prices = m6_staking::alpha_prices(&at).await.map_err(failure)?;
-            let flows = m6_root::subnet_tao_flows(&at).await.map_err(failure)?;
+            let prices = m6_staking::alpha_prices(&at)
+                .await
+                .map_err(CliError::from)?;
+            let flows = m6_root::subnet_tao_flows(&at)
+                .await
+                .map_err(CliError::from)?;
             let max = at
                 .storage_iter(&st::MAX_ALLOWED_UIDS, ())
                 .try_collect::<Vec<_>>()
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let emissions = at
                 .storage_iter(&st::SUBNET_TAO_IN_EMISSION, ())
                 .try_collect::<Vec<_>>()
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let key = |keys: &[rtao::core::DynValue]| -> Result<NetUid, CliError> {
                 keys.last()
                     .and_then(rtao::core::DynValue::as_u128)
@@ -713,7 +722,7 @@ async fn execute_inspect(
             if let Some(hotkey) = request.hotkey {
                 let data = m6_locks::hotkey_conviction(&at, hotkey, netuid)
                     .await
-                    .map_err(failure)?;
+                    .map_err(CliError::from)?;
                 return output
                     .detail(
                         Some(&format!("conviction netuid {netuid}")),
@@ -727,7 +736,7 @@ async fn execute_inspect(
             }
             let data = m6_locks::subnet_convictions(&at, netuid)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
             let mut names: BTreeMap<_, _> = lookup
                 .candidates()
@@ -760,7 +769,7 @@ async fn execute_inspect(
                 .collect();
             for (key, identity) in owner::hotkey_identities(&at, unnamed)
                 .await
-                .map_err(failure)?
+                .map_err(CliError::from)?
             {
                 if let Some(name) = identity
                     .get("name")
@@ -1390,10 +1399,10 @@ pub async fn execute(
             let at = client
                 .at(request.block.map_or(BlockRef::Best, BlockRef::Number))
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let graph = rtao::reads::dispatch(&at, request.name, &request.params)
                 .await
-                .map_err(failure)?;
+                .map_err(CliError::from)?;
             let netuid =
                 serde_json::from_value(request.params["netuid"].clone()).map_err(failure)?;
             let names = if ctx.output.options.json_mode {

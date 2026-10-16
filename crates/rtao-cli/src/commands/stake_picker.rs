@@ -131,7 +131,9 @@ pub(crate) async fn owner_with_label(ctx: &AppContext) -> Result<(AccountId, Str
 /// The caller retains its normal amount parser and records its own answer.
 pub async fn free_balance(ctx: &AppContext, client: &Client) -> Result<DynBalance, CliError> {
     let (account, label) = owner_with_label(ctx).await?;
-    let balance = owner::balance(client, account).await.map_err(failure)?;
+    let balance = owner::balance(client, account)
+        .await
+        .map_err(CliError::from)?;
     message(ctx, &format!("free balance of {label}: {balance}"))?;
     Ok(balance)
 }
@@ -330,7 +332,7 @@ async fn fill_names(
     }
     for (hotkey, identity) in owner::hotkey_identities(client, missing)
         .await
-        .map_err(failure)?
+        .map_err(CliError::from)?
     {
         if let Some(name) = identity["name"].as_str().filter(|name| !name.is_empty()) {
             names.entry(hotkey).or_insert_with(|| name.to_owned());
@@ -422,7 +424,7 @@ pub(crate) async fn source_for_labeled_owner(
     let (account, owner_label) = owner;
     let valuation = owner::stake_value_for_coldkey(client, account)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let mut positions: Vec<_> = valuation
         .positions
         .iter()
@@ -472,7 +474,7 @@ pub(crate) async fn source_for_labeled_owner(
             m6_locks::coldkey_lock(client, account, netuid),
             m6_staking::stake_availability(client, account, netuid),
         )
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
         if let Some(lock) = &lock {
             fill_names(client, [lock.hotkey], &mut names).await?;
         }

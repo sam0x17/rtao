@@ -27,12 +27,25 @@ unknown-fate classification. Fixes retain complete help/sample traversal and
 exact transmitted-byte/hash checks; deadline coverage uses controlled time and
 observed author acceptance.
 
-The next combined source candidate expects **3,196 tests and four skips**.
-It includes the nine CLI context fixtures and the three existing-fixture
-corrections. Formatting and source review are complete; hosted compilation and
-execution remain pending. The earlier planned
+Ordinary [38976362971](https://github.com/sam0x17/rtao/actions/runs/38976362971)
+at `550ad2579f4c1f5ac646bcc4141df863fcf5bded` is running the combined
+candidate, which expects **3,196 tests and four skips**. It includes the nine
+CLI context fixtures and the three existing-fixture corrections. At this
+source checkpoint, supply, no-host, MSRV and semver have passed; check and
+features remain live. No full success is claimed. The earlier planned
 standalone 3,187-test checkpoint is superseded by these failure corrections.
 The last fully green checkpoint remains `7997ec0` below.
+
+The next source batch preserves typed gateway retry guidance through the
+remaining confirmed CLI read, PoW, pruning and saved-multisig boundaries.
+Raw-call and pruning followup failures also retain known submission identity
+and inspection guidance. Pruning retains its durable journal and existing
+retry refusal; secondary close errors no longer replace the primary help.
+Six existing test functions cover real public read handlers, saved account
+derivation, raw approval followup and pre/post-receipt pruning failures.
+No new test functions are added. Source review, installed rustfmt and whitespace
+checks pass; this batch has no hosted compilation or execution result yet.
+The full context source row still needs local name/prose reconciliation.
 
 Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
 passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
@@ -45,7 +58,7 @@ claims remain unchanged. Inspection SHA256 is
 `8bd944e0b1469c0d848895d8206848e6a8a6b7a3cbab662d24188e44ed2da6a0`;
 adoption SHA256 is
 `b58b2200d1879ceff8ee7dfda89e9c6cd26d1e5707a75fcfc7a7498dbdbbb55d`.
-No raw archive is retained. The next push starts ordinary 3,196-test validation.
+No raw archive is retained. The ordinary run above validates these reports.
 
 Source reconciliation remains 322/357, with 35 pending. The source divergence
 register and adopted matrix now both contain 73 entries. M0/M1,

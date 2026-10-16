@@ -2540,6 +2540,58 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         );
         client.close().await;
 
+        // Saved-wallet account derivation pins a real snapshot before creating
+        // an adapter. Preserve a refusal without acquiring any member source.
+        let (client, chain, _) = fixture(1_000_000_000).await?;
+        let member_keys = members()?;
+        let factory = factory(&member_keys);
+        let (ctx, sink) = saved_context(&member_keys, &["--yes", "--json", "--no-mev-shield"], 3)?;
+        let start = chain.requests().len();
+        chain.queue_transport_error(
+            "chain_getBlockHash",
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+                policy.clone(),
+            )))),
+        );
+        let error = ctx
+            .submit_saved_with_factory(
+                &client,
+                &Preview { blocked: false },
+                false,
+                None,
+                &factory,
+                &CallCache::default(),
+            )
+            .await
+            .err()
+            .ok_or("saved account policy refusal")?;
+        assert_eq!(error.code, 1);
+        assert_eq!(error.message, message);
+        assert_eq!(error.help.as_deref(), Some(expected));
+        assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+        assert!(
+            member_keys
+                .iter()
+                .all(|key| key.unlocks.load(Ordering::SeqCst) == 0)
+        );
+        let requests = chain.requests();
+        assert_eq!(
+            requests[start..]
+                .iter()
+                .filter(|request| request.method == "chain_getBlockHash")
+                .count(),
+            1
+        );
+        assert!(
+            requests[start..]
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+        client.close().await;
+
         // These public execute_query calls distinguish the outer historical
         // Client::at mapping from the dispatched ReadError::Client mapping.
         for (block, method) in [

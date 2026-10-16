@@ -1227,7 +1227,10 @@ impl SubmissionOutcome {
     }
 }
 
-fn known_receipt_error(mut error: CliError, receipt: &rtao::tx::ExtrinsicResult) -> CliError {
+pub(crate) fn known_receipt_error(
+    mut error: CliError,
+    receipt: &rtao::tx::ExtrinsicResult,
+) -> CliError {
     let recovery = format!(
         "the transaction was already submitted{}; inspect that result before retrying",
         receipt
@@ -2631,7 +2634,7 @@ impl AppContext {
         let group = rtao::Executor::new(client.clone())
             .multisig(&raw.signatories, raw.threshold)
             .await
-            .map_err(|error| CliError::failure(error.to_string()))?;
+            .map_err(CliError::transaction)?;
         if intent
             .signer_role_dyn()
             .map_err(|error| CliError::input(error.to_string()))?
@@ -2691,7 +2694,7 @@ impl AppContext {
                     inner.clone(),
                 )
                 .await
-                .map_err(|error| CliError::failure(error.to_string()))?;
+                .map_err(|error| CliError::transaction(error.into()))?;
                 let adapter = if index > 0 && raw.threshold >= 2 {
                     adapter.with_opening_timepoint(opening.clone().ok_or_else(|| {
                         CliError::failure(

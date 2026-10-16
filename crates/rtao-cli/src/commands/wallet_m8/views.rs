@@ -47,7 +47,7 @@ async fn batch_uids(
             ],
         );
     }
-    let values = view.fetch(plan).await.map_err(failure)?;
+    let values = view.fetch(plan).await.map_err(CliError::from)?;
     let mut result = BTreeMap::new();
     for (pair, value) in pairs.iter().copied().zip(values) {
         if matches!(value.as_core(), CoreValue::Null) {
@@ -82,7 +82,7 @@ pub(super) async fn overview(
         owner::stake_value_for_coldkeys(&view, accounts.clone()),
         owner::balances(&view, accounts)
     )
-    .map_err(failure)?;
+    .map_err(CliError::from)?;
     let mut rows = Vec::new();
     let names = local_names(ctx).await?;
     let mut human_groups = Vec::new();
@@ -100,7 +100,7 @@ pub(super) async fn overview(
         .collect();
     let mut identities = owner::hotkey_identities(&view, unnamed)
         .await
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
     let pairs = valuations
         .values()
         .flat_map(|v| v.positions.iter())
@@ -127,7 +127,7 @@ pub(super) async fn overview(
             m6_staking::stake_availability_for_coldkey(&view, coldkey, netuids),
             owner::root_basket_owed(&view, coldkey)
         )
-        .map_err(failure)?;
+        .map_err(CliError::from)?;
         let locks = locks
             .into_iter()
             .map(|row| (row.netuid, row))
@@ -145,7 +145,7 @@ pub(super) async fn overview(
             identities.extend(
                 owner::hotkey_identities(&view, unnamed_targets)
                     .await
-                    .map_err(failure)?,
+                    .map_err(CliError::from)?,
             );
         }
         let staked = tao(sum(
@@ -451,7 +451,7 @@ pub(super) async fn registrations(
     for (name, coldkey, local) in targets {
         let owned = m6_accounts::owned_hotkeys(&view, coldkey)
             .await
-            .map_err(failure)?;
+            .map_err(CliError::from)?;
         let mut hotkeys = Vec::<(Option<String>, AccountId, bool)>::new();
         for (name, address) in local {
             if let Some(entry) = hotkeys.iter_mut().find(|entry| entry.1 == address) {
@@ -486,7 +486,7 @@ pub(super) async fn registrations(
                     Some(netuid) => vec![netuid],
                     None => m6_accounts::netuids_for_hotkey(&view, *hotkey)
                         .await
-                        .map_err(failure)?,
+                        .map_err(CliError::from)?,
                 };
                 pairs.extend(netuids.iter().map(|netuid| (*netuid, *hotkey)));
                 entry.insert(netuids);
