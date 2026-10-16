@@ -76,9 +76,9 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map reaches 311/357 reconciled inputs and 46 pending after
-the three root-command and oracle-only basket-producer dispositions. The generated matrix remains at 307/50
-until the next hosted refresh. The e2e source map and generated matrix agree at
+The reviewed source map and adopted generated matrix agree at 311/357
+reconciled inputs and 46 pending after the three root-command and oracle-only
+basket-producer dispositions. The e2e source map and generated matrix agree at
 18 pending mappings and 11 client contracts.
 There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
@@ -244,6 +244,19 @@ source-attribution guard. Root move/swap were listed in an additional-sources
 comment rather than explicit derived-source headers. Both now have full headers
 at the authenticated commit/license; production bodies are unchanged. No reports
 from the failed run were adopted. The corrected hosted report check follows.
+
+Hosted report run [38896301076](https://github.com/sam0x17/rtao/actions/runs/38896301076)
+at exact `4c1e5af` passes, including source attribution. Authenticate artifact
+12044595804 (58,707 bytes, SHA256
+`9eefd53289a02dc5b948266ee11a7229aafde024dc03c2b2fa98325be58baca2`),
+inspect all four changed source rows and all 23 actual dependency inputs, then
+separately refetch and adopt exactly four reports. Only the reviewed four Docify
+dependency inputs and normal measurement metadata change in the graph record.
+Profile package counts remain 225/362/366/417 and host flags remain
+false/false/false/true. Runtime, oracle, hardware and other compatibility claims
+stay unchanged. The generated matrix now agrees with source at 311/46.
+This passes report/source checks; ordinary combined hosted execution is next
+for 3,080 expected tests. No new milestone is accepted.
 
 A fresh reader also completed two cold reads of all five current authentication
 sources at `6fba8dc`, finding no surviving concrete implementation defect within
