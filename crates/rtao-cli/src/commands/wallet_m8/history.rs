@@ -188,6 +188,15 @@ pub(in crate::commands::wallet) async fn run(
     matches: &ArgMatches,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
+    run_with_transport(ctx, matches, history, None).await
+}
+
+async fn run_with_transport(
+    ctx: &mut AppContext,
+    matches: &ArgMatches,
+    history: &mut PromptHistory,
+    transport: Option<&dyn Transport>,
+) -> Result<(), CliError> {
     let network = rtao::client::Network::resolve(&ctx.globals.network).map_err(failure)?;
     if !matches!(network.label(), "finney" | "archive") {
         return Err(failure(format!(
@@ -203,9 +212,16 @@ pub(in crate::commands::wallet) async fn run(
     let raw = if limit <= 0 {
         Vec::new()
     } else {
+        let http;
+        let transport = if let Some(transport) = transport {
+            transport
+        } else {
+            http = Http::new()?;
+            &http
+        };
         tokio::time::timeout(
             Duration::from_secs(30),
-            fetch(&Http::new()?, &owner.to_string(), limit),
+            fetch(transport, &owner.to_string(), limit),
         )
         .await
         .map_err(|_| failure("transfer history request timed out"))??
@@ -225,43 +241,14 @@ pub(in crate::commands::wallet) async fn run(
         }
     }
     let address_names = ctx.output.address_names().map_err(failure)?;
-    let owner_text = ctx.output.account_text(
-        &owner.to_string(),
-        address_names.get(&owner.to_string()).map(String::as_str),
-    );
-    let columns = [
-        "block",
-        "timestamp",
-        "direction",
-        "amount (rao)",
-        "netuid",
-        "from",
-        "to",
-        "success",
-    ];
-    let rows = records
-        .iter()
-        .map(|row| {
-            vec![
-                row["block_number"].clone(),
-                row["timestamp"].clone(),
-                row["direction"].clone(),
-                row["amount_rao"].clone(),
-                row["netuid"].clone(),
-                row["from"].clone(),
-                row["to"].clone(),
-                row["success"].clone(),
-            ]
-        })
-        .collect();
-    let mut table = TableSpec::new(
-        format!("transfer history — {owner_text}"),
-        columns.into_iter().map(str::to_owned).collect(),
-        rows,
-    );
-    table.records = Some(json!(records));
-    table.right_align.extend([0, 3, 4]);
-    ctx.output.columns(&table).map_err(failure)
+    let owner_text = owner.to_string();
+    let owner_text = match address_names.get(&owner_text) {
+        Some(name) => format!("{name} ({owner_text})"),
+        None => owner_text,
+    };
+    ctx.output
+        .transfer_history(&format!("transfer history — {owner_text}"), &records)
+        .map_err(failure)
 }
 
 #[cfg(test)]
@@ -368,6 +355,114 @@ mod tests {
             .err()
             .ok_or("oversized body must fail")?;
         assert_eq!(error.message, "transfer history exceeds 16 MiB");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod renderer_command_tests {
+    use super::*;
+    use crate::{
+        application,
+        books::Books,
+        globals::Globals,
+        output::{MemorySink, OutputOptions, Stream},
+        prompt::LiveTerminal,
+    };
+    use std::sync::Mutex;
+
+    struct Page(Value);
+    impl Transport for Page {
+        fn get<'a>(&'a self, _: &'a Url) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
+            Box::pin(async move { serde_json::to_vec(&self.0).map_err(failure) })
+        }
+    }
+
+    #[tokio::test]
+    async fn actual_history_command_projects_indexer_records_through_shared_output()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let task_root = std::path::PathBuf::from(
+            std::env::var_os("RTAO_TEMP_ROOT").ok_or("hosted tests require RTAO_TEMP_ROOT")?,
+        );
+        let wallets = task_root
+            .join("tmp")
+            .join(format!("history-renderer-no-files-{}", std::process::id()));
+        if wallets.try_exists()? {
+            return Err("fixture wallet path must be absent".into());
+        }
+        let owner = rtao::primitives::AccountId([7; 32]).to_string();
+        let peer = rtao::primitives::AccountId([8; 32]).to_string();
+        let parsed = application::command_tree([super::super::super::command()])
+            .try_get_matches_from([
+                "rtao",
+                "--network",
+                "finney",
+                "--wallet-path",
+                wallets.to_str().ok_or("wallet path")?,
+                "wallet",
+                "history",
+                "--coldkey",
+                &owner,
+                "--limit",
+                "2",
+            ])?;
+        let matches = parsed
+            .subcommand()
+            .ok_or("wallet")?
+            .1
+            .subcommand()
+            .ok_or("history")?
+            .1;
+        let raw = vec![
+            json!({"block_number":23,"extrinsic_idx":2,"timestamp":"2026-10-16T12:45:00Z","amount":"2000000000","from_coldkey":peer,"to_coldkey":owner,"to_netuid":0,"success":true,"tao_price_usd":"42"}),
+            json!({"block_number":22,"extrinsic_idx":1,"timestamp":"not a date","amount":1_000_000_000u64,"from_coldkey":owner,"to_coldkey":peer,"from_netuid":0,"success":false}),
+        ];
+        let expected: Vec<_> = raw.iter().map(|row| record(&owner, row)).collect();
+        for json_mode in [false, true] {
+            let mut globals = Globals::resolve(&parsed, &Default::default(), &task_root, |_| None)?;
+            globals.apply_with_env(matches, &[], |_| None)?;
+            let mut ctx = AppContext::new(
+                globals,
+                Default::default(),
+                Books::from_values(
+                    json!([{"address":owner,"name":"my wallet"},{"address":peer,"name":"friend"}]),
+                    json!([]),
+                    json!([]),
+                ),
+                Arc::new(Mutex::new(Box::new(LiveTerminal))),
+            );
+            let sink = MemorySink::default();
+            ctx.output = Output::new(
+                OutputOptions {
+                    json_mode,
+                    quiet: true,
+                    network: None,
+                },
+                Arc::new(sink.clone()),
+            );
+            run_with_transport(
+                &mut ctx,
+                matches,
+                &mut PromptHistory::default(),
+                Some(&Page(json!({"results":raw}))),
+            )
+            .await?;
+            let text = sink.text(Stream::Stdout)?;
+            if json_mode {
+                assert_eq!(serde_json::from_str::<Value>(&text)?, json!(expected));
+            } else {
+                assert!(text.contains(&format!("transfer history — my wallet ({owner})")));
+                assert!(text.contains(&format!("from friend ({peer})")));
+                assert!(text.contains("2026-10-16 12:45"));
+                assert!(text.contains("not a date"));
+                assert!(text.contains("−τ1.000000000"));
+                assert!(text.contains("✗ failed"));
+                assert!(text.contains("2 transfers  ·  in τ2.000000000  ·  1 failed excluded"));
+                assert!(!text.contains("amount (rao)"));
+            }
+            assert!(sink.bytes(Stream::Stderr)?.is_empty());
+        }
+        assert!(!wallets.try_exists()?);
         Ok(())
     }
 }

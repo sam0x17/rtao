@@ -121,7 +121,45 @@ async fn run() -> Result<(), CliError> {
         .iter()
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect::<Vec<_>>();
-    let mut invocation = application::parse_with_prompts(command, argv, &context, &mut prompting)?;
+    let mut argv = argv;
+    let mut prompt_history = rtao_cli::prompt::PromptHistory::default();
+    let mut prepared_context = None;
+    if let Some(partial) =
+        application::pending_wallet_matches(&command, &argv, &context, &prompting)?
+    {
+        let mut leaf = &partial;
+        while let Some((_, child)) = leaf.subcommand() {
+            leaf = child;
+        }
+        #[allow(deprecated)]
+        let prompt_home =
+            env::home_dir().ok_or_else(|| CliError::failure("home directory is unavailable"))?;
+        // Only the two local-key commands above need this early context. This
+        // loads public options/books; confirmation never acquires a signer.
+        let mut app = AppContext::from_store(
+            &partial,
+            leaf,
+            &[],
+            &store,
+            &prompt_home,
+            |name| env::var(name).ok(),
+            terminal.clone(),
+        )
+        .await?;
+        application::confirm_required_wallet(&mut app, &mut argv, &mut prompt_history)?;
+        prepared_context = Some(app);
+    }
+    let parse_context = prepared_context
+        .as_ref()
+        .map(AppContext::prompt_context)
+        .unwrap_or(context);
+    let mut invocation = application::parse_with_prompt_history(
+        command,
+        argv,
+        &parse_context,
+        &mut prompting,
+        prompt_history,
+    )?;
     let command_path = application::command_path(&completion_tree, &invocation.matches);
     let Some((name, matches)) = invocation.matches.subcommand() else {
         return Err(CliError::input("missing command"));
@@ -189,16 +227,21 @@ async fn run() -> Result<(), CliError> {
         "evm" => evm::reserved(matches)?,
         _ => Vec::new(),
     };
-    let mut app = AppContext::from_store(
-        &invocation.matches,
-        leaf,
-        &reserved,
-        &store,
-        &home,
-        |name| env::var(name).ok(),
-        terminal,
-    )
-    .await?;
+    let mut app = match prepared_context {
+        Some(app) => app,
+        None => {
+            AppContext::from_store(
+                &invocation.matches,
+                leaf,
+                &reserved,
+                &store,
+                &home,
+                |name| env::var(name).ok(),
+                terminal,
+            )
+            .await?
+        }
+    };
     rtao_cli::logs::setup_logging(app.globals.verbosity, app.globals.quiet)
         .map_err(|e| CliError::failure(e.to_string()))?;
     let replay = invocation.history.replay_command(&replay_args);

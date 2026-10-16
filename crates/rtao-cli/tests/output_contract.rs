@@ -789,3 +789,150 @@ fn broken_output_pipe_is_reported_without_panicking() {
         matches!(output.value(&json!({"answer":42})),Err(rtao_cli::output::OutputError::Io(error)) if error.kind() == std::io::ErrorKind::BrokenPipe)
     );
 }
+
+#[test]
+fn transfer_history_preserves_columns_names_dates_signs_and_successful_tao_totals() -> TestResult {
+    let records = json!([
+        {"block_number":15,"timestamp":"2026-10-16T12:34:56Z","amount_rao":2_000_000_000u64,"netuid":null,"from":"peer","to":"owner","direction":"in","success":true,"opaque":HOSTILE_TEXT},
+        {"block_number":14,"timestamp":"2026-10-16T13:34:56+02:00","amount_rao":"1000000000","netuid":0,"from":"owner","to":"peer","direction":"out","success":true},
+        {"block_number":13,"timestamp":"2026-10-16T14:34:00","amount_rao":9_000_000_000u64,"netuid":0,"from":"owner","to":"owner","direction":"self","success":true},
+        {"block_number":12,"timestamp":"invalid date","amount_rao":8_000_000_000u64,"netuid":4,"from":"peer","to":"owner","direction":"in","success":true},
+        {"block_number":11,"timestamp":hostile("date"),"amount_rao":7_000_000_000u64,"netuid":0,"from":"owner","to":"peer","direction":"out","success":false}
+    ]);
+    let rows = records.as_array().ok_or("records")?;
+    for quiet in [false, true] {
+        let (output, sink) = capture(false, quiet);
+        output.name_address("peer", &hostile("contact"))?;
+        output.name_address("owner", "local owner")?;
+        output.transfer_history(&hostile("history-title"), rows)?;
+        let rendered = sink.text(Stream::Stdout)?;
+        assert_safe_human_text(&rendered, &["history-title", "contact", "date"]);
+        for text in [
+            "when",
+            "block",
+            "amount",
+            "counterparty",
+            "2026-10-16 12:34",
+            "2026-10-16 13:34",
+            "2026-10-16 14:34",
+            "invalid date",
+            "+τ2.000000000",
+            "−τ1.000000000",
+            "self local owner (owner)",
+            "✗ failed",
+            "5 transfers  ·  in τ2.000000000  ·  out τ1.000000000  ·  1 failed excluded",
+        ] {
+            assert!(rendered.contains(text), "missing {text}: {rendered}");
+        }
+        assert!(!rendered.contains("amount (rao)"));
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+        let (output, sink) = capture(true, quiet);
+        output.transfer_history("ignored", rows)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            records
+        );
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+    }
+    let (output, sink) = capture(false, true);
+    output.transfer_history("empty", &[])?;
+    assert_eq!(sink.text(Stream::Stdout)?, "empty\n  none\n");
+    let row = &rows[..1];
+    let (output, sink) = capture(false, false);
+    output.transfer_history("one", row)?;
+    assert!(
+        sink.text(Stream::Stdout)?
+            .contains("1 transfer  ·  in τ2.000000000")
+    );
+    Ok(())
+}
+
+#[test]
+fn transfer_history_refuses_native_overflow_without_partial_human_output_but_keeps_json()
+-> TestResult {
+    for direction in ["in", "out"] {
+        let records = [
+            json!({"block_number":1,"timestamp":"2026-10-16T12:00:00Z","amount_rao":u64::MAX,"netuid":0,"from":"a","to":"b","direction":direction,"success":true}),
+            json!({"block_number":2,"timestamp":"2026-10-16T12:00:00Z","amount_rao":1,"netuid":0,"from":"a","to":"b","direction":direction,"success":true}),
+        ];
+        let (output, sink) = capture(false, false);
+        let error = output
+            .transfer_history("history", &records)
+            .err()
+            .ok_or("overflow must refuse")?;
+        assert_eq!(
+            error.to_string(),
+            format!("transfer history {direction} TAO total exceeds u64 rao")
+        );
+        assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        assert!(sink.bytes(Stream::Stderr)?.is_empty());
+        let (output, sink) = capture(true, true);
+        output.transfer_history("history", &records)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            json!(records)
+        );
+    }
+    let record = json!({"block_number":1,"timestamp":"x","amount_rao":"18446744073709551616","netuid":0,"from":"a","to":"b","direction":"in","success":true});
+    let (output, sink) = capture(false, false);
+    assert!(
+        output
+            .transfer_history("history", std::slice::from_ref(&record))
+            .is_err()
+    );
+    assert!(sink.bytes(Stream::Stdout)?.is_empty());
+    let (output, sink) = capture(true, true);
+    output.transfer_history("history", std::slice::from_ref(&record))?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        json!([record])
+    );
+    Ok(())
+}
+
+#[test]
+fn chain_error_explain_tip_prefers_catalog_membership_then_non_unknown_code() -> TestResult {
+    use rtao_catalog::ErrorCode;
+    for (name, code, target) in [
+        (
+            Some("HotKeyNotRegisteredInSubNet"),
+            ErrorCode::NotRegistered,
+            Some("HotKeyNotRegisteredInSubNet"),
+        ),
+        (Some("Dropped"), ErrorCode::Unknown, Some("Dropped")),
+        (
+            Some("FreshRateLimit"),
+            ErrorCode::RateLimited,
+            Some("rate_limited"),
+        ),
+        (None, ErrorCode::InvalidArgument, Some("invalid_argument")),
+        (Some("Unrecognized"), ErrorCode::Unknown, None),
+        (None, ErrorCode::Unknown, None),
+    ] {
+        let error = ChainError::with_code("fixture failure", name.map(str::to_owned), code);
+        for quiet in [false, true] {
+            let (output, sink) = capture(false, quiet);
+            output.chain_error(&error, Some("https://example.invalid/extrinsic"))?;
+            let text = sink.text(Stream::Stderr)?;
+            assert!(text.contains("error["));
+            if let Some(target) = target {
+                assert!(text.contains(&format!("rtao explain {target}")));
+            } else {
+                assert!(!text.contains("rtao explain"));
+            }
+            if name == Some("FreshRateLimit") {
+                assert!(!text.contains("rtao explain FreshRateLimit"));
+            }
+            assert!(sink.bytes(Stream::Stdout)?.is_empty());
+            let (output, sink) = capture(true, quiet);
+            output.chain_error(&error, None)?;
+            assert_eq!(
+                serde_json::from_str::<Value>(&sink.text(Stream::Stderr)?)?,
+                error.to_json()
+            );
+            assert!(!sink.text(Stream::Stderr)?.contains("rtao explain"));
+            assert!(sink.bytes(Stream::Stdout)?.is_empty());
+        }
+    }
+    Ok(())
+}
