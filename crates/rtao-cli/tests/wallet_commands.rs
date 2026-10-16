@@ -275,6 +275,43 @@ async fn creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payloa
 }
 
 #[tokio::test]
+async fn new_key_commands_print_one_stdout_clear_hint_after_mnemonics_even_when_quiet() -> TestResult
+{
+    for command in ["create", "new-coldkey", "new-hotkey"] {
+        for quiet in [false, true] {
+            let root = Root::new()?;
+            let mut args = vec!["rtao", "wallet", command, "--crypto-type", "ed25519"];
+            if command != "new-hotkey" {
+                args.push("--no-password");
+            }
+            if command == "create" {
+                args.extend(["--hotkey-crypto-type", "ed25519"]);
+            }
+            let (matches, mut ctx, sink, reads) = fixture(&root, &args, false, false, &[])?;
+            ctx.globals.quiet = quiet;
+            ctx.output.options.quiet = quiet;
+            run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
+            let text = sink.text(Stream::Stdout)?;
+            assert_eq!(text.matches("once stored, wipe the mnemonic").count(), 1);
+            assert!(text.contains(r"clear && printf '\e[3J'"));
+            assert_eq!(
+                text.matches("  mnemonic  ").count(),
+                if command == "create" { 2 } else { 1 }
+            );
+            let last_mnemonic = text.rfind("  mnemonic  ").ok_or("mnemonic block")?;
+            let guidance = text
+                .find("once stored, wipe the mnemonic")
+                .ok_or("clear help")?;
+            assert!(guidance > last_mnemonic);
+            assert!(!text.contains('\x1b'));
+            assert!(sink.bytes(Stream::Stderr)?.is_empty());
+            assert_eq!(reads.load(Ordering::Relaxed), 0);
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn default_coldkey_encryption_uses_confirmed_hidden_password_without_echo() -> TestResult {
     let root = Root::new()?;
     let (matches, mut ctx, sink, reads) = fixture(
@@ -774,6 +811,19 @@ async fn list_retains_partial_wallets_without_deriving_or_unlocking_secret_files
     assert_eq!(value["coldkeys"][0]["hotkeys"][1]["ss58"], Value::Null);
     assert_eq!(value["addresses"], json!(ctx.books.addresses));
     assert!(!sink.text(Stream::Stdout)?.contains("sentinel"));
+    assert_eq!(reads.load(Ordering::Relaxed), 0);
+    let books = ctx.books.clone();
+    let (matches, mut ctx, sink, reads) =
+        fixture(&root, &["rtao", "wallet", "list"], false, false, &[])?;
+    ctx.books = books;
+    ctx.output.options.quiet = true;
+    run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
+    let human = sink.text(Stream::Stdout)?;
+    assert!(human.contains("no hotkeys"));
+    assert!(human.contains("Staking"));
+    assert!(human.contains("2 coldkeys  ·  2 hotkeys  ·  1 addresses  ·  1 proxy"));
+    assert!(!human.contains("sentinel"));
+    assert!(sink.bytes(Stream::Stderr)?.is_empty());
     assert_eq!(reads.load(Ordering::Relaxed), 0);
     Ok(())
 }

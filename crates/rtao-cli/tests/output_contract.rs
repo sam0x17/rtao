@@ -728,19 +728,26 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
 
 #[test]
 fn mnemonic_is_primary_data_under_quiet_and_not_an_extra_json_document() -> TestResult {
-    let (human, sink) = capture(false, true);
-    human.mnemonic("coldkey", "synthetic recovery phrase")?;
-    assert!(
-        sink.text(Stream::Stdout)?
-            .contains("synthetic recovery phrase")
-    );
-    let (output, sink) = capture(true, true);
-    output.mnemonic("coldkey", "synthetic recovery phrase")?;
-    output.secret_detail(None, &[], &[("mnemonic", "synthetic recovery phrase")])?;
-    assert_eq!(
-        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
-        json!({"mnemonic":"synthetic recovery phrase"})
-    );
+    for quiet in [false, true] {
+        let (human, sink) = capture(false, quiet);
+        human.mnemonic("coldkey", "synthetic recovery phrase")?;
+        human.mnemonic_clear_hint()?;
+        let text = sink.text(Stream::Stdout)?;
+        assert!(text.contains("synthetic recovery phrase"));
+        assert_eq!(text.matches("once stored, wipe the mnemonic").count(), 1);
+        assert!(text.contains(r"clear && printf '\e[3J'"));
+        assert!(text.find("synthetic recovery phrase") < text.find("once stored"));
+        assert!(sink.bytes(Stream::Stderr)?.is_empty());
+        let (output, sink) = capture(true, quiet);
+        output.mnemonic("coldkey", "synthetic recovery phrase")?;
+        output.secret_detail(None, &[], &[("mnemonic", "synthetic recovery phrase")])?;
+        output.mnemonic_clear_hint()?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            json!({"mnemonic":"synthetic recovery phrase"})
+        );
+        assert!(sink.bytes(Stream::Stderr)?.is_empty());
+    }
     Ok(())
 }
 
@@ -934,5 +941,70 @@ fn chain_error_explain_tip_prefers_catalog_membership_then_non_unknown_code() ->
             assert!(sink.bytes(Stream::Stdout)?.is_empty());
         }
     }
+    Ok(())
+}
+
+#[test]
+fn pending_multisigs_keep_structured_commands_members_and_unique_decode_guidance() -> TestResult {
+    let command = "rtao call System.remark --args '{\"remark\":[1,2]}' --signatory bob";
+    let records = vec![
+        json!({"status":"pending","call_hash":"0xaaaa","approval_labels":["alice (5Alice)"],"remaining_labels":["bob (5Bob)"],"co_signer_commands":[{"label":"bob (5Bob)","command":command}],"decode_note":"suppressed when commands exist","decode_hint":"also suppressed"}),
+        json!({"status":"pending","call_hash":"0xbbbb","approval_labels":["carol (5Carol)"],"remaining_labels":["dave (5Dave)"],"co_signer_commands":[],"decode_note":"Call details unavailable.","decode_hint":"Pass --call-data."}),
+        json!({"status":"pending","call_hash":"0xcccc","approval_labels":[],"remaining_labels":["eve (5Eve)"],"co_signer_commands":[],"decode_note":"Call details unavailable.","decode_hint":"Pass --call-data."}),
+    ];
+    let (output, sink) = capture(false, false);
+    output.pending_multisigs("pending team", &records)?;
+    let text = sink.text(Stream::Stdout)?;
+    for expected in [
+        command,
+        "alice (5Alice)",
+        "bob (5Bob)",
+        "carol (5Carol)",
+        "dave (5Dave)",
+        "eve (5Eve)",
+        "0xaaaa",
+        "0xbbbb",
+        "0xcccc",
+        "pending team  3 ops",
+    ] {
+        assert!(
+            text.contains(expected),
+            "missing pending-operation fact {expected}"
+        );
+    }
+    assert_eq!(text.matches("call details unavailable").count(), 1);
+    assert_eq!(text.matches("pass --call-data").count(), 1);
+    assert!(!text.contains("suppressed when commands exist"));
+    assert!(sink.bytes(Stream::Stderr)?.is_empty());
+    let (machine, sink) = capture(true, false);
+    machine.pending_multisigs("ignored human title", &records)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        json!({"pending_multisigs":records,"count":3})
+    );
+    for json_mode in [false, true] {
+        let (quiet, sink) = capture(json_mode, true);
+        quiet.pending_multisigs("pending", &records)?;
+        assert!(sink.bytes(Stream::Stdout)?.is_empty() && sink.bytes(Stream::Stderr)?.is_empty());
+    }
+    let (empty, sink) = capture(false, false);
+    empty.pending_multisigs("pending", &[])?;
+    assert_eq!(
+        sink.text(Stream::Stdout)?,
+        "No pending multisig operations.\n"
+    );
+    let (mut custom, sink) = capture(false, false);
+    let expected = json!(records);
+    custom
+        .registry_mut()
+        .register("custom pending", move |records| {
+            assert_eq!(records, &expected);
+            Ok(HumanView::Text("custom registered pending view".into()))
+        });
+    custom.pending_multisigs("custom pending", &records)?;
+    assert_eq!(
+        sink.text(Stream::Stdout)?,
+        "custom registered pending view\n"
+    );
     Ok(())
 }

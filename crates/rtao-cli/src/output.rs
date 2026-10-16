@@ -1323,13 +1323,75 @@ impl Output {
             return Ok(());
         }
         if self.options.json_mode {
-            self.json(
+            return self.json(
                 Stream::Stdout,
                 &json!({"pending_multisigs":records,"count":records.len()}),
-            )
-        } else {
-            self.render(title, &json!(records))
+            );
         }
+        if let Some(renderer) = self.registry.0.get(title) {
+            return self.human(&renderer(&json!(records))?);
+        }
+        if records.is_empty() {
+            return self.line(Stream::Stdout, "No pending multisig operations.");
+        }
+        // Pending records carry structured members and full replay commands.
+        // Generic query tables intentionally hide such cells, so prepare a
+        // complete detail view for each operation instead.
+        let mut fields = Vec::with_capacity(records.len());
+        let mut decode = Vec::new();
+        let mut seen = BTreeSet::new();
+        for record in records {
+            let record = record.as_object().ok_or_else(|| {
+                OutputError::Render("pending multisig record must be an object".into())
+            })?;
+            fields.push(
+                record
+                    .iter()
+                    .filter(|(key, _)| !matches!(key.as_str(), "decode_note" | "decode_hint"))
+                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .collect::<Vec<_>>(),
+            );
+            if record
+                .get("co_signer_commands")
+                .and_then(Value::as_array)
+                .is_none_or(Vec::is_empty)
+            {
+                let text = |key: &str| {
+                    record
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .filter(|text| !text.is_empty())
+                        .map(str::to_owned)
+                };
+                let pair = (text("decode_note"), text("decode_hint"));
+                if pair != (None, None) && seen.insert(pair.clone()) {
+                    decode.push(pair);
+                }
+            }
+        }
+        self.line(
+            Stream::Stdout,
+            &format!(
+                "{title}  {} {}",
+                records.len(),
+                if records.len() == 1 { "op" } else { "ops" }
+            ),
+        )?;
+        for (index, fields) in fields.iter().enumerate() {
+            if index != 0 {
+                self.line(Stream::Stdout, &"─".repeat(60))?;
+            }
+            self.detail(None, fields, None)?;
+        }
+        for (note, hint) in decode {
+            if let Some(note) = note {
+                self.sub_diag(Stream::Stdout, "note", &note)?;
+            }
+            if let Some(hint) = hint {
+                self.sub_diag(Stream::Stdout, "help", &hint)?;
+            }
+        }
+        Ok(())
     }
 
     /// Mnemonic data survives quiet mode and is carried by the command in JSON.
@@ -1340,6 +1402,18 @@ impl Output {
         self.line(Stream::Stdout, &format!("generating new {role}"))?;
         self.secret_line(&["  mnemonic  ", phrase])?;
         self.sub_diag(Stream::Stdout,"note",&format!("write this mnemonic down and store it somewhere safe — it is the only way to recover the {role}"))
+    }
+
+    /// Clear-scrollback guidance accompanies mnemonic data even under quiet.
+    pub fn mnemonic_clear_hint(&self) -> Result<(), OutputError> {
+        if self.options.json_mode {
+            return Ok(());
+        }
+        self.sub_diag(
+            Stream::Stdout,
+            "help",
+            "once stored, wipe the mnemonic from this terminal: run `clear && printf '\\e[3J'` (or clear terminal scrollback)",
+        )
     }
 
     fn human(&self, view: &HumanView) -> Result<(), OutputError> {

@@ -2337,12 +2337,12 @@ notes = "Source reconciliation 2026-10-15: public masked_input and LiveTerminal 
 
 [[file]]
 py = "sdk/python/bittensor/metagraph.py"
-rs = ["`rtao_metagraph::{Metagraph, MetagraphNeuron, MetagraphView, SubnetsMetagraphExt}`; the commitment parts → `rtao_reads::commitments`"]
+rs = ["crates/rtao-metagraph/src/graph.rs", "crates/rtao-metagraph/src/fetch.rs", "crates/rtao-reads/src/commitments.rs", "crates/rtao-primitives/src/axon.rs", "crates/rtao-primitives/src/pyfmt.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "80f0f0c9016c8f379254d9a880cef4afac4fc921"
 synced_tag = "v478"
 milestone = "M1"
-notes = "`fetch` `:238-291` (curated `client.subnets().metagraph(..)` through `SubnetsMetagraphExt`, §8.2); `_build` `:297-403` → `from_dynamic` reference path; `NeuronCommitment`, the commitment map, status machine and decoders `:37-125, 406-560` and `fetch_commitments`/`_fetch_commitment_map` `:258-291` → `rtao_reads::commitments` (§4.8), whose `reveals_at` uses `rtao_primitives::drand::reveal_time` (`:25, 120-124`); axon URL `:563-573` → `rtao_primitives::axon::axon_base_url` (§7.3)"
+notes = "Source reconciliation 2026-10-16: complete 573-line file, all 32 functions and 54 dataclass fields reviewed against graph projection/fetch, commitment lifecycle/history and the actual endpoint/text helpers. Ordered rows, padded and legacy collateral columns, subnet-tagged balances, score fractions, exact reserve quotient, signed I96F32 and raw runtime retention are represented. The shared Python fromhex parser repairs the public from_dynamic text adapter and retains commitment field/error diagnostics. Typed AccountId/Uid, Option rows/maps, explicit row materialization and native Debug replace Python properties/iterator, KeyError and repr ABI; dataclass JSON fields remain projected. Q25/D-035 excludes negative/oversized balances. Hosted run 38873429391 at d01830c passes 3051 tests, including the exact public hex-text repair and terminal-commitment fixtures. No Python execution, arbitrary-object/coercion equivalence, live runtime/oracle, sync/persistence or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/multisig.py"
@@ -2868,12 +2868,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/tests/harness/fake_node.py"
-rs = ["`rtao-testkit::FakeNode` (§11.3)"]
+rs = ["crates/rtao-testkit/src/fakes/node.rs", "rtao_testkit::fakes::{FakeState,Reply,FakeChain}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "46c7bd2b41774ac1757bf499f62db4b2fea81c21"
 synced_tag = "v478"
 milestone = "M1"
-notes = "Documented group `sdk/python/tests/harness/fake_node.py`: `rtao-testkit::FakeNode` (§11.3)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 153-line harness (17 definitions) and all 19 direct pinned test_rpc.py consumers reviewed. FakeNode uses finite loopback ws/wss sockets; FakeState/Reply preserve scripted result/error/silence, request IDs/order, batches, early/late subscription updates, drop/refusal, timeout and reconnect behavior used by those tests. FakeChain is the separate direct RpcClientT adapter over shared encoded state and does not establish socket coverage. Native typed replies, opaque decimal subscription IDs, latest-active connection selection, additive repeated refusal budgets and omitted empty all-silent batch responses are explicit harness adaptations; Python connection/asyncio object identity and arbitrary runtime behavior are not promised. All 19 matching real Session socket fixtures pass in hosted 38873429391 at d01830c. This source disposition does not accept the separate whole test_rpc.py row, Python/e2e/live-node equivalence or an M1 milestone."
 
 [[file]]
 py = "sdk/python/tests/harness/fake_substrate.py"
@@ -3129,12 +3129,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated test module an
 
 [[file]]
 py = "sdk/python/tests/unit/test_rpc.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["crates/rtao-testkit/tests/rpc.rs","crates/rtao-rpc/src/policy.rs","crates/rtao-client/tests/public_rpc.rs","xtask/src/extract_rpc_test_fixtures.rs","crates/rtao-catalog/src/py.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "655aa3ba498aeae6e061e73f8db6fb4f12e7e743"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-16: complete pinned 40-function/91-assertion review bound to d01830c hosted run 38873429391. Thirty-eight reviewed fixture bodies, the added refused-initialization socket-close observer, three guarded decorator-producer fixtures and two complete generated-table consumers have exact passing records; batch output cardinality is pinned to ten. Two authenticated decorator tables retain all seven cases; all 40 function origins and the six public-boundary markers are present. Checked native account/block/extrinsic inputs, typed transport/error/result/nonce APIs, allowlisted methods, real loopback connections and explicit timing/header/sentinel adaptations replace permissive Python mocks; opaque JSON policy payloads remain lossless. The classifier private/outer timeout boundary and supported wire-header domain are separately disposed in the whole-source review. These are reviewed native source counterparts and executed Rust fixtures; Python pytest/oracle execution, identical wire transcripts and live-node parity are unclaimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_shape_corpus.py"

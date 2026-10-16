@@ -720,10 +720,7 @@ async fn run_local(
             )
             .map_err(failure)?;
     }
-    if !ctx.output.options.json_mode {
-        ctx.output.message("once stored, wipe the mnemonic from this terminal: run `clear && printf '\\e[3J'` (or clear terminal scrollback)").map_err(failure)?;
-    }
-    Ok(())
+    ctx.output.mnemonic_clear_hint().map_err(failure)
 }
 
 /// Run a Keychain leaf with an injectable subprocess runner and platform.
@@ -1190,7 +1187,7 @@ async fn list(ctx: &AppContext) -> Result<(), CliError> {
             record["ss58"].as_str().unwrap_or("unavailable"),
             record["crypto_type"].as_str().unwrap_or("")
         );
-        let leaves = record["hotkeys"]
+        let mut leaves: Vec<String> = record["hotkeys"]
             .as_array()
             .into_iter()
             .flatten()
@@ -1203,17 +1200,79 @@ async fn list(ctx: &AppContext) -> Result<(), CliError> {
                 )
             })
             .collect();
+        if leaves.is_empty() {
+            leaves.push("no hotkeys".into());
+        }
         nodes.push((branch, leaves));
     }
     ctx.output
         .tree(&ctx.globals.wallet_path.to_string_lossy(), &nodes, None)
         .map_err(failure)?;
-    for key in ["multisigs", "addresses", "proxies"] {
-        if payload[key].as_array().is_some_and(|rows| !rows.is_empty()) {
-            ctx.output.query(key, &payload[key]).map_err(failure)?;
+    // These are curated public book views, not generated query tables. A
+    // first-row scalar projection would hide multisig members and optional
+    // metadata that appears only on a later row.
+    for (key, public_fields) in [
+        (
+            "multisigs",
+            &[
+                "name",
+                "ss58",
+                "threshold",
+                "signatory_count",
+                "signatories",
+                "note",
+            ][..],
+        ),
+        ("addresses", &["name", "address", "note", "signer"][..]),
+        (
+            "proxies",
+            &["name", "address", "proxy_type", "delay", "spawner", "note"][..],
+        ),
+    ] {
+        if let Some(rows) = payload[key].as_array() {
+            for row in rows {
+                let fields = public_fields
+                    .iter()
+                    .filter_map(|field| {
+                        if key == "proxies" && *field == "proxy_type" {
+                            return Some((
+                                (*field).to_owned(),
+                                row.get(*field)
+                                    .filter(|value| crate::books::public_json_truthy(value))
+                                    .cloned()
+                                    .unwrap_or_else(|| json!("Staking")),
+                            ));
+                        }
+                        row.get(*field)
+                            .map(|value| ((*field).to_owned(), value.clone()))
+                    })
+                    .collect::<Vec<_>>();
+                ctx.output
+                    .detail(Some(key), &fields, None)
+                    .map_err(failure)?;
+            }
         }
     }
-    Ok(())
+    let count = |key: &str| payload[key].as_array().map_or(0, Vec::len);
+    let hotkeys = payload["coldkeys"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|row| row["hotkeys"].as_array().map_or(0, Vec::len))
+        .sum::<usize>();
+    let mut summary = format!("{} coldkeys  ·  {hotkeys} hotkeys", count("coldkeys"));
+    for key in ["multisigs", "addresses", "proxies"] {
+        let rows = count(key);
+        if rows != 0 {
+            let noun = if key == "proxies" && rows == 1 {
+                "proxy"
+            } else {
+                key
+            };
+            summary.push_str(&format!("  ·  {rows} {noun}"));
+        }
+    }
+    ctx.output.value(&summary).map_err(failure)
 }
 
 fn saved_accounts(ctx: &AppContext) -> Result<Vec<(String, AccountId)>, CliError> {
