@@ -1386,8 +1386,8 @@ fn wallet_prompt_public_accounts(
     Ok((cold, hot))
 }
 
-#[test]
-fn confirmed_wallet_and_hotkey_cache_the_selected_names_by_account() -> TestResult {
+#[tokio::test]
+async fn confirmed_wallet_and_hotkey_cache_the_selected_names_by_account() -> TestResult {
     let root = CacheRoot::new()?;
     let (cold, hot) = wallet_prompt_public_accounts(&root)?;
     let (mut ctx, _, reads) = context(&[])?;
@@ -1428,6 +1428,82 @@ fn confirmed_wallet_and_hotkey_cache_the_selected_names_by_account() -> TestResu
             .account_text(&hot.to_string(), None)
             .ends_with(" (owner/miner)")
     );
+
+    // An explicitly selected wallet skips those prompts. Public signing-key
+    // construction still registers both identities before the real preview.
+    let (mut explicit, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
+    explicit.globals.wallet_path = root.0.clone();
+    explicit.globals.wallet_name = "owner".into();
+    explicit.globals.hotkey_name = "miner".into();
+    explicit.globals.wallet_given = true;
+    explicit.globals.hotkey_given = true;
+    explicit
+        .output
+        .name_address(&cold.to_string(), "already selected")?;
+    let contact = AccountId([42; 32]);
+    let proxy = AccountId([43; 32]);
+    let empty = AccountId([44; 32]);
+    explicit.books = Books::from_values(
+        json!([
+            {"address":cold,"name":"cold contact"},
+            {"address":hot,"name":"hot contact"},
+            {"address":contact,"name":"unused contact"},
+            {"address":empty,"name":""},
+        ]),
+        json!([
+            {"address":contact,"name":"later proxy alias"},
+            {"address":proxy,"name":"unused proxy"},
+        ]),
+        json!([]),
+    );
+    let cold_path = root.0.join("owner/coldkey");
+    let hot_path = root.0.join("owner/hotkeys/miner");
+    let original_cold = std::fs::read(&cold_path)?;
+    let original_hot = std::fs::read(&hot_path)?;
+    let keys = explicit.signing_keys(SignerRole::Coldkey, None).await?;
+    let (client, chain, _) = fixture(1_000_000_000).await?;
+    assert!(
+        explicit
+            .submit_with(
+                &client,
+                &Preview { blocked: false },
+                keys.as_ref(),
+                false,
+                None
+            )
+            .await?
+            .is_none()
+    );
+    assert_eq!(
+        explicit.output.address_names()?,
+        std::collections::BTreeMap::from([
+            (cold.to_string(), "already selected".to_owned()),
+            (hot.to_string(), "owner/miner".to_owned()),
+            (contact.to_string(), "unused contact".to_owned()),
+            (proxy.to_string(), "unused proxy".to_owned()),
+        ])
+    );
+    assert_eq!(
+        explicit.output.address_kinds()?.get(&cold.to_string()),
+        Some(&rtao_cli::books::AccountKind::Coldkey)
+    );
+    assert_eq!(
+        explicit.output.address_kinds()?.get(&hot.to_string()),
+        Some(&rtao_cli::books::AccountKind::Hotkey)
+    );
+    let plan: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+    assert_eq!(plan["signer_address"], json!(cold));
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    assert_eq!(std::fs::read(cold_path)?, original_cold);
+    assert_eq!(std::fs::read(hot_path)?, original_hot);
+    client.close().await;
     Ok(())
 }
 
@@ -2448,7 +2524,16 @@ async fn shield_signing_notices_use_actual_backends_and_respect_machine_quiet_an
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     chain.mutate_state(|state| {
-        state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))
+        state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))?;
+        for member in &keys {
+            state.seed_python(
+                "System",
+                "Account",
+                &[json!(member.key.account())],
+                json!({"data":{"free":1_000_000_000u64}}),
+            )?;
+        }
+        Ok::<_, rtao::core::CoreError>(())
     })?;
     let (mut ctx, sink) = saved_context(&keys, &["--yes", "--mev-shield"], 1)?;
     ctx.globals.signer_backend = Some("vault".into());
@@ -2731,8 +2816,11 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         .err()
         .ok_or("unknown fate")?;
     assert_eq!(error.message, message);
-    assert!(error.message.contains(&hex::encode(hash.0)));
-    assert!(error.help.is_none());
+    let help = error.help.as_deref().ok_or("unknown-fate recovery hash")?;
+    assert!(help.contains(&format!("inspect transaction 0x{}", hex::encode(hash.0))));
+    assert!(help.contains("do not resubmit until its outcome is known"));
+    assert!(!help.contains("wait "));
+    assert!(!help.contains("request or connection rate"));
     assert!(client.is_closed());
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
@@ -4158,6 +4246,50 @@ async fn command_review_human_final_card_and_question_precede_refusal_and_unlock
             .iter()
             .all(|request| !request.method.starts_with("author_"))
     );
+    let address = keys.key.account().to_string();
+    let label = "named\x1b[31m owner";
+    let (mut named, sink, _) = context(&["--no-mev-shield"])?;
+    named
+        .books
+        .addresses
+        .push(json!({"address":address,"name":label}));
+    named.output.update_subnet_names([(4, "four".into())])?;
+    let mut named_review = command_review(&intent);
+    named_review.summary = format!("Allocate from {address} on subnet 4");
+    let named_questions = Arc::new(Mutex::new(Vec::new()));
+    named.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation {
+        questions: named_questions.clone(),
+    })));
+    let error = named
+        .submit_with_keys_options(
+            &client,
+            &intent,
+            &keys,
+            SubmissionOptions {
+                review: Some(&named_review),
+                ..Default::default()
+            },
+        )
+        .await
+        .err()
+        .ok_or("named review was not declined")?;
+    assert_eq!(error.message, "aborted.");
+    let rendered_name =
+        rtao_cli::output::terminal_text(&format!("{label} ({address})")).into_owned();
+    assert_eq!(
+        named_questions
+            .lock()
+            .map_err(|_| "named questions")?
+            .as_slice(),
+        [format!(
+            "Allocate from {rendered_name} on subnet 4 (four)? [y/N]: "
+        )]
+    );
+    let card = sink.text(Stream::Stdout)?;
+    assert!(card.contains(&rendered_name));
+    assert!(!card.contains('\x1b'));
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     client.close().await;
     Ok(())
 }
