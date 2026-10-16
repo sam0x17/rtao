@@ -1996,16 +1996,21 @@ Pool rejections parse into a typed `PoolRejection`:
 
 #### 3.9.6 Retries and reconciliation
 
-- **Retries** happen at executor level only, when `ExecuteOptions::retries > 0` (default 0, Python). The transient set
-  is Python's (`_TRANSIENT_SUBSTRINGS = ("priority is too low", "transaction is outdated", "stale")`,
-  `PY/executor.py:52-56` [V], extracted). The match runs on the typed `PoolRejection`, with a one-block sleep and a
-  fresh nonce per attempt. Retries reuse the reviewed call and resolved signer. A runtime stamp mismatch triggers at
-  most one rebuild and policy check before signing the new call. Dispatch failures are never retried. Shielded submissions are never retried either, as in
-  Python: `execute` hands `mev_shield_required` intents to `submit_shielded` (`PY/executor.py:812-824`) before its
-  retry loop (`:833-845`), and `submit_shielded` has no `retries` parameter (`:897-909`). With `ShieldPeriod` the
-  era-caused `Stale` cannot occur (`UP/runtime/src/check_mortality.rs:94-100`), so a carrier `Stale` is `CheckNonce`'s
-  outdated nonce (`UP/runtime/src/check_nonce.rs:145-146`). It is surfaced as `PoolRejection::Stale`, both pair leases
-  drop, and the caller may resubmit. (D-011, which assumed Python retries carriers, is withdrawn.)
+- **Transient pool retries** happen at executor level when `ExecuteOptions::retries > 0` (default 0). The transient
+  set is Python's (`_TRANSIENT_SUBSTRINGS = ("priority is too low", "transaction is outdated", "stale")`,
+  `PY/executor.py:52-56` [V], extracted). They reuse the reviewed call and resolved signer and fetch a fresh nonce.
+  Python sleeps for one nominal `block_time`; rtao opens a strict best-head subscription and waits for a height
+  greater than the best height read after subscribing. Subscription, head-read and stream failures remain errors,
+  and the total deadline still applies (D-071). Shield carrier rejections and unknown fate are not retried by this
+  loop; unsettled nonce leases invalidate their account state. D-011 remains withdrawn for the original carrier
+  retry claim.
+- **Controlled replans** are separate from pool retries. A runtime stamp mismatch permits at most one rebuild and
+  policy check before broadcasting (D-013). With `replan_owner_rate_limit=true` (the default), a known failed result
+  named `TxRateLimitExceeded` permits one fresh plan when both outer and semantic intent origins are
+  `subnet_owner`, including the shield path (D-070). Policy and owner/window admission run again; the original total
+  deadline and resolved signer are retained. Unknown fate and multisig execution adapters are ineligible, so a
+  completed multisig approval cannot reopen its operation (D-041). Setting the option to false returns the first failure;
+  owner orchestration disables it when that layer owns the retry. Other dispatch failures are returned.
 - **Reconciliation** (`SubmitOptions::reconcile`, off by default; on in the framework, §9.3) answers "did a
   `FateUnknown` extrinsic land?" It also runs after a `retracted` status with no later inclusion and, with `reconcile`
   on, after `dropped` (§3.9.3):
@@ -2060,10 +2065,15 @@ pub struct ShieldOptions { pub period: ShieldPeriod /* P8 */, pub wait: Wait /* 
                            pub max_fee: Option<Balance<Tao>> }
 ```
 
-1. Read `MevShield.NextKey` at the best head B. If it is absent, retry twice, one block apart
-   (`executor.py:1027-1034`).
+1. Read `MevShield.NextKey` at the best head. If it is absent, retry twice, one block apart
+   (`executor.py:1027-1034`). Run `Signer::prepare_shielded` within the submission admission deadline before
+   reserving nonces or selecting the mortal era. The default does nothing; Vault waits for its page connection and
+   requests camera startup. `Arc<S>` forwards the hook. Preparation must preserve account and algorithm; a change
+   refuses before era or nonce selection. The request does not acknowledge camera or phone readiness, and both
+   signatures still have to complete within the signed era. The key read precedes preparation, as in Python; this
+   source contract does not establish rotating-key freshness during a long human delay.
 
-   **Era check (D-025).** Read the finalized head F too. The carrier and the inner extrinsic are applied together in
+   **Era check (D-025).** After preparation, read fresh best B and finalized F heights. The carrier and the inner extrinsic are applied together in
    block B + 2, by the author whose key `NextKey` holds (`UP/pallets/shield/README.md:15, 34`;
    `UP/pallets/shield/src/lib.rs:324, 616-620`; polkadot-sdk
    `substrate/client/basic-authorship/src/basic_authorship.rs:464-545`). An era of period p anchored at F is valid
@@ -2090,12 +2100,14 @@ pub struct ShieldOptions { pub period: ShieldPeriod /* P8 */, pub wait: Wait /* 
 5. Compose `MevShield.submit_encrypted(ciphertext)`, sign it at n with `ShieldPeriod`, and submit it with
    `client.submit_leased(.., carrier, ..)` (§3.9). The inner extrinsic is sealed into the carrier and is never
    submitted on its own.
-6. Resolve the inner extrinsic. Scan blocks from the carrier's inclusion to `included_at + period` for the inner hash,
-   with one shared budget of `4 * (period + 1)` missing-height polls
-   (`_SHIELDED_POLL_ATTEMPTS_PER_BLOCK`, extracted), as Python does. Under `Wait::Finalization`,
-   re-resolve after finality (`_SHIELDED_FINALITY_RPC_RETRIES = 4`) and rescan on a reorg. If the inner extrinsic never
-   lands, the result becomes a failure with Python's message. The inner lease settles when the inner extrinsic is
-   found and drops otherwise.
+6. Resolve the inner extrinsic by scanning from carrier inclusion through the actual signed inner expiry. Python
+   instead scans through `included_at + period`. Keep the shared `4 * (period + 1)` missing-height poll budget
+   (`_SHIELDED_POLL_ATTEMPTS_PER_BLOCK`, extracted), but exhaustion or an RPC failure leaves the carrier unresolved
+   with its hash rather than proving noninclusion. Under `Wait::Finalization`, verify finality and canonical block
+   hashes with `_SHIELDED_FINALITY_RPC_RETRIES = 4`; after an orphan disappears, earlier heights can be revisited.
+   Before returning definite noninclusion with Python's message, establish finalized signed expiry and rescan every
+   canonical height from the finalized signing anchor through expiry. Missing canonical data remains unresolved
+   (D-049). The inner lease settles when its inclusion is resolved and drops otherwise.
 7. Preflight:
    - price `submit_encrypted` with an 8,192-byte ciphertext;
    - when the intent reports `required_free`, block execution if free TAO covers the reserve but not reserve plus
@@ -2182,10 +2194,18 @@ pub mod compose {
   1. scan the receipt for `NetworkAdded` vs `NetworkRegistrationQueued`;
   2. on the queued path, rescan the inclusion block (on-idle events are not in the receipt), then every height up to
      the head, then follow heads;
-  3. accept only a `NetworkAdded` whose `SubnetOwner`/`SubnetOwnerHotkey` match and which is no longer in
-     `NetworkRegistrationQueue`.
-  Progress is reported as `Queued`, `Waiting`, `Registered`. The default timeout is `None`, as in Python ([R] A1 §10
-  item 14).
+  3. accept a queued `NetworkAdded` only when pinned `SubnetOwner`/`SubnetOwnerHotkey` match and the original
+     request is no longer in `NetworkRegistrationQueue`.
+  Native completion also authenticates the immediate receipt's historical owner/hotkey and canonical block before
+  and after its reads; Python's immediate fast path trusts the receipt event. Receipt queue events must match the
+  request identities, and a later same-identity queue cannot replace the first `registration_block`. An orphaned
+  inclusion refuses; a best-chain reorg discards abandoned queue/cleanup state before rescanning (D-069). These
+  checks use typed event records and pinned storage, not an identical Python read transcript.
+  Native progress carries lowercase `queued`, `waiting`, `registered` stages and stage-specific JSON through a
+  bounded channel in place of Python's callback. The default timeout is `None`; zero registration timeout is also
+  unbounded, as in Python. A supplied registration or total deadline bounds progress backpressure and following.
+  An ordinary approval-only receipt without deferred dispatch starts no follower. Disabled registration waiting,
+  pool-only, failed and unknown-fate results also return without following.
 
 ### 3.14 Offline and external signing
 
@@ -2540,7 +2560,8 @@ pub struct ExecuteOptions {                       // defaults = PY/executor.py:7
     pub period: Option<u32>,                      // Some(128); None = immortal
     pub wait_for_inclusion: bool,                 // true
     pub wait_for_finalization: bool,              // true
-    pub retries: u32,                             // 0
+    pub retries: u32,                             // 0; transient pool retries only
+    pub replan_owner_rate_limit: bool,              // true; one eligible owner replan, independent of retries
     pub proxy_for: Option<AccountId>, pub force_proxy_type: Option<ProxyType>,
     pub policy: Option<Policy>,
     pub wait_for_registration: bool,              // true
@@ -2609,9 +2630,12 @@ the same configured executor with `rtao_intents::executor(client)` or install th
 2. Otherwise `plan`, and refuse with `PolicyError` unless the plan is `ok`.
 3. Resolve the signer for the role, then submit **exactly** `plan.call`, so the dry run and the signed bytes cannot
    diverge (`PY/intents/plan.py:89-135` [J-CF §2]).
-4. Transient-only retries (§3.9.6).
+4. Transient pool retries and separately controlled runtime/owner replans (§3.9.6).
 5. Re-check nested dispatch failures.
-6. Merge extras: `pure_proxy` data, plan extras, and the `register_subnet` completion (§3.13).
+6. Merge extras: ordinary clear execution adds `pure_proxy` creation data before plan extras; explicit shield
+   retains only build extras and shield metadata, as Python does. `PureCreated` may therefore be all `None` after a
+   successful explicit shield even while its receipt retains `Proxy.PureCreated` and creation coordinates.
+   `register_subnet` completion runs afterward (§3.13).
 
 If the head runtime changed between plan and submit, `execute` re-plans once (D-013).
 
@@ -3320,13 +3344,14 @@ bitflags! { pub struct SignerCaps: u8 {
     const METADATA_HASH = 1 << 1;   // needs CheckMetadataHash=Enabled + RFC-0078 proof (MetadataVerifyingSigner: Ledger)
     const PAYLOAD_JSON  = 1 << 2;   // signs Polkadot-JS SignerPayloadJSON (ExtensionPayloadSigner: browser extension)
     const UNSIGNED_TX   = 1 << 3;   // takes the whole prepared extrinsic (UnsignedExtrinsicSigner: Vault, Ledger)
-    const OUT_OF_BAND   = 1 << 4;   // human round trip (Vault QR): the executor prepares shield payloads before the first scan
+    const OUT_OF_BAND   = 1 << 4;   // human round trip (Vault QR); setup precedes the short shield era
 }}
 pub trait Signer: Send + Sync + 'static {
     fn account(&self) -> AccountId;
     fn crypto_type(&self) -> CryptoType;
     fn caps(&self) -> SignerCaps { SignerCaps::RAW_PAYLOAD }
     fn metadata_constants(&self) -> Option<(u8, String)> { None }
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> { Box::pin(async { Ok(()) }) }
     fn sign<'a>(&'a self, req: &'a SigningRequest<'a>) -> BoxFuture<'a, Result<MultiSignature, SignerError>>;
     /// Raw message signing (btauth/1, EVM association, `wallet sign`); context-only backends refuse by default.
     fn sign_raw<'a>(&'a self, _msg: &'a [u8]) -> BoxFuture<'a, Result<[u8; 64], SignerError>> {
@@ -3469,7 +3494,7 @@ independent Python or device parity. M2-S02 remains open and unaccepted.
 |---|---|---|---|---|
 | `KeypairSigner` | always | `Keypair::sign` (`CORE/keys/mod.rs:391`; sr25519 `substrate` context, ed25519 RFC 8032) | RAW | dev URIs, mnemonics, unlocked keyfiles; inline signing |
 | `LedgerSigner` | `ledger` | the core's `LedgerDevice` behind the `LedgerBackend` seam (below): `sign(account, index, call ‖ extra ‖ additional, proof)`; proof = `generate_extrinsic_proof(call, extra, additional, metadata_v15, chain_info)` (`CORE/digest/mod.rs:117`) | METADATA_HASH \| UNSIGNED_TX | ed25519 at `m/44'/354'/account'/0'/index'`; one device mutex across whole operations; `spawn_blocking`; Polkadot generic app ≥ 100.0.5 ([R] G §4.4); refuses raw signing; tested against Ledger's emulator (§11.9) |
-| `VaultSigner` | `vault` | port of `PY/vault/uos.py` (UOS framing, multipart envelope) plus `prepare_call`/`submit_signature`; serves upstream `PY/vault/static/*` verbatim (embedded with `include_bytes!` from `vendor/`, Apache-2.0) from `VaultSessionServer`, a one-shot loopback server on an ephemeral port (`PY/vault/server.py:50-242`): `/` serves `vault.html`, `/bittensor-chain-specs.png` the chain-specs QR, and `/ws` is a WebSocket upgraded like the extension bridge's (axum, then `hyper::upgrade::on` and tokio-tungstenite at the workspace version, §2.3 rule 2); the page sends a hello with `role: "vault"` and the session id (a stale session is closed with 1008, a replaced tab with 1012), receives `sign-request`/`scan-request`/`result` and answers `signature`/`scanned`/`error`; UOS frames are rendered as SVG data URIs with one automatically selected numeric/alphanumeric/byte segment, no segment splitting, error correction M and a 4-module quiet zone (binary UOS frames remain byte mode) (`PY/vault/qr.py:15-28`); `scan_vault_address` parses `substrate:<ss58>:<genesis>` or a bare ss58 (`PY/vault/scan.py:21-49`); `vault::{VaultSessionServer, VaultError, VaultPageError, scan_vault_address}` mirror `PY/vault/__init__.py`'s `__all__` | UNSIGNED_TX \| OUT_OF_BAND | shielded submissions need two scans inside the 8-block era, so both payloads are prepared before the first scan |
+| `VaultSigner` | `vault` | port of `PY/vault/uos.py` (UOS framing, multipart envelope) plus `prepare_call`/`submit_signature`; serves upstream `PY/vault/static/*` verbatim (embedded with `include_bytes!` from `vendor/`, Apache-2.0) from `VaultSessionServer`, a one-shot loopback server on an ephemeral port (`PY/vault/server.py:50-242`): `/` serves `vault.html`, `/bittensor-chain-specs.png` the chain-specs QR, and `/ws` is a WebSocket upgraded like the extension bridge's (axum, then `hyper::upgrade::on` and tokio-tungstenite at the workspace version, §2.3 rule 2); the page sends a hello with `role: "vault"` and the session id (a stale session is closed with 1008, a replaced tab with 1012), receives `sign-request`/`scan-request`/`result` and answers `signature`/`scanned`/`error`; UOS frames are rendered as SVG data URIs with one automatically selected numeric/alphanumeric/byte segment, no segment splitting, error correction M and a 4-module quiet zone (binary UOS frames remain byte mode) (`PY/vault/qr.py:15-28`); `scan_vault_address` parses `substrate:<ss58>:<genesis>` or a bare ss58 (`PY/vault/scan.py:21-49`); `vault::{VaultSessionServer, VaultError, VaultPageError, scan_vault_address}` mirror `PY/vault/__init__.py`'s `__all__` | UNSIGNED_TX \| OUT_OF_BAND | shield setup runs before the short era; the inner scan precedes sealing and the carrier scan, and both approvals must finish within that era |
 | `ExtensionSigner` | `extension` | the v11 bridge protocol on `127.0.0.1:39295`, token in `~/.bittensor/extension_bridge.token`, serving upstream `PY/extension/static/bridge.html` verbatim (`PY/extension/bridge.py:17-40`) | PAYLOAD_JSON | wire-compatible with the Python daemon |
 | `RemoteSigner` (M10) | `remote` | rtao addition: `POST /sign` with the `SigningRequest` minus secrets, authenticated by btauth/1 with a separate client key; it ships with its wire schema, a reference server that decodes and policy-checks the call before signing, and replay tests, and stays outside `full` until then (§14 M10) | any | HSM/KMS deployments |
 
@@ -5894,6 +5919,10 @@ divergences. Classes:
 
 | ID | Upstream symbol | Python behavior | rtao behavior | Class | Test | Upstream |
 |---|---|---|---|---|---|---|
+| D-069 | registration completion identity/canonicality | immediate receipt event is trusted; later queues and best forks have no native guards | pinned immediate identities, original queue identity and canonical/reorg checks | stricter | `receipt_event_with_wrong_owner_or_hotkey_does_not_claim_registration`, `backfill_rejects_unrelated_and_later_same_identity_registration`, `live_best_reorg_discards_queue_state_from_abandoned_blocks` | Existing source and fixtures reviewed; hosted validation pending, no new filing |
+| D-070 | direct-owner execution replan | generic executor returns included dispatch failure | optional/default one fresh owner plan after known `TxRateLimitExceeded`, including shield; multisig/unknown fate excluded | addition | `owner_rate_failure_gets_only_one_retry_despite_the_pool_retry_setting`, `shield_owner_rate_failure_also_replans_once_with_a_fresh_alpha_pair`, `completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval` | Existing M4 owner behavior; hosted validation pending, no new filing |
+| D-071 | transient retry pacing | sleeps one nominal block time | waits for a strict best-head update greater than the freshly observed height; errors/deadline remain terminal | stricter | `transient_pool_retry_waits_for_one_head_and_reuses_reviewed_call` | Existing native timing policy; hosted validation pending, no new filing |
+| D-049 | submission recovery and shield absence certainty | receipt failures can lack recovery identity; bounded best-chain scan can report absence | retain attempted hash/cause; require actual signed expiry finalized and complete canonical rescan for definite shield noninclusion | improved | `shield_receipt_watch_and_inner_receipt_errors_retain_the_attempted_carrier_and_cause`, `ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan`, `finalized_absence_rescan_finds_an_inner_missed_on_the_orphan_branch` | Existing recovery policy; source-reviewed, hosted validation pending, no new filing |
 | D-068 | extension local I/O/session/signature policy | configurable targets, implicit launch, PID-based stop and permissive signature bytes | numeric loopback, explicit launch, bounded requests, verified state/process ownership and checked identity/signature admission; progress callbacks run inline | stricter | `connection_targets_never_send_tokens_off_host`, `request_deadline_includes_waiting_behind_an_approval`, `expired_startup_refuses_spawn_without_touching_state`, `signatures_are_bounded_and_never_change_negotiated_crypto` | Existing local client policy; conditional Unix ownership/foreground fixtures remain supplementary, current hosted/browser/platform execution unverified and device work deferred |
 | D-067 | Vault page session admission/lifecycle | configurable host, automatic browser, permissive reply kinds and fewer resource limits | numeric loopback, authenticated current page, expected reply kind, retired cancelled tabs and bounded I/O; library browser opening opt-in | stricter | `page_serves_exact_pinned_assets_and_refuses_foreign_origin`, `sequential_requests_result_and_reload_use_the_pinned_page_messages`, `timeout_cancellation_page_errors_and_stop_clear_the_pending_request` | Existing local I/O policy; source-reviewed, hosted execution pending and device coverage deferred |
 | D-066 | timelock decryption deadline | accepts arbitrary floats and attempts an already revealed envelope before checking retry expiry; async fetch gets at least one second | checked nonnegative Duration bounds the whole operation; zero starts no attempt; running blocking crypto may finish independently | stricter | `zero_timeout_does_not_start_a_beacon_request`, `deadline_caps_reveal_wait_and_fetch_together`, `deadline_drops_an_in_flight_attempt_future` | Existing local I/O policy; source review only, hosted execution pending |
@@ -5918,7 +5947,7 @@ divergences. Classes:
 | D-008 | `_transport.interface.attach_signature` | refuses on a `spec_version` change only | also refuses on a `transaction_version` change | stricter | `rtao_client::submission::prepared_signature_refuses_same_spec_transaction_version_change` | Active source; hosted validation pending; no new filing |
 | D-009 | `http_auth.verify retention check` | `ValueError` after a verified signature | `ConfigError` at `Verifier::new` | stricter | `rtao_btauth::conformance::test_window_wider_than_store_retention_refused` | Active source; hosted validation pending; no new filing |
 | D-010 | `_transport.runtime V14 path` | signs with V14 metadata if ever selected | V14 runtimes are read-only (runtime APIs via the legacy table only) | stricter | `rtao_runtime::handle::tests::v14_is_readable_but_signing_and_digest_are_refused`; `rtao_client::view::tests::v14_archive_calls_use_only_frozen_double_encoded_api_definitions` | Active source; hosted validation pending; no new filing |
-| D-011 | *withdrawn* | Python never retries shielded submissions (`PY/executor.py:812-824` returns before the retry loop at `:833-845`; `submit_shielded` has no `retries`, `:897-909`) | the same: shielded submissions are not retried (§3.9.6) | — | — | — |
+| D-011 | *withdrawn* | Python has no transient shield-carrier retry loop | same for carrier rejection/unknown fate; separate native owner replanning is D-070 | — | — | — |
 | D-012 | `Client.blocks / subscriptions` | the stream dies on reconnect | resubscribes and backfills by number (`blocks_strict` keeps Python semantics) | improved | `rtao_client::head::tests::reconnect_resubscribes_and_backfills_without_duplicate_finalized_heights`; `rtao_client::head::tests::best_fork_reports_common_ancestor_then_each_replacement_once`; `rtao_client::head::tests::strict_stream_keeps_subscription_loss_terminal` | Active source; hosted validation pending; no new filing |
 | D-013 | `Executor.execute` | composes and submits, even across a runtime upgrade | refuses spec-mismatched `CallBytes` and re-plans once | stricter | `rtao_tx::executor::spec_version_change_replans_once_and_refuses_a_second_change`; `rtao_tx::executor::transaction_version_change_replans_once_and_rechecks_policy` | Active source and independent review; hosted validation pending; no new filing |
 | D-014 | `btcli query` | no block flag | `rtao query <read> --block <n>` | addition | `rtao_cli::generated_commands::block_query_pins_real_storage_and_does_not_read_the_current_head_value` | Active source; hosted validation pending; no new filing |

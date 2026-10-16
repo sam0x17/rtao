@@ -3,6 +3,62 @@
 schema = 1
 
 [[divergences]]
+id = "D-069"
+upstream_symbol = "Executor._complete_subnet_registration"
+python_behavior = "The immediate fast path trusts NetworkAdded in the receipt. Best-chain following has no canonical inclusion/reorg reset guards, and later matching queue events can overwrite registration_block."
+rtao_behavior = "Authenticates immediate historical owner/hotkey and canonical block before/after reads. Receipt queues match requested identities, and the first registration_block remains fixed. Orphaned inclusion refuses; best reorgs discard abandoned queue/cleanup state before rescanning. Existing queued identity/pending checks and receipt/data output remain."
+rationale = "Completion must identify the original request on the current canonical branch. This records existing native follower admission rather than an identical Python read transcript."
+decision = "PLAN.md execution rule 5 design-gap reconciliation; whole executor source review on 2026-10-16"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = [
+  "rtao_tx::registration::tests::receipt_event_with_wrong_owner_or_hotkey_does_not_claim_registration",
+  "rtao_tx::registration::tests::backfill_rejects_unrelated_and_later_same_identity_registration",
+  "rtao_tx::registration::tests::an_orphaned_inclusion_cannot_be_followed_as_a_new_request",
+  "rtao_tx::registration::tests::live_best_reorg_discards_queue_state_from_abandoned_blocks",
+]
+upstream_report = "Existing production follower and actual pinned fake-chain fixture bodies independently source-reviewed. Hosted execution remains pending; no upstream defect alleged or new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py#L333-L568"
+
+[[divergences]]
+id = "D-070"
+upstream_symbol = "Executor.execute / submit_shielded direct-owner TxRateLimitExceeded handling"
+python_behavior = "Generic execute does not retry an included dispatch failure, and submit_shielded has no retry loop."
+rtao_behavior = "With replan_owner_rate_limit=true (default), permits one fresh plan when outer and semantic origins are subnet_owner, the result is failed without unknown fate, and error.name is exactly TxRateLimitExceeded. The ordinary and shield paths recheck policy/window admission with the original total deadline and resolved signer. Multisig execution adapters are excluded; false returns the first failure."
+rationale = "Record the native owner planner's existing M4 capability separately from transient pool retries. A known rate failure may justify another reviewed plan; a completed multisig approval or unknown fate does not."
+decision = "PLAN.md execution rule 5 documentation reconciliation of existing owner orchestration; whole executor source review on 2026-10-16"
+status = "active"
+class = "addition"
+milestone = "M9"
+pinning_tests = [
+  "rtao_tx::owner_execution::owner_rate_failure_rebuilds_the_real_alpha_call_once_from_fresh_state",
+  "rtao_tx::owner_execution::owner_rate_failure_gets_only_one_retry_despite_the_pool_retry_setting",
+  "rtao_tx::owner_execution::owner_replan_rechecks_the_window_before_a_second_submission",
+  "rtao_tx::owner_execution::owner_retry_keeps_the_original_total_deadline",
+  "rtao_tx::owner_execution::shield_owner_rate_failure_also_replans_once_with_a_fresh_alpha_pair",
+  "rtao_tx::owner_execution::clear_owner_rate_replan_opt_out_returns_first_included_failure",
+  "rtao_tx::owner_execution::shield_owner_rate_replan_opt_out_signs_and_submits_only_one_pair",
+  "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval",
+]
+upstream_report = "Existing eligible native replan, opt-out, bound, admission and multisig exclusion fixtures independently source-reviewed. Hosted execution remains pending. No new policy or upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py#L774-L889"
+
+[[divergences]]
+id = "D-071"
+upstream_symbol = "Executor.execute transient pool retry wait"
+python_behavior = "Waits asyncio.sleep(await substrate.block_time()) before the next transient pool attempt, without requiring a new head or subscription."
+rtao_behavior = "Opens a strict best-head subscription, reads the current best height after subscribing, and waits for an update strictly above that height. Stream, subscription and head-read failures surface; the original total deadline bounds the wait. The reviewed call/resolved signer are reused and the next attempt obtains a fresh nonce."
+rationale = "Record existing native observed-head pacing separately from Python's nominal-time sleep and the recovering-stream contract D-012. No additional retry or broadcast is authorized by elapsed time alone."
+decision = "PLAN.md execution rule 5 native timing-policy disclosure; whole executor source review on 2026-10-16"
+status = "active"
+class = "stricter"
+milestone = "M9"
+pinning_tests = ["rtao_tx::executor::transient_pool_retry_waits_for_one_head_and_reuses_reviewed_call"]
+upstream_report = "Existing production strict-head wait and actual executor fixture independently source-reviewed. Hosted execution remains pending; no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py#L832-L845"
+
+[[divergences]]
 id = "D-068"
 upstream_symbol = "bittensor.extension bridge/client/session/signer local I/O policy"
 python_behavior = "Permits configured non-loopback hosts/URLs, implicit ensure_bridge launch, PID-based daemon termination and permissive raw signature bytes; its request waits do not implement the native aggregate resource policy."
@@ -356,9 +412,9 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-049"
-upstream_symbol = "Client submission watch and receipt recovery"
-python_behavior = "Several receipt and protocol failures after author transmission propagate without a typed recovery identity."
-rtao_behavior = "Unresolved post-transmission failures retain the attempted extrinsic hash, original cause and any later reconciliation failure. Direct, leased, externally signed, shield and executor entries invalidate unresolved nonce state and do not rebroadcast. Proven pool refusal and expiry remain distinct."
+upstream_symbol = "Client submission watch, shield absence and receipt recovery"
+python_behavior = "Several receipt and protocol failures after author transmission propagate without a typed recovery identity. Shield resolution scans through included_at + period and can report noninclusion after a bounded best-chain scan or unavailable-height budget."
+rtao_behavior = "Unresolved post-transmission failures retain the attempted extrinsic hash, original cause and any later reconciliation failure. Direct, leased, externally signed, shield and executor entries invalidate unresolved nonce state and do not rebroadcast. Proven pool refusal and expiry remain distinct. Shield noninclusion requires actual signed expiry to finalize and a complete canonical scan from the finalized signing anchor through expiry; stalled or unavailable data stays unresolved, and earlier canonical heights are revisited after a reorg."
 rationale = "A failed receipt lookup does not prove that the mutation failed. Preserve recovery information before a caller decides whether to retry."
 decision = "PLAN.md execution rule 5; M4-S1 source review (2026-10-15)"
 status = "active"
@@ -368,8 +424,11 @@ pinning_tests = [
   "rtao_client::submission::receipt_rpc_protocol_and_event_decode_failures_keep_hash_and_cause_for_all_entries",
   "rtao_client::shield::shield_receipt_watch_and_inner_receipt_errors_retain_the_attempted_carrier_and_cause",
   "rtao_tx::executor::receipt_rpc_failure_keeps_recovery_identity_without_retry_for_every_executor_entry",
+  "rtao_client::shield::ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan",
+  "rtao_client::shield::finalized_absence_rescan_finds_an_inner_missed_on_the_orphan_branch",
+  "rtao_client::shield::stalled_chain_keeps_carrier_unresolved_and_inner_can_still_execute_later",
 ]
-upstream_report = "Local recovery-boundary repair; combined hosted validation pending. No new filing."
+upstream_report = "Existing recovery and shield-certainty policy plus substantive canonical-absence/reorg fixtures independently source-reviewed. Current combined hosted validation remains pending. No new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport"
 
 [[divergences]]
@@ -663,8 +722,8 @@ upstream_report = "Existing implementation and named regression bodies were sour
 id = "D-011"
 upstream_symbol = "*withdrawn*"
 python_behavior = "Python never retries shielded submissions (`PY/executor.py:812-824` returns before the retry loop at `:833-845`; `submit_shielded` has no `retries`, `:897-909`)"
-rtao_behavior = "the same: shielded submissions are not retried (§3.9.6)"
-rationale = "Explicit design decision recorded in docs/plan/architecture.md Appendix C (D-011); pending means the behavior/test is not claimed implemented."
+rtao_behavior = "the same for transient carrier rejection and unknown fate; separate eligible direct-owner replanning is D-070 (§3.9.6)"
+rationale = "Withdrawn because the original alleged Python carrier retry did not exist. The native owner planner has a separately documented controlled replan; this entry does not claim all shield execution paths return every included failure without another plan."
 status = "withdrawn"
 
 [[divergences]]
