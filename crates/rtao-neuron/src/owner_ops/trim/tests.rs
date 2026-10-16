@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::OwnerConfig;
+use anyhow::Context;
 use rtao_client::{ClientConfig, Network};
 use rtao_primitives::{CryptoType, DefaultAccount, MechId};
 use rtao_signer::{
@@ -55,6 +56,7 @@ impl Drop for Temp {
 enum Step {
     Remove,
     Cleanup,
+    CleanupQueued,
     Stall,
     MissingProgress,
     WrongTarget,
@@ -196,13 +198,21 @@ impl Signer for JournalSigner {
                 }
                 let before = self.population.load(Ordering::SeqCst);
                 let removed = match step {
-                    Step::Cleanup | Step::Stall => 0,
+                    Step::Cleanup | Step::CleanupQueued | Step::Stall => 0,
                     Step::Oversized => 65,
                     _ => before.saturating_sub(TARGET).min(64),
                 };
                 let remaining = before.saturating_sub(removed);
                 let pending = (remaining > TARGET).then_some(TARGET);
-                let cleared = if matches!(step, Step::Cleanup) { 2500u32 } else { 0 };
+                let cleared = match step {
+                    Step::Cleanup => 2500u32,
+                    Step::CleanupQueued => {
+                        let key = queued_twc_key(state).expect("queued commitment key");
+                        state.seed_encoded(key, None);
+                        20
+                    }
+                    _ => 0,
+                };
                 if !matches!(step, Step::UnchangedStorage) {
                     self.population.store(remaining, Ordering::SeqCst);
                     state.seed(&st::SUBNETWORK_N, (NET,), remaining).expect("population seed");
@@ -383,6 +393,11 @@ fn seed_target(state: &mut FakeState, target: Option<u16>) -> anyhow::Result<()>
     Ok(())
 }
 fn failure(name: &str) -> Json {
+    if name == "BadOrigin" {
+        let mut event = failure("InvalidValue");
+        event["attributes"]["dispatch_error"] = json!({"BadOrigin":null});
+        return event;
+    }
     let error = rtao_runtime::errors::MODULE_ERRORS
         .iter()
         .find(|error| error.pallet == "SubtensorModule" && error.name == name)
@@ -390,6 +405,9 @@ fn failure(name: &str) -> Json {
     json!({"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Module":{"index":error.pallet_index,"error":[error.error_index,0,0,0]}},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_continuation_and_cleanup_only_batches
+// Native 300 -> 128 uses four batches, including cleanup, rather than Python's
+// 384 -> 256 three-batch vector. The CLI fixture separately checks its summary.
 #[tokio::test]
 async fn actual_signed_batches_are_bounded_and_await_finalized_storage() -> anyhow::Result<()> {
     let mut f = fixture(300, [Step::Cleanup]).await?;
@@ -512,6 +530,8 @@ async fn matching_pending_target_resumes_despite_first_batch_cooldown() -> anyho
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_batch_limit_allows_restart
+// Native 300 -> 128 needs three total batches; the cap/restart contract is shared.
 #[tokio::test]
 async fn bounded_stop_resumes_from_chain_without_local_population_claim() -> anyhow::Result<()> {
     let mut f = fixture(300, []).await?;
@@ -523,16 +543,23 @@ async fn bounded_stop_resumes_from_chain_without_local_population_claim() -> any
         .expect_err("batch cap");
     assert!(error.to_string().contains("batch limit"));
     assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
     f.owner.config.trim_max_batches = 128;
     let report = f.owner.trim_null(NET, TARGET, &f.recovery).await?;
     assert_eq!(
         (report.batches, report.removed_uids, report.population),
         (2, 108, TARGET)
     );
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 3);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 3);
     f.owner.client().close().await;
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_uncertain_receipt_does_not_retry
+// pyt: unit/test_cli_null_pruning.py::test_lost_ownership_and_mechanism_changes_stop
+// pyt: unit/test_cli_null_pruning.py::test_incomplete_approval_does_not_repeat_transaction
 #[tokio::test]
 async fn bad_receipt_or_unadvanced_storage_retains_record_and_blocks_restart() -> anyhow::Result<()>
 {
@@ -550,6 +577,8 @@ async fn bad_receipt_or_unadvanced_storage_retains_record_and_blocks_restart() -
         assert!(f.recovery.is_file());
         let submissions = f.chain.mutate_state(|state| state.submissions.len());
         let unlocks = f.owner.keys.unlocks.load(Ordering::SeqCst);
+        assert_eq!(submissions, 1);
+        assert_eq!(unlocks, 1);
         let error = f
             .owner
             .trim_null(NET, TARGET, &f.recovery)
@@ -582,6 +611,7 @@ async fn cancellation_during_signing_keeps_record_before_any_broadcast() -> anyh
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_interrupt_during_submission_blocks_uncertain_resubmission
 #[tokio::test]
 async fn cancellation_drains_one_batch_and_retains_record_before_next_batch() -> anyhow::Result<()>
 {
@@ -678,12 +708,24 @@ async fn root_caps_and_policy_fail_before_private_key_access() -> anyhow::Result
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_permanent_failure_stops_and_cooldown_is_not_repeated
 #[tokio::test]
 async fn finalized_dispatch_failure_clears_record_and_does_not_repeat_payment() -> anyhow::Result<()>
 {
-    for name in ["InvalidValue", "TxRateLimitExceeded"] {
+    for name in [
+        "InvalidValue",
+        "TrimmingWouldExceedMaxImmunePercentage",
+        "TxRateLimitExceeded",
+        "BadOrigin",
+    ] {
         let f = fixture(300, [Step::Failure(name)]).await?;
-        assert!(f.owner.trim_null(NET, TARGET, &f.recovery).await.is_err());
+        let error = f
+            .owner
+            .trim_null(NET, TARGET, &f.recovery)
+            .await
+            .expect_err("finalized dispatch refusal");
+        assert!(matches!(error, TxError::Chain(ref error) if error.name.as_deref() == Some(name)));
+        assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
         assert!(!f.recovery.exists());
         assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
         f.owner.client().close().await;
@@ -691,6 +733,7 @@ async fn finalized_dispatch_failure_clears_record_and_does_not_repeat_payment() 
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_repeated_no_progress_stops
 #[tokio::test]
 async fn three_confirmed_cleanup_batches_without_progress_stop() -> anyhow::Result<()> {
     let f = fixture(300, [Step::Stall, Step::Stall, Step::Stall]).await?;
@@ -706,6 +749,7 @@ async fn three_confirmed_cleanup_batches_without_progress_stop() -> anyhow::Resu
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_admin_wait_timeout_and_interrupt_are_safe
 #[tokio::test(start_paused = true)]
 async fn wait_budget_starts_on_first_wait_and_survives_rechecks_and_cancellation()
 -> anyhow::Result<()> {
@@ -761,6 +805,9 @@ async fn wait_budget_starts_on_first_wait_and_survives_rechecks_and_cancellation
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_waits_for_admin_window_without_submitting_failures
+// Configured native intervals and batch vectors differ; read-only waits precede
+// actual signed batches and preserve the no-submission-while-frozen contract.
 #[tokio::test(start_paused = true)]
 async fn accepted_batches_clear_wait_budget_but_three_stalls_still_stop() -> anyhow::Result<()> {
     let f = fixture(300, [Step::Remove, Step::Stall, Step::Stall, Step::Stall]).await?;
@@ -935,6 +982,7 @@ async fn already_yuma_is_reported_without_claiming_target_population() -> anyhow
     Ok(())
 }
 
+// pyt: unit/test_cli_null_pruning.py::test_already_yuma_is_idempotent
 #[tokio::test]
 async fn already_yuma_with_implicit_target_ignores_null_pruning_bounds() -> anyhow::Result<()> {
     let f = fixture(128, []).await?;
@@ -1900,31 +1948,49 @@ async fn explicit_approval_binds_review_and_event_timepoint_before_pending_stora
 
 // Execute the actual guarded session action with its reviewed native executor.
 // Session-default selection is not exposed by OwnerOps::trim_null's explicit target.
-async fn execute_session_batch(
+async fn execute_session_action(
     fixture: &Fixture,
     session: &mut TrimNullSession,
     action: TrimNullAction,
 ) -> anyhow::Result<()> {
-    let TrimActionKind::Batch(intent) = action.kind.as_ref() else {
-        anyhow::bail!("expected a guarded Null batch");
+    let options = PlanOptions::default();
+    let plan = match action.kind.as_ref() {
+        TrimActionKind::Batch(intent) => {
+            fixture
+                .owner
+                .executor
+                .plan(intent, fixture.owner.keys.as_ref(), &options)
+                .await?
+        }
+        TrimActionKind::Switch(intent) => {
+            fixture
+                .owner
+                .executor
+                .plan(intent, fixture.owner.keys.as_ref(), &options)
+                .await?
+        }
     };
-    let plan = fixture
-        .owner
-        .executor
-        .plan(intent, fixture.owner.keys.as_ref(), &PlanOptions::default())
-        .await?;
     assert!(plan.ok(), "{:?}", plan.violations);
     session.before_attempt(&action, &plan)?;
-    let receipt = fixture
-        .owner
-        .operation()?
-        .execute_trim_reviewed(intent, &ExecuteOptions::default(), &plan)
-        .await?;
+    let operation = fixture.owner.operation()?;
+    let options = ExecuteOptions::default();
+    let receipt = match action.kind.as_ref() {
+        TrimActionKind::Batch(intent) => {
+            operation
+                .execute_trim_reviewed(intent, &options, &plan)
+                .await?
+        }
+        TrimActionKind::Switch(intent) => {
+            operation
+                .execute_trim_reviewed(intent, &options, &plan)
+                .await?
+        }
+    };
     session.finish_action(action, &receipt).await?;
     Ok(())
 }
 
-// pyt: test_cli_null_pruning.py::test_default_target_uses_shared_yuma_ceiling
+// pyt: unit/test_cli_null_pruning.py::test_default_target_uses_shared_yuma_ceiling
 #[tokio::test]
 async fn test_default_target_uses_shared_yuma_ceiling() -> anyhow::Result<()> {
     let f = fixture(192, []).await?;
@@ -1944,7 +2010,7 @@ async fn test_default_target_uses_shared_yuma_ceiling() -> anyhow::Result<()> {
         anyhow::bail!("the implicit two-mechanism target needs one batch");
     };
     assert_eq!(action.intent().to_json_dyn()["target"], json!(128));
-    execute_session_batch(&f, &mut session, action).await?;
+    execute_session_action(&f, &mut session, action).await?;
     let TrimNullStep::Complete(report) = session.next_action().await? else {
         anyhow::bail!("one finalized batch must reach the implicit ceiling");
     };
@@ -1962,7 +2028,7 @@ async fn test_default_target_uses_shared_yuma_ceiling() -> anyhow::Result<()> {
     Ok(())
 }
 
-// pyt: test_cli_null_pruning.py::test_restart_resumes_pending_target_without_local_progress
+// pyt: unit/test_cli_null_pruning.py::test_restart_resumes_pending_target_without_local_progress
 #[tokio::test]
 async fn test_restart_resumes_pending_target_without_local_progress() -> anyhow::Result<()> {
     let f = fixture(192, []).await?;
@@ -1994,7 +2060,7 @@ async fn test_restart_resumes_pending_target_without_local_progress() -> anyhow:
         anyhow::bail!("matching pending target must resume despite initial-trim cooldown");
     };
     assert_eq!(action.intent().to_json_dyn()["target"], json!(TARGET));
-    execute_session_batch(&f, &mut session, action).await?;
+    execute_session_action(&f, &mut session, action).await?;
     let TrimNullStep::Complete(report) = session.next_action().await? else {
         anyhow::bail!("the existing target must complete in one finalized batch");
     };
@@ -2067,9 +2133,10 @@ fn assert_pruning_queue_probe_transcript(
     Ok(())
 }
 
-// pyt: test_cli_null_pruning.py::test_key_probe_never_loads_commit_values
-// pyt: test_cli_null_pruning.py::test_switch_probes_all_legacy_indices_and_owner_cooldown
-// The cooldown half remains separately pending; this fixture covers its complete probe contract.
+// pyt: unit/test_cli_null_pruning.py::test_key_probe_never_loads_commit_values
+// pyt: unit/test_cli_null_pruning.py::test_switch_probes_all_legacy_indices_and_owner_cooldown
+// This fixture covers the probe contract; the switch-session test below covers
+// the owner-key cooldown. Authenticated literal input extraction remains pending.
 #[tokio::test]
 async fn test_key_probe_never_loads_commit_values() -> anyhow::Result<()> {
     let f = fixture(TARGET, []).await?;
@@ -2099,7 +2166,7 @@ async fn test_key_probe_never_loads_commit_values() -> anyhow::Result<()> {
     Ok(())
 }
 
-// pyt: test_cli_null_pruning.py::test_switch_queue_probe_works_through_client_backend
+// pyt: unit/test_cli_null_pruning.py::test_switch_queue_probe_works_through_client_backend
 #[tokio::test]
 async fn test_switch_queue_probe_works_through_client_backend() -> anyhow::Result<()> {
     let f = fixture(TARGET, []).await?;
@@ -2136,5 +2203,538 @@ async fn test_switch_queue_probe_works_through_client_backend() -> anyhow::Resul
     assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
     assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
     f.owner.client().close().await;
+    Ok(())
+}
+
+fn queued_twc_key(state: &FakeState) -> anyhow::Result<Vec<u8>> {
+    let info = state
+        .runtime
+        .storage_entry("SubtensorModule", "TimelockedWeightCommits")
+        .ok_or_else(|| anyhow::anyhow!("missing commitment descriptor"))?;
+    Ok(state.runtime.storage_key(
+        info,
+        &[Value::Uint(u128::from(NET.0 + 15 * 4096)), Value::Uint(3)],
+    )?)
+}
+
+// pyt: unit/test_cli_null_pruning.py::test_interrupt_while_waiting_can_resume
+// Native cancellation replaces KeyboardInterrupt; the same journal path is
+// released and reused, with one actual finalized batch after the restart.
+#[tokio::test(start_paused = true)]
+async fn test_interrupt_while_waiting_can_resume() -> anyhow::Result<()> {
+    let f = fixture(192, []).await?;
+    f.chain
+        .mutate_state(|state| state.seed(&st::PENDING_EPOCH_AT, (NET,), 110u64))?;
+    {
+        let operation = f.owner.operation()?;
+        let mut session = operation
+            .read(TrimNullSession::begin(
+                f.owner.client().clone(),
+                f.owner.effective_owner()?,
+                NET,
+                Some(TARGET),
+                &f.recovery,
+                TrimNullConfig::default(),
+            ))
+            .await?;
+        let TrimNullStep::Wait { reason, delay } = operation.read(session.next_action()).await?
+        else {
+            anyhow::bail!("expected the closed admin window");
+        };
+        let wait = operation.read(session.wait(&reason, delay));
+        tokio::pin!(wait);
+        assert!(futures::poll!(wait.as_mut()).is_pending());
+        f.owner.cancel.cancel();
+        assert!(
+            wait.await
+                .expect_err("cancel read-only wait")
+                .to_string()
+                .contains("cancelled")
+        );
+    }
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    f.chain.mutate_state(|state| -> anyhow::Result<()> {
+        state.seed(&st::PENDING_EPOCH_AT, (NET,), 0u64)?;
+        seed_target(state, Some(TARGET))?;
+        Ok(())
+    })?;
+    let restarted = f.owner.clone().with_cancellation(CancellationToken::new());
+    let report = restarted.trim_null(NET, TARGET, &f.recovery).await?;
+    assert_eq!(
+        (report.batches, report.population, report.removed_uids),
+        (1, TARGET, 64)
+    );
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    assert!(!f.recovery.exists());
+    f.owner.client().close().await;
+    Ok(())
+}
+
+// pyt: unit/test_cli_null_pruning.py::test_window_race_waits_then_rechecks_state
+#[tokio::test(start_paused = true)]
+async fn test_window_race_waits_then_rechecks_state() -> anyhow::Result<()> {
+    let f = fixture(
+        192,
+        [
+            Step::Failure("AdminActionProhibitedDuringWeightsWindow"),
+            Step::Remove,
+        ],
+    )
+    .await?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            poll_interval: Duration::from_secs(1),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("initial batch");
+    };
+    execute_session_action(&f, &mut session, action).await?;
+    assert_eq!(session.report().batches, 0);
+    assert!(!f.recovery.exists());
+    let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+        anyhow::bail!("window-race wait");
+    };
+    assert_eq!(delay, Duration::from_secs(1));
+    let started = tokio::time::Instant::now();
+    session.wait(&reason, delay).await?;
+    assert_eq!(started.elapsed(), Duration::from_secs(1));
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    let reads = f.chain.requests().len();
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("rechecked open state");
+    };
+    assert!(f.chain.requests().len() > reads);
+    execute_session_action(&f, &mut session, action).await?;
+    let TrimNullStep::Complete(report) = session.next_action().await? else {
+        anyhow::bail!("completed after retry");
+    };
+    assert_eq!(
+        (report.batches, report.population, report.removed_uids),
+        (1, TARGET, 64)
+    );
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 2);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 2);
+    assert!(!f.recovery.exists());
+    f.owner.client().close().await;
+    Ok(())
+}
+
+// pyt: unit/test_cli_null_pruning.py::test_explicit_switch_waits_for_cooldown_and_verifies_mode
+// pyt: unit/test_cli_null_pruning.py::test_switch_probes_all_legacy_indices_and_owner_cooldown
+// Authenticated producer inputs drive the real owner key, both sides of its
+// inclusive opening, all32 native key-only probes, and one finalized setter.
+#[tokio::test(start_paused = true)]
+async fn test_explicit_switch_waits_for_cooldown_and_verifies_mode() -> anyhow::Result<()> {
+    let input =
+        imported_pruning_input("test_switch_probes_all_legacy_indices_and_owner_cooldown.inputs")?;
+    u16::try_from(input_number(&input, "netuid")?)?; // reviewed public NET1 -> native NET3 adapter
+    let values = &input["storage"];
+    let now = input_number(&input, "block")?;
+    let last = input_number(values, "LastRateLimitedBlock")?;
+    let tempo = u16::try_from(input_number(values, "Tempo")?)?;
+    let periods = u16::try_from(input_number(values, "OwnerHyperparamRateLimit")?)?;
+    let opens = last
+        .checked_add(u64::from(tempo) * u64::from(periods))
+        .context("cooldown overflow")?;
+    anyhow::ensure!(
+        opens > now + 1,
+        "imported case must reach both sides of cooldown opening"
+    );
+    let f = fixture(TARGET, [Step::Switch]).await?;
+    f.chain.mutate_state(|state| -> anyhow::Result<()> {
+        state.seed(&st::TEMPO, (NET,), tempo)?;
+        state.seed(&st::OWNER_HYPERPARAM_RATE_LIMIT, (), periods)?;
+        state.seed(
+            &st::LAST_RATE_LIMITED_BLOCK,
+            (rtao_intents::hyperparameters::owner_rate_key(
+                NET,
+                "EpochConsensus",
+            ),),
+            last,
+        )?;
+        Ok(())
+    })?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            switch_to_yuma: true,
+            poll_interval: Duration::from_secs(1),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let at = f.owner.client().at(BlockRef::Finalized).await?;
+    assert_eq!(at.block().number, now);
+    let first_request = f.chain.requests().len();
+    let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+        anyhow::bail!("owner setter cooldown");
+    };
+    assert_eq!(reason, format!("owner setter cooldown until block {opens}"));
+    assert_pruning_queue_probe_transcript(&f.chain, &at, first_request)?;
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    assert!(!f.recovery.exists());
+    session.wait(&reason, delay).await?;
+    f.chain.advance(opens - now - 1)?;
+    let TrimNullStep::Wait { reason, .. } = session.next_action().await? else {
+        anyhow::bail!("cooldown before equality");
+    };
+    assert_eq!(reason, format!("owner setter cooldown until block {opens}"));
+    f.chain.advance(1)?;
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("inclusive cooldown opening");
+    };
+    assert_eq!(
+        action.intent().to_json_dyn()["name"],
+        json!("epoch_consensus")
+    );
+    assert_eq!(action.intent().to_json_dyn()["value"], json!("Yuma"));
+    execute_session_action(&f, &mut session, action).await?;
+    let TrimNullStep::Complete(report) = session.next_action().await? else {
+        anyhow::bail!("finalized Yuma");
+    };
+    assert!(report.switched_to_yuma);
+    assert_eq!(report.batches, 0);
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    assert!(!f.recovery.exists());
+    f.owner.client().close().await;
+    Ok(())
+}
+
+// pyt: unit/test_cli_null_pruning.py::test_cleanup_before_optional_switch
+#[tokio::test]
+async fn test_cleanup_before_optional_switch() -> anyhow::Result<()> {
+    let f = fixture(TARGET, [Step::CleanupQueued, Step::Switch]).await?;
+    f.chain.mutate_state(|state| {
+        state.seed_python(
+            "SubtensorModule",
+            "TimelockedWeightCommits",
+            &[json!(NET.0 + 15 * 4096), json!(3)],
+            json!([]),
+        )
+    })?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            switch_to_yuma: true,
+            ..Default::default()
+        },
+    )
+    .await?;
+    let TrimNullStep::Submit(cleanup) = session.next_action().await? else {
+        anyhow::bail!("queued cleanup batch");
+    };
+    assert_eq!(cleanup.operation(), "trim_null_subnet_batch");
+    execute_session_action(&f, &mut session, cleanup).await?;
+    assert_eq!(
+        (
+            session.report().batches,
+            session.report().removed_uids,
+            session.report().cleared_commits
+        ),
+        (1, 0, 20)
+    );
+    let TrimNullStep::Submit(switch) = session.next_action().await? else {
+        anyhow::bail!("setter after finalized cleanup");
+    };
+    assert_eq!(switch.operation(), "set_hyperparameter");
+    assert_eq!(
+        switch.intent().to_json_dyn()["name"],
+        json!("epoch_consensus")
+    );
+    assert_eq!(switch.intent().to_json_dyn()["value"], json!("Yuma"));
+    execute_session_action(&f, &mut session, switch).await?;
+    let TrimNullStep::Complete(report) = session.next_action().await? else {
+        anyhow::bail!("cleanup then Yuma completed");
+    };
+    assert_eq!(
+        (
+            report.batches,
+            report.population,
+            report.removed_uids,
+            report.cleared_commits
+        ),
+        (1, TARGET, 0, 20)
+    );
+    assert!(report.switched_to_yuma);
+    assert!(!report.already_yuma);
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 2);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 2);
+    assert!(!f.recovery.exists());
+    let runtime = f.owner.client().refresh_runtime().await?;
+    let trim = rtao_runtime::calls::admin_utils::sudo_trim_null_uids_batch(NET, TARGET)
+        .compose(&runtime)?;
+    let yuma = rtao_runtime::calls::admin_utils::sudo_set_epoch_consensus(
+        NET,
+        DynValue::new(Value::Str("Yuma".into())),
+    )
+    .compose(&runtime)?;
+    assert_eq!(
+        *f.owner.keys.signer.calls.lock().expect("calls lock"),
+        vec![trim.as_bytes().to_vec(), yuma.as_bytes().to_vec()]
+    );
+    f.owner.client().close().await;
+    Ok(())
+}
+
+fn imported_pruning_input(name: &str) -> anyhow::Result<Json> {
+    let path = "sdk/python/tests/unit/test_cli_null_pruning.py";
+    let table = rtao_catalog::py::table(path, name)
+        .context("generate authenticated pruning inputs in hosted extract job first")?;
+    anyhow::ensure!(
+        table.blob == "0705e3c90e593202712a08d9ec9ed21a82d622a3",
+        "pruning fixture pin changed; review source inputs"
+    );
+    anyhow::ensure!(
+        table.line > 0 && table.end_line >= table.line && table.value_json.len() <= 65_536,
+        "invalid pruning input provenance/bounds"
+    );
+    Ok(serde_json::from_str(table.value_json)?)
+}
+fn input_number(value: &Json, key: &str) -> anyhow::Result<u64> {
+    value[key]
+        .as_u64()
+        .with_context(|| format!("missing native integer {key}"))
+}
+fn input_owner(value: &Json, owner: AccountId) -> anyhow::Result<AccountId> {
+    match value.as_str() {
+        Some("owner") => Ok(owner),
+        Some("other") => Ok(AccountId([2; 32])),
+        _ => anyhow::bail!("unreviewed symbolic fixture owner"),
+    }
+}
+fn seed_imported_storage(
+    state: &mut FakeState,
+    values: &Json,
+    owner: AccountId,
+) -> anyhow::Result<()> {
+    for (name, value) in values.as_object().context("imported storage dictionary")? {
+        let mut native = value.clone();
+        match name.as_str() {
+            "BlockHash" => {
+                anyhow::ensure!(
+                    value.as_str() == Some("0xgenesis"),
+                    "unreviewed fixture genesis symbol"
+                );
+                continue;
+            }
+            "NetworksAdded" => {
+                value.as_bool().context("network flag")?;
+            }
+            "SubnetOwner" => {
+                native = json!(input_owner(value, owner)?);
+            }
+            "SubnetworkN" | "MinAllowedUids" | "MaxAllowedUids" | "Tempo" | "AdminFreezeWindow" => {
+                u16::try_from(value.as_u64().context("u16 storage")?)?;
+            }
+            "NullPruningTarget" => {
+                if value.is_null() {
+                    seed_target(state, None)?;
+                    continue;
+                }
+                u16::try_from(value.as_u64().context("optional u16")?)?;
+            }
+            "MechanismCountCurrent" => {
+                u8::try_from(value.as_u64().context("mechanism count")?)?;
+            }
+            "LastEpochBlock" | "PendingEpochAt" => {
+                value.as_u64().context("block number")?;
+            }
+            "SubnetEpochConsensus" => {
+                let mode = value
+                    .as_str()
+                    .or_else(|| {
+                        value
+                            .as_object()
+                            .filter(|object| object.len() == 1)
+                            .and_then(|object| object.iter().next())
+                            .filter(|(_, value)| value.is_null())
+                            .map(|(name, _)| name.as_str())
+                    })
+                    .context("consensus input")?;
+                anyhow::ensure!(
+                    matches!(mode, "Null" | "Yuma"),
+                    "unreviewed consensus input"
+                );
+                native = json!(mode);
+            }
+            _ => anyhow::bail!("unreviewed imported storage {name}"),
+        }
+        let params = if name == "AdminFreezeWindow" {
+            vec![]
+        } else {
+            vec![json!(NET.0)]
+        };
+        state.seed_python("SubtensorModule", name, &params, native)?;
+    }
+    Ok(())
+}
+
+// pyt: unit/test_cli_null_pruning.py::test_invalid_requests_never_submit
+// Symbolic accounts/genesis and NET1 adapt to valid public native records/NET3;
+// every original input row is extracted rather than recopied into this fixture.
+#[tokio::test]
+async fn test_invalid_requests_never_submit_from_authenticated_rows() -> anyhow::Result<()> {
+    let input = imported_pruning_input("test_invalid_requests_never_submit.parametrize")?;
+    let rows = input.as_array().context("invalid request rows")?;
+    assert_eq!(rows.len(), 4);
+    for row in rows {
+        let original = &row["state"];
+        let population = u16::try_from(input_number(original, "population")?)?;
+        let target = u16::try_from(input_number(row, "target")?)?;
+        let f = fixture(population, []).await?;
+        let owner = f.owner.effective_owner()?;
+        anyhow::ensure!(
+            original["frozen"] == json!(false),
+            "unreviewed invalid-request frozen seed"
+        );
+        anyhow::ensure!(
+            original["genesis"].as_str() == Some("0xgenesis"),
+            "unreviewed genesis symbol"
+        );
+        let values = json!({"SubnetOwner":original["owner"],"SubnetworkN":original["population"],"NullPruningTarget":original["pending_target"],"MechanismCountCurrent":original["mechanisms"],"MinAllowedUids":original["minimum"],"MaxAllowedUids":original["maximum"],"SubnetEpochConsensus":original["mode"]});
+        f.chain
+            .mutate_state(|state| seed_imported_storage(state, &values, owner))?;
+        let at = f.owner.client().at(BlockRef::Finalized).await?;
+        assert_eq!(at.block().number, input_number(original, "block")?);
+        let error = match TrimNullSession::begin(
+            f.owner.client().clone(),
+            owner,
+            NET,
+            Some(target),
+            &f.recovery,
+            TrimNullConfig::default(),
+        )
+        .await
+        {
+            Err(error) => error,
+            Ok(_) => anyhow::bail!("imported invalid request was accepted"),
+        };
+        let diagnostic = row["message"].as_str().context("expected refusal")?;
+        if diagnostic == "owner coldkey" {
+            assert!(
+                matches!(error,TxError::Chain(ref error) if error.name.as_deref()==Some("BadOrigin"))
+            );
+        } else {
+            assert!(error.to_string().contains(diagnostic), "{error}");
+        }
+        assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+        assert!(!f.recovery.exists());
+        f.owner.client().close().await;
+    }
+    Ok(())
+}
+
+// pyt: unit/test_cli_null_pruning.py::test_state_reads_are_pinned_and_match_admin_window
+#[tokio::test]
+async fn test_state_reads_match_authenticated_admin_window_rows_at_one_hash() -> anyhow::Result<()>
+{
+    let input =
+        imported_pruning_input("test_state_reads_are_pinned_and_match_admin_window.parametrize")?;
+    let rows = input.as_array().context("window rows")?;
+    assert_eq!(rows.len(), 5);
+    for row in rows {
+        u16::try_from(input_number(row, "netuid")?)?; // native fixture owns NET3
+        let values = &row["storage"];
+        let expected = &row["expected"];
+        let f = fixture(u16::try_from(input_number(values, "SubnetworkN")?)?, []).await?;
+        let owner = f.owner.effective_owner()?;
+        f.chain
+            .mutate_state(|state| seed_imported_storage(state, values, owner))?;
+        let at = f.owner.client().at(BlockRef::Finalized).await?;
+        assert_eq!(at.block().number, input_number(row, "block")?);
+        let first = f.chain.requests().len();
+        let observed = read_state(&at, NET).await?;
+        let (_, reasons) = HyperparamPlanner::new(owner)
+            .operation_window(
+                &at,
+                NET,
+                "sudo_trim_null_uids_batch",
+                observed.pending_target,
+            )
+            .await?;
+        let frozen = expected["frozen"].as_bool().context("freeze expectation")?;
+        assert_eq!(
+            reasons
+                .iter()
+                .any(|reason| reason.starts_with("admin freeze")),
+            frozen
+        );
+        assert_eq!(reasons.len(), usize::from(frozen));
+        assert_eq!(
+            u64::from(observed.yuma_ceiling()),
+            input_number(expected, "yuma_ceiling")?
+        );
+        assert_eq!(
+            observed.pending_target,
+            Some(u16::try_from(input_number(expected, "pending_target")?)?)
+        );
+        assert_eq!(observed.consensus, Consensus::Null);
+        assert_eq!(expected["mode"], json!("Null"));
+        assert_eq!(observed.owner, owner);
+        assert_eq!(
+            u64::from(observed.population),
+            input_number(values, "SubnetworkN")?
+        );
+        assert_eq!(
+            u64::from(observed.mechanisms),
+            input_number(values, "MechanismCountCurrent")?
+        );
+        assert_eq!(
+            u64::from(observed.minimum),
+            input_number(values, "MinAllowedUids")?
+        );
+        assert_eq!(
+            u64::from(observed.maximum),
+            input_number(values, "MaxAllowedUids")?
+        );
+        assert_eq!(observed.genesis, f.owner.client().genesis());
+        let hash = json!(format!("0x{}", hex::encode(at.block().hash.0)));
+        let mut reads = 0;
+        for request in &f.chain.requests()[first..] {
+            if matches!(
+                request.method.as_str(),
+                "state_getStorage"
+                    | "state_getStorageAt"
+                    | "state_queryStorageAt"
+                    | "state_getKeysPaged"
+                    | "state_call"
+            ) {
+                assert_eq!(
+                    request.params.as_array().and_then(|params| params.last()),
+                    Some(&hash),
+                    "{request:?}"
+                );
+                reads += 1;
+            }
+        }
+        assert!(reads > 0);
+        assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+        assert!(!f.recovery.exists());
+        f.owner.client().close().await;
+    }
     Ok(())
 }

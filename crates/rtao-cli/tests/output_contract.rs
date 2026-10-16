@@ -700,7 +700,80 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
         assert_eq!(payload["data"]["netuid"], json!(4));
         assert!(payload.get("events").is_none());
         assert!(payload.get("output").is_none());
+        let (registration, sink) = capture(true, true);
+        assert_eq!(registration.registration_result(&result)?, success);
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            result.to_json()
+        );
+        assert!(sink.text(Stream::Stderr)?.is_empty());
     }
+    for (mode, prior, explanation) in [
+        ("immediate", None, "immediate · no deregistration needed"),
+        (
+            "after_deregistration",
+            Some(7),
+            "queued · registered after deregistration of subnet 7",
+        ),
+        (
+            "after_deregistration",
+            None,
+            "queued · registered after deregistration of subnet 9",
+        ),
+    ] {
+        let mut result = outcome(true);
+        result.data.insert("registration_mode".into(), json!(mode));
+        result
+            .data
+            .insert("registration_price_rao".into(), json!(1_234_567_890_123u64));
+        result.data.insert("queued_at_block".into(), json!(99));
+        result.data.insert("registered_at_block".into(), json!(100));
+        result
+            .data
+            .insert("deregistered_netuid".into(), json!(prior));
+        result.data.insert("cleanup_netuid".into(), json!(9));
+        for quiet in [false, true] {
+            let (human, sink) = capture(false, quiet);
+            assert!(human.registration_result(&result)?);
+            let text = sink.text(Stream::Stdout)?;
+            for fact in [
+                "subnet 4 registered",
+                explanation,
+                "τ1,234.567890123",
+                "queued block",
+                "registered block",
+                "registration tx",
+                "12-3",
+            ] {
+                assert!(
+                    text.contains(fact),
+                    "registration output lost {fact}: {text}"
+                );
+            }
+            assert!(!text.contains("registration price rao"));
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+            let (machine, sink) = capture(true, quiet);
+            assert!(machine.registration_result(&result)?);
+            assert_eq!(
+                serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+                result.to_json()
+            );
+        }
+    }
+    let mut invalid = outcome(true);
+    invalid.data.insert(
+        "registration_price_rao".into(),
+        json!("18446744073709551616"),
+    );
+    let (human, sink) = capture(false, false);
+    assert!(human.registration_result(&invalid).is_err());
+    assert!(sink.bytes(Stream::Stdout)?.is_empty());
+    let (machine, sink) = capture(true, false);
+    assert!(machine.registration_result(&invalid)?);
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        invalid.to_json()
+    );
     Ok(())
 }
 
@@ -974,6 +1047,13 @@ fn pending_multisigs_keep_structured_commands_members_and_unique_decode_guidance
     }
     assert_eq!(text.matches("call details unavailable").count(), 1);
     assert_eq!(text.matches("pass --call-data").count(), 1);
+    assert_eq!(
+        text.matches("--macos-password or --keychain-password")
+            .count(),
+        1
+    );
+    assert!(text.contains("--signer vault (or ledger/extension) before call"));
+    assert!(text.contains("--signatory already names the account"));
     assert!(!text.contains("suppressed when commands exist"));
     assert!(sink.bytes(Stream::Stderr)?.is_empty());
     let (machine, sink) = capture(true, false);
@@ -993,6 +1073,35 @@ fn pending_multisigs_keep_structured_commands_members_and_unique_decode_guidance
         sink.text(Stream::Stdout)?,
         "No pending multisig operations.\n"
     );
+    for record in &records {
+        let (human, sink) = capture(false, false);
+        human.multisig_followup(record)?;
+        assert_eq!(
+            sink.text(Stream::Stdout)?
+                .contains("--macos-password or --keychain-password"),
+            !record["co_signer_commands"]
+                .as_array()
+                .ok_or("commands")?
+                .is_empty()
+        );
+        let (machine, sink) = capture(true, false);
+        machine.multisig_followup(record)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            json!({"multisig_followup":record})
+        );
+    }
+    for status in ["executed", "submitted"] {
+        let (human, sink) = capture(false, false);
+        human.multisig_followup(
+            &json!({"status":status,"co_signer_commands":[{"command":command}]}),
+        )?;
+        assert!(
+            !sink
+                .text(Stream::Stdout)?
+                .contains("--macos-password or --keychain-password")
+        );
+    }
     let (mut custom, sink) = capture(false, false);
     let expected = json!(records);
     custom

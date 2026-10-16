@@ -355,7 +355,8 @@ pub async fn execute_prepared_read(
     let mut records = Vec::new();
     let mut rows = Vec::new();
     let mut total = 0u64;
-    let (title, columns, footer) = match name {
+    let mut primary_footer = None;
+    let (title, columns, message) = match name {
         "list" => {
             let owner = request.account;
             let locks = m6_locks::locks_for_coldkey(client, owner)
@@ -414,17 +415,22 @@ pub async fn execute_prepared_read(
                     dust_value += value.amount();
                 }
             }
+            primary_footer = (!rows.is_empty()).then(|| {
+                format!(
+                    "total locked value {} (spot, excl. slippage/fees)",
+                    DynBalance::from_rao(total, NetUid(0))
+                )
+            });
             (
                 "locks (per-subnet currency: TAO on netuid 0, alpha elsewhere)".to_owned(),
                 vec!["netuid", "hotkey", "locked", "value", "mode"],
                 Some(format!(
-                    "total locked value {}{}\n{}",
-                    DynBalance::from_rao(total, NetUid(0)),
+                    "{}{}",
                     if dust_count == 0 {
                         String::new()
                     } else {
                         format!(
-                            "\n{dust_count} dust subnet{} hidden (each < τ0.001, ≈ τ{dust_value:.6} total) — pass --dust to show",
+                            "{dust_count} dust subnet{} hidden (each < τ0.001, ≈ τ{dust_value:.6} total) — pass --dust to show\n",
                             if dust_count == 1 { "" } else { "s" }
                         )
                     },
@@ -499,7 +505,6 @@ pub async fn execute_prepared_read(
         }
         _ => return Err(CliError::input("not a conviction read command")),
     };
-    let message = footer;
     ctx.output
         .columns(&TableSpec {
             title,
@@ -508,7 +513,7 @@ pub async fn execute_prepared_read(
             records: Some(json!(records)),
             right_align: Default::default(),
             legend: vec![],
-            footer: None,
+            footer: primary_footer,
         })
         .map_err(failure)?;
     if let Some(message) = message {

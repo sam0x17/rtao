@@ -1,6 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/registration.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/_root_claim_fee.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_root_claim_fee.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Fail-closed root-claim admission and reserve, with optional yield previews.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -1999,6 +2000,62 @@ mod tests {
                 }
                 client.close().await;
             }
+        }
+        #[cfg(all(feature = "batch", feature = "transfer"))]
+        {
+            // pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_batch_enforces_child_hard_stops
+            // Keep the source's child order and 0.1 TAO transfer, using the
+            // native reserve seed's valid encoded basket and public accounts.
+            let (chain, client, _snapshot) = fixture(|state| {
+                seed_extracted_case(
+                    state,
+                    extracted(
+                        &data.seed_cases,
+                        "test_reserve_hard_stop_survives_unavailable_payout_preview",
+                    )?,
+                )?;
+                state.seed_python(
+                    "System",
+                    "Account",
+                    &[json!(CLAIMANT.to_string())],
+                    json!({"data":{"free":0}}),
+                )?;
+                Ok(())
+            })
+            .await?;
+            let claim = ClaimRoot {
+                subnets: vec![NetUid::ROOT],
+            };
+            let transfer = crate::Transfer {
+                dest_ss58: PAYER.into(),
+                amount_tao: Balance::<Tao>::from_rao(100_000_000).into(),
+                keep_alive: true,
+            };
+            let intent = crate::Batch::new(vec![claim.to_json(), transfer.to_json()])?;
+            let keys = PublicOnlyKeys::default();
+            let executor = Executor::new(client.clone());
+            let refusal = executor
+                .submit_shielded(&intent, &keys, &ShieldOptions::default())
+                .await;
+            let Err(TxError::Policy(error)) = refusal else {
+                anyhow::bail!("expected policy refusal for batch/reserve: {refusal:?}");
+            };
+            assert!(
+                error.violations.iter().any(|violation| {
+                    violation.starts_with("[0] ")
+                        && violation.contains("below the reserved claim fee")
+                }),
+                "batch/reserve: {error}"
+            );
+            assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(
+                !chain
+                    .requests()
+                    .iter()
+                    .any(|request| request.method.starts_with("author_"))
+            );
+            client.close().await;
         }
         Ok(())
     }

@@ -22,6 +22,7 @@ use std::{
     time::Duration,
 };
 
+mod direct_multisig;
 mod registration;
 
 /// The resolved shield choice and whether it can be downgraded.
@@ -405,6 +406,40 @@ impl AppContext {
                 },
             )
             .await?;
+        self.finish_direct_submission(client, intent, options.hooks, outcome)
+            .await
+    }
+    async fn finish_direct_submission(
+        &self,
+        client: &Client,
+        intent: &dyn DynIntent,
+        hooks: Option<&dyn SubmissionHooks>,
+        mut outcome: Option<SubmissionOutcome>,
+    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+        if let Some(outcome) = &mut outcome
+            && outcome.hook_error.is_none()
+            && direct_multisig::eligible(intent, &outcome.receipt)
+        {
+            // perform_submission already persisted the raw receipt. Cosmetic
+            // followup failures cannot turn a successful dispatch into failure.
+            if let Ok(Some(followup)) = direct_multisig::followup(
+                self,
+                client,
+                intent,
+                outcome.signer_address,
+                &outcome.receipt,
+            )
+            .await
+            {
+                outcome
+                    .receipt
+                    .data
+                    .insert("multisig_followup".into(), followup);
+            }
+            if let Some(hooks) = hooks {
+                outcome.hook_error = hooks.after_followup(&outcome.receipt).await.err();
+            }
+        }
         self.finish_submission(intent, outcome).await
     }
     async fn finish_submission(
@@ -416,9 +451,13 @@ impl AppContext {
             return Ok(None);
         };
         let result = outcome.into_receipt()?;
-        if !self
-            .output
-            .result(&result, &format!("submitted {}", intent.spec().name))
+        let rendered = if intent.spec().name == "register_subnet" {
+            self.output.registration_result(&result)
+        } else {
+            self.output
+                .result(&result, &format!("submitted {}", intent.spec().name))
+        };
+        if !rendered
             .map_err(|error| known_receipt_error(CliError::failure(error.to_string()), &result))?
         {
             return Err(CliError::failure(""));
@@ -595,6 +634,16 @@ impl AppContext {
             ("role".into(), serde_json::json!(plan.signer.as_str())),
             ("MEV shield".into(), serde_json::json!(choice.enabled)),
         ];
+        if let Some(binding) = &control.factory {
+            transaction.push((
+                "approval member".into(),
+                serde_json::json!(format!(
+                    "{} via {}",
+                    binding.selection.display_wallet(),
+                    binding.selection.backend,
+                )),
+            ));
+        }
         if let Some(registration) = &registration {
             transaction.push(("cost".into(), serde_json::json!(registration.cost)));
         }
@@ -758,6 +807,7 @@ impl AppContext {
         // fails. Successful submissions retain their receipt for recovery.
         let result = result?;
         Ok(Some(SubmissionOutcome {
+            signer_address: plan.signer_address,
             receipt: result,
             release_error,
             hook_error,
@@ -784,6 +834,7 @@ struct SubmissionControl<'a> {
     external: Option<&'a dyn ExternalSignerFactory>,
 }
 struct SubmissionOutcome {
+    signer_address: AccountId,
     receipt: rtao::tx::ExtrinsicResult,
     release_error: Option<CliError>,
     hook_error: Option<CliError>,
@@ -836,7 +887,7 @@ pub trait SubmissionHooks: Send + Sync {
         &'a self,
         result: &'a rtao::tx::ExtrinsicResult,
     ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>>;
-    /// Update durable recovery details after saved-multisig enrichment. This
+    /// Update durable recovery details after multisig enrichment. This
     /// never replaces the earlier raw-receipt callback and must be idempotent.
     fn after_followup<'a>(
         &'a self,
@@ -1978,7 +2029,8 @@ impl AppContext {
                 None => return Err(error),
             }
         }
-        self.finish_submission(intent, outcome).await
+        self.finish_direct_submission(client, intent, options.hooks, outcome)
+            .await
     }
 }
 
@@ -2274,6 +2326,15 @@ impl AppContext {
                     adapter
                 };
                 let public = PublicApprovalKeys(member);
+                if !self.globals.dry_run {
+                    self.output
+                        .step(
+                            &format!("approval {} of {}", index + 1, raw.threshold),
+                            &format!("{} via {}", selection.display_wallet(), selection.backend),
+                            crate::output::StepState::Running,
+                        )
+                        .map_err(|error| CliError::failure(error.to_string()))?;
+                }
                 let receipt = round
                     .perform_submission(
                         client,
@@ -2416,9 +2477,13 @@ impl AppContext {
                 return Err(error);
             }
         };
-        if !self
-            .output
-            .result(&result, &format!("submitted {}", intent.spec().name))
+        let rendered = if intent.spec().name == "register_subnet" {
+            self.output.registration_result(&result)
+        } else {
+            self.output
+                .result(&result, &format!("submitted {}", intent.spec().name))
+        };
+        if !rendered
             .map_err(|error| known_receipt_error(CliError::failure(error.to_string()), &result))?
         {
             return Err(CliError::failure(""));

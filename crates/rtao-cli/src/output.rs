@@ -1248,6 +1248,71 @@ impl Output {
         Ok(true)
     }
 
+    /// Successful subnet registration uses human units and its two-phase state.
+    /// Machine output and unsuccessful/incomplete receipts keep the canonical shape.
+    pub fn registration_result<O>(&self, result: &ExtrinsicResult<O>) -> Result<bool, OutputError> {
+        if self.options.json_mode || !result.success || !result.data.contains_key("netuid") {
+            return self.result(result, "register a new subnet");
+        }
+        let netuid = result.data["netuid"]
+            .as_u64()
+            .and_then(|value| u16::try_from(value).ok())
+            .ok_or_else(|| {
+                OutputError::Render("registration result has a non-native netuid".into())
+            })?;
+        let registration = if result.data.get("registration_mode").and_then(Value::as_str)
+            == Some("after_deregistration")
+        {
+            let prior = result
+                .data
+                .get("deregistered_netuid")
+                .filter(|value| crate::books::public_json_truthy(value))
+                .or_else(|| result.data.get("cleanup_netuid"))
+                .filter(|value| !value.is_null());
+            let mut text = "queued · registered after deregistration".to_owned();
+            if let Some(prior) = prior {
+                text.push_str(&format!(" of subnet {}", python_value(prior)));
+            }
+            text
+        } else {
+            "immediate · no deregistration needed".into()
+        };
+        let mut fields = vec![
+            ("netuid".into(), json!(netuid)),
+            ("registration".into(), json!(registration)),
+        ];
+        if let Some(price) = result
+            .data
+            .get("registration_price_rao")
+            .filter(|value| !value.is_null())
+        {
+            let price = price.as_u64().ok_or_else(|| {
+                OutputError::Render("registration price exceeds native u64 rao".into())
+            })?;
+            fields.push(("price".into(), json!(self.balance(price, NetUid::ROOT))));
+        }
+        for (key, label) in [
+            ("queued_at_block", "queued block"),
+            ("registered_at_block", "registered block"),
+        ] {
+            if let Some(value) = result.data.get(key).filter(|value| !value.is_null()) {
+                fields.push((label.into(), value.clone()));
+            }
+        }
+        if let Some(fee) = result.fee {
+            fields.push(("fee".into(), json!(PythonBalance(fee.into()))));
+        }
+        if let Some(id) = result.extrinsic_id.as_ref().filter(|id| !id.is_empty()) {
+            fields.push(("registration tx".into(), json!(id)));
+        }
+        if let Some(url) = result.explorer_url.as_ref().filter(|url| !url.is_empty()) {
+            fields.push(("explorer".into(), json!(url)));
+        }
+        self.line(Stream::Stdout, &format!("✓ subnet {netuid} registered"))?;
+        self.detail(Some("Result"), &fields, None)?;
+        Ok(true)
+    }
+
     /// A classified chain diagnostic uses the domain's existing JSON contract.
     pub fn chain_error(
         &self,
@@ -1313,8 +1378,27 @@ impl Output {
         if self.options.json_mode {
             self.json(Stream::Stdout, &json!({"multisig_followup":followup}))
         } else {
-            self.render("multisig_followup", followup)
+            self.render("multisig_followup", followup)?;
+            self.co_signer_guidance(followup)
         }
+    }
+
+    fn co_signer_guidance(&self, followup: &Value) -> Result<(), OutputError> {
+        if matches!(
+            followup.get("status").and_then(Value::as_str),
+            Some("executed" | "submitted")
+        ) || followup
+            .get("co_signer_commands")
+            .and_then(Value::as_array)
+            .is_none_or(Vec::is_empty)
+        {
+            return Ok(());
+        }
+        self.sub_diag(
+            Stream::Stdout,
+            "help",
+            "add --macos-password or --keychain-password before call if the co-signer needs them; for a Vault/Ledger/extension member, put --signer vault (or ledger/extension) before call; --signatory already names the account",
+        )
     }
 
     /// Pending multisig list shape and quiet behavior from the shared renderer.
@@ -1382,6 +1466,7 @@ impl Output {
                 self.line(Stream::Stdout, &"─".repeat(60))?;
             }
             self.detail(None, fields, None)?;
+            self.co_signer_guidance(&records[index])?;
         }
         for (note, hint) in decode {
             if let Some(note) = note {

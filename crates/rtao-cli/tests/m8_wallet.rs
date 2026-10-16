@@ -728,11 +728,52 @@ async fn transfer_preview_retains_native_exact_amount_and_never_reads_private_ma
     Ok(())
 }
 
+fn seed_overview_availability(
+    state: &mut FakeState,
+    coldkey: AccountId,
+    rows: &[(u16, u64, u64, u64)],
+) -> TestResult {
+    use rtao::core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
+    use rtao_testkit::fakes::json_to_core;
+    let api = "StakeInfoRuntimeApi";
+    let method = "get_stake_availability_for_coldkeys";
+    let signature = runtime_api::runtime_api_method(&state.runtime, api, method)?;
+    let input = runtime_api::encode_params(
+        &state.runtime,
+        api,
+        signature,
+        &[
+            CoreValue::List(vec![CoreValue::Bytes(coldkey.0.to_vec())]),
+            CoreValue::List(
+                rows.iter()
+                    .map(|(netuid, ..)| CoreValue::Int(i128::from(*netuid)))
+                    .collect(),
+            ),
+        ],
+    )?;
+    let availability = rows
+        .iter()
+        .map(|(netuid, total, locked, available)| {
+            Ok((
+                CoreValue::Int(i128::from(*netuid)),
+                json_to_core(&json!({"total":total,"locked":locked,"available":available}))?,
+            ))
+        })
+        .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
+    let output = state.runtime.encode_spec(
+        &TypeSpec::Id(signature.output),
+        &CoreValue::Dict(vec![(
+            CoreValue::Bytes(coldkey.0.to_vec()),
+            CoreValue::Dict(availability),
+        )]),
+    )?;
+    state.seed_runtime_encoded(format!("{api}_{method}"), input, output);
+    Ok(())
+}
+
 #[tokio::test]
 async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_uid() -> TestResult
 {
-    use rtao::core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
-    use rtao_testkit::fakes::json_to_core;
     let root = Root::new()?;
     root.public("alice", COLD)?;
     let mut state = FakeState::default();
@@ -766,25 +807,14 @@ async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_
         "get_root_basket_owed",
         json!(250_000_000),
     )?;
-    let api = "StakeInfoRuntimeApi";
-    let method = "get_stake_availability_for_coldkeys";
-    let signature = runtime_api::runtime_api_method(&state.runtime, api, method)?;
-    let input = runtime_api::encode_params(
-        &state.runtime,
-        api,
-        signature,
+    seed_overview_availability(
+        &mut state,
+        COLD,
         &[
-            CoreValue::List(vec![CoreValue::Bytes(COLD.0.to_vec())]),
-            CoreValue::List(vec![CoreValue::Int(0), CoreValue::Int(1)]),
+            (0, 2_000_000_000, 0, 2_000_000_000),
+            (1, 3_000_000_000, 2_000_000_000, 1_000_000_000),
         ],
     )?;
-    let output=state.runtime.encode_spec(&TypeSpec::Id(signature.output),&CoreValue::Dict(vec![(
-        CoreValue::Bytes(COLD.0.to_vec()),CoreValue::Dict(vec![
-            (CoreValue::Int(0),json_to_core(&json!({"total":2_000_000_000u64,"locked":0,"available":2_000_000_000u64}))?),
-            (CoreValue::Int(1),json_to_core(&json!({"total":3_000_000_000u64,"locked":2_000_000_000u64,"available":1_000_000_000u64}))?),
-        ]),
-    )]))?;
-    state.seed_runtime_encoded(format!("{api}_{method}"), input, output);
     let (client, chain) = client(state).await?;
     let (parsed, mut ctx, sink) = context(&root, &["wallet", "overview", "--netuid", "1"])?;
     wallet::run_with_client(
@@ -795,28 +825,276 @@ async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_
     )
     .await?;
     let rows = value(&sink)?;
-    let row = &rows[0];
-    assert_eq!(row["free"], "τ1.250000000");
-    assert_eq!(row["stake_value"], "τ3.500000001");
-    assert_eq!(row["locked_value"], "τ1.000000000");
-    assert_eq!(row["locked_subnets"], 1);
-    assert_eq!(row["positions"], 2);
-    assert_eq!(row["root_staked"], "τ2.000000000");
-    assert_eq!(row["accrued_basket_yield"], "τ0.250000000");
-    assert_eq!(row["personal_yield"], 0.125);
-    assert_eq!(row["auto_claim"], false);
-    assert_eq!(row["stakes"][0]["uid"], 17);
-    assert_eq!(row["stakes"][0]["locked"], "2.000000000Ω");
-    assert_eq!(row["stakes"][0]["available"], "1.000000000Ω");
-    assert!(row["stakes"][0].get("lock_hotkey").is_none());
-    assert_eq!(row["stakes"][1]["stake"], "0.000000002Ω");
-    assert_eq!(row["stakes"][1]["value"], "τ0.000000001");
-    assert!(row["stakes"][1]["uid"].is_null());
+    let yields = json!({
+        "accrued_basket_yield":"τ0.250000000", "accrued_basket_yield_tao":0.25,
+        "root_staked":"τ2.000000000", "root_staked_tao":2.0,
+        "personal_yield":0.125, "auto_claim":false,
+    });
+    let mut expected = json!({
+        "wallet":"alice", "coldkey":COLD,
+        "free":"τ1.250000000", "free_tao":1.25,
+        "stake_value":"τ3.500000001", "stake_value_tao":3.500000001,
+        "stake_value_basis":"spot price; excludes slippage/fees of an actual unstake",
+        "locked_value":"τ1.000000000", "locked_value_tao":1.0,
+        "locked_subnets":1, "positions":2,
+        "stakes":[
+            {
+                "netuid":1, "hotkey":HOT, "stake":"3.000000000Ω", "stake_amount":3.0,
+                "stake_unit":"alpha (netuid 1)", "value":"τ1.500000000", "value_tao":1.5,
+                "registered":true, "uid":17,
+                "locked":"2.000000000Ω", "locked_amount":2.0,
+                "available":"1.000000000Ω", "available_amount":1.0,
+            },
+            {
+                "netuid":1, "hotkey":OWNED, "stake":"0.000000002Ω", "stake_amount":2e-9,
+                "stake_unit":"alpha (netuid 1)", "value":"τ0.000000001", "value_tao":1e-9,
+                "registered":false, "uid":null,
+                "locked":"2.000000000Ω", "locked_amount":2.0,
+                "available":"1.000000000Ω", "available_amount":1.0,
+            },
+        ],
+    });
+    let yield_fields = yields.as_object().ok_or("yield fields")?;
+    for record in expected["stakes"].as_array_mut().ok_or("expected stakes")? {
+        record
+            .as_object_mut()
+            .ok_or("expected position")?
+            .extend(yield_fields.clone());
+    }
+    expected
+        .as_object_mut()
+        .ok_or("expected overview")?
+        .extend(yield_fields.clone());
+    assert_eq!(rows, json!([expected]));
+    assert!(sink.text(Stream::Stderr)?.is_empty());
     assert!(
         !chain
             .requests()
             .iter()
             .any(|r| r.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeating_availability()
+-> TestResult {
+    const BOB: AccountId = AccountId([10; 32]);
+    const LOCK_TARGET: AccountId = AccountId([11; 32]);
+    const DUST: AccountId = AccountId([12; 32]);
+    let root = Root::new()?;
+    root.public("alice", COLD)?;
+    root.public("bob", BOB)?;
+    let hotkeys = root.0.join("alice/hotkeys");
+    fs::create_dir(&hotkeys)?;
+    fs::write(
+        hotkeys.join("local-worker"),
+        serde_json::to_vec(&json!({"ss58Address":HOT,"cryptoType":1}))?,
+    )?;
+    let mut state = FakeState::default();
+    for hotkey in [HOT, OWNED, DUST, LOCK_TARGET] {
+        state.seed_python("SubtensorModule", "Owner", &[json!(hotkey)], json!(COLD))?;
+    }
+    state.seed_python(
+        "SubtensorModule",
+        "IdentitiesV2",
+        &[json!(COLD)],
+        json!({"name":"chain-validator"}),
+    )?;
+    state.seed_python("SubtensorModule", "TokenSymbol", &[json!(1)], json!("Ω"))?;
+    state.seed_python("SubtensorModule", "TokenSymbol", &[json!(2)], json!("Ψ"))?;
+    state.seed_python(
+        "SubtensorModule",
+        "Uids",
+        &[json!(1), json!(HOT)],
+        json!(17),
+    )?;
+    state.seed_python(
+        "SubtensorModule",
+        "Lock",
+        &[json!(COLD), json!(1), json!(LOCK_TARGET)],
+        json!({"locked_mass":2_000_000_000u64,"conviction":{"bits":0},"last_update":0}),
+    )?;
+    state.seed_python(
+        "SubtensorModule",
+        "DecayingLock",
+        &[json!(COLD), json!(1)],
+        json!(false),
+    )?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_coldkey_lock",
+        json!({"locked_mass":2_000_000_000u64,"conviction":{"bits":0},"last_update":0}),
+    )?;
+    // Runtime order is deliberately different from subnet/stake display order.
+    state.seed_runtime("StakeInfoRuntimeApi", "get_stake_info_for_coldkeys", json!([
+        [COLD,[
+            {"hotkey":OWNED,"coldkey":COLD,"netuid":2,"stake":7_000_000_000u64,"is_registered":false},
+            {"hotkey":OWNED,"coldkey":COLD,"netuid":1,"stake":2_000_000_000u64,"is_registered":false},
+            {"hotkey":HOT,"coldkey":COLD,"netuid":1,"stake":3_000_000_000u64,"is_registered":true},
+            {"hotkey":DUST,"coldkey":COLD,"netuid":1,"stake":1u64,"is_registered":false},
+        ]],
+        [BOB,[{"hotkey":HOT,"coldkey":BOB,"netuid":1,"stake":4_000_000_000u64,"is_registered":false}]],
+    ]))?;
+    state.seed_runtime(
+        "SwapRuntimeApi",
+        "current_alpha_price_all",
+        json!([
+            {"netuid":1,"price":500_000_000}, {"netuid":2,"price":250_000_000},
+        ]),
+    )?;
+    state.seed_runtime("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0))?;
+    seed_overview_availability(
+        &mut state,
+        COLD,
+        &[
+            (1, 5_000_000_001, 2_000_000_000, 3_000_000_001),
+            (2, 7_000_000_000, 0, 7_000_000_000),
+        ],
+    )?;
+    seed_overview_availability(&mut state, BOB, &[(1, 4_000_000_000, 0, 4_000_000_000)])?;
+    let (client, chain) = client(state).await?;
+    for (quiet, dust) in [(false, false), (true, false), (false, true)] {
+        let mut args = vec!["wallet", "overview", "--all"];
+        if dust {
+            args.push("--dust");
+        }
+        let (parsed, mut ctx, _) = context(&root, &args)?;
+        ctx.globals.json = false;
+        ctx.globals.quiet = quiet;
+        ctx.books.addresses.extend([
+            json!({"name":"contact-must-not-replace-local","address":HOT}),
+            json!({"name":"lock\u{1b}[31mtarget","address":LOCK_TARGET}),
+        ]);
+        let sink = MemorySink::default();
+        ctx.output = Output::with_sink(
+            OutputOptions {
+                json_mode: false,
+                quiet,
+                network: None,
+            },
+            Arc::new(sink.clone()),
+        );
+        wallet::run_with_client(
+            &mut ctx,
+            &client,
+            group(&parsed)?,
+            &mut PromptHistory::default(),
+        )
+        .await?;
+        let text = sink.text(Stream::Stdout)?;
+        let alice_one = text.find("alice · netuid 1 Ω").ok_or("alice subnet 1")?;
+        let alice_two = text.find("alice · netuid 2 Ψ").ok_or("alice subnet 2")?;
+        let bob_one = text.find("bob · netuid 1 Ω").ok_or("bob subnet 1")?;
+        assert!(alice_one < alice_two && alice_two < bob_one);
+        let first = &text[alice_one..alice_two];
+        let second = &text[alice_two..bob_one];
+        let bob = &text[bob_one..];
+        assert!(first.contains("5.000000001Ω"));
+        assert!(first.contains("τ2.500000000"));
+        assert!(second.contains("7.000000000Ψ"));
+        assert!(second.contains("τ1.750000000"));
+        assert!(bob.contains("4.000000000Ω"));
+        assert!(bob.contains("τ2.000000000"));
+        assert_eq!(
+            text.matches("2.000000000Ω locked · 3.000000001Ω free")
+                .count(),
+            1
+        );
+        assert!(first.contains("lock → lock\\x1b[31mtarget"));
+        assert_eq!(
+            first.matches("lock on lock\\x1b[31mtarget").count(),
+            if dust { 3 } else { 2 }
+        );
+        assert!(!text.contains('\u{1b}'));
+        assert!(
+            first.find("local-worker").ok_or("local name")?
+                < first.find("chain-validator").ok_or("chain name")?
+        );
+        assert!(!text.contains("contact-must-not-replace-local"));
+        assert_eq!(first.contains("0.000000001Ω"), dust);
+        assert_eq!(text.contains("1 dust positions hidden"), !dust);
+        assert!(text.contains("total τ6.250000000  (spot, excl. slippage/fees)"));
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+    }
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    assert_eq!(
+        fs::read(root.0.join("alice/coldkey"))?,
+        b"private-key sentinel must not be opened by reads or plans"
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn overview_human_subnet_stake_overflow_refuses_before_output_while_json_keeps_positions()
+-> TestResult {
+    let root = Root::new()?;
+    root.public("alice", COLD)?;
+    let mut state = FakeState::default();
+    for hotkey in [HOT, OWNED] {
+        state.seed_python("SubtensorModule", "Owner", &[json!(hotkey)], json!(COLD))?;
+    }
+    let amount = (u64::MAX / 2) + 1;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_info_for_coldkeys",
+        json!([[COLD,[
+            {"hotkey":HOT,"coldkey":COLD,"netuid":1,"stake":amount,"is_registered":false},
+            {"hotkey":OWNED,"coldkey":COLD,"netuid":1,"stake":amount,"is_registered":false},
+        ]]]),
+    )?;
+    state.seed_runtime(
+        "SwapRuntimeApi",
+        "current_alpha_price_all",
+        json!([{ "netuid":1,"price":250_000_000 }]),
+    )?;
+    state.seed_runtime("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0))?;
+    seed_overview_availability(&mut state, COLD, &[(1, u64::MAX, 0, u64::MAX)])?;
+    let (client, chain) = client(state).await?;
+    let (parsed, mut ctx, sink) = context(&root, &["wallet", "overview"])?;
+    wallet::run_with_client(
+        &mut ctx,
+        &client,
+        group(&parsed)?,
+        &mut PromptHistory::default(),
+    )
+    .await?;
+    assert_eq!(
+        value(&sink)?[0]["stakes"]
+            .as_array()
+            .ok_or("positions")?
+            .len(),
+        2
+    );
+    let (parsed, mut ctx, _) = context(&root, &["wallet", "overview"])?;
+    ctx.globals.json = false;
+    let sink = MemorySink::default();
+    ctx.output = Output::with_sink(OutputOptions::default(), Arc::new(sink.clone()));
+    let error = wallet::run_with_client(
+        &mut ctx,
+        &client,
+        group(&parsed)?,
+        &mut PromptHistory::default(),
+    )
+    .await
+    .err()
+    .ok_or("subnet sum must overflow")?;
+    assert_eq!(error.code, 2);
+    assert_eq!(error.message, "subnet stake exceeds native u64 rao");
+    assert!(sink.text(Stream::Stdout)?.is_empty());
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
     );
     client.close().await;
     Ok(())

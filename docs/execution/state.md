@@ -17,48 +17,45 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## Current client checkpoint, 2026-10-16
 
 The latest successful ordinary checkpoint is
-[38944089487](https://github.com/sam0x17/rtao/actions/runs/38944089487)
-at `569162e324faf5f54346f9b9d7298919e10fd5fc`. All six required jobs
-passed: 3,132 tests, four skips and nine doctests across 19 workspace suites,
+[38949537519](https://github.com/sam0x17/rtao/actions/runs/38949537519)
+at `7997ec0c5c3352746c887ea974f92d8471b32054`. All six required jobs
+passed: 3,145 tests, four skips and nine doctests across 19 workspace suites,
 plus strict Clippy, documentation, source/generated guards, feature profiles,
 MSRV, no-host, semver and supply checks. Feature validation also passed the
 native template gate, both TLS crypto providers, unpatched-core compilation
 and generic keyfiles without encryption support. No local build ran.
 
-The bounded primary proof is `client-569162e-hosted-results.json`, SHA256
-`16406e49a3233ef397556c774201ae8cbc8b16bacd6e62dd7863e488f19bc078`.
-It retains 93 qualified PASS records and 84 source identities. Same-log
-supplements retain 23 raw-call witnesses and 42 miner-related witnesses.
-The main log was 739,644 bytes, SHA256
-`c380cc8e94242d29988d818112030db4957661fed7e90e6438fe2a25082692b7`;
+The bounded primary proof is `client-7997ec0-hosted-results.json`, SHA256
+`a3ba7b4bfa03cc74c3fea2aebc328471ada0e77ab29498beb3798612d25b6728`.
+It retains 113 qualified PASS records and 101 source identities. Same-log
+supplements retain nine payment and four metagraph witnesses.
+The main log was 739,615 bytes, SHA256
+`538c058f93bbbbc3c0d01cfb0561fc876cc1a19829254004e45bc3f3a5048de2`;
 no raw log or archive is retained.
 
-Source and generated matrix both record 319 of 357 files reconciled, with
-38 pending. M0/M1 and twenty individual M2 implementation/guide steps remain
+Source records 322 of 357 files reconciled, with 35 pending. The generated
+matrix remains at 319 reconciled and 38 pending until the hosted refresh.
+The three new source dispositions cover CLI startup, metagraph output and
+the payment wrapper's client-visible contract. They do not establish runtime
+admission, debit or refund behavior. The exact adoption record is
+`client-7997ec0-three-source-row-adoption.json`, SHA256
+`a3ca105e82aca429dfbdd3e0c602057af007b3dded5ef32e4bb96cd36fa669bf`.
+M0/M1 and twenty individual M2 implementation/guide steps remain
 accepted. M2-26 and the M2 milestone remain open because M2-S02 is unaccepted;
 no later milestone or strict M8 acceptance follows from this checkpoint.
 
-The subsequent source batch at
-`00c7952f4cf084ea696a255abb1c9f3a1a1c1d28` adds startup compatibility,
-83-operation policy loops, generic prompt acquisition/diagnostics, authenticated
-fee-policy extraction, stake-exit guidance and synchronous picker corrections.
-Its 13 new test functions require a later ordinary checkpoint, expecting
-3,145 tests with four skips. Report run
-[38947563587](https://github.com/sam0x17/rtao/actions/runs/38947563587)
-passed at that exact source. Inspection and an independent refetch adopted
-exactly five files: the fee-contract extraction and four reports, including
-the D-072 matrix entry. The other 18 generated outputs are byte-identical.
-All 23 dependency inputs and the package/feature graphs are unchanged.
-The inspection proof SHA256 is
-`f40cc18f073e3e142886a0146d2674721e9eff871cc9e5b78f533ad5e8f78c33`;
-the adoption proof SHA256 is
-`f0ac385e6d4bb0d12dee770da0710fbd847e84748b1ee0e89639ef21812cc291`.
-This report-only success does not execute the 13 newer tests; full ordinary
-hosted validation remains pending.
+The next reviewed source batch changes 31 files and adds 27 test functions,
+expecting 3,172 tests with four skips in its future ordinary checkpoint.
+It adds multisig aliases and direct followup, owner labels and human output,
+authenticated pruning-test inputs, staking boundary fixtures, pre-signing
+reserve refusal and shielded inner-finality regressions. All exact reviewed
+afterimages and formatting checks match; no local compilation or tests ran.
+The pruning inputs require hosted regeneration and authenticated adoption
+of `named_tables.json` and catalog `py.rs` before ordinary checks. The reports
+also need to include the three source dispositions above. This newer batch
+has no execution credit from the green checkpoint.
 
-Multisig alias/followup, owner-label and specialized human-output proposals
-remain held for a separate reviewed batch. They have no execution credit from
-the green checkpoint. Additional source reconciliation, security dispositions
+Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded
 bounded recovery root. No node, testnet, soak or hardware work is scheduled.

@@ -231,6 +231,8 @@ pub enum Request {
     Show {
         /// Position owner.
         owner: AccountId,
+        /// Public input context for picker messages, independent of the account.
+        owner_label: String,
         /// Explicit hotkey, or picker.
         hotkey: Option<AccountId>,
         /// Position subnet.
@@ -296,8 +298,20 @@ impl Request {
                 } else {
                     None
                 };
+                let owner_label = optional(leaf, "coldkey_ss58")
+                    .filter(|value| !value.is_empty())
+                    .map_or_else(
+                        || {
+                            format!(
+                                "wallet {}",
+                                rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+                            )
+                        },
+                        str::to_owned,
+                    );
                 Ok(Self::Show {
                     owner,
+                    owner_label,
                     hotkey,
                     netuid: subnet(leaf)?,
                 })
@@ -468,6 +482,7 @@ pub async fn execute(
         }
         Request::Show {
             owner,
+            owner_label,
             hotkey,
             netuid,
         } => {
@@ -475,10 +490,10 @@ pub async fn execute(
                 Some(account) => *account,
                 None => {
                     let mut answers = Map::from_iter([("netuid".into(), json!(netuid))]);
-                    picker::source_for_owner(
+                    picker::source_for_labeled_owner(
                         ctx,
                         client,
-                        *owner,
+                        (*owner, owner_label),
                         "hotkey_ss58",
                         Some("netuid"),
                         &mut answers,
@@ -679,6 +694,7 @@ async fn list(
     };
     let mut records = Vec::new();
     let mut rows = Vec::new();
+    let mut has_locked = false;
     let mut names = local_names(ctx)?;
     fill_names(
         client,
@@ -770,6 +786,10 @@ async fn list(
                 dust_value_tao += rtao::primitives::pyfmt::rao_to_f64(value);
                 continue;
             }
+            let locked = availability
+                .iter()
+                .any(|entry| entry.netuid == netuid && entry.locked.rao > 0);
+            has_locked |= locked;
             let group = group.into_iter().filter(|(_, record)| {
                 let value = record["value_tao"].as_f64().unwrap_or_default();
                 if !dust && value < 0.001 {
@@ -790,11 +810,6 @@ async fn list(
                 if all_wallets {
                     row.push(json!(name));
                 }
-                let locked = record
-                    .get("locked_amount")
-                    .and_then(Value::as_f64)
-                    .unwrap_or_default()
-                    > 0.0;
                 let lock = locks
                     .iter()
                     .find(|lock| lock.netuid == netuid)
@@ -817,10 +832,10 @@ async fn list(
                 row.extend([
                     record["netuid"].clone(),
                     record["stake"].clone(),
-                    if index == 0 {
+                    if index == 0 && locked {
                         record.get("locked").cloned().unwrap_or(Value::Null)
                     } else {
-                        Value::Null
+                        json!("")
                     },
                     record["value"].clone(),
                     json!(label),
@@ -843,6 +858,13 @@ async fn list(
     if all_wallets {
         columns.insert(0, "wallet");
     }
+    if !has_locked {
+        let index = if all_wallets { 3 } else { 2 };
+        columns.remove(index);
+        for (_, row) in &mut rows {
+            row.remove(index);
+        }
+    }
     let mut spec = TableSpec::new(
         "stake (per-subnet currency: TAO on netuid 0, alpha elsewhere)",
         columns.into_iter().map(str::to_owned).collect(),
@@ -850,25 +872,28 @@ async fn list(
     );
     spec.records = Some(Value::Array(records));
     let total = DynBalance::from_rao(total, NetUid::ROOT);
-    let accrued = DynBalance::from_rao(accrued_total, NetUid::ROOT);
-    let principal = DynBalance::from_rao(principal_total, NetUid::ROOT);
-    let accrued_display =
-        match rtao::primitives::ratio::integer_division(i128::from(accrued_total), principal_total)
-        {
+    let mut footer = format!("Total: {total} (spot, excl. slippage/fees)");
+    if accrued_total > 0 || principal_total > 0 {
+        let accrued = DynBalance::from_rao(accrued_total, NetUid::ROOT);
+        let principal = DynBalance::from_rao(principal_total, NetUid::ROOT);
+        let accrued_display = match rtao::primitives::ratio::integer_division(
+            i128::from(accrued_total),
+            principal_total,
+        ) {
             Some(ratio) => format!("{accrued} ({:.2}% of root stake)", ratio * 100.0),
             None => accrued.to_string(),
         };
-    spec.footer = Some(format!(
-        "Total: {total}; accrued basket yield: {accrued_display}; root principal: {principal}; auto-claim is off → rtao root claim"
-    ));
+        footer.push_str(&format!(
+            "; accrued basket yield: {accrued_display}; root principal: {principal}; auto-claim is off → rtao root claim"
+        ));
+    }
+    spec.footer = Some(footer);
     ctx.output.table(&spec).map_err(failure)?;
     if spec.rows.is_empty()
         && !ctx.globals.json
         && let Some(footer) = &spec.footer
     {
-        ctx.output
-            .detail(None, &[("yield".into(), json!(footer))], None)
-            .map_err(failure)?;
+        ctx.output.value(footer).map_err(failure)?;
     }
     if dust_groups > 0 || dust_positions > 0 {
         let mut parts = Vec::new();

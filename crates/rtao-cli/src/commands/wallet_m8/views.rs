@@ -84,7 +84,7 @@ pub(super) async fn overview(
     .map_err(failure)?;
     let mut rows = Vec::new();
     let names = local_names(ctx).await?;
-    let mut human_rows = Vec::new();
+    let mut human_groups = Vec::new();
     let mut hidden = 0usize;
     let mut total_values = Vec::new();
     let mut accrued_values = Vec::new();
@@ -95,7 +95,7 @@ pub(super) async fn overview(
         .map(|p| p.hotkey)
         .filter(|h| !names.contains_key(h))
         .collect();
-    let identities = owner::hotkey_identities(&view, unnamed)
+    let mut identities = owner::hotkey_identities(&view, unnamed)
         .await
         .map_err(failure)?;
     let pairs = valuations
@@ -133,6 +133,18 @@ pub(super) async fn overview(
             .into_iter()
             .map(|row| (row.netuid, row))
             .collect::<BTreeMap<_, _>>();
+        if !ctx.globals.json {
+            let unnamed_targets = locks
+                .values()
+                .map(|lock| lock.hotkey)
+                .filter(|hotkey| !names.contains_key(hotkey) && !identities.contains_key(hotkey))
+                .collect();
+            identities.extend(
+                owner::hotkey_identities(&view, unnamed_targets)
+                    .await
+                    .map_err(failure)?,
+            );
+        }
         let staked = tao(sum(
             valuation
                 .positions
@@ -165,7 +177,7 @@ pub(super) async fn overview(
                 .checked_add(value.rao)
                 .ok_or_else(|| input("subnet value exceeds native u64 rao"))?;
         }
-        for position in selected {
+        for position in &selected {
             let value = spot(&position.stake, valuation)?;
             let uid = position
                 .is_registered
@@ -190,35 +202,97 @@ pub(super) async fn overview(
             }
             extend_yield(&mut record, &yields)?;
             stakes.push(record);
-            if enabled(matches, "dust")
-                || (value.rao >= DUST_RAO
-                    && subnet_values
-                        .get(&position.netuid)
-                        .is_some_and(|v| *v >= DUST_RAO))
-            {
-                let avail = availability.get(&position.netuid);
-                let note = avail
-                    .filter(|a| a.locked.rao > 0)
-                    .map(|a| {
-                        format!(
+        }
+        if !ctx.globals.json {
+            let mut groups = BTreeMap::<NetUid, Vec<_>>::new();
+            for position in selected {
+                groups.entry(position.netuid).or_default().push(position);
+            }
+            for (netuid, mut positions) in groups {
+                let Some(first) = positions.first() else {
+                    continue;
+                };
+                // The subtotal includes dust positions, matching the grouped
+                // source view; only its per-hotkey breakdown is filtered.
+                let mut stake = first.stake.clone();
+                stake.rao = sum(positions.iter().map(|p| p.stake.rao), "subnet stake")?;
+                let value = spot(&stake, valuation)?;
+                if !enabled(matches, "dust") && value.rao < DUST_RAO {
+                    hidden += positions.len();
+                    continue;
+                }
+                let availability = availability.get(&netuid).filter(|a| a.locked.rao > 0);
+                let lock = availability.and_then(|_| locks.get(&netuid));
+                let lock_target = lock.map(|lock| {
+                    let name = label(&lock.hotkey, &names, &identities);
+                    if name == "—" {
+                        lock.hotkey.to_string()
+                    } else {
+                        name
+                    }
+                });
+                let mut fields = vec![
+                    ("stake".into(), display(&stake)),
+                    ("value (τ)".into(), display(&value)),
+                ];
+                if let Some(target) = &lock_target {
+                    fields.push(("lock".into(), json!(format!("lock → {target}"))));
+                }
+                if let Some(availability) = availability {
+                    fields.push((
+                        "availability".into(),
+                        json!(format!(
                             "{} locked · {} free",
-                            a.locked.to_python_string(),
-                            a.available.to_python_string()
-                        )
-                    })
-                    .unwrap_or_default();
-                human_rows.push(vec![
-                    json!(name),
-                    json!(position.netuid),
-                    json!(uid),
-                    display(&position.stake),
-                    display(&value),
-                    json!(label(&position.hotkey, &names, &identities)),
-                    json!(position.hotkey),
-                    json!(note),
-                ]);
-            } else {
-                hidden += 1;
+                            availability.locked.to_python_string(),
+                            availability.available.to_python_string()
+                        )),
+                    ));
+                }
+                positions.sort_by_key(|position| std::cmp::Reverse(position.stake.rao));
+                let mut positions_rows = Vec::new();
+                for position in positions {
+                    let value = spot(&position.stake, valuation)?;
+                    if !enabled(matches, "dust") && value.rao < DUST_RAO {
+                        hidden += 1;
+                        continue;
+                    }
+                    let uid = position
+                        .is_registered
+                        .then(|| uids.get(&(netuid, position.hotkey)).copied())
+                        .flatten();
+                    let note = lock
+                        .filter(|lock| lock.hotkey != position.hotkey)
+                        .and(lock_target.as_ref())
+                        .map(|target| format!("lock on {target}"))
+                        .unwrap_or_default();
+                    positions_rows.push(vec![
+                        json!(uid),
+                        display(&position.stake),
+                        display(&value),
+                        json!(label(&position.hotkey, &names, &identities)),
+                        json!(position.hotkey),
+                        json!(note),
+                    ]);
+                }
+                let title = format!(
+                    "{}netuid {}",
+                    if enabled(matches, "all") {
+                        format!("{name} · ")
+                    } else {
+                        String::new()
+                    },
+                    ctx.output.subnet_text(netuid, true)
+                );
+                let mut table = TableSpec::new(
+                    "",
+                    ["uid", "stake", "value (τ)", "validator", "hotkey", "note"]
+                        .into_iter()
+                        .map(str::to_owned)
+                        .collect(),
+                    positions_rows,
+                );
+                table.right_align.extend([0, 1, 2]);
+                human_groups.push((title, fields, table));
             }
         }
         let free = balances.get(&coldkey).cloned().unwrap_or_else(|| tao(0));
@@ -260,30 +334,25 @@ pub(super) async fn overview(
     if ctx.globals.json {
         return ctx.output.value(&rows).map_err(failure);
     }
-    let mut table = TableSpec::new(
-        STAKE_TITLE,
-        [
-            "wallet",
-            "netuid",
-            "uid",
-            "stake",
-            "value (τ)",
-            "validator",
-            "hotkey",
-            "lock",
-        ]
-        .into_iter()
-        .map(str::to_owned)
-        .collect(),
-        human_rows,
-    );
-    table.right_align.extend([1, 2, 3, 4]);
-    if hidden > 0 {
-        table.footer = Some(format!(
-            "{hidden} dust positions hidden — pass --dust to show"
-        ));
+    ctx.output.value(&STAKE_TITLE).map_err(failure)?;
+    if human_groups.is_empty() {
+        ctx.output.detail(None, &[], None).map_err(failure)?;
     }
-    ctx.output.columns(&table).map_err(failure)?;
+    for (title, fields, table) in human_groups {
+        ctx.output
+            .detail(Some(&title), &fields, None)
+            .map_err(failure)?;
+        if !table.rows.is_empty() {
+            ctx.output.columns(&table).map_err(failure)?;
+        }
+    }
+    if hidden > 0 {
+        ctx.output
+            .value(&format!(
+                "{hidden} dust positions hidden — pass --dust to show"
+            ))
+            .map_err(failure)?;
+    }
     ctx.output
         .value(&format!(
             "total {}  (spot, excl. slippage/fees)",

@@ -110,10 +110,19 @@ pub fn command() -> Command {
 pub struct SigningSelection {
     /// Local wallet name, or a public external member label.
     pub wallet: String,
+    /// Optional public approval label, independent of the selected wallet file.
+    pub display_name: Option<String>,
     /// `wallet`, `vault`, `ledger`, or `extension`.
     pub backend: String,
     /// Expected external or multisig member account, when known.
     pub address: Option<AccountId>,
+}
+
+impl SigningSelection {
+    /// Public member label for review and progress, never key acquisition.
+    pub fn display_wallet(&self) -> &str {
+        self.display_name.as_deref().unwrap_or(&self.wallet)
+    }
 }
 
 /// Resolved multisig settings, preserving preset order for labels and followup.
@@ -288,6 +297,60 @@ mod pinned_spec_tests {
         assert!(refused.target.is_none());
         assert_eq!(refused.role, SignerRole::Coldkey);
         Ok(())
+    }
+
+    #[test]
+    fn multisig_wallet_alias_order_is_natural_and_keeps_equal_name_ties_stable() {
+        use crate::books::{NameCandidate, ResolveError};
+
+        struct Lookup(Vec<NameCandidate>);
+        impl AccountLookup for Lookup {
+            fn coldkey(&self, _: &str) -> Result<String, ResolveError> {
+                Err(ResolveError::new(
+                    "this fixture exposes public candidates only",
+                ))
+            }
+            fn hotkey(&self, _: &str, _: &str) -> Result<String, ResolveError> {
+                Err(ResolveError::new(
+                    "this fixture exposes public candidates only",
+                ))
+            }
+            fn candidates(&self) -> Vec<NameCandidate> {
+                self.0.clone()
+            }
+        }
+        let first = AccountId([7; 32]);
+        let second = AccountId([8; 32]);
+        let outsider = AccountId([9; 32]);
+        for equal_names in [["wallet02", "wallet2"], ["wallet2", "wallet02"]] {
+            let candidate = |name: &str, account: AccountId, source: &str| NameCandidate {
+                name: name.into(),
+                address: account.to_string(),
+                source: source.into(),
+            };
+            let lookup = Lookup(vec![
+                candidate("wallet10", first, "wallet"),
+                candidate(equal_names[0], first, "wallet"),
+                candidate("wallet1", second, "wallet"),
+                candidate(equal_names[1], first, "wallet"),
+                candidate("wallet0", first, "hotkey"),
+                candidate("wallet4", outsider, "wallet"),
+                NameCandidate {
+                    name: "wallet9".into(),
+                    address: "invalid-public-address".into(),
+                    source: "wallet".into(),
+                },
+            ]);
+            assert_eq!(
+                local_multisig_wallets(&lookup, &[first, second]),
+                vec![
+                    (equal_names[0].to_owned(), first),
+                    (equal_names[1].to_owned(), first),
+                    ("wallet10".to_owned(), first),
+                    ("wallet1".to_owned(), second),
+                ]
+            );
+        }
     }
 }
 
@@ -964,7 +1027,7 @@ pub async fn execute_rounds_with(
         ctx.output
             .step(
                 &format!("approval {}", index.saturating_add(1)),
-                &format!("{} via {}", selection.wallet, selection.backend),
+                &format!("{} via {}", selection.display_wallet(), selection.backend),
                 StepState::Running,
             )
             .map_err(public_failure)?;
@@ -1101,7 +1164,7 @@ async fn prepare_continuation(
             opening: false,
             outer_call: Some(&outer),
             crypto_type: CryptoType::Sr25519,
-            signer_label: Some(&selection.wallet),
+            signer_label: Some(selection.display_wallet()),
         },
     )
     .await
@@ -1239,7 +1302,7 @@ fn show_dry_run(
                     request
                         .rounds
                         .iter()
-                        .map(|round| format!("{} ({})", round.wallet, round.backend))
+                        .map(|round| format!("{} ({})", round.display_wallet(), round.backend))
                         .collect::<Vec<_>>()
                         .join(" → ")
                 ),
@@ -1326,7 +1389,11 @@ fn show_raw_review(
             } else {
                 format!("approval {}", index + 1)
             },
-            json!(format!("{} ({})", selection.wallet, selection.backend)),
+            json!(format!(
+                "{} ({})",
+                selection.display_wallet(),
+                selection.backend
+            )),
         ));
         if let Some(account) = selection.address {
             signer.push((
@@ -1541,6 +1608,31 @@ pub fn select_member(
         .ok_or_else(|| CliError::input("no selected signing member"))
 }
 
+// Keep Python's naturally ordered wallet scan local to multisig consumers.
+// Both sorts are stable: account order takes precedence, while aliases keep
+// natural wallet order and equal natural names retain the original scan order.
+fn local_multisig_wallets(
+    lookup: &dyn AccountLookup,
+    signatories: &[AccountId],
+) -> Vec<(String, AccountId)> {
+    let mut locals = lookup
+        .candidates()
+        .into_iter()
+        .filter(|candidate| candidate.source == "wallet")
+        .filter_map(|candidate| {
+            candidate
+                .address
+                .parse::<AccountId>()
+                .ok()
+                .filter(|address| signatories.contains(address))
+                .map(|address| (candidate.name, address))
+        })
+        .collect::<Vec<_>>();
+    locals.sort_by(|left, right| crate::commands::wallet::natural_cmp(&left.0, &right.0));
+    locals.sort_by_key(|(_, account)| signatories.iter().position(|member| member == account));
+    locals
+}
+
 fn signing_rounds(
     ctx: &AppContext,
     lookup: &FsAccountLookup,
@@ -1583,31 +1675,13 @@ fn signing_rounds(
                 .transpose()?
         };
         return Ok(vec![SigningSelection {
+            display_name: None,
             wallet: ctx.globals.wallet_name.clone(),
             backend: backend.into(),
             address,
         }]);
     };
-    let mut locals: Vec<_> = lookup
-        .candidates()
-        .into_iter()
-        .filter(|candidate| candidate.source == "wallet")
-        .filter_map(|candidate| {
-            candidate
-                .address
-                .parse::<AccountId>()
-                .ok()
-                .filter(|address| group.signatories.contains(address))
-                .map(|address| (candidate.name, address))
-        })
-        .collect();
-    // Python keeps signatory order, with stable wallet ordering for aliases.
-    locals.sort_by_key(|(_, account)| {
-        group
-            .signatories
-            .iter()
-            .position(|member| member == account)
-    });
+    let locals = local_multisig_wallets(lookup, &group.signatories);
     let external = |name: &str, address: AccountId| {
         ctx.books
             .address_entry(name)
@@ -1617,7 +1691,10 @@ fn signing_rounds(
             .map(crate::globals::normalize_signer_backend)
             .filter(|backend| ["vault", "ledger", "extension"].contains(&backend.as_str()))
     };
-    let member = |reference: &str, wallet_only: bool| -> Result<SigningSelection, CliError> {
+    let member = |reference: &str,
+                  wallet_only: bool,
+                  exact_wallet: bool|
+     -> Result<SigningSelection, CliError> {
         let (reference, forced) = reference
             .split_once('=')
             .map(|(reference, forced)| {
@@ -1635,18 +1712,62 @@ fn signing_rounds(
                 "unknown backend {forced:?} in --signatory"
             )));
         }
-        let address: AccountId = names
-            .resolve_address_ref("coldkey_ss58", reference)
-            .map_err(public_input)?
-            .address
-            .parse()
-            .map_err(public_input)?;
+        // Local single/picker choices bind the public wallet directly. Repeated
+        // refs follow Python's member namespace: raw address, member contact,
+        // then a local member name; proxy/saved multisig aliases do not enter it.
+        let local_address = || {
+            locals
+                .iter()
+                .find(|(name, member)| name == reference || member.to_string() == reference)
+                .map(|(_, member)| *member)
+        };
+        let member_address = || {
+            reference
+                .parse::<AccountId>()
+                .ok()
+                .filter(|address| group.signatories.contains(address))
+                .or_else(|| {
+                    ctx.books
+                        .addresses
+                        .iter()
+                        .find(|entry| entry.get("name").and_then(Json::as_str) == Some(reference))
+                        .and_then(|entry| entry.get("address"))
+                        .and_then(Json::as_str)
+                        .and_then(|address| address.parse::<AccountId>().ok())
+                        .filter(|address| group.signatories.contains(address))
+                })
+                .or_else(|| {
+                    locals
+                        .iter()
+                        .find(|(name, _)| name == reference)
+                        .map(|(_, address)| *address)
+                })
+        };
+        let address = (exact_wallet && forced.as_deref().is_none_or(|backend| backend == "wallet"))
+            .then(local_address)
+            .flatten()
+            .or_else(member_address)
+            .ok_or_else(|| {
+                CliError::input(format!(
+                    "--signatory {reference:?} is not a member of this multisig"
+                ))
+            })?;
         if !group.signatories.contains(&address) {
             return Err(CliError::input(format!(
                 "--signatory {reference:?} is not a member of this multisig"
             )));
         }
-        let local = locals.iter().find(|(_, member)| *member == address);
+        // Single explicit and interactive wallet choices retain their exact
+        // file. Python's chained driver selects by address and uses the first
+        // natural alias.
+        let local = exact_wallet
+            .then(|| {
+                locals
+                    .iter()
+                    .find(|(name, member)| name == reference && *member == address)
+            })
+            .flatten()
+            .or_else(|| locals.iter().find(|(_, member)| *member == address));
         let inferred = if wallet_only || local.is_some() {
             Some("wallet".into())
         } else {
@@ -1663,7 +1784,24 @@ fn signing_rounds(
         } else {
             reference.to_owned()
         };
+        let display = if is_bittensor_address(reference) {
+            locals
+                .iter()
+                .find(|(_, member)| *member == address)
+                .map(|(name, _)| name.clone())
+                .or_else(|| {
+                    ctx.books
+                        .address_entry(&address.to_string())
+                        .and_then(|entry| entry.get("name").and_then(Json::as_str))
+                        .filter(|name| !name.is_empty())
+                        .map(str::to_owned)
+                })
+                .unwrap_or_else(|| address.to_string())
+        } else {
+            reference.to_owned()
+        };
         Ok(SigningSelection {
+            display_name: (display != wallet).then_some(display),
             wallet,
             backend: selected,
             address: Some(address),
@@ -1682,7 +1820,7 @@ fn signing_rounds(
         }
         let rounds = explicit
             .iter()
-            .map(|reference| member(reference, false))
+            .map(|reference| member(reference, false, false))
             .collect::<Result<Vec<_>, _>>()?;
         let mut unique = BTreeSet::new();
         if rounds
@@ -1706,6 +1844,7 @@ fn signing_rounds(
             ));
         }
         return Ok(vec![SigningSelection {
+            display_name: None,
             wallet: explicit
                 .first()
                 .cloned()
@@ -1719,7 +1858,7 @@ fn signing_rounds(
         // inference for a single member. Repeated approvals keep their own
         // per-member inference, matching Python's separate rounds planner.
         let wallet_only = selected_backend.is_some_and(|backend| !backend.is_empty());
-        return member(reference, wallet_only).map(|selected| vec![selected]);
+        return member(reference, wallet_only, true).map(|selected| vec![selected]);
     }
     if automatic
         && role == SignerRole::Coldkey
@@ -1730,28 +1869,43 @@ fn signing_rounds(
     {
         let mut rounds = Vec::new();
         for address in &group.signatories {
-            if let Some((name, _)) = locals.iter().find(|(name, member)| {
-                member == address && lookup.root().join(name).join("coldkey").is_file()
-            }) {
+            // Python's dict keeps the last natural alias for auto admission
+            // and display. Its chained driver selects by account afterwards,
+            // so the first natural alias is the actual wallet source.
+            let last_alias = locals
+                .iter()
+                .rev()
+                .find(|(_, member)| member == address)
+                .map(|(name, _)| name);
+            if let Some(last) = last_alias
+                && lookup.root().join(last).join("coldkey").is_file()
+            {
+                let first = locals
+                    .iter()
+                    .find(|(_, member)| member == address)
+                    .map(|(name, _)| name)
+                    .unwrap_or(last);
                 rounds.push(SigningSelection {
-                    wallet: name.clone(),
+                    display_name: (last != first).then(|| last.clone()),
+                    wallet: first.clone(),
                     backend: "wallet".into(),
                     address: Some(*address),
                 });
-            } else if let Some(backend) = external(&address.to_string(), *address) {
+            } else if let Some(backend) = external(&address.to_string(), *address)
+                .or_else(|| last_alias.and_then(|name| external(name, *address)))
+            {
                 let name = ctx
                     .books
                     .address_entry(&address.to_string())
-                    .and_then(|entry| entry.get("name"))
-                    .and_then(Json::as_str)
-                    .unwrap_or("")
-                    .to_owned();
+                    .or_else(|| last_alias.and_then(|name| ctx.books.address_entry(name)))
+                    .and_then(|entry| entry.get("name").and_then(Json::as_str))
+                    .filter(|name| !name.is_empty())
+                    .map(str::to_owned)
+                    .or_else(|| last_alias.cloned())
+                    .unwrap_or_else(|| address.to_string());
                 rounds.push(SigningSelection {
-                    wallet: if name.is_empty() {
-                        address.to_string()
-                    } else {
-                        name
-                    },
+                    display_name: None,
+                    wallet: name,
                     backend,
                     address: Some(*address),
                 });
@@ -1774,6 +1928,7 @@ fn signing_rounds(
     .and_then(|address| address.parse().ok());
     if let Some(address) = own.filter(|address| group.signatories.contains(address)) {
         return Ok(vec![SigningSelection {
+            display_name: None,
             wallet: ctx.globals.wallet_name.clone(),
             backend: "wallet".into(),
             address: Some(address),
@@ -1781,6 +1936,7 @@ fn signing_rounds(
     }
     if locals.len() == 1 {
         return Ok(vec![SigningSelection {
+            display_name: None,
             wallet: locals[0].0.clone(),
             backend: "wallet".into(),
             address: Some(locals[0].1),
@@ -1836,7 +1992,7 @@ fn signing_rounds(
         help: None,
     })?;
     drop(terminal);
-    member(&selected, false).map(|member| vec![member])
+    member(&selected, false, true).map(|member| vec![member])
 }
 
 fn signer_address_for_backend(
@@ -2310,16 +2466,13 @@ pub fn signatory_labels(
             preset_by_addr.insert(account, reference.clone());
         }
     }
-    let locals = lookup.candidates();
+    let locals = local_multisig_wallets(&lookup, &raw.signatories);
     let mut labels = BTreeMap::new();
     for account in &raw.signatories {
         let preset = preset_by_addr
             .get(account)
             .filter(|reference| !is_bittensor_address(reference));
-        let local = locals.iter().find(|candidate| {
-            candidate.source == "wallet"
-                && candidate.address.parse::<AccountId>().ok() == Some(*account)
-        });
+        let local = locals.iter().find(|(_, member)| member == account);
         let contact = ctx.books.addresses.iter().find(|entry| {
             entry
                 .get("address")
@@ -2329,7 +2482,7 @@ pub fn signatory_labels(
         });
         let label = preset
             .cloned()
-            .or_else(|| local.map(|candidate| candidate.name.clone()))
+            .or_else(|| local.map(|(name, _)| name.clone()))
             .or_else(|| {
                 contact
                     .and_then(|entry| entry.get("name").and_then(Json::as_str))

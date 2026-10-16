@@ -317,6 +317,127 @@ async fn subnet_creation_review_quotes_exact_cost_and_all_queue_flows_before_unl
     Ok(())
 }
 
+#[tokio::test]
+async fn subnet_creation_success_keeps_compact_registration_fields_in_quiet_and_json() -> TestResult
+{
+    use rtao::primitives::{DefaultAccount, NetUid, TaoBalance};
+    use rtao_runtime::storage::subtensor_module as st;
+
+    for json_mode in [false, true] {
+        let (client, chain, keys) = fixture(u64::MAX).await?;
+        let netuid = NetUid(9);
+        let hotkey = AccountId([5; 32]);
+        let paid_rao = 1_234_567_890_123u64;
+        assert_ne!(hotkey, keys.key.account());
+        chain.mutate_state(|state| -> TestResult {
+            // The receipt's authenticated lock cost must replace the earlier
+            // review quote in the completed registration's human fields.
+            state.seed_runtime(
+                "SubnetRegistrationRuntimeApi",
+                "get_network_registration_cost",
+                json!(2_000_000_000u64),
+            )?;
+            state.seed(
+                &st::SUBNET_OWNER,
+                (netuid,),
+                DefaultAccount::from(keys.key.account()),
+            )?;
+            state.seed(
+                &st::SUBNET_OWNER_HOTKEY,
+                (netuid,),
+                DefaultAccount::from(hotkey),
+            )?;
+            state.seed(&st::SUBNET_LOCKED, (netuid,), TaoBalance(paid_rao))?;
+            state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                events: json!([
+                    {
+                        "phase":"ApplyExtrinsic", "extrinsic_idx":0,
+                        "module_id":"SubtensorModule", "event_id":"NetworkAdded",
+                        "attributes":[netuid.0, 0], "topics":[]
+                    },
+                    {
+                        "phase":"ApplyExtrinsic", "extrinsic_idx":0,
+                        "module_id":"System", "event_id":"ExtrinsicSuccess",
+                        "attributes":{"dispatch_info":{
+                            "weight":{"ref_time":1,"proof_size":0},
+                            "class":"Normal", "pays_fee":"Yes"
+                        }},
+                        "topics":[]
+                    }
+                ]),
+            });
+            Ok(())
+        })?;
+        let intent = rtao_intents::RegisterSubnet {
+            hotkey_ss58: Some(hotkey.into()),
+        };
+        let mut flags = vec!["--yes", "--no-mev-shield", "--quiet"];
+        if json_mode {
+            flags.push("--json");
+        }
+        let (ctx, sink, reads) = context(&flags)?;
+        let receipt = tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            ctx.submit_with(&client, &intent, &keys, false, None),
+        )
+        .await??
+        .ok_or("registration receipt")?;
+        assert!(receipt.success, "{}", receipt.message);
+        assert_eq!(receipt.message, "Subnet 9 registered.");
+        assert_eq!(receipt.data["netuid"], 9);
+        assert_eq!(receipt.data["registration_mode"], "immediate");
+        assert_eq!(receipt.data["registration_price_rao"], paid_rao);
+        assert_eq!(receipt.data["registered_at_block"], 101);
+        assert_eq!(receipt.extrinsic_id.as_deref(), Some("101-0000"));
+        assert!(
+            receipt
+                .events
+                .iter()
+                .any(|event| event.matches("SubtensorModule", "NetworkAdded"))
+        );
+        let stdout = sink.text(Stream::Stdout)?;
+        if json_mode {
+            let payload: Value = serde_json::from_str(&stdout)?;
+            assert_eq!(payload, receipt.to_json());
+        } else {
+            assert!(stdout.contains("subnet 9 registered"));
+            assert!(stdout.lines().any(|line| {
+                line.trim_start()
+                    .strip_prefix("netuid")
+                    .is_some_and(|value| {
+                        value.starts_with(' ') && value.split_whitespace().next() == Some("9")
+                    })
+            }));
+            for (label, expected) in [
+                ("registration", "immediate · no deregistration needed"),
+                ("price", "τ1,234.567890123"),
+                ("registered block", "101"),
+                ("registration tx", "101-0000"),
+            ] {
+                assert!(
+                    stdout.lines().any(|line| {
+                        line.trim_start()
+                            .strip_prefix(label)
+                            .is_some_and(|value| value.starts_with(' ') && value.trim() == expected)
+                    }),
+                    "missing {label}={expected}: {stdout}"
+                );
+            }
+            assert!(!stdout.contains("registration price rao"));
+            assert!(!stdout.contains("Transaction"));
+        }
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            chain.state().lock().map_err(|_| "state")?.submissions.len(),
+            1
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
 struct StopRegistrationBeforeSigning;
 impl rtao_cli::context::SubmissionHooks for StopRegistrationBeforeSigning {
     fn before_submit(&self) -> BoxFuture<'_, Result<(), rtao_cli::error::CliError>> {
@@ -3963,5 +4084,135 @@ async fn mismatched_command_review_refuses_every_entry_before_rpc_or_source_acqu
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     client.close().await;
+    Ok(())
+}
+
+struct SavedDisplayFactory {
+    inner: MemberFactory,
+    seen: Mutex<Vec<(String, String, String)>>,
+}
+impl rtao_cli::call::RawSignerFactory for SavedDisplayFactory {
+    fn source<'a>(
+        &'a self,
+        ctx: &'a AppContext,
+        selection: &'a rtao_cli::call::SigningSelection,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            self.seen.lock().map_err(callback_lock)?.push((
+                selection.wallet.clone(),
+                selection.display_wallet().to_owned(),
+                ctx.globals.wallet_name.clone(),
+            ));
+            rtao_cli::call::RawSignerFactory::source(&self.inner, ctx, selection).await
+        })
+    }
+    fn release<'a>(
+        &'a self,
+        selection: &'a rtao_cli::call::SigningSelection,
+        keys: &'a dyn DynKeySource,
+        success: bool,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        rtao_cli::call::RawSignerFactory::release(&self.inner, selection, keys, success)
+    }
+}
+
+#[tokio::test]
+async fn saved_automatic_alias_display_preserves_the_canonical_source_and_json_receipt()
+-> TestResult {
+    for json_mode in [false, true] {
+        let root = CacheRoot::new()?;
+        let wallet_root = root.0.join("wallets");
+        let keys = members()?;
+        for (name, key) in [
+            ("wallet10", &keys[0]),
+            ("wallet2", &keys[0]),
+            ("wallet3", &keys[1]),
+        ] {
+            let directory = wallet_root.join(name);
+            std::fs::create_dir_all(&directory)?;
+            std::fs::write(
+                directory.join("coldkeypub.txt"),
+                serde_json::to_vec(&json!({"ss58Address":key.key.account(),"cryptoType":0}))?,
+            )?;
+            // Public existence-only planner sentinel. The injected source owns
+            // all actual signing; this text must never be read as private key.
+            std::fs::write(directory.join("coldkey"), b"public planner fixture")?;
+        }
+        let (client, chain, _) = fixture(1_000_000_000).await?;
+        let runtime = client.refresh_runtime().await?;
+        let group =
+            rtao::tx::Multisig::new(&runtime, &[keys[0].key.account(), keys[1].key.account()], 2)?;
+        let inner = rtao_runtime::calls::system::remark(vec![8, 9]).compose(&runtime)?;
+        chain.mutate_state(|state| {
+            state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                events: success_events(Some((keys[0].key.account(), &group, inner.hash()))),
+            })
+        });
+        let flags: &[&str] = if json_mode {
+            &["--yes", "--json", "--no-mev-shield"]
+        } else {
+            &["--yes", "--no-mev-shield"]
+        };
+        let (mut ctx, sink, reads) = context(flags)?;
+        ctx.globals.wallet_path = wallet_root.clone();
+        ctx.globals.wallet_name = "team".into();
+        ctx.globals.wallet_given = true;
+        ctx.globals.signatories.clear();
+        ctx.books = Books::from_values(
+            json!([]),
+            json!([]),
+            json!([{"name":"team","threshold":2,"signatories":["wallet2","wallet3"]}]),
+        );
+        let factory = SavedDisplayFactory {
+            inner: factory(&keys),
+            seen: Mutex::new(Vec::new()),
+        };
+        let result = ctx
+            .submit_saved_with_factory(
+                &client,
+                &Preview { blocked: false },
+                false,
+                None,
+                &factory,
+                &CallCache::default(),
+            )
+            .await?
+            .ok_or("receipt")?;
+        assert!(result.success);
+        assert_eq!(result.data["multisig_followup"]["status"], "executed");
+        assert_eq!(
+            *factory.seen.lock().map_err(|_| "selection capture")?,
+            vec![("wallet2".into(), "wallet10".into(), "wallet2".into())]
+        );
+        assert_eq!(factory.inner.acquired.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            *factory.inner.releases.lock().map_err(|_| "releases")?,
+            vec![true]
+        );
+        assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(keys[1].unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(keys[2].unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            chain.state().lock().map_err(|_| "state")?.submissions.len(),
+            1
+        );
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            std::fs::read(wallet_root.join("wallet2/coldkey"))?,
+            b"public planner fixture"
+        );
+        let stdout = sink.text(Stream::Stdout)?;
+        let stderr = sink.text(Stream::Stderr)?;
+        if json_mode {
+            assert_eq!(serde_json::from_str::<Value>(&stdout)?, result.to_json());
+            assert!(stderr.is_empty());
+        } else {
+            assert!(stdout.contains("approval member"));
+            assert!(stdout.contains("wallet10 via wallet"));
+            assert!(stderr.contains("approval 1 of 2  wallet10 via wallet"));
+            assert!(!stderr.contains("approval 2 of 2"));
+        }
+        client.close().await;
+    }
     Ok(())
 }

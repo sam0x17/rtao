@@ -683,6 +683,7 @@ async fn raw_member_review_and_saved_round_source_bind_same_discovered_account()
     let account = backend.discovered;
     let factory = NativeSignerFactory::with_backend(&ctx, backend);
     let selected = SigningSelection {
+        display_name: None,
         wallet: "public-external-member".into(),
         backend: "extension".into(),
         address: None,
@@ -842,6 +843,7 @@ async fn raw_unresolved_explicit_account_cannot_be_erased_by_public_selection() 
         let factory =
             NativeSignerFactory::with_backend(&ctx, Arc::new(TestBackend::new(&trace, 19)?));
         let selection = SigningSelection {
+            display_name: None,
             wallet: ctx.globals.wallet_name.clone(),
             backend: backend_name.into(),
             address: None,
