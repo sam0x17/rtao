@@ -7123,11 +7123,12 @@
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "runtime/src/transaction_payment_wrapper.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "runtime-authoritative fee-payer/discount/priority policy; source-to-client contract guard pending"
+          "xtask/src/extract_fee_contract.rs",
+          "vendor/upstream/extracted/chain_rules.json"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1d9f3cb8d00c601eb76fde8aa27db24add6f0d10"
       },
       {
         "kind": "oracle-only",
@@ -8476,22 +8477,27 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/main.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` entry point and command tree"
+          "rtao_cli::application::{command_tree, compatibility_aliases, command_path, normalize_legacy_address_argv, warn_legacy_config}",
+          "crates/rtao-cli/src/main.rs; rtao_cli::commands::command_tree",
+          "rtao_cli::commands::catalog::{tools_payload, chain_matches, chain_catalog, run_tools, run_explain}",
+          "rtao_cli::globals::{root_globals, Globals}; rtao_cli::context::AppContext",
+          "crates/rtao-cli/tests/{startup_contract, entrypoint_contract, cli_source_tree, config_catalog, catalog_entrypoint, globals_contract}.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "57f82d668a651b24f71174a0f26f5c91a2dea842"
       },
       {
         "kind": "ported",
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/metagraph_view.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `subnets metagraph`"
+          "crates/rtao-cli/src/commands/subnets.rs",
+          "crates/rtao-cli/tests/subnets_commands.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3ef561c3cbb67138952c08fdc02c5ec78dd9a19a"
       },
       {
         "kind": "ported",

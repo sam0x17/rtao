@@ -33,16 +33,21 @@ The main log was 739,615 bytes, SHA256
 `538c058f93bbbbc3c0d01cfb0561fc876cc1a19829254004e45bc3f3a5048de2`;
 no raw log or archive is retained.
 
-Source records 322 of 357 files reconciled, with 35 pending. The generated
-matrix remains at 319 reconciled and 38 pending until the hosted refresh.
+Source and the generated matrix record 322 of 357 files reconciled, with
+35 pending.
 The three new source dispositions cover CLI startup, metagraph output and
 the payment wrapper's client-visible contract. They do not establish runtime
 admission, debit or refund behavior. The exact adoption record is
 `client-7997ec0-three-source-row-adoption.json`, SHA256
 `a3ca105e82aca429dfbdd3e0c602057af007b3dded5ef32e4bb96cd36fa669bf`.
-M0/M1 and twenty individual M2 implementation/guide steps remain
-accepted. M2-26 and the M2 milestone remain open because M2-S02 is unaccepted;
-no later milestone or strict M8 acceptance follows from this checkpoint.
+M0/M1 and twenty individual M2 implementation/guide steps remain accepted.
+Eight individual M3 implementation/example/guide steps are now checked:
+M3-01 through 06, M3-09 and M3-10. Their 61 owning inputs and template tree
+are unchanged from the tested checkpoint. The earlier 42 named miner-related
+witnesses retain their actual 3,132-test run provenance; the current green
+3,145-test result and successful native template gate supply the later C1
+evidence. M2-26, M2-S02, M3-11 and whole M2/M3 acceptance remain open.
+No later milestone or strict M8 acceptance follows.
 
 The next reviewed source batch changes 31 files and adds 27 test functions,
 expecting 3,172 tests with four skips in its future ordinary checkpoint.
@@ -50,16 +55,27 @@ It adds multisig aliases and direct followup, owner labels and human output,
 authenticated pruning-test inputs, staking boundary fixtures, pre-signing
 reserve refusal and shielded inner-finality regressions. All exact reviewed
 afterimages and formatting checks match; no local compilation or tests ran.
-The pruning inputs require hosted regeneration and authenticated adoption
-of `named_tables.json` and catalog `py.rs` before ordinary checks. The reports
-also need to include the three source dispositions above. This newer batch
-has no execution credit from the green checkpoint.
+The pruning inputs and source reports have now been regenerated and adopted
+from the successful hosted refresh below. The newer 27 tests still have no
+execution credit from the green checkpoint.
 
 The first refresh, run 38954992909 at `e497f18`, generated the candidate
 outputs but failed source parity because the newly mapped CLI entry file
 lacked its separate `main.py` attribution header. No artifacts were adopted.
 A header-only correction preserves all executable bytes and the existing
-`prompt.py` attribution. A new hosted refresh is required before full tests.
+`prompt.py` attribution. The corrected refresh,
+[38956406939](https://github.com/sam0x17/rtao/actions/runs/38956406939),
+passes at exact `9dd98921f76f052ae890ead825bdf1047b5cef9b`. Artifact inspection
+and a separate refetch adopt exactly six files: the pruning input extraction,
+catalog `py.rs` and four reports. The other 17 generated outputs, all 23
+dependency inputs and the package/feature graphs remain unchanged. The new
+source entry adds four invalid-input cases, five admin-window cases and one
+switch-input vector; every prior named-table byte and catalog record is
+preserved. Inspection SHA256 is
+`768707e72981512b5014180646b2523d2a84241ef0cc07436413b7300b590582`;
+adoption SHA256 is
+`645c5d25a167529e95a4efee38a70bc3df08aeb524723cb0970a4a91319b598c`.
+This report-only success does not execute the 27 newer test functions.
 
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
