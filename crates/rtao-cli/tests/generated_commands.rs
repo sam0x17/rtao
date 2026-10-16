@@ -895,6 +895,21 @@ async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_acce
         expected,
         "CLI dry-runs must cover the exact authenticated intent table"
     );
+    // Required public hotkey arguments resolve through the real wallet lookup
+    // before the injected key source is used. Supply public records only.
+    let root = TempRoot::new();
+    let wallet = root.path().join("sample");
+    std::fs::create_dir(&wallet)?;
+    std::fs::create_dir(wallet.join("hotkeys"))?;
+    for (path, account) in [
+        (wallet.join("coldkeypub.txt"), COLD),
+        (wallet.join("hotkeys/sample"), HOT),
+    ] {
+        std::fs::write(
+            path,
+            serde_json::to_vec(&json!({"ss58Address":account,"cryptoType":1}))?,
+        )?;
+    }
     let runtime = FakeState::try_default()?.runtime;
     let mut visited = BTreeSet::new();
     let mut failures = Vec::new();
@@ -906,6 +921,12 @@ async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_acce
             bind_cli_sample_work(&state, spec.name, &mut args)?;
             let mut argv = vec![
                 "rtao".into(),
+                "--wallet-path".into(),
+                root.path().to_str().ok_or("fixture wallet path")?.into(),
+                "--wallet".into(),
+                "sample".into(),
+                "--hotkey".into(),
+                "sample".into(),
                 "--json".into(),
                 "--dry-run".into(),
                 "tx".into(),
@@ -915,7 +936,7 @@ async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_acce
             let parsed = commands::command_tree()?.try_get_matches_from(argv)?;
             let (mut ctx, sink) = context(&parsed, &generated::intent_reserved(spec.name)?)?;
             // JSON/non-TTY policy retains the real confirmation stage without
-            // --yes, an on-disk wallet, or a secret-bearing test signer.
+            // --yes, private key material, or a secret-bearing test signer.
             let request = TxRequest::from_matches(
                 &mut ctx,
                 spec.name,

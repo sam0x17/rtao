@@ -164,7 +164,21 @@ still awaits successful hosted execution. The bounded failure record is
 The small compiler/leaf correction is pushed at
 `8b0ffbd21f26da8b77baebd40ac43b0461e7fa70`; ordinary run
 [38966898387](https://github.com/sam0x17/rtao/actions/runs/38966898387)
-is active. Its result does not cover the following later source batch.
+passes all five supporting jobs and strict Clippy, then reports 3,180 passed,
+three failed and four skipped. Doctests and documentation upload were not
+reached. Its result does not cover the following later source batch.
+
+The failures identify three fixture corrections. Clap's generated `help`
+subcommand is invoked without an appended help flag, while every ordinary
+visible command still receives `--help`. The 83-operation dry-run traversal
+now supplies public-only wallet records for required hotkey name resolution;
+its injected private-acquisition, hook and author-RPC sentinels stay intact.
+The proxy success event uses an empty array for the metadata's unit tuple
+instead of JSON null. All existing traversal and receipt assertions remain.
+The bounded failure details are `client-8b0ffbd-three-failure-details.json`;
+the 783,437-byte main log has SHA256
+`840ff1c724401ab1f9133b6412a73ae1aa2f67ebae14cf730d50e431418d6a1c`.
+No raw log is retained. These corrections require another full hosted run.
 
 The next source batch shares the naturally ordered, nonempty-contact public
 name lookup between stake views and pickers. It fixes duplicate local aliases
