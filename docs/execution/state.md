@@ -143,8 +143,9 @@ input, one first D-042 pinning test, derived counts and ordinary measurement
 metadata. All 23 dependency inputs, role inventories/host flags and other
 compatibility claims are unchanged. No archive or extraction directory remains.
 
-The ordinary combined checkpoint is next, with 3,077 expected tests. Report
-generation supplies no new regression execution or milestone acceptance.
+Ordinary combined [38889135192](https://github.com/sam0x17/rtao/actions/runs/38889135192)
+is running at exact `60a20ee`, with 3,077 expected tests. Report generation
+supplies no new regression execution or milestone acceptance.
 The M3 readiness audit finds represented miner/authentication/template source;
 shared compiled-example documentation wiring remains unfinished. M2's guide
 acceptance retains that shared documentation requirement. The security note's
@@ -152,6 +153,15 @@ old live-cache claim is retired; historical review identities stay intact.
 M2-S02 remains open/unaccepted: direct owning-boundary inspection found no safe
 compatible wrapper that erases the dependency's private Ed25519 object. Existing
 upstream issue #3251 remains open, with no comments at this inspection.
+
+The subsequent source batch adds one independently reviewed multisig
+registration fixture with ordinary and shielded vectors. It uses distinct
+member/group/hotkey identities, preserves the inclusion receipt and requires
+later-block registration completion for the shielded path. Existing fake
+transport support is reused; no production harness or dependency changes.
+Formatting and applicability pass. This function is outside the `60a20ee`
+checkpoint and remains unexecuted; the next combined total becomes 3,078.
+The multisig-safety source row stays pending.
 
 ### Command review and required-address follow-up, execution pending
 
