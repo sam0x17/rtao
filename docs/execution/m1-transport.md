@@ -16,7 +16,8 @@ This supplies current transport execution for the applicable
 [M1 Q30 development exit](m1-client.md#current-q30-development-exit).
 Generated parameter inputs are authenticated and adopted. Complete source review
 and exact hosted results now reconcile test_rpc.py and the FakeNode harness;
-the generated matrix awaits hosted refresh. These Rust results add no
+hosted report run 38876950939 refreshed their generated matrix entries at
+`82d82d7`. These Rust results add no
 Python/oracle, HTTPS two-provider, live-network, platform or release claim.
 
 `rtao-rpc` now owns a single WebSocket supervisor and implements the real

@@ -63,8 +63,8 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map and adopted generated matrix now agree at 303/357
-reconciled and 54 pending after the authenticated refresh below.
+The reviewed source map and adopted generated matrix now agree at 306/357
+reconciled and 51 pending after the authenticated refresh below.
 There remain 20 pending e2e mappings and 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -87,12 +87,24 @@ actual-command fixtures await hosted compilation and execution. Direct rustfmt,
 whitespace checks and independent source reviews pass.
 
 Complete source reviews and exact d01830c results reconcile the metagraph,
-FakeNode harness and test_rpc.py rows. The source map is now 306/357 reconciled,
-51 pending; the generated matrix remains 303/54 until hosted refresh and review.
-Only those three rows change. Root command summaries and generic required-address
+FakeNode harness and test_rpc.py rows. The source map and generated matrix now
+agree at 306/357 reconciled, 51 pending. Root command summaries and generic required-address
 picker integration remain incomplete, so their whole source rows stay pending.
 Strict M8 remains off and M2-S02 stays open/unaccepted. No local builds/tests or
 new upstream filings were used for this batch.
+
+Report-only hosted run
+[38876950939](https://github.com/sam0x17/rtao/actions/runs/38876950939)
+passed at exact `82d82d792b2c01eb7df3d81538f0ede0ca592f24`, including the full
+source-parity check. Authenticated artifact 12035678693 contains only four
+reports (58,349 bytes, SHA256
+`2770c94c6e5507a9f829272eb3f7ababa080746637c1db55e4add34ad5340a08`).
+Independent refetch confirms exactly those three source-row replacements;
+all 23 shipped dependency inputs, role counts/host flags, 20 e2e gaps,
+68 divergences and other compatibility claims remain unchanged. Bounded proof
+`m1-three-source-report-82d82d7-adoption.json` retains the reviewed identities;
+no archive or extraction tree is retained. This report-only run did not execute
+the five new fixtures; the ordinary combined checkpoint remains pending.
 
 ### Verified weight-clipping repair
 
