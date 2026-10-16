@@ -367,6 +367,9 @@ impl<S: Signer + ?Sized> Signer for Arc<S> {
     fn metadata_constants(&self) -> Option<(u8, String)> {
         (**self).metadata_constants()
     }
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
+        (**self).prepare_shielded()
+    }
     fn sign<'a>(
         &'a self,
         request: &'a SigningRequest<'a>,

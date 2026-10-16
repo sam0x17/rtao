@@ -1274,58 +1274,70 @@ impl Signer for PreparingSigner {
 
 #[tokio::test]
 async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
-    for lag in [2, 6] {
-        let (client, fake, inner) = fixture().await;
-        let signer = PreparingSigner::new(inner, fake.clone(), PrepareBehavior::Advance(lag));
-        fake.mutate_state(|state| {
-            state.set_nonce(signer.account().to_string(), 7);
-            state.set_finalized(state.block - 2).unwrap();
-        });
-        let initial_finalized = fake.state().lock().unwrap().finalized;
-        let inner_call = call(&client, 3).await;
-        let result = client
-            .submit_shielded(inner_call.clone(), &signer, &pool())
-            .await;
-        assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
-        if lag == 6 {
-            assert!(matches!(
-                result,
-                Err(SubmitFailure::ShieldEraExpired {
-                    period: 8,
-                    finality_lag: 6,
-                })
+    for wrapper in ["direct", "arc", "dyn_arc"] {
+        for lag in [2, 6] {
+            let (client, fake, inner) = fixture().await;
+            let signer = Arc::new(PreparingSigner::new(
+                inner,
+                fake.clone(),
+                PrepareBehavior::Advance(lag),
             ));
-            assert!(signer.inner.signed.lock().unwrap().is_empty());
-            assert!(fake.state().lock().unwrap().submissions.is_empty());
-            assert_eq!(
-                client.nonces().cached(&signer.account().to_string()).await,
-                None
-            );
-        } else {
-            let result = result.unwrap();
-            assert_eq!(result.inclusion, Inclusion::PoolAccepted);
-            let signed = signer.inner.signed.lock().unwrap().clone();
-            let expected_anchor = fake
-                .state()
-                .lock()
-                .unwrap()
-                .block_hash(initial_finalized + 40)
-                .unwrap();
-            assert_eq!(signed.len(), 2);
-            assert_eq!(signed[0].purpose, SignPurpose::ShieldInner);
-            assert_eq!(signed[1].purpose, SignPurpose::ShieldCarrier);
-            assert_eq!(signed[0].call, inner_call.as_bytes());
-            assert_eq!(signed[0].json["nonce"], "0x00000030");
-            assert_eq!(signed[1].json["nonce"], "0x0000002f");
-            assert_eq!(signed[0].json["blockHash"], expected_anchor);
-            assert_eq!(signed[1].json["blockHash"], expected_anchor);
-            assert_eq!(signed[0].json["era"], signed[1].json["era"]);
-            assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
-            let next = client.nonces().lease(&signer.account()).await.unwrap();
-            assert_eq!(next.value(), 49);
-            next.settle();
+            let dynamic: Arc<dyn Signer> = signer.clone();
+            let selected: &dyn Signer = match wrapper {
+                "arc" => &signer,
+                "dyn_arc" => &dynamic,
+                _ => signer.as_ref(),
+            };
+            fake.mutate_state(|state| {
+                state.set_nonce(signer.account().to_string(), 7);
+                state.set_finalized(state.block - 2).unwrap();
+            });
+            let initial_finalized = fake.state().lock().unwrap().finalized;
+            let inner_call = call(&client, 3).await;
+            let result = client
+                .submit_shielded(inner_call.clone(), selected, &pool())
+                .await;
+            assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+            if lag == 6 {
+                assert!(matches!(
+                    result,
+                    Err(SubmitFailure::ShieldEraExpired {
+                        period: 8,
+                        finality_lag: 6,
+                    })
+                ));
+                assert!(signer.inner.signed.lock().unwrap().is_empty());
+                assert!(fake.state().lock().unwrap().submissions.is_empty());
+                assert_eq!(
+                    client.nonces().cached(&signer.account().to_string()).await,
+                    None
+                );
+            } else {
+                let result = result.unwrap();
+                assert_eq!(result.inclusion, Inclusion::PoolAccepted);
+                let signed = signer.inner.signed.lock().unwrap().clone();
+                let expected_anchor = fake
+                    .state()
+                    .lock()
+                    .unwrap()
+                    .block_hash(initial_finalized + 40)
+                    .unwrap();
+                assert_eq!(signed.len(), 2);
+                assert_eq!(signed[0].purpose, SignPurpose::ShieldInner);
+                assert_eq!(signed[1].purpose, SignPurpose::ShieldCarrier);
+                assert_eq!(signed[0].call, inner_call.as_bytes());
+                assert_eq!(signed[0].json["nonce"], "0x00000030");
+                assert_eq!(signed[1].json["nonce"], "0x0000002f");
+                assert_eq!(signed[0].json["blockHash"], expected_anchor);
+                assert_eq!(signed[1].json["blockHash"], expected_anchor);
+                assert_eq!(signed[0].json["era"], signed[1].json["era"]);
+                assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+                let next = client.nonces().lease(&signer.account()).await.unwrap();
+                assert_eq!(next.value(), 49);
+                next.settle();
+            }
+            client.close().await;
         }
-        client.close().await;
     }
 }
 
@@ -1401,7 +1413,7 @@ async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_m
         );
         assert!(!fake.requests()[before..].iter().any(|request| {
             request.method.starts_with("author_")
-                || request.method == "system_accountNextIndex"
+                || request.method == "account_nextIndex"
                 || request.method == "chain_getFinalizedHead"
         }));
         client.close().await;
