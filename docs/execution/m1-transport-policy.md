@@ -1,5 +1,31 @@
 # M1 transport policy and TLS provider checks
 
+## Current source and hosted validation
+
+Ordinary hosted run 38865058430 at `3f1aa67` passed the policy and socket
+fixtures with the shipped Rustls 0.23.46 graph. Its poisoned-default regression
+checks explicit provider selection when an unusable process default exists.
+That fixture does not compile a second provider.
+
+The follow-up adds two source-extracted pytest parameter tables and seven exact
+`pyt:` origins. Three actual-resolver fixtures check literal updates, provenance
+spans and unsupported producer refusal. Hosted generation and execution remain
+pending. These tables supply test inputs; they do not establish Python assertion
+execution or complete `test_rpc.py` reconciliation.
+
+A maintained independent workspace at `ci/tls-two-providers` exercises the real
+RPC connector with both ring and AWS-LC compiled for the shipped Rustls version
+and no process-default provider. Its independent lock must be generated and
+reviewed in hosted CI before the existing features job can execute its one test.
+Preparation alone proves no TLS execution. The shipped workspace's AWS-LC bans,
+dependency inputs and locks remain unchanged. This fixture supplies no HTTPS
+SignedClient or additional platform result.
+
+All substantial validation runs in bounded free `ubuntu-latest` jobs. Do not
+create a local fixture workspace, install tools or resume a retired build cache.
+
+## Historical evidence, 2026-10-14
+
 `cargo test --locked -p rtao-rpc policy:: --lib` passed all 16 policy tests on
 the Mac Studio with Rust/Cargo 1.99.0. The tests consume the extracted v478
 constants, including the diagnostic limits, and cover the pinned Python
@@ -26,7 +52,7 @@ The normal workspace lockfile contains neither aws-lc package; its dependency
 bans remain in force. Both runs of the fixture test passed, most recently in
 0.20 seconds, with no ignored tests.
 
-Reproduction requires a new independent workspace with path dependencies on
+The historical disposable workspace used path dependencies on
 `rtao-rpc` and `rtao-testkit`, the root's pinned `w3f-bls` patch, tokio's `macros`
 and `rt-multi-thread` features, `url`, and this rustls dependency:
 
@@ -67,6 +93,7 @@ async fn wss_with_two_compiled_providers_and_no_process_default()
 }
 ```
 
-The disposable fixture manifest, source, lockfile, and temporary logs were
-removed after the liveness and dependency audit. The shared task build cache
-remains needed by the ongoing plan execution.
+The disposable fixture manifest, source, lockfile and temporary logs were
+removed after the liveness and dependency audit. The former shared task build
+root is retired and absent. Current source and hosted checks above supersede
+its reproduction instructions; no live-cache requirement remains.

@@ -660,7 +660,7 @@ mod tests {
         json!({"block": block, "deposit": 7, "info": {"fields": fields}})
     }
 
-    // py: sdk/python/tests/unit/test_v446_accounting_and_commitments.py:10-40
+    // pyt: sdk/python/tests/unit/test_v446_accounting_and_commitments.py::test_failed_timelock_commitment_is_terminal_and_not_revealed
     #[test]
     fn test_failed_timelock_commitment_is_terminal_and_not_revealed() -> Result<(), CommitmentError>
     {
