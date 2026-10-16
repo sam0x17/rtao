@@ -21,6 +21,10 @@ the underlying call as executed.
 Balances use checked native `u64` rao. Amounts below one rao, negative amounts
 and values outside that range are refused. EVM contract integers and public
 book recovery coordinates have their own domains.
+TAO/alpha amounts under `rtao tx` and amounts for `root allocate` and `root swap`
+accept decimal exponents, underscores and Unicode decimal digits, such as
+`1e-9`, `1_0` and `١.٥`. Input is limited to 4,096 UTF-8 bytes and exponent
+magnitude 4,096. Normalization preserves exact rao values.
 
 ## Discovery and account names
 

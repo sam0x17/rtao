@@ -198,6 +198,33 @@ bring the future inventory to 3,185/four skips. All source changes remain
 unexecuted; formatting and whitespace checks pass. No source row or milestone
 is promoted by these changes.
 
+Those changes and the three fixture corrections are pushed at `edefe85`.
+Ordinary run [38970331580](https://github.com/sam0x17/rtao/actions/runs/38970331580)
+is active with an expected 3,185 tests and four skips. Its supply job failed
+after `inout 0.2.3` was yanked on 2026-10-16 at 21:27 UTC. The upstream
+`0.2.4` release restores a missing output-buffer length check, keeps the same
+dependencies and requires Rust 1.85, below this workspace's MSRV. The lock
+candidate will be resolved in the existing hosted lock lane. Its guard permits
+only that package's version/checksum and sole versioned dependency reference
+to change; the fuzz lock and all remaining bytes must stay unchanged. No new
+advisory exception or manual lockfile edit is proposed. The raw failure
+identity and registry/source comparison are retained under the recovery root.
+
+The following client repairs are separate from that active run. Weight
+activity alarms now use the chain's minimum one-block cutoff, including
+root-permitted zero-tempo subnets. Live external signers repeat the carrier-fee
+check after public account selection: default shielding downgrades on a known
+shortfall, forced/required shielding refuses before private acquisition, and
+previews remain warning-only. Root and generated transaction amount options
+share the existing bounded Decimal-compatible CLI normalizer; native Money
+and Amount constructors retain their strict checked-u64 contract. D-042 and
+the CLI guide describe the shared input budgets. Direct source attribution
+is corrected for serving, rate limits and the intent-table fixture homes.
+Two new fixture functions bring the next expected inventory to 3,187/four
+skips; the existing money fixture is strengthened without a new function.
+Formatting and whitespace checks pass. Hosted lock adoption, report refresh
+and ordinary validation remain pending; no source row or milestone is accepted.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded
