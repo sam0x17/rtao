@@ -324,7 +324,12 @@ async fn subnet_creation_success_keeps_compact_registration_fields_in_quiet_and_
     use rtao::primitives::{DefaultAccount, NetUid, TaoBalance};
     use rtao_runtime::storage::subtensor_module as st;
 
-    for json_mode in [false, true] {
+    for (quiet, json_mode, fail_progress) in [
+        (true, false, false),
+        (true, true, false),
+        (false, false, false),
+        (false, false, true),
+    ] {
         let (client, chain, keys) = fixture(u64::MAX).await?;
         let netuid = NetUid(9);
         let hotkey = AccountId([5; 32]);
@@ -372,17 +377,77 @@ async fn subnet_creation_success_keeps_compact_registration_fields_in_quiet_and_
         let intent = rtao_intents::RegisterSubnet {
             hotkey_ss58: Some(hotkey.into()),
         };
-        let mut flags = vec!["--yes", "--no-mev-shield", "--quiet"];
+        let mut flags = vec!["--yes", "--no-mev-shield"];
+        if quiet {
+            flags.push("--quiet");
+        }
         if json_mode {
             flags.push("--json");
         }
-        let (ctx, sink, reads) = context(&flags)?;
-        let receipt = tokio::time::timeout(
+        let (mut ctx, sink, reads) = context(&flags)?;
+        let progress_failed = Arc::new(tokio::sync::Notify::new());
+        let execution = RegistrationProgressCompletion {
+            progress_failed: progress_failed.clone(),
+            finished: std::sync::atomic::AtomicBool::new(false),
+            receipt: Mutex::new(None),
+        };
+        if fail_progress {
+            ctx.output = Output::new(
+                ctx.output.options.clone(),
+                Arc::new(RegistrationProgressSink {
+                    sink: sink.clone(),
+                    progress_failed,
+                }),
+            );
+        }
+        let outcome = tokio::time::timeout(
             std::time::Duration::from_secs(10),
-            ctx.submit_with(&client, &intent, &keys, false, None),
+            ctx.submit_with_keys_options(
+                &client,
+                &intent,
+                &keys,
+                SubmissionOptions {
+                    execution: fail_progress
+                        .then_some(&execution as &dyn rtao_cli::context::SubmissionExecution),
+                    hooks: fail_progress
+                        .then_some(&execution as &dyn rtao_cli::context::SubmissionHooks),
+                    ..Default::default()
+                },
+            ),
         )
-        .await??
-        .ok_or("registration receipt")?;
+        .await?;
+        if fail_progress {
+            let error = outcome.err().ok_or("progress pipe must fail")?;
+            assert!(error.message.contains("registration progress pipe closed"));
+            assert!(execution.finished.load(Ordering::SeqCst));
+            let receipt = execution
+                .receipt
+                .lock()
+                .map_err(|_| "progress receipt")?
+                .clone()
+                .ok_or("durable receipt after progress failure")?;
+            assert!(receipt.success);
+            assert_eq!(receipt.data["netuid"], 9);
+            let help = error.help.as_deref().ok_or("known receipt help")?;
+            assert!(
+                help.contains(
+                    receipt
+                        .extrinsic_id
+                        .as_deref()
+                        .ok_or("known receipt identity")?
+                )
+            );
+            assert!(help.contains("already submitted"));
+            assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+            assert_eq!(reads.load(Ordering::SeqCst), 0);
+            assert_eq!(
+                chain.state().lock().map_err(|_| "state")?.submissions.len(),
+                1
+            );
+            client.close().await;
+            continue;
+        }
+        let receipt = outcome?.ok_or("registration receipt")?;
         assert!(receipt.success, "{}", receipt.message);
         assert_eq!(receipt.message, "Subnet 9 registered.");
         assert_eq!(receipt.data["netuid"], 9);
@@ -425,9 +490,28 @@ async fn subnet_creation_success_keeps_compact_registration_fields_in_quiet_and_
                 );
             }
             assert!(!stdout.contains("registration price rao"));
-            assert!(!stdout.contains("Transaction"));
+            if quiet {
+                assert!(!stdout.contains("Transaction"));
+            } else {
+                // The ordinary pre-sign card is still present; the compact
+                // registration receipt adds no second Transaction section.
+                assert_eq!(
+                    stdout.lines().filter(|line| *line == "Transaction").count(),
+                    1
+                );
+            }
         }
-        assert!(sink.text(Stream::Stderr)?.is_empty());
+        let stderr = sink.text(Stream::Stderr)?;
+        if quiet || json_mode {
+            assert!(stderr.is_empty());
+        } else {
+            assert_eq!(
+                stderr
+                    .matches("NetworkAdded · subnet 9 · block 101")
+                    .count(),
+                1
+            );
+        }
         assert_eq!(reads.load(Ordering::SeqCst), 0);
         assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
         assert_eq!(
@@ -437,6 +521,71 @@ async fn subnet_creation_success_keeps_compact_registration_fields_in_quiet_and_
         client.close().await;
     }
     Ok(())
+}
+
+struct RegistrationProgressSink {
+    sink: MemorySink,
+    progress_failed: Arc<tokio::sync::Notify>,
+}
+impl rtao_cli::output::OutputSink for RegistrationProgressSink {
+    fn write(&self, stream: Stream, bytes: &[u8]) -> std::io::Result<()> {
+        if stream == Stream::Stderr && String::from_utf8_lossy(bytes).contains("NetworkAdded") {
+            self.progress_failed.notify_one();
+            return Err(std::io::Error::other("registration progress pipe closed"));
+        }
+        rtao_cli::output::OutputSink::write(&self.sink, stream, bytes)
+    }
+}
+
+struct RegistrationProgressCompletion {
+    progress_failed: Arc<tokio::sync::Notify>,
+    finished: std::sync::atomic::AtomicBool,
+    receipt: Mutex<Option<rtao::tx::ExtrinsicResult>>,
+}
+impl rtao_cli::context::SubmissionExecution for RegistrationProgressCompletion {
+    fn execute<'a>(
+        &'a self,
+        client: &'a Client,
+        intent: &'a dyn rtao::tx::DynIntent,
+        keys: &'a dyn DynKeySource,
+        options: &'a rtao::tx::ExecuteOptions,
+    ) -> BoxFuture<'a, Result<rtao::tx::ExtrinsicResult, rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            if options.progress.is_none() {
+                return Err(rtao_cli::error::CliError::failure(
+                    "registration progress missing",
+                ));
+            }
+            let receipt = rtao::Executor::new(client.clone())
+                .execute_dyn(intent, keys, options)
+                .await
+                .map_err(|error| rtao_cli::error::CliError::failure(error.to_string()))?;
+            // The actual SDK has queued NetworkAdded. The operation remains
+            // pending until the failing sink observes it; it must be drained.
+            self.progress_failed.notified().await;
+            self.finished.store(true, Ordering::SeqCst);
+            Ok(receipt)
+        })
+    }
+}
+impl rtao_cli::context::SubmissionHooks for RegistrationProgressCompletion {
+    fn before_submit(&self) -> BoxFuture<'_, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async { Ok(()) })
+    }
+    fn on_result<'a>(
+        &'a self,
+        receipt: &'a rtao::tx::ExtrinsicResult,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            assert!(self.finished.load(Ordering::SeqCst));
+            *self
+                .receipt
+                .lock()
+                .map_err(|_| rtao_cli::error::CliError::failure("progress receipt lock"))? =
+                Some(receipt.clone());
+            Ok(())
+        })
+    }
 }
 
 struct StopRegistrationBeforeSigning;
@@ -540,6 +689,66 @@ async fn subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_r
             }
         }));
     }
+    client.close().await;
+    // The live cost belongs to the semantic registration, including when a
+    // saved multisig supplies the outer approval. Stop before acquiring it.
+    let member_keys = members()?;
+    let (client, chain, _) = fixture(u64::MAX).await?;
+    let group = saved_group(&client, &member_keys).await?;
+    chain.mutate_state(|state| -> Result<(), rtao::core::CoreError> {
+        state.seed_runtime(
+            "SubnetRegistrationRuntimeApi",
+            "get_network_registration_cost",
+            json!(2_000_000_000u64),
+        )?;
+        for account in member_keys
+            .iter()
+            .map(|keys| keys.key.account())
+            .chain([group.address])
+        {
+            state.seed_python(
+                "System",
+                "Account",
+                &[json!(account)],
+                json!({"data":{"free":u64::MAX}}),
+            )?;
+        }
+        Ok(())
+    })?;
+    let (ctx, sink) = saved_context(&member_keys, &["--yes", "--no-mev-shield"], 1)?;
+    let factory = factory(&member_keys);
+    let intent = rtao_intents::RegisterSubnet {
+        hotkey_ss58: Some(AccountId([50; 32]).into()),
+    };
+    let error = ctx
+        .submit_saved_with_options(
+            &client,
+            &intent,
+            SubmissionOptions {
+                hooks: Some(&StopRegistrationBeforeSigning),
+                ..Default::default()
+            },
+            &factory,
+            &CallCache::default(),
+        )
+        .await
+        .err()
+        .ok_or("saved review sentinel")?;
+    assert_eq!(error.message, "review finished sentinel");
+    assert!(sink.text(Stream::Stdout)?.contains("2.000000000 TAO"));
+    assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+    assert!(
+        member_keys
+            .iter()
+            .all(|keys| keys.unlocks.load(Ordering::SeqCst) == 0)
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
     client.close().await;
     Ok(())
 }
