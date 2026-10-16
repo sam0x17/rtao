@@ -14,7 +14,62 @@ infrastructure, scheduled, oracle and release workflows are inactive drafts
 in `.github/deferred-workflows/`. No workflow was dispatched during
 the cleanup itself. Subsequent client checkpoints use hosted CI as recorded below.
 
-## Current client checkpoint, 2026-10-15
+## Current client checkpoint, 2026-10-16
+
+Ordinary hosted
+[38832708259](https://github.com/sam0x17/rtao/actions/runs/38832708259)
+passed at `7bb8c0b888b5e634c8ca1236f05ceb9b6f81a48a`. All six jobs
+passed: check, no-host, features, MSRV, semver and supply. The main gate passed
+strict Clippy, source/pin/extraction checks, documentation generation, all
+3,013 executed tests (four skipped) and workspace doctests. The documentation
+artifact uploaded successfully. This supersedes the earlier execution-pending
+claims for the integrated EVM, pruning, compiler, transport and extractor
+fixtures below. It supplies no Python/oracle, live-runtime, device, sanitizer
+or native-platform result.
+
+The authenticated main log is 927,796 bytes with SHA256
+`88bc33d05df3a5c14789d615940791ce65c1e6486726926f1b25de2dc15933d3`.
+Bounded evidence is `check-38832708259.json` and
+`7bb8c0b-hosted-results.json` under `.local/recovery/2026-10-15/`;
+no raw log, archive or extraction directory is retained. A separate exact-name
+extraction, `m9-security-current-ci-38832708259.json`, confirms all 70 selected
+S9 regressions and all 12 new M2-S03 parser/public-view/differential regressions
+passed on this commit. Independent source review and exact executed results
+close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
+the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
+[M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
+
+The published source map and generated matrix agree at 297/357 reconciled,
+60 pending, with 20 pending e2e mappings and 68 divergences. Passing CI does not
+reconcile the remaining source rows or accept a milestone. Strict M8 remains
+off and M2-S02 remains open/unaccepted. Current work continues through M9,
+with source review and substantial validation on free hosted CI.
+
+Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
+No local build/test, service, Mac Studio work, new temporary root or upstream
+filing was needed. Preserve wallets, recovery material and unrelated work.
+
+### Subsequent weight-clipping repair, awaiting hosted validation
+
+Source review found a public-helper result mismatch for finite minimum-subnormal
+scores: clipping can underflow its final denominator to zero. Python raises;
+Rust previously returned successful NaNs. Refuse either sign of zero with a
+native `WeightsError` and Python's message before division. Existing `conform`
+already rejected those NaNs before call composition; no invalid submission was
+established. The regression exercises both helper and conform, plus valid
+subnormal normalization, unclipped output and uniform fallback branches.
+
+Independent source review, direct rustfmt and whitespace checks pass.
+Compilation and regression execution remain pending hosted CI. The complete
+weights source row stays pending; native checked u64 balances and raw-weight
+semantics are unchanged. Bounded proposal/review evidence remains under the
+existing recovery root, with no build output or extra temporary directory.
+
+## Prior integrated client checkpoint, 2026-10-15
+
+The following records describe earlier checkpoints. Their pending execution
+claims and dispatch instructions are superseded by the current result above;
+their source-review and coverage limits remain applicable.
 
 The current source batch reconciles thirteen complete source relationships: all
 ten EVM CLI modules, basket display pricing and both optional recorders. The
@@ -214,7 +269,7 @@ resolver checks both locks under one 170-second deadline. Source reports are
 refreshed for ordinary validation. The main gate now checks documentation
 before nextest/doctests, preserving every command and catching link failures earlier.
 
-All current work follows Q30. Local target output remains 547,192 KiB; only
+At this earlier checkpoint, local target output was 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.
 No local builds/tests, new temporary root, node, Mac Studio work, device run
 or new upstream filing was needed. Preserve wallets, recovery material and
@@ -1099,8 +1154,9 @@ The recovery directory is excluded from Git and Docker contexts; its README and 
 manifest describe recovery. Preserving a candidate does not adopt or
 validate it. See [disk-cleanup.md](disk-cleanup.md).
 
-The pre-existing `target/debug` is preserved; the remaining complete target
-directory is 547,192 KiB (534 MiB). Shared Cargo/toolchain caches, other
+At the initial cleanup, the pre-existing `target/debug` was preserved and the
+remaining target directory was 547,192 KiB (534 MiB). By the 2026-10-16
+checkpoint, `target` is absent. Shared Cargo/toolchain caches, other
 projects and all wallets/recovery state are untouched. Retained durable
 wallet/recovery data: `/Users/sam/.local/share/rtao/testnet-soak`. No service
 or task still depends on the deleted temporary root. Time Machine snapshots
@@ -1151,7 +1207,7 @@ this decision, and no repeated namespace/runner/Pages permission is needed.
 PR-U17 was filed against current upstream main using the recorded prototype
 and its prior emulator evidence; validation is in `docs/upstream/pr-u17.md`.
 
-## Current verification
+## Historical verification before Q30
 
 The user explicitly approved Q26's BLS build-graph criterion, Q27's exact
 dormant lru exception and Q28's exact dormant ruzstd exception. The reviewed
@@ -1468,7 +1524,7 @@ Clippy checks already passed. No complete gate, commit/push, formal milestone
 exit or release is claimed. The unanswered license-criterion decision remains
 unchanged; all already approved decisions remain applied.
 
-## Active source-artifact task, 2026-10-15
+## Earlier source-artifact task, 2026-10-15
 
 No temporary root remains. Hosted archives and logs are inspected in memory;
 only bounded adoption and failure records are retained in the existing
@@ -1478,4 +1534,5 @@ The Q30 follow-up audit removes the stale macOS-local requirement and adds
 hosted documentation coverage to the existing check job: strict rustdoc, a
 rendered book, generated API/LLM index and downloadable development artifacts.
 The docs command has a 15-minute limit, reuses the hosted target and requires
-GitHub's Linux runner environment. Hosted execution remains pending.
+GitHub's Linux runner environment. Hosted execution was pending at that
+checkpoint; run 38832708259 now verifies documentation generation.
