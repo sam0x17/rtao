@@ -896,12 +896,427 @@ fn generic_address_machine_abort_and_excluded_routes_keep_existing_boundaries() 
         assert!(
             application::pending_prompt_matches(
                 &command,
-                &original(&["rtao", "evm", "pubkey"]),
+                &original(&["rtao", "evm", "stake", "add"]),
                 &PromptContext::default(),
                 &input
             )?
             .is_none()
         );
+    }
+    Ok(())
+}
+
+#[test]
+fn generic_transaction_required_fields_confirm_wallet_before_values_and_bind_root_hotkey()
+-> TestResult {
+    let root = Root::new()?;
+    let configured_hotkey = AccountId([21; 32]);
+    let chosen_hotkey = AccountId([22; 32]);
+    public_hotkey(&root, "configured", configured_hotkey)?;
+    public_hotkey(&root, "chosen", chosen_hotkey)?;
+    let cases = vec![
+        (vec!["rtao", "call"], vec![("target", "System.remark")]),
+        (
+            vec!["rtao", "root", "swap", "--hotkey", "worker"],
+            vec![("--from", "1"), ("--to", "2"), ("--amount", "1")],
+        ),
+        (
+            vec!["rtao", "misc", "weights", "set"],
+            vec![("--netuid", "1")],
+        ),
+        (vec!["rtao", "wt", "commit"], vec![("--netuid", "1")]),
+        (
+            vec!["rtao", "misc", "weights", "reveal"],
+            vec![
+                ("--netuid", "1"),
+                ("--uids", "0"),
+                ("--weights", "1"),
+                ("--salt", "1"),
+            ],
+        ),
+        (
+            vec!["rtao", "misc", "axon", "set"],
+            vec![("--netuid", "1"), ("--ip", "127.0.0.1"), ("--port", "3030")],
+        ),
+        (vec!["rtao", "axon", "reset"], vec![("--netuid", "1")]),
+        (
+            vec!["rtao", "misc", "collateral", "add"],
+            vec![("--netuid", "1")],
+        ),
+        (
+            vec!["rtao", "collateral", "set-min"],
+            vec![("--netuid", "1"), ("--min-alpha", "1")],
+        ),
+        (vec!["rtao", "stake", "set-auto"], vec![("--netuid", "1")]),
+        (
+            vec!["rtao", "st", "children", "set"],
+            vec![("--netuid", "1"), ("--children", "[]")],
+        ),
+        (
+            vec!["rtao", "stake", "child", "revoke"],
+            vec![("--netuid", "1")],
+        ),
+        (
+            vec!["rtao", "stake", "child", "take"],
+            vec![("--netuid", "1"), ("--take", "0.1")],
+        ),
+        (
+            vec!["rtao", "hparams", "stake-burn"],
+            vec![
+                ("--netuid", "1"),
+                ("--amount-tao", "1"),
+                ("--limit-price", "1"),
+            ],
+        ),
+        (
+            vec!["rtao", "hparams", "trim-null"],
+            vec![("--netuid", "1")],
+        ),
+        (
+            vec!["rtao", "conviction", "mode", "--perpetual"],
+            vec![("--netuid", "1")],
+        ),
+    ];
+    #[cfg(feature = "evm")]
+    let cases = {
+        let mut cases = cases;
+        cases.push((vec!["rtao", "evm", "associate"], vec![("--netuid", "1")]));
+        cases
+    };
+    for (words, fields) in cases {
+        let command = rtao_cli::commands::command_tree()?;
+        let argv = original(&words);
+        let lines = std::iter::once("chosen")
+            .chain(fields.iter().map(|(_, answer)| *answer))
+            .collect::<Vec<_>>();
+        let (input, trace) = terminal(&lines, true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        let mut invocation = application::parse_with_context(
+            command,
+            argv.clone(),
+            &mut app,
+            PromptHistory::default(),
+        )?;
+        assert_eq!(app.globals.wallet_name, "chosen", "{words:?}");
+        assert!(app.globals.wallet_given, "{words:?}");
+        let reads = trace.lock().map_err(|_| "trace")?.clone();
+        assert_eq!(reads.len(), 1 + fields.len(), "{words:?}");
+        assert!(reads[0].contains("wallet [configured]"), "{words:?}");
+        for (read, (field, _)) in reads.iter().skip(1).zip(&fields) {
+            assert!(
+                read.contains(field.trim_start_matches('-')),
+                "{words:?}: {read}"
+            );
+        }
+        let replay = invocation.history.replay_command(&strings(&argv));
+        assert_eq!(replay.matches("--wallet chosen").count(), 1, "{words:?}");
+        assert!(!reads.iter().any(|line| line.contains("PRIVATE")));
+        if words.get(1) == Some(&"root") {
+            let group = invocation.matches.subcommand().ok_or("root group")?.1;
+            let rtao_cli::commands::root::Request::Swap {
+                hotkey,
+                origin,
+                dest,
+                amount,
+                ..
+            } = rtao_cli::commands::root::Request::from_matches(
+                &mut app,
+                group,
+                &mut invocation.history,
+            )?
+            else {
+                return Err("actual root swap request".into());
+            };
+            assert_eq!(hotkey, chosen_hotkey);
+            assert_ne!(hotkey, configured_hotkey);
+            assert_eq!((origin.0, dest.0), (1, 2));
+            assert_eq!(amount, "1");
+            assert_eq!(*trace.lock().map_err(|_| "trace")?, reads);
+            assert_eq!(
+                replay,
+                "rtao root swap --hotkey worker --wallet chosen --from 1 --to 2 --amount 1",
+            );
+        }
+    }
+    // A raw command's role belongs to that command; the root backend remains
+    // authoritative and must not be overwritten by --key hotkey.
+    let command = rtao_cli::commands::command_tree()?;
+    let argv = original(&["rtao", "--signer", "ledger", "call", "--key", "hotkey"]);
+    let (input, trace) = terminal(&["System.remark"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+    let invocation =
+        application::parse_with_context(command, argv, &mut app, PromptHistory::default())?;
+    assert_eq!(app.globals.signer_backend.as_deref(), Some("ledger"));
+    assert_eq!(
+        invocation_leaf(&invocation.matches)
+            .get_one::<String>("signer_backend")
+            .map(String::as_str),
+        Some("hotkey"),
+    );
+    let reads = trace.lock().map_err(|_| "trace")?;
+    assert_eq!(reads.len(), 1);
+    assert!(reads[0].contains("target"));
+    Ok(())
+}
+
+#[cfg(feature = "evm")]
+#[tokio::test]
+async fn required_evm_pubkey_position_uses_public_picker_and_actual_offline_handler() -> TestResult
+{
+    let root = Root::new()?;
+    let command = rtao_cli::commands::command_tree()?;
+    let argv = original(&["rtao", "evm", "pubkey"]);
+    let (input, trace) = terminal(&["unknown-contact", "1"], true, true);
+    let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+    let mut invocation =
+        application::parse_with_context(command, argv.clone(), &mut app, PromptHistory::default())?;
+    let canonical = AccountId([41; 32]).to_string();
+    assert_eq!(
+        invocation_leaf(&invocation.matches).get_one::<String>("ss58"),
+        Some(&canonical)
+    );
+    assert_eq!(
+        strings(&invocation.argv),
+        ["rtao", "evm", "pubkey", canonical.as_str()]
+    );
+    assert_eq!(
+        invocation.history.replay_command(&strings(&argv)),
+        format!("rtao evm pubkey {canonical}"),
+    );
+    assert_eq!(app.globals.wallet_name, "configured");
+    assert!(!app.globals.wallet_given);
+    let reads = trace.lock().map_err(|_| "trace")?.clone();
+    assert_eq!(reads.len(), 2);
+    assert!(reads.iter().all(|line| line.contains("ss58")));
+    let sink = MemorySink::default();
+    app.output = Output::new(
+        OutputOptions {
+            json_mode: true,
+            ..Default::default()
+        },
+        Arc::new(sink.clone()),
+    );
+    let group = invocation.matches.subcommand().ok_or("evm group")?.1;
+    assert!(!rtao_cli::commands::evm::needs_native(group));
+    rtao_cli::commands::evm::run(
+        &mut app,
+        None,
+        group,
+        Default::default(),
+        None,
+        &mut invocation.history,
+    )
+    .await?;
+    let payload: Value = serde_json::from_str(&sink.text(rtao_cli::output::Stream::Stdout)?)?;
+    assert_eq!(
+        payload,
+        json!({"ss58":canonical,"pubkey":format!("0x{}",hex::encode([41u8;32]))})
+    );
+    assert_eq!(*trace.lock().map_err(|_| "trace")?, reads);
+    Ok(())
+}
+
+#[test]
+fn generic_required_typed_inputs_show_shape_retry_and_preserve_exact_public_replay() -> TestResult {
+    let command = application::command_tree([clap::Command::new("typed")
+        .arg(
+            clap::Arg::new("count")
+                .long("count")
+                .required(true)
+                .value_parser(clap::value_parser!(u16).range(1..=5)),
+        )
+        .arg(
+            clap::Arg::new("ratio")
+                .long("ratio")
+                .required(true)
+                .value_parser(clap::value_parser!(f64)),
+        )
+        .arg(
+            clap::Arg::new("enabled")
+                .long("enabled")
+                .required(true)
+                .value_parser(clap::value_parser!(bool)),
+        )
+        .arg(
+            clap::Arg::new("mode")
+                .long("mode")
+                .required(true)
+                .value_parser(["safe", "fast"]),
+        )]);
+    let argv = original(&["rtao", "typed"]);
+    let (mut input, trace) = terminal(
+        &["6", "3", "bad", "0.25", "true", "bad", "safe"],
+        true,
+        true,
+    );
+    let invocation = application::parse_with_prompts(
+        command,
+        argv.clone(),
+        &PromptContext::default(),
+        &mut input,
+    )?;
+    let leaf = invocation_leaf(&invocation.matches);
+    assert_eq!(leaf.get_one::<u16>("count"), Some(&3));
+    assert_eq!(leaf.get_one::<f64>("ratio"), Some(&0.25));
+    assert_eq!(leaf.get_one::<bool>("enabled"), Some(&true));
+    assert_eq!(
+        leaf.get_one::<String>("mode").map(String::as_str),
+        Some("safe")
+    );
+    let reads = trace.lock().map_err(|_| "trace")?;
+    assert_eq!(reads.len(), 7);
+    for (read, cue) in reads.iter().zip([
+        "integer",
+        "integer",
+        "number",
+        "number",
+        "y/n",
+        "safe|fast",
+        "safe|fast",
+    ]) {
+        assert!(read.contains(cue), "{read}");
+    }
+    assert_eq!(
+        invocation.history.replay_command(&strings(&argv)),
+        "rtao typed --count 3 --ratio 0.25 --enabled true --mode safe",
+    );
+    Ok(())
+}
+
+#[test]
+fn required_conviction_boolean_choices_preserve_signer_order_real_intents_and_canonical_flags()
+-> TestResult {
+    let root = Root::new()?;
+    for (operation, positive, negative, op, enabled_when_yes) in [
+        ("mode", "perpetual", "decaying", "set_perpetual_lock", true),
+        (
+            "accept",
+            "allow",
+            "reject",
+            "set_reject_locked_alpha",
+            false,
+        ),
+    ] {
+        for (answer, yes) in [
+            ("y", true),
+            ("YES", true),
+            ("t", true),
+            ("true", true),
+            ("on", true),
+            ("1", true),
+            ("n", false),
+            ("NO", false),
+            ("f", false),
+            ("false", false),
+            ("off", false),
+            ("0", false),
+        ] {
+            let command = rtao_cli::commands::command_tree()?;
+            let argv = original(&["rtao", "conviction", operation]);
+            let mut lines = vec!["chosen"];
+            if operation == "mode" {
+                lines.push("7");
+            }
+            lines.extend(["maybe", answer]);
+            let (input, trace) = terminal(&lines, true, true);
+            let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+            let mut invocation = application::parse_with_context(
+                command,
+                argv.clone(),
+                &mut app,
+                PromptHistory::default(),
+            )?;
+            let flag = format!("--{}", if yes { positive } else { negative });
+            let opposite = format!("--{}", if yes { negative } else { positive });
+            let tokens = strings(&invocation.argv);
+            assert_eq!(tokens.last(), Some(&flag));
+            assert!(!tokens.contains(&opposite));
+            assert!(!tokens.contains(&answer.to_owned()) && !tokens.contains(&"maybe".to_owned()));
+            let group = invocation.matches.subcommand().ok_or("conviction group")?.1;
+            let requests = rtao_cli::commands::conviction::tx_requests(
+                &mut app,
+                group,
+                &mut invocation.history,
+            )?;
+            assert_eq!(requests.len(), 1);
+            assert_eq!(requests[0].op, op);
+            assert_eq!(
+                requests[0].args["enabled"],
+                json!(if yes {
+                    enabled_when_yes
+                } else {
+                    !enabled_when_yes
+                })
+            );
+            if operation == "mode" {
+                assert_eq!(requests[0].args["netuid"], 7);
+            }
+            let reads = trace.lock().map_err(|_| "trace")?;
+            assert_eq!(reads.len(), if operation == "mode" { 4 } else { 3 });
+            assert!(reads[0].contains("wallet [configured]"));
+            assert!(reads.last().ok_or("boolean prompt")?.contains("y/n"));
+            assert_eq!(
+                invocation.history.replay_command(&strings(&argv)),
+                format!(
+                    "rtao conviction {operation} --wallet chosen{} {flag}",
+                    if operation == "mode" {
+                        " --netuid 7"
+                    } else {
+                        ""
+                    }
+                )
+            );
+        }
+        // A supplied boolean half is never asked again or rewritten.
+        let command = rtao_cli::commands::command_tree()?;
+        let positive_flag = format!("--{positive}");
+        let mut words = vec!["rtao", "conviction", operation, positive_flag.as_str()];
+        if operation == "mode" {
+            words.extend(["--netuid", "7"]);
+        }
+        let argv = original(&words);
+        let (mut input, trace) = terminal(&[], true, true);
+        let invocation = application::parse_with_prompts(
+            command,
+            argv.clone(),
+            &PromptContext::default(),
+            &mut input,
+        )?;
+        assert_eq!(strings(&invocation.argv), strings(&argv));
+        assert!(trace.lock().map_err(|_| "trace")?.is_empty());
+        for flag in ["--json", "--quiet"] {
+            let command = rtao_cli::commands::command_tree()?;
+            let argv = original(&["rtao", "conviction", operation, flag]);
+            let (mut input, trace) = terminal(&[], true, true);
+            let error = application::parse_with_prompts(
+                command,
+                argv,
+                &PromptContext::default(),
+                &mut input,
+            )
+            .err()
+            .ok_or("missing bool")?;
+            assert_eq!(error.code, 2);
+            assert!(error.message.contains(&positive_flag));
+            if operation == "mode" {
+                assert!(error.message.contains("--netuid"));
+            }
+            assert_eq!(
+                error.help.as_deref(),
+                Some("pass the options explicitly, or run on a terminal to be prompted")
+            );
+            assert!(trace.lock().map_err(|_| "trace")?.is_empty());
+        }
+        let command = rtao_cli::commands::command_tree()?;
+        let argv = original(&["rtao", "conviction", operation]);
+        let (input, trace) = terminal(&["chosen"], true, true);
+        let mut app = pending_context(&root, &command, &argv, input, picker_books())?;
+        let error =
+            application::parse_with_context(command, argv, &mut app, PromptHistory::default())
+                .err()
+                .ok_or("aborted choice")?;
+        assert_eq!(error.code, 130);
+        assert_eq!(trace.lock().map_err(|_| "trace")?.len(), 2);
     }
     Ok(())
 }
