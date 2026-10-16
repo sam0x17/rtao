@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_keyfiles_golden.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generic native keyfile contracts, using only disposable source fixtures.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod support;
@@ -309,6 +310,39 @@ async fn generic_plaintext_and_public_files_use_exact_codec_without_companion_si
     }
 }
 
+#[cfg(unix)]
+#[tokio::test]
+async fn generic_overwrite_clamps_loose_file_mode_and_preserves_key_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    // pyt: unit/test_keyfiles_golden.py::test_keyfile_written_owner_only
+    // The process-wide umask is deliberately untouched. This independently
+    // exercises new-directory modes and replacement of an existing 0644 file.
+    use std::os::unix::fs::PermissionsExt;
+    let root = TempRoot::new();
+    let path = root.path().join("wallets/golden/hotkeys/hotkey");
+    let file = Keyfile::new(&path);
+    let write = WriteOptions {
+        encrypt: false,
+        password: None,
+        overwrite: Overwrite::Yes,
+    };
+    file.set_keypair(Keypair::from_uri("//Alice", 1)?, write.clone())
+        .await?;
+    assert_eq!(fs::metadata(&path)?.permissions().mode() & 0o777, 0o600);
+    let parent = path.parent().ok_or("keyfile parent")?;
+    assert_eq!(fs::metadata(parent)?.permissions().mode() & 0o777, 0o700);
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o644))?;
+    assert_eq!(fs::metadata(&path)?.permissions().mode() & 0o777, 0o644);
+    file.set_keypair(Keypair::from_uri("//Alice", 1)?, write)
+        .await?;
+    assert_eq!(fs::metadata(&path)?.permissions().mode() & 0o777, 0o600);
+    assert_eq!(
+        file.get_keypair(None).await?.ss58_address(),
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn generic_keyfile_rejects_oversize_nonregular_and_symlink_writes() {
     let root = TempRoot::new();
@@ -525,11 +559,22 @@ async fn generic_encrypted_write_saves_only_after_success_and_uses_first_passwor
     .unwrap();
     assert!(file.should_save_to_env());
     assert!(file.is_encrypted().unwrap());
+    // pyt: unit/test_keyfiles_golden.py::test_nacl_encrypt_decrypt_roundtrip
+    assert!(rtao_core::keyfile_json::keyfile_data_is_encrypted_nacl(
+        &fs::read(file.path()).unwrap()
+    ));
     assert_eq!(
         *environment.calls.lock().unwrap(),
         [format!("set {}", file.env_var_name())]
     );
     let restored = file.clone().get_keypair(None).await.unwrap();
+    assert_eq!(
+        restored.ss58_address(),
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    );
+    let signature = restored.sign(b"after-decrypt").unwrap();
+    assert_eq!(signature.len(), 64);
+    assert!(restored.verify(b"after-decrypt", &signature).unwrap());
     assert_eq!(
         restored.public_key_bytes(),
         Keypair::from_uri("//Alice", 1).unwrap().public_key_bytes()
