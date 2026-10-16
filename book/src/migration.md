@@ -73,6 +73,20 @@ all clones share that choice. Construct a fresh instance to change modes.
 
 ## Deliberate differences
 
+The CLI shares current JSON configuration with btcli. It ignores the old
+`~/.bittensor/config.yml` file and prints a migration warning once when that
+file is present, including during help, version, JSON and quiet invocations.
+Move the settings you need with `rtao config set`, then rename or remove the
+old YAML file. The warning never reads its contents. Deleting
+`~/.bittensor/.btcli_legacy_config_warned` lets it appear again. The warning
+skips symlinked legacy directories and files. Only a regular, unsymlinked
+marker suppresses it; failure to create the marker leaves the warning enabled.
+
+For saved public contacts, `rtao addr NAME SS58` and
+`rtao addresses NAME SS58` retain the old shorthand for `addr add NAME SS58`.
+The installed executable is named `rtao`, so Python distributions competing
+for the `btcli` console script do not affect its command entry point.
+
 Read the generated [divergence register](divergences.md) before treating a
 source correspondence as behavioral equivalence. It records the affected
 contract, reason, status and pinning fixtures. Native amounts, typed errors,

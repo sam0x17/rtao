@@ -387,6 +387,7 @@ fn actual_cli_config_startup_preserves_an_oversized_source() -> TestResult {
     file.set_len(MAX_JSON_FILE_BYTES as u64 + 1)?;
     drop(file);
     let mut command = Command::new(env!("CARGO_BIN_EXE_rtao"));
+    command.env("HOME", &fixture.0);
     command
         .args(["call", "System.remark", "--args", r#"{"remark":"0x01"}"#])
         .env("BTCLI_CONFIG", &path);
