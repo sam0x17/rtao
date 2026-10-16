@@ -9,6 +9,13 @@ if (process.env.GITHUB_ACTIONS !== 'true'
   throw new Error('Lock refresh is restricted to hosted Ubuntu CI.');
 }
 
+// The first pinned docs-tool resolution has its own bounded candidate guard.
+if (readFileSync('Cargo.toml', 'utf8').includes('\ndocify = "=0.4.1"\n')
+    && !/^name = "docify"$/m.test(readFileSync('Cargo.lock', 'utf8'))) {
+  execFileSync(process.execPath, ['ci/resolve-docify-lock.mjs'], {stdio:'inherit',timeout:170000});
+  process.exit(0);
+}
+
 function packages(text) {
   const result = new Map();
   for (const body of text.split('[[package]]').slice(1)) {

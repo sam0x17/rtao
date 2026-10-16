@@ -14,6 +14,7 @@ struct Args {
     weights_version_key: u64,
 }
 struct MyValidator;
+#[docify::export(validator_implementation)]
 impl Validator for MyValidator {
     type State = EmaScores;
     async fn step(&self, cx: &NeuronCx, state: &StateCell<Self::State>) -> anyhow::Result<()> {
