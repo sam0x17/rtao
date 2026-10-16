@@ -10198,11 +10198,12 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/codegen/check.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "rtao_catalog::py::PYTHON_TABLES"
+          "rtao_catalog::py::PYTHON_TABLES",
+          "xtask/src/parity_catalog.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a859b70612e8b92d0ae14e51c657e996ab9052e2"
       },
       {
         "kind": "n/a",
