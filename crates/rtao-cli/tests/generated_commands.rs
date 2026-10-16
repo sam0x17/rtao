@@ -303,6 +303,7 @@ fn leaf(parsed: &clap::ArgMatches) -> Result<&clap::ArgMatches, Box<dyn std::err
         .1)
 }
 
+// pyt: unit/test_cli_commands.py::test_every_intent_has_a_tx_command
 #[test]
 fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability() -> TestResult {
     let tx = generated::tx_command()?;
@@ -312,6 +313,27 @@ fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability()
     let rows = rtao_intents::interface_metadata();
     assert_eq!(rows.len(), rtao_catalog::INTENTS.len());
     assert!(rows.iter().all(|row| row.implemented));
+    let expected_leaves = rows
+        .iter()
+        .filter(|row| row.compiled && row.implemented)
+        .map(|row| row.name.replace('_', "-"))
+        .collect::<BTreeSet<_>>();
+    let actual_leaves = tx
+        .get_subcommands()
+        .filter(|command| !command.is_hide_set())
+        .map(|command| {
+            assert!(
+                !command.has_subcommands(),
+                "tx operation {} is not a leaf",
+                command.get_name()
+            );
+            command.get_name().to_owned()
+        })
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        actual_leaves, expected_leaves,
+        "visible tx leaves must match the complete available intent catalog"
+    );
     for row in &rows {
         let command = row.name.replace('_', "-");
         assert_eq!(

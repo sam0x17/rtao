@@ -148,6 +148,19 @@ handler tests, without a new installed-process or wallet-factory claim.
 The next inventory expects 3,183 tests and four skips. Independent source review,
 direct rustfmt and whitespace checks pass; hosted execution remains pending.
 
+Ordinary run [38965848977](https://github.com/sam0x17/rtao/actions/runs/38965848977)
+at `f84be4cb15b4d80903c1fa8c00c1911f44dcefee` passes supply, MSRV,
+no-host and semver, but stops before Nextest on two test-only compiler/lint
+errors. The extracted subnet helper returns CoreError, so its iterator must
+collect that error type before converting at the anyhow boundary. A local
+alias names the shield fixture's captured signing records to satisfy strict
+Clippy. These corrections preserve every assertion and test count. The existing
+CLI advertisement fixture also now requires exact visible transaction-leaf
+set equality, closing the remaining no-extra-command assertion gap. Formatting
+and source checks pass; the expected inventory remains 3,183/four skips and
+still awaits successful hosted execution. The bounded failure record is
+`client-f84be4c-check-failure.json`; no raw log is retained.
+
 Additional source reconciliation, security dispositions
 and exact milestone evidence remain required through M9. The laptop target
 folder remains absent; temporary source/review work stays in the recorded
