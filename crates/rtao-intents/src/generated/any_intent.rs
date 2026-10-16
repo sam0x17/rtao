@@ -6,252 +6,335 @@
 #[non_exhaustive]
 pub enum AnyIntent {
     #[cfg(feature = "collateral")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "collateral")))]
     #[doc = "Lock additional miner collateral on your own hotkey."]
     AddCollateral(super::interfaces::AddCollateral),
     #[cfg(feature = "proxy")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
     #[doc = "Authorize a delegate key to sign calls on this account's behalf."]
     AddProxy(super::interfaces::AddProxy),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Stake TAO from the coldkey onto a hotkey."]
     AddStake(super::interfaces::AddStake),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Stake TAO with a limit price (slippage protection)."]
     AddStakeLimit(super::interfaces::AddStakeLimit),
     #[cfg(feature = "coldkey")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "coldkey")))]
     #[doc = "Announce (commit to) a coldkey swap; executable after the chain's delay."]
     AnnounceColdkeySwap(super::interfaces::AnnounceColdkeySwap),
     #[cfg(feature = "association")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "association")))]
     #[doc = "Associate an EVM key with a hotkey on a subnet."]
     AssociateEvmKey(super::interfaces::AssociateEvmKey),
     #[cfg(feature = "association")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "association")))]
     #[doc = "Associate a hotkey with the signing coldkey."]
     AssociateHotkey(super::interfaces::AssociateHotkey),
     #[cfg(feature = "batch")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "batch")))]
     #[doc = "Execute several intents atomically in one extrinsic (all-or-nothing)."]
     Batch(super::interfaces::Batch),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Register a hotkey on a subnet by paying the registration cost."]
     BurnedRegister(super::interfaces::BurnedRegister),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Redeem accrued root dividends across every validator for the coldkey."]
     ClaimRoot(super::interfaces::ClaimRoot),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Redeem accrued root dividends (basket shares) for one validator."]
     ClaimRootWithHotkey(super::interfaces::ClaimRootWithHotkey),
     #[cfg(feature = "coldkey")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "coldkey")))]
     #[doc = "Cancel a pending coldkey swap announcement (after the reannouncement delay)."]
     ClearColdkeySwapAnnouncement(super::interfaces::ClearColdkeySwapAnnouncement),
     #[cfg(feature = "weights")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "weights")))]
     #[doc = "Timelock-encrypt and commit weights, forcing the commit-reveal path."]
     CommitWeights(super::interfaces::CommitWeights),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Contribute TAO to an active crowdloan."]
     ContributeCrowdloan(super::interfaces::ContributeCrowdloan),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Open a crowdloan raising up to `cap_tao` by `end` block."]
     CreateCrowdloan(super::interfaces::CreateCrowdloan),
     #[cfg(feature = "proxy")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
     #[doc = "Create a pure proxy: a fresh keyless account controlled via delegation."]
     CreatePureProxy(super::interfaces::CreatePureProxy),
     #[cfg(feature = "children")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "children")))]
     #[doc = "Decrease the delegate take of a hotkey."]
     DecreaseTake(super::interfaces::DecreaseTake),
     #[cfg(feature = "coldkey")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "coldkey")))]
     #[doc = "Freeze this coldkey entirely until root resolves the dispute."]
     DisputeColdkeySwap(super::interfaces::DisputeColdkeySwap),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Dissolve a fully-refunded crowdloan (creator only)."]
     DissolveCrowdloan(super::interfaces::DissolveCrowdloan),
     #[cfg(feature = "evm")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
     #[doc = "Claim TAO deposited to the coldkey's truncated EVM mirror."]
     EvmWithdraw(super::interfaces::EvmWithdraw),
     #[cfg(feature = "proxy")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
     #[doc = "Execute a proxy call that was announced and has passed its delay."]
     ExecuteProxyAnnounced(super::interfaces::ExecuteProxyAnnounced),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Finalize a crowdloan that reached its cap (creator only)."]
     FinalizeCrowdloan(super::interfaces::FinalizeCrowdloan),
     #[cfg(feature = "evm")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
     #[doc = "Fund an EVM (h160) address with TAO from the signing coldkey."]
     FundEvmKey(super::interfaces::FundEvmKey),
     #[cfg(feature = "children")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "children")))]
     #[doc = "Increase the delegate take of a hotkey."]
     IncreaseTake(super::interfaces::IncreaseTake),
     #[cfg(feature = "proxy")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
     #[doc = "Close a pure proxy account and return its reserved deposit."]
     KillPureProxy(super::interfaces::KillPureProxy),
     #[cfg(feature = "lock")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "lock")))]
     #[doc = "Lock alpha stake on a subnet, building conviction toward a hotkey."]
     LockStake(super::interfaces::LockStake),
     #[cfg(feature = "lock")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "lock")))]
     #[doc = "Move an existing lock from one hotkey to another on a subnet."]
     MoveLock(super::interfaces::MoveLock),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Move alpha between hotkeys and/or subnets."]
     MoveStake(super::interfaces::MoveStake),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Move stake to a new hotkey and swap it to a new subnet in one transaction."]
     MoveSwapStake(super::interfaces::MoveSwapStake),
     #[cfg(feature = "multisig")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
     #[doc = "Register approval for a multisig call (non-final approvals)."]
     MultisigApprove(super::interfaces::MultisigApprove),
     #[cfg(feature = "multisig")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
     #[doc = "Cancel an ongoing multisig operation (only the original depositor may)."]
     MultisigCancel(super::interfaces::MultisigCancel),
     #[cfg(feature = "multisig")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
     #[doc = "Approve and, if the threshold is met, execute a multisig call (final approval)."]
     MultisigExecute(super::interfaces::MultisigExecute),
     #[cfg(feature = "multisig")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
     #[doc = "Dispatch a 1-of-N multisig call immediately (single approval)."]
     MultisigThreshold1(super::interfaces::MultisigThreshold1),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Register using an owner-enabled proof instead of TAO."]
     PowRegister(super::interfaces::PowRegister),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Refund contributors of a non-finalized crowdloan (creator only)."]
     RefundCrowdloan(super::interfaces::RefundCrowdloan),
     #[cfg(feature = "leasing")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "leasing")))]
     #[doc = "Register a new crowdloan-funded leased subnet."]
     RegisterLeasedNetwork(super::interfaces::RegisterLeasedNetwork),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Create a new subnet owned by the signing coldkey."]
     RegisterSubnet(super::interfaces::RegisterSubnet),
     #[cfg(feature = "proxy")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
     #[doc = "Revoke every proxy delegation for the signing account at once."]
     RemoveProxies(super::interfaces::RemoveProxies),
     #[cfg(feature = "proxy")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
     #[doc = "Revoke one proxy delegation."]
     RemoveProxy(super::interfaces::RemoveProxy),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Unstake alpha from a hotkey back to the coldkey."]
     RemoveStake(super::interfaces::RemoveStake),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Unstake alpha with a limit price (slippage protection)."]
     RemoveStakeLimit(super::interfaces::RemoveStakeLimit),
     #[cfg(feature = "serving")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
     #[doc = "Reset (stop serving) this hotkey's axon endpoint on a subnet."]
     ResetAxon(super::interfaces::ResetAxon),
     #[cfg(feature = "weights")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "weights")))]
     #[doc = "Reveal previously committed weights (legacy salt-based commit-reveal)."]
     RevealWeights(super::interfaces::RevealWeights),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Register a hotkey on the root network (netuid 0)."]
     RootRegister(super::interfaces::RootRegister),
     #[cfg(feature = "serving")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
     #[doc = "Publish this hotkey's axon endpoint (ip:port) for a subnet."]
     ServeAxon(super::interfaces::ServeAxon),
     #[cfg(feature = "serving")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
     #[doc = "Publish this hotkey's axon endpoint with a neuron certificate."]
     ServeAxonTls(super::interfaces::ServeAxonTls),
     #[cfg(feature = "serving")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
     #[doc = "Publish this hotkey's prometheus metrics endpoint (ip:port) for a subnet."]
     ServePrometheus(super::interfaces::ServePrometheus),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Auto-stake future mining rewards on a subnet to a chosen hotkey."]
     SetAutoStake(super::interfaces::SetAutoStake),
     #[cfg(feature = "children")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "children")))]
     #[doc = "Set the childkey take for a hotkey on a subnet."]
     SetChildkeyTake(super::interfaces::SetChildkeyTake),
     #[cfg(feature = "children")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "children")))]
     #[doc = "Assign child hotkeys with stake-weight proportions on a subnet."]
     SetChildren(super::interfaces::SetChildren),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Set or clear the per-contributor max for a non-finalized crowdloan (creator only)."]
     SetCrowdloanMaxContribution(super::interfaces::SetCrowdloanMaxContribution),
     #[cfg(feature = "hyperparameters")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "hyperparameters")))]
     #[doc = "Set an owner-settable subnet hyperparameter (btcli `sudo set`)."]
     SetHyperparameter(super::interfaces::SetHyperparameter),
     #[cfg(feature = "identity")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "identity")))]
     #[doc = "Publish an on-chain identity (name, links, description) for the coldkey."]
     SetIdentity(super::interfaces::SetIdentity),
     #[cfg(feature = "governance")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
     #[doc = "Set the number of mechanisms on a subnet."]
     SetMechanismCount(super::interfaces::SetMechanismCount),
     #[cfg(feature = "collateral")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "collateral")))]
     #[doc = "Set the self-maintaining collateral floor for your hotkey on a subnet."]
     SetMinCollateral(super::interfaces::SetMinCollateral),
     #[cfg(feature = "lock")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "lock")))]
     #[doc = "Enable or disable perpetual lock mode for a coldkey on a subnet."]
     SetPerpetualLock(super::interfaces::SetPerpetualLock),
     #[cfg(feature = "lock")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "lock")))]
     #[doc = "Opt the signing coldkey in or out of receiving locked alpha."]
     SetRejectLockedAlpha(super::interfaces::SetRejectLockedAlpha),
     #[cfg(feature = "root")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "root")))]
     #[doc = "Set the minimum TAO payout for a root dividend claim (root only)."]
     SetRootClaimThreshold(super::interfaces::SetRootClaimThreshold),
     #[cfg(feature = "root")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "root")))]
     #[doc = "Enable or disable a subnet's pool-side TAO emission (root only)."]
     SetSubnetEmissionEnabled(super::interfaces::SetSubnetEmissionEnabled),
     #[cfg(feature = "identity")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "identity")))]
     #[doc = "Publish identity metadata for a subnet (signer must be the subnet owner)."]
     SetSubnetIdentity(super::interfaces::SetSubnetIdentity),
     #[cfg(feature = "children")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "children")))]
     #[doc = "Set the delegate take to an absolute value."]
     SetTake(super::interfaces::SetTake),
     #[cfg(feature = "weights")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "weights")))]
     #[doc = "Set validator weights, auto-selecting plaintext or commit-reveal."]
     SetWeights(super::interfaces::SetWeights),
     #[cfg(feature = "governance")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
     #[doc = "Buy back / burn stake via the stake-burn extrinsic."]
     StakeBurn(super::interfaces::StakeBurn),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Buy shares in a root-registered validator's basket with free TAO."]
     StakeIntoBasket(super::interfaces::StakeIntoBasket),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Activate a subnet (subtoken trading, epochs) as its owner."]
     StartCall(super::interfaces::StartCall),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Rebalance a root validator's basket: sell one holding to buy another."]
     SwapBasket(super::interfaces::SwapBasket),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Atomically execute up to 128 legs of one validator basket rebalance."]
     SwapBasketMany(super::interfaces::SwapBasketMany),
     #[cfg(feature = "coldkey")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "coldkey")))]
     #[doc = "Execute a previously announced coldkey swap (after the delay has passed)."]
     SwapColdkeyAnnounced(super::interfaces::SwapColdkeyAnnounced),
     #[cfg(feature = "registration")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registration")))]
     #[doc = "Swap a hotkey for a new one (all subnets, or one netuid)."]
     SwapHotkey(super::interfaces::SwapHotkey),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Swap stake on one hotkey between two subnets."]
     SwapStake(super::interfaces::SwapStake),
     #[cfg(feature = "leasing")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "leasing")))]
     #[doc = "Terminate an ended lease and take subnet ownership (beneficiary only)."]
     TerminateLease(super::interfaces::TerminateLease),
     #[cfg(feature = "transfer")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "transfer")))]
     #[doc = "Transfer TAO from the coldkey to a destination address."]
     Transfer(super::interfaces::Transfer),
     #[cfg(feature = "transfer")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "transfer")))]
     #[doc = "Transfer the entire transferable balance to a destination address."]
     TransferAll(super::interfaces::TransferAll),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Transfer stake ownership to another coldkey."]
     TransferStake(super::interfaces::TransferStake),
     #[cfg(feature = "governance")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
     #[doc = "Execute one bounded Null subnet pruning batch toward `target`."]
     TrimNullSubnetBatch(super::interfaces::TrimNullSubnetBatch),
     #[cfg(feature = "governance")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
     #[doc = "Trim a subnet to at most `max_n` UIDs (subnet owner)."]
     TrimSubnet(super::interfaces::TrimSubnet),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Unstake everything from a hotkey across all subnets."]
     UnstakeAll(super::interfaces::UnstakeAll),
     #[cfg(feature = "staking")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "staking")))]
     #[doc = "Unstake all alpha from a hotkey across subnets (moves it to root)."]
     UnstakeAllAlpha(super::interfaces::UnstakeAllAlpha),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Update the cap of a non-finalized crowdloan (creator only)."]
     UpdateCrowdloanCap(super::interfaces::UpdateCrowdloanCap),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Update the end block of a non-finalized crowdloan (creator only)."]
     UpdateCrowdloanEnd(super::interfaces::UpdateCrowdloanEnd),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Update the minimum contribution of a non-finalized crowdloan (creator only)."]
     UpdateCrowdloanMinContribution(super::interfaces::UpdateCrowdloanMinContribution),
     #[cfg(feature = "governance")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "governance")))]
     #[doc = "Update a subnet's symbol (from the chain's fixed catalog)."]
     UpdateSymbol(super::interfaces::UpdateSymbol),
     #[cfg(feature = "crowdloan")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
     #[doc = "Withdraw the signer's contribution from a non-finalized crowdloan."]
     WithdrawCrowdloan(super::interfaces::WithdrawCrowdloan),
 }
