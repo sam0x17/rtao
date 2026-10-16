@@ -1266,12 +1266,12 @@ notes = "§10.5; keychain M7"
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/weights.py"
-rs = ["`rtao-cli` `weights` group"]
+rs = ["crates/rtao-cli/src/commands/weights.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "538d640818772ddac7362320de21b5434a65fdad"
 synced_tag = "v478"
 milestone = "M4"
-notes = "§10.5; under `misc`"
+notes = "Source reconciliation 2026-10-16: complete authenticated 195-line CLI module and all six functions reviewed against installed misc/historical routes and semantic consumers. CSV order/empty-token removal/Python strip/numeric spelling, file-or-parallel exclusivity, object-only file data, expected refusals, defaults and all three intent routes have direct native homes. File UID None is omitted in native request JSON; the SDK canonicalizes UID mappings. Native u16 UID/salt/raw, u8 mechanism, u64 version and finite Ratio fields enforce native bounds; D-042 bounds aggregate inline and regular-file acquisition to 16 MiB. Real SDK intents retain hotkey role, raw Null gate, registration/permit/rate checks, adaptive set, forced protocol-default-4 commit and independently normalized legacy reveal. The reviewed human help retains the validating guide/example, clipping/normalization/quantization and hotkey/preflight guidance and legacy-versus-automatic-reveal meaning; period is an explicit native addition. Thirteen actual fixtures cover 2,500-UID files, parser/refusals, fake-chain plaintext/reveal bytes/era/hotkey role, raw admissions, semantic dry runs and built encrypted commit prefix/reveal round. They do not prove live chain acceptance or decrypted timelock execution. SDK weights math/intents, globals/context/output and test_null_weights source rows remain separate obligations. Ordinary run 38936419655 at 21d47bd passed all six required jobs, 3,127 tests with four skipped and nine doctests across 19 suites; exact relevant PASS records are retained with source identities. This records source reconciliation at that tested revision. Later SDK signer/shield and Executor changes require separate validation and do not inherit this result. No fresh Python/Typer/oracle, live validator, terminal/platform, hardware or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/context.py"
@@ -1284,12 +1284,12 @@ notes = "Source audit 2026-10-15: live burned/root registration uses context::re
 
 [[file]]
 py = "sdk/python/bittensor/cli/globals.py"
-rs = ["`rtao-cli` global flags"]
+rs = ["crates/rtao-cli/src/globals.rs", "crates/rtao-cli/tests/globals_contract.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "7d092d75f82f31449c0a9b425d01968dfbad7f73"
 synced_tag = "v478"
 milestone = "M4"
-notes = "§10.2"
+notes = "Source reconciliation 2026-10-16: complete authenticated 542-line globals.py, four named functions/nested decorator helpers, four exported decorators and all 27 logical options reviewed against actual clap registration, apply/resolve and downstream consumers. Read/unlock/extension/tx tiers, command-owned argument reservations, leaf/root/environment/config precedence, positive boolean inheritance, count replacement, signatory append/splitting/backend override, zero Ledger indices and EVM signing-wallet exclusion have native homes. Global forced-proxy values come from the exact live catalog; command-owned fields retain their own parsers. Shield flags preserve last occurrence within each scope and supplied-leaf precedence. CPython control-whitespace backend normalization is shared by validation, prompt policy, wallet/external routing and actual lazy NativeSignerFactory/raw consumers without rewriting recorded input. Seven installed-parser/public-consumer fixtures plus three strengthened unit/application witnesses retain these contracts; public mock callbacks prove routing/account/acquisition order, not hardware or real signing. Checked u32 Ledger indices/u8 verbosity, explicit clap argument ownership and native signing-wallet policy replace unbounded Python reflection/kwargs/function mutation. Ordinary run 38936419655 at 21d47bd passed all six required jobs, 3,127 tests with four skipped and nine doctests across 19 suites; exact relevant PASS records are retained with source identities. This records source reconciliation at that tested revision. Later SDK signer/shield and Executor changes require separate validation and do not inherit this result. Context, prompts, output, SDK signer behavior and OS integrations retain separate obligations. No fresh Python/Typer/oracle, device, browser/extension/vault service, live chain, platform or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/help_theme.py"
@@ -2967,12 +2967,12 @@ notes = "Source-input reconciliation 2026-10-15: all five authenticated function
 
 [[file]]
 py = "sdk/python/tests/unit/test_evm.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = ["crates/rtao-evm/src/addresses.rs", "crates/rtao-evm/src/money.rs", "crates/rtao-evm/src/transactions.rs", "crates/rtao-evm/src/precompiles.rs", "crates/rtao-evm/src/keys/tests.rs", "xtask/src/extract_precompiles.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "503a7ef44e63fcf91211fc123af67262d230af8d"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 154-line test_evm.py, all 14 functions/21 assertion statements, parametrization, registry iteration and canonical-directory skip reviewed against actual native fixtures and production guards. Three exact H160 vectors, typed key roundtrip/truncation, exact 1.5-TAO wei roundtrip/dust, SCALE-u64/EIP-191 association recovery, SS58 bytes32/bounded-array encoding, four nonpayable state changers, every registered embedded ABI and Unix 0600 nested keystore write have native witnesses with // pyt provenance. All 21 direct SDK JSON inputs have separately imported exact-pin canonical Solidity ABI counterparts; maintained extraction authenticates both and requires parsed-array equality, including unregistered SDK files, with positive/refusal fixtures. Canonical candidate run 38930971428 supplied 12 importer/nine extraction passes and authenticated adoption; the ordinary checkpoint retains all nine new canonical and eight native EVM witnesses. Deterministic typed keys replace some Python Alice-hot/Bob-hot/random keys; inverse roundtrip direction, shared coercion and common 0x formatting are combined witnesses rather than an identical Python transcript. Signature length is checked as 65 decoded bytes with production 0x formatting. Checked native u64 rao/explicit TAO replace arbitrary Python balances; native keystore fixtures require a valid V3 document rather than the intentionally refused incomplete Python document; permissions are Unix-only. Ordinary run 38936419655 at 21d47bd passed all six required jobs, 3,127 tests with four skipped and nine doctests across 19 suites; exact relevant PASS records are retained with source identities. This records source reconciliation at that tested revision. Later SDK signer/shield and Executor changes require separate validation and do not inherit this result. No fresh Python/pytest/PyO3, differential oracle, live-EVM/runtime submission, current-metadata, hardware/platform/release or M7/milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_extension_bridge.py"
