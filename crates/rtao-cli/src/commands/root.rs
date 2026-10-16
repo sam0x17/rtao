@@ -6,7 +6,7 @@
 use super::generated::{self, TxRequest};
 use crate::{
     books::{AccountLookup, FsAccountLookup},
-    context::{AppContext, ExternalSignerFactory, SubmissionOptions},
+    context::{AppContext, CommandReview, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
     globals::{Tier, with_globals},
     output::{Output, ReviewSection, TableSpec},
@@ -960,25 +960,113 @@ pub fn minimum_out(expected: u64, percent: f64) -> Result<u64, CliError> {
         .parse()
         .map_err(failure)
 }
-fn review(ctx: &AppContext, title: &str, rows: Vec<(&str, Value)>) -> Result<(), CliError> {
-    ctx.output
-        .transaction_card(&[ReviewSection {
+type PendingReview = (String, Vec<ReviewSection>);
+
+fn short_hotkey(hotkey: AccountId) -> String {
+    format!(
+        "{}…",
+        hotkey.to_string().chars().take(8).collect::<String>()
+    )
+}
+fn signing_wallet_row(ctx: &AppContext) -> Option<Value> {
+    if ctx.globals.wallet_name.is_empty() {
+        return None;
+    }
+    Some(
+        ctx.resolve_address("coldkey_ss58", None)
+            .ok()
+            .flatten()
+            .map_or_else(|| json!(ctx.globals.wallet_name), |owner| json!(owner)),
+    )
+}
+fn review(
+    ctx: &AppContext,
+    pending: &mut Option<PendingReview>,
+    summary: String,
+    title: &str,
+    rows: Vec<(&str, Value)>,
+) -> Result<(), CliError> {
+    let names = ctx.output.address_names().map_err(failure)?;
+    *pending = Some((
+        summary,
+        vec![ReviewSection {
             title: title.into(),
             rows: rows
                 .into_iter()
-                .map(|(key, value)| (key.into(), value))
+                .map(|(key, value)| {
+                    let value = match value {
+                        Value::String(address) if names.contains_key(&address) => {
+                            Value::String(format!("{} ({address})", names[&address]))
+                        }
+                        value => value,
+                    };
+                    (key.into(), value)
+                })
                 .collect(),
-        }])
-        .map_err(failure)
+        }],
+    ));
+    Ok(())
 }
 
-/// Prepare an actual SDK transaction, including source position checks and the
-/// best-effort swap quote. Empty terminal pickers return no transaction.
+/// A typed transaction and command display facts bound to its semantic intent.
+pub struct PreparedSubmission {
+    /// Actual SDK request; display context never enters its encoded arguments.
+    pub request: TxRequest,
+    /// Optional richer command summary and stages for preview and every review.
+    pub review: Option<CommandReview>,
+}
+
+/// Prepare command facts without printing an early review card. The caller
+/// forwards the bound context through SubmissionOptions at actual submission.
+pub async fn prepare_submission(
+    ctx: &mut AppContext,
+    client: &Client,
+    request: &Request,
+    history: &mut PromptHistory,
+) -> Result<Option<PreparedSubmission>, CliError> {
+    let mut pending = None;
+    let Some(request) =
+        prepare_transaction_inner(ctx, client, request, history, &mut pending).await?
+    else {
+        return Ok(None);
+    };
+    let review = match pending {
+        Some((summary, sections)) => Some(CommandReview::new(
+            request.intent()?.as_dyn(),
+            summary,
+            sections,
+        )),
+        None => None,
+    };
+    Ok(Some(PreparedSubmission { request, review }))
+}
+
+/// Prepare an SDK transaction and render its command-only diagnostic card.
+/// The actual entrypoint uses prepare_submission to retain these facts through
+/// the shared preview, confirmation and saved-approval paths.
 pub async fn prepare_transaction(
     ctx: &mut AppContext,
     client: &Client,
     request: &Request,
     history: &mut PromptHistory,
+) -> Result<Option<TxRequest>, CliError> {
+    let Some(prepared) = prepare_submission(ctx, client, request, history).await? else {
+        return Ok(None);
+    };
+    if let Some(review) = &prepared.review {
+        ctx.output
+            .transaction_card(&review.sections)
+            .map_err(failure)?;
+    }
+    Ok(Some(prepared.request))
+}
+
+async fn prepare_transaction_inner(
+    ctx: &mut AppContext,
+    client: &Client,
+    request: &Request,
+    history: &mut PromptHistory,
+    pending: &mut Option<PendingReview>,
 ) -> Result<Option<TxRequest>, CliError> {
     match request {
         Request::Transaction(request) => Ok(Some(TxRequest {
@@ -1032,7 +1120,17 @@ pub async fn prepare_transaction(
                 "note",
                 json!("principal stays staked — withdraw TAO with rtao stake remove --netuid 0"),
             ));
-            review(ctx, "Claim", rows)?;
+            let label = names
+                .get(&hotkey)
+                .cloned()
+                .unwrap_or_else(|| short_hotkey(hotkey));
+            review(
+                ctx,
+                pending,
+                format!("claim {accrued} into {label}'s root stake"),
+                "Claim",
+                rows,
+            )?;
             tx(
                 "claim_root_with_hotkey",
                 Map::from_iter([("hotkey_ss58".into(), json!(hotkey))]),
@@ -1065,16 +1163,19 @@ pub async fn prepare_transaction(
                     raw
                 }
             };
+            let resolved_amount = Amount::parse(&amount)
+                .and_then(|amount| amount.resolve(NetUid::ROOT, true))
+                .map_err(|error| CliError::input(error.to_string()))?;
+            let amount_display = match &resolved_amount {
+                ResolvedAmount::All => "ALL free TAO".into(),
+                ResolvedAmount::Exact(value) => value.to_string(),
+            };
+            let mut label = short_hotkey(hotkey);
+            let mut summary_rate = None;
+            let mut summary_receive = None;
             let mut rows = vec![
                 ("validator", json!(hotkey)),
-                (
-                    "amount",
-                    json!(if Amount::parse(&amount) == Ok(Amount::All) {
-                        "ALL free TAO".into()
-                    } else {
-                        amount.clone()
-                    }),
-                ),
+                ("amount", json!(amount_display)),
                 (
                     "note",
                     json!(
@@ -1098,24 +1199,40 @@ pub async fn prepare_transaction(
             };
             if let Some((name, beta_price_tao)) = context {
                 if let Some(name) = name {
+                    label = name.clone();
                     rows.insert(0, ("name", json!(name)));
                 }
                 if beta_price_tao > 0.0 {
+                    summary_rate = Some(beta_price_tao);
                     rows.push(("rate", json!(format!("{beta_price_tao:.4} τ/β"))));
                     if let Ok(ResolvedAmount::Exact(amount)) =
                         Amount::parse(&amount).and_then(|amount| amount.resolve(NetUid::ROOT, true))
                     {
-                        rows.push((
-                            "receive",
-                            json!(format!(
-                                "~{} β",
-                                comma_fixed(amount.amount() / beta_price_tao, 4)
-                            )),
-                        ));
+                        let receive = comma_fixed(amount.amount() / beta_price_tao, 4);
+                        rows.push(("receive", json!(format!("~{receive} β"))));
+                        summary_receive = Some(receive);
                     }
                 }
             }
-            review(ctx, "Allocate", rows)?;
+            ctx.confirm_wallet(
+                &crate::prompt::WalletConfirmation {
+                    help: "Wallet whose coldkey signs this transaction.".into(),
+                    require_coldkey: true,
+                    ..Default::default()
+                },
+                history,
+            )?;
+            if let Some(wallet) = signing_wallet_row(ctx) {
+                rows.insert(0, ("wallet", wallet));
+            }
+            let mut summary = format!("allocate {amount_display} into {label}'s fund");
+            if let Some(rate) = summary_rate {
+                summary.push_str(&format!(" at {rate:.4} τ/β"));
+                if let Some(receive) = summary_receive {
+                    summary.push_str(&format!(" for ~{receive} β"));
+                }
+            }
+            review(ctx, pending, summary, "Allocate", rows)?;
             tx(
                 "stake_into_basket",
                 Map::from_iter([
@@ -1158,9 +1275,31 @@ pub async fn prepare_transaction(
             if total.rao == 0 {
                 return Err(failure(format!("no root position to move on {origin}")));
             }
-            let _names = names(ctx, client, &[origin, dest]).await?;
+            let labels = names(ctx, client, &[origin, dest]).await?;
+            ctx.confirm_wallet(
+                &crate::prompt::WalletConfirmation {
+                    help: "Wallet whose coldkey signs this transaction.".into(),
+                    require_coldkey: true,
+                    ..Default::default()
+                },
+                history,
+            )?;
+            let origin_label = labels
+                .get(&origin)
+                .cloned()
+                .unwrap_or_else(|| short_hotkey(origin));
+            let dest_label = labels
+                .get(&dest)
+                .cloned()
+                .unwrap_or_else(|| short_hotkey(dest));
+            let mut summary = format!("move {total} from {origin_label} to {dest_label} on root");
+            if position.accrued.rao > 0 {
+                summary = format!("claim {} then {summary}", position.accrued);
+            }
             review(
                 ctx,
+                pending,
+                summary,
                 "Move",
                 vec![
                     ("wallet", json!(account)),
@@ -1251,9 +1390,16 @@ pub async fn prepare_transaction(
                 .map(|expected| minimum_out(expected.rao, *max_slippage))
                 .transpose()?
                 .unwrap_or(0);
+            let amount_display = match Amount::parse(amount)
+                .and_then(|amount| amount.resolve(*origin, true))
+                .map_err(|error| CliError::input(error.to_string()))?
+            {
+                ResolvedAmount::All => "the whole holding".into(),
+                ResolvedAmount::Exact(value) => value.to_string(),
+            };
             let mut rows = vec![
                 ("validator", json!(hotkey)),
-                ("sell", json!(format!("{amount} (netuid {origin})"))),
+                ("sell", json!(format!("{amount_display} (netuid {origin})"))),
                 ("buy", json!(format!("netuid {dest}"))),
             ];
             for (key, netuid) in [("origin holding", origin), ("dest holding", dest)] {
@@ -1293,7 +1439,14 @@ pub async fn prepare_transaction(
                 }
             }
             rows.push(("note",json!("each leg must fill within 2% of both moving and spot price; TAO through the middle counts against the daily turnover budget")));
-            review(ctx, "Swap", rows)?;
+            if let Some(wallet) = signing_wallet_row(ctx) {
+                rows.insert(0, ("wallet", wallet));
+            }
+            let summary = format!(
+                "sell {amount_display} on netuid {origin} to buy netuid {dest} in {}'s fund",
+                short_hotkey(*hotkey)
+            );
+            review(ctx, pending, summary, "Swap", rows)?;
             swap_request(*hotkey, *origin, *dest, amount, floor).map(Some)
         }
         Request::List { .. } => Err(CliError::input("root list does not prepare a transaction")),
@@ -1791,9 +1944,20 @@ pub async fn execute(
         execute_list(ctx, client, request).await?;
         return Ok(None);
     }
-    match prepare_transaction(ctx, client, request, history).await? {
-        Some(request) => {
-            generated::execute_tx(ctx, client, &request, options, external, history).await
+    match prepare_submission(ctx, client, request, history).await? {
+        Some(prepared) => {
+            generated::execute_tx(
+                ctx,
+                client,
+                &prepared.request,
+                SubmissionOptions {
+                    review: prepared.review.as_ref().or(options.review),
+                    ..options
+                },
+                external,
+                history,
+            )
+            .await
         }
         None => Ok(None),
     }

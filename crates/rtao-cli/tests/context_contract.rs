@@ -14,9 +14,9 @@ use rtao::{
 use rtao_cli::{
     application::command_tree,
     books::Books,
-    context::{AppContext, ShieldChoice},
+    context::{AppContext, CommandReview, ShieldChoice, SubmissionOptions},
     globals::{Globals, Tier, with_globals},
-    output::{MemorySink, Output, OutputOptions, Stream},
+    output::{MemorySink, Output, OutputOptions, ReviewSection, Stream},
     prompt::{PromptError, Terminal},
 };
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
@@ -3432,6 +3432,536 @@ async fn durable_saved_binding_keeps_reviewed_plan_and_refuses_drift_before_priv
             .submissions
             .is_empty()
     );
+    client.close().await;
+    Ok(())
+}
+
+// This transport probe deliberately builds a remark rather than a root trade.
+// Actual root preparation is covered by root_commands; here independent effect
+// strings discriminate exact-summary replacement from substring/blanket rewriting.
+struct CommandFactsFixture;
+impl IntentInterface for CommandFactsFixture {
+    const SPEC: &'static rtao_catalog::IntentSpec = Preview::SPEC;
+    type Role = Coldkey;
+    type Origin = Signed;
+    type Output = ();
+    const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] = Preview::WRAPS;
+    fn to_json(&self) -> Value {
+        json!({"op":"add_stake"})
+    }
+}
+impl Intent for CommandFactsFixture {
+    fn summary(&self) -> String {
+        "generic semantic action".into()
+    }
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        Ok(Built::new(
+            rtao_runtime::calls::system::remark(vec![31, 41]).compose(cx.runtime)?,
+        ))
+    }
+    async fn preflight<V: View + ?Sized>(
+        &self,
+        _: &PreflightCx<'_, V>,
+    ) -> Result<IntentPreflight, IntentError> {
+        Ok(IntentPreflight {
+            effects: vec![
+                "generic semantic action".into(),
+                "keep unrelated semantic fact".into(),
+                "prefix generic semantic action suffix".into(),
+            ],
+            warnings: vec!["keep independent warning".into()],
+            ..Default::default()
+        })
+    }
+}
+fn command_review(intent: &dyn rtao::tx::DynIntent) -> CommandReview {
+    CommandReview::new(
+        intent,
+        "allocate τ2 into Chosen Fund at 2.0000 τ/β for ~1.0000 β",
+        vec![ReviewSection {
+            title: "Allocate".into(),
+            rows: vec![
+                ("validator name".into(), json!("Chosen Fund")),
+                ("receive".into(), json!("~1.0000 β")),
+                (
+                    "note".into(),
+                    json!("you bear entry slippage and swap fees"),
+                ),
+            ],
+        }],
+    )
+}
+
+#[tokio::test]
+async fn command_review_direct_json_replaces_only_matching_effect_and_keeps_plan_identity()
+-> TestResult {
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let intent = CommandFactsFixture;
+    let review = command_review(&intent);
+    let (ctx, sink, reads) = context(&["--dry-run", "--json", "--no-mev-shield"])?;
+    let replay = "rtao root allocate --hotkey exact --amount 2 --dry-run";
+    assert!(
+        ctx.submit_with_keys_options(
+            &client,
+            &intent,
+            &keys,
+            SubmissionOptions {
+                review: Some(&review),
+                replay: Some(replay),
+                ..Default::default()
+            }
+        )
+        .await?
+        .is_none()
+    );
+    let plan: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+    assert_eq!(plan["summary"], review.summary);
+    assert_eq!(
+        plan["effects"],
+        json!([
+            review.summary,
+            "keep unrelated semantic fact",
+            "prefix generic semantic action suffix"
+        ])
+    );
+    assert_eq!(plan["warnings"], json!(["keep independent warning"]));
+    assert_eq!(plan["op"], "add_stake");
+    assert_eq!(plan["args"], json!({}));
+    assert_eq!(plan["signer_address"], json!(keys.key.account()));
+    assert_eq!(plan["command"], replay);
+    assert!(!plan["fee_tao"].is_null());
+    assert!(sink.text(Stream::Stderr)?.is_empty());
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn command_review_human_final_card_and_question_precede_refusal_and_unlock() -> TestResult {
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let intent = CommandFactsFixture;
+    let review = command_review(&intent);
+    let (mut ctx, sink, _) = context(&["--no-mev-shield"])?;
+    let questions = Arc::new(Mutex::new(Vec::new()));
+    ctx.terminal = Arc::new(Mutex::new(Box::new(RegistrationConfirmation {
+        questions: questions.clone(),
+    })));
+    let error = ctx
+        .submit_with_keys_options(
+            &client,
+            &intent,
+            &keys,
+            SubmissionOptions {
+                review: Some(&review),
+                ..Default::default()
+            },
+        )
+        .await
+        .err()
+        .ok_or("declined command review")?;
+    assert_eq!(error.message, "aborted.");
+    assert_eq!(
+        questions.lock().map_err(|_| "questions")?.as_slice(),
+        [format!("{}? [y/N]: ", review.summary)]
+    );
+    let card = sink.text(Stream::Stdout)?;
+    assert!(card.starts_with("Allocate\n"));
+    assert!(card.contains("Chosen Fund"));
+    assert!(card.contains("~1.0000 β"));
+    assert!(card.contains("you bear entry slippage and swap fees"));
+    assert!(card.contains("Transaction"));
+    assert!(card.contains(&keys.key.account().to_string()));
+    assert!(card.contains("keep unrelated semantic fact"));
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+struct LabelOnlyKeys {
+    public: Arc<dyn DynKeySource>,
+}
+impl KeyView for LabelOnlyKeys {
+    fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+        self.public.coldkey_address()
+    }
+    fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+        self.public.hotkey_address()
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+        self.public.hotkey_public_key()
+    }
+}
+impl DynKeySource for LabelOnlyKeys {
+    fn signer_for<'a>(
+        &'a self,
+        role: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+        Box::pin(async move { Err(SignerError::KeyUnavailable(role)) })
+    }
+}
+struct ReviewExternalFactory<'a> {
+    inner: &'a DirectExternalFactory,
+    labels: Mutex<Vec<String>>,
+    label_only: bool,
+}
+impl rtao_cli::context::ExternalSignerFactory for ReviewExternalFactory<'_> {
+    fn set_summary(&self, _: &dyn DynKeySource, summary: &str) {
+        self.labels
+            .lock()
+            .expect("fixture labels")
+            .push(summary.into());
+    }
+    fn keys<'a>(
+        &'a self,
+        globals: &'a Globals,
+        role: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, rtao_cli::error::CliError>> {
+        Box::pin(async move {
+            let keys =
+                rtao_cli::context::ExternalSignerFactory::keys(self.inner, globals, role).await?;
+            Ok(if self.label_only {
+                Arc::new(LabelOnlyKeys { public: keys }) as Arc<dyn DynKeySource>
+            } else {
+                keys
+            })
+        })
+    }
+    fn release<'a>(
+        &'a self,
+        globals: &'a Globals,
+        keys: &'a dyn DynKeySource,
+        success: bool,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        rtao_cli::context::ExternalSignerFactory::release(self.inner, globals, keys, success)
+    }
+}
+#[tokio::test]
+async fn command_review_external_label_retains_custom_action_proxy_and_shield_suffixes()
+-> TestResult {
+    // The injected backend is the same summary boundary used by Vault. No
+    // browser/device or Ledger display behavior is exercised by this fixture.
+    for shield in [false, true] {
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        chain.mutate_state(|state| {
+            state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))
+        })?;
+        let inner = DirectExternalFactory::new(&keys, false);
+        let factory = ReviewExternalFactory {
+            inner: &inner,
+            labels: Mutex::new(Vec::new()),
+            label_only: true,
+        };
+        let flags = if shield {
+            vec!["--yes", "--json", "--mev-shield", "--signer", "extension"]
+        } else {
+            vec![
+                "--yes",
+                "--json",
+                "--no-mev-shield",
+                "--signer",
+                "extension",
+            ]
+        };
+        let (mut ctx, _, _) = context(&flags)?;
+        let proxy = AccountId([77; 32]);
+        ctx.globals.proxy_for = Some(proxy.to_string());
+        let intent = CommandFactsFixture;
+        let review = command_review(&intent);
+        let outcome = ctx
+            .submit_with_options(
+                &client,
+                &intent,
+                SubmissionOptions {
+                    review: Some(&review),
+                    ..Default::default()
+                },
+                Some(&factory),
+                &mut rtao_cli::prompt::PromptHistory::default(),
+            )
+            .await;
+        // This public-only backend refuses every private signer request. The
+        // label must already describe the reviewed action/envelopes before it.
+        let expected = format!(
+            "{} [as {proxy} via proxy]{}",
+            review.summary,
+            if shield { " [MEV-shielded]" } else { "" }
+        );
+        assert_eq!(
+            factory.labels.lock().map_err(|_| "labels")?.as_slice(),
+            [expected]
+        );
+        assert_eq!(inner.acquired.load(Ordering::SeqCst), 1);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(inner.released.lock().map_err(|_| "released")?.len(), 1);
+        assert!(outcome.is_err());
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
+struct ReviewMemberFactory<'a> {
+    inner: &'a MemberFactory,
+    labels: Mutex<Vec<String>>,
+}
+impl rtao_cli::call::RawSignerFactory for ReviewMemberFactory<'_> {
+    fn set_summary(
+        &self,
+        _: &rtao_cli::call::SigningSelection,
+        _: &dyn DynKeySource,
+        summary: &str,
+    ) {
+        self.labels
+            .lock()
+            .expect("fixture labels")
+            .push(summary.into());
+    }
+    fn source<'a>(
+        &'a self,
+        ctx: &'a AppContext,
+        selection: &'a rtao_cli::call::SigningSelection,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, rtao_cli::error::CliError>> {
+        rtao_cli::call::RawSignerFactory::source(self.inner, ctx, selection)
+    }
+    fn release<'a>(
+        &'a self,
+        selection: &'a rtao_cli::call::SigningSelection,
+        keys: &'a dyn DynKeySource,
+        success: bool,
+    ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
+        rtao_cli::call::RawSignerFactory::release(self.inner, selection, keys, success)
+    }
+}
+struct ReviewAcceptTerminal {
+    questions: Arc<Mutex<Vec<String>>>,
+}
+impl Terminal for ReviewAcceptTerminal {
+    fn stdin_is_tty(&self) -> bool {
+        true
+    }
+    fn stderr_is_tty(&self) -> bool {
+        true
+    }
+    fn read_line(&mut self, question: &str) -> Result<String, PromptError> {
+        self.questions
+            .lock()
+            .map_err(|_| PromptError::Io)?
+            .push(question.into());
+        Ok("yes".into())
+    }
+    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        Err(PromptError::Unavailable)
+    }
+    fn message(&mut self, _: &str) -> Result<(), PromptError> {
+        Ok(())
+    }
+}
+#[tokio::test]
+async fn command_review_repeats_semantic_stages_but_preserves_saved_outer_round_labels()
+-> TestResult {
+    let keys = members()?;
+    let (client, chain, _) = fixture(1_000_000_000).await?;
+    let group = saved_group(&client, &keys).await?;
+    let call = rtao_runtime::calls::system::remark(vec![8, 9])
+        .compose(&client.refresh_runtime().await?)?;
+    let mut inner = factory(&keys);
+    publish_pending_after_release(
+        &mut inner,
+        chain.clone(),
+        &group,
+        keys[0].key.account(),
+        &call,
+    );
+    chain.mutate_state(|state| {
+        state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+            events: success_events(Some((keys[1].key.account(), &group, call.hash()))),
+        })
+    });
+    let factory = ReviewMemberFactory {
+        inner: &inner,
+        labels: Mutex::new(Vec::new()),
+    };
+    let (mut ctx, sink) = saved_context(&keys, &["--no-mev-shield"], 2)?;
+    let questions = Arc::new(Mutex::new(Vec::new()));
+    ctx.terminal = Arc::new(Mutex::new(Box::new(ReviewAcceptTerminal {
+        questions: questions.clone(),
+    })));
+    let intent = Preview { blocked: false };
+    let review = command_review(&intent);
+    // A preview retains the signed outer summary and acquires no source.
+    {
+        let (preview_ctx, preview_sink) =
+            saved_context(&keys, &["--dry-run", "--json", "--no-mev-shield"], 2)?;
+        assert!(
+            preview_ctx
+                .submit_saved_with_options(
+                    &client,
+                    &intent,
+                    SubmissionOptions {
+                        review: Some(&review),
+                        ..Default::default()
+                    },
+                    &factory,
+                    &CallCache::default()
+                )
+                .await?
+                .is_none()
+        );
+        let plan: Value = serde_json::from_str(&preview_sink.text(Stream::Stdout)?)?;
+        assert!(
+            plan["summary"]
+                .as_str()
+                .ok_or("outer summary")?
+                .starts_with("multisig 3-of-3 execute:")
+        );
+        assert_ne!(plan["summary"], json!(review.summary));
+        assert_eq!(plan["op"], "multisig_execute");
+        assert_eq!(inner.acquired.load(Ordering::SeqCst), 0);
+    }
+    let receipt = ctx
+        .submit_saved_with_options(
+            &client,
+            &intent,
+            SubmissionOptions {
+                review: Some(&review),
+                ..Default::default()
+            },
+            &factory,
+            &CallCache::default(),
+        )
+        .await?
+        .ok_or("saved receipt")?;
+    assert!(receipt.success);
+    assert_eq!(receipt.data["multisig_followup"]["status"], "executed");
+    let card = sink.text(Stream::Stdout)?;
+    assert_eq!(card.lines().filter(|line| *line == "Allocate").count(), 2);
+    assert_eq!(
+        card.lines()
+            .filter(|line| line.contains("Chosen Fund"))
+            .count(),
+        2
+    );
+    assert_eq!(
+        card.lines()
+            .filter(|line| line.contains("~1.0000 β"))
+            .count(),
+        2
+    );
+    assert!(card.contains("multisig 3-of-3 execute"));
+    assert_eq!(
+        questions.lock().map_err(|_| "questions")?.as_slice(),
+        [format!("{}? [y/N]: ", review.summary)]
+    );
+    let labels = factory.labels.lock().map_err(|_| "labels")?.clone();
+    assert_eq!(labels.len(), 2);
+    for label in &labels {
+        assert!(label.starts_with("multisig 3-of-3 execute: review context fixture"));
+        assert!(!label.contains("Chosen Fund"));
+    }
+    assert_eq!(inner.acquired.load(Ordering::SeqCst), 2);
+    assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(keys[1].unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(chain.mutate_state(|state| state.submissions.len()), 2);
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn mismatched_command_review_refuses_every_entry_before_rpc_or_source_acquisition()
+-> TestResult {
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let bound = rtao_intents::AnyIntent::from_tool(
+        "stake_into_basket",
+        json!({"hotkey_ss58":keys.key.account(),"amount_tao":"1"}),
+    )?;
+    let changed = rtao_intents::AnyIntent::from_tool(
+        "stake_into_basket",
+        json!({"hotkey_ss58":keys.key.account(),"amount_tao":"2"}),
+    )?;
+    let review = command_review(bound.as_dyn());
+    let options = SubmissionOptions {
+        review: Some(&review),
+        ..Default::default()
+    };
+    let (ctx, _, reads) = context(&["--no-mev-shield"])?;
+    let start = chain.requests().len();
+    let error = ctx
+        .submit_with_keys_options(&client, changed.as_dyn(), &keys, options)
+        .await
+        .err()
+        .ok_or("injected keys mismatch")?;
+    assert_eq!(error.code, 2);
+    assert!(error.message.contains("review does not match"));
+    assert_eq!(chain.requests().len(), start);
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    let inner = DirectExternalFactory::new(&keys, false);
+    let external = ReviewExternalFactory {
+        inner: &inner,
+        labels: Mutex::new(Vec::new()),
+        label_only: true,
+    };
+    let (mut ctx, _, reads) = context(&["--signer", "extension", "--no-mev-shield"])?;
+    let error = ctx
+        .submit_with_options(
+            &client,
+            changed.as_dyn(),
+            options,
+            Some(&external),
+            &mut rtao_cli::prompt::PromptHistory::default(),
+        )
+        .await
+        .err()
+        .ok_or("external mismatch")?;
+    assert_eq!(error.code, 2);
+    assert_eq!(chain.requests().len(), start);
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    assert_eq!(inner.acquired.load(Ordering::SeqCst), 0);
+    assert!(inner.released.lock().map_err(|_| "released")?.is_empty());
+    let members = members()?;
+    let factory = factory(&members);
+    let (ctx, _) = saved_context(&members, &["--no-mev-shield"], 2)?;
+    let error = ctx
+        .submit_saved_with_options(
+            &client,
+            changed.as_dyn(),
+            options,
+            &factory,
+            &CallCache::default(),
+        )
+        .await
+        .err()
+        .ok_or("saved mismatch")?;
+    assert_eq!(error.code, 2);
+    assert_eq!(chain.requests().len(), start);
+    assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+    assert!(
+        members
+            .iter()
+            .all(|member| member.unlocks.load(Ordering::SeqCst) == 0)
+    );
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     client.close().await;
     Ok(())
 }

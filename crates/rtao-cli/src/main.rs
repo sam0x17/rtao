@@ -121,11 +121,10 @@ async fn run() -> Result<(), CliError> {
         .iter()
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect::<Vec<_>>();
-    let mut argv = argv;
-    let mut prompt_history = rtao_cli::prompt::PromptHistory::default();
+    let prompt_history = rtao_cli::prompt::PromptHistory::default();
     let mut prepared_context = None;
     if let Some(partial) =
-        application::pending_wallet_matches(&command, &argv, &context, &prompting)?
+        application::pending_prompt_matches(&command, &argv, &context, &prompting)?
     {
         let mut leaf = &partial;
         while let Some((_, child)) = leaf.subcommand() {
@@ -134,32 +133,31 @@ async fn run() -> Result<(), CliError> {
         #[allow(deprecated)]
         let prompt_home =
             env::home_dir().ok_or_else(|| CliError::failure("home directory is unavailable"))?;
-        // Only the two local-key commands above need this early context. This
-        // loads public options/books; confirmation never acquires a signer.
-        let mut app = AppContext::from_store(
+        // Required public addresses and local-key commands need the same
+        // resolved options/books as their handlers, without acquiring a signer.
+        let reserved = application::pending_prompt_reserved(&partial)?;
+        let app = AppContext::from_store(
             &partial,
             leaf,
-            &[],
+            &reserved,
             &store,
             &prompt_home,
             |name| env::var(name).ok(),
             terminal.clone(),
         )
         .await?;
-        application::confirm_required_wallet(&mut app, &mut argv, &mut prompt_history)?;
         prepared_context = Some(app);
     }
-    let parse_context = prepared_context
-        .as_ref()
-        .map(AppContext::prompt_context)
-        .unwrap_or(context);
-    let mut invocation = application::parse_with_prompt_history(
-        command,
-        argv,
-        &parse_context,
-        &mut prompting,
-        prompt_history,
-    )?;
+    let mut invocation = match prepared_context.as_mut() {
+        Some(app) => application::parse_with_context(command, argv, app, prompt_history),
+        None => application::parse_with_prompt_history(
+            command,
+            argv,
+            &context,
+            &mut prompting,
+            prompt_history,
+        ),
+    }?;
     let command_path = application::command_path(&completion_tree, &invocation.matches);
     let Some((name, matches)) = invocation.matches.subcommand() else {
         return Err(CliError::input("missing command"));
@@ -386,8 +384,8 @@ async fn run() -> Result<(), CliError> {
                             .await
                             .map(|_| ());
                         }
-                        let Some(request) =
-                            root::prepare_transaction(app_ref, &client, &request, history).await?
+                        let Some(prepared) =
+                            root::prepare_submission(app_ref, &client, &request, history).await?
                         else {
                             return Ok(());
                         };
@@ -395,8 +393,9 @@ async fn run() -> Result<(), CliError> {
                         generated::execute_tx(
                             app_ref,
                             &client,
-                            &request,
+                            &prepared.request,
                             rtao_cli::context::SubmissionOptions {
+                                review: prepared.review.as_ref(),
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
