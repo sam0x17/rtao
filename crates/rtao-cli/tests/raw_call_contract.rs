@@ -328,10 +328,21 @@ fn input_parsing_retains_full_width_integers_and_rejects_nonobjects() -> TestRes
     );
     assert!(call::load_params(Some("[]"), None).is_err());
     assert!(call::load_params(Some("{bad}"), None).is_err());
-    assert_eq!(
-        call::load_params(Some("  \n"), None)?,
-        serde_json::Map::new()
-    );
+    for raw in [
+        "  \n",
+        "\u{1c}",
+        "\u{1d}",
+        "\u{1e}",
+        "\u{1f}",
+        "\t\u{1c}\u{1d}\u{1e}\u{1f}\n",
+    ] {
+        assert_eq!(call::load_params(Some(raw), None)?, serde_json::Map::new());
+    }
+    // Python strips only to detect an empty input; JSON still parses the
+    // original text, so these separators cannot wrap a nonempty object.
+    for separator in ['\u{1c}', '\u{1d}', '\u{1e}', '\u{1f}'] {
+        assert!(call::load_params(Some(&format!("{separator}{{}}{separator}")), None).is_err());
+    }
     Ok(())
 }
 
@@ -430,6 +441,84 @@ fn semantic_routes_resolve_public_members_without_a_raw_target_or_key_source() -
             .map(|round| round.backend.as_str())
             .collect::<Vec<_>>(),
         vec!["vault", "extension"]
+    );
+    // A single empty suffix is rejected by globals, while the repeated-member
+    // planner treats an empty normalized suffix as an instruction to infer.
+    assert!(context(&["--yes", "--signatory", "alice="]).is_err());
+    for root_wallet in [false, true] {
+        for members in [
+            vec![],
+            vec!["--signatory", "alice"],
+            vec!["--signatory", "alice=", "--signatory", "bob="],
+            vec!["--signatory", "alice=ledger"],
+        ] {
+            let automatic = !root_wallet && members.is_empty();
+            let expected = if root_wallet && (members.is_empty() || members[1] == "alice") {
+                None
+            } else if members.len() == 4 || members.is_empty() {
+                Some(vec!["vault", "extension"])
+            } else if members[1] == "alice=ledger" {
+                Some(vec!["ledger"])
+            } else {
+                Some(vec!["vault"])
+            };
+            let mut argv = vec!["rtao"];
+            if root_wallet {
+                argv.extend(["--signer", "wallet"]);
+            }
+            argv.extend(["call", "System.remark", "--multisig", "team", "--yes"]);
+            if !root_wallet {
+                argv.extend(["--signer", "wallet"]);
+            }
+            argv.extend(members);
+            let parsed = command_tree([call::command()]).try_get_matches_from(argv)?;
+            let leaf = parsed.subcommand().ok_or("call command")?.1;
+            let config = serde_json::Map::new();
+            let mut globals = Globals::resolve(
+                &parsed,
+                &config,
+                Path::new("/isolated/nonexistent-home"),
+                |_| None,
+            )?;
+            globals.apply_with_env(leaf, &["signer_backend"], |_| None)?;
+            let mut selected = AppContext::new(
+                globals,
+                config,
+                ctx.books.clone(),
+                Arc::new(Mutex::new(Box::new(NoTerminal))),
+            );
+            let sink = MemorySink::default();
+            selected.output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+            let result = RawCallRequest::from_matches(&selected, leaf);
+            if let Some(expected) = expected {
+                assert_eq!(
+                    result?
+                        .rounds
+                        .iter()
+                        .map(|round| round.backend.as_str())
+                        .collect::<Vec<_>>(),
+                    expected
+                );
+            } else {
+                let error = result
+                    .err()
+                    .ok_or("root wallet must not use external tags")?;
+                assert_eq!(error.code, 2);
+                assert!(error.message.contains("local"));
+            }
+            assert_eq!(
+                sink.text(Stream::Stderr)?.contains("approvals planned"),
+                automatic
+            );
+        }
+    }
+    ctx.globals.signatories = vec!["alice=\u{1c}\u{1f}".into(), "bob".into()];
+    assert_eq!(
+        call::plan_rounds(&ctx, Some(&group), SignerRole::Coldkey, None)?
+            .iter()
+            .map(|round| round.backend.as_str())
+            .collect::<Vec<_>>(),
+        ["vault", "extension"]
     );
     assert!(call::resolve_preset(&ctx, "missing").is_err());
     ctx.books.multisigs[0]["threshold"] = json!(0);
