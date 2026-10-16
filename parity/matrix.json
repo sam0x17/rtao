@@ -2595,7 +2595,9 @@
           "rtao_cli::multisig::tests::operation_changed_after_composition_keeps_stale_some_in_the_actual_signed_call",
           "rtao_cli::context_contract::saved_semantic_replaced_opening_refuses_before_second_source",
           "rtao_cli::context_contract::saved_semantic_missing_opening_identity_refuses_automatic_continuation",
-          "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval"
+          "rtao_tx::owner_execution::completed_multisig_owner_rate_failure_preserves_receipt_without_reapproval",
+          "rtao_neuron::owner_ops::trim::tests::new_approval_binds_receipt_position_and_refuses_later_same_block_opening",
+          "rtao_neuron::owner_ops::trim::tests::explicit_approval_binds_review_and_event_timepoint_before_pending_storage"
         ]
       },
       {
@@ -7934,11 +7936,11 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/basket_index.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `root_helpers::basket_index`"
+          "crates/rtao-cli/src/root_helpers/basket_index.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "caa7830f5183fe3e22f8cacb8c130be0b86d8a18"
       },
       {
         "kind": "extracted",
@@ -8058,110 +8060,111 @@
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/__init__.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3d97ad96c4355f95960a23728c4e5952628132f6"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/_shared.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm.rs",
+          "crates/rtao-cli/src/commands/evm/keys.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a5689ac25cc006e86809ac52818e083d6ca5f969"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/address.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "fddc33ddc279c43d7e423b21dc635bae817665b8"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/association.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm/association.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "84a0f6e45fe5998e20a05510f8e0f0e75f45d996"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/contracts_cmd.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm/contracts.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a2fec29b926c5e3b2df132805ffe717236dd4ddc"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/keys.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm/keys.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5bd75ff7f952c3fa746f1ced32b3b23bb3e91426"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/money.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "85f22716ada1bc1810c194e27774146c78cbfdb1"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm/precompiles.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cdbc8d2a2c8c4ec7a9a84d046a35952d301fe1a6"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/setup.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm/setup.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "c5ba0b6ea1b439db781898e12d9ff42508305e88"
       },
       {
         "kind": "ported",
         "milestone": "M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/evm/stake.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `evm` group (feature `evm`)"
+          "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "298a0c8b32d77046c3ad5dcb65d91428fd20c95d"
       },
       {
         "kind": "ported",
@@ -10294,22 +10297,22 @@
         "milestone": "M2, M6",
         "oracle": "unverified",
         "python": "sdk/python/scripts/record_golden.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional hosted xtask record through ci/oracle/record.py; committed fixture readers in rtao-testkit"
+          "Optional upstream producer invoked by ci/oracle/record.py and xtask/src/record.rs; rtao-testkit loaders and recorded-root replay are separate consumers"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f8de6bddb01df20c4b1948ee0ba880debb9c2879"
       },
       {
         "kind": "oracle-only",
         "milestone": "M2, M6",
         "oracle": "unverified",
         "python": "sdk/python/scripts/record_shape_corpus.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Optional hosted xtask record through ci/oracle/record.py; committed fixture readers in rtao-testkit"
+          "Optional upstream producer invoked by ci/oracle/record.py and xtask/src/record.rs; rtao-testkit loaders and recorded-root replay are separate consumers"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "dc205be8269ccde3e348908acee71819bc7fc0d9"
       },
       {
         "kind": "oracle-only",

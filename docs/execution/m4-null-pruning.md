@@ -14,11 +14,13 @@ The command accepts the pinned Python options: netuid, optional target,
 The target defaults to an existing on-chain target or the current Yuma ceiling.
 The default journal path uses Python's SHA-256 chain/subnet identity beside the
 shared CLI config. An explicit `--state-file` uses the supplied recovery path.
-The native wait budget starts with the session and resets only after verified
-finalized progress (population decreases, commitments clear, pruning completes
-or the Yuma switch is confirmed). Opening another wait does not reset it. This
-can stop earlier than Python, which starts its timer on the first wait and
-clears it after any successful batch. The CLI help states the native limit.
+The wait budget starts on the first required wait, matching Python. Polls,
+changed wait reasons and cancelled read-only waits share that deadline. Each
+accepted finalized batch clears the timer, including an unchanged batch; the
+next required wait starts a fresh interval. Three consecutive batches without
+progress still stop independently. The last sleep is limited to the remaining
+time so the driver can reread state before deciding whether another wait is
+required. Failed submissions and pending approvals do not clear the timer.
 Each submitted step also receives an executor deadline, unless an explicit
 submission deadline overrides it. The executor drains attempted delivery when
 that deadline expires; the CLI never cancels a submission future to implement a

@@ -705,6 +705,202 @@ async fn three_confirmed_cleanup_batches_without_progress_stop() -> anyhow::Resu
     Ok(())
 }
 
+#[tokio::test(start_paused = true)]
+async fn wait_budget_starts_on_first_wait_and_survives_rechecks_and_cancellation()
+-> anyhow::Result<()> {
+    let f = fixture(300, []).await?;
+    f.chain
+        .mutate_state(|state| state.seed(&st::PENDING_EPOCH_AT, (NET,), 110u64))?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            poll_interval: Duration::from_secs(12),
+            wait_timeout: Duration::from_secs(30),
+            ..Default::default()
+        },
+    )
+    .await?;
+    // Preparation before the first wait consumes none of its budget.
+    tokio::time::advance(Duration::from_secs(300)).await;
+    let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+        anyhow::bail!("expected the closed administration window");
+    };
+    let started = tokio::time::Instant::now();
+    session.wait(&reason, delay).await?;
+    assert_eq!(started.elapsed(), Duration::from_secs(12));
+    {
+        let cancelled_wait = session.wait(&reason, delay);
+        tokio::pin!(cancelled_wait);
+        assert!(futures::poll!(cancelled_wait.as_mut()).is_pending());
+        tokio::time::advance(Duration::from_secs(7)).await;
+    }
+    // A recheck and a cancelled wait cannot grant a fresh interval. The last
+    // sleep is clamped to the eleven seconds remaining, then permits a recheck.
+    let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+        anyhow::bail!("administration must still be frozen");
+    };
+    session.wait(&reason, delay).await?;
+    assert_eq!(started.elapsed(), Duration::from_secs(30));
+    assert!(
+        session
+            .wait(&reason, delay)
+            .await
+            .expect_err("the unchanged window exhausted its budget")
+            .to_string()
+            .contains("wait timed out")
+    );
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 0);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
+    f.owner.client().close().await;
+    Ok(())
+}
+
+#[tokio::test(start_paused = true)]
+async fn accepted_batches_clear_wait_budget_but_three_stalls_still_stop() -> anyhow::Result<()> {
+    let f = fixture(300, [Step::Remove, Step::Stall, Step::Stall, Step::Stall]).await?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            max_batches: 4,
+            poll_interval: Duration::from_secs(12),
+            wait_timeout: Duration::from_secs(30),
+            ..Default::default()
+        },
+    )
+    .await?;
+    for batch in 1..=4 {
+        // Time before the next wait, including after an accepted batch, is free.
+        tokio::time::advance(Duration::from_secs(60)).await;
+        f.chain
+            .mutate_state(|state| state.seed(&st::PENDING_EPOCH_AT, (NET,), 110u64))?;
+        let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+            anyhow::bail!("expected a closed window before batch {batch}");
+        };
+        let started = tokio::time::Instant::now();
+        session.wait(&reason, delay).await?;
+        tokio::time::advance(Duration::from_secs(17)).await;
+        session.wait(&reason, delay).await?;
+        assert_eq!(started.elapsed(), Duration::from_secs(30));
+        // At the deadline a fresh read can observe that waiting is no longer
+        // needed. Submission has its own owner/executor deadline, not this clock.
+        f.chain
+            .mutate_state(|state| state.seed(&st::PENDING_EPOCH_AT, (NET,), 0u64))?;
+        let TrimNullStep::Submit(action) = session.next_action().await? else {
+            anyhow::bail!("expected a batch after the window opened");
+        };
+        let TrimActionKind::Batch(intent) = action.kind.as_ref() else {
+            anyhow::bail!("expected a guarded pruning batch");
+        };
+        let plan = f
+            .owner
+            .executor
+            .plan(intent, f.owner.keys.as_ref(), &PlanOptions::default())
+            .await?;
+        assert!(plan.ok(), "{:?}", plan.violations);
+        session.before_attempt(&action, &plan)?;
+        let operation = f.owner.operation()?;
+        let receipt = operation
+            .execute_trim_reviewed(intent, &ExecuteOptions::default(), &plan)
+            .await?;
+        let finished = session.finish_action(action, &receipt).await;
+        if batch < 4 {
+            finished?;
+        } else {
+            assert!(
+                finished
+                    .expect_err("three stalled batches still stop")
+                    .to_string()
+                    .contains("three finalized")
+            );
+        }
+        assert_eq!(session.report().batches, batch);
+        assert_eq!(session.report().population, 236);
+        assert_eq!(session.report().removed_uids, 64);
+        assert_eq!(session.report().cleared_commits, 0);
+        assert!(!f.recovery.exists());
+    }
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 4);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 4);
+    f.owner.client().close().await;
+    Ok(())
+}
+
+#[tokio::test(start_paused = true)]
+async fn finalized_window_race_preserves_the_existing_wait_deadline() -> anyhow::Result<()> {
+    let f = fixture(
+        300,
+        [Step::Failure("AdminActionProhibitedDuringWeightsWindow")],
+    )
+    .await?;
+    f.chain
+        .mutate_state(|state| state.seed(&st::PENDING_EPOCH_AT, (NET,), 110u64))?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig {
+            poll_interval: Duration::from_secs(12),
+            wait_timeout: Duration::from_secs(30),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+        anyhow::bail!("expected the closed administration window");
+    };
+    session.wait(&reason, delay).await?;
+    f.chain
+        .mutate_state(|state| state.seed(&st::PENDING_EPOCH_AT, (NET,), 0u64))?;
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("expected a batch after the window opened");
+    };
+    let TrimActionKind::Batch(intent) = action.kind.as_ref() else {
+        anyhow::bail!("expected guarded pruning batch");
+    };
+    let plan = f
+        .owner
+        .executor
+        .plan(intent, f.owner.keys.as_ref(), &PlanOptions::default())
+        .await?;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    session.before_attempt(&action, &plan)?;
+    let operation = f.owner.operation()?;
+    let receipt = operation
+        .execute_trim_reviewed(intent, &ExecuteOptions::default(), &plan)
+        .await?;
+    assert!(!receipt.success);
+    session.finish_action(action, &receipt).await?;
+    let TrimNullStep::Wait { reason, delay } = session.next_action().await? else {
+        anyhow::bail!("the finalized window race must wait before replanning");
+    };
+    tokio::time::advance(Duration::from_secs(19)).await;
+    assert!(
+        session
+            .wait(&reason, delay)
+            .await
+            .expect_err("failed dispatch must not clear the old wait interval")
+            .to_string()
+            .contains("wait timed out")
+    );
+    assert_eq!(session.report().batches, 0);
+    assert!(!f.recovery.exists());
+    assert_eq!(f.owner.keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 1);
+    f.owner.client().close().await;
+    Ok(())
+}
+
 #[tokio::test]
 async fn already_complete_uses_storage_without_signing() -> anyhow::Result<()> {
     let f = fixture(TARGET, []).await?;

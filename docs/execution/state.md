@@ -16,10 +16,10 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-15
 
-The next source batch reconciles thirteen complete source relationships: all
+The current source batch reconciles thirteen complete source relationships: all
 ten EVM CLI modules, basket display pricing and both optional recorders. The
-source map reaches 297/357 reconciled and 60 pending; the generated matrix
-remains at 284 pending its next hosted refresh. Seven EVM input corrections
+source map and adopted generated matrix agree at 297/357 reconciled and 60
+pending. Seven EVM input corrections
 preserve exact-empty option semantics, one shared fund-all decision and the
 alpha-only root guard. Fourteen new injected fixture functions exercise actual
 handlers, intent construction, ABI words, preview/confirmation and refusal
@@ -32,9 +32,13 @@ compare block-end state, then repeat that authentication on restart. New and
 explicit nonexecuting approvals each have same-opening/replaced-opening cases;
 old artificial receipts now use their actual inclusion position. Preserve raw
 evidence, D-023, D-041, S9 and no automatic reopening. Already-Yuma no-op ordering
-is corrected; wait-budget help now states the existing native behavior. Both
-complete null-pruning rows remain pending, including their exact pytest and
-wait-semantics obligations.
+is corrected. A separately reviewed timer repair now starts the wait budget on
+the first wait and clears it after each accepted batch, matching Python. A final
+partial sleep permits a state recheck; cancellation and failed-window retries
+retain the deadline. Three paused-time FakeChain fixtures cover these boundaries
+without changing three-stall, journal, finality or submission-draining guards.
+Both complete null-pruning rows remain pending, including their full pytest
+mapping and hosted execution obligations.
 
 Complete codegen/check.py review found missing metadata/classifier and nonblank
 prose guards. Native parity now checks those contracts with targeted source
@@ -44,6 +48,21 @@ No Python/oracle, device, live runtime or sanitizer execution is inferred.
 All new fixtures and strict M8/milestone acceptance remain unverified; M2-S02
 is open/unaccepted. Bounded source/adoption reviews live under the existing
 recovery root; no build output, archive or extraction tree was created.
+
+Hosted report refresh
+[38826175917](https://github.com/sam0x17/rtao/actions/runs/38826175917) passed
+at clean `d2d5add9eb68806f37d1b90eac372b0db97ac0c9`, including full source
+parity. Authenticated and independently refetched artifact 12015413800
+(57,978 bytes, SHA256
+`f3af367e6632bef6c2200ca8fee15bb86387e81f5598e348337ca4db52ffa8da`)
+supplies exactly four adopted reports. Matrix changes are limited to the thirteen
+reviewed source promotions and two appended D-041 tests. All 23 dependency
+inputs, role inventories, host flags, 20 pending e2e mappings, 68 divergence
+identities and other compatibility claims are unchanged. Inspection and adoption
+proofs are `d2d5add-report-inspection.json` and `d2d5add-report-adoption.json`.
+The timer patch has independent source approval in
+`null-pruning-wait-independent-review.txt`; its three fixtures and the integrated
+compiler, transport, extractor and documentation fixes await ordinary hosted CI.
 
 Ordinary [38824416747](https://github.com/sam0x17/rtao/actions/runs/38824416747)
 at `d9ae66842d0cdb261b353ea0284b1f5936c324b4` passed supply, MSRV and
@@ -60,8 +79,8 @@ Its 77,984-byte terminal log has SHA256
 `351ce4a11a4b49f367c5bbe81e8f28722e76af135fb38b564df3a1214fd1cb3d`;
 bounded proof is `check-main-38824416747.json`. No tests or documentation ran
 there. The feature job subsequently passed and the run is terminally failed.
-Execution of both corrections remains pending. Push the reviewed source batch
-for a separate report refresh before the next combined ordinary checkpoint.
+Execution of both corrections remains pending. The reviewed source batch and
+report refresh above are ready for the next combined ordinary checkpoint.
 
 Hosted report refresh
 [38823630645](https://github.com/sam0x17/rtao/actions/runs/38823630645) passed
@@ -97,7 +116,7 @@ unchanged. Existing legacy runtime-API output is unchanged. Bounded proofs
 `2ad5d1b-artifact-inspection.json` and `2ad5d1b-artifact-adoption.json` remain
 under `.local/recovery/2026-10-15/`, without archives or extraction directories.
 
-The published matrix has 284/357 source rows reconciled, 73 pending, 20 pending
+The published matrix has 297/357 source rows reconciled, 60 pending, 20 pending
 e2e mappings and 68 divergences. Source mappings retain explicit native API,
 strictness and coverage limits. These are source reconciliation results.
 Strict M8 completeness remains off; no milestone is accepted. M2-S02 remains
