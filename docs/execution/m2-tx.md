@@ -1,5 +1,14 @@
 # M2 transaction executor
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `rtao-tx` implements the M2 intent contracts, dynamic dispatch, plans, policies,
 execution, typed outputs and chain errors. Balances and caps use checked native
 `u64` rao (Q25 / D-035).
@@ -66,11 +75,12 @@ pool-error tests. The signer accounts for 14 checks.
 
 Final logs are `target/execute-plan.6Ro0PC/tmp/m2-tx-final-{current,msrv,
 no-default,clippy,msrv-clippy}.log`. No separate scratch directories were
-created by the TX owner. The shared build and bounded logs remain live for
-parent integration and other workers.
+created by the TX owner. That task root and its build/log paths are retired
+and absent; shared global Cargo/toolchain caches remain preserved.
 
 Raw submission and shield execution are assigned to M4. Subnet-registration
 completion lands with its M4 intent. Offline executor methods and complete
 multisig/pure-proxy behaviors land in M5. Mandatory shield intents fail closed
 until that execution path is present. This evidence does not claim those later
-behaviors. Live localnet and oracle milestone gates remain separate.
+behaviors at that historical checkpoint. Live localnet and oracle execution
+are optional targeted hosted evidence under Q30, not development exit gates.

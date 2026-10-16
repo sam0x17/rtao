@@ -243,6 +243,116 @@ async fn utility_batch_survives_unsigned_json_roundtrip_and_signature_attachment
     client.close().await;
 }
 
+// pyt: sdk/python/tests/unit/test_prepare_attach.py::test_offline_roundtrip_assembles_nested_calls
+#[tokio::test]
+async fn transfer_proxy_and_sudo_survive_unsigned_json_roundtrip_and_attachment() {
+    let (client, fake, signer) = fixture(CryptoType::Sr25519).await;
+    client.nonces().pin(&signer.account(), 80);
+    let runtime = client.refresh_runtime().await.unwrap();
+    let transfer = rtao_runtime::calls::balances::transfer_keep_alive(
+        rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(vec![9; 32])),
+        rtao_primitives::TaoBalance(1),
+    )
+    .compose(&runtime)
+    .unwrap();
+    let proxy = rtao_runtime::calls::proxy::proxy(
+        rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(signer.account().0.to_vec())),
+        Some(rtao_runtime::models::ProxyType::Transfer),
+        transfer.clone(),
+    )
+    .compose(&runtime)
+    .unwrap();
+    let sudo = rtao_runtime::calls::sudo::sudo(transfer.clone())
+        .compose(&runtime)
+        .unwrap();
+    for (module, function, call) in [
+        ("Balances", "transfer_keep_alive", transfer),
+        ("Proxy", "proxy", proxy),
+        ("Sudo", "sudo", sudo),
+    ] {
+        let call_data = call.as_bytes().to_vec();
+        let unsigned = client
+            .prepare_public(
+                call,
+                signer.account(),
+                &PublicPrepareOptions {
+                    crypto_type: signer.crypto_type(),
+                    tip: 3,
+                    submit: SubmitOptions {
+                        mortality: Mortality::Immortal,
+                        nonce: NoncePolicy::Explicit(7),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let expected = unsigned.to_json().unwrap();
+        let encoded = serde_json::to_vec(&expected).unwrap();
+        drop(unsigned);
+        let imported = client
+            .import_unsigned_json(&encoded, &SubmitOptions::default())
+            .await
+            .unwrap();
+        assert_eq!(imported.to_json().unwrap(), expected, "{module}.{function}");
+        assert_eq!(imported.call().as_bytes(), call_data, "{module}.{function}");
+        assert_eq!(imported.address(), signer.account());
+        let signature = signer
+            .sign(&imported.signing_request(SignPurpose::Extrinsic))
+            .await
+            .unwrap();
+        let (signed, _) = client.attach_signature(&imported, signature).await.unwrap();
+        assert!(signed.ends_with(&call_data), "{module}.{function}");
+        let decoded =
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(&signed, true).unwrap())
+                .to_json();
+        let outer = &decoded["call"];
+        assert_eq!(outer["call_module"], module);
+        assert_eq!(outer["call_function"], function);
+        let transfer = if module == "Balances" {
+            outer
+        } else {
+            &outer["call_args"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|arg| arg["name"] == "call")
+                .unwrap()["value"]
+        };
+        assert_eq!(transfer["call_module"], "Balances");
+        assert_eq!(transfer["call_function"], "transfer_keep_alive");
+        let args = transfer["call_args"].as_array().unwrap();
+        assert_eq!(
+            args.iter().find(|arg| arg["name"] == "value").unwrap()["value"],
+            1
+        );
+        assert_eq!(
+            args.iter().find(|arg| arg["name"] == "dest").unwrap()["value"],
+            AccountId([9; 32]).to_ss58(runtime.core().ss58_format)
+        );
+        if module == "Proxy" {
+            let args = outer["call_args"].as_array().unwrap();
+            assert_eq!(
+                args.iter().find(|arg| arg["name"] == "real").unwrap()["value"],
+                signer.account().to_ss58(runtime.core().ss58_format)
+            );
+            assert_eq!(
+                args.iter()
+                    .find(|arg| arg["name"] == "force_proxy_type")
+                    .unwrap()["value"],
+                "Transfer"
+            );
+        }
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            Some(80)
+        );
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+    }
+    client.close().await;
+}
+
 #[tokio::test]
 async fn fuzz_unsigned_seed_reconstructs_signs_and_attaches_under_authenticated_context() {
     let (client, fake, _) = fixture(CryptoType::Sr25519).await;

@@ -1,5 +1,14 @@
 # M2-06 portable receipt, fee and inclusion helpers
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `rtao-core-ext::ops::{receipt, dispatch_error, fee, extrinsic_lookup}` now
 provide protocol helpers without transport, nonce-cache mutation or signing.
 Callers supply the runtime selected for the included block. The public modules
@@ -41,7 +50,8 @@ outer `ExtrinsicSuccess`. Lookup finds index 1 in block 12, both RPCs use
 the same block hash, and decoded attributes contain `sudo_result` without
 the legacy core's assumed `result` field. Receipt resolution returns
 `success: false` with the `BadOrigin` error. FakeChain models these events;
-the later M5 scenario supplies live runtime evidence.
+a separately executed optional hosted M5 scenario could supply live runtime
+evidence. No such result is inferred from these fake events.
 
 Validation on 2026-10-14:
 
@@ -62,11 +72,12 @@ Sources are pinned at commit
 the error-map SHA256 is
 `65efe42793da7201a0707f4648cd8801ea1206bebd47d75e4af74e6f90767db3`.
 
-Builds and logs use the recorded `target/execute-plan.6Ro0PC` task root.
+Historical builds and logs used `target/execute-plan.6Ro0PC`. That root is
+retired and absent; its scratch/log paths are historical provenance.
 The four new staged probe directories were removed after process, open-file,
 launchd, configuration, symlink and virtual-environment checks found no live
 dependency. Their bounded outcome remains in the staged-check log.
 No Python interpreter, wallet writes, chain submission, commits, pushes,
 external filing or PLAN checkbox edits were performed by this work.
-The shared build, staged-probe build and tool caches remain live parent-task
-dependencies.
+The former task build/staged-probe/tool paths are retired and are not current
+parent-task dependencies. Preserve shared global Cargo/toolchain caches.

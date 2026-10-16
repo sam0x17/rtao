@@ -1,5 +1,14 @@
 # M2 SS58 input addresses
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `Ss58Address` separates an intent's validated input spelling from its binary
 chain identity. It retains the caller's exact string for display, JSON and
 summaries. `account()` returns the decoded `AccountId`; `IntoCoreValue` encodes
@@ -37,8 +46,8 @@ Validation on 2026-10-14 used `--locked` throughout:
 | TX executor and core-policy integration tests | 16 + 7 passed | 16 + 7 passed |
 | Strict all-target Clippy, primitives/client/intents/TX | passed | passed |
 
-Owned Rust formatting passed with edition 2024. Logs are retained under
+Owned Rust formatting passed with edition 2024. Historical logs used
 `target/execute-plan.6Ro0PC/tmp/m2-address-*`. No separate disposable directories
-were created. The shared build cache and coordination notes remain live for
-parent integration. Hosted oracle and localnet validation remain separate
-milestone gates.
+were created. That task build/tmp root is retired and absent; shared global
+Cargo/toolchain caches remain preserved. Oracle and localnet validation are
+optional targeted hosted evidence under Q30, not development milestone gates.

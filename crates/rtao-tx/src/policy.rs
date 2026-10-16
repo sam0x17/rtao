@@ -85,7 +85,7 @@ impl PolicySubject for IntentSafety {
 }
 impl<I: Intent> PolicySubject for I {
     fn op(&self) -> &'static str {
-        I::SPEC.name
+        self.semantic_intent().spec().name
     }
     fn spend(&self) -> Spend {
         Intent::spend(self)

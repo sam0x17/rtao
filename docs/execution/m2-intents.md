@@ -1,6 +1,15 @@
 # M2 transaction intents
 
-All nine M2 intent behaviors are implemented locally: transfer/transfer-all, four serving operations, and set/commit/reveal weights. Hosted oracle vectors, localnet scenarios and milestone exits remain pending.
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
+The initial M2 source implemented nine intent behaviors: transfer/transfer-all, four serving operations, and set/commit/reveal weights. Independent oracle vectors and localnet execution remain optional/unverified under Q30; the milestone security exit remains open.
 
 Transfer resolves exact amounts into TAO before encoding, chooses keep-alive/allow-death/all exactly as Python does, and reports bounded or unbounded spend. Summaries and sweep warnings preserve Python's wording. Validated SS58 inputs retain the caller's network prefix in JSON and summaries, while encoding the decoded account bytes. Transfer-all delegates its build to the generated pass-through function. Native u64 limits and TAO/alpha unit checks follow Q25/D-035.
 
@@ -10,11 +19,13 @@ The root owner implemented weight preflight, rate and Null-permit checks, mechan
 
 `crates/rtao-intents/tests/hosted_oracle.rs` uses the unified native adapter in `xtask/src/oracle/replay.rs` to replay the designated CI lane's intent/read vectors and each immutable sample seed. It compares constructor JSON, call bytes through the core encoder, build extras, preflight fields, spend, exact descriptor hit sets, fee rao and complete executor plans. Only the oracle's explicit randomized commitment/reveal-round masks are admitted. It closes injected clients and rejects any submission request. Two native input tests construct and encode every reviewed intent sample and dispatch every reviewed read sample at both blocks. These checks prepare the adapter; Python differential results still require the hosted output.
 
-The hosted test requires `RTAO_ORACLE_DIR` and is deliberately ignored in ordinary local runs:
+The optional hosted replay requires authenticated `RTAO_ORACLE_DIR` artifacts
+and is excluded from ordinary fixture runs. Its historical command form is
+for a bounded designated hosted job:
 
 ```sh
 RTAO_ORACLE_DIR=/path/to/verified/artifacts cargo test -p rtao-intents \
   --features all --test hosted_oracle hosted_m2_intent_and_read_oracle_replay -- --ignored
 ```
 
-No Python or local oracle containers were executed. Current Rust and Rust 1.89 aggregate suites pass 38 intent library tests and two native oracle-input tests, with strict all-target Clippy for primitives/intents/xtask, four generator tests and no-feature compilation. The seven policy-equivalence tests pass and the localnet e2e target compiles with its Docker feature. The separate hosted test remains pending actual immutable vectors; full gates must pass before any push or milestone tag.
+No Python or local oracle containers were executed. Current Rust and Rust 1.89 aggregate suites pass 38 intent library tests and two native oracle-input tests, with strict all-target Clippy for primitives/intents/xtask, four generator tests and no-feature compilation. The seven policy-equivalence tests pass and the localnet e2e target compiles with its Docker feature. The separate hosted replay remains unverified without actual immutable vectors. Q30 permits ordinary client development and source pushes without an oracle/localnet campaign or release tag; applicable client checks run in hosted CI.

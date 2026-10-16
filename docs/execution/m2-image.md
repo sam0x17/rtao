@@ -1,5 +1,17 @@
 # M2 validator image preparation
 
+## Current source and scope
+
+M2-23 is an optional hosted image check under Q30. Retain the Dockerfile and
+TLS-probe source; a recipe change may justify a bounded free hosted check.
+The [validator-image workflow draft](../../.github/deferred-workflows/validator-image.yml)
+is inactive. No local image build/container, GHCR setup or deployment is
+required. Q29 waives the testnet soak and its funding/registration/host setup.
+Image execution and its container-TLS result remain unverified. M2-S02 remains
+open and unaccepted, so the M2 milestone exit remains open.
+
+## Historical preparation and validation
+
 The no-host image recipe, free Ubuntu workflow and standalone Rust TLS probe
 are authored. They use `rtao-neuron`'s wallet-free `--check-connection` path,
 normal TLS validation, Finney genesis checking and required runtime metadata
@@ -9,8 +21,8 @@ self-signed certificate without its explicit trust root.
 The standalone probe compiles on Rust 1.99 and Rust 1.89, and strict Clippy
 passes. Actionlint 1.7.7 passes the workflow. These are local preparation
 results. No local Docker daemon is available, so no image build or container
-TLS run is claimed. M2-23 and its numbered exits still require those actual
-Ubuntu results. No Python was executed locally or in a local container.
+TLS run is claimed. Those actual Ubuntu results would be needed before
+claiming image/container acceptance; they are not required for M2 development. No Python was executed locally or in a local container.
 
 The Rust builder digest is the existing authenticated oracle base for
 `rust:1.89-slim-bookworm` on linux/amd64:
@@ -33,8 +45,9 @@ checkbox, rtao commit, push or tag follows from this record.
 The probe journals its exact owned container name before starting Docker and
 checks its ownership label before removal. A failed cleanup retains the mount
 directory and reports the live dependency. The current local checks created
-no containers or certificates. Shared build/source caches under
-`target/execute-plan.6Ro0PC` remain live for integrated verification.
+no containers or certificates. The former `target/execute-plan.6Ro0PC` root
+is retired and absent; its build/source caches are not current dependencies.
+Shared global Cargo/toolchain caches remain preserved.
 
 The final probe's Rust 1.89 strict Clippy check passes after tightening its
 metadata assertion: trusted startup must call `Metadata_metadata_at_version`
@@ -42,4 +55,5 @@ with the V15 argument, in addition to genesis and runtime-version requests.
 The exact unused Debian manifest download was removed after process,
 open-file, launchd, source/configuration, symlink and virtual-environment
 audits. Bounded cleanup evidence is `tmp/root-image-input-cleanup.txt` under
-the shared execution root; no image, container or certificate was created.
+the former execution root. That scratch path is historical; no image,
+container or certificate was created.

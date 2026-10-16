@@ -61,7 +61,7 @@ work to the blocking pool. A synchronous loop that never yields cannot be
 preempted by a step timeout.
 
 Watch `rtao_step_errors_total`, `rtao_clock_skew_seconds`,
-`rtao_weights_submissions_total`, `rtao_weights_commit_epoch_slip_total` and
+`rtao_weights_submitted_total`, `rtao_weights_commit_epoch_slip_total` and
 `rtao_weights_reveal_missed_total{mech,reason}`. A reveal miss records the observed
 epoch events and the first failing reveal condition. An owner-triggered epoch
 can advance the reveal before a round becomes available; retain the metrics and

@@ -766,6 +766,32 @@ const FEE_CLIENT_E2E_LIMITS: &[&str] = &["live-runtime-fee-query"];
 // only for their reviewed client contracts. Each retains its own runtime limits.
 const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
     ClientE2eFixture {
+        key: "test_auto_stake_destination",
+        target: "rtao_intents::client_transfer_lifecycles::client_auto_stake_submits_exact_call_then_reads_supplied_coldkey_destination",
+        identifiers: &[
+            "SetAutoStake",
+            "set_coldkey_auto_stake_hotkey",
+            "NETUID",
+            "coldkey",
+            "hotkey",
+            "seed_at",
+            "StorageObservation",
+            "install_step",
+            "execute",
+            "auto_stake",
+            "assert_consumed",
+            "assert_eq",
+        ],
+        runtime_limits: &[
+            "controlled-success-receipts",
+            "controlled-auto-stake-state",
+            "submission-outcome-intentionally-unasserted",
+            "subnet-registration-ownership-unverified",
+            "runtime-auto-stake-application-unverified",
+            "runtime-reward-routing-unverified",
+        ],
+    },
+    ClientE2eFixture {
         key: "test_key_association",
         target: "rtao_intents::client_transfer_lifecycles::client_hotkey_association_submits_exact_call_then_reads_missing_uid_zero_evm_key",
         identifiers: &[

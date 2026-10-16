@@ -1,5 +1,23 @@
 # M2-22 pin pipeline preparation
 
+## Current source and scope
+
+M2-22 covers reviewed source/pin/extraction/regeneration/parity maintenance and
+applicable hosted guards. Q30 defers forced full-pipeline replay, bot deployment
+and scheduled upkeep. Oracle/recording stages are optional targeted hosted work.
+The historical complete-pipeline design below is not a development checklist
+or a request to provision a candidate, node, image, toolchain or private cache.
+
+The [pin-bump](../../.github/deferred-workflows/pin-bump.yml),
+[upstream-next](../../.github/deferred-workflows/upstream-next.yml) and
+[nightly](../../.github/deferred-workflows/nightly.yml) workflows are inactive
+drafts outside `.github/workflows`; only ordinary `pr.yml` is active. No poll,
+schedule, issue publication or PR creation is required. Preserve adoption
+recovery journals and durable state. M2-S02 remains open/unaccepted and M2 exit
+remains open.
+
+## Historical preparation and validation
+
 `cargo xtask pin --parity <vN|auto>` prepares a candidate under
 `RTAO_TEMP_ROOT`. The original workspace supplies the parity-report baseline.
 The candidate includes current source edits and its own build directory.
@@ -18,7 +36,7 @@ before adoption. Python execution requires the existing designated hosted
 Ubuntu oracle or recording lane. Local execution refuses before creating a
 candidate or invoking Docker. No local Python or Python container was run.
 
-Useful entry points:
+Historical command forms (execution is not required under Q30):
 
 ```sh
 cargo xtask pin --force --plan
@@ -51,17 +69,19 @@ Verified oracle output is archived before later gates run. Fresh recordings
 are archived after their Rust replay. A later gate failure therefore preserves
 useful authenticated evidence while holding adoption.
 
-`pin-bump.yml` runs on free `ubuntu-latest`, serializes the 30-minute poll, and
+The archived `pin-bump.yml` design targets free `ubuntu-latest`, serializes a
+30-minute poll, and
 skips releases already under review. Scheduled upkeep is off until
 `RTAO_UPKEEP=on`; manual dispatch defaults to dry-run. PR publication requires
 validated outputs, upkeep enabled, and a live dispatch. It never applies the
 `CI` label or requests the restricted review team.
 
-`upstream-next.yml` compares immutable `main` and `testnet` revisions nightly.
+The archived `upstream-next.yml` design compares immutable `main` and `testnet`
+revisions nightly. No schedule is active.
 Its Rust helper joins changed blobs to the parity map, normalizes catalog
 source locations, and compares the core-input fingerprint. It preserves
 release pins and produces an informational issue when changes are present.
-The core-canary lane now refreshes its disposable main image digest, requires
+The archived core-canary lane design refreshes its disposable main image digest, requires
 the published image's revision and source labels to match resolved upstream
 main, and runs the Rust core-oracle smoke. The localnet owner wired it into
 `nightly.yml`; the helper removes its exact owned container and retains bounded
@@ -87,5 +107,7 @@ Validation and remaining evidence:
   production pins stayed identical.
 - Fresh hosted oracle/recording outputs, their current-spec native replay,
   fast/slow e2e, Python interop, and successful `--force` byte reproducibility
-  remain pending. The literal BLS gate remains unchanged and failing. M2-22
-  and milestone exit checks are not marked complete.
+  were not executed by that preparation. They are optional/deferred under Q30.
+  The historical literal BLS failure is superseded by approved Q26
+  [built-dependency checks](bls-lock.md). M2-22 source completion requires
+  applicable hosted source checks; the M2 security exit remains open.
