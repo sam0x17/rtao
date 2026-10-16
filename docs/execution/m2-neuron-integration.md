@@ -1,8 +1,18 @@
 # Validator scenario integration
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `rtao_neuron::NeuronCx::connect(&config).await` builds verified chain, hotkey,
-metagraph and signed HTTP services for an already registered validator. Use a
-task-owned plaintext btcli hotkey file and point `NeuronConfig` at it. The
+metagraph and signed HTTP services for an already registered validator. An
+optional hosted localnet fixture may point `NeuronConfig` at its published
+development hotkey file; ordinary client tests use fixtures and fake transports. The
 context enforces the default subnet allowlist, zero-spend policy and raw-call
 refusal. Call `cx.close().await` before removing fixture files.
 `cx.executor.execute_tool` uses the generated feature-enabled registry, with
@@ -59,11 +69,11 @@ version and deregistration attribution, cadence and Null proofs. The runtime
 regression also exercises generated tool parsing through the production
 constructor and refusal by the validator policy before signer unlock or
 submission. Current Rust and Rust 1.89 pass all forty-one integrated library
-tests; these tests supplement
-the real localnet scenarios and do not complete their exits.
+tests at that historical snapshot. These fixtures establish no live localnet
+execution. Q30 does not require completing the optional infrastructure scenarios.
 
 The image binary's wallet-free diagnostic is `rtao-validator
---check-connection --network finney --chain-endpoint wss://...`. Protocol and
-soak tests can use `--synthetic-weights` to assign equal scores to registered
+--check-connection --network finney --chain-endpoint wss://...`. Optional
+protocol checks can use `--synthetic-weights` to assign equal scores to registered
 miner destinations other than self and owner. Normal subnet binaries should
 implement their own scoring protocol, as the signed echo example demonstrates.

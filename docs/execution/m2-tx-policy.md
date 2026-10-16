@@ -1,5 +1,14 @@
 # M2 transaction policy equivalence
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `crates/rtao-tx/tests/policy_equivalence.rs` checks the three M2 trusted
 constructors from `bittensor-core/host` at upstream `v478`, commit
 `850f2755bb05a3851f948489f0ab27b0645cebce`.
@@ -44,11 +53,12 @@ passed (Rust 1.99)
 ```
 
 This evidence covers the three M2 constructors. The M4/M5 constructors and live
-localnet core-oracle lane remain separate gates. Raw-call opt-in is tested
+localnet core-oracle lane remain separate evidence. The localnet comparison
+is optional targeted hosted work under Q30. Raw-call opt-in is tested
 against Python's separate gate; arbitrary core calls have broader conservative
 semantics and are outside the trusted-constructor equivalence claim.
 
 The production dependency graph is unchanged. `rtao-intents/transfer` and
 `bittensor-core/host` are dev-dependencies of the TX harness. No task-specific
-scratch directories were created. The shared build directory remains live for
-other execution-plan workers.
+scratch directories were created. The former task root and build directory
+are retired and absent; preserve shared global Cargo/toolchain caches.

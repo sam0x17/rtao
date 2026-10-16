@@ -1,12 +1,21 @@
 # M2 intent interfaces and generation
 
-Local implementation for M2-09 and M2-10. Milestone exits remain pending hosted oracle replay and the full gates.
+## Current source and scope
 
-`cargo xtask regen` now generates all 83 intent structs, extracted constructor defaults, signer/origin/output contracts, typed `WRAPS`, `AnyIntent` dispatch, and 74 explicit `NotYetPorted` implementations. Every class has its Python rustdoc alias and the unchanged catalog description. Each Python group is gated by its Cargo feature. With no group enabled, `AnyIntent` is uninhabited and the crate still compiles.
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
+The initial M2-09/M2-10 implementation is recorded below. Hosted client source checks are required under Q30; first-oracle replay is optional/unverified. The current intent/read pending arrays are empty, so the 74/87 counts and unimplemented-body descriptions below are historical.
+
+At that initial snapshot, `cargo xtask regen` generated all 83 intent structs, extracted constructor defaults, signer/origin/output contracts, typed `WRAPS`, `AnyIntent` dispatch, and 74 explicit `NotYetPorted` implementations. Every class has its Python rustdoc alias and the unchanged catalog description. Each Python group is gated by its Cargo feature. With no group enabled, `AnyIntent` is uninhabited and the crate still compiles.
 
 Generation checks the source/catalog field and required sets, refuses unknown override or pending entries, requires an explicit currency source for unsuffixed money fields, validates pass-through calls against metadata and `WRAPS`, and refuses orphan or symlink outputs. `codegen/intent_types.toml` selects native field widths, exact money, mapping/list weights, typed result data and scalar/plural SS58 input carriers. Money uses checked native u64 rao under Q25/D-035. The PoW timeout uses `serde_json::Number` to preserve Python's integer default of 300.
 
-`codegen/intent_callmap.toml` records all 46 reviewed pass-through members. The generator validates their argument and conversion routes. It emits the first live body, `TransferAll`; the remaining 45 stay pending until their behavior hooks and resolvers land in M4/M5. No transfer-all build body was hand-written.
+`codegen/intent_callmap.toml` records all 46 reviewed pass-through members. The generator validates their argument and conversion routes. At the initial M2 snapshot it emitted `TransferAll`; the other 45 members were assigned to later M4/M5 behavior hooks and resolvers. No transfer-all build body was hand-written.
 
 `AnyIntent::from_tool` requires a JSON object, ignores the top-level `op`, rejects unknown fields, fills extracted defaults and runs validation. Unknown or disabled operation lookup precedes the object-shape error. Set/commit weight construction canonicalizes mappings into sorted UID and float lists, matching Python's `_as_pairs`. Weight text accepts Python's whitespace, digit separators and Unicode decimal digits before checked finite-ratio conversion. Weight booleans become 0.0 or 1.0 at that input boundary, as Python's `float(weight)` requires; other Ratio inputs remain numeric. UID text uses Python's base-ten integer syntax before checked u16 conversion. Money JSON remains exact decimal strings. SS58 input fields use a validated `Ss58Address` carrier to preserve the caller's network prefix in JSON and summaries; call arguments explicitly extract the binary `AccountId`. `AnyIntent::into_dyn` and the zero-size `rtao_intents::Registry` implement the executor's parser injection without a tx-to-intents dependency cycle:
 
@@ -20,4 +29,4 @@ Current validation includes all-83 constructor/default/field/requiredness/unknow
 
 Main CI was inspected before implementation: GitHub returned no runs for `main`. No CI labels, reviews, commits, pushes or milestone tags were created.
 
-The task-scoped bootstrap generator directory was audited against running processes, launchd, repository configuration, symlinks and virtual-environment dependencies, then removed. Bounded logs remain under the recorded task root. Shared build caches remain live for the parent goal.
+The task-scoped bootstrap generator directory was audited against running processes, launchd, repository configuration, symlinks and virtual-environment dependencies, then removed. The former task root and its build/log paths are retired and absent. Preserve shared global Cargo/toolchain caches; current generation and validation belong in hosted CI.

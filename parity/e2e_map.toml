@@ -236,7 +236,10 @@ pending = "M5"
 pending = "M5"
 
 [tests."test_auto_stake_destination"]
-pending = "M5"
+rtao = "rtao_intents::client_transfer_lifecycles::client_auto_stake_submits_exact_call_then_reads_supplied_coldkey_destination"
+scope = "client-contract"
+runtime = "unverified"
+runtime_limits = ["controlled-success-receipts", "controlled-auto-stake-state", "submission-outcome-intentionally-unasserted", "subnet-registration-ownership-unverified", "runtime-auto-stake-application-unverified", "runtime-reward-routing-unverified"]
 
 [tests."test_balance_and_existential_deposit"]
 # Encoded client reads; runtime funding remains outside Q30 fixture evidence.

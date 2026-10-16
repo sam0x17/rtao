@@ -16,7 +16,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-16
 
-The latest completed ordinary run is
+The latest successful ordinary checkpoint is
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.
 The main gate passed all 3,051 executed tests, zero failed, four skipped,
@@ -74,6 +74,40 @@ with source review and substantial validation on free hosted CI.
 Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
 No local build/test, service, Mac Studio work, new temporary root or upstream
 filing was needed. Preserve wallets, recovery material and unrelated work.
+
+### Next reviewed client source batch, execution pending
+
+Seven additional regression functions are integrated after independent source
+review. Root allocate/swap normalize exact decimal spellings to checked u64 rao
+at the CLI boundary, including signed zero. Shared Money/Amount constructors
+stay strict. D-042 records the 4096-byte and exponent-magnitude budgets; prompted
+negative-zero replay uses attached option syntax and is reparsed by its fixture.
+Move retains the picked destination name and still propagates a required source
+identity lookup failure. Direct multisig Policy checks now name the semantic
+operation, matching the executor's refusal diagnostics.
+
+Two further client fixtures cover the exact auto-stake call/coldkey/subnet read
+and remaining transfer/Proxy/Sudo unsigned-JSON/signature-attachment paths. The
+auto-stake transcript preserves the upstream ignored execution Result and lists
+six runtime limits. Its source e2e map has 18 pending keys and 11 client-contract
+rows; generated reports remain at 19/10 until the next authenticated refresh.
+The source-file map remains 306/357 reconciled, 51 pending. The oracle-only
+keyfiles disposition is still unapplied pending current hosted fixture evidence.
+
+A complete audit corrects 25 M2 execution documents and the validator guide's
+metric name. Current instructions retire local caches and restore recipes,
+keep optional infrastructure evidence unverified, and distinguish historical
+results from current source. Actual event refresh, reveal tracking, parser/S04
+proofs and Q30 optional-oracle machinery are described accurately. M2-S02 stays
+open/unaccepted; no M2 security or milestone exit is claimed. The remaining
+M3-M9 execution-record resource audit is in progress.
+
+Direct rustfmt, whitespace, exact patch/source reviews and all 26 documentation
+after-image identities pass. None of the seven new functions is executed yet;
+the expected combined main total is 3,077. Current hosted run 38883630624 on
+0b0bb79 remains active with five supporting jobs passed. Its pending main result
+cannot validate these newer sources. Exact proposal/review identities are in
+next-client-source-work-0b0bb79.json under the existing recovery root.
 
 ### Command review and required-address follow-up, execution pending
 

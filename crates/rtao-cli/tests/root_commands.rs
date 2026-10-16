@@ -834,6 +834,252 @@ async fn root_move_selector_preserves_contact_and_nav_identity_order() -> TestRe
 }
 
 #[tokio::test]
+async fn move_picker_retains_selected_name_and_only_reloads_required_identities() -> TestResult {
+    struct AfterPick {
+        inner: ScriptTerminal,
+        chain: FakeChain,
+        fail: bool,
+        boundary: Arc<Mutex<Option<usize>>>,
+    }
+    impl Terminal for AfterPick {
+        fn stdin_is_tty(&self) -> bool {
+            self.inner.stdin_is_tty()
+        }
+        fn stderr_is_tty(&self) -> bool {
+            self.inner.stderr_is_tty()
+        }
+        fn read_line(&mut self, label: &str) -> Result<String, PromptError> {
+            let answer = self.inner.read_line(label)?;
+            *self.boundary.lock().map_err(|_| PromptError::Io)? = Some(self.chain.requests().len());
+            self.chain
+                .mutate_state(|state| {
+                    if self.fail {
+                        for method in [
+                            "state_getStorage",
+                            "state_getStorageAt",
+                            "state_queryStorageAt",
+                        ] {
+                            state.set_handler(method, |_, _| {
+                                rtao_testkit::Reply::error(
+                                    -32602,
+                                    "fixture identity unavailable after pick",
+                                    None,
+                                )
+                            });
+                        }
+                        Ok(())
+                    } else {
+                        state.seed_python(
+                            "SubtensorModule",
+                            "IdentitiesV2",
+                            &[json!(OTHER)],
+                            json!({"name":"Changed Destination"}),
+                        )
+                    }
+                })
+                .map_err(|_| PromptError::Io)?;
+            Ok(answer)
+        }
+        fn read_secret(&mut self, label: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+            self.inner.read_secret(label)
+        }
+        fn message(&mut self, message: &str) -> Result<(), PromptError> {
+            self.inner.message(message)
+        }
+    }
+    const EXTRA: AccountId = AccountId([10; 32]);
+    let owner = OWNER.to_string();
+    let hotkey = HOT.to_string();
+    let destination = OTHER.to_string();
+    // A local source needs no further identity read once the destination was
+    // selected. Without that source name, Python still requires a lookup.
+    for local_source in [true, false] {
+        for fail_after_pick in [true, false] {
+            let mut state = seed()?;
+            // Keep two eligible destinations so the real picker asks for an
+            // answer instead of automatically selecting its only candidate.
+            state.seed_runtime(
+                "BetaBasketRuntimeApi",
+                "get_all_validator_baskets",
+                json!([
+                    summary(HOT, 2_000_000_000),
+                    summary(OTHER, 7),
+                    summary(EXTRA, 1)
+                ]),
+            )?;
+            for (key, owner_key, name) in [
+                (HOT, OWNER, "Chain Source"),
+                (OTHER, OTHER, "Picked Destination"),
+            ] {
+                state.seed_python("SubtensorModule", "Owner", &[json!(key)], json!(owner_key))?;
+                state.seed_python(
+                    "SubtensorModule",
+                    "IdentitiesV2",
+                    &[json!(owner_key)],
+                    json!({"name":name}),
+                )?;
+            }
+            let (client, chain) = client(state).await?;
+            let args = [
+                "rtao",
+                "root",
+                "move",
+                "--from",
+                &hotkey,
+                "--coldkey",
+                &owner,
+                "--yes",
+            ];
+            let parsed = parse(&args)?;
+            let (mut ctx, _) = context(&parsed)?;
+            ctx.books.addresses = vec![json!({"address":EXTRA,"name":"Extra Fund"})];
+            if local_source {
+                ctx.books
+                    .addresses
+                    .push(json!({"address":HOT,"name":"Local Source"}));
+            }
+            let boundary = Arc::new(Mutex::new(None));
+            ctx.terminal = Arc::new(Mutex::new(Box::new(AfterPick {
+                inner: ScriptTerminal {
+                    answers: VecDeque::from(["1".into()]),
+                    messages: Arc::new(Mutex::new(Vec::new())),
+                },
+                chain: chain.clone(),
+                fail: fail_after_pick,
+                boundary: boundary.clone(),
+            })));
+            let request = parse_request(&mut ctx, &parsed)?;
+            let mut history = PromptHistory::default();
+            let result = root::prepare_submission(&mut ctx, &client, &request, &mut history).await;
+            let boundary = boundary
+                .lock()
+                .map_err(|_| "picker boundary")?
+                .ok_or("picker answer")?;
+            let requests = chain.requests();
+            let later_storage = requests
+                .iter()
+                .skip(boundary)
+                .filter(|request| {
+                    matches!(
+                        request.method.as_str(),
+                        "state_getStorage" | "state_getStorageAt" | "state_queryStorageAt"
+                    )
+                })
+                .count();
+            if local_source {
+                assert_eq!(
+                    later_storage, 0,
+                    "selected/local names require no second identity read"
+                );
+            } else {
+                assert!(
+                    later_storage > 0,
+                    "an unnamed source still requires an identity read"
+                );
+            }
+            if !local_source && fail_after_pick {
+                let error = result.err().ok_or("required source identity failure")?;
+                assert!(
+                    error
+                        .message
+                        .contains("fixture identity unavailable after pick")
+                );
+            } else {
+                let prepared = result?.ok_or("prepared picked move")?;
+                let expected = json!({"origin_hotkey_ss58":HOT,"origin_netuid":0,"dest_hotkey_ss58":OTHER,"dest_netuid":0,"amount_alpha":"all","claim":true});
+                assert_eq!(prepared.request.op, "move_stake");
+                assert_eq!(
+                    prepared.request.args,
+                    expected.as_object().ok_or("move arguments")?.clone()
+                );
+                let intent = prepared.request.intent()?.as_dyn().to_json_dyn();
+                for (field, value) in expected.as_object().ok_or("move fields")? {
+                    assert_eq!(&intent[field], value);
+                }
+                assert_eq!(
+                    history.replay_command(&args.map(str::to_owned)),
+                    format!("rtao root move --from {HOT} --coldkey {OWNER} --yes --to {OTHER}")
+                );
+                let review = prepared.review.ok_or("bound move review")?;
+                let source_name = if local_source {
+                    "Local Source"
+                } else {
+                    "Chain Source"
+                };
+                assert!(
+                    review
+                        .summary
+                        .contains(&format!("from {source_name} to Picked Destination on root"))
+                );
+                assert!(!review.summary.contains("Changed Destination"));
+                assert_eq!(review.sections.len(), 1);
+                assert_eq!(review.sections[0].title, "Move");
+                let to = review.sections[0]
+                    .rows
+                    .iter()
+                    .find(|(key, _)| key == "to")
+                    .ok_or("destination review row")?;
+                assert_eq!(to.1, json!(format!("Picked Destination ({OTHER})")));
+            }
+            assert!(
+                requests
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            client.close().await;
+        }
+    }
+    // An explicit nonlocal destination has no selected label to reuse. It
+    // must resolve the current identity, preserving the existing direct path.
+    let mut state = seed()?;
+    state.seed_python("SubtensorModule", "Owner", &[json!(OTHER)], json!(OTHER))?;
+    state.seed_python(
+        "SubtensorModule",
+        "IdentitiesV2",
+        &[json!(OTHER)],
+        json!({"name":"Current Destination"}),
+    )?;
+    let (client, chain) = client(state).await?;
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "move",
+        "--from",
+        &hotkey,
+        "--to",
+        &destination,
+        "--coldkey",
+        &owner,
+        "--yes",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    ctx.books.addresses = vec![json!({"address":HOT,"name":"Local Source"})];
+    let request = parse_request(&mut ctx, &parsed)?;
+    let prepared =
+        root::prepare_submission(&mut ctx, &client, &request, &mut PromptHistory::default())
+            .await?
+            .ok_or("explicit move")?;
+    assert!(
+        prepared
+            .review
+            .ok_or("explicit move review")?
+            .summary
+            .contains("from Local Source to Current Destination on root")
+    );
+    assert_eq!(prepared.request.args["dest_hotkey_ss58"], json!(OTHER));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn root_local_names_follow_natural_wallet_and_hotkey_order_before_contacts() -> TestResult {
     let wallets = WalletRoot::new()?;
     wallets.add("wallet10", OTHER)?;
@@ -1515,6 +1761,298 @@ async fn swap_quotes_both_legs_sets_destination_floor_and_keeps_all_sentinel() -
             .requests()
             .iter()
             .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_decimal_spellings_prepare_exact_typed_amounts_and_identical_quote_inputs()
+-> TestResult {
+    use rtao::primitives::{Money, NetUid, ResolvedAmount};
+    let (client, chain) = client(seed()?).await?;
+    let hotkey = HOT.to_string();
+    let mut canonical_quotes = std::collections::BTreeMap::<u64, Vec<Value>>::new();
+    // The first case for each rao amount is its strict canonical control.
+    let mut cases = vec![
+        ("1".to_owned(), 1_000_000_000u64),
+        ("1e0".into(), 1_000_000_000),
+        ("+1".into(), 1_000_000_000),
+        ("1.".into(), 1_000_000_000),
+        (" \t1\r\n".into(), 1_000_000_000),
+        ("\u{1c}\u{85}\u{a0}1\u{202f}\u{1f}".into(), 1_000_000_000),
+        ("1.00000000000000000000000000000".into(), 1_000_000_000),
+        ("1_e_+_0".into(), 1_000_000_000),
+        ("١e+٠".into(), 1_000_000_000),
+        ("１.０".into(), 1_000_000_000),
+        ("0.5".into(), 500_000_000),
+        (".5".into(), 500_000_000),
+        (".٥".into(), 500_000_000),
+        ("0.000000001".into(), 1),
+        ("1e-9".into(), 1),
+        ("10e-10".into(), 1),
+        ("18446744073.709551615".into(), u64::MAX),
+        ("18446744073709551615e-9".into(), u64::MAX),
+        ("0".into(), 0),
+        ("-0".into(), 0),
+        ("-0.000".into(), 0),
+        ("-0e4096".into(), 0),
+        ("-0e-4096".into(), 0),
+        ("0e-4096".into(), 0),
+        ("+0.00000000000000000000000000000".into(), 0),
+    ];
+    cases.push(("0".repeat(4096), 0));
+    for (raw, expected_rao) in cases {
+        let canonical = Money::from_rao(expected_rao).to_decimal_string();
+        for command in ["allocate", "swap"] {
+            let amount_flag = format!("--amount={raw}");
+            let mut args = vec![
+                "rtao",
+                "root",
+                command,
+                "--hotkey",
+                &hotkey,
+                &amount_flag,
+                "--json",
+            ];
+            if command == "swap" {
+                args.extend(["--from", "1", "--to", "2"]);
+            }
+            let parsed = parse(&args)?;
+            let (mut ctx, sink) = context(&parsed)?;
+            let request = parse_request(&mut ctx, &parsed)?;
+            match &request {
+                Request::Allocate {
+                    amount: Some(amount),
+                    ..
+                }
+                | Request::Swap { amount, .. } => assert_eq!(amount, &canonical),
+                _ => return Err("unexpected parsed money request".into()),
+            }
+            let start = chain.requests().len();
+            let prepared = root::prepare_submission(
+                &mut ctx,
+                &client,
+                &request,
+                &mut PromptHistory::default(),
+            )
+            .await?
+            .ok_or("prepared money command")?;
+            let tx = prepared.request;
+            let intent = tx.intent()?;
+            let resolved = match &intent {
+                rtao_intents::AnyIntent::StakeIntoBasket(value) => {
+                    value.amount_tao.resolve(NetUid::ROOT, false)?
+                }
+                rtao_intents::AnyIntent::SwapBasket(value) => {
+                    assert_eq!(value.origin_netuid, NetUid(1));
+                    assert_eq!(value.dest_netuid, NetUid(2));
+                    value.amount.resolve(NetUid(1), false)?
+                }
+                _ => return Err("unexpected typed money intent".into()),
+            };
+            let ResolvedAmount::Exact(balance) = resolved else {
+                return Err("exact amount became all".into());
+            };
+            assert_eq!(balance.rao, expected_rao);
+            let field = if command == "allocate" {
+                "amount_tao"
+            } else {
+                "amount"
+            };
+            assert_eq!(tx.args[field], canonical);
+            assert_eq!(intent.to_json()[field], canonical);
+            assert!(sink.text(Stream::Stdout)?.is_empty());
+            if command == "swap" {
+                let quotes = chain
+                    .requests()
+                    .into_iter()
+                    .skip(start)
+                    .filter(|request| {
+                        request.method == "state_call"
+                            && (request.params[0] == "SwapRuntimeApi_sim_swap_alpha_for_tao"
+                                || request.params[0] == "SwapRuntimeApi_sim_swap_tao_for_alpha")
+                    })
+                    .map(|request| request.params)
+                    .collect::<Vec<_>>();
+                if let Some(expected) = canonical_quotes.get(&expected_rao) {
+                    assert_eq!(&quotes, expected);
+                } else {
+                    canonical_quotes.insert(expected_rao, quotes.clone());
+                }
+                if matches!(expected_rao, 1 | 500_000_000 | 1_000_000_000) {
+                    assert_eq!(quotes.len(), 2);
+                    let sell = [
+                        1u16.to_le_bytes().as_slice(),
+                        expected_rao.to_le_bytes().as_slice(),
+                    ]
+                    .concat();
+                    let buy = [
+                        2u16.to_le_bytes().as_slice(),
+                        4_000_000_000u64.to_le_bytes().as_slice(),
+                    ]
+                    .concat();
+                    assert_eq!(quotes[0][1], format!("0x{}", hex::encode(sell)));
+                    assert_eq!(quotes[1][1], format!("0x{}", hex::encode(buy)));
+                    assert_eq!(tx.args["min_amount_out"], "6.930000002");
+                }
+            }
+        }
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[test]
+fn root_decimal_boundary_retains_native_refusals_budgets_and_strict_money_constructors()
+-> TestResult {
+    use rtao::primitives::{Amount, Money};
+    let hotkey = HOT.to_string();
+    let mut refused = [
+        "-1",
+        "--0",
+        "-+0",
+        "-1e0",
+        "18446744073.709551616",
+        "1e20",
+        "1e-10",
+        "0.0000000001",
+        "1.0000000001",
+        "0.00000000101",
+        "",
+        ".",
+        "+",
+        "-",
+        "1..0",
+        "1e",
+        "1ee0",
+        "1e+-1",
+        "1e--1",
+        "1e1.0",
+        "NaN",
+        "sNaN",
+        "inf",
+        "Infinity",
+        "1 0",
+        "0x1",
+        "+-1",
+        "1\u{200b}",
+        "all_",
+        "_",
+        "1e4097",
+        "-0e4097",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect::<Vec<_>>();
+    refused.extend(["0".repeat(4097), format!("1e{}", "9".repeat(32))]);
+    for raw in refused {
+        for command in ["allocate", "swap"] {
+            let attached = format!("--amount={raw}");
+            let mut args = vec![
+                "rtao", "root", command, "--hotkey", &hotkey, &attached, "--json",
+            ];
+            if command == "swap" {
+                args.extend(["--from", "1", "--to", "2"]);
+            }
+            let parsed = parse(&args)?;
+            let (mut ctx, sink) = context(&parsed)?;
+            let error = parse_request(&mut ctx, &parsed)
+                .err()
+                .ok_or("native-domain or malformed refusal")?;
+            assert_eq!(error.code, 2);
+            if raw.len() > 4096
+                || matches!(raw.as_str(), "1e4097" | "-0e4097")
+                || raw.starts_with("1e999")
+            {
+                assert!(error.message.contains("budget"));
+            }
+            assert!(sink.text(Stream::Stdout)?.is_empty());
+        }
+    }
+    // CLI normalization must not broaden the public exact constructors.
+    for raw in ["1e0", "+1", ".5", "1.", " 1 ", "-0"] {
+        assert!(Money::parse(raw).is_err());
+        assert!(Amount::parse(raw).is_err());
+    }
+    assert_eq!(Money::parse("1")?.rao()?, 1_000_000_000);
+    Ok(())
+}
+
+#[tokio::test]
+async fn prompted_root_amount_retries_native_errors_but_keeps_original_decimal_replay() -> TestResult
+{
+    let (client, chain) = client(seed()?).await?;
+    let hotkey = HOT.to_string();
+    let argv = ["rtao", "root", "allocate", "--hotkey", &hotkey, "--yes"];
+    for (answer, canonical, replay_suffix) in [
+        ("+1e0", "1", "--amount +1e0"),
+        ("-0.000", "0", "--amount=-0.000"),
+    ] {
+        let parsed = parse(&argv)?;
+        let (mut ctx, _) = context(&parsed)?;
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptTerminal {
+            answers: ["not-a-number", "1e-10", answer]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+            messages: messages.clone(),
+        })));
+        let request = parse_request(&mut ctx, &parsed)?;
+        assert!(matches!(request, Request::Allocate { amount: None, .. }));
+        let mut history = PromptHistory::default();
+        let prepared = root::prepare_submission(&mut ctx, &client, &request, &mut history)
+            .await?
+            .ok_or("prompted allocation")?;
+        assert_eq!(prepared.request.args["amount_tao"], canonical);
+        assert_eq!(
+            prepared.request.intent()?.to_json()["amount_tao"],
+            canonical
+        );
+        let replay = history.replay_command(
+            &argv
+                .iter()
+                .map(|word| (*word).to_owned())
+                .collect::<Vec<_>>(),
+        );
+        assert_eq!(
+            replay,
+            format!("rtao root allocate --hotkey {hotkey} --yes {replay_suffix}")
+        );
+        // These fixture tokens need no shell quoting. Re-enter the real parser
+        // to prove the original decimal spelling is a valid native command.
+        let replayed = parse(&replay.split_whitespace().collect::<Vec<_>>())?;
+        let (mut replay_ctx, _) = context(&replayed)?;
+        let replay_request = parse_request(&mut replay_ctx, &replayed)?;
+        assert!(
+            matches!(replay_request, Request::Allocate { amount: Some(ref amount), .. } if amount == canonical)
+        );
+        {
+            let messages = messages.lock().map_err(|_| "prompt messages")?;
+            assert!(
+                messages
+                    .iter()
+                    .any(|line| line.contains("finite non-negative decimal"))
+            );
+            assert!(
+                messages
+                    .iter()
+                    .any(|line| line.contains("more than nine fractional digits"))
+            );
+        }
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
     );
     client.close().await;
     Ok(())

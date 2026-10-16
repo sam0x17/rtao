@@ -1,12 +1,22 @@
 # M2 read interfaces and behavior
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 The read generator now emits all 102 `ReadName` variants, typed parameter
 records, signature defaults, namespace methods and exhaustive dynamic dispatch.
 `ReadName::spec()` exposes category, argument documentation, requiredness,
 wallet-key fallback metadata, documentation URL, rendering, pinning and the
 complete descriptor hit set. `catalog_spec()` retains authenticated signature
-and source provenance. The 87 pending reads return `NotYetPorted(ReadName)`
-after input validation and perform no I/O. The raw metagraph read stays a free
+and source provenance. At the initial M2 snapshot, 87 pending reads returned
+`NotYetPorted(ReadName)` after validation without I/O. The current pending
+intent/read arrays are empty; those initial counts are historical. The raw metagraph read stays a free
 function and dispatcher entry; generation preserves the curated metagraph
 extension method.
 
@@ -50,14 +60,16 @@ earlier full read suite also passed on that compiler. The testkit Docker library
 test target compiles. An isolated audit found the enormous-index and float
 duration differences and two imported stake-valuation helper hits; all four
 findings were fixed and checked. No Python ran locally. Hosted oracle vectors
-and their Rust replay remain part of M2-05 and M2-14; these Rust checks do not
-claim the oracle or milestone exit.
+and their Rust replay are optional targeted hosted evidence under Q30;
+M2-14 source machinery does not assert independent Python behavior. These Rust
+checks do not claim oracle or milestone acceptance.
 
-All Cargo invocations use the recorded task root
+Historical Cargo invocations used the recorded task root
 `target/execute-plan.6Ro0PC`, its `build` target and `tmp` directory. A bounded
 read-generator bootstrap under that root used the owned generator and extractor
 sources while the normal xtask dependency graph was being integrated. After the
 canonical checks passed, its process, launchd, configuration, symlink and virtual
 environment dependencies were audited. The bootstrap directory and temporary
-source copy were removed. Shared builds remain live for the root goal. No
+source copy were removed. That root is retired and absent; no current build
+dependency remains there. Shared global Cargo/toolchain caches are preserved. No
 wallet, key, private dataset or validator state was created or removed.

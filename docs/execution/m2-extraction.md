@@ -1,5 +1,14 @@
 # M2-03 and M2-04 extraction and catalogs
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `cargo xtask extract` now generates the complete M2 extraction and public
 `rtao-catalog` surface from authenticated v478 inputs. No Python interpreter
 runs. `extract --check` repeats extraction and compares every Rust and JSON
@@ -61,7 +70,7 @@ the nonempty guard. A changed computed read fails extraction. The inventory is
 compared with `parity/env.toml` so new or vanished names need an explicit
 consumer or divergence.
 
-The environment map currently names 12 implemented consumers, 16 pending
+At the initial M2 snapshot, the environment map named 12 implemented consumers, 16 pending
 milestone gaps, and the documented terminal-presentation omission for
 `TERM_PROGRAM`. Pending rows do not claim implemented parity. The map gate
 requires exact inventory coverage and rejects absent maps, unsupported or
@@ -80,14 +89,14 @@ constant arithmetic, Rust variants, and projection. Cargo must have fetched its
 locked dependencies before extraction; the Git database is a retained shared
 source dependency, not a disposable task directory.
 
-Validation uses the shared recorded task root
+Historical validation used the shared recorded task root
 `target/execute-plan.6Ro0PC`, its `build` target directory, and its `tmp`
 directory. New generator fixtures are in memory. The existing btauth fixture
 test removed its exact `extract/check-<pid>` directory after it finished; its
 empty `extract` parent was also removed after process, open-file, launchd,
 configuration, symlink, and virtual-environment checks found no dependency.
-The shared build and source caches remain live dependencies of the parent
-execution.
+That task build/source root is retired and absent. Shared global Cargo/source
+caches remain preserved, and current extraction runs belong in hosted CI.
 
 The final checks passed:
 

@@ -1,5 +1,14 @@
 # M2 signer roles and public key views
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 `rtao-signer` now exports `SignerRole`, the sealed `Role` markers `Coldkey` and `Hotkey`, `KeyView`, `KeySource<R>`, `DynKeySource`, and `IntentKeyView`. `SignerRole` parses only the two exact role tokens and returns a typed `InvalidRole` error for other input. A source that supports one role can reject the other dynamically with `RoleUnavailable`; the typed path rejects that combination at compile time.
 
 `KeyView` exposes attached public keys. Wallet implementations must read these views without obtaining a signer or unlocking. A bare signer has no attached hotkey or coldkey and instead exposes its own identity through `bare_signer_account()`. `IntentKeyView` applies the pinned Python rules: explicit hotkey overrides win before public I/O; attached wallet keys win next; a bare identity supplies a default only for the intent's signing role. A coldkey-signed intent therefore cannot silently default its hotkey to the bare coldkey. Missing-default messages match `intents/base.py`; actual public-file failures propagate without identity fallback.
@@ -16,4 +25,4 @@ Validation:
 
 The later secret-boundary remediation adds a pinned URI-leak negative control, full constructor error-chain checks and valid password-URI derivation evidence. All eight software signer tests pass on current Rust and Rust 1.89, with strict all-feature/all-target Clippy. Detailed owned-buffer and dependency limits are recorded in `docs/execution/m2-secret-boundaries.md`.
 
-No Python ran locally. Tests use deterministic in-memory keys and no user wallet, password, Keychain or Ledger state. No disposable fixture directories were created; bounded logs and shared build outputs remain in the recorded task root for continuing verification. The balance domain and literal BLS gate are unchanged.
+No Python ran locally. Tests use deterministic in-memory keys and no user wallet, password, Keychain or Ledger state. No disposable fixture directories were created. The former task root and its build/log paths are retired and absent; preserve shared global Cargo/toolchain caches. Native balance limits remain unchanged; current BLS checks use the approved Q26 built-dependency policy. M2-S02 remains open and unaccepted.

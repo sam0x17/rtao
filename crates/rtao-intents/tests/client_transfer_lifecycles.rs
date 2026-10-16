@@ -1,10 +1,10 @@
 // Derived from RaoFoundation/subtensor sdk/bittensor-core/tests/e2e.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Client transfer, batch and association contracts over a finite RPC transcript.
+//! Client transfer, batch, association and auto-stake contracts over finite RPC.
 //!
-//! Balances and absent EVM keys are supplied observations, not calculated effects.
+//! Balances, EVM keys and stake destinations are supplied observations, not effects.
 //! These fixtures exercise signing, exact submitted calls, receipt decoding and
 //! pinned reads. They do not prove runtime economics, atomic application,
-//! rollback, registration/ownership, association effects, fees or consensus.
+//! rollback, registration/ownership, association, reward routing, fees or consensus.
 #![cfg(all(feature = "transfer", feature = "batch"))]
 
 use std::{
@@ -97,7 +97,7 @@ impl DynKeySource for DevKeys {
 }
 
 #[derive(Clone)]
-struct AccountObservation {
+struct StorageObservation {
     key: Vec<u8>,
     encoded: Vec<u8>,
 }
@@ -108,14 +108,14 @@ fn account_observation(
     runtime: &Runtime,
     account: AccountId,
     free: u64,
-) -> Result<AccountObservation> {
+) -> Result<StorageObservation> {
     let entry = runtime
         .storage_entry("System", "Account")
         .context("System.Account metadata")?;
     let key = runtime.storage_key(entry, &[CoreValue::Bytes(account.0.to_vec())])?;
     let value = fill_defaults(runtime, entry.value_type, json!({"data":{"free":free}}))?;
     let encoded = runtime.encode_spec(&TypeSpec::Id(entry.value_type), &value)?;
-    Ok(AccountObservation { key, encoded })
+    Ok(StorageObservation { key, encoded })
 }
 
 fn events(success: bool) -> Result<Value> {
@@ -148,7 +148,7 @@ struct Step {
     account: AccountId,
     nonce: u64,
     events: Value,
-    post: Vec<AccountObservation>,
+    post: Vec<StorageObservation>,
 }
 
 #[derive(Default)]
@@ -848,6 +848,129 @@ async fn client_hotkey_association_submits_exact_call_then_reads_missing_uid_zer
         json!([
             [format!("0x{}", hex::encode(key))],
             format!("0x{}", hex::encode(receipt.block().hash.0))
+        ])
+    );
+    assert_consumed(&fixture, &expected)?;
+    fixture.executor.client().close().await;
+    Ok(())
+}
+
+// upstream e2e.rs::test_auto_stake_destination discards the submission result.
+// The fixed subnet represents already-owned context, without registration.
+#[cfg(feature = "staking")]
+#[tokio::test]
+async fn client_auto_stake_submits_exact_call_then_reads_supplied_coldkey_destination() -> Result<()>
+{
+    use rtao_intents::SetAutoStake;
+    use rtao_primitives::NetUid;
+    use rtao_reads::reads::m6_staking::auto_stake;
+    use rtao_runtime::calls::subtensor_module;
+
+    const NETUID: NetUid = NetUid(1);
+    let fixture = fixture().await?;
+    let runtime = fixture.executor.client().refresh_runtime().await?;
+    let coldkey = fixture.keys.coldkey_address()?;
+    let hotkey = fixture.keys.hotkey_address()?;
+    assert_eq!(coldkey, fixture.keys.signer.account());
+    assert_eq!(hotkey, AccountId([2; 32]));
+    assert_ne!(coldkey, hotkey);
+    let intent = SetAutoStake {
+        netuid: NETUID,
+        hotkey_ss58: Some(hotkey.into()),
+    };
+    assert_eq!(intent.spec().name, "set_auto_stake");
+    assert_eq!(intent.signer_role_dyn()?, SignerRole::Coldkey);
+    assert_eq!(intent.touches_netuids_dyn().as_slice(), [NETUID]);
+    let expected =
+        subtensor_module::set_coldkey_auto_stake_hotkey(NETUID, hotkey).compose(&runtime)?;
+    assert_eq!(
+        expected.as_bytes(),
+        [&[7, 114][..], &NETUID.0.to_le_bytes(), &hotkey.0].concat()
+    );
+    let entry = runtime
+        .core()
+        .storage_entry("SubtensorModule", "AutoStakeDestination")
+        .context("AutoStakeDestination metadata")?;
+    let key = runtime.core().storage_key(
+        entry,
+        &[
+            CoreValue::Bytes(coldkey.0.to_vec()),
+            CoreValue::Uint(u128::from(NETUID.0)),
+        ],
+    )?;
+    let encoded = runtime.core().encode_spec(
+        &TypeSpec::Id(entry.value_type),
+        &CoreValue::Bytes(hotkey.0.to_vec()),
+    )?;
+    assert_eq!(encoded, hotkey.0);
+    let before = fixture.executor.client().at(BlockRef::Best).await?;
+    fixture.chain.mutate_state(|state| {
+        state.seed_at(
+            format!("0x{}", hex::encode(before.block().hash.0)),
+            key.clone(),
+            None,
+        );
+    });
+    // This value is supplied at the controlled receipt block by the existing
+    // transcript. No runtime registration or auto-stake effect is computed.
+    install_step(
+        &fixture.chain,
+        &fixture.script,
+        Step {
+            expected: expected.clone(),
+            account: coldkey,
+            nonce: NONCE,
+            events: events(true)?,
+            post: vec![StorageObservation {
+                key: key.clone(),
+                encoded,
+            }],
+        },
+    )?;
+    // Preserve the source's ignored Result: no execution success is asserted.
+    let _ = execute(&fixture, &intent).await;
+    let after = fixture.executor.client().at(BlockRef::Best).await?;
+    assert_ne!(after.block().hash, before.block().hash);
+    assert_eq!(
+        after.block().number,
+        before
+            .block()
+            .number
+            .checked_add(1)
+            .context("receipt height")?
+    );
+    let view = RecordingView::new(after.clone());
+    let start = fixture.chain.requests().len();
+    let destination = auto_stake(&view, coldkey, NETUID).await?;
+    assert_eq!(destination, Some(hotkey));
+    let touches = view.touches();
+    assert_eq!(touches.len(), 1);
+    let touch = touches.first().context("auto-stake descriptor read")?;
+    assert_eq!(touch.kind, ReadKind::Storage);
+    assert_eq!(
+        (&*touch.pallet_or_api, &*touch.item),
+        ("SubtensorModule", "AutoStakeDestination")
+    );
+    assert_eq!(touch.at, Some(after.block().hash));
+    assert_eq!(view.block_hashes(), BTreeSet::from([after.block().hash]));
+    let requests = fixture.chain.requests();
+    let reads = requests
+        .get(start..)
+        .context("auto-stake request window")?
+        .iter()
+        .filter(|request| {
+            request.method.starts_with("state_getStorage")
+                || request.method == "state_queryStorageAt"
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(reads.len(), 1);
+    let read = reads.first().context("auto-stake storage request")?;
+    assert_eq!(read.method, "state_queryStorageAt");
+    assert_eq!(
+        read.params,
+        json!([
+            [format!("0x{}", hex::encode(key))],
+            format!("0x{}", hex::encode(after.block().hash.0))
         ])
     );
     assert_consumed(&fixture, &expected)?;

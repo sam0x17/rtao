@@ -1,14 +1,36 @@
 # M2 oracle preparation
 
+## Current source and scope
+
+M2-05 is optional targeted hosted work under Q30. `vendor/oracle` contains
+only the three reviewed generation inputs, with no first manifest, vectors or
+current-spec recording corpus. Ordinary and strict client-source parity report
+`optional-unverified`; neither mode establishes independent Python behavior.
+
+`xtask/src/oracle_readiness.rs` permits the exact checked M2-14
+`Strict client-source parity machinery` row under the explicit Q30 policy.
+It still rejects duplicate/malformed status rows, partial or corrupt outputs,
+incomplete history and removal of previously committed evidence. Existing
+outputs use full authentication and native replay; standalone `oracle --check`
+still requires actual artifacts. Source-machinery completion does not complete
+strict M8, source/e2e reconciliation or oracle behavioral parity.
+
+The oracle workflow is an inactive [draft](../../.github/deferred-workflows/oracle.yml).
+Any future refresh needs a bounded reviewed hosted entry point; no local
+container, GHCR deployment or automatic upkeep is a development prerequisite.
+M2-S02 remains open/unaccepted and the M2 milestone exit remains open.
+
+## Historical preparation and validation
+
 The image, dumpers, Rust verifier and current-spec recorder wrapper are authored.
 Under Q30, a fresh M2-05 oracle refresh is optional targeted hosted work. The
 committed `vendor/oracle` directory contains generation inputs only: no first
-manifest, vectors or current-spec recordings have been produced. Ordinary parity
-therefore reports the oracle as **pending**, never verified. Strict parity still
-rejects the absent corpus; M2-14's oracle behavioral parity remains unverified.
+manifest, vectors or current-spec recordings have been produced. The initial staging policy
+reported the oracle as pending and rejected strict mode without a corpus.
+The current Q30 optional-unverified policy above supersedes that restriction.
 
-The staging guard accepts Q30's explicit optional M2-05 declaration and requires
-M2-14 to remain unchecked. It rejects checked or duplicate milestone rows,
+The original staging guard required M2-14 to remain unchecked. It rejected
+checked or duplicate milestone rows,
 missing plan status, incomplete Git history and any previously committed oracle
 artifact. Existing partial or corrupt outputs always invoke the real verifier
 and fail rather than becoming an initial-pending state. A regression reads the
@@ -78,7 +100,7 @@ JSON. Quicknet round/time arithmetic uses native constants and native UTC
 timestamp conversion. The root task corrected the discarded-state diagnostic
 to match the pinned Python archive-node guidance.
 
-`oracle.yml` runs only on free Ubuntu. Dry-run builds and checks without GHCR or
+The archived `oracle.yml` design targets free Ubuntu. Dry-run builds and checks without GHCR or
 PR writes. A live image push uses context and parity tags plus inline registry
 cache. Dumps use the immutable hosted image ID or a GHCR digest, check labels and
 disable the container network. Outputs remain reviewable Actions artifacts;
@@ -105,7 +127,8 @@ paths and local execution, and require committed vectors once M2-05 is checked.
 No absent vector set was presented as a successful behavioral replay. Read-only
 Docker command plans parse without execution. actionlint 1.7.7 passes the oracle
 and both release workflows, including ShellCheck 0.11.0 over embedded shell and
-the recorder shell script; the existing sibling-owned actionlint tool remains live.
+the recorder shell script. Those results describe the historical tool snapshot;
+no local validation-tool installation or retained task-tool dependency is required.
 
 Root integrated `oracle` and `record` command arms/help. The native replay
 follow-up added the xtask TX/signer dependencies and enabled the weights,
@@ -119,17 +142,18 @@ Standalone Null commits now preserve Python's descriptor reads while the
 validator's `TimelockCommitter` retains its consensus ciphertext caps. The
 dedicated Null read-set regression passes, as do all seven oracle tests after
 the production change. The raw Null sample and exact touch checks remain intact.
-The full root gates and
-real Ubuntu/GHCR runs must pass before adopting generated vectors or claiming
-M2-05. No signing key, trust anchor or Keychain changed. Both prior release
+Any optional adoption of generated vectors still requires authenticated hosted
+Python output and its native replay, plus applicable hosted client checks.
+Neither producing that first batch nor configuring GHCR is an M2 prerequisite. No signing key, trust anchor or Keychain changed. Both prior release
 review findings were fixed: the pinned SemVer checker precedes the dry-run
 rehearsal, and live release PRs regenerate compatibility and run gates before
 the App-token push.
 
 The rehearsal and downloaded ShellCheck directories were audited for processes,
 launchd, configuration, symlink and virtualenv dependencies and removed.
-`m2-oracle-inputs.json` retains the bounded context identity. Shared build/source
-caches and the sibling-owned actionlint tool remain live; no wallets or private
+`m2-oracle-inputs.json` retains the bounded historical context identity. The
+retired task root and its build/source/tool paths are not current dependencies.
+Shared global Cargo/toolchain caches remain preserved; no wallets or private
 state were created or removed.
 
 The native replay follow-up created no separate disposable directories. Its
@@ -137,6 +161,7 @@ historical shared `target/execute-plan.6Ro0PC` build and temporary directories
 were deleted during Q30 cleanup and must not be recreated. No Python interpreter
 or local container ran, and no expected vectors were fabricated.
 
-The Q30 staging correction changes only source, documentation and regressions.
-Installed rustfmt and source checks are the local validation; execution of the
-Rust regression remains a hosted CI check. No temporary directory was needed.
+The original Q30 staging correction changed source, documentation and
+regressions, with local formatting/source inspection only. Its then-pending
+execution status is historical; applicable current results must come from the
+exact hosted checkpoint. No temporary directory was needed.
