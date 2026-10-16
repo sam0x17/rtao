@@ -587,6 +587,7 @@ async fn post_review_sudo_change_and_reopened_operation_refuse_before_source() -
         preset: None,
     };
     let selection = SigningSelection {
+        display_name: None,
         wallet: "public".into(),
         backend: "ledger".into(),
         address: Some(signer),

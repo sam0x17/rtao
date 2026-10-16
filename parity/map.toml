@@ -285,12 +285,12 @@ notes = "Source reconciliation 2026-10-15: xtask/src/extract_chain.rs parses the
 
 [[file]]
 py = "runtime/src/transaction_payment_wrapper.rs"
-rs = ["runtime-authoritative fee-payer/discount/priority policy; source-to-client contract guard pending"]
+rs = ["xtask/src/extract_fee_contract.rs","vendor/upstream/extracted/chain_rules.json"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "1d9f3cb8d00c601eb76fde8aa27db24add6f0d10"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Complete authenticated source review 2026-10-15: direct Proxy.proxy opt-in precedes allowlisted hotkey-owner payment; nested opt-ins extend at most two proxy layers or a nonempty homogeneous Utility batch/batch_all/force_batch; proxy_announced is excluded. Redirected payers lose signer-chosen tips, self-paying signers retain them, and dispatch origin is preserved. validate/prepare/post_dispatch apply discounted pricing with bounded refunds and fixed class-based priority. The client estimates fees through the node; executor::coldkey_pays is a Python-compatible warning heuristic, not this runtime payer resolver. No exact source parser or payer-policy equivalence fixture currently exists. Keep pending; neither fee_filters extraction nor the heuristic proves this broader wrapper contract."
+notes = "Source reconciliation 2026-10-16: the authenticated syn policy guard in xtask/src/extract_fee_contract.rs is integrated by extract_chain::outputs; hosted regeneration supplies chain_rules.fee_contract with exact v478 source provenance. It guards validate-time symbolic payer precedence, proxy/batch eligibility, branch-based tip suppression, original dispatch origin, fee_dispatch_info and metadata delegation. Native parser/mutation and fully wrapped public-identity fee-probe fixtures bind this projection; existing zero-tip preparation, receipt and warning fixtures retain their separate client scopes. Constructor/debug/weight/prepare/post-dispatch/bare method bodies and all 26 vendored runtime tests are source-reviewed reference only, outside the semantic projection and unexecuted. Concrete discounts/priority constants, payer state, account debits/refunds and admission remain runtime-owned under Q30. The any-leaf coldkey warning is a Python-compatible heuristic, not a runtime payer resolver or runtime equivalence claim."
 
 [[file]]
 py = "sdk/bittensor-core-py/Cargo.toml"
@@ -1338,21 +1338,21 @@ notes = "Source reconciliation 2026-10-15: exact authenticated source compared w
 
 [[file]]
 py = "sdk/python/bittensor/cli/main.py"
-rs = ["`rtao-cli` entry point and command tree"]
+rs = ["rtao_cli::application::{command_tree, compatibility_aliases, command_path, normalize_legacy_address_argv, warn_legacy_config}","crates/rtao-cli/src/main.rs; rtao_cli::commands::command_tree","rtao_cli::commands::catalog::{tools_payload, chain_matches, chain_catalog, run_tools, run_explain}","rtao_cli::globals::{root_globals, Globals}; rtao_cli::context::AppContext","crates/rtao-cli/tests/{startup_contract, entrypoint_contract, cli_source_tree, config_catalog, catalog_entrypoint, globals_contract}.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "57f82d668a651b24f71174a0f26f5c91a2dea842"
 synced_tag = "v478"
 milestone = "M4"
-notes = "groups `:99-144`; hidden aliases `:116-135`; snake_case aliases `:449-477`; `tools` `:321`, `explain` `:405` (§10.1-10.2)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 549-line module, every root registration/callback/catalog/error/alias/startup path and actual native owners/fixture bodies reviewed. Hidden group and snake-case spellings, root/leaf option and identity provenance, tools/explain data and the root Docs URL have concrete homes. The ignored v9 YAML warning precedes startup fast paths, never reads YAML and creates an exclusive 0600 marker after successful stderr output; stricter regular-file/no-follow policy is documented. Exact top-level addr/addresses NAME SS58 shorthand inserts add before parsing, keeps trailing arguments and rewritten replay identity, and preserves known-command/flag/address guards. Four startup regressions exercise actual parsing/offline entrypoint, isolated HOME, warning/output/error and marker semantics; real help/version checks the Docs URL. Native rtao executable/version, async entrypoint, feature availability, owned tree, checked u64 money/u32 Ledger indices/u8 verbosity and terminal presentation are explicit adaptations. Python pip packages competing for btcli do not collide with the separately named rtao executable. Required-input prompting delegates to the reviewed native prompt/context seam; child handlers and source rows retain separate obligations. Source correspondence and scoped Rust fixtures do not establish Python/oracle, arbitrary dynamic-object, live-chain, device, native-platform or milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/cli/metagraph_view.py"
-rs = ["`rtao-cli` `subnets metagraph`"]
+rs = ["crates/rtao-cli/src/commands/subnets.rs", "crates/rtao-cli/tests/subnets_commands.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "3ef561c3cbb67138952c08fdc02c5ec78dd9a19a"
 synced_tag = "v478"
 milestone = "M4"
-notes = "§10.5"
+notes = "Source reconciliation: complete authenticated 211-line module and all four definitions map to the actual typed Request/execute and render_metagraph path. Raw JSON, overview/identity/pool/registration/weights sections, native readings, exact stable stake order, short and empty per-neuron columns, local-name then contact then chain-name precedence and native IPv4/IPv6 endpoints are retained. Stable complete-wallet natural groups preserve first aliases across equal wallet spellings. Human native tables/account truncation and checked u64 balances, u128 volume and native endpoint domains replace Rich rendering and arbitrary Python coercions. Exact named hosted provenance is retained separately; fake transports establish no live runtime, Python-oracle transcript or milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/cli/multisig_helpers.py"

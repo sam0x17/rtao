@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/executor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Exercise shield and raw entry points through signed FakeChain submissions.
@@ -975,6 +976,137 @@ async fn executor_shield_entries_prepare_before_fresh_nonce_and_era_selection() 
             .unwrap();
         assert_eq!(next.value(), 49);
         next.settle();
+        ex.client().close().await;
+    }
+}
+
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_raw_call_propagates_finalization_request
+// pyt: unit/test_intents_table.py::TestExecuteFlow::test_shielded_inner_waits_for_its_own_finalization
+// Real typed/dynamic raw entries replace Python's mocked call forwarding. The
+// carrier finalizes at 101; its independently signed inner is included at 102.
+#[tokio::test(start_paused = true)]
+async fn raw_shield_finalization_waits_for_the_distinct_signed_inner_in_both_routes() {
+    for dynamic in [false, true] {
+        let (ex, fake, keys) = fixture().await;
+        let call = remark(&ex).await;
+        let prepared = ex
+            .client()
+            .prepare_call(
+                call.clone(),
+                &keys.signer.key,
+                &rtao_client::SubmitOptions {
+                    nonce: rtao_client::NoncePolicy::Explicit(1),
+                    mortality: rtao_client::Mortality::Mortal(rtao_client::Period::new(8)),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let signature = keys
+            .signer
+            .key
+            .sign(&prepared.signing_request(SignPurpose::ShieldInner))
+            .await
+            .unwrap();
+        let (inner_bytes, inner_hash) = ex
+            .client()
+            .attach_signature(&prepared, signature)
+            .await
+            .unwrap();
+        let finality_reads = Arc::new(AtomicUsize::new(0));
+        let counted = finality_reads.clone();
+        fake.mutate_state(|state| {
+            // Preserve the actual carrier's generated receipt at 101 while
+            // making a distinct later block available to the inner resolver.
+            state.set_handler("author_submitAndWatchExtrinsic", |state, request| {
+                let reply = state.dispatch(request);
+                if reply.outcome.as_ref().is_some_and(Result::is_ok) {
+                    assert_eq!(state.block, 101);
+                    state.advance(1);
+                }
+                reply
+            });
+            state.set_handler("chain_getBlock", move |state, request| {
+                let mut reply = state.dispatch(request);
+                if let Some(Ok(raw)) = &mut reply.outcome {
+                    let number = raw["block"]["header"]["number"]
+                        .as_str()
+                        .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok());
+                    if number == Some(102) {
+                        let extrinsics = raw["block"]["extrinsics"].as_array_mut().unwrap();
+                        assert!(extrinsics.is_empty());
+                        extrinsics.push(json!(format!("0x{}", hex::encode(&inner_bytes))));
+                        state
+                            .seed_events(
+                                request.params[0].as_str().unwrap(),
+                                json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,
+                                    "module_id":"System","event_id":"ExtrinsicSuccess",
+                                    "attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},
+                                        "class":"Normal","pays_fee":"Yes"}},"topics":[]}]),
+                            )
+                            .unwrap();
+                    }
+                }
+                reply
+            });
+            state.set_handler("chain_getFinalizedHead", move |state, request| {
+                if !state.submissions.is_empty() {
+                    let attempt = counted.fetch_add(1, Ordering::SeqCst);
+                    assert!(attempt < 2, "unexpected extra finality read");
+                    state.set_finalized(if attempt == 0 { 101 } else { 102 }).unwrap();
+                }
+                state.dispatch(request)
+            });
+        });
+        let options = ExecuteOptions {
+            shielded: true,
+            period: Some(8),
+            wait_for_inclusion: true,
+            wait_for_finalization: true,
+            retries: 0,
+            replan_owner_rate_limit: false,
+            deadline: Some(Duration::from_secs(5)),
+            ..Default::default()
+        };
+        let result = tokio::time::timeout(Duration::from_secs(10), async {
+            if dynamic {
+                ex.submit_call_dyn(call.clone(), &keys, SignerRole::Coldkey, &options)
+                    .await
+            } else {
+                ex.submit_call::<Coldkey, _>(call.clone(), &keys, &options)
+                    .await
+            }
+        })
+        .await
+        .unwrap()
+        .unwrap();
+        assert!(result.success);
+        assert_eq!(result.inclusion, Inclusion::Finalized);
+        assert_eq!(result.extrinsic_id.as_deref(), Some("102-0000"));
+        assert_eq!(
+            format!("0x{}", hex::encode(result.block_hash.unwrap().0)),
+            fake.state().lock().unwrap().block_hash(102).unwrap()
+        );
+        assert_eq!(result.data["shielded"], true);
+        assert_eq!(
+            result.data["inner_extrinsic_hash"],
+            json!(format!("0x{}", hex::encode(inner_hash.0)))
+        );
+        assert_eq!(finality_reads.load(Ordering::SeqCst), 2);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        let requests = keys.signer.requests.lock().unwrap().clone();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0].0, SignPurpose::ShieldInner);
+        assert_eq!(requests[0].1, call.as_bytes());
+        assert_eq!(requests[1].0, SignPurpose::ShieldCarrier);
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        assert_eq!(
+            fake.requests()
+                .iter()
+                .filter(|request| request.method.starts_with("author_submit"))
+                .count(),
+            1
+        );
         ex.client().close().await;
     }
 }

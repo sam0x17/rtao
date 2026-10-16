@@ -56,6 +56,9 @@ mod root_claim_fixtures;
 #[path = "extract_rpc_test_fixtures.rs"]
 mod rpc_test_fixtures;
 
+#[path = "extract_null_pruning_test_fixtures.rs"]
+mod null_pruning_test_fixtures;
+
 #[path = "extract_descriptions.rs"]
 mod descriptions;
 
@@ -113,6 +116,10 @@ const RPC_NAMES: &[&str] = &[
 const NAMED_TABLES: &[(&str, &[&str])] = &[
     (precompiles::SOURCE, precompiles::NAMES),
     (rpc_test_fixtures::SOURCE, rpc_test_fixtures::NAMES),
+    (
+        null_pruning_test_fixtures::SOURCE,
+        null_pruning_test_fixtures::NAMES,
+    ),
     ("sdk/python/bittensor/_generated/errors.py", &["ERRORS"]),
     (
         "sdk/python/bittensor/_transport/utils/receipt.py",
@@ -2395,6 +2402,9 @@ impl<'a> Resolver<'a> {
     }
 
     fn values(&mut self, path: &str, names: &[&str]) -> Result<Value> {
+        if path == null_pruning_test_fixtures::SOURCE {
+            return null_pruning_test_fixtures::values(self, names);
+        }
         if path == rpc_test_fixtures::SOURCE {
             return rpc_test_fixtures::values(self, names);
         }

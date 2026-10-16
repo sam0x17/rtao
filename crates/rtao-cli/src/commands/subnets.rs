@@ -691,6 +691,16 @@ async fn execute_inspect(
                 rows,
             );
             table.records = Some(json!(records));
+            table.legend = [
+                ("price (τ)", "spot price of one alpha token in TAO (root has no alpha pool)."),
+                ("emission (τ/day)", "TAO injected into the subnet per day at the current rate."),
+                ("flow (τ/day)", "smoothed net TAO flow from staking: positive means TAO is entering the subnet, negative means it is leaving."),
+                ("burn", "TAO burned to register a neuron on the subnet right now."),
+                ("symbol", "the subnet's alpha token symbol is included with its netuid."),
+            ]
+            .into_iter()
+            .map(|(term, meaning)| (term.into(), meaning.into()))
+            .collect();
             table.footer = Some(format!(
                 "{} subnets · {} neurons · sorted by emission",
                 infos.len(),
@@ -833,7 +843,13 @@ fn render_convictions_named(
         .detail(
             Some(&format!("conviction netuid {}", data.netuid)),
             &[
-                ("alpha out".into(), json!(data.alpha_out.to_python_string())),
+                (
+                    "alpha out".into(),
+                    json!(format!(
+                        "{} — alpha in circulation on this subnet (grows with emissions)",
+                        data.alpha_out.to_python_string()
+                    )),
+                ),
                 (
                     "takeover threshold".into(),
                     json!(format!(
@@ -843,23 +859,42 @@ fn render_convictions_named(
                 ),
                 (
                     "unlock rate".into(),
-                    json!(format!("{} blocks", data.unlock_rate)),
+                    json!(format!(
+                        "{} blocks — a decaying lock's mass halves every ~{:.0}d",
+                        data.unlock_rate,
+                        data.unlock_rate as f64 * std::f64::consts::LN_2 * 12.0 / 86400.0
+                    )),
                 ),
                 (
                     "maturity rate".into(),
-                    json!(format!("{} blocks", data.maturity_rate)),
+                    json!(format!(
+                        "{} blocks — conviction closes half its gap to the locked mass every ~{:.0}d",
+                        data.maturity_rate,
+                        data.maturity_rate as f64 * std::f64::consts::LN_2 * 12.0 / 86400.0
+                    )),
                 ),
                 (
                     "age gate".into(),
                     json!(
                         if u128::from(data.block) >= data.ownership_changeable_at_block {
-                            "open".into()
+                            format!(
+                                "open — registered at block {} — the one-year age gate has passed",
+                                data.registered_at
+                            )
                         } else {
-                            format!("block {}", data.ownership_changeable_at_block)
+                            format!(
+                                "block {} — ~{:.0}d away — a subnet must be one year old before ownership can change",
+                                data.ownership_changeable_at_block,
+                                (data.ownership_changeable_at_block - u128::from(data.block)) as f64 * 12.0 / 86400.0
+                            )
                         }
                     ),
                 ),
                 ("owner hotkey".into(), json!(data.owner_hotkey)),
+                (
+                    "owner rule".into(),
+                    json!("its lock always counts conviction equal to its full locked mass"),
+                ),
                 (
                     "leader".into(),
                     json!(
@@ -926,7 +961,29 @@ fn render_convictions_named(
         rows,
     );
     output.table(&table).map_err(failure)?;
-    output.message(&format!("Lock alpha with `rtao conviction add --netuid {} --amount <alpha>`. Estimates assume constant rates and alpha accounting. Ownership also requires the one-year age gate. Unlock half-life ~{:.0}d; maturity half-life ~{:.0}d.", data.netuid, data.unlock_rate as f64 * std::f64::consts::LN_2 * 12.0 / 86400.0, data.maturity_rate as f64 * std::f64::consts::LN_2 * 12.0 / 86400.0)).map_err(failure)?;
+    output
+        .detail(
+            Some("how conviction works"),
+            &[
+                (
+                    "lock alpha".into(),
+                    json!(format!(
+                        "Lock alpha to a hotkey with `rtao conviction add --netuid {} --amount <alpha>` to earn conviction — the score that gates subnet ownership.",
+                        data.netuid
+                    )),
+                ),
+                (
+                    "estimates".into(),
+                    json!("The times shown assume the rates and alpha accounting stay constant."),
+                ),
+                (
+                    "full mechanics".into(),
+                    json!(format!("{}/guides/conviction", rtao_catalog::py::DOCS_URL)),
+                ),
+            ],
+            None,
+        )
+        .map_err(failure)?;
     let hidden = data.hotkeys.len() - shown.len();
     if hidden != 0 {
         output

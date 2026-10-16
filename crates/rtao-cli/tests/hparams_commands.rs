@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_null_pruning.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/sudo.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/hyperparams_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Curated owner commands preserve real SDK arguments and lossless read output.
@@ -1258,6 +1259,9 @@ mod null_pruning {
         Ok(())
     }
 
+    // pyt: unit/test_cli_null_pruning.py::test_dry_run_previews_one_batch_without_creating_broadcast_record
+    // D-062 intentionally refuses a closed-window preview; no wait, journal or
+    // signing is allowed. This is the explicit native adaptation of that input.
     #[tokio::test]
     async fn cli_null_preview_reports_a_closed_window_without_waiting_for_it() -> TestResult {
         let mut f = fixture(260, vec![], false, true, false).await?;
