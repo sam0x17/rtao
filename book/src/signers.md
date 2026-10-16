@@ -31,9 +31,16 @@ that hash before deciding whether to submit again.
 Its signing operation starts a loopback page with embedded upstream assets,
 displays UOS QR frames and verifies the phone's answer. `VaultOptions` controls
 the algorithm, browser opening and deadlines. `close().await` releases the
-page server. For mortal shield approvals, warm up the camera before preparing
-the two signatures; the phone and operator still need to finish within the
-signed era. `vault::scan_vault_address` supports address scans separately.
+page server. Shield submission calls `Signer::prepare_shielded` before choosing
+the mortal-era anchor or reserving paired nonces. Vault uses this hook to wait
+for the page connection and request camera startup. Phone unlocking and both
+signature scans still need to finish within the signed era.
+`vault::scan_vault_address` supports address scans separately.
+
+Custom interactive signers can implement `prepare_shielded` for setup that
+should precede the short era. Its default does nothing, and the submission
+deadline also bounds preparation. This hook must not sign or broadcast a
+transaction.
 
 Vault and extension browser opening share the explicit browser choice,
 environment fallback and executable aliases. Launching returns after spawning;
