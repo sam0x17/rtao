@@ -1,10 +1,10 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional source at the same commit/license: sdk/python/bittensor/cli/metagraph_view.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/metagraph_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Registration and raw metagraph inspection through real SDK operations.
 
 use super::generated::{self, QueryRequest, TxRequest};
 use crate::{
-    books::{AccountLookup, FsAccountLookup},
+    books::{AccountLookup, FsAccountLookup, public_json_truthy},
     context::{AppContext, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
     globals::{Tier, with_globals},
@@ -940,10 +940,33 @@ fn render_convictions_named(
 }
 
 fn raw_text(value: &Value) -> String {
+    fn repr(value: &Value) -> String {
+        match value {
+            Value::String(value) => rtao::primitives::pyfmt::string_repr(value),
+            _ => raw_text(value),
+        }
+    }
     match value {
+        Value::Null => "None".into(),
         Value::String(value) => value.clone(),
         Value::Bool(true) => "True".into(),
         Value::Bool(false) => "False".into(),
+        Value::Array(values) => format!(
+            "[{}]",
+            values.iter().map(repr).collect::<Vec<_>>().join(", ")
+        ),
+        Value::Object(values) => format!(
+            "{{{}}}",
+            values
+                .iter()
+                .map(|(key, value)| format!(
+                    "{}: {}",
+                    rtao::primitives::pyfmt::string_repr(key),
+                    repr(value)
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         _ => value.to_string(),
     }
 }
@@ -1025,18 +1048,24 @@ pub fn render_metagraph(
             ),
         ))
     };
-    let overview = [
-        "owner_hotkey",
-        "owner_coldkey",
-        "network_registered_at",
-        "block",
-        "tempo",
-        "last_step",
-        "blocks_since_last_step",
-    ]
-    .into_iter()
-    .map(raw)
-    .collect::<Result<Vec<_>, _>>()?;
+    let overview = vec![
+        raw("owner_hotkey")?,
+        raw("owner_coldkey")?,
+        (
+            "registered_at".into(),
+            json!(required_u64(graph, "network_registered_at")?),
+        ),
+        raw("block")?,
+        raw("tempo")?,
+        (
+            "last_step".into(),
+            json!(format!(
+                "{}  {} blocks ago",
+                required_u64(graph, "last_step")?,
+                required_u64(graph, "blocks_since_last_step")?
+            )),
+        ),
+    ];
     output
         .detail(Some(&format!("metagraph netuid {netuid}")), &overview, None)
         .map_err(failure)?;
@@ -1046,8 +1075,8 @@ pub fn render_metagraph(
         .map(|fields| {
             fields
                 .iter()
-                .filter(|(_, value)| !value.is_null() && **value != json!(""))
-                .map(|(key, value)| (key.clone(), value.clone()))
+                .filter(|(_, value)| public_json_truthy(value))
+                .map(|(key, value)| (key.clone(), json!(raw_text(value))))
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
@@ -1076,14 +1105,9 @@ pub fn render_metagraph(
             json!(format!("{:.6}", bits as f64 / 4_294_967_296.0)),
         ));
     }
-    for key in [
-        "tao_in",
-        "subnet_emission",
-        "tao_in_emission",
-        "pending_root_emission",
-    ] {
-        pool.push(money(key, NetUid::ROOT)?);
-    }
+    pool.push(money("tao_in", NetUid::ROOT)?);
+    pool.push(money("alpha_in", netuid)?);
+    pool.push(money("alpha_out", netuid)?);
     // The cumulative volume is a native u128 counter, unlike u64 balances.
     // Keep its full range without constructing or narrowing a balance.
     let volume = record
@@ -1092,21 +1116,23 @@ pub fn render_metagraph(
         .and_then(RawInteger::as_u128)
         .ok_or_else(|| failure("metagraph subnet_volume is not a native u128"))?;
     pool.push((
-        "subnet_volume".into(),
+        "volume".into(),
         json!(format!(
             "τ{}.{:09}",
             volume / 1_000_000_000,
             volume % 1_000_000_000
         )),
     ));
-    for key in [
-        "alpha_in",
-        "alpha_out",
-        "alpha_in_emission",
-        "alpha_out_emission",
-        "pending_alpha_emission",
+    for (key, subnet, note) in [
+        ("subnet_emission", NetUid::ROOT, "per block"),
+        ("tao_in_emission", NetUid::ROOT, "per block"),
+        ("alpha_in_emission", netuid, "per block"),
+        ("alpha_out_emission", netuid, "per block"),
+        ("pending_alpha_emission", netuid, "undistributed"),
+        ("pending_root_emission", NetUid::ROOT, "undistributed"),
     ] {
-        pool.push(money(key, netuid)?);
+        let (key, value) = money(key, subnet)?;
+        pool.push((key, json!(format!("{}  {note}", raw_text(&value)))));
     }
     output
         .detail(Some("pool & emission"), &pool, None)
@@ -1154,7 +1180,21 @@ pub fn render_metagraph(
         let fields = keys
             .iter()
             .copied()
-            .map(raw)
+            .map(|key| {
+                if matches!(key, "burn" | "min_burn" | "max_burn") {
+                    let (_, balance) = money(key, NetUid::ROOT)?;
+                    Ok((
+                        key.into(),
+                        json!(format!(
+                            "{}  = {}",
+                            required_u64(graph, key)?,
+                            raw_text(&balance)
+                        )),
+                    ))
+                } else {
+                    raw(key)
+                }
+            })
             .collect::<Result<Vec<_>, _>>()?;
         output.detail(Some(title), &fields, None).map_err(failure)?;
     }
@@ -1179,9 +1219,8 @@ pub fn render_metagraph(
         let name = local_names.get(&hotkey).cloned().or_else(|| {
             column("identities", uid)
                 .get("name")
-                .and_then(Value::as_str)
-                .filter(|name| !name.is_empty())
-                .map(str::to_owned)
+                .filter(|name| public_json_truthy(name))
+                .map(raw_text)
         });
         let stake = optional_u64(&column("total_stake", uid), "total_stake")?;
         let emission = optional_u64(&column("emission", uid), "emission")?;
@@ -1241,9 +1280,17 @@ pub fn render_metagraph(
     );
     table.records = Some(graph.clone());
     table.footer = Some(format!(
-        "{num_uids} uids · {validators} validator permits · {active_count} active. --json carries every per-uid field."
+        "{num_uids} uids · {validators} validator permits · {active_count} active. --json carries every per-uid field (trust, consensus, rank, axons); `rtao subnets hyperparameters {netuid}` explains each parameter."
     ));
-    output.table(&table).map_err(failure)
+    output.table(&table).map_err(failure)?;
+    // The shared table omits its footer when empty. The metagraph still
+    // reports its uid summary and help for an unpopulated subnet.
+    if table.rows.is_empty()
+        && let Some(footer) = &table.footer
+    {
+        output.value(footer).map_err(failure)?;
+    }
+    Ok(())
 }
 
 /// Execute transactions through the shared review path, or inspect a metagraph.
@@ -1297,12 +1344,42 @@ pub async fn execute(
             } else {
                 let lookup =
                     FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
-                lookup
+                let mut candidates = lookup
                     .candidates()
                     .into_iter()
                     .filter(|candidate| candidate.source == "hotkey")
-                    .map(|candidate| (candidate.address, candidate.name))
-                    .collect()
+                    .collect::<Vec<_>>();
+                // Python walks naturally sorted wallets, then naturally sorted
+                // hotkeys, retaining the first name for a duplicate address.
+                candidates.sort_by(|left, right| {
+                    let (left_wallet, left_hotkey) =
+                        left.name.split_once('/').unwrap_or((&left.name, ""));
+                    let (right_wallet, right_hotkey) =
+                        right.name.split_once('/').unwrap_or((&right.name, ""));
+                    super::wallet::natural_cmp(left_wallet, right_wallet)
+                        .then_with(|| super::wallet::natural_cmp(left_hotkey, right_hotkey))
+                });
+                let mut names = BTreeMap::new();
+                for candidate in candidates {
+                    let name = candidate.name.rsplit('/').next().unwrap_or(&candidate.name);
+                    names
+                        .entry(candidate.address)
+                        .or_insert_with(|| name.to_owned());
+                }
+                for entry in &ctx.books.addresses {
+                    if let (Some(address), Some(name)) = (
+                        entry
+                            .get("address")
+                            .and_then(Value::as_str)
+                            .filter(|address| !address.is_empty()),
+                        entry.get("name").filter(|name| public_json_truthy(name)),
+                    ) {
+                        names
+                            .entry(address.into())
+                            .or_insert_with(|| raw_text(name));
+                    }
+                }
+                names
             };
             render_metagraph(&ctx.output, netuid, &graph, &names)?;
             Ok(None)

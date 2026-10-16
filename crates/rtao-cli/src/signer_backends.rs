@@ -104,12 +104,9 @@ impl NativeSignerFactory {
     fn request(&self, globals: &Globals) -> Result<BackendRequest, CliError> {
         let mut context = self.context.clone();
         context.globals = globals.clone();
-        let backend = globals
-            .signer_backend
-            .as_deref()
-            .unwrap_or("wallet")
-            .trim()
-            .to_lowercase();
+        let backend = crate::globals::normalize_signer_backend(
+            globals.signer_backend.as_deref().unwrap_or("wallet"),
+        );
         if !matches!(backend.as_str(), "ledger" | "vault" | "extension") {
             return Err(CliError::input(format!(
                 "unknown external signing backend {backend:?}"
@@ -253,7 +250,7 @@ impl RawSignerFactory for NativeSignerFactory {
         selection: &'a SigningSelection,
     ) -> BoxFuture<'a, Result<SigningSelection, CliError>> {
         Box::pin(async move {
-            if selection.backend == "wallet" {
+            if crate::globals::normalize_signer_backend(&selection.backend) == "wallet" {
                 return Ok(selection.clone());
             }
             let keys = self.source(ctx, selection).await?;
@@ -273,7 +270,7 @@ impl RawSignerFactory for NativeSignerFactory {
         selection: &'a SigningSelection,
     ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
         Box::pin(async move {
-            if selection.backend == "wallet" {
+            if crate::globals::normalize_signer_backend(&selection.backend) == "wallet" {
                 return WalletSignerFactory.source(ctx, selection).await;
             }
             let mut globals = ctx.globals.clone();
