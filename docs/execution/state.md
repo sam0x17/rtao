@@ -216,7 +216,13 @@ The correction selects published Docify 0.2.9, whose local export, embed,
 embed_run and in-memory Markdown APIs match our uses and need neither Git/SHA
 libraries nor their native build helpers. Its published macro source and
 package checksums were inspected. A new hosted candidate will preserve the
-entire pre-Docify dependency graph; no lock is hand-edited.
+entire pre-Docify dependency graph; no lock is hand-edited. Hosted lock run
+[38895014224](https://github.com/sam0x17/rtao/actions/runs/38895014224)
+passes at exact `6a2e191`. The reviewed and separately refetched candidate adds
+nine pure Rust documentation packages against that original graph and only
+the facade-dev/xtask Docify edges. It removes the failed Git/native-tool closure
+and restores the old `cc` edges. Fuzz lock bytes stay identical. This is lock
+preparation evidence; compilation, supply and regression execution still follow.
 
 Two independently reviewed shared offline example tests now cover checked
 native balances and Python-compatible numeric display. The generated
