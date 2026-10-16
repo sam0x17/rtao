@@ -8242,33 +8242,33 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/root.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `root` group"
+          "rtao_cli::commands::root"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0dd627a74cc86b1dc006536b0f26fdb1a7971cf6"
       },
       {
         "kind": "ported",
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/root_move.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `root` group"
+          "rtao_cli::commands::root"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2c826049b5bf3e1b4706b7e09c67cbd38e17c5fb"
       },
       {
         "kind": "ported",
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/root_swap.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `root` group"
+          "rtao_cli::commands::root"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "03cffc1dd3ec5b6cde29674af4a156edb947be2d"
       },
       {
         "kind": "ported",
@@ -10314,11 +10314,11 @@
         "milestone": "M2, M6",
         "oracle": "unverified",
         "python": "sdk/python/scripts/build_basket_index.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Upstream frozen-basket producer; its checked-in basket_index_data.py output is extracted by native xtask and consumed by CLI root_helpers"
+          "Retained upstream historical-index producer; native xtask/src/regen_basket_index.rs separately converts authenticated basket_index_data.py output for crates/rtao-cli/src/root_helpers consumers"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "80d945897b6752bf3459db23680362af98be199c"
       },
       {
         "kind": "oracle-only",
