@@ -15,6 +15,7 @@ pub fn command_tree(commands: impl IntoIterator<Item = Command>) -> Command {
         Command::new("rtao")
             .version(env!("CARGO_PKG_VERSION"))
             .about("Rust SDK and operator tooling for Bittensor subnets")
+            .after_help(format!("Docs: {}", rtao_catalog::py::DOCS_URL))
             .arg_required_else_help(true)
             .subcommand(
                 Command::new("doctor")
@@ -28,6 +29,75 @@ pub fn command_tree(commands: impl IntoIterator<Item = Command>) -> Command {
             .subcommands(commands),
     );
     compatibility_aliases(root)
+}
+
+/// Accept the pinned legacy address-book shorthand before the real parser runs.
+///
+/// Only a top-level addr/addresses NAME SS58 invocation is rewritten. Existing
+/// commands, flags, malformed addresses and arguments after root flags stay exact.
+pub fn normalize_legacy_address_argv(argv: &mut Vec<std::ffi::OsString>) {
+    let args = argv
+        .iter()
+        .skip(1)
+        .map(|arg| arg.to_str())
+        .collect::<Vec<_>>();
+    let rewrite = match args.as_slice() {
+        [Some(group), Some(name), Some(address), ..] => {
+            matches!(*group, "addr" | "addresses")
+                && !["add", "save", "list", "show", "remove"].contains(name)
+                && !name.starts_with('-')
+                && !address.starts_with('-')
+                && crate::books::is_bittensor_address(address)
+        }
+        _ => false,
+    };
+    if rewrite {
+        argv.insert(2, "add".into());
+    }
+}
+
+/// Warn once when the old YAML configuration is ignored, independently of
+/// JSON, quiet, help or version output, matching the Python startup warning.
+///
+/// The legacy contents are never opened. Symlinked directories/files and
+/// special files are ignored; the marker is created exclusively after writing
+/// stderr successfully. Marker creation failure is advisory and never fails a
+/// command. The injected home and writer keep tests away from user settings.
+pub fn warn_legacy_config(
+    home: &std::path::Path,
+    config_path: &std::path::Path,
+    stderr: &mut dyn std::io::Write,
+) -> std::io::Result<()> {
+    let directory = home.join(".bittensor");
+    if !std::fs::symlink_metadata(&directory).is_ok_and(|info| info.is_dir()) {
+        return Ok(());
+    }
+    let legacy = directory.join("config.yml");
+    if !std::fs::symlink_metadata(&legacy).is_ok_and(|info| info.is_file()) {
+        return Ok(());
+    }
+    let marker = directory.join(".btcli_legacy_config_warned");
+    if std::fs::symlink_metadata(&marker).is_ok_and(|info| info.is_file()) {
+        return Ok(());
+    }
+    writeln!(
+        stderr,
+        "warning: {} is the legacy (v9) btcli config and is ignored by this CLI; migrate values with rtao config set (stored in {}), then rename or delete the old file. Migration guide: {}/migration",
+        crate::output::terminal_text(&legacy.display().to_string()),
+        crate::output::terminal_text(&config_path.display().to_string()),
+        rtao_catalog::py::DOCS_URL,
+    )?;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC);
+    }
+    let _ = options.open(marker);
+    Ok(())
 }
 
 /// Register hidden snake_case aliases for every hyphenated command, plus the
