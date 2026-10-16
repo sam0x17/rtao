@@ -8,6 +8,10 @@ license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Asynchronous Bittensor JSON-RPC transport."
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+features = ["rate-limit","metrics"]
+
 [lints]
 workspace = true
 

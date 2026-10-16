@@ -14,6 +14,7 @@ repository = "https://github.com/sam0x17/rtao"
 [workspace.lints.rust]
 missing_docs = "deny"
 unsafe_code = "forbid"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(docsrs)'] }
 
 [workspace.lints.clippy]
 unwrap_used = "deny"

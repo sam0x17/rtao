@@ -379,6 +379,11 @@ fn storage_keys_requested(fake: &FakeChain, since: usize) -> Vec<String> {
         .collect()
 }
 
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_multisig_claim_reads_multisig_state_but_checks_member_balance
+// Native adaptation: the Probe records group dispatch_origin and member
+// fee_payer at the adapter boundary. The separate wrapped ClaimRoot reserve/read
+// fixture checks those roles in the actual intent; this is compositional
+// coverage, not a combined multisig ClaimRoot run.
 #[tokio::test]
 async fn plan_preserves_the_semantic_contract_and_exact_python_dispatch_shape() {
     let (executor, fake, keys) = fixture(1_000_000_000).await;
@@ -778,6 +783,11 @@ async fn preflight_retains_facts_amounts_and_semantic_policy_blocks() {
     assert!(fake.state().lock().unwrap().submissions.is_empty());
 }
 
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_saved_multisig_composes_sudo_and_proxy_inside_multisig
+// Native input adaptation: a Root probe emits System.remark to isolate
+// Multisig -> Proxy -> Sudo nesting. Actual AdminUtils [7]/enabled=true bytes
+// and pending timepoint 12/3 are pinned by separate existing fixtures; this
+// fixture does not reproduce the full pending AdminUtils transcript.
 #[tokio::test]
 async fn root_and_proxy_layers_remain_inside_the_outer_multisig() {
     assert_eq!(RootCall::SPEC.name, "set_subnet_emission_enabled");

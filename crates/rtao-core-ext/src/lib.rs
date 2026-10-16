@@ -1,5 +1,6 @@
 //! Staged extensions for the upstream Bittensor core.
 
+#![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 #![deny(
     clippy::arithmetic_side_effects,

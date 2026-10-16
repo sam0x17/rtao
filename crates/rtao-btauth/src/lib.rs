@@ -4,20 +4,26 @@
 //! The core uses no runtime or network I/O. Hash raw received body bytes and
 //! pass the percent-encoded request target, including its query string.
 
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 /// Signed HTTP requests and bounded concurrent axon queries.
 #[cfg(feature = "client")]
+#[cfg_attr(docsrs, doc(cfg(feature = "client")))]
 pub mod client;
 /// Temporary signature bridge for schema-specific v10 requests.
 #[cfg(feature = "legacy-v10")]
+#[cfg_attr(docsrs, doc(cfg(feature = "legacy-v10")))]
 pub mod legacy;
 #[cfg(feature = "redis")]
 mod redis;
 /// Tower authentication, caller admission and axum request extractors.
 #[cfg(feature = "server")]
+#[cfg_attr(docsrs, doc(cfg(feature = "server")))]
 pub mod server;
 #[cfg(feature = "redis")]
+#[cfg_attr(docsrs, doc(cfg(feature = "redis")))]
 pub use redis::RedisNonceStore;
 mod nonce;
 pub use nonce::{

@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Exercise shield and raw entry points through signed FakeChain submissions.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -492,6 +493,11 @@ async fn shielded_raw_periods_are_exact_and_default_maps_to_eight() {
     }
 }
 
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_required_mev_shield_survives_multisig_dispatch
+// Native adaptation: Required is a probe rather than BurnedRegister wrapped
+// in a threshold-one adapter. This pins the required-shield redirect; typed
+// adapter safety and unchanged ExecuteOptions cloning cover the remaining
+// forwarding contract, rather than an identical combined transcript.
 #[tokio::test]
 async fn required_shield_routes_before_plan_and_preserves_extras() {
     let (ex, fake, keys) = fixture().await;
@@ -733,6 +739,11 @@ async fn shield_unavailable_inner_fee_is_a_policy_error_before_unlock() {
     assert!(fake.state().lock().unwrap().submissions.is_empty());
 }
 
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_required_mev_shield_passes_proxy_for
+// Native adaptation: this probe pins proxy origin and inspects the signed inner
+// Proxy wrapper. The Python test's BOB/Staking kwargs use typed option
+// forwarding; this fixture does not run that full registration/multisig
+// combination or assert a Staking proxy category.
 #[tokio::test]
 async fn shield_keeps_proxy_origin_and_reviewed_inner_call() {
     let (ex, fake, keys) = fixture().await;

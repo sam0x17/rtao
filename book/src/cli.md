@@ -24,11 +24,17 @@ book recovery coordinates have their own domains.
 
 ## Discovery and account names
 
-`rtao tools` lists the implemented semantic transaction tools. `rtao tx
-<operation> --help` and `rtao query <read> --help` expose their arguments.
+`rtao tools` prints the full semantic transaction catalog. Check each entry's
+`rust.cli` field for a command available in this build; a null value means no
+executable generated command is available. `rtao tx <operation> --help` and
+`rtao query <read> --help` expose their arguments.
 `rtao explain <code>` describes known semantic and chain errors. The
 [transaction reference](tx-reference.md) and [generated reference](reference.md)
 describe the SDK operations behind these commands.
+
+The [agent guide](agents.md) connects catalog discovery, schemas, planning,
+policy, approval and execution. The [migration guide](migration.md) explains
+the v11, v10 and blocking-core API changes.
 
 Use `rtao addr --help` to maintain named public contacts. `rtao proxy book
 --help` manages saved pure-proxy recovery details; `list --verify` checks live

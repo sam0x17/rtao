@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_prepare_attach.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Public fixture signing and adversarial unsigned-JSON imports.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -147,6 +148,8 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
 }
 
 // pyt: sdk/python/tests/unit/test_prepare_attach.py::test_offline_roundtrip_assembles_nested_calls
+// pyt: sdk/python/tests/unit/test_prepare_attach.py::test_payload_json_declares_signed_extensions
+// pyt: sdk/python/tests/unit/test_prepare_attach.py::test_payload_json_pins_polkadot_js_number_shape
 #[tokio::test]
 async fn utility_batch_survives_unsigned_json_roundtrip_and_signature_attachment() {
     let (client, fake, signer) = fixture(CryptoType::Sr25519).await;
@@ -240,6 +243,96 @@ async fn utility_batch_survives_unsigned_json_roundtrip_and_signature_attachment
         Some(80)
     );
     assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+
+// pyt: sdk/python/tests/unit/test_prepare_attach.py::test_signature_normalization_forms_are_equivalent
+#[tokio::test]
+async fn valid_raw_tagged_and_hex_signatures_attach_identical_extrinsics() {
+    let (client, fake, signer) = fixture(CryptoType::Sr25519).await;
+    client.nonces().pin(&signer.account(), 80);
+    let runtime = client.refresh_runtime().await.unwrap();
+    let call = rtao_runtime::calls::balances::transfer_keep_alive(
+        rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(vec![9; 32])),
+        rtao_primitives::TaoBalance(1),
+    )
+    .compose(&runtime)
+    .unwrap();
+    let call_data = call.as_bytes().to_vec();
+    let unsigned = client
+        .prepare_public(
+            call,
+            signer.account(),
+            &PublicPrepareOptions {
+                crypto_type: signer.crypto_type(),
+                tip: 3,
+                submit: SubmitOptions {
+                    mortality: Mortality::Immortal,
+                    nonce: NoncePolicy::Explicit(7),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let encoded = serde_json::to_vec(&unsigned.to_json().unwrap()).unwrap();
+    drop(unsigned);
+    let imported = client
+        .import_unsigned_json(&encoded, &SubmitOptions::default())
+        .await
+        .unwrap();
+    // Sr25519 signatures need not repeat across signing calls. Normalize the
+    // same valid signature rather than signing separately for each form.
+    let signature = signer
+        .sign(&imported.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    let raw = MultiSignature {
+        crypto: signer.crypto_type(),
+        bytes: signature.bytes,
+    };
+    let tagged =
+        MultiSignature::from_bytes_for(&signature.to_bytes(), signer.crypto_type()).unwrap();
+    // Client attachment accepts a typed signature. Hex is caller-side wire
+    // text here; this does not exercise the extension response protocol.
+    let text = format!("0x{}", hex::encode(signature.bytes));
+    let from_hex = MultiSignature {
+        crypto: signer.crypto_type(),
+        bytes: hex::decode(text.strip_prefix("0x").unwrap())
+            .unwrap()
+            .try_into()
+            .unwrap(),
+    };
+    let expected = client.attach_signature(&imported, signature).await.unwrap();
+    for (name, normalized) in [("raw64", raw), ("tagged65", tagged), ("0x-hex", from_hex)] {
+        assert_eq!(normalized, signature, "{name}");
+        let (signed, hash) = client
+            .attach_signature(&imported, normalized)
+            .await
+            .unwrap();
+        assert_eq!(signed, expected.0, "{name}");
+        assert_eq!(hash, expected.1, "{name}");
+        assert!(signed.ends_with(&call_data), "{name}");
+    }
+    let decoded =
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&expected.0, true).unwrap())
+            .to_json();
+    assert_eq!(decoded["call"]["call_module"], "Balances");
+    assert_eq!(decoded["call"]["call_function"], "transfer_keep_alive");
+    assert_eq!(decoded["nonce"], 7);
+    assert_eq!(decoded["tip"], 3);
+    assert_eq!(
+        client.nonces().cached(&signer.account().to_string()).await,
+        Some(80)
+    );
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    assert!(
+        !fake
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
     client.close().await;
 }
 
@@ -644,6 +737,8 @@ async fn live_spec_and_transaction_upgrade_refuse_import_and_external_submit() {
     }
 }
 
+// pyt: sdk/python/tests/unit/test_prepare_attach.py::test_metadata_hash_mode_survives_roundtrip
+// Native digests are authenticated; cross-payload signature reuse stays refused.
 #[tokio::test]
 async fn metadata_digest_mortal_anchor_expiry_and_native_fee_boundaries() {
     let (client, fake, signer) = fixture(CryptoType::Ed25519).await;
@@ -665,6 +760,10 @@ async fn metadata_digest_mortal_anchor_expiry_and_native_fee_boundaries() {
     let digest = runtime
         .metadata_digest(&first.context().chain_info)
         .unwrap();
+    let submit = SubmitOptions {
+        nonce: NoncePolicy::Explicit(7),
+        ..Default::default()
+    };
     let unsigned = client
         .prepare_public(
             call.clone(),
@@ -673,6 +772,7 @@ async fn metadata_digest_mortal_anchor_expiry_and_native_fee_boundaries() {
                 crypto_type: signer.crypto_type(),
                 metadata_hash: Some(digest),
                 tip: u64::MAX,
+                submit: submit.clone(),
                 ..Default::default()
             },
         )
@@ -684,9 +784,93 @@ async fn metadata_digest_mortal_anchor_expiry_and_native_fee_boundaries() {
         "0x0000000000000000ffffffffffffffff"
     );
     let value = unsigned.to_json().unwrap();
+    let imported = import(&client, &value).await.unwrap();
+    assert_eq!(imported.to_json().unwrap(), value);
+    assert_eq!(imported.metadata_hash(), Some(digest));
+    assert_eq!(imported.payload_json()["mode"], 1);
     assert_eq!(
-        import(&client, &value).await.unwrap().to_json().unwrap(),
-        value
+        imported.payload_json()["metadataHash"],
+        format!("0x{}", hex::encode(digest))
+    );
+    let signature = signer
+        .sign(&imported.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    let (enabled_bytes, _) = client.attach_signature(&imported, signature).await.unwrap();
+    let enabled = rtao_core::DynValue::new(
+        runtime
+            .core()
+            .decode_extrinsic(&enabled_bytes, true)
+            .unwrap(),
+    )
+    .to_json();
+    assert_eq!(enabled["mode"]["mode"], "Enabled");
+    assert_eq!(enabled["call"]["call_module"], "System");
+    assert_eq!(enabled["call"]["call_function"], "remark");
+    assert_eq!(enabled["nonce"], 7);
+    assert_eq!(enabled["tip"], u64::MAX);
+    assert!(enabled_bytes.ends_with(imported.call().as_bytes()));
+
+    let disabled = client
+        .prepare_public(
+            call.clone(),
+            signer.account(),
+            &PublicPrepareOptions {
+                crypto_type: signer.crypto_type(),
+                metadata_hash: None,
+                tip: u64::MAX,
+                submit,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(disabled.metadata_hash(), None);
+    assert_eq!(disabled.payload_json()["mode"], 0);
+    assert_eq!(disabled.payload_json()["metadataHash"], Value::Null);
+    assert_eq!(disabled.call().as_bytes(), imported.call().as_bytes());
+    assert_eq!(disabled.nonce(), imported.nonce());
+    assert_eq!(disabled.tip(), imported.tip());
+    assert_eq!(disabled.to_json().unwrap()["era"], value["era"]);
+    assert_eq!(disabled.era_block_hash(), imported.era_block_hash());
+    let disabled_signature = signer
+        .sign(&disabled.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    let (disabled_bytes, _) = client
+        .attach_signature(&disabled, disabled_signature)
+        .await
+        .unwrap();
+    let disabled_decoded = rtao_core::DynValue::new(
+        runtime
+            .core()
+            .decode_extrinsic(&disabled_bytes, true)
+            .unwrap(),
+    )
+    .to_json();
+    assert_eq!(disabled_decoded["mode"]["mode"], "Disabled");
+    for field in ["call", "nonce", "tip", "era"] {
+        assert_ne!(enabled[field], Value::Null, "{field}");
+        assert_eq!(enabled[field], disabled_decoded[field], "{field}");
+    }
+    // Compare unsigned extras: each signed extrinsic has its own valid
+    // signature, while only the transmitted metadata-mode byte should differ.
+    let enabled_extra = imported.included_in_extrinsic();
+    let disabled_extra = disabled.included_in_extrinsic();
+    assert_eq!(enabled_extra.len(), disabled_extra.len());
+    let differences = enabled_extra
+        .iter()
+        .zip(disabled_extra)
+        .filter(|(enabled, disabled)| enabled != disabled)
+        .map(|(enabled, disabled)| (*enabled, *disabled))
+        .collect::<Vec<_>>();
+    assert_eq!(differences, vec![(1, 0)]);
+    assert!(client.attach_signature(&disabled, signature).await.is_err());
+    assert!(
+        client
+            .attach_signature(&imported, disabled_signature)
+            .await
+            .is_err()
     );
     assert!(
         client
@@ -701,17 +885,17 @@ async fn metadata_digest_mortal_anchor_expiry_and_native_fee_boundaries() {
             .await
             .is_err()
     );
-    let signature = signer
-        .sign(&unsigned.signing_request(SignPurpose::Extrinsic))
-        .await
-        .unwrap();
-    fake.mutate_state(|s| s.finalized = unsigned.expiry().unwrap());
+    let expiry = imported.expiry().unwrap();
+    fake.mutate_state(|state| {
+        state.advance(expiry.saturating_sub(state.block));
+        state.finalized = expiry;
+    });
     assert!(import(&client, &value).await.is_err());
     client.nonces().pin(&signer.account(), 80);
     assert!(
         client
             .submit_signature(
-                &unsigned,
+                &imported,
                 signature,
                 &SubmitOptions {
                     wait: Wait::Pool,

@@ -485,6 +485,13 @@ fn cfg(feature: &str) -> String {
     format!("#[cfg(feature = {feature:?})]\n")
 }
 
+fn documented_cfg(feature: &str) -> String {
+    format!(
+        "{}#[cfg_attr(docsrs, doc(cfg(feature = {feature:?})))]\n",
+        cfg(feature)
+    )
+}
+
 /// Generate all interfaces, dynamic dispatch, defaults and reviewable call maps.
 pub(super) fn run(
     root: &Path,
@@ -575,8 +582,9 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             .or_default()
             .push(spec.python_class.to_owned());
         let enabled = cfg(&feature);
+        let documented = documented_cfg(&feature);
         let class = spec.python_class;
-        interfaces.push_str(&format!("{enabled}#[doc = {:?}]\n#[doc(alias = {:?})]\n#[derive(Debug,Clone,PartialEq,serde::Serialize,serde::Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct {class} {{\n", spec.description, format!("bittensor.intents.{feature}.{class}")));
+        interfaces.push_str(&format!("{documented}#[doc = {:?}]\n#[doc(alias = {:?})]\n#[derive(Debug,Clone,PartialEq,serde::Serialize,serde::Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct {class} {{\n", spec.description, format!("bittensor.intents.{feature}.{class}")));
         defaults.push_str(&format!(
             "{enabled}/// Constructor defaults for `{}`.\npub mod {} {{\n",
             spec.name, spec.name
@@ -710,7 +718,7 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         };
         interfaces.push_str(&format!("{enabled}impl rtao_tx::IntentInterface for {class} {{\nconst SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[{index}];\ntype Role = rtao_signer::{role};\ntype Origin = rtao_tx::{origin};\ntype Output = {};\nconst WRAPS: &'static [&'static rtao_runtime::CallDescriptor] = &[{wraps}];\nfn to_json(&self) -> serde_json::Value {{ {json} }}\n}}\n", outputs(&config, spec.name)));
         any.push_str(&format!(
-            "{enabled}#[doc = {:?}]\n{class}(super::interfaces::{class}),\n",
+            "{documented}#[doc = {:?}]\n{class}(super::interfaces::{class}),\n",
             spec.summary
         ));
         if pending.contains(spec.name) {
@@ -968,10 +976,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         .collect::<Vec<_>>()
         .join(",");
     let mut modules = format!(
-        "//! Generated transaction interfaces and dispatch.\nmod interfaces;\nmod any_intent;\npub mod metadata;\npub use metadata::{{InterfaceMetadata,interface_metadata}};\npub(crate) mod defaults;\npub(crate) mod passthrough;\nmod pending;\n#[cfg(any({enabled_features}))]\npub use interfaces::*;\npub use any_intent::AnyIntent;\n"
+        "//! Generated transaction interfaces and dispatch.\nmod interfaces;\nmod any_intent;\npub mod metadata;\npub use metadata::{{InterfaceMetadata,interface_metadata}};\npub(crate) mod defaults;\npub(crate) mod passthrough;\nmod pending;\n#[cfg(any({enabled_features}))]\n#[cfg_attr(docsrs, doc(cfg(any({enabled_features}))))]\npub use interfaces::*;\npub use any_intent::AnyIntent;\n"
     );
     for (feature, classes) in groups {
-        modules.push_str(&format!("{}/// Intent types in the `{feature}` Python module.\npub mod {feature} {{pub use super::interfaces::{{{}}};}}\n", cfg(&feature), classes.join(",")));
+        modules.push_str(&format!("{}/// Intent types in the `{feature}` Python module.\npub mod {feature} {{pub use super::interfaces::{{{}}};}}\n", documented_cfg(&feature), classes.join(",")));
     }
     let files = [
         ("interfaces", interfaces),

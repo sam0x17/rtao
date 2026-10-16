@@ -49,6 +49,70 @@ fn code(value: &str) -> String {
     format!("<code>{}</code>", table_text(value))
 }
 
+struct BookChapter {
+    title: String,
+    path: String,
+    depth: usize,
+}
+
+fn book_chapters(summary: &str) -> Result<Vec<BookChapter>> {
+    let mut chapters = Vec::new();
+    for line in summary.lines() {
+        let trimmed = line.trim_start();
+        let Some(link) = trimmed.strip_prefix("- [") else {
+            continue;
+        };
+        let (title, target) = link.split_once("](").context("book chapter link")?;
+        let target = target.strip_suffix(')').context("book chapter target")?;
+        if target.starts_with("https://") || target.starts_with("http://") {
+            continue;
+        }
+        let path = target.split('#').next().context("book chapter path")?;
+        ensure!(
+            !path.is_empty()
+                && Path::new(path)
+                    .components()
+                    .all(|part| matches!(part, std::path::Component::Normal(_)))
+                && path.ends_with(".md"),
+            "book chapter must name a relative Markdown file: {target}"
+        );
+        chapters.push(BookChapter {
+            title: title.to_owned(),
+            path: path.to_owned(),
+            depth: (line.len() - trimmed.len()) / 2,
+        });
+    }
+    ensure!(!chapters.is_empty(), "book summary contains no chapters");
+    Ok(chapters)
+}
+
+fn append_book(
+    summary: &str,
+    outputs: &BTreeMap<String, String>,
+    mut authored: impl FnMut(&str) -> Result<String>,
+) -> Result<String> {
+    let chapters = book_chapters(summary)?;
+    let mut text = String::new();
+    let mut included = BTreeSet::new();
+    for path in
+        std::iter::once("README.md").chain(chapters.iter().map(|chapter| chapter.path.as_str()))
+    {
+        if included.insert(path.to_owned()) {
+            let chapter = match outputs.get(path) {
+                Some(generated) => generated.clone(),
+                None => authored(path)?,
+            };
+            text.push_str(&format!("## {path}\n\n{chapter}\n\n"));
+        }
+    }
+    for (path, chapter) in outputs {
+        if path.ends_with(".md") && path != "SUMMARY.md" && included.insert(path.clone()) {
+            text.push_str(&format!("## {path}\n\n{chapter}\n\n"));
+        }
+    }
+    Ok(text)
+}
+
 fn pending_intents(source: &str) -> Result<BTreeSet<String>> {
     pending_entries(source, "intents", INTENTS.iter().map(|spec| spec.name))
 }
@@ -227,7 +291,7 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
         .get("file")
         .and_then(toml_edit::Item::as_array_of_tables)
         .context("parity map has no file rows")?;
-    let mut index = "# Python and Rust API index\n\nThe parity map records implemented and planned Rust homes. A pending row is prospective; consult the Rust API docs for the shipped surface.\n\n| Python source | Rust home | Kind | Milestone |\n|---|---|---|---|\n".to_owned();
+    let mut index = "# Python and Rust API index\n\nThe parity map is the file-level migration table for the pinned Python source and watched inputs. A pending row still needs source reconciliation; its Rust home is prospective. A reconciled row records a reviewed mapping or classification, including upstream-only producers. Source review does not certify operation availability or executed parity. Consult the generated transaction/query references and Rust API docs for available APIs.\n\n| Python source | Rust home | Kind | Source review | Milestone |\n|---|---|---|---|---|\n".to_owned();
     for row in rows {
         let py = row
             .get("py")
@@ -241,8 +305,13 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
             .map(|item| item.as_str().context("Rust home is not a string"))
             .collect::<Result<Vec<_>>>()?
             .join(", ");
+        let reconciled = row
+            .get("synced_blob")
+            .and_then(toml_edit::Item::as_str)
+            .context("parity source reconciliation")?
+            != "pending";
         index.push_str(&format!(
-            "| `{}` | {} | {} | {} |\n",
+            "| `{}` | {} | {} | {} | {} |\n",
             escaped(py),
             escaped(&rs),
             escaped(
@@ -250,6 +319,7 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
                     .and_then(toml_edit::Item::as_str)
                     .context("parity kind")?
             ),
+            if reconciled { "reconciled" } else { "pending" },
             escaped(
                 row.get("milestone")
                     .and_then(toml_edit::Item::as_str)
@@ -258,32 +328,6 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
         ));
     }
     let examples = examples::pages(root)?;
-    let mut llms = "# rtao\n\nRust SDK for Bittensor. The downloadable book includes rustdoc in `api/`. This text records source documentation and parity mappings; it is not a claim that pending milestones have shipped.\n\n".to_owned();
-    for file in [
-        "README.md",
-        "COMPAT.md",
-        "book/src/introduction.md",
-        "book/src/getting-started.md",
-        "book/src/validator.md",
-        "book/src/miner.md",
-        "book/src/owner.md",
-        "book/src/mev-shield.md",
-        "book/src/multisig.md",
-        "book/src/releases.md",
-    ] {
-        llms.push_str(&format!(
-            "## {file}\n\n{}\n\n",
-            match examples.get(
-                Path::new(file)
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .context("documentation filename")?
-            ) {
-                Some(compiled) => compiled.clone(),
-                None => fs::read_to_string(root.join(file))?,
-            }
-        ));
-    }
     let pending_source = fs::read_to_string(root.join("parity/pending.toml"))?;
     let pending = pending_intents(&pending_source)?;
     let pending_reads =
@@ -302,14 +346,32 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
             "duplicate documentation path {path}"
         );
     }
-    reference::add_indexes(root, &mut outputs)?;
-    llms.push_str(&index);
-    llms.push('\n');
-    for (path, text) in &outputs {
-        if path.ends_with(".md") && path != "SUMMARY.md" && !examples.contains_key(path) {
-            llms.push_str(&format!("\n## {path}\n\n{text}\n"));
-        }
+    for (path, text) in reference::migration_pages(root)? {
+        ensure!(
+            outputs.insert(path.clone(), text).is_none(),
+            "duplicate migration documentation path {path}"
+        );
     }
+    outputs.insert("api-index.md".into(), index);
+    outputs.insert("tx-reference.md".into(), transactions);
+    outputs.insert(
+        "compat.md".into(),
+        fs::read_to_string(root.join("COMPAT.md"))?,
+    );
+    let card = reference::agent_card(root, &outputs)?;
+    outputs.insert("agent-card.md".into(), card);
+    reference::add_indexes(root, &mut outputs)?;
+    let mut llms = "# rtao\n\nRust SDK for Bittensor. The downloadable book includes rustdoc in `api/`. This text records source documentation and parity mappings; validation evidence is recorded separately.\n\n".to_owned();
+    llms.push_str(&append_book(
+        outputs
+            .get("SUMMARY.md")
+            .context("generated book summary")?,
+        &outputs,
+        |path| {
+            fs::read_to_string(root.join("book/src").join(path))
+                .with_context(|| format!("read book chapter {path}"))
+        },
+    )?);
     llms.push_str("\n## Rust API surface\n\nThe complete rustdoc tree is included in `api/` in the book archive. The following item signatures come from this source checkout.\n\n");
     // Rustdoc JSON is unstable. Walk the parsed source AST instead, keeping
     // module and impl context so signatures remain useful without inventing
@@ -335,12 +397,6 @@ fn content(root: &Path) -> Result<BTreeMap<String, String>> {
             llms.push('\n');
         }
     }
-    outputs.insert("api-index.md".into(), index);
-    outputs.insert("tx-reference.md".into(), transactions);
-    outputs.insert(
-        "compat.md".into(),
-        fs::read_to_string(root.join("COMPAT.md"))?,
-    );
     let llms_index = reference::llms_index(&outputs)?;
     outputs.insert("llms.txt".into(), llms_index.clone());
     outputs.insert("llms-full.txt".into(), format!("{llms_index}\n{llms}"));
@@ -499,6 +555,34 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn llm_book_follows_summary_includes_authored_guides_and_uses_each_overlay_once() -> Result<()>
+    {
+        let summary = "# Summary\n\n- [Start](getting-started.md)\n- [CLI](cli.md)\n- [Signers](signers.md)\n- [Ledger](ledger.md)\n- [EVM](evm.md)\n  - [Start again](getting-started.md)\n";
+        let outputs = BTreeMap::from([
+            ("README.md".into(), "compiled readme".into()),
+            (
+                "getting-started.md".into(),
+                "exported example overlay".into(),
+            ),
+            ("SUMMARY.md".into(), summary.into()),
+            ("aliases.md".into(), "generated aliases".into()),
+        ]);
+        let mut read = Vec::new();
+        let full = append_book(summary, &outputs, |path| {
+            read.push(path.to_owned());
+            Ok(format!("authored {path}"))
+        })?;
+        assert_eq!(read, ["cli.md", "signers.md", "ledger.md", "evm.md"]);
+        assert_eq!(full.matches("exported example overlay").count(), 1);
+        assert_eq!(full.matches("compiled readme").count(), 1);
+        assert!(full.contains("generated aliases"));
+        assert!(!full.contains("## SUMMARY.md"));
+        assert!(book_chapters("- [Escape](../outside.md)").is_err());
+        assert!(book_chapters("- [Absolute](/outside.md)").is_err());
+        Ok(())
+    }
 
     #[test]
     fn transaction_reference_covers_exact_catalog_and_does_not_advertise_pending_commands()

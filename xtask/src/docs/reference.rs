@@ -10,8 +10,9 @@ use anyhow::{Context, Result, ensure};
 use quote::ToTokens;
 use rtao_catalog::{INTENTS, READS};
 use serde_json::{Value, json};
+use toml_edit::DocumentMut;
 
-use super::{code, constructor_fields, default_text, schema_block, table_text};
+use super::{book_chapters, code, constructor_fields, default_text, schema_block, table_text};
 
 const INTENT_SOURCE: &str = "crates/rtao-intents/src/generated/interfaces.rs";
 const READ_SOURCE: &str = "crates/rtao-reads/src/generated/interfaces.rs";
@@ -350,6 +351,21 @@ pub(super) fn pages(
             ),
         ]));
         text.push_str(&input_table(&input_types));
+        text.push_str("## Use with Executor\n\n");
+        if pending.contains(spec.name) {
+            text.push_str("This interface is pending and refuses execution. Its constructor and schema describe the planned surface.\n\n");
+        } else {
+            text.push_str(&format!(
+                "Enable the {} feature on `rtao-intents` and construct {} using the fields above. The facade's `intents-all` feature enables the complete catalog. Keep one client and executor for the workflow so typed and JSON operations share nonce state.\n\n",
+                code(&feature), code(&rust_type)
+            ));
+            text.push_str("Install an application `Policy` with `Executor::with_policy` before planning or execution. Call `plan(&intent, keys, &PlanOptions)` with a key source matching the signing role above, inspect the returned plan's effects, warnings, fees and violations, and require `plan.ok()` before approval. Planning may read chain state and estimate fees; it does not acquire a private signer or submit. Set explicit deadlines and spend, fee and subnet limits appropriate to the operation.\n\n");
+            text.push_str("After approval, call `execute(&intent, keys, &ExecuteOptions)`. Execution repeats its current policy and preflight checks before acquiring the signer. An `Ok(ExtrinsicResult)` can still carry a failed dispatch: inspect it and call `raise_for_failure()` before treating the operation as successful. Preserve an unknown-fate hash for reconciliation before preparing another submission. Required shielding is retained by execution; select optional shielding explicitly as described in the [shield guide](../mev-shield.md).\n\n");
+            text.push_str(&format!(
+                "For a JSON invocation, construct a registry-bearing executor with `rtao_intents::executor(client)` or the facade's `Executor::new(client)` with `intents` enabled. {} executes after your approval. Preview parsed JSON through `Registry::from_tool` and `plan_dyn` first. The [agent workflow](../agents.md) and [SDK guide](../sdk.md) explain these shared steps and link the compiled examples.\n\n",
+                code(&format!("execute_tool({:?}, args, keys, options)", spec.name))
+            ));
+        }
         text.push_str(&format!(
             "**Rust source:** {} — {} and {}.\n\n## Sources\n\n",
             code(INTENT_SOURCE),
@@ -483,6 +499,482 @@ pub(super) fn pages(
     Ok(outputs)
 }
 
+fn function(root: &Path, path: &str, name: &str) -> Result<syn::ItemFn> {
+    ast(root, path)?
+        .items
+        .into_iter()
+        .find_map(|item| match item {
+            syn::Item::Fn(item) if item.sig.ident == name => Some(item),
+            _ => None,
+        })
+        .with_context(|| format!("missing CLI documentation constructor {path}::{name}"))
+}
+
+#[derive(Default)]
+struct AliasIndex {
+    scope: Vec<String>,
+    rows: BTreeMap<String, BTreeSet<String>>,
+    error: Option<syn::Error>,
+}
+
+impl AliasIndex {
+    fn record(&mut self, name: &str, attributes: &[syn::Attribute]) {
+        use syn::parse::Parser;
+
+        let item = self
+            .scope
+            .iter()
+            .map(String::as_str)
+            .chain([name])
+            .collect::<Vec<_>>()
+            .join("::");
+        for attribute in attributes.iter().filter(|attr| attr.path().is_ident("doc")) {
+            let syn::Meta::List(list) = &attribute.meta else {
+                continue;
+            };
+            let parser = syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated;
+            let entries = match parser.parse2(list.tokens.clone()) {
+                Ok(entries) => entries,
+                Err(error) => {
+                    self.error = Some(error);
+                    continue;
+                }
+            };
+            for entry in entries {
+                let aliases = match entry {
+                    syn::Meta::NameValue(value) if value.path.is_ident("alias") => {
+                        literal(&value.value).into_iter().collect::<Vec<_>>()
+                    }
+                    syn::Meta::List(list) if list.path.is_ident("alias") => {
+                        match syn::punctuated::Punctuated::<syn::LitStr, syn::Token![,]>::parse_terminated
+                            .parse2(list.tokens)
+                        {
+                            Ok(values) => values.iter().map(syn::LitStr::value).collect(),
+                            Err(error) => {
+                                self.error = Some(error);
+                                continue;
+                            }
+                        }
+                    }
+                    _ => continue,
+                };
+                for alias in aliases
+                    .into_iter()
+                    .filter(|alias| alias.starts_with("bittensor."))
+                {
+                    self.rows.entry(alias).or_default().insert(item.clone());
+                }
+            }
+        }
+    }
+}
+
+impl<'ast> syn::visit::Visit<'ast> for AliasIndex {
+    fn visit_item(&mut self, item: &'ast syn::Item) {
+        let named = match item {
+            syn::Item::Const(item) => Some((&item.ident, &item.attrs)),
+            syn::Item::Enum(item) => Some((&item.ident, &item.attrs)),
+            syn::Item::Fn(item) => Some((&item.sig.ident, &item.attrs)),
+            syn::Item::Mod(item) => Some((&item.ident, &item.attrs)),
+            syn::Item::Static(item) => Some((&item.ident, &item.attrs)),
+            syn::Item::Struct(item) => Some((&item.ident, &item.attrs)),
+            syn::Item::Trait(item) => Some((&item.ident, &item.attrs)),
+            syn::Item::Type(item) => Some((&item.ident, &item.attrs)),
+            _ => None,
+        };
+        if let Some((name, attributes)) = named {
+            self.record(&name.to_string(), attributes);
+        }
+        if let syn::Item::Use(item) = item {
+            self.record(&item.tree.to_token_stream().to_string(), &item.attrs);
+        }
+        let scope = match item {
+            syn::Item::Mod(item) => Some(item.ident.to_string()),
+            syn::Item::Enum(item) => Some(item.ident.to_string()),
+            syn::Item::Trait(item) => Some(item.ident.to_string()),
+            syn::Item::Impl(item) => Some(item.self_ty.to_token_stream().to_string()),
+            _ => None,
+        };
+        if let Some(scope) = &scope {
+            self.scope.push(scope.clone());
+        }
+        syn::visit::visit_item(self, item);
+        if scope.is_some() {
+            self.scope.pop();
+        }
+    }
+
+    fn visit_variant(&mut self, item: &'ast syn::Variant) {
+        self.record(&item.ident.to_string(), &item.attrs);
+        syn::visit::visit_variant(self, item);
+    }
+
+    fn visit_impl_item_fn(&mut self, item: &'ast syn::ImplItemFn) {
+        self.record(&item.sig.ident.to_string(), &item.attrs);
+        syn::visit::visit_impl_item_fn(self, item);
+    }
+
+    fn visit_trait_item_fn(&mut self, item: &'ast syn::TraitItemFn) {
+        self.record(&item.sig.ident.to_string(), &item.attrs);
+        syn::visit::visit_trait_item_fn(self, item);
+    }
+}
+
+pub(super) fn migration_pages(root: &Path) -> Result<BTreeMap<String, String>> {
+    use syn::visit::Visit;
+
+    let mut aliases = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut files = Vec::new();
+    super::source_files(&root.join("crates"), &mut files)?;
+    files.sort();
+    for file in files {
+        let path = file
+            .strip_prefix(root)?
+            .to_string_lossy()
+            .replace('\\', "/");
+        if path.split('/').nth(2) != Some("src") {
+            continue;
+        }
+        let mut index = AliasIndex::default();
+        index.visit_file(&syn::parse_file(&fs::read_to_string(&file)?)?);
+        if let Some(error) = index.error {
+            return Err(error.into());
+        }
+        for (alias, items) in index.rows {
+            aliases
+                .entry(alias)
+                .or_default()
+                .extend(items.into_iter().map(|item| format!("{path} :: {item}")));
+        }
+    }
+    let mut alias_page = format!(
+        "{GENERATED}# Python aliases and API replacements\n\nThis item-level index supplements the [file migration table](api-index.md) and [migration guide](migration.md). Aliases are parsed from `doc(alias)` attributes in this checkout's Rust source, including gated items. A source location identifies a declaration, not a guarantee that it is public or enabled in your build. Consult rustdoc and the generated references for usable paths and features.\n\n## Rust documentation aliases\n\n| Python name | Rust source and item |\n|---|---|\n"
+    );
+    for (alias, homes) in aliases {
+        alias_page.push_str(&format!(
+            "| {} | {} |\n",
+            code(&alias),
+            homes
+                .iter()
+                .map(|home| code(home))
+                .collect::<Vec<_>>()
+                .join("<br>")
+        ));
+    }
+    alias_page.push_str("\n## Reviewed public API replacements\n\nThese decisions come from `parity/exports_extra.toml`. Some replace a Python export with typed APIs, private CLI behavior or an explicit omission. A pending decision remains pending. Listed regression names identify source evidence; this index does not assert that those tests or an independent Python oracle ran.\n\n| Python name | Native home or disposition | Source review | Reason | Python source | Named source regressions |\n|---|---|---|---|---|---|\n");
+    let exports: DocumentMut =
+        fs::read_to_string(root.join("parity/exports_extra.toml"))?.parse()?;
+    let mut export_rows = exports["export"]
+        .as_array_of_tables()
+        .context("public export decisions")?
+        .iter()
+        .collect::<Vec<_>>();
+    export_rows.sort_by(|left, right| {
+        left.get("python")
+            .and_then(toml_edit::Item::as_str)
+            .cmp(&right.get("python").and_then(toml_edit::Item::as_str))
+    });
+    for row in export_rows {
+        let field = |name: &str| {
+            row.get(name)
+                .and_then(toml_edit::Item::as_str)
+                .unwrap_or("")
+        };
+        let tests = row
+            .get("pinning_tests")
+            .and_then(toml_edit::Item::as_array)
+            .map(|tests| {
+                tests
+                    .iter()
+                    .map(|test| test.as_str().context("public export test name").map(code))
+                    .collect::<Result<Vec<_>>>()
+            })
+            .transpose()?
+            .unwrap_or_default()
+            .join("<br>");
+        alias_page.push_str(&format!(
+            "| {} | {} | {} | {} | {} | {} |\n",
+            code(field("python")),
+            table_text(field("home")),
+            if row.get("pending").is_some() {
+                "pending"
+            } else {
+                "reviewed disposition"
+            },
+            table_text(field("reason")),
+            code(field("source")),
+            tests,
+        ));
+    }
+    let register: DocumentMut =
+        fs::read_to_string(root.join("parity/divergences.toml"))?.parse()?;
+    let mut rows = register["divergences"]
+        .as_array_of_tables()
+        .context("divergence register")?
+        .iter()
+        .collect::<Vec<_>>();
+    rows.sort_by(|left, right| {
+        left.get("id")
+            .and_then(toml_edit::Item::as_str)
+            .cmp(&right.get("id").and_then(toml_edit::Item::as_str))
+    });
+    let mut divergences = format!(
+        "{GENERATED}# Divergence register\n\nThese records render `parity/divergences.toml` from the same checkout. Status and evidence prose retain the register's scope. `active` describes the recorded source policy; it does not certify current hosted, Python, live-chain or platform execution. A missing status is shown as the register's `active` default. Read the [parity guide](parity.md) and [migration guide](migration.md) before comparing behavior.\n\n"
+    );
+    for row in rows {
+        let field = |name: &str| {
+            row.get(name)
+                .and_then(toml_edit::Item::as_str)
+                .unwrap_or("")
+        };
+        let id = field("id");
+        divergences.push_str(&format!("## {}\n\n", table_text(id)));
+        for (label, name) in [
+            ("Python symbol", "upstream_symbol"),
+            ("Class", "class"),
+            ("Milestone", "milestone"),
+            ("Python behavior", "python_behavior"),
+            ("rtao behavior", "rtao_behavior"),
+            ("Rationale", "rationale"),
+            ("Decision", "decision"),
+            ("Evidence and filing disposition", "upstream_report"),
+        ] {
+            let value = field(name);
+            if !value.is_empty() {
+                divergences.push_str(&format!("**{label}:** {}\n\n", table_text(value)));
+            }
+        }
+        let status = row
+            .get("status")
+            .and_then(toml_edit::Item::as_str)
+            .unwrap_or("active (register default)");
+        divergences.push_str(&format!("**Recorded status:** {}\n\n", table_text(status)));
+        if let Some(tests) = row.get("pinning_tests").and_then(toml_edit::Item::as_array) {
+            divergences.push_str("**Named source regressions:**\n\n");
+            for test in tests {
+                divergences.push_str(&format!(
+                    "- {}\n",
+                    code(test.as_str().context("divergence test name")?)
+                ));
+            }
+            divergences.push('\n');
+        }
+        let link = field("upstream_link");
+        if !link.is_empty() {
+            divergences.push_str(&format!("**Upstream reference:** {}\n\n", table_text(link)));
+        }
+        for (name, value) in row.iter().filter(|(name, _)| {
+            ![
+                "id",
+                "upstream_symbol",
+                "class",
+                "milestone",
+                "python_behavior",
+                "rtao_behavior",
+                "rationale",
+                "decision",
+                "upstream_report",
+                "status",
+                "pinning_tests",
+                "upstream_link",
+            ]
+            .contains(name)
+        }) {
+            let rendered = value
+                .as_str()
+                .map_or_else(|| value.to_string(), str::to_owned);
+            divergences.push_str(&format!(
+                "**{}:** {}\n\n",
+                table_text(name),
+                table_text(&rendered)
+            ));
+        }
+    }
+    Ok(BTreeMap::from([
+        ("aliases.md".into(), alias_page),
+        ("divergences.md".into(), divergences),
+    ]))
+}
+
+#[derive(Default)]
+struct Registrations {
+    calls: BTreeSet<String>,
+    error: Option<syn::Error>,
+}
+
+impl<'ast> syn::visit::Visit<'ast> for Registrations {
+    fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
+        if let syn::Expr::Path(function) = call.func.as_ref() {
+            self.calls.insert(
+                function
+                    .path
+                    .segments
+                    .iter()
+                    .map(|part| part.ident.to_string())
+                    .collect::<Vec<_>>()
+                    .join("::"),
+            );
+        }
+        syn::visit::visit_expr_call(self, call);
+    }
+
+    fn visit_macro(&mut self, item: &'ast syn::Macro) {
+        // command_tree registers its initial constructors inside vec!. Parse
+        // those expressions instead of treating macro text as live commands.
+        if item.path.is_ident("vec") {
+            use syn::parse::Parser;
+            match syn::punctuated::Punctuated::<syn::Expr, syn::Token![,]>::parse_terminated
+                .parse2(item.tokens.clone())
+            {
+                Ok(expressions) => {
+                    for expression in &expressions {
+                        let mut nested = Registrations::default();
+                        syn::visit::Visit::visit_expr(&mut nested, expression);
+                        self.calls.extend(nested.calls);
+                        if nested.error.is_some() {
+                            self.error = nested.error;
+                        }
+                    }
+                }
+                Err(error) => self.error = Some(error),
+            }
+        }
+    }
+}
+
+fn command_name(expression: &syn::Expr) -> Option<String> {
+    match expression {
+        syn::Expr::MethodCall(method) => command_name(&method.receiver),
+        syn::Expr::Call(call) => {
+            let syn::Expr::Path(function) = call.func.as_ref() else {
+                return None;
+            };
+            let path = function
+                .path
+                .segments
+                .iter()
+                .map(|part| part.ident.to_string())
+                .collect::<Vec<_>>();
+            if path.iter().map(String::as_str).eq(["Command", "new"]) {
+                literal(call.args.first()?)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn literal(expression: &syn::Expr) -> Option<String> {
+    match expression {
+        syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Str(value),
+            ..
+        }) => Some(value.value()),
+        _ => None,
+    }
+}
+
+#[derive(Default)]
+struct CommandHelp(BTreeMap<String, String>);
+
+impl<'ast> syn::visit::Visit<'ast> for CommandHelp {
+    fn visit_expr_method_call(&mut self, method: &'ast syn::ExprMethodCall) {
+        if method.method == "about"
+            && let Some(name) = command_name(&method.receiver)
+            && let Some(description) = method.args.first().and_then(literal)
+        {
+            self.0.insert(name, description);
+        }
+        syn::visit::visit_expr_method_call(self, method);
+    }
+}
+
+pub(super) fn agent_card(root: &Path, pages: &BTreeMap<String, String>) -> Result<String> {
+    use syn::visit::Visit;
+
+    const COMMANDS: &str = "crates/rtao-cli/src/commands/mod.rs";
+    const APPLICATION: &str = "crates/rtao-cli/src/application.rs";
+    let mut registered = Registrations::default();
+    registered.visit_item_fn(&function(root, COMMANDS, "command_tree")?);
+    if let Some(error) = registered.error {
+        return Err(error.into());
+    }
+    ensure!(
+        registered
+            .calls
+            .contains("crate::application::command_tree"),
+        "CLI root constructor is no longer installed"
+    );
+    let mut text = format!(
+        "{GENERATED}# Agent card\n\nUse the [eight-step agent workflow](agents.md) for discovery, JSON execution, previews, policy limits, error handling and noninteractive CLI use. The [SDK guide](sdk.md) explains client and signer ownership; [testing](testing.md) covers offline fixtures. Check the exact revision's hosted results before relying on validation claims.\n\n## Commands from the CLI source\n\nThese names and summaries come from constructors registered by the actual CLI tree. Transaction and query leaves depend on the installed binary's features and implementation metadata; use its `--help` and `rtao tools` output for availability.\n\n| Command | CLI description | Source constructor |\n|---|---|---|\n"
+    );
+    for (name, registration, path, constructor) in [
+        ("doctor", None, APPLICATION, "command_tree"),
+        (
+            "tools",
+            Some("catalog::tools_command"),
+            "crates/rtao-cli/src/commands/catalog.rs",
+            "tools_command",
+        ),
+        (
+            "tx",
+            Some("generated::tx_command"),
+            "crates/rtao-cli/src/commands/generated.rs",
+            "tx_command",
+        ),
+        (
+            "query",
+            Some("generated::query_command"),
+            "crates/rtao-cli/src/commands/generated.rs",
+            "query_command",
+        ),
+        (
+            "explain",
+            Some("catalog::explain_command"),
+            "crates/rtao-cli/src/commands/catalog.rs",
+            "explain_command",
+        ),
+    ] {
+        if let Some(registration) = registration {
+            ensure!(
+                registered.calls.contains(registration),
+                "agent-card constructor is no longer registered: {registration}"
+            );
+        }
+        let mut help = CommandHelp::default();
+        help.visit_item_fn(&function(root, path, constructor)?);
+        let description = help
+            .0
+            .get(name)
+            .with_context(|| format!("CLI command {name} has no literal name/summary"))?;
+        text.push_str(&format!(
+            "| {} | {} | {} |\n",
+            code(&format!("rtao {name}")),
+            table_text(description),
+            code(&format!("{path}::{constructor}"))
+        ));
+    }
+    text.push_str("\nUse `rtao doctor --manifest-path Cargo.toml` to check the downstream core/BLS patch contract without a chain connection. `rtao tools` emits JSON schemas and native metadata. Inspect `rtao tx <operation> --help` or `rtao query <read> --help` before constructing arguments. Supported mutations accept `--dry-run` for preview; unattended submission requires explicit approval through `--yes`. `--json` selects machine output. The [CLI guide](cli.md) explains output and confirmation rules.\n\n## Native catalog\n\n| Catalog | Entries | Implemented source entries |\n|---|---|---|\n");
+    for (title, path) in [
+        ("Transactions", "catalog/intents.json"),
+        ("Queries", "catalog/reads.json"),
+    ] {
+        let catalog: Value = serde_json::from_str(pages.get(path).context("agent catalog")?)?;
+        let entries = catalog.as_array().context("agent catalog entries")?;
+        let implemented = entries
+            .iter()
+            .filter(|entry| entry["rust"]["implemented"].as_bool() == Some(true))
+            .count();
+        text.push_str(&format!(
+            "| [{title}]({path}) | {} | {implemented} |\n",
+            entries.len()
+        ));
+    }
+    text.push_str("\nThe source counts above do not describe the features compiled into a particular CLI. Read each operation's `rust` metadata and input schema, signing role and dispatch origin. In Rust, a registry-bearing executor parses JSON tools; an application `Policy` bounds fees, spend, subnets and raw calls. Preview with `plan_dyn` before approval. `execute_tool` submits and does not perform a preview-only action.\n\nInspect the returned `ExtrinsicResult`, including dispatch errors, before declaring success. `rtao explain <code>` describes semantic and exact chain errors. Preserve an unknown-fate hash and reconcile it before any replacement submission. See the [transaction reference](tx/index.md), [error reference](errors/index.md) and [shield guide](mev-shield.md).\n");
+    Ok(text)
+}
+
 pub(super) fn add_indexes(root: &Path, pages: &mut BTreeMap<String, String>) -> Result<()> {
     let groups = [
         ("tx", "Transactions"),
@@ -494,7 +986,8 @@ pub(super) fn add_indexes(root: &Path, pages: &mut BTreeMap<String, String>) -> 
     let mut reference = format!(
         "{GENERATED}# Reference\n\nThese pages preserve authenticated upstream descriptions and record Rust mappings from this checkout. Source implementation and feature metadata do not establish successful hosted acceptance or live-chain coverage.\n\n"
     );
-    let mut summary = String::from("  - [Compatibility](compat.md)\n");
+    let mut summary =
+        String::from("  - [Compatibility](compat.md)\n  - [Agent card](agent-card.md)\n");
     for (directory, title) in groups {
         let entries: Vec<_> = pages
             .keys()
@@ -519,7 +1012,7 @@ pub(super) fn add_indexes(root: &Path, pages: &mut BTreeMap<String, String>) -> 
         }
         pages.insert(format!("{directory}/index.md"), index);
     }
-    reference.push_str("\n- [Python and Rust API index](api-index.md)\n- [Combined transaction reference](tx-reference.md)\n- [Intent catalog](catalog/intents.json)\n- [Read catalog](catalog/reads.json)\n- [Error catalog](catalog/errors.json)\n");
+    reference.push_str("\n- [Agent card](agent-card.md)\n- [Python and Rust API index](api-index.md)\n- [Combined transaction reference](tx-reference.md)\n- [Intent catalog](catalog/intents.json)\n- [Read catalog](catalog/reads.json)\n- [Error catalog](catalog/errors.json)\n");
     pages.insert("reference.md".into(), reference);
     let source = fs::read_to_string(root.join("book/src/SUMMARY.md"))?;
     ensure!(
@@ -540,7 +1033,16 @@ pub(super) fn add_indexes(root: &Path, pages: &mut BTreeMap<String, String>) -> 
 }
 
 pub(super) fn llms_index(pages: &BTreeMap<String, String>) -> Result<String> {
-    let mut text = "# rtao\n\n> Rust SDK for Bittensor. Source mappings describe this checkout; validation evidence is recorded separately.\n\nThe downloadable book includes Rust API documentation in `api/`. Read `llms-full.txt` for the complete generated reference and source signatures.\n\n## Book\n\n- [Getting started](getting-started.md)\n- [Reference](reference.md)\n- [Compatibility](compat.md)\n- [Python and Rust API index](api-index.md)\n\n## Catalogs\n\n- [Intent catalog](catalog/intents.json)\n- [Read catalog](catalog/reads.json)\n- [Error catalog](catalog/errors.json)\n\n## Upstream mappings\n\n| rtao page | Upstream raw Markdown | Rust entry point |\n|---|---|---|\n".to_owned();
+    let mut text = "# rtao\n\n> Rust SDK for Bittensor. Source mappings describe this checkout; validation evidence is recorded separately.\n\nSearch the pages below for an operation, read or error. Use the catalogs for exact schemas and native mappings. The downloadable book includes Rust API documentation in `api/`. Read `llms-full.txt` for every book chapter, generated reference and source signature. The [agent card](agent-card.md) links the discovery, preview, policy and execution workflow.\n\n## Book\n\n".to_owned();
+    for chapter in book_chapters(pages.get("SUMMARY.md").context("LLM book summary")?)? {
+        text.push_str(&format!(
+            "{}- [{}]({})\n",
+            "  ".repeat(chapter.depth),
+            chapter.title,
+            chapter.path
+        ));
+    }
+    text.push_str("\n## Catalogs\n\n- [Intent catalog](catalog/intents.json)\n- [Read catalog](catalog/reads.json)\n- [Error catalog](catalog/errors.json)\n\n## Upstream mappings\n\n| rtao page | Upstream raw Markdown | Rust entry point |\n|---|---|---|\n");
     for file in ["catalog/intents.json", "catalog/reads.json"] {
         let catalog: Value = serde_json::from_str(pages.get(file).context("LLM catalog")?)?;
         let directory = if file.contains("intents") {
@@ -803,6 +1305,12 @@ mod tests {
                 let page = &generated[&format!("{directory}/{name}.md")];
                 assert!(page.contains(prose), "description missing from {name}");
                 assert!(page.contains("\n## Rust\n"));
+                if directory == "tx" {
+                    assert!(page.contains("\n## Use with Executor\n"));
+                    assert!(page.contains("plan(&intent, keys, &PlanOptions)"));
+                    assert!(page.contains("execute(&intent, keys, &ExecuteOptions)"));
+                    assert!(page.contains("raise_for_failure()"));
+                }
                 assert!(!page.contains("#L"));
                 let metadata = row
                     .as_object_mut()
@@ -833,6 +1341,64 @@ mod tests {
             }
         }
         assert_eq!(extended, original);
+        Ok(())
+    }
+
+    #[test]
+    fn agent_card_tracks_registered_cli_constructors_and_catalog_metadata() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let pages = BTreeMap::from([
+            (
+                "catalog/intents.json".into(),
+                r#"[{"rust":{"implemented":true}},{"rust":{"implemented":false}}]"#.into(),
+            ),
+            (
+                "catalog/reads.json".into(),
+                r#"[{"rust":{"implemented":true}}]"#.into(),
+            ),
+        ]);
+        let card = agent_card(root, &pages)?;
+        for name in ["doctor", "tools", "tx", "query", "explain"] {
+            assert!(card.contains(&code(&format!("rtao {name}"))));
+        }
+        assert!(card.contains("| [Transactions](catalog/intents.json) | 2 | 1 |"));
+        assert!(card.contains("| [Queries](catalog/reads.json) | 1 | 1 |"));
+        assert!(card.contains("(agents.md)"));
+        assert!(card.contains("execute_tool` submits"));
+        Ok(())
+    }
+
+    #[test]
+    fn migration_indexes_keep_alias_owners_export_decisions_and_every_divergence() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let pages = migration_pages(root)?;
+        let aliases = &pages["aliases.md"];
+        assert!(aliases.contains(&code("bittensor.http_auth.MalformedAuth")));
+        assert!(aliases.contains("AuthError::MalformedAuth"));
+        assert!(aliases.contains("bittensor.UnsignedExtrinsic"));
+        assert!(aliases.contains(&table_text("rtao_client::UnsignedExtrinsic")));
+        let register: DocumentMut =
+            fs::read_to_string(root.join("parity/divergences.toml"))?.parse()?;
+        for row in register["divergences"]
+            .as_array_of_tables()
+            .context("divergences")?
+        {
+            let id = row["id"].as_str().context("divergence id")?;
+            assert_eq!(
+                pages["divergences.md"]
+                    .matches(&format!("## {id}\n"))
+                    .count(),
+                1
+            );
+            if let Some(behavior) = row.get("rtao_behavior").and_then(toml_edit::Item::as_str) {
+                assert!(pages["divergences.md"].contains(&table_text(behavior)));
+            }
+        }
+        assert!(pages["divergences.md"].contains(&table_text("read_hit_replacement")));
         Ok(())
     }
 }

@@ -1767,67 +1767,67 @@ integration are optional targeted hosted evidence; deployment and upkeep are out
 **Parallel work.** M2-01…M2-02 (keys and wallets) and M2-03…M2-05 (extraction, catalog, oracle) are independent of each
 other; M2-16 needs only M1. Q29 waives M2-24's testnet soak.
 
-- [ ] **M2-01** `rtao-signer`: `SigningRequest`, `SignerCaps`, roles (`Role`, `Coldkey`, `Hotkey`, `KeyView`,
+- [x] **M2-01** `rtao-signer`: `SigningRequest`, `SignerCaps`, roles (`Role`, `Coldkey`, `Hotkey`, `KeyView`,
       `KeySource<R>`, `DynKeySource`).
-- [ ] **M2-02** `rtao-wallet`: btcli layout, `HotkeyFile` through the staged `keyfile_json` (no `host`), `Wallet` and
+- [x] **M2-02** `rtao-wallet`: btcli layout, `HotkeyFile` through the staged `keyfile_json` (no `host`), `Wallet` and
       encrypted coldkeys behind `encrypted`, the password chain of `PY/wallets.py:62-118` (steps 1-4 and 7 here; steps
       5-6, the macOS Keychain and the macOS dialog, in M4), create and regen; the keyfile differential test; staged
       `keyfile_env`; maintain keyfile-detection and `keyfile_json` fuzz target source for optional targeted hosted checks
       ([§9.6](#96-property-tests-fuzzing-benchmarks)).
-- [ ] **M2-03** Extraction: `PY/error_map.py`, `PY/result.py`, `PY/executor.py` constants, the remaining
+- [x] **M2-03** Extraction: `PY/error_map.py`, `PY/result.py`, `PY/executor.py` constants, the remaining
       `PY/settings.py`, `PY/fee_filters.py` (equal to the runtime's `fee_filters.rs`, parsed with `syn`), custom
       transaction codes (`common/src/transaction_error.rs`), intent field defaults and class variables, read parameter
       defaults and requiredness (`read_params.json`), and the environment variables the Python package reads
       (`env_vars.json`).
-- [ ] **M2-04** `rtao-catalog`: `INTENTS`, `READS`, `ErrorCode` (18), `CHAIN_ERRORS` (390), `py::*`, `rt::*`.
+- [x] **M2-04** `rtao-catalog`: `INTENTS`, `READS`, `ErrorCode` (18), `CHAIN_ERRORS` (390), `py::*`, `rt::*`.
 - **M2-05 optional hosted refresh.** Preserve committed oracle vectors/seeds for implemented ops, reads and
   pure functions. If refreshed vectors are needed, build the pinned oracle only in a bounded free hosted job and
   review the resulting diff. No local image build or GHCR setup is a client milestone prerequisite.
-- [ ] **M2-06** Staged `ops::{receipt, fee, extrinsic_lookup, dispatch_error}`, with a `FakeChain` receipt test in which
+- [x] **M2-06** Staged `ops::{receipt, fee, extrinsic_lookup, dispatch_error}`, with a `FakeChain` receipt test in which
       a `Sudo.sudo` fails inside `Sudid` (PR-U1 and PR-U2 evidence,
       [§5.8](#58-known-core-defects-and-how-rtao-handles-them) #4).
-- [ ] **M2-07** Submission (`rtao-client`): `NonceManager`/`NonceLease`, one manager per `Client` (`client.nonces()`,
+- [x] **M2-07** Submission (`rtao-client`): `NonceManager`/`NonceLease`, one manager per `Client` (`client.nonces()`,
       shared by every clone and executor); era 128 anchored at the finalized head; metadata-hash mode with the
       RFC-0078 digest cached per spec; sign, assemble, submit, watch; `SubmitFailure`; `CallBytes` spec stamping; typed
       `PoolRejection`; `FateUnknown`; reconciliation; the watch statuses of D-024 (`retracted` keeps watching,
       `finalityTimeout(h)` resolves from block h, `dropped` reconciles when `reconcile` is on); the event-splitting
       fuzz target source is available for optional targeted hosted checks.
-- [ ] **M2-08** `rtao-tx`: intent traits, `Executor` (`plan`, `preflight`, `execute`, `dyn` twins), `Plan`, `Policy`
+- [x] **M2-08** `rtao-tx`: intent traits, `Executor` (`plan`, `preflight`, `execute`, `dyn` twins), `Plan`, `Policy`
       with the harness of a table-driven equivalence test against the core's constructors
       ([§5.8](#58-known-core-defects-and-how-rtao-handles-them) #9), whose pairs land with their intents: 3 in M2-12,
       5 in M4-06 and the other 13 in M5-03, for 21 of 22 at the M5 exit. `ExtrinsicResult<O>`, `ChainError`,
       `PolicyError`, `TxError`, `classify` and its name, code and custom-code gates.
-- [ ] **M2-09** `rtao-intents` and `rtao-reads`: generated interfaces, `AnyIntent`, `defaults.rs`, `ReadName`,
+- [x] **M2-09** `rtao-intents` and `rtao-reads`: generated interfaces, `AnyIntent`, `defaults.rs`, `ReadName`,
       `ReadSpec`/`ParamSpec`, and `dispatch`, which fills the extracted `read_params.json` defaults; `RecordingView` and
       the exact-hits test with `parity/read_hits_extra.toml` ([§9.3](#93-fakes-at-the-right-layers)); `pending.toml`
       listing the 74 unported intents and 87 unported reads.
-- [ ] **M2-10** The pass-through generator (`generated/passthrough.rs`), driven by `codegen/intent_types.toml` and
+- [x] **M2-10** The pass-through generator (`generated/passthrough.rs`), driven by `codegen/intent_types.toml` and
       `intent_callmap.toml`; `transfer_all` is its first output, and it later generates M4's nine and M5's 36 bodies, so
       no body is hand-written first [I: building it here means none of the 10 M2 and M4 bodies is written twice].
-- [ ] **M2-11** `weights::conform` (`round_ties_even`, Python's order); `TimelockCommitter`; staged `epoch_schedule` and
+- [x] **M2-11** `weights::conform` (`round_ties_even`, Python's order); `TimelockCommitter`; staged `epoch_schedule` and
       `timelock_commit` (PR-U5 evidence), with the safety-net vectors: a skip at a scheduled slot b fires the epoch at
       b + 1; a skip at an owner-triggered slot b with step counter c fires it at b + tempo + 1 − c; a tempo lowered
       below the counter in block t fires it at t + 1.
-- [ ] **M2-12** The 9 M2 intents: `set_weights`, `commit_weights`, `reveal_weights`, `serve_axon`, `serve_axon_tls`,
+- [x] **M2-12** The 9 M2 intents: `set_weights`, `commit_weights`, `reveal_weights`, `serve_axon`, `serve_axon_tls`,
       `serve_prometheus`, `reset_axon`, `transfer`, `transfer_all`. The `Policy` equivalence test (M2-08) gains its
       three M2 pairs: `transfer`, `transfer_all` and `transfer_allow_death` (↔ `Transfer { keep_alive: false }`).
-- [ ] **M2-13** The 13 M2 reads: `block_time`, `timestamp`, `blocks_since_last_step`, `blocks_since_last_update`,
+- [x] **M2-13** The 13 M2 reads: `block_time`, `timestamp`, `blocks_since_last_step`, `blocks_since_last_update`,
       `epoch_status`, `max_weight_limit`, `min_allowed_weights`, `reveal_period`, `weights_rate_limit`, `uid`,
       `commit_reveal_enabled`, `mechanism_count`, `weights`.
-- [ ] **M2-14** Strict client-source parity machinery: the remaining `xtask parity check` layers (symbol, catalog, extraction, chain-source,
+- [x] **M2-14** Strict client-source parity machinery: the remaining `xtask parity check` layers (symbol, catalog, extraction, chain-source,
       environment, coverage, available committed oracle evidence, completeness with `parity/exports_extra.toml`) and `divergences.toml` from
       Appendix C. From here on, `parity/map.toml` rows (seeded in M0 from
       [python-module-map.md](docs/plan/python-module-map.md)) are blessed as they are ported. Q30 permits an explicitly
       unverified first oracle batch; historical evidence and removal checks remain mandatory.
-- [ ] **M2-15** `MetagraphSync` with the validator preset (`EveryEpoch { fallback_blocks: 100 }`, `Preset::Validator`,
+- [x] **M2-15** `MetagraphSync` with the validator preset (`EveryEpoch { fallback_blocks: 100 }`, `Preset::Validator`,
       `MetagraphHandle`, `MetagraphDiff` with `replaced`/`deregistered` for score resets, last-good snapshot on failure,
       architecture §8.3), because `NeuronCx` holds the handle and `Validator::on_metagraph` takes the diff.
-- [ ] **M2-16** The `rtao-btauth` client adapter: `SignedClient` with `fan_out` and `fan_out_stream` (`FanOut` defaults:
+- [x] **M2-16** The `rtao-btauth` client adapter: `SignedClient` with `fan_out` and `fan_out_stream` (`FanOut` defaults:
       256 concurrent, 3 s connect timeout, 12 s per attempt, a call deadline of timeout + 1 s, no retries), over
       `rtao_primitives::axon::{AxonTarget, axon_base_url}` and `Metagraph::axon_targets()`, re-signing every attempt;
       its loopback `https://` `FakeNode` test through the ring config. `NeuronCx.http` is a `SignedClient`, and the
       facade's `neuron` feature already enables `btauth-client`.
-- [ ] **M2-17** `rtao-neuron`: `NeuronConfig`, `NeuronRuntime::validator`, `NeuronCx`, `StateCell` (over
+- [x] **M2-17** `rtao-neuron`: `NeuronConfig`, `NeuronRuntime::validator`, `NeuronCx`, `StateCell` (over
       `std::sync::RwLock`, with a `compile_fail` doctest for a guard held across an `.await`), `Validator` with
       `StepPolicy` (errors and panics counted and backed off, never ending `run()`); `WeightScheduler` (cadence with
       per-hotkey jitter, one-RPC preflight at the best head as Python reads it, the Null-consensus missing-permit
@@ -1835,7 +1835,7 @@ other; M2-16 needs only M1. Q29 waives M2-24's testnet soak.
       defaults, reconciliation); reveal watcher that follows the commit's actual reveal epoch and attributes misses
       (`reason`); `ClockGuard`; `EpochClock`; `StateStore`, with the test `validator_restart_resumes_state` (kill and
       restart resumes from persisted state); telemetry (`/metrics`, `/healthz`, `/readyz`); two-stage shutdown.
-- [ ] **M2-18** `crates/rtao/examples/validator.rs` (the example of [§7.2](#72-a-validator)) and its line in the
+- [x] **M2-18** `crates/rtao/examples/validator.rs` (the example of [§7.2](#72-a-validator)) and its line in the
       `features` job.
 - **M2-19 optional hosted infrastructure.** Retain `Localnet`/`Scenario` as a test-harness design reference
   (§9.4). Implement only the setup needed by a specific targeted hosted integration test; no local node setup,
@@ -1844,20 +1844,33 @@ other; M2-16 needs only M1. Q29 waives M2-24's testnet soak.
   changed client code from §9.4 (1, 2, 3, 5, 6, 7, 8, 15, 16 or 17) or a `core-oracle` comparison. Use one pinned
   image, a small selection and a timeout. No automatic push/nightly/multi-network campaign or blocking
   `e2e-required` gate is required.
-- [ ] **M2-21** `parity/e2e_map.toml` (115 keys, each `rtao`, `na` or `pending = "M<k>"`, [§9.4](#94-localnet-e2e)),
+- [x] **M2-21** `parity/e2e_map.toml` (115 keys, each `rtao`, `na` or `pending = "M<k>"`, [§9.4](#94-localnet-e2e)),
       with the six `test_*` keys of [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names) that M2 can run
       mapped to rtao tests.
-- [ ] **M2-22** Maintain reviewed source/pin/extraction/regeneration/parity update tooling and hosted guards.
+- [x] **M2-22** Maintain reviewed source/pin/extraction/regeneration/parity update tooling and hosted guards.
       Record relevant upstream changes and blocked refreshes. Oracle/recording stages are optional targeted hosted
       work; forced full-pipeline replays, bot deployment and scheduled upkeep are deferred.
 - **M2-23 optional hosted image check.** Keep the no-host validator image recipe as source. If the recipe
   changes, a targeted free hosted job may build it and check TLS through FakeNode; do not build it locally.
 - **M2-24 waived by Q29.** No testnet soak, funding, subnet setup or host is required. Preserve prepared wallet
   and recovery material. Client tests run in hosted CI; costly infrastructure checks are optional under Q30.
-- [ ] **M2-25** The validator guide in the book ([§11](#11-documentation-plan)).
+- [x] **M2-25** The validator guide in the book ([§11](#11-documentation-plan)).
 - [ ] **M2-26** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m2.md`; focus: keyfile
       loading and `keyfile_json` (ordinary malformed-input regressions passing in hosted CI), the password chain, `Zeroizing`/`secrecy` with a test that
       `Debug` output redacts secrets, and the signing path.
+
+**Client-source step checkpoint, 2026-10-16.** The checked implementation and
+validator-guide steps are verified at
+`3772699612278d4592648d07232241430e96791b` by hosted
+[run 38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100).
+This records their individual source, fixture and guide completion. M2-26 and
+the M2 milestone exit remain open because M2-S02 is unaccepted; the retained
+owning-boundary proposal does not close that finding.
+
+M2-25 covers the validator guide and its compiled source example. Checking it
+does not certify all §11 documentation contracts. The newer crate-README,
+complete-book, LLM-text and migration changes require their own hosted validation.
+Optional hosted checks and the waived soak retain their declarations above.
 
 **Exit checks (hosted CI):**
 
@@ -2989,3 +3002,5 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-16 | Local documentation lock adoption | Hosted lock run 38895014224 passes at 6a2e191. Authenticate immutable artifact, inspect all nine exact additions against the original pre-Docify graph and independently refetch before adopting Cargo.lock only. Remove the failed Git/native build closure and restore old cc edges; every original package identity/metadata/edge and fuzz lock remain intact, except the two reviewed Docify consumer edges. No local Cargo or validation; hosted reports and 3,080-test combined CI remain next. |
 | 2026-10-16 | Root port attribution correction | Report run 38895327494 compiles corrected Docify and generates dependency/parity outputs, then the license guard rejects root_move.py because its source appears only in an additional-sources comment. Replace that shorthand with complete Derived-from headers for both root_move.py and root_swap.py at the authenticated Apache-2.0 commit; preserve the actual root.py/root_helpers.py headers and all production bodies. Retain failure evidence, adopt no failed-run reports and rerun the bounded hosted report lane. No local Cargo/test or milestone acceptance. |
 | 2026-10-16 | Root and documentation report adoption | Hosted report-only run 38896301076 passes at exact 4c1e5af, including attribution. Authenticate artifact 12044595804 (58,707 bytes, SHA256 9eefd53289a02dc5b948266ee11a7229aafde024dc03c2b2fa98325be58baca2), inspect three root rows plus oracle-only basket producer and all 23 dependency inputs, independently refetch, then adopt exactly four reports. Source/matrix agree at 311/357 reconciled and 46 pending. Only four reviewed Docify dependency-input hashes and normal measurement metadata change; profile package counts 225/362/366/417, host flags false/false/false/true and other compatibility claims stay unchanged. Push ordinary combined CI for 3,080 expected tests; no new runtime/oracle/hardware or milestone acceptance claim. No local Cargo, raw archive retention or new filing. |
+| 2026-10-16 | Green 3,080-test client checkpoint and individual M2 steps | Ordinary run 38897437100 passes all six jobs at exact 3772699: 3,080 tests, zero failed, four skipped and nine doctests across 19 workspace suites, plus strict Clippy/docs/source/feature/MSRV/no-host/semver/supply guards. Bounded proof authenticates 34 selected PASS records, including wrapped registration completion, both shared documentation examples and positive unsigned-seed reconstruction/signing/attachment. Nextest's nine-slow suffix and stdout/stderr-interleaved doctest headings are represented without changing counts; independent collector review finds no defect. Check the 20 independently audited M2 implementation/validator-guide steps; M2-26 and M2 remain unaccepted with M2-S02 open. Adopt the fully reviewed multisig-safety source row after adding five genuine adapted pytest origins and preserving all executable witness bodies. Source reaches 312/357 reconciled and 45 pending; generated matrix remains 311/46 until refresh. No independent Python, live-chain, hardware, standalone fuzz or later milestone result follows. |
+| 2026-10-16 | M9 documentation and offline-signing source batch | Add the missing SDK, agent, migration, concepts, Null-consensus, testing, parity, upgrades and pin-log chapters. Generate complete LLM chapter inclusion, CLI-derived agent card, item aliases, divergence register and per-transaction Executor guidance; keep source reconciliation status visible. Include READMEs in all 19 library roots and add docsrs-only feature labels, with three generated intent outputs awaiting hosted regeneration. Add three shared offline example tests, one signature-form attachment regression and three generator regressions; strengthen imported metadata-mode attachment and bidirectional cross-signature refusal without another function. Independent source reviews, direct formatting and whitespace checks pass. These seven new functions and current docs are outside green 3772699; the next main run expects 3,087 tests after reviewed hosted codegen/report adoption. The prepare/attach source row remains pending until its new and strengthened fixtures pass. M2-S02 remains open/unaccepted, strict M8 off; no new milestone acceptance, local build/test/codegen, upstream filing or resource campaign. |
