@@ -902,7 +902,7 @@ async fn raw_admission_deadline_includes_initial_runtime_validation() {
 
 #[tokio::test]
 async fn executor_shield_entries_prepare_before_fresh_nonce_and_era_selection() {
-    for route in ["typed", "dynamic", "required"] {
+    for route in ["typed", "dynamic", "required", "bare", "bare_dynamic"] {
         let (ex, fake, mut keys) = fixture().await;
         fake.mutate_state(|state| {
             state.set_nonce(keys.signer.account().to_string(), 7);
@@ -915,6 +915,7 @@ async fn executor_shield_entries_prepare_before_fresh_nonce_and_era_selection() 
             execute: pool(),
             ..Default::default()
         };
+        let bare = Arc::new(keys.signer.clone());
         let (success, inclusion) = match route {
             "typed" => {
                 let result = ex.submit_shielded(&intent, &keys, &options).await.unwrap();
@@ -927,6 +928,17 @@ async fn executor_shield_entries_prepare_before_fresh_nonce_and_era_selection() 
                     .unwrap();
                 (result.success, result.inclusion)
             }
+            "bare" => {
+                let result = ex.submit_shielded(&intent, &bare, &options).await.unwrap();
+                (result.success, result.inclusion)
+            }
+            "bare_dynamic" => {
+                let result = ex
+                    .submit_shielded_dyn(&intent, &bare, &options)
+                    .await
+                    .unwrap();
+                (result.success, result.inclusion)
+            }
             _ => {
                 let result = ex.execute(&intent, &keys, &pool()).await.unwrap();
                 (result.success, result.inclusion)
@@ -934,7 +946,10 @@ async fn executor_shield_entries_prepare_before_fresh_nonce_and_era_selection() 
         };
         assert!(success, "{route}");
         assert_eq!(inclusion, Inclusion::PoolAccepted);
-        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            keys.unlocks.load(Ordering::SeqCst),
+            usize::from(!route.starts_with("bare"))
+        );
         assert_eq!(keys.signer.prepared.load(Ordering::SeqCst), 1);
         let signed = keys.signer.requests.lock().unwrap().clone();
         let expected_anchor = fake
