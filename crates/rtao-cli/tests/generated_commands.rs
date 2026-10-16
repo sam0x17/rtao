@@ -1,19 +1,21 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/tx.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
 use rtao::{
     client::{Client, ClientConfig, HeadProvider, Network, View},
-    primitives::{AccountId, CryptoType, NetUid},
+    primitives::{AccountId, CryptoType, H256, NetUid},
+    reads::ReadName,
     signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
     tx::{ExtrinsicResult, IntentInterface},
 };
 use rtao_cli::{
     application,
-    books::{AccountKind, Books},
+    books::{AccountKind, Books, address_cli_name},
     commands::{
-        catalog,
+        self, catalog,
         generated::{self, QueryRequest, TxRequest},
         schema,
     },
@@ -22,10 +24,17 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
-use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_testkit::{
+    FakeChain, FakeState,
+    fixtures::{
+        catalog_samples::{COLD, HOT, SUBNET, intent_args, intent_state, literal, read_state},
+        decode_fixed_hex,
+    },
+    rpc::RpcClient,
+};
 use serde_json::{Value, json};
 use std::{
-    collections::{BTreeSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     path::Path,
     sync::{
         Arc, Mutex,
@@ -37,7 +46,7 @@ use std::{
 mod support;
 use support::TempRoot;
 
-type TestResult = Result<(), Box<dyn std::error::Error>>;
+type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 struct NoTerminal;
 impl Terminal for NoTerminal {
@@ -57,6 +66,113 @@ impl Terminal for NoTerminal {
         Ok(())
     }
 }
+// These table fixtures hold public identities only. A mistaken private
+// acquisition returns an error and increments the sentinel even if a caller
+// were to swallow that error.
+#[derive(Default)]
+struct SamplePublicKeys {
+    acquisitions: AtomicUsize,
+}
+impl KeyView for SamplePublicKeys {
+    fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+        Ok(COLD)
+    }
+    fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+        Ok(HOT)
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+        Ok(HOT.0)
+    }
+}
+impl DynKeySource for SamplePublicKeys {
+    fn signer_for<'a>(
+        &'a self,
+        _: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+        self.acquisitions.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async {
+            Err(SignerError::KeyView(
+                "CLI sample dry-run attempted private signer acquisition".into(),
+            ))
+        })
+    }
+}
+
+fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
+    let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
+        .ok_or("authenticated CLI sample table")?;
+    assert_eq!(table.blob, "f04e4a3681a9798f20bebcb44ba508561509e391");
+    let extracted = rtao::primitives::json::from_str::<Value>(table.value_json)?;
+    let decoded = literal(&extracted)?;
+    Ok(decoded
+        .as_object()
+        .ok_or("CLI sample dictionary")?
+        .iter()
+        .map(|(name, args)| (name.clone(), args.clone()))
+        .collect())
+}
+
+// Follow the pinned Python argv adapter, then let real Clap parsing, defaults,
+// name resolution and native coercion validate the command. Do not construct
+// TxRequest/QueryRequest parameters directly from these sample dictionaries.
+fn argv_from_sample(args: &Value, tx: bool) -> TestResult<Vec<String>> {
+    let mut argv = Vec::new();
+    for (key, value) in args.as_object().ok_or("CLI sample arguments")? {
+        if value.is_null() {
+            continue;
+        }
+        let flag = if key.contains("_ss58") {
+            address_cli_name(key)
+        } else {
+            format!("--{}", key.replace('_', "-"))
+        };
+        if let Some(enabled) = value.as_bool() {
+            argv.push(if enabled {
+                flag
+            } else {
+                format!("--no-{}", flag.trim_start_matches("--"))
+            });
+            continue;
+        }
+        let text = match value {
+            Value::Array(parts) if !tx => parts
+                .iter()
+                .map(|part| match part {
+                    Value::String(value) => Ok(value.clone()),
+                    Value::Number(value) => Ok(value.to_string()),
+                    Value::Bool(true) => Ok("True".into()),
+                    Value::Bool(false) => Ok("False".into()),
+                    Value::Null => Ok("None".into()),
+                    _ => Err("review nested query sample list element"),
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .join(","),
+            Value::String(value) => value.clone(),
+            _ => serde_json::to_string(value)?,
+        };
+        argv.extend([flag, text]);
+    }
+    Ok(argv)
+}
+
+fn bind_cli_sample_work(state: &FakeState, op: &str, args: &mut Value) -> TestResult {
+    if op == "pow_register" {
+        // Bind one fixed public seal, never run a PoW worker. This helper stays
+        // above testkit because registration_prefix belongs to intents.
+        let hash = state.block_hash(state.block).ok_or("fake work block")?;
+        let prefix = rtao_intents::pow::registration_prefix(
+            SUBNET,
+            H256(decode_fixed_hex(&hash)?),
+            HOT,
+            COLD,
+        )?;
+        args["work_block"] = json!(state.block);
+        args["nonce"] = json!(0);
+        args["work_hex"] = json!(hex::encode(rtao::core::pow::seal(&prefix, 0)?));
+    }
+    Ok(())
+}
+
 fn tree() -> Result<clap::Command, rtao_cli::error::CliError> {
     Ok(application::command_tree([
         generated::tx_command()?,
@@ -738,6 +854,169 @@ fn missing_required_values_refuse_with_input_status_before_any_connection() -> T
     assert_eq!(error.code, 2);
     assert!(error.message.contains("--dest") && error.message.contains("--amount-tao"));
     assert!(sink.text(Stream::Stdout)?.is_empty());
+    Ok(())
+}
+
+// In-process installed parsing and handlers use fake transport and public-only
+// keys. Installed subprocess exits and wallet-file access are separate fixtures.
+// pyt: unit/test_cli_commands.py::test_tx_dry_run_from_sample
+#[tokio::test]
+async fn all_83_samples_run_through_actual_cli_json_dry_run_without_private_access() -> TestResult {
+    let samples = cli_samples("INTENT_SAMPLES")?;
+    let expected = rtao_catalog::INTENTS
+        .iter()
+        .map(|spec| spec.name)
+        .collect::<BTreeSet<_>>();
+    assert_eq!(expected.len(), 83);
+    assert_eq!(
+        samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
+        expected,
+        "CLI dry-runs must cover the exact authenticated intent table"
+    );
+    let runtime = FakeState::try_default()?.runtime;
+    let mut visited = BTreeSet::new();
+    let mut failures = Vec::new();
+    for spec in &rtao_catalog::INTENTS {
+        visited.insert(spec.name);
+        let outcome: TestResult = async {
+            let state = intent_state(runtime.clone(), spec.name)?;
+            let mut args = intent_args(spec.name, &samples[spec.name])?;
+            bind_cli_sample_work(&state, spec.name, &mut args)?;
+            let mut argv = vec![
+                "rtao".into(),
+                "--json".into(),
+                "--dry-run".into(),
+                "tx".into(),
+                spec.name.replace('_', "-"),
+            ];
+            argv.extend(argv_from_sample(&args, true)?);
+            let parsed = commands::command_tree()?.try_get_matches_from(argv)?;
+            let (mut ctx, sink) = context(&parsed, &generated::intent_reserved(spec.name)?)?;
+            // JSON/non-TTY policy retains the real confirmation stage without
+            // --yes, an on-disk wallet, or a secret-bearing test signer.
+            let request = TxRequest::from_matches(
+                &mut ctx,
+                spec.name,
+                leaf(&parsed)?,
+                &mut PromptHistory::default(),
+            )?;
+            let keys = SamplePublicKeys::default();
+            let hooks = Hooks::default();
+            let (client, chain) = client(state).await?;
+            let result = generated::execute_tx_with_keys(
+                &ctx,
+                &client,
+                &request,
+                &keys,
+                SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                },
+            )
+            .await;
+            client.close().await;
+            assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+            assert_eq!(hooks.before.load(Ordering::SeqCst), 0);
+            assert_eq!(hooks.results.load(Ordering::SeqCst), 0);
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(
+                chain
+                    .requests()
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            if result?.is_some() {
+                return Err("CLI dry-run returned a submitted receipt".into());
+            }
+            let plan: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+            if plan["op"] != spec.name || plan["ok"] != true {
+                return Err(format!(
+                    "CLI dry-run did not render a successful {} plan: {plan}",
+                    spec.name
+                )
+                .into());
+            }
+            Ok(())
+        }
+        .await;
+        if let Err(error) = outcome {
+            failures.push(format!("{}: {error}", spec.name));
+        }
+    }
+    assert_eq!(visited, expected);
+    assert!(
+        failures.is_empty(),
+        "CLI sample dry-run failures:\n{}",
+        failures.join("\n")
+    );
+    Ok(())
+}
+
+// pyt: unit/test_cli_commands.py::test_query_from_sample
+#[tokio::test]
+async fn all_102_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
+    let samples = cli_samples("READ_SAMPLES")?;
+    let expected = ReadName::ALL
+        .into_iter()
+        .map(|name| name.as_str())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(expected.len(), 102);
+    assert_eq!(
+        samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
+        expected,
+        "CLI queries must cover the exact authenticated read table"
+    );
+    let coldkey = samples["stake_availability"]["coldkey_ss58"]
+        .as_str()
+        .ok_or("CLI availability coldkey sample")?;
+    let (client, chain) = client(read_state(coldkey)?).await?;
+    let mut visited = BTreeSet::new();
+    let mut failures = Vec::new();
+    for name in ReadName::ALL {
+        visited.insert(name.as_str());
+        let outcome: TestResult = async {
+            let mut argv = vec![
+                "rtao".into(),
+                "--json".into(),
+                "query".into(),
+                name.as_str().replace('_', "-"),
+            ];
+            argv.extend(argv_from_sample(&samples[name.as_str()], false)?);
+            let parsed = commands::command_tree()?.try_get_matches_from(argv)?;
+            let (ctx, sink) = context(&parsed, &generated::read_reserved(name))?;
+            let request = QueryRequest::from_matches(
+                &ctx,
+                name,
+                leaf(&parsed)?,
+                &mut PromptHistory::default(),
+            )?;
+            let value = generated::execute_query(&client, &request, &ctx.output).await?;
+            let stdout = sink.text(Stream::Stdout)?;
+            let rendered: Value = serde_json::from_str(&stdout)?;
+            if rendered != value || stdout.contains("Traceback") {
+                return Err("CLI query JSON differs from its actual native payload".into());
+            }
+            Ok(())
+        }
+        .await;
+        if let Err(error) = outcome {
+            failures.push(format!("{name}: {error}"));
+        }
+    }
+    client.close().await;
+    assert_eq!(visited, expected);
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    assert!(
+        failures.is_empty(),
+        "CLI query sample failures:\n{}",
+        failures.join("\n")
+    );
     Ok(())
 }
 

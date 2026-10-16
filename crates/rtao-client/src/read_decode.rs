@@ -206,6 +206,7 @@ typed_leaves!(
     rtao_runtime::models::SimSwapResult,
     rtao_runtime::models::MinerCollateralState,
     rtao_runtime::models::LockState,
+    rtao_runtime::models::CommitmentRegistration,
     rtao_runtime::models::SubnetLease,
     rtao_runtime::models::CrowdloanInfo,
     rtao_runtime::models::SubnetPrice,
