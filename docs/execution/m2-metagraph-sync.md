@@ -1,5 +1,21 @@
 # M2-15 validator metagraph synchronization
 
+## Current source and scope
+
+Current `SyncPolicy` supports `early_on_events=true`; relevant finalized
+`NeuronRegistered`, `AxonServed` and `HotkeySwapped*` events coalesce into a
+refresh after one second. Failed event-triggered refreshes retain invalidation
+for a spaced retry. `SyncPolicy::miner()` uses a 600-second interval with early
+events enabled; the validator preset keeps its epoch/100-block schedule and
+leaves early events off. Persistence and miner support are present in the later
+source, so the initial M2 policy-error statement below is historical.
+
+Current checks use fixtures and fake transports in free `ubuntu-latest` CI
+under Q30. Localnet integration is optional and Q29 waives the soak. M2-S02
+remains open/unaccepted; this document accepts no M2 milestone exit.
+
+## Historical preparation and validation
+
 The validator policy fetches the documented 20 selected fields without
 commitment scans. It refreshes when finalized `LastEpochBlock` advances, or
 after 100 finalized blocks since the last successful snapshot. The fallback
@@ -61,11 +77,12 @@ Validation on 2026-10-14:
   features. Strict Clippy passed for all metagraph targets and features after
   the final shape-gate correction. Formatting and whitespace checks passed.
 
-The miner preset, debounced event refresh and persistence belong to M3.
-`early_on_events=true` currently returns a policy error. M2 validator runtime,
-localnet scenarios and soak evidence are owned by the parent task; this record
-claims no milestone exit.
+At the original M2 snapshot, the miner preset, debounced event refresh and
+persistence were assigned to M3, and `early_on_events=true` returned a policy
+error. The current source above supersedes that limitation. This historical
+record claims no localnet or soak execution and no milestone exit.
 
 No temporary test directories were created. Build outputs and bounded logs
-remain under `target/execute-plan.6Ro0PC`; that shared build tree is still live.
+were recorded under `target/execute-plan.6Ro0PC`; that root is retired and
+absent. No current build/log dependency remains there.
 No local Python, external filings, commits, pushes or PLAN checkboxes were used.

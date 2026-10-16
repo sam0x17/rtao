@@ -1,5 +1,20 @@
 # M2-11 weight math and epoch preparation
 
+## Current source and scope
+
+Current math source retains compensated float sums and left-fold cumulative
+sums. The scheduler already follows the included commit's actual assigned
+epoch through `crates/rtao-neuron/src/weights/reveal.rs`, including inclusion
+slip, temporary queue-read failure and reveal-history recovery. The staged
+predictor cannot promise successful future epochs; that model limit remains.
+
+Native fixtures and source guards are required hosted client evidence under
+Q30. Independent Python conform outputs and actual accepted commits/reveals
+remain optional targeted hosted evidence, with no result inferred from source
+or native tests. M2-S02 remains open/unaccepted and the M2 exit remains open.
+
+## Historical preparation and validation
+
 The pure weight helpers now port `normalize`, `clip_to_max_weight` and
 `_conform` from pinned Python v478. Quantization uses ties-to-even rounding,
 retains Python's division/multiplication order and drops zero quantized values.
@@ -10,8 +25,9 @@ code. Typed UIDs enforce the chain's u16 range.
 
 Float sums use CPython 3.12+'s Neumaier compensation. Cumulative sums in the
 clipping calculation remain a left fold, matching `itertools.accumulate`.
-The CI oracle must record its exact Python version and compare these helpers
-bit for bit; those vectors are still pending. No local Python was run.
+Any optional Python oracle refresh must record its exact interpreter and
+compare these helpers bit for bit before claiming equality; those independent
+vectors remain absent. No local Python was run.
 
 The staged `epoch_schedule` uses the pallet's `counter > tempo` predicate
 and `tempo + 1` counter cap. Its tests cover all four upstream v478 schedule
@@ -33,10 +49,10 @@ predicate leaves a second error, predicting 107. The staged predictor derives
 the commit epoch from the post-coinbase state and returns 126.
 
 This model assumes successful future epochs. It cannot predict future input
-inconsistency or per-block-cap deferrals. The validator's reveal watcher still
-needs to follow the actual included commit's assigned epoch.
+inconsistency or per-block-cap deferrals. The current validator reveal watcher
+follows the actual included commit's assigned epoch as described above.
 
-Validation under `target/execute-plan.6Ro0PC`:
+Historical validation under the former `target/execute-plan.6Ro0PC` root:
 
 - Six weight math tests pass on current Rust and Rust 1.89. Strict all-target,
   all-feature intent Clippy passed before the separately owned committer joined.
@@ -57,8 +73,9 @@ The bounded upstream failure transcript is retained in
 `docs/execution/m2-epoch-upstream-proof.txt`. The isolated proof directory
 and downloaded reference/body files were checked for running processes, open
 files, launchd/configuration references, symlinks and virtual environments,
-then removed by exact paths. Shared build, source and fuzz caches remain live
-for the ongoing goal. The open-file audit warned about an unrelated backup
+then removed by exact paths. The former execution root and its build/source/
+fuzz output are retired and absent. Shared global Cargo/toolchain caches remain
+preserved. The open-file audit warned about an unrelated backup
 SMB mount; the proof directory is on the local workspace filesystem and had
 no open files. No backup path was changed.
 
@@ -76,7 +93,7 @@ current Rust and Rust 1.89 (`tmp/root-epoch-budget-tests.log` and
 `tmp/root-epoch-budget-msrv.log`).
 Upstream U5 is filed as [subtensor#3248](https://github.com/RaoFoundation/subtensor/pull/3248)
 with the same overflow guard. Hosted oracle equality and actual accepted
-commits/reveals remain required.
+commits/reveals remain unverified optional evidence under Q30.
 
 
 Final standalone-intent parity verification adds the exact Null storage-read

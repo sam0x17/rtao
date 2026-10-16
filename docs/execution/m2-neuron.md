@@ -1,5 +1,19 @@
 # M2 validator framework preparation
 
+## Current source and scope
+
+Current client source includes validator services, actual-epoch reveal
+tracking, state recovery and the public example. Q30 requires relevant hosted
+fixture/profile/example checks, while image/localnet/interop work is optional
+and Q29 waives the testnet soak. No deployment or local campaign is required.
+
+The subprocess restart fixture exercises production StateStore/EmaScores
+persistence. It does not establish a connected NeuronRuntime kill/restart
+campaign. M2-S02 remains open/unaccepted, so M2-26 and the M2 milestone exit
+remain open. Current CI claims require the exact checkpoint result.
+
+## Historical preparation and validation
+
 The validator framework is implemented in `rtao-neuron`, with a facade example
 at `crates/rtao/examples/validator.rs` and the guide at
 `book/src/validator.md`. This record describes local preparation. Hosted image,
@@ -79,7 +93,8 @@ callback panic/error/timeout supervision, skew refusal, two-stage Unix signals
 and HTTP health checks. Current Rust and Rust 1.89 passed; strict MSRV Clippy
 passed. The additional production recorder and HTTP tests passed current Rust
 and MSRV, with strict all-target Clippy. The isolated harnesses and completed
-fixtures were audited and removed; shared build caches remain live.
+fixtures were audited and removed. The former task build root is retired
+and absent; no current cache dependency remains there.
 The integrated current-Rust library suite passed all 40 tests, including the
 best/finalized lag-three RPC proof, inclusion-epoch slip, late drand, version and
 deregistration attribution, per-mechanism cadence and exact Null raw rows.
@@ -88,11 +103,11 @@ guard compile-fail doctest (41 checks). Strict MSRV Clippy passed all features
 and all targets, the no-default-feature base crate, and the facade's real
 `validator,prometheus` example. The example performs bounded signed JSON echo
 fan-out and binds scores to the queried hotkey across UID replacement.
-Logs remain under the recorded task root as
+Historical logs were recorded under the former task root as
 `tmp/neuron-integrated-{tests,msrv,clippy}.log`,
 `tmp/neuron-example-clippy.log` and `tmp/neuron-base-clippy.log`.
-The no-host image and TLS proof are
-owned by the root's CI integration lane.
+No-host image/container TLS acceptance remains separate optional hosted
+evidence under Q30.
 
 The registry attachment regression passes on current Rust and Rust 1.89.
 Current Rust compiled the all-feature library test executable for the focused

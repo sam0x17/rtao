@@ -1,5 +1,22 @@
 # M2-16 signed HTTP client
 
+## Current source and scope
+
+The current SignedClient source keeps explicit ring TLS and controlled trust
+roots. The loopback `https_uses_explicit_ring_and_requires_the_fixture_root`
+fixture belongs to ordinary hosted client validation. The retained dual-provider
+HTTPS record below used Rustls 0.23.45 and its own source snapshot; it is not a
+fresh run against the current graph. Current M1 RPC two-provider evidence in
+[m1-transport-policy.md](m1-transport-policy.md) exercises WSS, not SignedClient
+HTTPS. No fresh dual-provider HTTPS result or additional M2-16 requirement is
+inferred from that RPC proof.
+
+Substantial validation belongs in bounded free `ubuntu-latest` CI under Q30.
+Do not restore the historical workspace, build it locally or install tools.
+M2-S02 remains open and unaccepted; the M2 milestone exit remains open.
+
+## Historical preparation and validation
+
 The `rtao-btauth/client` feature implements `SignedClient`,
 `SignedRequestBuilder`, `FanOut` and per-UID `FanOutError` results. Its public
 target vocabulary comes from `rtao_primitives::axon`; it has no dependency on
@@ -77,22 +94,24 @@ past their deadlines. HTTPS rejects the untrusted self-signed certificate,
 then succeeds through the explicitly configured trust root; the global TLS
 provider remains absent before and after the test.
 
-An independent Cargo workspace compiles ring and aws-lc simultaneously.
+A historical independent Cargo workspace compiled ring and aws-lc simultaneously.
 All 28 adapter tests pass there on current Rust and Rust 1.89.0, including
 the same positive/negative HTTPS test. This exercises third-party provider
 feature unification without adding aws-lc to the production lock. The
 retained [manifest](btauth-client/two-provider-fixture.toml) and
-[lock](btauth-client/two-provider.lock) reproduce that fixture; restore the
-lock as `Cargo.lock` in a temporary workspace and adjust the source paths
-to the checkout. Its lock SHA-256 is
+[lock](btauth-client/two-provider.lock) preserve that historical fixture
+provenance, including its old checkout paths. They do not authorize recreating
+a local workspace. Its lock SHA-256 is
 `d601d6b1278e7d07c0f8d4bb59dcbb858603e08b40f93ee0144ee1ea28e0b160`.
 It uses rustls 0.23.45, ring 0.17.14 and aws-lc-rs 1.18.2.
 
-All validation and the isolated TLS-provider fixture use the temporary root
+Historical validation and the isolated TLS-provider fixture used the temporary root
 recorded in `state.md`; no Python interpreter, container or chain write was
 used. The disposable provider fixture, its exact test/fingerprint/incremental
 artifacts and temporary logs were removed after checks for live processes,
 open files, launchd/configuration references, symlinks and virtual
 environments. The [cleanup record](btauth-client/cleanup.json) lists the
-removed directories. Shared goal build and scratch caches remain in use by
-other workers; useful source, lock, results and manifests remain here.
+removed directories. That former task root is retired and absent; its build
+and scratch caches are not current live dependencies. Useful source, lock,
+results and manifests remain here; shared global Cargo/toolchain caches remain
+preserved.

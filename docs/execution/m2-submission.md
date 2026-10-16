@@ -1,5 +1,24 @@
 # M2 client submission
 
+## Current source and scope
+
+The client and ordinary executor preserve attempted transaction identity across
+postbroadcast deadlines. `rtao-tx/src/executor.rs` passes the remaining full and
+admission budgets to `Client::submit` without an outer timeout around that
+submission future. Prebroadcast planning/unlock budgets remain checked.
+
+The retained hosted [run 38832708259](https://github.com/sam0x17/rtao/actions/runs/38832708259)
+at `7bb8c0b888b5e634c8ca1236f05ceb9b6f81a48a` includes exact passes for the
+five selected S04 client/executor regressions. The
+[M2 security disposition](../security/m2.md#current-hosted-dispositions-at-7bb8c0b)
+closes S04 within its FakeChain limits; the earlier executor-pending note below
+is historical. It does not establish live inclusion/finality behavior.
+
+Current substantial checks belong in free `ubuntu-latest` CI under Q30. M2-S02
+remains open and unaccepted, so M2-26 and the milestone exit remain open.
+
+## Historical preparation and validation
+
 `rtao-client` now prepares, signs, assembles and submits spec-stamped calls through the portable core. Ordinary and externally signed submissions use the client's shared `NonceManager`. A lease settles only after pool acceptance or a resolved inclusion, including dispatch failure. Every unsettled exit clears synchronously; reconciliation starts after the lease has dropped and never reserves or repins the nonce.
 
 Preparation uses a fresh pool-aware nonce without changing cached allocations. The default mortal era is the extracted 128 blocks, anchored at the finalized height and its core-computed birth block. Immortal transactions use genesis. Finality lag produces the configured warning and optional metric. Metadata-verifying signers receive the cached RFC-0078 digest, the exact signed extension parts and runtime context needed to generate a proof. The runtime's actual `specName` supplies the digest identity. Software signers leave metadata-hash mode disabled; tip remains zero.
@@ -27,9 +46,9 @@ cargo +1.89.0 test --locked -p rtao-client -p rtao-signer --all-features
 cargo clippy --locked -p rtao-client -p rtao-signer --all-features --all-targets -- -D warnings
 ```
 
-Logs are bounded beneath `target/execute-plan.6Ro0PC/tmp/m2-client-{tests,nodefault,msrv,clippy}.log`; the focused submission log is `m2-submission-tests.log`. Instrumented fuzz results remain in the parent-owned `fuzz/results.json` beneath the recorded root. Raw preparation and signer JSON views are implemented here; Python prepared-extrinsic import/export and interop lane 6 remain the M5 work.
+Historical logs were recorded beneath `target/execute-plan.6Ro0PC/tmp/m2-client-{tests,nodefault,msrv,clippy}.log`; the focused submission log was `m2-submission-tests.log`. The historical fuzz machine report is retained separately as `m2-fuzz.json`; the retired-root paths are not current logs or build dependencies. Raw preparation and signer JSON views are implemented here; Python prepared-extrinsic import/export and interop lane 6 remain the M5 work.
 
-No local Python, user wallets or Keychain state were accessed. Test-created cache/config directories are removed by their owners. The shared build and fuzz caches remain live for the continuing execution task. No commits, pushes, PLAN checkboxes or milestone exit claims were made by this child.
+No local Python, user wallets or Keychain state were accessed. Test-created cache/config directories are removed by their owners. The former task build/fuzz root is retired and absent; shared global Cargo/toolchain caches remain preserved. No commits, pushes, PLAN checkboxes or milestone exit claims were made by this child.
 
 ## Full-deadline hash retention
 
@@ -68,11 +87,10 @@ with all features and all targets passed on both toolchains. Owned Rust
 formatting passed with edition 2024. Final logs are
 `target/execute-plan.6Ro0PC/tmp/m2-submission-full-deadline-{current,msrv,clippy,clippy-msrv,format}.log`
 and `m3-client-certificate-{current,msrv}.log`. No disposable directories were
-created; the shared build cache and bounded logs remain live for parent and
-peer validation.
+created. That former execution root is retired and absent; the build/log
+paths describe historical provenance only.
 
-This follow-up validates the client's three submission APIs. Security review
-separately identified executor wrappers in `rtao-tx/src/executor.rs` that can
-cancel or discard a known-hash client result under `TimeBudget::run`. Executor
-ownership and public executor regressions remain with the parent before S04
-can be closed for ordinary intent execution.
+That initial follow-up validated the client's three submission APIs while
+executor wrappers still needed repair. The later executor change and exact
+client/executor passes recorded above close S04 within its documented limits;
+the historical pending note does not describe current source.

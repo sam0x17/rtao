@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_multisig_safety.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Public typed multisig adapters exercised through the executor and FakeChain.
 #![cfg(feature = "all")]
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -439,6 +440,94 @@ async fn plan_preserves_the_semantic_contract_and_exact_python_dispatch_shape() 
     assert_eq!(plan.call().stamp(), inner.stamp());
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(fake.state().lock().unwrap().submissions.is_empty());
+}
+
+// pyt: sdk/python/tests/unit/test_multisig_safety.py::test_saved_multisig_preserves_inner_policy_and_mev_contract
+#[tokio::test]
+async fn unbounded_multisig_policy_checks_match_the_semantic_plan_before_unlock() {
+    let (executor, fake, keys) = fixture(1_000_000_000).await;
+    fake.mutate_state(|state| {
+        state
+            .seed_python("SubtensorModule", "Burn", &[json!(7)], json!(2_000_000))
+            .unwrap();
+        state
+            .seed_python(
+                "SubtensorModule",
+                "CollateralLockShare",
+                &[json!(7)],
+                json!(0),
+            )
+            .unwrap();
+    });
+    let hotkey = AccountId([4; 32]);
+    let semantic = rtao_intents::BurnedRegister {
+        netuid: NetUid(7),
+        hotkey_ss58: Some(hotkey.into()),
+    };
+    let adapter = MultisigThreshold1Adapter::new(
+        semantic,
+        executor.client(),
+        group(&executor, &keys, 1).await,
+        keys.signer.account(),
+        CryptoType::Ed25519,
+        None,
+    )
+    .await
+    .unwrap();
+    let policy = Policy {
+        max_spend: Some(Balance::from_rao(1_000_000_000)),
+        allowed_netuids: Some(BTreeSet::from([NetUid(1)])),
+        ..Default::default()
+    };
+    let expected = vec![
+        "burned_register spends an amount that cannot be bounded before execution; max_spend_tao τ1.000000000 blocks it".to_owned(),
+        "netuid 7 not in allowed_netuids [1]".to_owned(),
+    ];
+    let direct = policy.check(&adapter, None);
+    assert_eq!(direct, expected);
+    let plan = executor
+        .plan(
+            &adapter,
+            &keys,
+            &PlanOptions {
+                policy: Some(policy.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(plan.op, "multisig_threshold_1");
+    assert_eq!(plan.spend, Spend::Unbounded);
+    assert_eq!(plan.violations, expected);
+    assert_eq!(plan.violations, direct);
+    assert!(!plan.ok());
+    let runtime = executor.client().refresh_runtime().await.unwrap();
+    let outer = decode(&runtime, plan.call());
+    assert_eq!(outer["call_module"], "Multisig");
+    assert_eq!(outer["call_function"], "as_multi_threshold_1");
+    let inner = rtao_runtime::calls::subtensor_module::burned_register(NetUid(7), hotkey)
+        .compose(&runtime)
+        .unwrap();
+    assert_eq!(arg(&outer, "call"), &decode(&runtime, &inner));
+    let error = executor
+        .execute(
+            &adapter,
+            &keys,
+            &ExecuteOptions {
+                policy: Some(policy),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_err();
+    let TxError::Policy(error) = error else {
+        panic!("unbounded multisig execution did not retain its policy refusal");
+    };
+    assert_eq!(error.violations, expected);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    assert!(keys.roles.lock().unwrap().is_empty());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    executor.client().close().await;
 }
 
 #[tokio::test]

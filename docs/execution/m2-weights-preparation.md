@@ -1,11 +1,21 @@
 # Weights and timelock preparation
 
+## Current source and scope
+
+Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
+source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
+unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
+preserves earlier source snapshots and their measured results.
+
+## Historical preparation and validation
+
 The pure weights helper uses the pinned Python cutoff search, ties-to-even
 quantization, raw integer ratio checks, minimum nonzero count and single
 self-weight exception. The CPython 3.12 oracle uses compensated `sum(float)`;
 the sorted cutoff scan's `itertools.accumulate` remains ordinary ordered
 addition. Six math tests pass on current Rust and Rust 1.89. Oracle vector
-comparison remains required in its CI lane.
+comparison remains unverified; a future optional refresh belongs in a bounded
+hosted job before claiming independent Python equality.
 
 `TimelockCommitter` accepts a named `TimelockCommitRequest` containing an
 explicit Unix timestamp, public hotkey, conformed row, version key, coherent
@@ -37,9 +47,11 @@ revision must contain all current harnesses; missing targets fail explicitly.
 The measured conform means were 1.17 microseconds for 256 entries and 6.78
 microseconds for 2,500. A same-source repeat changed them by +0.67% and +3.11%.
 That repeat failed the actual 30% gate on two ed25519 measurements while other
-builds ran on the shared Mac; an isolated hosted comparison remains required.
+builds ran on the shared Mac. A fresh comparison is optional targeted hosted
+work; that historical failure does not require a local replacement campaign.
 
 The scheduler still supplies ClockGuard, fresh schedule reads and the one allowed
 `InvalidRevealRound` recomputation. This helper performs no submission or retry.
-CI oracle vectors, localnet acceptance, observed reveals and upstream PR-U5
-verification remain required; these local checks do not complete M2.
+Independent oracle vectors, localnet acceptance and observed reveals remain
+unverified optional hosted evidence under Q30. These historical local checks
+do not complete M2; its unaccepted S02 security disposition remains open.

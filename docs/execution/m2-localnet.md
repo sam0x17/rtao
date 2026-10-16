@@ -1,8 +1,26 @@
 # M2 localnet scenarios and hosted validation
 
-All ten required M2 scenario entry points have implementations and are enabled.
-The source compiles with the core-oracle feature. Hosted localnet runs remain
-pending, so M2-19, M2-20 and the milestone exit are not claimed complete.
+## Current source and scope
+
+M2-19 and M2-20 are optional targeted hosted infrastructure/integration under
+Q30. The retained Localnet/Scenario sources and scenario mappings provide a
+harness reference; source presence or historical compilation establishes no
+live scenario result. No node, Docker service, full campaign or replacement
+local run is required. Q29 waives the testnet soak.
+
+The [e2e](../../.github/deferred-workflows/e2e.yml),
+[interop](../../.github/deferred-workflows/interop.yml) and
+[nightly](../../.github/deferred-workflows/nightly.yml) workflow drafts are
+inactive. Any specifically needed integration selects a small relevant case
+on a bounded free hosted runner. Multi-network schedules and a blocking
+`e2e-required` summary are outside the development exit. M2-S02 remains open
+and unaccepted; the M2 milestone exit remains open.
+
+## Historical preparation and validation
+
+The initial preparation implemented ten M2 scenario entry points and compiled
+the source with the core-oracle feature. It did not execute hosted localnet
+scenarios. Those compilation results remain historical source evidence.
 
 `Localnet` uses the Docker CLI and digest pins from `upstream.toml`.
 `E2E_ENDPOINT` reuses a loopback node; `LOCALNET_IMAGE` and `SKIP_PULL` retain
@@ -28,7 +46,7 @@ localnet development keys beneath the recorded root. They close their contexts,
 retain bounded metrics, inspect the fixture tree for symlinks, then remove the
 exact development wallet and state directory.
 
-The required scenarios now exercise:
+The retained scenario implementations target:
 
 - 1: `NeuronRuntime` produces one commit per actual epoch for 20 fast or three
   slow epochs. A gap-free finalized-block observer requires every matching
@@ -64,13 +82,14 @@ The required scenarios now exercise:
   identities and the full recipient balance increase.
 
 The additional protocol tests and six upstream client counterparts remain.
-`parity/e2e_map.toml` covers all 115 upstream keys: six implemented mappings,
+The initial `parity/e2e_map.toml` snapshot covered all 115 upstream keys: six source mappings,
 one retired-constructor exemption and 108 later-milestone entries. Mapping a
 source implementation does not claim its hosted run passed.
 `xtask localnet contracts --check` rejects missing, ignored and conditionally
 omitted required entry points before CI provisions a node.
 
-`e2e.yml` uses free `ubuntu-latest` runners. Pushes select pinned fast and slow
+The archived `e2e.yml` design uses free `ubuntu-latest` runners. Its former
+push branches select pinned fast and slow
 plus mainnet; nightly adds testnet and devnet, and weekly adds main. Each job
 owns two partition nodes, a serialized global node, and a main fast-runtime
 source node. Global state scenarios use the separate invocation and test group.
@@ -79,7 +98,7 @@ owned container, and retains bounded node logs, JUnit results, runtime hash and
 probe JSON. The non-matrix required gate admits documentation-only skips and
 fails if a required chain job fails or is cancelled.
 
-`interop.yml` supplies the Rust core-oracle lane on one finalized setup block:
+The archived `interop.yml` design supplies the Rust core-oracle lane on one finalized setup block:
 storage, metagraph, neurons, hyperparameters, stake and fees on identical full
 extrinsic bytes. All 21 non-retired trusted core constructors have independent
 generated runtime-call byte counterparts. Actual M2 Transfer/TransferAll
@@ -87,7 +106,7 @@ intents cover 12,000 Policy comparisons, including fees, bounded and unbounded
 spend, subnet allowlists and raw-call permissions. The remaining 18 semantic
 intent counterparts belong to M5 and are printed as coverage gaps. The upstream
 blocking client is confined to the differential test's blocking task.
-`nightly.yml` now invokes `ci/core-canary-smoke.sh` after resolving actual upstream
+The archived `nightly.yml` design invokes `ci/core-canary-smoke.sh` after resolving actual upstream
 main and passing its build, surface and offline checks. That script verifies the
 main image's OCI source/revision, runs the hosted localnet oracle smoke, retains
 bounded evidence and removes its exact owned container.
@@ -115,14 +134,15 @@ Local validation on 2026-10-14:
   scoped strict Clippy passes on both. No live chain scenario has executed
   locally.
 
-All local scratch, builds and logs use `target/execute-plan.6Ro0PC`.
-Shared build, source and tool caches remain live parent dependencies. Earlier
+Historical local scratch, builds and logs used `target/execute-plan.6Ro0PC`.
+That root is retired and absent; no task build/source/tool cache there is a
+current live dependency. Preserve shared global Cargo/toolchain caches. Earlier
 isolated command rehearsals and lock files were removed after process,
 open-file, launchd, configuration, symlink and virtual-environment checks.
 The isolated PR-U4 source clone and probe rehearsal were also removed after
 their build and decryption checks in both builds finished and the same audit found no
-live dependency. The compiled probe and its Cargo metadata remain bounded live
-dependencies for the parent task; its recorded source-manifest path is historical
-build provenance.
+live dependency. The compiled probe and Cargo metadata belonged to that
+historical run; they are not current live dependencies. Its recorded source-
+manifest path is historical build provenance.
 No local Python, Docker node, user wallet, private validator state, commit,
 push or PLAN checkbox mutation was performed by this integration.
