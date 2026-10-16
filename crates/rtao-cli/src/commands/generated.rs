@@ -9,7 +9,7 @@ use super::{
     schema::{self, Field},
 };
 use crate::{
-    books::{AccountLookup, FsAccountLookup, NameResolver},
+    books::{FsAccountLookup, NameResolver},
     call_names::{report_resolved_account, resolve_intent_args_with},
     context::{AppContext, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
@@ -320,62 +320,77 @@ impl PromptResolver for ArgumentResolver<'_> {
         terminal: &mut dyn Terminal,
         answers: &mut Map<String, Value>,
     ) -> Result<Vec<String>, PromptError> {
-        let lookup = FsAccountLookup::new(self.ctx.globals.wallet_path.clone())
-            .map_err(|e| PromptError::InvalidValue(e.to_string()))?;
+        let candidates = super::stake::picker::local_candidates(self.ctx)
+            .map_err(|error| PromptError::InvalidValue(error.to_string()))?;
         let mut choices = Vec::<(String, String)>::new();
         let mut seen = BTreeSet::new();
         if spec.flow == PromptFlow::DestinationAccount {
             for entry in &self.ctx.books.addresses {
                 if let (Some(name), Some(address)) =
                     (entry["name"].as_str(), entry["address"].as_str())
+                    && !address.is_empty()
                     && seen.insert(address.to_owned())
                 {
                     choices.push((name.into(), address.into()));
                 }
             }
-            for candidate in lookup
-                .candidates()
-                .into_iter()
-                .filter(|c| c.source == "wallet" && c.name != self.ctx.globals.wallet_name)
-            {
+            for candidate in candidates.into_iter().filter(|candidate| {
+                candidate.source == "wallet" && candidate.name != self.ctx.globals.wallet_name
+            }) {
                 if seen.insert(candidate.address.clone()) {
                     choices.push((candidate.name, candidate.address));
                 }
             }
         } else {
-            for candidate in lookup.candidates().into_iter().filter(|c| {
-                c.source == "hotkey"
-                    && c.name
+            // A named hotkey is a choice even when another key file carries
+            // the same public account. Python numbers key names, not accounts.
+            for candidate in candidates.into_iter().filter(|candidate| {
+                candidate.source == "hotkey"
+                    && candidate
+                        .name
                         .starts_with(&format!("{}/", self.ctx.globals.wallet_name))
             }) {
-                if seen.insert(candidate.address.clone()) {
-                    choices.push((candidate.name, candidate.address));
-                }
+                choices.push((candidate.name, candidate.address));
             }
         }
         for (index, (name, address)) in choices.iter().enumerate() {
             terminal.message(&format!("{}  {name}  {address}", index + 1))?;
         }
         let (value, _) = ask_with(&self.ctx.prompt_context(), terminal, spec, |raw| {
-            let selected = raw
-                .parse::<usize>()
-                .ok()
-                .filter(|_| !choices.is_empty())
-                .map(|index| {
-                    choices
-                        .get(index.saturating_sub(1))
-                        .filter(|_| index > 0)
-                        .map(|(_, address)| address.as_str())
+            let numbered = !raw.is_empty()
+                && raw.chars().all(|character| {
+                    unicode_general_category::get_general_category(character)
+                        == unicode_general_category::GeneralCategory::DecimalNumber
+                });
+            let selected = if numbered && !choices.is_empty() {
+                Some(
+                    rtao::primitives::pyfmt::parse_integer(raw)
+                        .and_then(|value| value.to_string().parse::<usize>().ok())
+                        .and_then(|index| index.checked_sub(1))
+                        .and_then(|index| choices.get(index))
                         .ok_or_else(|| {
                             PromptValidation::Message(format!(
                                 "enter a number between 1 and {}",
                                 choices.len()
                             ))
-                        })
-                })
-                .transpose()?
-                .unwrap_or(raw);
-            self.parse(spec, selected)
+                        })?,
+                )
+            } else {
+                None
+            };
+            if let Some((name, address)) = selected {
+                // Validate before caching the selected key's name. Normal
+                // resolution may find a contact alias for the same account;
+                // Python records the numeric menu choice first.
+                address
+                    .parse::<rtao::primitives::AccountId>()
+                    .map_err(|error| PromptValidation::Message(error.to_string()))?;
+                self.ctx
+                    .output
+                    .name_address(address, name)
+                    .map_err(|error| PromptValidation::Message(error.to_string()))?;
+            }
+            self.parse(spec, selected.map_or(raw, |(_, address)| address.as_str()))
         })?;
         let text = value
             .as_str()

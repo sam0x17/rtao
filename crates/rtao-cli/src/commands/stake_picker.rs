@@ -227,7 +227,7 @@ pub fn source_rows(
     Ok(rows)
 }
 
-fn local_candidates(ctx: &AppContext) -> Result<Vec<NameCandidate>, CliError> {
+pub(crate) fn local_candidates(ctx: &AppContext) -> Result<Vec<NameCandidate>, CliError> {
     let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
     let mut candidates = lookup.candidates();
     sort_candidates(&mut candidates);
