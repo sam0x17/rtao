@@ -121,8 +121,19 @@ Valid legacy Fernet, the exact combined encrypted-create transcript and isolated
 umask-000 execution remain unverified. Its oracle-only source row stays pending.
 The combined checkpoint must execute all 19 newly added functions since d01830c,
 plus the extended fixtures; the expected main total is 3,070. Five supporting
-jobs passed on earlier source in run 38877875846, while its main result remains
-unconfirmed. No earlier subset validates these newer sources.
+jobs passed on earlier source in run 38877875846; its main check was cancelled
+when superseded, before a complete test summary. No earlier subset validates
+these newer sources.
+
+Combined hosted run
+[38882046195](https://github.com/sam0x17/rtao/actions/runs/38882046195)
+at `a042d983623cc697e26af3014d28c489b9906c49` stops in Clippy before tests:
+the association fixture imports `associated_evm_key` from the reads root,
+but the public implementation is in `reads::m6_accounts`. Correct that fixture
+import without changing the production API or lint policy. The bounded main
+diagnostic is `check-38882046195.json`; its 67,265-byte source log has SHA256
+`6c522c799df32b98f6e0626057441d7110669acd0f6c1026c1af322a9955b05b`.
+All 19 new fixture executions remain pending the corrected hosted checkpoint.
 
 ### Earlier CLI detail batch, hosted execution pending
 
