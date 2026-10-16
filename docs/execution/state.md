@@ -63,9 +63,10 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The reviewed source map and adopted generated matrix now agree at 306/357
-reconciled and 51 pending after the authenticated refresh below.
-The e2e source map and generated matrix now agree at 19 pending mappings.
+The reviewed source map has 307/357 reconciled inputs and 50 pending;
+the adopted generated matrix remains at 306/51 until the next hosted refresh.
+The e2e source map has 18 pending mappings and 11 client contracts; the generated
+matrix remains at 19/10 until that refresh.
 There remain 68 divergences. Passing CI alone does
 not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -91,8 +92,11 @@ and remaining transfer/Proxy/Sudo unsigned-JSON/signature-attachment paths. The
 auto-stake transcript preserves the upstream ignored execution Result and lists
 six runtime limits. Its source e2e map has 18 pending keys and 11 client-contract
 rows; generated reports remain at 19/10 until the next authenticated refresh.
-The source-file map remains 306/357 reconciled, 51 pending. The oracle-only
-keyfiles disposition is still unapplied pending current hosted fixture evidence.
+The source-file map reaches 307/357 reconciled, 50 pending. The keyfiles row
+retains oracle-only status after complete source-input review and exact hosted
+PASS evidence for its two narrow native fixtures. Valid Fernet decryption,
+the complete encrypted-created wallet scenario and isolated umask-000 execution
+remain gaps; source-input reconciliation does not establish a complete native port.
 
 A complete audit corrects 25 M2 execution documents and the validator guide's
 metric name. Current instructions retire local caches and restore recipes,
@@ -109,10 +113,24 @@ resource audit grants no source-step or milestone acceptance.
 
 Direct rustfmt, whitespace, exact patch/source reviews and all 26 documentation
 after-image identities pass. None of the seven new functions is executed yet;
-the expected combined main total is 3,077. Current hosted run 38883630624 on
-0b0bb79 remains active with five supporting jobs passed. Its pending main result
-cannot validate these newer sources. Exact proposal/review identities are in
-next-client-source-work-0b0bb79.json under the existing recovery root.
+the expected combined main total is 3,077.
+
+Hosted run [38883630624](https://github.com/sam0x17/rtao/actions/runs/38883630624)
+at exact `0b0bb79` completed with five supporting jobs passed and main failed:
+3,069 tests passed, one failed and four were skipped. Strict Clippy reached
+Nextest, but later doctests and documentation gates did not run. The sole
+failure was `canonical_picker_answers_use_real_clap_parser_retries_and_final_relationships`:
+its supplied conflicting option waived Clap's required address, so the fixture
+never entered the expected public prompt context. The corrected fixture first
+asserts that behavior, then omits both conflicting fields and checks collection
+followed by final conflict rejection. This correction awaits hosted execution.
+
+The bounded `client-0b0bb79-partial-hosted-results.json` authenticates 22 selected
+PASS records, including both keyfile fixtures, and the sole failure. Its source
+identities and full-run failure remain explicit; it validates none of the seven
+newer functions. No raw log is retained. Exact proposal/review identities and
+the next report-refresh steps are in `next-client-source-work-0b0bb79.json`
+under the existing recovery root.
 
 ### Command review and required-address follow-up, execution pending
 
