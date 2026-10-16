@@ -2,27 +2,33 @@
 
 ## Current source and hosted validation
 
-Ordinary hosted run 38865058430 at `3f1aa67` passed the policy and socket
-fixtures with the shipped Rustls 0.23.46 graph. Its poisoned-default regression
-checks explicit provider selection when an unusable process default exists.
-That fixture does not compile a second provider.
+[Hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
+passed all six blocking jobs at `d01830cdf6a7e1301ca4a2629b35663617f97dab`.
+The main job passed the policy/socket and public-client fixtures, including the
+refused-initialization socket observer and all three actual-resolver fixtures
+for literal updates, authenticated spans and unsupported producer refusal.
+The two source-extracted pytest parameter tables and seven exact `pyt:` origins
+are integrated; hosted generation in run 38871417189 at `d5132a0` supplied the
+authenticated outputs, and the final extraction check passed. These are Rust
+fixture results, with Python execution and source-row disposition kept separate.
 
-The follow-up adds two source-extracted pytest parameter tables and seven exact
-`pyt:` origins. Three actual-resolver fixtures check literal updates, provenance
-spans and unsupported producer refusal. Hosted generation passed in run
-38871417189 at `d5132a0`; authenticated outputs are adopted. Fixture compilation
-and execution remain pending. These tables supply test inputs; they do not
-establish Python assertion execution or complete `test_rpc.py` reconciliation.
-
-A maintained independent workspace at `ci/tls-two-providers` exercises the real
-RPC connector with both ring and AWS-LC compiled for the shipped Rustls version
-and no process-default provider. Run 38871434589 generated its independent lock;
-the reviewed 127,044-byte lock has SHA256
+The maintained independent workspace at `ci/tls-two-providers` passed
+`wss_with_two_compiled_providers_and_no_process_default` in the same run's
+[features job](https://github.com/sam0x17/rtao/actions/runs/38873429391/job/116882706610):
+one passed, zero failed, ignored or filtered. It used the real RPC connector and
+TLS `FakeNode` with both ring and AWS-LC compiled for Rustls 0.23.46, and checked
+that no process default existed before startup, after the request and after
+shutdown. The authenticated phase-`check` graph artifact (ID 12035095089) binds
+that exact source and the shared Rustls/provider graph; its `graph.json` SHA256 is
+`ff917bef9f77d4d05b0625b055798e45b3136f6f02fddc572be66e1ba35acf2b`.
+The independent 127,044-byte lock, prepared in run 38871434589, retains SHA256
 `f193c79d7eab8fd4bbc06c7e0099a3bb3f8fdb46b39be8719c72c5fcd9730fe1`.
-The existing features job must still execute its one test. Preparation alone
-proves no TLS execution. The shipped workspace's AWS-LC bans,
-dependency inputs and locks remain unchanged. This fixture supplies no HTTPS
-SignedClient or additional platform result.
+
+These results supply current RPC evidence for the applicable
+[M1 Q30 development exit](m1-client.md#current-q30-development-exit).
+The shipped workspace's AWS-LC bans, dependency inputs and locks remain
+unchanged. HTTPS SignedClient, Python/oracle, live-network and additional
+platform coverage remain separate obligations.
 
 All substantial validation runs in bounded free `ubuntu-latest` jobs. Do not
 create a local fixture workspace, install tools or resume a retired build cache.
