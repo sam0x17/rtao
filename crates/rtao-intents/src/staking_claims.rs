@@ -719,10 +719,21 @@ mod tests {
     use rtao_core::{DynValue, runtime::TypeSpec};
     use rtao_primitives::{Alpha, Balance, Ratio, Tao};
     use rtao_runtime::{RuntimeHandle, calls::proxy};
+    use rtao_signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole};
     use rtao_testkit::{FakeChain, FakeState, RecordingView, Reply, rpc::RpcClient};
-    use rtao_tx::{DynIntent, OriginView, Policy, SystemClock};
+    use rtao_tx::{
+        DynIntent, ExecuteOptions, Executor, OriginView, PlanOptions, Policy, ShieldOptions,
+        SystemClock, TxError,
+    };
     use serde_json::{Value as Json, json};
-    use std::collections::BTreeSet;
+    use std::{
+        collections::BTreeSet,
+        sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        },
+        time::Duration,
+    };
 
     const ORIGIN: AccountId = AccountId([7; 32]);
     const HOTKEY: AccountId = AccountId([8; 32]);
@@ -731,6 +742,41 @@ mod tests {
     const SENDER_LOCK: AccountId = AccountId([11; 32]);
     const RECEIVER_LOCK: AccountId = AccountId([12; 32]);
     const RECEIVER: AccountId = AccountId([6; 32]);
+
+    // Public fixture identity only. A private acquisition fails and is counted
+    // even if a future caller were to suppress the returned error.
+    struct PublicClaimKeys {
+        account: AccountId,
+        acquisitions: AtomicUsize,
+    }
+    impl PublicClaimKeys {
+        fn new(account: AccountId) -> Self {
+            Self {
+                account,
+                acquisitions: AtomicUsize::new(0),
+            }
+        }
+    }
+    impl KeyView for PublicClaimKeys {
+        fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+            Ok(self.account)
+        }
+        fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+            Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+        }
+        fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+            Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+        }
+    }
+    impl DynKeySource for PublicClaimKeys {
+        fn signer_for<'a>(
+            &'a self,
+            role: SignerRole,
+        ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+            self.acquisitions.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async move { Err(SignerError::KeyUnavailable(role)) })
+        }
+    }
 
     fn seed_availability(
         state: &mut FakeState,
@@ -1390,30 +1436,42 @@ mod tests {
     async fn merged_claim_previews_preserve_admission_dust_legacy_and_financial_fields()
     -> anyhow::Result<()> {
         let (chain, client, snapshot) = fixture(|_| Ok(())).await?;
-        for intent in [
-            Box::new(remove(
-                Balance::<Tao>::from_rao(1).into(),
-                NetUid::ROOT,
-                true,
-                false,
-            )?) as Box<dyn DynIntent>,
-            Box::new(remove_limit(
-                Balance::<Tao>::from_rao(1).into(),
-                NetUid::ROOT,
-                true,
-                1_000_000_000,
-            )),
-            Box::new(moved(
-                Balance::<Tao>::from_rao(1).into(),
-                NetUid::ROOT,
-                NetUid::ROOT,
-                true,
-                true,
-            )?),
-            Box::new(UnstakeAll {
-                hotkey_ss58: HOTKEY.into(),
-                claim: true,
-            }),
+        for (intent, expected_warning) in [
+            (
+                Box::new(remove(
+                    Balance::<Tao>::from_rao(1).into(),
+                    NetUid::ROOT,
+                    true,
+                    false,
+                )?) as Box<dyn DynIntent>,
+                CLAIM_NOT_PROPORTIONAL,
+            ),
+            (
+                Box::new(remove_limit(
+                    Balance::<Tao>::from_rao(1).into(),
+                    NetUid::ROOT,
+                    true,
+                    1_000_000_000,
+                )),
+                CLAIM_NOT_PROPORTIONAL,
+            ),
+            (
+                Box::new(moved(
+                    Balance::<Tao>::from_rao(1).into(),
+                    NetUid::ROOT,
+                    NetUid::ROOT,
+                    true,
+                    true,
+                )?),
+                MOVE_CLAIM_NOT_PROPORTIONAL,
+            ),
+            (
+                Box::new(UnstakeAll {
+                    hotkey_ss58: HOTKEY.into(),
+                    claim: true,
+                }),
+                "removes the entire stake from this hotkey",
+            ),
         ] {
             let built = build(intent.as_ref(), &snapshot).await?;
             let preview = inspect(intent.as_ref(), &client, &snapshot, &built.call).await?;
@@ -1424,13 +1482,11 @@ mod tests {
                     "claim root dividends on {HOTKEY} (redeem basket shares to root stake)"
                 ))
             );
-            assert!(
-                preview
-                    .warnings
-                    .first()
-                    .is_some_and(|warning| warning == CLAIM_NOT_PROPORTIONAL
-                        || warning == MOVE_CLAIM_NOT_PROPORTIONAL
-                        || warning == "removes the entire stake from this hotkey")
+            assert_eq!(
+                preview.warnings.first().map(String::as_str),
+                Some(expected_warning),
+                "{} warning",
+                intent.spec().name
             );
             assert_eq!(
                 preview.required_free,
@@ -1479,6 +1535,135 @@ mod tests {
         assert!(denied.required_free.is_none());
         assert!(denied.facts.is_empty());
         client.close().await;
+        Ok(())
+    }
+
+    // pyt: unit/test_intents_table.py::TestRootClaimOnUnstake::test_embedded_claim_enforces_admission_in_plan_and_shielded_submit
+    #[tokio::test]
+    async fn embedded_root_claim_families_enforce_public_plan_and_shield_admission()
+    -> anyhow::Result<()> {
+        const EXPECTED: &str = "root claim exceeds the 129-unit admission limit (1 root hotkey + 257 basket holdings = 258); the claim cannot be admitted until this basket's work is reduced";
+        let mut sweep = vec![7, 83];
+        sweep.extend_from_slice(HOTKEY.as_bytes());
+        for (intent, follow_up) in [
+            (
+                Box::new(remove(
+                    Balance::<Tao>::from_rao(1_000_000_000).into(),
+                    NetUid::ROOT,
+                    true,
+                    false,
+                )?) as Box<dyn DynIntent>,
+                plain_remove(NetUid::ROOT, 1_000_000_000, None),
+            ),
+            (
+                Box::new(RemoveStakeLimit {
+                    allow_partial: false,
+                    ..remove_limit(
+                        Balance::<Tao>::from_rao(1_000_000_000).into(),
+                        NetUid::ROOT,
+                        true,
+                        1_000_000_000,
+                    )
+                }),
+                plain_remove(NetUid::ROOT, 1_000_000_000, Some((1_000_000_000, false))),
+            ),
+            (
+                Box::new(UnstakeAll {
+                    hotkey_ss58: HOTKEY.into(),
+                    claim: true,
+                }),
+                sweep,
+            ),
+            (
+                Box::new(moved(
+                    Balance::<Tao>::from_rao(1_000_000_000).into(),
+                    NetUid::ROOT,
+                    NetUid::ROOT,
+                    true,
+                    true,
+                )?),
+                plain_move(NetUid::ROOT, NetUid::ROOT, 1_000_000_000, None),
+            ),
+        ] {
+            let (chain, client, _snapshot) = fixture(|state| {
+                state.seed_python(
+                    "System",
+                    "Account",
+                    &[json!(ORIGIN)],
+                    json!({"data":{"free":1_000_000_000_000u64}}),
+                )?;
+                // Keep all257 distinct subnet holdings with valid native
+                // (NetUid, shares, balance) tuples instead of Python's pairs.
+                state.seed_runtime(
+                    "BetaBasketRuntimeApi",
+                    "get_validator_basket",
+                    json!(
+                        (0u16..257)
+                            .map(|netuid| json!([netuid, 1, 1]))
+                            .collect::<Vec<_>>()
+                    ),
+                )?;
+                state.seed_runtime(
+                    "BetaBasketRuntimeApi",
+                    "get_basket_payout",
+                    json!(1_000_000),
+                )?;
+                Ok(())
+            })
+            .await?;
+            let keys = PublicClaimKeys::new(ORIGIN);
+            let executor = Executor::new(client.clone());
+            let outcome = async {
+                let plan = executor
+                    .plan_dyn(
+                        intent.as_ref(),
+                        &keys,
+                        &PlanOptions {
+                            deadline: Some(Duration::from_secs(5)),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+                assert_eq!(plan.op, intent.spec().name);
+                assert_eq!(plan.call().as_bytes(), claim_batch(&follow_up));
+                assert_eq!(plan.signer, SignerRole::Coldkey);
+                assert_eq!(plan.signer_address, ORIGIN);
+                assert_eq!(plan.violations, [EXPECTED]);
+                assert!(!plan.ok());
+                let refusal = executor
+                    .submit_shielded_dyn(
+                        intent.as_ref(),
+                        &keys,
+                        &ShieldOptions {
+                            execute: ExecuteOptions {
+                                deadline: Some(Duration::from_secs(5)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    )
+                    .await;
+                let Err(TxError::Policy(error)) = refusal else {
+                    anyhow::bail!(
+                        "{} expected embedded-claim admission refusal: {refusal:?}",
+                        intent.spec().name
+                    );
+                };
+                assert_eq!(error.violations, [EXPECTED]);
+                Ok::<(), anyhow::Error>(())
+            }
+            .await;
+            client.close().await;
+            assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+            assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+            assert!(
+                chain
+                    .requests()
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            outcome?;
+        }
         Ok(())
     }
 
@@ -1563,8 +1748,102 @@ mod tests {
             true,
         )?;
         assert_eq!(decoded.field("call"), Some(&expected));
-        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        // The component above sets its own PreflightCx. Exercise the real
+        // executor wiring separately with the source's exact1TAO root exit:
+        // the funded proxy origin must not pay the delegate's reserved fee.
+        chain.mutate_state(|state| {
+            state.seed_python(
+                "System",
+                "Account",
+                &[json!(ORIGIN)],
+                json!({"data":{"free":1_000_000_000_000u64}}),
+            )
+        })?;
+        let keys = PublicClaimKeys::new(PAYER);
+        let executor = Executor::new(client.clone());
+        let start = chain.requests().len();
+        let outcome = async {
+            let intent = remove(
+                Balance::<Tao>::from_rao(1_000_000_000).into(),
+                NetUid::ROOT,
+                true,
+                false,
+            )?;
+            let plan = executor
+                .plan_dyn(
+                    &intent,
+                    &keys,
+                    &PlanOptions {
+                        proxy_for: Some(ORIGIN),
+                        deadline: Some(Duration::from_secs(5)),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            let mut expected = vec![16, 0, 0];
+            expected.extend_from_slice(ORIGIN.as_bytes());
+            expected.push(0); // No forced proxy type.
+            expected.extend(claim_batch(&plain_remove(
+                NetUid::ROOT,
+                1_000_000_000,
+                None,
+            )));
+            assert_eq!(plan.call().as_bytes(), expected);
+            assert_eq!(plan.op, "remove_stake");
+            assert_eq!(plan.signer, SignerRole::Coldkey);
+            assert_eq!(plan.signer_address, PAYER);
+            assert_eq!(plan.extras["proxy_for"], json!(ORIGIN));
+            assert!(!plan.ok());
+            assert!(
+                plan.violations
+                    .iter()
+                    .any(|violation| violation.contains("below the reserved claim fee"))
+            );
+            assert_eq!(plan.fee, Some(Balance::<Tao>::from_rao(8_209_263)));
+            let probes = chain.requests()[start..]
+                .iter()
+                .filter(|request| {
+                    request.method == "state_call"
+                        && request.params[0] == "TransactionPaymentApi_query_info"
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+            assert_eq!(probes.len(), 1);
+            let encoded = hex::decode(
+                probes[0].params[1]
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("public plan fee bytes"))?
+                    .trim_start_matches("0x"),
+            )?;
+            let decoded = snapshot
+                .block()
+                .runtime
+                .core()
+                .decode_extrinsic(&encoded[..encoded.len() - 4], true)?;
+            assert_eq!(
+                decoded.field("address").and_then(Value::as_str),
+                Some(PAYER.to_string().as_str())
+            );
+            let expected =
+                snapshot
+                    .block()
+                    .runtime
+                    .core()
+                    .decode_spec(&TypeSpec::Call, &expected, true)?;
+            assert_eq!(decoded.field("call"), Some(&expected));
+            Ok::<(), anyhow::Error>(())
+        }
+        .await;
         client.close().await;
+        assert_eq!(keys.acquisitions.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        outcome?;
         Ok(())
     }
 
