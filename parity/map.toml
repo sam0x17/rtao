@@ -3039,12 +3039,12 @@ notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pyte
 
 [[file]]
 py = "sdk/python/tests/unit/test_keyfiles_golden.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
+rs = ["Complete reviewed upstream pytest input; narrow native NaCl and permission counterparts in crates/rtao-wallet/tests/keyfile.rs"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "74ceea95d5fff0af271d0534e2e691e881dac162"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source-input reconciliation 2026-10-16: complete authenticated eight-test/23-assertion module reviewed against shared pinned native keys/keyfile crypto, guarded portable codec and specific wallet/signer/CLI fixtures. Retain oracle-only: this is not a complete eight-test native port, and ci/oracle does not run this pytest module. Independently reviewed native fixtures now author actual NaCl detection, literal persisted/decrypted Alice identity, post-decrypt signing, initial 0600/0700 modes and 0644-to-0600 overwrite. Those two native fixture functions pass on exact 0b0bb79 in hosted run 38883630624; that checkpoint has one separate picker-fixture failure, so no overall passing checkpoint is claimed. Typed scheme/SS58/signature APIs, async I/O and Result errors replace Python bindings; exact golden signing/password literals and explicit-read password sourcing are adapted. Valid Fernet-token decryption, the complete encrypted-created cold/hot wallet signing/raw-public-JSON scenario and isolated umask000 execution remain explicit native fixture gaps: prefix tests and retained dependency tests do not establish them. Source proves permission requests; the added fixture leaves process umask untouched. No fresh Python, cryptographic interoperability, platform or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_ledger_signer.py"
