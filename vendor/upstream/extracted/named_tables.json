@@ -22368,6 +22368,283 @@
         }
       }
     },
+    "sdk/python/tests/unit/test_cli_null_pruning.py": {
+      "format": 1,
+      "provenance": {
+        "blob": "0705e3c90e593202712a08d9ec9ed21a82d622a3",
+        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "path": "sdk/python/tests/unit/test_cli_null_pruning.py",
+        "tag": "v478"
+      },
+      "values": {
+        "test_invalid_requests_never_submit.parametrize": {
+          "derived": {
+            "function": "test_invalid_requests_never_submit",
+            "function_end_line": 160,
+            "function_line": 156,
+            "helper_end_line": 31,
+            "helper_line": 18,
+            "kind": "pruning-pytest-inputs"
+          },
+          "end_line": 154,
+          "line": 149,
+          "value": [
+            {
+              "message": "conflicting",
+              "state": {
+                "block": 100,
+                "frozen": false,
+                "genesis": "0xgenesis",
+                "maximum": 2500,
+                "mechanisms": 1,
+                "minimum": 64,
+                "mode": "Null",
+                "owner": "owner",
+                "pending_target": 128,
+                "population": 384
+              },
+              "target": 256
+            },
+            {
+              "message": "target must",
+              "state": {
+                "block": 100,
+                "frozen": false,
+                "genesis": "0xgenesis",
+                "maximum": 2500,
+                "mechanisms": 2,
+                "minimum": 64,
+                "mode": "Null",
+                "owner": "owner",
+                "pending_target": null,
+                "population": 384
+              },
+              "target": 256
+            },
+            {
+              "message": "target must",
+              "state": {
+                "block": 100,
+                "frozen": false,
+                "genesis": "0xgenesis",
+                "maximum": 2500,
+                "mechanisms": 1,
+                "minimum": 128,
+                "mode": "Null",
+                "owner": "owner",
+                "pending_target": null,
+                "population": 384
+              },
+              "target": 64
+            },
+            {
+              "message": "owner coldkey",
+              "state": {
+                "block": 100,
+                "frozen": false,
+                "genesis": "0xgenesis",
+                "maximum": 2500,
+                "mechanisms": 1,
+                "minimum": 64,
+                "mode": "Null",
+                "owner": "other",
+                "pending_target": null,
+                "population": 384
+              },
+              "target": 256
+            }
+          ]
+        },
+        "test_state_reads_are_pinned_and_match_admin_window.parametrize": {
+          "derived": {
+            "function": "test_state_reads_are_pinned_and_match_admin_window",
+            "function_end_line": 368,
+            "function_line": 341,
+            "kind": "pruning-pytest-inputs",
+            "storage_end_line": 356,
+            "storage_keys": [
+              "NetworksAdded",
+              "SubnetOwner",
+              "SubnetworkN",
+              "NullPruningTarget",
+              "MechanismCountCurrent",
+              "MinAllowedUids",
+              "MaxAllowedUids",
+              "SubnetEpochConsensus",
+              "Tempo",
+              "LastEpochBlock",
+              "PendingEpochAt",
+              "AdminFreezeWindow",
+              "BlockHash"
+            ],
+            "storage_line": 342
+          },
+          "end_line": 339,
+          "line": 333,
+          "value": [
+            {
+              "block": 100,
+              "expected": {
+                "frozen": false,
+                "mode": "Null",
+                "pending_target": 128,
+                "yuma_ceiling": 128
+              },
+              "netuid": 1,
+              "storage": {
+                "AdminFreezeWindow": 20,
+                "BlockHash": "0xgenesis",
+                "LastEpochBlock": 50,
+                "MaxAllowedUids": 1250,
+                "MechanismCountCurrent": 2,
+                "MinAllowedUids": 64,
+                "NetworksAdded": true,
+                "NullPruningTarget": 128,
+                "PendingEpochAt": 0,
+                "SubnetEpochConsensus": {
+                  "Null": null
+                },
+                "SubnetOwner": "owner",
+                "SubnetworkN": 320,
+                "Tempo": 100
+              }
+            },
+            {
+              "block": 100,
+              "expected": {
+                "frozen": true,
+                "mode": "Null",
+                "pending_target": 128,
+                "yuma_ceiling": 128
+              },
+              "netuid": 1,
+              "storage": {
+                "AdminFreezeWindow": 20,
+                "BlockHash": "0xgenesis",
+                "LastEpochBlock": 0,
+                "MaxAllowedUids": 1250,
+                "MechanismCountCurrent": 2,
+                "MinAllowedUids": 64,
+                "NetworksAdded": true,
+                "NullPruningTarget": 128,
+                "PendingEpochAt": 0,
+                "SubnetEpochConsensus": {
+                  "Null": null
+                },
+                "SubnetOwner": "owner",
+                "SubnetworkN": 320,
+                "Tempo": 100
+              }
+            },
+            {
+              "block": 100,
+              "expected": {
+                "frozen": true,
+                "mode": "Null",
+                "pending_target": 128,
+                "yuma_ceiling": 128
+              },
+              "netuid": 1,
+              "storage": {
+                "AdminFreezeWindow": 20,
+                "BlockHash": "0xgenesis",
+                "LastEpochBlock": 50,
+                "MaxAllowedUids": 1250,
+                "MechanismCountCurrent": 2,
+                "MinAllowedUids": 64,
+                "NetworksAdded": true,
+                "NullPruningTarget": 128,
+                "PendingEpochAt": 110,
+                "SubnetEpochConsensus": {
+                  "Null": null
+                },
+                "SubnetOwner": "owner",
+                "SubnetworkN": 320,
+                "Tempo": 100
+              }
+            },
+            {
+              "block": 100,
+              "expected": {
+                "frozen": false,
+                "mode": "Null",
+                "pending_target": 128,
+                "yuma_ceiling": 128
+              },
+              "netuid": 1,
+              "storage": {
+                "AdminFreezeWindow": 20,
+                "BlockHash": "0xgenesis",
+                "LastEpochBlock": 0,
+                "MaxAllowedUids": 1250,
+                "MechanismCountCurrent": 2,
+                "MinAllowedUids": 64,
+                "NetworksAdded": true,
+                "NullPruningTarget": 128,
+                "PendingEpochAt": 110,
+                "SubnetEpochConsensus": {
+                  "Null": null
+                },
+                "SubnetOwner": "owner",
+                "SubnetworkN": 320,
+                "Tempo": 0
+              }
+            },
+            {
+              "block": 100,
+              "expected": {
+                "frozen": false,
+                "mode": "Null",
+                "pending_target": 128,
+                "yuma_ceiling": 128
+              },
+              "netuid": 1,
+              "storage": {
+                "AdminFreezeWindow": 20,
+                "BlockHash": "0xgenesis",
+                "LastEpochBlock": 100,
+                "MaxAllowedUids": 1250,
+                "MechanismCountCurrent": 2,
+                "MinAllowedUids": 64,
+                "NetworksAdded": true,
+                "NullPruningTarget": 128,
+                "PendingEpochAt": 0,
+                "SubnetEpochConsensus": {
+                  "Null": null
+                },
+                "SubnetOwner": "owner",
+                "SubnetworkN": 320,
+                "Tempo": 20
+              }
+            }
+          ]
+        },
+        "test_switch_probes_all_legacy_indices_and_owner_cooldown.inputs": {
+          "derived": {
+            "function": "test_switch_probes_all_legacy_indices_and_owner_cooldown",
+            "function_end_line": 391,
+            "function_line": 371,
+            "kind": "pruning-pytest-inputs",
+            "storage_keys": [
+              "LastRateLimitedBlock",
+              "Tempo",
+              "OwnerHyperparamRateLimit"
+            ]
+          },
+          "end_line": 372,
+          "line": 372,
+          "value": {
+            "block": 100,
+            "netuid": 1,
+            "storage": {
+              "LastRateLimitedBlock": 90,
+              "OwnerHyperparamRateLimit": 1,
+              "Tempo": 20
+            }
+          }
+        }
+      }
+    },
     "sdk/python/tests/unit/test_rpc.py": {
       "format": 1,
       "provenance": {
