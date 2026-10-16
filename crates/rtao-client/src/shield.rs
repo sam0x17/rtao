@@ -182,7 +182,24 @@ impl Client {
                     .into());
                 }
             }
-            let (next_key, best) = limits.admission.run(self, self.shield_next_key()).await?;
+            let (next_key, _) = limits.admission.run(self, self.shield_next_key()).await?;
+            limits
+                .admission
+                .run(self, async {
+                    signer
+                        .prepare_shielded()
+                        .await
+                        .map_err(ClientError::Signing)
+                })
+                .await?;
+            // Interactive preparation may span many blocks. Both heights used
+            // by the era guard must be observed after the signer is ready.
+            let best = limits
+                .admission
+                .run(self, self.at(BlockRef::Best))
+                .await?
+                .block()
+                .number;
             let finalized = limits
                 .admission
                 .run(self, self.at(BlockRef::Finalized))

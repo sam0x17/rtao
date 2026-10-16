@@ -368,6 +368,13 @@ impl Signer for VaultSigner {
     fn metadata_constants(&self) -> Option<(u8, String)> {
         Some((9, "TAO".to_owned()))
     }
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
+        Box::pin(async move {
+            self.warm_up()
+                .await
+                .map_err(|error| SignerError::Vault(error.to_string()))
+        })
+    }
     fn sign<'a>(
         &'a self,
         request: &'a SigningRequest<'a>,
