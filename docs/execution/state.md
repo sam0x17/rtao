@@ -56,9 +56,8 @@ close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
 the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
 [M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
 
-The latest reviewed source map records 303/357 reconciled and 54 pending after
-the samples/PoW disposition below. The adopted generated matrix remains at
-301/56 until its next authenticated hosted refresh.
+The reviewed source map and adopted generated matrix now agree at 303/357
+reconciled and 54 pending after the authenticated refresh below.
 There remain 20 pending e2e mappings and 68 divergences. Passing CI does not
 reconcile the remaining source rows or accept a milestone. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
@@ -267,6 +266,57 @@ four reports and isolated lock are authenticated and adopted. The subsequent
 combined checkpoint must pass before milestone acceptance. Source map stays
 303/357 reconciled, 54 pending; adopted matrix stays 301/56 pending generation.
 No local Cargo/build/test, service, Studio work, new temporary root or filing.
+
+### Authenticated M1 preparation and combined follow-up
+
+Both preparation runs passed at exact `d5132a0`: codegen/report run
+[38871417189](https://github.com/sam0x17/rtao/actions/runs/38871417189) and isolated
+TLS-lock run
+[38871434589](https://github.com/sam0x17/rtao/actions/runs/38871434589).
+All 19 generated members, four reports and two TLS preparation members were
+inspected in memory and independently refetched. Exactly six generated/report
+paths plus `ci/tls-two-providers/Cargo.lock` were adopted. The bounded coordinated adoption
+proof is 18,348 bytes, SHA256
+`ce9a3d479f0d86644b449f770c874715ad4576d7f003bfc0c32997d9b0dc81de`.
+The two new RPC tables retain all seven literal cases and exact source spans;
+all previous corpus/catalog bytes and 17 other generated members are unchanged.
+The matrix promotes only the reviewed samples/PoW rows to 303/54. All 23 shipped
+dependency inputs, role counts, host flags, 20 e2e gaps and 68 divergences remain
+unchanged. No archive, extraction tree or local target was created.
+
+The isolated lock is 127,044 bytes, SHA256
+`f193c79d7eab8fd4bbc06c7e0099a3bb3f8fdb46b39be8719c72c5fcd9730fe1`.
+Graph proof requires one shared Rustls 0.23.46 with ring and AWS-LC features.
+Nine identities are new relative to the shipped lock, including the fixture;
+all git identities remain pinned. Read-only RustSec checks find the listed
+AWS-LC and generic-array advisories fixed in the resolved versions. This manual
+range review is not a fresh full cargo-audit result. Shipped supply gates and
+AWS-LC bans remain intact. The compiled-provider test still requires execution.
+
+Five independently reviewed actual root-command fixtures and the strengthened
+pagination assertion are integrated. The repair restores cached subnet identity/unit, compact
+fund addresses, ordered local/contact/NAV aliases, matchable-key prefix ambiguity
+and the canonical hint's upstream quiet exception. Exact number/address
+reservations remain. Keep whole root-helper and command rows pending until
+hosted results and their separate complete-source dispositions are reconciled.
+
+The complete RPC review traces all 40 functions and 91 explicit assertions.
+A real refused-initialization socket observer and the batch's ten-result
+cardinality assertion are integrated; existing cleanup and batch production code require no repair.
+Metagraph review finds one supported direct `from_dynamic` text gap: Python
+accepts ASCII separators between hex byte pairs. The repair shares the existing
+exact commitment parser through `pyfmt`, preserves commitment diagnostics and
+corrects three source spans. One new public adapter fixture covers accepted separators,
+split-nibble refusal and non-ASCII error precedence. Canonical chain text uses
+byte lists; no wire-path failure was demonstrated.
+
+The M1 resource audit covers all 23 execution documents and corrects 17 further
+historical cache/reproduction/platform requirements. Direct formatting and
+whitespace checks pass. The combined hosted run must execute the authored
+fixtures; the expected Nextest total is 3,051 plus one separate TLS test.
+Preparation alone accepts no milestone or full source/pytest row. Strict M8
+remains off, M2-S02 stays open/unaccepted, and no local build/test, service,
+Studio work, new temporary root or filing occurred.
 
 ## Prior integrated client checkpoint, 2026-10-15
 

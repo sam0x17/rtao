@@ -50,6 +50,15 @@ impl WalletRoot {
         fs::create_dir(&root)?;
         Ok(Self(root))
     }
+    fn add_hotkey(&self, wallet: &str, name: &str, address: AccountId) -> TestResult {
+        let directory = self.0.join(wallet).join("hotkeys");
+        fs::create_dir_all(&directory)?;
+        fs::write(
+            directory.join(name),
+            serde_json::to_vec(&json!({"ss58Address":address,"cryptoType":1}))?,
+        )?;
+        Ok(())
+    }
     fn add(&self, name: &str, address: AccountId) -> TestResult {
         let directory = self.0.join(name);
         fs::create_dir(&directory)?;
@@ -483,12 +492,17 @@ async fn terminal_fund_picker_pages_past_twenty_and_records_the_exact_hotkey() -
                 .iter()
                 .any(|message| message.contains("20 of 21 shown"))
         );
+        let identity = format!(
+            "21. {}… (Fund 20)",
+            expected.chars().take(8).collect::<String>()
+        );
+        assert!(messages.iter().any(|message| message.starts_with(&identity)
+            && message.contains("rate")
+            && message.contains("NAV")));
         assert!(
-            messages
+            !messages
                 .iter()
-                .any(|message| message.starts_with("21. Fund 20")
-                    && message.contains("rate")
-                    && message.contains("NAV"))
+                .any(|message| message.starts_with("21. Fund 20"))
         );
     }
     assert!(
@@ -546,6 +560,397 @@ async fn root_picker_prefers_reserved_numbers_and_exact_hotkeys_over_labels() ->
         );
         client.close().await;
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_move_selector_preserves_contact_and_nav_identity_order() -> TestResult {
+    let owner = OWNER.to_string();
+    let hotkey = HOT.to_string();
+    for chain_names in [false, true] {
+        let mut state = seed()?;
+        state.seed_runtime(
+            "BetaBasketRuntimeApi",
+            "get_all_validator_baskets",
+            json!([summary(HOT, 2_000_000_000), summary(OTHER, 3_000_000_000)]),
+        )?;
+        for (key, owner_key, name) in [(HOT, OWNER, "ALIAS"), (OTHER, OTHER, "alias")] {
+            state.seed_python("SubtensorModule", "Owner", &[json!(key)], json!(owner_key))?;
+            state.seed_python(
+                "SubtensorModule",
+                "IdentitiesV2",
+                &[json!(owner_key)],
+                json!({"name":name}),
+            )?;
+        }
+        let (client, chain) = client(state).await?;
+        let parsed = parse(&[
+            "rtao",
+            "root",
+            "move",
+            "--from",
+            "alias",
+            "--to",
+            &hotkey,
+            "--coldkey",
+            &owner,
+            "--json",
+        ])?;
+        let (mut ctx, _) = context(&parsed)?;
+        ctx.books.addresses = if chain_names {
+            vec![]
+        } else {
+            vec![
+                json!({"address":OTHER,"name":"alias"}),
+                json!({"address":HOT,"name":"ALIAS"}),
+            ]
+        };
+        let request = parse_request(&mut ctx, &parsed)?;
+        let tx =
+            root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+                .await?
+                .ok_or("ordered selector")?;
+        assert_eq!(tx.op, "move_stake");
+        assert_eq!(tx.args["origin_hotkey_ss58"], json!(OTHER));
+        assert_eq!(tx.args["dest_hotkey_ss58"], json!(HOT));
+        assert_eq!(
+            tx.intent()?.as_dyn().to_json_dyn()["origin_hotkey_ss58"],
+            json!(OTHER)
+        );
+        assert_eq!(tx.args["amount_alpha"], "all");
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_local_names_follow_natural_wallet_and_hotkey_order_before_contacts() -> TestResult {
+    let wallets = WalletRoot::new()?;
+    wallets.add("wallet10", OTHER)?;
+    wallets.add("wallet2", OWNER)?;
+    // Creation order deliberately opposes the expected natural wallet/hotkey order.
+    wallets.add_hotkey("wallet10", "alias", HOT)?;
+    wallets.add_hotkey("wallet2", "ALIAS", OTHER)?;
+    wallets.add_hotkey("wallet2", "hot10", HOT)?;
+    wallets.add_hotkey("wallet2", "hot2", HOT)?;
+    let owner = OWNER.to_string();
+    let hotkey = HOT.to_string();
+    {
+        let (client, chain) = client(seed()?).await?;
+        let parsed = parse(&[
+            "rtao",
+            "root",
+            "move",
+            "--from",
+            "alias",
+            "--to",
+            &hotkey,
+            "--coldkey",
+            &owner,
+            "--json",
+        ])?;
+        let (mut ctx, _) = context(&parsed)?;
+        ctx.globals.wallet_path = wallets.0.clone();
+        ctx.books.addresses = vec![json!({"address":HOT,"name":"contact must not replace hot2"})];
+        let request = parse_request(&mut ctx, &parsed)?;
+        let tx =
+            root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+                .await?
+                .ok_or("local ordered selector")?;
+        assert_eq!(tx.op, "move_stake");
+        assert_eq!(tx.args["origin_hotkey_ss58"], json!(OTHER));
+        assert_eq!(tx.args["dest_hotkey_ss58"], json!(HOT));
+        assert_eq!(
+            ctx.output.address_names()?.get(&hotkey).map(String::as_str),
+            Some("hot2")
+        );
+        assert_eq!(
+            ctx.output
+                .address_names()?
+                .get(&OTHER.to_string())
+                .map(String::as_str),
+            Some("ALIAS")
+        );
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .all(|request| !request.method.starts_with("author_"))
+        );
+        client.close().await;
+    }
+    // Python's natural key treats wallet2 and wallet02 as equal. Whichever
+    // wallet the directory enumerates first must stay a complete group; its
+    // hot9 label wins over the second wallet's otherwise earlier hot1 label.
+    let tied_wallets = WalletRoot::new()?;
+    tied_wallets.add("wallet2", OWNER)?;
+    tied_wallets.add("wallet02", OTHER)?;
+    let order = fs::read_dir(&tied_wallets.0)?
+        .map(|entry| entry.map(|entry| entry.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(order.len(), 2);
+    tied_wallets.add_hotkey(&order[0], "hot9", HOT)?;
+    tied_wallets.add_hotkey(&order[1], "hot1", HOT)?;
+    let (client, chain) = client(seed()?).await?;
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "move",
+        "--from",
+        &OTHER.to_string(),
+        "--to",
+        &hotkey,
+        "--coldkey",
+        &owner,
+        "--json",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    ctx.globals.wallet_path = tied_wallets.0.clone();
+    ctx.books.addresses.clear();
+    let request = parse_request(&mut ctx, &parsed)?;
+    root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+        .await?
+        .ok_or("natural-equal wallet groups")?;
+    assert_eq!(
+        ctx.output.address_names()?.get(&hotkey).map(String::as_str),
+        Some("hot9")
+    );
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_pickers_count_alias_prefix_keys_and_reprompt_before_recording() -> TestResult {
+    let hotkey = HOT.to_string();
+    let other = OTHER.to_string();
+    let length = (1..hotkey.len() - 1)
+        .find(|length| !other.starts_with(&hotkey[..*length]))
+        .ok_or("distinct address prefix")?;
+    let prefix = &hotkey[..length];
+    let alias = &hotkey[..length + 1];
+    let owner = OWNER.to_string();
+    for position_picker in [false, true] {
+        for exact_alias in [false, true] {
+            let mut state = seed()?;
+            state.seed_runtime(
+                "BetaBasketRuntimeApi",
+                "get_root_basket_positions",
+                json!([[HOT, 2, 123456789], [OTHER, 3, 2_000_000]]),
+            )?;
+            let (client, chain) = client(state).await?;
+            let argv = if position_picker {
+                vec!["rtao", "root", "claim", "--coldkey", &owner, "--yes"]
+            } else {
+                vec!["rtao", "root", "allocate", "--amount", "all", "--yes"]
+            };
+            let parsed = parse(&argv)?;
+            let (mut ctx, _) = context(&parsed)?;
+            ctx.books.addresses = vec![
+                json!({"address":HOT,"name":alias}),
+                json!({"address":OTHER,"name":"Destination"}),
+            ];
+            let messages = Arc::new(Mutex::new(Vec::new()));
+            let answers = if exact_alias {
+                VecDeque::from([alias.to_owned()])
+            } else {
+                VecDeque::from([prefix.to_owned(), "2".into()])
+            };
+            ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptTerminal {
+                answers,
+                messages: messages.clone(),
+            })));
+            let request = parse_request(&mut ctx, &parsed)?;
+            let mut history = PromptHistory::default();
+            let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut history)
+                .await?
+                .ok_or("prefix picker")?;
+            let expected = if exact_alias { HOT } else { OTHER };
+            assert_eq!(
+                tx.op,
+                if position_picker {
+                    "claim_root_with_hotkey"
+                } else {
+                    "stake_into_basket"
+                }
+            );
+            assert_eq!(tx.args["hotkey_ss58"], json!(expected));
+            assert_eq!(
+                tx.intent()?.as_dyn().to_json_dyn()["hotkey_ss58"],
+                json!(expected)
+            );
+            assert_eq!(
+                history
+                    .replay_command(&argv.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>()),
+                format!("{} --hotkey {expected}", argv.join(" "))
+            );
+            {
+                let messages = messages.lock().map_err(|_| "prefix messages")?;
+                assert_eq!(
+                    messages
+                        .iter()
+                        .filter(|line| *line == "enter a list number, name, or hotkey")
+                        .count(),
+                    usize::from(!exact_alias)
+                );
+                if position_picker {
+                    assert!(
+                        messages
+                            .iter()
+                            .any(|line| line.starts_with(&format!("1. {alias}  total ")))
+                    );
+                    assert!(!messages.iter().any(|line| line.starts_with(&format!(
+                        "1. {}… (",
+                        hotkey.chars().take(8).collect::<String>()
+                    ))));
+                }
+            }
+            assert!(
+                chain
+                    .requests()
+                    .iter()
+                    .all(|request| !request.method.starts_with("author_"))
+            );
+            client.close().await;
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_detail_holdings_keep_cached_subnet_names_units_and_machine_shape() -> TestResult {
+    let mut state = seed()?;
+    let mut record = summary(HOT, 2_000_000_000);
+    record["holdings"] = json!([
+        {"netuid":0,"alpha":1_000_000_000,"spot_tao":1_000_000_000,"realizable_tao":1_000_000_000},
+        {"netuid":4,"alpha":500_000_000,"spot_tao":1_000_000_000,"realizable_tao":1_000_000_000}
+    ]);
+    state.seed_runtime(
+        "BetaBasketRuntimeApi",
+        "get_validator_basket_summary",
+        record,
+    )?;
+    let (client, chain) = client(state).await?;
+    let owner = OWNER.to_string();
+    let hotkey = HOT.to_string();
+    for machine in [false, true] {
+        let mut args = vec!["rtao", "root", "list", &hotkey, "--coldkey", &owner];
+        if machine {
+            args.push("--json");
+        }
+        let parsed = parse(&args)?;
+        let (mut ctx, sink) = context(&parsed)?;
+        ctx.output.update_subnet_names([(4, "Targon".into())])?;
+        ctx.output.update_token_symbols([(4, "γ".into())])?;
+        let request = parse_request(&mut ctx, &parsed)?;
+        root::execute(
+            &mut ctx,
+            &client,
+            &request,
+            SubmissionOptions::default(),
+            None,
+            &mut PromptHistory::default(),
+        )
+        .await?;
+        let stdout = sink.text(Stream::Stdout)?;
+        if machine {
+            let json: Value = serde_json::from_str(&stdout)?;
+            assert_eq!(json["holdings"][0]["netuid"], 0);
+            assert_eq!(json["holdings"][1]["netuid"], 4);
+            assert_eq!(
+                json["holdings"].as_array().ok_or("holding records")?.len(),
+                2
+            );
+            assert!(json["holdings"][1].get("name").is_none());
+            assert!(!stdout.contains("Targon"));
+            assert!(sink.text(Stream::Stderr)?.is_empty());
+        } else {
+            assert!(stdout.contains("0 (root) τ"));
+            assert!(stdout.contains("4 (Targon) γ"));
+            assert!(stdout.contains("realizable (τ)"));
+        }
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn root_detail_canonical_hint_survives_quiet_but_stays_off_json_and_exact_address()
+-> TestResult {
+    let (client, chain) = client(seed()?).await?;
+    let owner = OWNER.to_string();
+    let hotkey = HOT.to_string();
+    for (selector, quiet, machine, hint) in [
+        ("12", false, false, true),
+        ("12", true, false, true),
+        ("STRASSE", true, false, true),
+        (hotkey.as_str(), true, false, false),
+        ("12", true, true, false),
+    ] {
+        let mut args = vec!["rtao", "root", "list", selector, "--coldkey", &owner];
+        if quiet {
+            args.push("--quiet");
+        }
+        if machine {
+            args.push("--json");
+        }
+        let parsed = parse(&args)?;
+        let (mut ctx, sink) = context(&parsed)?;
+        let request = parse_request(&mut ctx, &parsed)?;
+        root::execute(
+            &mut ctx,
+            &client,
+            &request,
+            SubmissionOptions::default(),
+            None,
+            &mut PromptHistory::default(),
+        )
+        .await?;
+        let stderr = sink.text(Stream::Stderr)?;
+        let expected = format!("hint: rtao root list {hotkey}");
+        assert_eq!(
+            stderr.lines().filter(|line| *line == expected).count(),
+            usize::from(hint)
+        );
+        assert!(!sink.text(Stream::Stdout)?.contains("hint:"));
+        if quiet {
+            assert_eq!(
+                stderr,
+                if hint {
+                    format!("{expected}\n")
+                } else {
+                    String::new()
+                }
+            );
+        }
+        if machine {
+            let _: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        }
+    }
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
     Ok(())
 }
 

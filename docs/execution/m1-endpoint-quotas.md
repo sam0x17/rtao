@@ -1,5 +1,9 @@
 # M1-24 public endpoint pacing observations
 
+Current pacing checks use fixtures and `FakeNode` in free `ubuntu-latest` CI
+under Q30. Any new public-endpoint sample is optional targeted hosted work with
+bounded traffic. No local probe workspace or build is required.
+
 On 2026-10-14, 08:10:00–08:14:10 UTC, all seven public URLs in the extracted
 network, fallback and archive pools accepted 36 of 36 lightweight reads with
 one request per second and no burst. `RateLimit::PUBLIC` therefore retains
@@ -69,11 +73,11 @@ The fixture used an independent temporary Cargo workspace with path dependency
 `rtao-rpc`, `futures = "0.3"`, `serde_json = "1"` with `arbitrary_precision`,
 `tokio = "1.53"` with `macros`, `rt-multi-thread`, `time`, `url = "2"`, and
 `tokio-tungstenite = "0.30"` with default features disabled and `connect`,
-`handshake`, `rustls-tls-native-roots`. To reproduce, create that workspace
-under the recorded task temporary root, point its binary at the fixture,
-restore the retained lock as `Cargo.lock`, and build/run with its
-`--manifest-path`. Endpoint labels in the source can be passed as arguments
-to restrict a run. The fixture never accepts a higher rate or request count.
+`handshake`, `rustls-tls-native-roots`. These dependencies and the retained
+source/lock document that historical run. A future sample needs a reviewed
+bounded hosted entry point; do not recreate its local workspace or retired
+build root. Endpoint labels can restrict a hosted sample, and the fixture
+never accepts a higher rate or request count.
 
 `ratelimit_paces_public_presets` passes against the real `Session` and
 `FakeNode`: discovery and two concurrently queued reads arrive at least
@@ -89,5 +93,6 @@ The disposable fixture directory and its exact binary, dependency,
 incremental and fingerprint artifacts were removed after checks for running
 processes, open files, launchd/configuration references, symlinks and virtual
 environments. The [cleanup record](endpoint-quotas/cleanup.json) lists the
-removed directories. Shared plan build and scratch caches remain live for
-other workers; the useful source, lock and bounded results remain here.
+removed directories. The former plan build/scratch root is retired and absent;
+no current dependency on those caches remains. Useful source, lock and bounded
+results remain here; shared global Cargo caches and unrelated work are preserved.

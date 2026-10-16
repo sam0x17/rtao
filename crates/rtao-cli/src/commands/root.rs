@@ -23,7 +23,7 @@ use rtao::{
 };
 use rtao_runtime::storage::subtensor_module as st;
 use serde_json::{Map, Value, json};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 fn failure(error: impl std::fmt::Display) -> CliError {
     CliError::failure(error.to_string())
@@ -437,31 +437,61 @@ fn local_wallets(ctx: &AppContext) -> Result<Vec<(String, AccountId)>, CliError>
     wallets.sort_by(|left, right| super::wallet::natural_cmp(&left.0, &right.0));
     Ok(wallets)
 }
-fn local_names(ctx: &AppContext) -> Result<BTreeMap<AccountId, String>, CliError> {
+fn local_names(ctx: &AppContext) -> Result<Vec<(AccountId, String)>, CliError> {
     let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
-    let mut names = BTreeMap::new();
-    for candidate in lookup
+    let mut candidates: Vec<_> = lookup
         .candidates()
         .into_iter()
         .filter(|candidate| candidate.source == "hotkey")
-    {
-        if let Ok(account) = candidate.address.parse() {
-            names.entry(account).or_insert_with(|| {
+        .collect();
+    // Preserve wallet groups when distinct spellings have the same natural key.
+    let mut wallet_rank = BTreeMap::new();
+    for candidate in &candidates {
+        let wallet = candidate
+            .name
+            .rsplit_once('/')
+            .map_or("", |(wallet, _)| wallet);
+        let next = wallet_rank.len();
+        wallet_rank.entry(wallet.to_owned()).or_insert(next);
+    }
+    // Python sorts wallets stably, then sorts each wallet's hotkeys stably.
+    // Compare the components separately: a slash is not part of a wallet name.
+    candidates.sort_by(|left, right| {
+        let (left_wallet, left_hotkey) = left.name.rsplit_once('/').unwrap_or(("", &left.name));
+        let (right_wallet, right_hotkey) = right.name.rsplit_once('/').unwrap_or(("", &right.name));
+        super::wallet::natural_cmp(left_wallet, right_wallet)
+            .then_with(|| {
+                wallet_rank
+                    .get(left_wallet)
+                    .cmp(&wallet_rank.get(right_wallet))
+            })
+            .then_with(|| super::wallet::natural_cmp(left_hotkey, right_hotkey))
+    });
+    let mut names = Vec::new();
+    let mut seen = BTreeSet::new();
+    for candidate in candidates {
+        if let Ok(account) = candidate.address.parse::<AccountId>()
+            && seen.insert(account)
+        {
+            names.push((
+                account,
                 candidate
                     .name
                     .rsplit('/')
                     .next()
                     .unwrap_or(&candidate.name)
-                    .to_owned()
-            });
+                    .to_owned(),
+            ));
         }
     }
+    // Contacts follow local hotkeys in file order; the first label wins.
     for entry in &ctx.books.addresses {
         if let (Some(address), Some(name)) = (entry["address"].as_str(), entry["name"].as_str())
             && !name.is_empty()
-            && let Ok(account) = address.parse()
+            && let Ok(account) = address.parse::<AccountId>()
+            && seen.insert(account)
         {
-            names.entry(account).or_insert_with(|| name.to_owned());
+            names.push((account, name.to_owned()));
         }
     }
     Ok(names)
@@ -471,7 +501,7 @@ async fn names(
     client: &Client,
     hotkeys: &[AccountId],
 ) -> Result<BTreeMap<AccountId, String>, CliError> {
-    let mut names = local_names(ctx)?;
+    let mut names: BTreeMap<_, _> = local_names(ctx)?.into_iter().collect();
     let missing: Vec<_> = hotkeys
         .iter()
         .filter(|key| !names.contains_key(key))
@@ -536,18 +566,23 @@ async fn selector(ctx: &AppContext, client: &Client, value: &str) -> Result<Acco
     let funds = m6_root::root_baskets(client).await.map_err(failure)?;
     // Selection accepts the chain name even when a different local alias
     // wins display precedence. Do not reuse display-name filtering here.
-    for (hotkey, identity) in
+    let identities =
         owner::hotkey_identities(client, funds.iter().map(|fund| fund.hotkey).collect())
             .await
-            .map_err(failure)?
-    {
-        if let Some(name) = identity["name"].as_str().filter(|name| !name.is_empty())
+            .map_err(failure)?;
+    // The identity read returns a lookup map; selection must retain the funds'
+    // descending NAV order, including stable ties, rather than account-byte order.
+    for fund in &funds {
+        if let Some(name) = identities
+            .get(&fund.hotkey)
+            .and_then(|identity| identity["name"].as_str())
+            .filter(|name| !name.is_empty())
             && casefold(name) == wanted
         {
             ctx.output
-                .name_address(&hotkey.to_string(), name)
+                .name_address(&fund.hotkey.to_string(), name)
                 .map_err(failure)?;
-            return Ok(hotkey);
+            return Ok(fund.hotkey);
         }
     }
     Err(
@@ -593,7 +628,14 @@ fn choose(
                 .message(&format!(
                     "{}. {}{}",
                     index + 1,
-                    label(*hotkey, names),
+                    if page {
+                        ctx.output.account_text(
+                            &hotkey.to_string(),
+                            names.get(hotkey).map(String::as_str),
+                        )
+                    } else {
+                        label(*hotkey, names)
+                    },
                     details.get(hotkey).map_or("", String::as_str)
                 ))
                 .map_err(prompt_error)?;
@@ -617,6 +659,17 @@ fn choose(
             .map_err(prompt_error)?;
         return Ok(Some(hotkeys[0]));
     }
+    let mut matchable: BTreeMap<_, _> = hotkeys
+        .iter()
+        .enumerate()
+        .map(|(index, hotkey)| ((index + 1).to_string(), *hotkey))
+        .collect();
+    for hotkey in hotkeys {
+        matchable.insert(hotkey.to_string(), *hotkey);
+    }
+    for hotkey in hotkeys {
+        matchable.entry(label(*hotkey, names)).or_insert(*hotkey);
+    }
     loop {
         let raw = terminal
             .read_line(&format!(
@@ -638,29 +691,15 @@ fn choose(
             }
             continue;
         }
-        if let Some(key) = raw
-            .parse::<usize>()
-            .ok()
-            .filter(|index| index.to_string() == raw)
-            .and_then(|index| index.checked_sub(1))
-            .and_then(|index| hotkeys.get(index))
-        {
+        if let Some(key) = matchable.get(raw) {
             return Ok(Some(*key));
         }
-        // Every listed address is reserved before display aliases are added.
-        if let Some(key) = hotkeys.iter().find(|key| key.to_string() == raw) {
-            return Ok(Some(*key));
-        }
-        if let Some(key) = hotkeys
+        // Python counts matching keys, including a label that is itself an
+        // address prefix. Two keys remain ambiguous even for the same validator.
+        let mut matching = matchable
             .iter()
-            .find(|key| names.get(key).is_some_and(|name| name == raw))
-        {
-            return Ok(Some(*key));
-        }
-        let mut matching = hotkeys
-            .iter()
-            .filter(|key| key.to_string().starts_with(raw));
-        if let (Some(key), None) = (matching.next(), matching.next()) {
+            .filter(|(key, hotkey)| key.starts_with(raw) && hotkey.to_string().starts_with(raw));
+        if let (Some((_, key)), None) = (matching.next(), matching.next()) {
             return Ok(Some(*key));
         }
         terminal
@@ -1521,7 +1560,7 @@ async fn execute_list(
             .iter()
             .map(|row| {
                 vec![
-                    json!(row.netuid),
+                    json!(ctx.output.subnet_text(row.netuid, true)),
                     json!(row.alpha.to_string()),
                     json!(row.realizable_tao.to_string()),
                     json!(row.spot_tao.to_string()),
@@ -1551,8 +1590,15 @@ async fn execute_list(
             )?;
         }
         if validator != &hotkey.to_string() {
+            // Upstream uses a separate stderr console for this canonical hint,
+            // so it survives --quiet. JSON has already returned above. The
+            // interpolated AccountId is canonical, with no raw selector text.
             ctx.output
-                .message(&format!("hint: rtao root list {hotkey}"))
+                .sink()
+                .write(
+                    crate::output::Stream::Stderr,
+                    format!("hint: rtao root list {hotkey}\n").as_bytes(),
+                )
                 .map_err(failure)?;
         }
         return Ok(());

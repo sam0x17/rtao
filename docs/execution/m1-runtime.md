@@ -24,7 +24,9 @@ Traversal rejects malformed registries and projections and has 128-level depth a
 
 RuntimeHandle owns immutable parsed metadata, name caches, structural hashes, the surface report, and a cached RFC-0078 digest. V14 remains readable and refuses call composition and digest signing. Unknown extensions with nonempty payloads and unsupported extrinsic versions disable signing before a call is composed. CallBytes stamps both runtime versions, and every nested typed call must match both. Generated calls use the core's `compose_call` encoder after checking their own descriptor, so unrelated drift does not prevent a compatible call.
 
-Validation after the surface review corrections:
+Historical validation after the surface review corrections follows. Current
+substantial checks run in free `ubuntu-latest` CI under Q30; no local
+regeneration/build campaign is required:
 
 - Runtime unit tests: 49 passed, including the full generated descriptor inventory, model/core comparisons, unrelated additions, per-call refusal, V14, extension guards, stamps, projections, fixed semantic validation and digest agreement.
 - Generator tests: 14 passed, covering six generation tests, five model/source tripwire checks and three namespace generator checks. The shared 22 shape tests run in the runtime suite; generator and drift use that crate's canonical shape types and implementation.
@@ -36,4 +38,4 @@ Validation after the surface review corrections:
 - Xtask Rust 1.89 all-target check: passed. Its latest strict Clippy run reaches one unrelated extraction lint, invalidate_block's receiver is only used in recursion; the extraction owner has the correction request.
 - `cargo xtask regen --check`: passed against repository-pinned metadata and all five Python descriptor files.
 
-The final review corrections are verified. Surface reports require checked membership before an individual descriptor can pass its shape gate. Type identities remain descriptive; argument names and structural hashes decide encoding compatibility, so an unrelated leaf type alias does not refuse an unchanged call. Both corrections have regressions. The test harness directory used by the handle worker was removed after a process, launchd, configuration, symlink, and virtual-environment audit. The shared task build cache remains a live dependency of the ongoing plan execution.
+The final review corrections are verified. Surface reports require checked membership before an individual descriptor can pass its shape gate. Type identities remain descriptive; argument names and structural hashes decide encoding compatibility, so an unrelated leaf type alias does not refuse an unchanged call. Both corrections have regressions. The test harness directory used by the handle worker was removed after a process, launchd, configuration, symlink, and virtual-environment audit. The former task build root is retired and absent; no current dependency on those caches remains. Shared global Cargo/toolchain caches are preserved.

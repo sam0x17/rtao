@@ -1,5 +1,12 @@
 # M1 transport validation
 
+Current source review traces all 40 pinned `test_rpc.py` functions and 91
+explicit assertions to native witnesses or documented API/input adaptations.
+The follow-up adds an actual refused-Client-initialization socket observer and
+the missing ten-result batch cardinality assertion. Generated parameter inputs
+are authenticated and adopted; combined hosted execution remains pending.
+The complete source/pytest row is not accepted by the older counts below.
+
 `rtao-rpc` now owns a single WebSocket supervisor and implements the real
 `subxt_rpcs::client::RpcClientT` interface. `FakeNode` exercises it over loopback
 WebSockets; `FakeChain` implements that interface directly over the same encoded
@@ -33,17 +40,17 @@ policy failure and successful completion.
 Both WebSocket size limits are 256 MiB by default. The transport accepts the
 required 20 MiB response in one frame. TLS uses an explicit ring configuration
 with native and extra roots and HTTP/1.1 ALPN. The library never installs or reads
-the process-default crypto provider. The independent two-provider regression and
-its reproduction are recorded in [m1-transport-policy.md](m1-transport-policy.md).
+the process-default crypto provider. Current two-provider source and hosted
+validation status are recorded in
+[m1-transport-policy.md](m1-transport-policy.md).
 
 ## Checks
 
-All checks use the recorded task root for temporary files and builds:
+The following commands record historical validation. Current substantial checks
+run in free `ubuntu-latest` CI under Q30. The former execution root is retired
+and absent; do not recreate it or run this suite locally.
 
-```sh
-export RTAO_TEMP_ROOT=~/workspace/rtao/target/execute-plan.6Ro0PC
-export CARGO_TARGET_DIR="$RTAO_TEMP_ROOT/build"
-export TMPDIR="$RTAO_TEMP_ROOT/tmp"
+```text
 cargo test -p rtao-rpc --all-features --locked
 cargo test -p rtao-testkit --features rpc-rate-limit,rpc-metrics \
   --test rpc --test rpc_lifecycle --test rpc_metrics --test fakes --locked
@@ -82,13 +89,14 @@ third-party-only dependency layer. A workspace consumer must enable the
 disable default features.
 
 No milestone checkbox, release tag or successful full-workspace gate is inferred
-from these narrow checks. The shared task build cache remains in use by the root
-execution task; disposable transport probes were removed.
+from these narrow checks. Disposable transport probes were removed; the former
+task build root is retired and creates no current cache dependency. Shared
+global Cargo/toolchain caches remain preserved.
 
 The final repeat of the testkit target Clippy command reached a concurrent
 primitive edit and stopped because the newly declared `python`, `drand`,
 `hyperparams` and `ratio` modules had not yet been written. The earlier target
-Clippy run passed. Repeat that command after those modules are integrated.
+Clippy run passed. Any integrated repeat belongs in hosted CI under Q30.
 The final standalone RPC Clippy, no-default-feature check and Rust 1.89 check
 passed; its active normal/build graph contains no internal rtao crate,
 `bittensor-core`, jsonrpsee, reqwest, native-tls or aws-lc dependency.

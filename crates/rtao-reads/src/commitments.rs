@@ -251,7 +251,7 @@ impl Serialize for CommitmentMap {
 }
 
 /// Decode corpus-shaped storage rows without performing any I/O.
-// py: sdk/python/bittensor/metagraph.py:408-463 (_commitments)
+// py: sdk/python/bittensor/metagraph.py:406-456 (_commitments)
 pub fn decode_commitments(
     netuid: NetUid,
     committed: &[(String, JsonValue)],
@@ -406,7 +406,7 @@ fn field_round(fields: &[JsonValue], variant_name: &str) -> Result<Option<u64>, 
 }
 
 /// Concatenate Raw fields and render non-timelock string payloads as hashes.
-// py: sdk/python/bittensor/metagraph.py:494-521 (_decode_fields)
+// py: sdk/python/bittensor/metagraph.py:489-510 (_decode_fields)
 pub fn decode_fields(fields: &[JsonValue]) -> Result<String, CommitmentError> {
     let mut raw = Vec::new();
     let mut hashes = Vec::new();
@@ -435,7 +435,7 @@ pub fn decode_fields(fields: &[JsonValue]) -> Result<String, CommitmentError> {
 ///
 /// As in Python, the compact prefix chooses only the number of bytes to skip;
 /// its encoded length is not used to truncate or validate the plaintext.
-// py: sdk/python/bittensor/metagraph.py:546-571 (_revealed_entry)
+// py: sdk/python/bittensor/metagraph.py:535-560 (_revealed_entry)
 pub fn decode_revealed_entry(entry: &JsonValue) -> Result<(u64, String), CommitmentError> {
     let entry = entry
         .as_array()
@@ -467,38 +467,7 @@ fn utf8_or_hex(raw: Vec<u8>) -> String {
 }
 
 pub(crate) fn python_fromhex(text: &str, field: &str) -> Result<Vec<u8>, CommitmentError> {
-    let chars: Vec<_> = text.chars().collect();
-    let mut index = 0;
-    let mut bytes = Vec::new();
-    let error = |position| {
-        invalid(
-            field,
-            format!("non-hexadecimal number found in fromhex() arg at position {position}"),
-        )
-    };
-    // CPython rejects the first non-ASCII character before inspecting any
-    // hexadecimal pairs, even when an earlier ASCII character is malformed.
-    if let Some(position) = chars.iter().position(|character| !character.is_ascii()) {
-        return Err(error(position));
-    }
-    while index < chars.len() {
-        if matches!(chars[index], '\t'..='\r' | ' ') {
-            index += 1;
-            continue;
-        }
-        let upper = chars[index]
-            .to_digit(16)
-            .filter(|_| chars[index].is_ascii())
-            .ok_or_else(|| error(index))?;
-        index += 1;
-        let lower = chars
-            .get(index)
-            .and_then(|digit| digit.to_digit(16).filter(|_| digit.is_ascii()))
-            .ok_or_else(|| error(index))?;
-        bytes.push((upper * 16 + lower) as u8);
-        index += 1;
-    }
-    Ok(bytes)
+    rtao_primitives::pyfmt::bytes_fromhex(text).map_err(|message| invalid(field, message))
 }
 
 fn age_text(mut seconds: u64) -> String {

@@ -30,8 +30,9 @@ V14 conversion of that metadata. All 22 cache tests passed, with no ignored
 tests. They cover parent selection, cache bounds and eviction, sharing,
 cancellation, upgrade invalidation, retryable failures, disk byte equality,
 pruning and corrupt recovery, narrow legacy fallback, V14 signing refusal,
-and runtime API version lookup. These commands passed against the product
-crate:
+and runtime API version lookup. These historical commands passed against the
+product crate. Current substantial checks belong in free `ubuntu-latest` CI
+under Q30, without a local rebuild:
 
 ```text
 cargo test -p rtao-client --lib cache:: --no-default-features --locked
@@ -43,8 +44,9 @@ cargo +1.89.0 check -p rtao-client --no-default-features --locked
 Builds and tests used the recorded
 `target/execute-plan.6Ro0PC/{build,tmp}` root. Fixture directories were removed
 after their RPC and blocking workers completed; the final directory check
-found no `runtime-cache-test-*` directories. The shared build and tooling
-caches remain live for the plan executor. No Python was run locally.
+found no `runtime-cache-test-*` directories. That execution root is retired
+and absent; no current build/cache dependency remains. Shared global Cargo and
+toolchain caches are preserved. No Python was run locally.
 
 ## M3 offline persistence support
 
@@ -69,7 +71,8 @@ preservation of malformed and missing entries, empty disk API provenance and
 head/cache isolation. Symlinks, FIFOs, directories and oversized files are
 rejected without mutation; the FIFO check returns within its one-second budget
 with no writer present. Strict all-target Clippy for primitives, client, intents
-and TX passed on both toolchains. These follow-up logs are retained under
-`target/execute-plan.6Ro0PC/tmp/m2-cache-persistence-bounds-{current,msrv,clippy,clippy-msrv}.log`.
+and TX passed on both toolchains. Those follow-up logs were recorded under
+`target/execute-plan.6Ro0PC/tmp/m2-cache-persistence-bounds-{current,msrv,clippy,clippy-msrv}.log`;
+that path describes historical logs in the retired root.
 All fixture workers completed before their RAII owners removed the fixtures;
 the final directory audit found no `runtime-cache-test-*` directories.

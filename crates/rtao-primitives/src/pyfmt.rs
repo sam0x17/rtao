@@ -1,6 +1,7 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/metagraph.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/balance.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/hyperparams.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Python-compatible float and balance formatting.
+//! Python-compatible text, numeric parsing and balance formatting.
 //!
 //! Balance conversion rounds the integer quotient once, before formatting the
 //! resulting binary float. Decimal formatting rounds that exact binary value,
@@ -17,6 +18,44 @@ use crate::NetUid;
 /// Shared by Python-compatible diagnostics, including wallet name validation.
 pub fn string_repr(value: &str) -> String {
     crate::python::string_repr(value)
+}
+
+// py: sdk/python/bittensor/metagraph.py:459-472 (_text)
+// py: sdk/python/bittensor/metagraph.py:489-510 (_decode_fields)
+/// Decode Python's `bytes.fromhex(text)` syntax, without a `0x` prefix.
+///
+/// The six ASCII whitespace characters are accepted between complete byte
+/// pairs. Errors retain Python's message and position; the first non-ASCII
+/// character is rejected before checking earlier malformed ASCII pairs.
+pub fn bytes_fromhex(text: &str) -> Result<Vec<u8>, String> {
+    let chars: Vec<_> = text.chars().collect();
+    let mut index = 0;
+    let mut bytes = Vec::new();
+    let error =
+        |position| format!("non-hexadecimal number found in fromhex() arg at position {position}");
+    // CPython rejects the first non-ASCII character before inspecting any
+    // hexadecimal pairs, even when an earlier ASCII character is malformed.
+    if let Some(position) = chars.iter().position(|character| !character.is_ascii()) {
+        return Err(error(position));
+    }
+    while index < chars.len() {
+        if matches!(chars[index], '\t'..='\r' | ' ') {
+            index += 1;
+            continue;
+        }
+        let upper = chars[index]
+            .to_digit(16)
+            .filter(|_| chars[index].is_ascii())
+            .ok_or_else(|| error(index))?;
+        index += 1;
+        let lower = chars
+            .get(index)
+            .and_then(|digit| digit.to_digit(16).filter(|_| digit.is_ascii()))
+            .ok_or_else(|| error(index))?;
+        bytes.push((upper * 16 + lower) as u8);
+        index += 1;
+    }
+    Ok(bytes)
 }
 
 /// Parse Python's base-ten `int(text)` syntax without losing integer precision.

@@ -9746,11 +9746,13 @@
         "milestone": "M4–M7",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/pow_registration.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_intents::pow::PowSolver` (feature `pow`; `pow-gpu`)"
+          "crates/rtao-intents/src/pow/mod.rs",
+          "crates/rtao-intents/src/pow/workers.rs",
+          "crates/rtao-intents/src/pow/gpu.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e406e347c5a39e668c9583ca8bef8cf37c7e8c42"
       },
       {
         "kind": "n/a",
@@ -10417,11 +10419,14 @@
         "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/tests/harness/samples.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "rtao_catalog::py::PYTHON_TABLES"
+          "rtao_catalog::py::PYTHON_TABLES",
+          "xtask/src/extract_resolved.rs",
+          "crates/rtao-intents/tests/intent_plans.rs",
+          "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f04e4a3681a9798f20bebcb44ba508561509e391"
       },
       {
         "kind": "n/a",
