@@ -91,6 +91,38 @@ hints. These 17 new functions expect 3,104 passed tests and four skipped in
 the next ordinary run; they are not executed evidence yet. Query, Null, PoW,
 EVM and prepare/attach source-row proposals remain unapplied.
 
+Run [38904971807](https://github.com/sam0x17/rtao/actions/runs/38904971807)
+at `29178a070a3108a49d2a4e4e97af1370a6743aee` completed with five
+ordinary jobs passing and the main check failing: 3,103 tests passed, one failed
+and four skipped. All 17 new functions and all 61 selected witnesses passed.
+The failure is in
+`oracle::readiness::tests::q30_strict_source_parity_reports_optional_oracle_as_unverified`:
+its invalid-plan mutation still targets an unchecked M2-14 row, while the plan
+now records that source-machinery step as checked. The replacement changes
+nothing, leaving a valid Q30 declaration where the test expects refusal.
+The production readiness guard remains unchanged while this fixture is repaired.
+Doctests and the later documentation check were not reached.
+
+The bounded `client-29178a0-partial-hosted-results.json` records the exact
+failed-run identity and 61 unique PASS records (SHA256
+`db2fa8d8ad99c633eaf927d1e8fe93a39b79aed1d170c471a9d9241a2c026a51`).
+The 723,148-byte main log has SHA256
+`1cddfb4bc7773909f11d89dbb9d6f811063cee805204ed98c70fade2a7474d96`;
+`client-29178a0-check-failure.json` retains its failure excerpt. No raw log is
+retained. Passing witnesses in this failed run do not advance the successful
+checkpoint, source rows or milestone acceptance.
+
+The correction normalizes that fixture's M2-14 checkbox and checks both valid
+states in strict and non-strict modes. Each invalid case must change the plan
+and fail under both modes; production readiness/history code is byte-identical.
+The same source batch puts ordered raw-call member names and backends in the
+review card before confirmation, reports automatic-round provenance, and adds
+two regression functions. They cover human/quiet/JSON refusal before private
+source acquisition and the absent shield-key fallback versus forced/required
+refusal. Independent source reviews and formatting pass. The next ordinary
+run expects 3,106 tests, four skipped and 65 selected PASS records; execution
+and source-row acceptance remain pending.
+
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.
