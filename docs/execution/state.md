@@ -198,8 +198,13 @@ at `0f68970` resolved ten additions but failed because the guard omitted the
 The corrected guard pins all ten observed versions/checksums and permits only
 the existing `cc` build tool's optional `libc`/`jobserver` edges within Docify's
 closure. Old identities, metadata and resolved edges remain protected. Candidate
-locks are retained even after guard failure for review. Exact candidate review,
-regenerated reports and hosted compilation/tests remain pending. Current compatibility reports predate
+locks are retained even after guard failure for review. Second lock run
+[38893353758](https://github.com/sam0x17/rtao/actions/runs/38893353758)
+at exact `80ad78b` passed. The authenticated candidate adds exactly those ten
+packages and only the two Docify edges plus `cc` to `jobserver`/existing `libc`.
+All old identities, metadata and edges are preserved; the fuzz lock is identical.
+Independent source review and a separate artifact refetch passed before adoption.
+Regenerated reports and hosted compilation/supply/tests remain pending. Current compatibility reports predate
 these manifest changes. No generated lock or report is hand-edited. The successful
 `60a20ee` ordinary run validates the preceding sources only. Offline doc examples
 and broader M9 documentation completion remain separate.
