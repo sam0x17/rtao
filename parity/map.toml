@@ -1185,30 +1185,30 @@ notes = "Source reconciliation 2026-10-15: Reviewed native delegation/create/kil
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/root.py"
-rs = ["`rtao-cli` `root` group"]
+rs = ["rtao_cli::commands::root"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0dd627a74cc86b1dc006536b0f26fdb1a7971cf6"
 synced_tag = "v478"
 milestone = "M6"
-notes = "§10.5"
+notes = "Source reconciliation 2026-10-16: complete pinned 708-line module review reused with actual list/detail/mine, claim, allocate and generated register dispatch. Helper F1-F5, selected allocation name/raw rate, and bound CommandReview summary/stages are source-reviewed through actual main/prepare_submission/shared direct and saved-approval paths. The adopted root-only Decimal normalizer resolves RC-F4 for exact native-range spellings, including exponent, plus, omitted decimal side, Python whitespace, Unicode digits and signed zero; Q25/D-035 checked u64 units/range and nonzero sub-rao refusal remain, with D-042 4096-byte/exponent-magnitude budgets. Shared Money/Amount constructors stay strict. Existing root_commands and context_contract bodies plus three new decimal fixtures were inspected; the three new decimal fixtures and selected command-review/picker regressions pass at exact 60a20ee in hosted run 38889135192. Rich/help/layout bytes are adapted. No full pytest/e2e/fresh-oracle equivalence, live registration/dispatch, Ledger/Vault hardware or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/root_move.py"
-rs = ["`rtao-cli` `root` group"]
+rs = ["rtao_cli::commands::root"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "2c826049b5bf3e1b4706b7e09c67cbd38e17c5fb"
 synced_tag = "v478"
 milestone = "M6"
-notes = "§10.5; `root move` command, mounted at `root.py:682`"
+notes = "Source reconciliation 2026-10-16: complete pinned 213-line module review reused for installed root move parse/owner selection, held-position and destination pickers, selectors/replay, same-target/empty-position refusals, claim-then-move-all root/root intent and bound summary/stages. Adopted RC-F5 repair retains PickedFund destination name: local source plus chosen name needs no second identity read; an unnamed source still reads the source-required missing-local batch and propagates failures, while the chosen destination label wins during merge. The actual parse/Request/prepare_submission fixture forces two eligible choices and covers four failed/changed-read combinations plus an explicit-destination control, exact typed args/replay and matching summary/stage labels. The selected-name fixture passes at exact 60a20ee in hosted run 38889135192. Q25/D-035 native amounts, typed APIs and plain presentation apply; no full pytest/e2e/oracle, runtime dispatch, hardware or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/root_swap.py"
-rs = ["`rtao-cli` `root` group"]
+rs = ["rtao_cli::commands::root"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "03cffc1dd3ec5b6cde29674af4a156edb947be2d"
 synced_tag = "v478"
 milestone = "M6"
-notes = "§10.5; `root swap` command, mounted at `root.py:684`"
+notes = "Source reconciliation 2026-10-16: complete pinned 219-line module review reused for coldkey-wallet-before-relative-hotkey binding, typed normalization, both quote legs/root-cash bypasses, all-holding lookup, Decimal-context destination floor, zero-floor context/quote fallback and holdings/status/budget warning facts. Adopted root-only Decimal normalization resolves RS-F2 for exact native-range spellings with Q25/D-035 checked u64 units and nonzero sub-rao refusal; D-042 caps normalization text/exponent magnitude at 4096, and shared strict constructors stay unchanged. Real parser/preparation/typed-intent fixtures compare 26 accepted vectors with canonical controls and quote requests, pin small-vector SCALE inputs and native/grammar/budget refusals. Existing quote convenience float behavior is retained; no extra large-value quote precision is promised. Bound custom reviews retain shared approval semantics. All three decimal fixture functions pass at exact 60a20ee in hosted run 38889135192; chain bands, turnover/concentration and dispatch remain runtime responsibilities. No full pytest/e2e/fresh-oracle, live runtime, hardware or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/stake.py"
