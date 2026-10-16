@@ -527,8 +527,8 @@ impl Output {
     pub fn name_address(&self, address: &str, name: &str) -> Result<(), OutputError> {
         if !address.is_empty() && !name.is_empty() && address != name {
             let mut names = self.address_names.write();
-            if !names.contains_key(address) {
-                names.insert(address.into(), name.into());
+            if let std::collections::btree_map::Entry::Vacant(entry) = names.entry(address.into()) {
+                entry.insert(name.into());
                 self.address_name_order.write().push(address.into());
             }
         }
