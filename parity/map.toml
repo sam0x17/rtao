@@ -2787,12 +2787,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated 143-line proje
 
 [[file]]
 py = "sdk/python/scripts/build_basket_index.py"
-rs = ["Upstream frozen-basket producer; its checked-in basket_index_data.py output is extracted by native xtask and consumed by CLI root_helpers"]
+rs = ["Retained upstream historical-index producer; native xtask/src/regen_basket_index.rs separately converts authenticated basket_index_data.py output for crates/rtao-cli/src/root_helpers consumers"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "80d945897b6752bf3459db23680362af98be199c"
 synced_tag = "v478"
 milestone = "M2, M6"
-notes = "Source audit 2026-10-15: ci/oracle/record.py does not run this builder; it runs the separate golden and shape-corpus recorders. rtao regeneration consumes authenticated frozen data through xtask/src/regen_basket_index.rs. Remains pending for producer behavior; no builder execution or historical-chain reconstruction claimed."
+notes = "Source reconciliation 2026-10-16 under PLAN section8.3 oracle-only policy: complete authenticated 252-line upstream producer reviewed, including I96F32 decoding, fixed-grid finney archive sampling, optional rate-aware JSON cache/refetch and skipped sample failures, prior-NAV-weighted price/total-return chaining with 0.1-TAO depth at both ends, first-sighting divisor/block/rate baselines, sorted Python-module rewrite and CLI entrypoint. This remains an upstream producer, not a native historical builder. Neither xtask regen nor ci/oracle/record.py invokes it. Native regeneration authenticates its separately pinned frozen basket_index_data.py output, recomputes Rust extraction, checks bounds/grids/domains/provenance and emits CLI-only Rust literals; all three scalars, 45 INDEX points, 45 TR_INDEX points and 171 baselines match current Python/extracted/Rust data. Attribution names the actual data/helper sources. Frozen-data refusal and five display-consumer test bodies were inspected; their source images are unchanged from the aggregate green 3077-test checkpoint, which does not establish producer execution. No archive sampling, cache replay, historical chain reconstruction, Python producer run, fresh oracle/differential or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/scripts/record_golden.py"

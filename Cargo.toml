@@ -92,7 +92,7 @@ secrecy = "0.8"
 zeroize = "1"
 regex = "1"
 anyhow = "1"
-docify = "=0.4.1"
+docify = "=0.2.9"
 clap = { version = "4", features = ["derive", "env"] }
 clap_complete = "4"
 axum = { version = "0.8", default-features = false, features = ["json", "http1", "tokio"] }

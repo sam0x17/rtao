@@ -10,8 +10,8 @@ if (process.env.GITHUB_ACTIONS !== 'true'
 }
 
 // The first pinned docs-tool resolution has its own bounded candidate guard.
-if (readFileSync('Cargo.toml', 'utf8').includes('\ndocify = "=0.4.1"\n')
-    && !/^name = "docify"$/m.test(readFileSync('Cargo.lock', 'utf8'))) {
+if (readFileSync('Cargo.toml', 'utf8').includes('\ndocify = "=0.2.9"\n')
+    && !/name = "docify"\nversion = "0.2.9"/.test(readFileSync('Cargo.lock', 'utf8'))) {
   execFileSync(process.execPath, ['ci/resolve-docify-lock.mjs'], {stdio:'inherit',timeout:170000});
   process.exit(0);
 }
