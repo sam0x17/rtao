@@ -104,6 +104,11 @@ pub struct ExtrinsicResult<O = ()> {
     pub success: bool,
     /// Human-readable outcome.
     pub message: String,
+    /// Extrinsic identity retained by this receipt for native recovery.
+    /// A resolved shield result identifies its inner extrinsic; an unresolved
+    /// result retains the attempted identity. This is not always the author-RPC
+    /// carrier hash. Canonical Python-compatible JSON omits this field.
+    pub extrinsic_hash: Option<H256>,
     /// Inclusion block when known.
     pub block_hash: Option<H256>,
     /// Explorer-style block and position identity.
@@ -147,6 +152,7 @@ impl ExtrinsicResult {
         Self {
             success: report.success,
             message: report.message,
+            extrinsic_hash: Some(report.hash),
             block_hash: report.block_hash,
             extrinsic_id: report.extrinsic_id,
             explorer_url,
@@ -167,6 +173,7 @@ impl ExtrinsicResult {
         Self {
             success: false,
             message: error.message.clone(),
+            extrinsic_hash: fate_unknown,
             block_hash: None,
             extrinsic_id: None,
             explorer_url: None,
@@ -185,6 +192,7 @@ impl ExtrinsicResult {
         Ok(ExtrinsicResult {
             success: self.success,
             message: self.message,
+            extrinsic_hash: self.extrinsic_hash,
             block_hash: self.block_hash,
             extrinsic_id: self.extrinsic_id,
             explorer_url: self.explorer_url,

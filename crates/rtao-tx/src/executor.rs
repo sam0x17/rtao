@@ -1175,29 +1175,35 @@ impl Executor {
         {
             return Ok(result);
         }
-        let origin = opts
-            .proxy_for
-            .map(OriginView::Account)
-            .unwrap_or_else(|| intent.origin_view_dyn(keys));
-        let view = IntentKeyView::new(&origin, semantic.signer_role_dyn()?, semantic.spec().name);
-        let args = semantic.to_json_dyn();
-        let explicit = args
-            .get("hotkey_ss58")
-            .filter(|value| !value.is_null())
-            .map(|value| {
-                serde_json::from_value::<AccountId>(value.clone()).map_err(IntentError::from)
-            })
-            .transpose()?;
-        crate::registration::complete(
-            &self.client,
-            result,
-            view.coldkey_address()?,
-            view.hotkey_address(explicit)?,
-            opts,
-            deferred_dispatch,
-            budget.expires,
-        )
-        .await
+        let completion = async {
+            let origin = opts
+                .proxy_for
+                .map(OriginView::Account)
+                .unwrap_or_else(|| intent.origin_view_dyn(keys));
+            let view =
+                IntentKeyView::new(&origin, semantic.signer_role_dyn()?, semantic.spec().name);
+            let args = semantic.to_json_dyn();
+            let explicit = args
+                .get("hotkey_ss58")
+                .filter(|value| !value.is_null())
+                .map(|value| {
+                    serde_json::from_value::<AccountId>(value.clone()).map_err(IntentError::from)
+                })
+                .transpose()?;
+            crate::registration::complete(
+                &self.client,
+                result.clone(),
+                view.coldkey_address()?,
+                view.hotkey_address(explicit)?,
+                opts,
+                deferred_dispatch,
+                budget.expires,
+            )
+            .await
+        };
+        completion
+            .await
+            .map_err(|cause| cause.with_submitted_receipt(result))
     }
 
     async fn wait_one_block(&self) -> Result<(), TxError> {

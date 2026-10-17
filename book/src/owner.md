@@ -39,6 +39,10 @@ can return without a subnet identifier. A receipt alone does not prove that
 queued creation completed. The zero-spend policy above is for configuration;
 creation needs a policy that admits its registration spend.
 
+If completion fails after inclusion, the underlying `TxError::PostSubmission`
+retains the observed receipt. Inspect it and the current registration state;
+the error alone does not mean that another registration should be submitted.
+
 `start(netuid)` rereads the mutable start schedule and ownership while waiting,
 then submits `StartCall`. `set_identity`, `update_symbol` and
 `set_mechanism_count` use typed intents and the same policy-bearing executor.

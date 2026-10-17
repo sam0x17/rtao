@@ -245,6 +245,7 @@ fn receipt() -> ExtrinsicResult {
     ExtrinsicResult {
         success: true,
         message: "included".into(),
+        extrinsic_hash: None,
         block_hash: Some(H256([7; 32])),
         extrinsic_id: Some("12-1".into()),
         explorer_url: None,

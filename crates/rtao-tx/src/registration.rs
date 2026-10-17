@@ -31,35 +31,41 @@ pub(crate) async fn complete(
     {
         return Ok(result);
     }
-    // Python treats a zero registration timeout as an unbounded wait.
-    let registration_deadline = opts
-        .registration_timeout
-        .filter(|duration| !duration.is_zero())
-        .map(|duration| {
-            Instant::now().checked_add(duration).ok_or_else(|| {
-                IntentError::InvalidArgument("registration timeout overflows time".into())
+    let retained = result.clone();
+    let completion = async {
+        // Python treats a zero registration timeout as an unbounded wait.
+        let registration_deadline = opts
+            .registration_timeout
+            .filter(|duration| !duration.is_zero())
+            .map(|duration| {
+                Instant::now().checked_add(duration).ok_or_else(|| {
+                    IntentError::InvalidArgument("registration timeout overflows time".into())
+                })
             })
-        })
-        .transpose()?;
-    let deadline = match (execution_deadline, registration_deadline) {
-        (Some(left), Some(right)) => Some(left.min(right)),
-        (left, right) => left.or(right),
-    };
-    let wait = async {
-        tokio::select! {
-            biased;
-            () = client.closed() => Err(TxError::ConnectionNotReady),
-            outcome = follow(client, result, owner, hotkey, opts, deferred_dispatch) => outcome,
+            .transpose()?;
+        let deadline = match (execution_deadline, registration_deadline) {
+            (Some(left), Some(right)) => Some(left.min(right)),
+            (left, right) => left.or(right),
+        };
+        let wait = async {
+            tokio::select! {
+                biased;
+                () = client.closed() => Err(TxError::ConnectionNotReady),
+                outcome = follow(client, result, owner, hotkey, opts, deferred_dispatch) => outcome,
+            }
+        };
+        match deadline {
+            Some(deadline) => tokio::time::timeout_at(deadline, wait).await.map_err(|_| {
+                TxError::Rpc(rtao_rpc::RpcError::Timeout {
+                    detail: "registration timed out without reaching NetworkAdded".into(),
+                })
+            })?,
+            None => wait.await,
         }
     };
-    match deadline {
-        Some(deadline) => tokio::time::timeout_at(deadline, wait).await.map_err(|_| {
-            TxError::Rpc(rtao_rpc::RpcError::Timeout {
-                detail: "registration timed out without reaching NetworkAdded".into(),
-            })
-        })?,
-        None => wait.await,
-    }
+    completion
+        .await
+        .map_err(|cause| cause.with_submitted_receipt(retained))
 }
 
 #[derive(Clone, Default)]
@@ -567,6 +573,7 @@ mod tests {
         ExtrinsicResult {
             success: true,
             message: "Extrinsic submitted.".into(),
+            extrinsic_hash: Some(H256([37; 32])),
             block_hash: Some(snapshot.block().hash),
             extrinsic_id: Some(format!("{height}-{index}")),
             explorer_url: None,
@@ -931,13 +938,20 @@ mod tests {
                     ..Default::default()
                 };
                 let deadline = total.then(|| Instant::now() + Duration::from_millis(40));
+                let expected = original.clone();
                 let error = complete(&client, original, OWNER, HOTKEY, &opts, true, deadline)
                     .await
                     .unwrap_err();
                 assert!(matches!(
-                    error,
+                    error.primary_cause(),
                     TxError::Rpc(rtao_rpc::RpcError::Timeout { .. })
                 ));
+                let retained = error.submitted_receipt().unwrap();
+                assert_eq!(retained.to_json(), expected.to_json());
+                assert_eq!(retained.extrinsic_hash, expected.extrinsic_hash);
+                assert_eq!(error.code(), error.primary_cause().code());
+                assert_eq!(error.to_string(), error.primary_cause().to_string());
+                assert!(std::error::Error::source(&error).is_some());
                 assert!(
                     !fake
                         .requests()
@@ -952,6 +966,7 @@ mod tests {
     async fn closing_client_cancels_an_unbounded_registration_wait() {
         let (client, fake) = fixture(FakeState::default()).await;
         let original = receipt(&client, 100, 0).await;
+        let expected = original.clone();
         let worker_client = client.clone();
         let task = tokio::spawn(async move {
             complete(
@@ -967,10 +982,19 @@ mod tests {
         });
         wait_subscribed(&fake).await;
         client.close().await;
-        assert!(matches!(
-            task.await.unwrap(),
-            Err(TxError::ConnectionNotReady)
-        ));
+        let error = task.await.unwrap().unwrap_err();
+        assert!(matches!(error.primary_cause(), TxError::ConnectionNotReady));
+        let retained = error.submitted_receipt().unwrap();
+        assert_eq!(retained.to_json(), expected.to_json());
+        assert_eq!(retained.events, expected.events);
+        assert_eq!(retained.extrinsic_hash, expected.extrinsic_hash);
+        assert!(retained.data.get("netuid").is_none());
+        assert!(
+            !fake
+                .requests()
+                .iter()
+                .any(|request| request.method.starts_with("author_"))
+        );
     }
 
     #[tokio::test]
@@ -992,6 +1016,10 @@ mod tests {
             .await
             .unwrap_err();
         assert!(error.to_string().contains("inclusion was reorganized"));
+        let retained = error.submitted_receipt().unwrap();
+        assert_eq!(retained.block_hash, Some(original_hash));
+        assert_eq!(retained.extrinsic_hash, Some(H256([37; 32])));
+        assert!(retained.data.get("netuid").is_none());
     }
 
     #[tokio::test]

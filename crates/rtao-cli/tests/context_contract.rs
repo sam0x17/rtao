@@ -6787,3 +6787,195 @@ async fn post_root_yield_skips_empty_failed_nontrigger_and_saved_approval_outcom
     client.close().await;
     Ok(())
 }
+
+#[tokio::test]
+async fn registration_read_failure_persists_direct_and_saved_receipts_before_release() -> TestResult
+{
+    use rtao::primitives::{IntoCoreValue, NetUid};
+    for saved in [false, true] {
+        for fail_result in [false, true] {
+            for connection_closed in [false, true] {
+                let (client, chain, keys) = fixture(1_000_000_000).await?;
+                let members = members()?;
+                let direct = DirectExternalFactory::new(&keys, true);
+                let mut member = factory(&members);
+                member.fail_release = true;
+                let (mut ctx, mut sink, _) = context(&[
+                    "--yes",
+                    "--json",
+                    "--no-mev-shield",
+                    "--signer",
+                    "extension",
+                ])?;
+                if saved {
+                    (ctx, sink) =
+                        saved_context(&members, &["--yes", "--json", "--no-mev-shield"], 1)?;
+                    ctx.books.multisigs[0]["threshold"] = json!(1);
+                }
+                let releases = if saved {
+                    &member.releases
+                } else {
+                    &direct.released
+                };
+                let unlocks = if saved {
+                    members[0].unlocks.as_ref()
+                } else {
+                    keys.unlocks.as_ref()
+                };
+                let hooks = DurablePlanHooks {
+                    unlocks,
+                    source_acquisitions: saved.then_some(&member.acquired),
+                    releases,
+                    plans: Mutex::new(Vec::new()),
+                    raw: Mutex::new(Vec::new()),
+                    enriched: Mutex::new(Vec::new()),
+                    fail_result,
+                };
+                let completion_read = Arc::new(tokio::sync::Notify::new());
+                chain.mutate_state(|state| -> TestResult {
+                let info = state.runtime.storage_entry("SubtensorModule", "SubnetOwner").ok_or("owner storage")?;
+                let key = format!("0x{}", hex::encode(state.runtime.storage_key(info, &[NetUid(9).into_core_value()])?));
+                state.set_handler("state_getStorage", {
+                    let key = key.clone();
+                    let completion_read = completion_read.clone();
+                    move |state, request| {
+                        if !state.submissions.is_empty() && request.params[0] == key {
+                            if connection_closed {
+                                completion_read.notify_one();
+                                rtao_testkit::Reply::silent()
+                            } else {
+                                rtao_testkit::Reply::error(-32603, "registration completion read sentinel", None)
+                            }
+                        } else { state.dispatch(request) }
+                    }
+                });
+                state.set_handler("state_queryStorageAt", {
+                  let completion_read = completion_read.clone();
+                  move |state, request| {
+                    if !state.submissions.is_empty() && request.params[0].as_array().is_some_and(|keys| keys.iter().any(|value| value == &json!(key))) {
+                        if connection_closed {
+                            completion_read.notify_one();
+                            rtao_testkit::Reply::silent()
+                        } else {
+                            rtao_testkit::Reply::error(-32603, "registration completion read sentinel", None)
+                        }
+                    } else { state.dispatch(request) }
+                  }
+                });
+                state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                    events: json!([
+                        {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"SubtensorModule","event_id":"NetworkAdded","attributes":[9,0],"topics":[]},
+                        {"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}
+                    ])
+                });
+                Ok(())
+            })?;
+                let intent = rtao_intents::RegisterSubnet {
+                    hotkey_ss58: Some(AccountId([8; 32]).into()),
+                };
+                let options = SubmissionOptions {
+                    hooks: Some(&hooks),
+                    ..Default::default()
+                };
+                let runner = ctx.clone();
+                let connector = Connected(client.clone());
+                let context = &mut ctx;
+                let member_ref = &member;
+                let direct_ref = &direct;
+                let operation = runner.run_with(&connector, |connected| async move {
+                    if saved {
+                        context
+                            .submit_saved_with_options(
+                                &connected,
+                                &intent,
+                                options,
+                                member_ref,
+                                &CallCache::default(),
+                            )
+                            .await
+                    } else {
+                        context
+                            .submit_with_options(
+                                &connected,
+                                &intent,
+                                options,
+                                Some(direct_ref),
+                                &mut Default::default(),
+                            )
+                            .await
+                    }
+                });
+                let close = async {
+                    if connection_closed {
+                        tokio::time::timeout(
+                            std::time::Duration::from_secs(2),
+                            completion_read.notified(),
+                        )
+                        .await?;
+                        client.close().await;
+                    }
+                    Ok::<(), Box<dyn std::error::Error>>(())
+                };
+                let (result, closed) = tokio::join!(operation, close);
+                closed?;
+                assert!(client.is_closed());
+                let error = result
+                    .err()
+                    .ok_or("post-inclusion completion must remain an error")?;
+                assert_eq!(error.code, 1);
+                if connection_closed {
+                    assert_eq!(error.message, "connection is not ready");
+                    assert!(matches!(
+                        &error.diagnostic,
+                        Some(rtao_cli::error::CliDiagnostic::Connection)
+                    ));
+                } else {
+                    assert!(
+                        error
+                            .message
+                            .contains("registration completion read sentinel")
+                    );
+                }
+                assert!(!error.message.contains("could not reach"));
+                let retained = error.submitted_receipt.as_deref().ok_or("native receipt")?;
+                assert!(retained.success);
+                assert_eq!(retained.extrinsic_id.as_deref(), Some("101-0000"));
+                assert!(retained.data.get("netuid").is_none());
+                assert!(retained.data.get("registered_at_block").is_none());
+                let hash = retained.extrinsic_hash.ok_or("exact submitted hash")?;
+                let submitted = chain
+                    .state()
+                    .lock()
+                    .map_err(|_| "state")?
+                    .submissions
+                    .clone();
+                assert_eq!(submitted.len(), 1);
+                assert_eq!(
+                    rtao::core::ops::extrinsic_lookup::find(
+                        &json!({"block":{"extrinsics":[format!("0x{}", hex::encode(&submitted[0]))]}}),
+                        hash.0
+                    )?,
+                    Some(0)
+                );
+                let raw = hooks.raw.lock().map_err(|_| "raw")?.clone();
+                assert_eq!(raw.len(), 1);
+                assert_eq!(raw[0].extrinsic_hash, Some(hash));
+                assert_eq!(raw[0].to_json(), retained.to_json());
+                assert!(hooks.enriched.lock().map_err(|_| "enriched")?.is_empty());
+                assert_eq!(*releases.lock().map_err(|_| "release")?, vec![true]);
+                assert_eq!(unlocks.load(Ordering::SeqCst), 1);
+                let help = error.help.as_deref().ok_or("receipt help")?;
+                assert!(help.contains(&hex::encode(hash.0)));
+                assert!(help.contains("already submitted"));
+                assert!(!help.contains("check the endpoint"));
+                assert!(!help.contains("then retry"));
+                if fail_result {
+                    assert!(help.contains("journal receipt persistence failure"));
+                }
+                assert!(sink.text(Stream::Stdout)?.is_empty());
+                client.close().await;
+            }
+        }
+    }
+    Ok(())
+}
