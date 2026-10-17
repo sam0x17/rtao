@@ -14,7 +14,39 @@ infrastructure, scheduled, oracle and release workflows are inactive drafts
 in `.github/deferred-workflows/`. No workflow was dispatched during
 the cleanup itself. Subsequent client checkpoints use hosted CI as recorded below.
 
-## Current client checkpoint, 2026-10-16
+## Final client-source checkpoint, 2026-10-17
+
+Hosted [38999377082](https://github.com/sam0x17/rtao/actions/runs/38999377082)
+passes at exact source head
+`95b9e8c692ff8bd3d15e7ce9769ef2b785bb4a7f`: **3,204 tests passed,
+zero failed and four skipped**, doctests passed, documentation uploaded, and
+all six required `check`, `features`, `supply`, `msrv`, `no-host` and `semver`
+jobs succeeded. This is the final implemented client source under Q30; no
+local build, node, container, testnet, device or release campaign was used.
+
+Hosted report refresh
+[38998872513](https://github.com/sam0x17/rtao/actions/runs/38998872513)
+authenticated the four generated compatibility reports at `dd5b076`, and the
+adopted report commit is an ancestor of the final source head. The source map
+is **357/357 reconciled with zero pending blobs**. All 83 intents and 102 reads
+are implemented. The 18 `e2e_map.toml` Q30-deferred rows describe optional live/localnet
+evidence; they are explicit nonrequirements and are not represented as executed tests.
+
+The active M0-M9 step register is now **126/127 complete**. Every implemented
+client, documentation and milestone-specific security step is checked. The
+sole open step is M2-26 because M2-S02 remains explicitly unaccepted: the
+pinned upstream Ed25519 signing object does not guarantee erasure on final
+drop. Consequently M2 and milestones that depend on its formal exit remain
+unaccepted even though their individual source steps and applicable hosted
+checks are complete. No release, device, platform, fresh Python-oracle,
+interoperability or live-chain acceptance is claimed.
+
+The filing inventory was refreshed read-only on 2026-10-17: the existing eight
+PRs and five issues remain open at the reviewed heads, with no labels or review
+requests and no new filing. The worktree remains bounded; the retired
+`target/execute-plan.6Ro0PC` build root was not recreated.
+
+## Earlier client checkpoint, 2026-10-16
 
 Hosted [38984859167](https://github.com/sam0x17/rtao/actions/runs/38984859167)
 passes at exact `892aa9d007a7ee43b99f31fcaaca37ed75eb75da`: **3,196 tests

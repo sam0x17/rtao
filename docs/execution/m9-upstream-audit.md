@@ -24,6 +24,11 @@ empty. Evidence is
 This refresh uses read-only GraphQL fields; it does not repeat source/tests
 or make a new authored-filing census claim. No GitHub write was performed.
 
+A state-only refresh on 2026-10-17 again confirms all eight PRs and five issues
+are open. Every PR retains the reviewed HEAD and base below; labels and review
+requests remain empty. No filing or other GitHub write was performed. This
+refresh does not repeat the body, source or test-evidence audit.
+
 GitHub's authored-issue searches (`author:sam0x17`, each repository, `created:>=2026-10-13`, all states) returned exactly eleven Subtensor filings and two Zondax filings, with `incomplete_results=false`. Each individual issue/PR endpoint resolves. Every PR is unmerged, has no labels or requested reviewers/teams, and retains the reviewed HEAD below. This is a dated inventory of these two repositories, rather than an account-wide filing census.
 
 | PR | Current HEAD | Reviewed evidence and limits |
