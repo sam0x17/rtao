@@ -3,6 +3,23 @@
 schema = 1
 
 [[divergences]]
+id = "D-076"
+upstream_symbol = "bittensor.executor subnet registration completion failures"
+python_behavior = "Raises completion failures after the registration submission without a typed error carrier retaining its included receipt."
+rtao_behavior = "Returns TxError::PostSubmission with the original observed receipt and primary cause when post-inclusion registration origin resolution or following fails. CLI direct and saved paths save that receipt once before releasing the signer, retain recovery identity and suppress generic connection retry framing. The error remains a failure; no NetworkAdded or completed registration is fabricated and no transaction is retransmitted."
+rationale = "A failed completion read, timeout or connection close cannot erase an already observed mutation. Callers need its evidence before making any retry decision."
+decision = "PLAN.md execution rule 5 recovery correction; registration completion and real SDK/CLI error paths independently reviewed on 2026-10-16"
+status = "active"
+class = "improved"
+milestone = "M4"
+pinning_tests = [
+  "rtao_tx::owner_execution::registration_origin_failure_keeps_the_already_included_receipt",
+  "rtao_cli::context_contract::registration_read_failure_persists_direct_and_saved_receipts_before_release",
+]
+upstream_report = "Two new actual SDK/CLI fixtures and existing timeout/close/serialization cases cover native receipt retention, raw hooks, source release and no retransmission. Renewed independent review resolves generic retry framing and distinguishes observed inner identity from a transmitted shield carrier. Hosted execution pending; no new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py"
+
+[[divergences]]
 id = "D-075"
 upstream_symbol = "bittensor.cli.context.AppContext.submit shield carrier failure narration"
 python_behavior = "Adds a carrier-fee explanation and unconditional no-mev-shield advice after a failed shielded attempt without a confirmed inner result; Payment descriptions and remediation can repeat the advice."
@@ -975,7 +992,7 @@ upstream_report = "Authored regression source was independently reviewed; hosted
 id = "D-023"
 upstream_symbol = "ExtrinsicResult / RpcSubstrate._result_from_report"
 python_behavior = "no inclusion level; fate unknown visible only in the message; _substrate.py:804-811 constructs failed results without triggered events"
-rtao_behavior = "adds inclusion/fate_unknown and retains decoded failed-receipt events for native consumers; to_json preserves Python field presence and omits events"
+rtao_behavior = "adds inclusion/fate_unknown and observed extrinsic_hash, and retains decoded failed-receipt events for native consumers; to_json preserves Python field presence and omits native tracking fields and events. A resolved shield receipt's observed identity is its inner extrinsic, not necessarily the transmitted carrier."
 rationale = "Public results retain typed inclusion and unknown-fate identity while to_json preserves Python field presence. Native multisig_executed and Null-pruning recovery inspect receipt events even when an inner dispatch failed, to distinguish consumed execution from a remaining approval; suppressing those events would erase required evidence. The real-executor dispatch-failure fixture checks retained System.ExtrinsicFailed, absent success fee/extras and one submission/build. The failed-batch client transcript compares the complete retained event vector with an actual pinned event read. Included and unresolved serialization fixtures preserve native fields through with_output and compare independent complete Python dictionaries, without event JSON. This extends the existing native diagnostic addition; it does not claim Python failed construction behaves identically. Current hosted execution and final disposition remain pending."
 status = "active"
 class = "addition"

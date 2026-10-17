@@ -36,6 +36,7 @@ fn included_results_keep_complete_python_json_without_native_tracking_fields()
         let result = ExtrinsicResult {
             success: true,
             message: "Success".into(),
+            extrinsic_hash: Some(H256([0x33; 32])),
             block_hash: Some(H256([0x11; 32])),
             extrinsic_id: Some("123-4".into()),
             explorer_url: Some("https://example.test/extrinsic/123-4".into()),
@@ -55,6 +56,7 @@ fn included_results_keep_complete_python_json_without_native_tracking_fields()
         assert_eq!(result.events.len(), 1);
         assert_eq!(result.inclusion, inclusion);
         assert_eq!(result.fate_unknown, None);
+        assert_eq!(result.extrinsic_hash, Some(H256([0x33; 32])));
         assert_eq!(result.to_json(), expected);
     }
     Ok(())
@@ -66,6 +68,7 @@ fn fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_ha
     let result = ExtrinsicResult {
         success: false,
         message: "transmitted outcome sentinel".into(),
+        extrinsic_hash: Some(H256([0x22; 32])),
         block_hash: None,
         extrinsic_id: None,
         explorer_url: None,
@@ -84,6 +87,7 @@ fn fate_unknown_results_keep_complete_python_failure_json_and_native_recovery_ha
     .with_output::<WeightsSubmitted>()?;
     assert_eq!(result.inclusion, Inclusion::Unobserved);
     assert_eq!(result.fate_unknown, Some(H256([0x22; 32])));
+    assert_eq!(result.extrinsic_hash, Some(H256([0x22; 32])));
     assert_eq!(
         result.to_json(),
         json!({

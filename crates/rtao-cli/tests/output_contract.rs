@@ -409,6 +409,7 @@ fn outcome(success: bool) -> ExtrinsicResult {
         } else {
             "The hotkey is not registered.".into()
         },
+        extrinsic_hash: None,
         block_hash: None,
         extrinsic_id: Some("12-3".into()),
         explorer_url: None,

@@ -28,6 +28,9 @@ pub struct CliError {
     pub help: Option<String>,
     /// Typed diagnostic metadata, independent of the displayed message.
     pub diagnostic: Option<CliDiagnostic>,
+    /// Native observed receipt retained across post-submission failure.
+    /// It is not added to canonical diagnostic or result JSON.
+    pub submitted_receipt: Option<Box<rtao::tx::ExtrinsicResult>>,
 }
 impl CliError {
     /// A runtime failure or declined mutation.
@@ -37,12 +40,19 @@ impl CliError {
             message: message.into(),
             help: None,
             diagnostic: None,
+            submitted_receipt: None,
         }
     }
     /// Preserve typed chain, signer, gateway and submission recovery help.
     pub(crate) fn transaction(error: rtao::tx::TxError) -> Self {
         use rtao::tx::{IntentError, TxError};
         match error {
+            TxError::PostSubmission { receipt, cause } => {
+                let error = Self::transaction(*cause);
+                let mut error = crate::context::known_receipt_error(error, &receipt);
+                error.submitted_receipt = Some(receipt);
+                error
+            }
             TxError::Chain(error) | TxError::Intent(IntentError::Chain(error)) => Self {
                 help: Some(error.remediation().to_owned()),
                 diagnostic: Some(CliDiagnostic::Chain(Box::new(error.clone()))),
@@ -103,7 +113,7 @@ impl CliError {
     }
     /// Attach endpoint guidance once, only for a typed connection failure.
     pub(crate) fn for_network(mut self, network: &str) -> Self {
-        if self.message.is_empty() {
+        if self.message.is_empty() || self.submitted_receipt.is_some() {
             return self;
         }
         if matches!(self.diagnostic, Some(CliDiagnostic::Connection)) {

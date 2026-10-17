@@ -1117,3 +1117,72 @@ async fn subnet_registration_executor_follows_cleanup_through_one_waiting_block(
     );
     ex.client().close().await;
 }
+
+#[tokio::test]
+async fn registration_origin_failure_keeps_the_already_included_receipt() {
+    struct MissingOrigin {
+        keys: Keys,
+        submitted: Arc<AtomicUsize>,
+    }
+    impl KeyView for MissingOrigin {
+        fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+            self.keys.coldkey_address()
+        }
+        fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+            if self.submitted.load(Ordering::SeqCst) != 0 {
+                return Err(SignerError::KeyView("registration origin sentinel".into()));
+            }
+            self.keys.hotkey_address()
+        }
+        fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+            self.keys.hotkey_public_key()
+        }
+    }
+    impl KeySource<Coldkey> for MissingOrigin {
+        fn address(&self) -> Result<AccountId, SignerError> {
+            self.keys.address()
+        }
+        async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
+            self.keys.signer().await
+        }
+    }
+    let (ex, fake, keys) = fixture().await;
+    let submitted = Arc::new(AtomicUsize::new(0));
+    let observed = submitted.clone();
+    fake.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+            let reply = state.dispatch(request);
+            observed.fetch_add(1, Ordering::SeqCst);
+            reply
+        });
+    });
+    let keys = MissingOrigin { keys, submitted };
+    let error = ex
+        .execute(&RegisterSubnet { hotkey_ss58: None }, &keys, &included())
+        .await
+        .unwrap_err();
+    assert!(
+        error
+            .primary_cause()
+            .to_string()
+            .contains("registration origin sentinel")
+    );
+    let retained = error.submitted_receipt().unwrap();
+    assert!(retained.success);
+    assert_eq!(retained.extrinsic_id.as_deref(), Some("101-0000"));
+    assert!(retained.data.get("netuid").is_none());
+    let hash = retained.extrinsic_hash.unwrap();
+    let submissions = fake.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 1);
+    assert_eq!(
+        rtao_core::ops::extrinsic_lookup::find(
+            &json!({"block":{"extrinsics":[format!("0x{}", hex::encode(&submissions[0]))]}}),
+            hash.0
+        )
+        .unwrap(),
+        Some(0)
+    );
+    assert_eq!(keys.submitted.load(Ordering::SeqCst), 1);
+    assert_eq!(keys.keys.unlocks.load(Ordering::SeqCst), 1);
+    ex.client().close().await;
+}

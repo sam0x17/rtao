@@ -2206,6 +2206,11 @@ pub mod compose {
   unbounded, as in Python. A supplied registration or total deadline bounds progress backpressure and following.
   An ordinary approval-only receipt without deferred dispatch starts no follower. Disabled registration waiting,
   pool-only, failed and unknown-fate results also return without following.
+  If post-inclusion origin resolution or completion fails, `TxError::PostSubmission` retains the original observed
+  receipt and primary cause (D-076). Direct and saved CLI paths run the raw receipt hook once before source release,
+  keep recovery identity and avoid generic connection retry framing. The operation remains an error without invented
+  registration completion. Native `extrinsic_hash` identifies the observed receipt; a resolved shield receipt uses
+  the inner identity, not necessarily its carrier. Canonical JSON omits this field (D-023).
 
 ### 3.14 Offline and external signing
 

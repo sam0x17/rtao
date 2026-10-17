@@ -284,7 +284,14 @@ pub enum TxError {
     Rpc(RpcError),
     /// Connection closed before the operation.
     ConnectionNotReady,
-    /// Intent construction or validation failed.
+    /// A submitted operation failed while completing its post-inclusion work.
+    PostSubmission {
+        /// Original observed receipt, without fabricated completion fields.
+        receipt: Box<crate::ExtrinsicResult>,
+        /// Primary completion failure; the operation remains an error.
+        cause: Box<TxError>,
+    },
+    /// Intent construction, validation, public key defaults or reads failed.
     Intent(IntentError),
     /// Role selection or private-key unlock failed.
     Signer(SignerError),
@@ -313,6 +320,29 @@ pub enum TxError {
     },
 }
 impl TxError {
+    /// Original receipt when post-inclusion work failed.
+    pub fn submitted_receipt(&self) -> Option<&crate::ExtrinsicResult> {
+        match self {
+            Self::PostSubmission { receipt, .. } => Some(receipt),
+            _ => None,
+        }
+    }
+    /// Primary error, independent of the retained submission receipt.
+    pub fn primary_cause(&self) -> &Self {
+        match self {
+            Self::PostSubmission { cause, .. } => cause.primary_cause(),
+            error => error,
+        }
+    }
+    pub(crate) fn with_submitted_receipt(self, receipt: crate::ExtrinsicResult) -> Self {
+        match self {
+            error @ Self::PostSubmission { .. } => error,
+            cause => Self::PostSubmission {
+                receipt: Box::new(receipt),
+                cause: Box::new(cause),
+            },
+        }
+    }
     /// Semantic code shared with Python.
     pub fn code(&self) -> ErrorCode {
         match self {
@@ -321,6 +351,7 @@ impl TxError {
             Self::RpcPolicy(policy) => classify(&policy.message, None),
             Self::Rpc(error) => classify(&error.to_string(), None),
             Self::ConnectionNotReady => ErrorCode::Internal,
+            Self::PostSubmission { cause, .. } => cause.code(),
             Self::Intent(error) => error.code(),
             Self::Signer(_) => ErrorCode::Internal,
             Self::UnitMismatch(_) => ErrorCode::UnitMismatch,
@@ -339,6 +370,7 @@ impl fmt::Display for TxError {
             Self::RpcPolicy(error) => error.fmt(f),
             Self::Rpc(error) => error.fmt(f),
             Self::ConnectionNotReady => f.write_str("connection is not ready"),
+            Self::PostSubmission { cause, .. } => cause.fmt(f),
             Self::Intent(error) => error.fmt(f),
             Self::Signer(error) => error.fmt(f),
             Self::UnitMismatch(error) => error.fmt(f),
@@ -358,7 +390,14 @@ impl fmt::Display for TxError {
         }
     }
 }
-impl std::error::Error for TxError {}
+impl std::error::Error for TxError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::PostSubmission { cause, .. } => Some(cause.as_ref()),
+            _ => None,
+        }
+    }
+}
 impl From<IntentError> for TxError {
     fn from(error: IntentError) -> Self {
         match error {
