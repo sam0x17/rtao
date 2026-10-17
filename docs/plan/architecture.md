@@ -4694,6 +4694,10 @@ fn tx_command() -> clap::Command {
 - **Connection labels (D-074).** Named networks retain their labels. Custom RPC URLs in connection diagnostics use
   the existing `safe_endpoint` formatter, excluding user information, path, query and fragment while retaining the
   configured endpoint for routing. This confidentiality correction applies to human, quiet and JSON errors.
+- **Shield failure guidance (D-075).** Retain the actual transport after fallback, including the last saved approval
+  round. Human carrier failures explain free-TAO fees without unconditional opt-out advice; known mandatory shields
+  cannot be disabled. Missing inner metadata does not prove rejection, and unknown fate requires inspection before
+  another submission. Canonical JSON keeps the upstream Payment fields; quiet suppresses supplemental narration.
 - **JSON is the parity contract.** It is **value-equal** to btcli's: parsed JSON equality, with `Balance` strings
   byte-equal through §5.3, enforced by the read oracle and the interop lanes (lane 9 runs every hand-written command
   against btcli at a pinned block, §11.6).

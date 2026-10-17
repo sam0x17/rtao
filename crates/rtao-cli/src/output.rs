@@ -1355,7 +1355,22 @@ impl Output {
         result: &ExtrinsicResult<O>,
         success_message: &str,
     ) -> Result<bool, OutputError> {
-        let recovery = result
+        self.result_with_shield_context(result, success_message, false, false)
+    }
+
+    /// Render a receipt using its actual submission transport and shield requirement.
+    ///
+    /// Machine receipts retain their canonical fields. Human carrier guidance
+    /// does not infer rejection from a missing inner-receipt marker, and a
+    /// required shield overrides incompatible Payment advice.
+    pub fn result_with_shield_context<O>(
+        &self,
+        result: &ExtrinsicResult<O>,
+        success_message: &str,
+        shielded: bool,
+        required_shield: bool,
+    ) -> Result<bool, OutputError> {
+        let mut recovery = result
             .fate_unknown
             .as_ref()
             .filter(|_| !result.success)
@@ -1377,11 +1392,33 @@ impl Output {
             return Ok(result.success);
         }
         if !result.success {
+            let unconfirmed_inner =
+                shielded && result.data.get("shielded").and_then(Value::as_bool) != Some(true);
+            let uncertain = unconfirmed_inner && result.fate_unknown.is_some();
+            let contextual_payment = (required_shield || unconfirmed_inner)
+                && result
+                    .error
+                    .as_ref()
+                    .and_then(|error| error.name.as_deref())
+                    == Some("Payment");
+            if contextual_payment {
+                let help = if required_shield {
+                    "fund the signing account with free TAO; this operation requires MEV shielding"
+                } else {
+                    "fund the signing account with free TAO for the outer carrier fee; alpha cannot cover this fee"
+                };
+                recovery = Some(match recovery {
+                    Some(recovery) => format!("{help}; {recovery}"),
+                    None => help.into(),
+                });
+            }
             if let Some(error) = &result.error {
                 self.chain_error_with_help(
                     error,
                     result.explorer_url.as_deref(),
                     recovery.as_deref(),
+                    contextual_payment,
+                    uncertain,
                 )?;
             } else {
                 self.line(
@@ -1394,6 +1431,15 @@ impl Output {
                 if let Some(help) = recovery.as_deref() {
                     self.sub_diag(Stream::Stderr, "help", help)?;
                 }
+            }
+            if unconfirmed_inner {
+                self.message(if uncertain {
+                    "the submission used MEV shielding; its outcome is unknown. The outer carrier fee requires free TAO, not alpha; inspect the transaction before any further submission"
+                } else if required_shield {
+                    "the submission used MEV shielding; the outer carrier fee requires free TAO, not alpha. This operation requires shielding; fund the signing account with free TAO"
+                } else {
+                    "the submission used MEV shielding; the outer carrier fee requires free TAO, not alpha. After checking the result, use --no-mev-shield only if this operation supports unshielded submission"
+                })?;
             }
             return Ok(false);
         }
@@ -1565,7 +1611,7 @@ impl Output {
         error: &ChainError,
         explorer_url: Option<&str>,
     ) -> Result<(), OutputError> {
-        self.chain_error_with_help(error, explorer_url, None)
+        self.chain_error_with_help(error, explorer_url, None, false, false)
     }
 
     fn chain_error_with_help(
@@ -1573,6 +1619,8 @@ impl Output {
         error: &ChainError,
         explorer_url: Option<&str>,
         help: Option<&str>,
+        contextual_payment: bool,
+        uncertain: bool,
     ) -> Result<(), OutputError> {
         if self.options.json_mode {
             let mut payload = error.to_json();
@@ -1586,10 +1634,20 @@ impl Output {
             &format!(
                 "error[{}]: {}",
                 error.code.as_str(),
-                diagnostic(&self.prose(&error.message))
+                diagnostic(&self.prose(if uncertain {
+                    "the transaction outcome is unknown"
+                } else if contextual_payment {
+                    "the signing account cannot cover the transaction fee (and tip)"
+                } else {
+                    &error.message
+                }))
             ),
         )?;
-        if let Some(name) = error.name.as_deref().filter(|name| !name.is_empty()) {
+        if let Some(name) = error
+            .name
+            .as_deref()
+            .filter(|name| !uncertain && !name.is_empty())
+        {
             self.sub_diag(
                 Stream::Stderr,
                 "note",
@@ -1598,6 +1656,7 @@ impl Output {
         }
         if let Some(description) = error
             .description()
+            .filter(|_| !contextual_payment && !uncertain)
             .filter(|description| *description != error.message)
         {
             self.sub_diag(Stream::Stderr, "note", description)?;

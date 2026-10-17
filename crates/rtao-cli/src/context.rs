@@ -581,12 +581,18 @@ impl AppContext {
         let Some(outcome) = outcome else {
             return Ok(None);
         };
+        let shield = outcome.shield;
+        let required_shield = outcome.required_shield;
         let result = outcome.into_receipt()?;
-        let rendered = if intent.spec().name == "register_subnet" {
+        let rendered = if result.success && intent.spec().name == "register_subnet" {
             self.output.registration_result(&result)
         } else {
-            self.output
-                .result(&result, &format!("submitted {}", intent.spec().name))
+            self.output.result_with_shield_context(
+                &result,
+                &format!("submitted {}", intent.spec().name),
+                shield.enabled,
+                required_shield,
+            )
         };
         if !rendered
             .map_err(|error| known_receipt_error(CliError::failure(error.to_string()), &result))?
@@ -1192,6 +1198,8 @@ impl AppContext {
             signer_address: plan.signer_address,
             dispatch_owner: proxy_for.unwrap_or(plan.signer_address),
             dispatch_proxy: proxy_for,
+            shield: choice,
+            required_shield,
             receipt: result,
             release_error,
             hook_error,
@@ -1259,6 +1267,8 @@ struct SubmissionOutcome {
     signer_address: AccountId,
     dispatch_owner: AccountId,
     dispatch_proxy: Option<AccountId>,
+    shield: ShieldChoice,
+    required_shield: bool,
     receipt: rtao::tx::ExtrinsicResult,
     release_error: Option<CliError>,
     hook_error: Option<CliError>,
@@ -2767,10 +2777,10 @@ impl AppContext {
         }
         let mut inner: Option<crate::multisig::ReviewedInnerCall> = None;
         let mut opening: Option<rtao_runtime::models::MultisigTimepoint> = None;
-        let mut last: Option<rtao::tx::ExtrinsicResult> = None;
+        let mut last: Option<(rtao::tx::ExtrinsicResult, ShieldChoice, bool)> = None;
         let attempt = async {
             for (index, selection) in rounds.iter().enumerate() {
-                if let Some(receipt) = &last {
+                if let Some((receipt, ..)) = &last {
                     if crate::call::multisig_executed(receipt) || !receipt.success {
                         break;
                     }
@@ -2868,10 +2878,12 @@ impl AppContext {
                 let Some(outcome) = receipt else {
                     return Ok(None);
                 };
+                let shield = outcome.shield;
+                let required_shield = outcome.required_shield;
                 let mut receipt = outcome.receipt;
                 // Retain every known on-chain result before any fallible local
                 // post-processing, including an external signer's close failure.
-                last = Some(receipt.clone());
+                last = Some((receipt.clone(), shield, required_shield));
                 if let Some(error) = outcome.hook_error {
                     return Err(known_receipt_error(error, &receipt));
                 }
@@ -2914,21 +2926,22 @@ impl AppContext {
                 let succeeded = receipt.success;
                 // The enriched form is an optional update after the raw
                 // result has already been persisted, even if closing failed.
-                last = Some(receipt.clone());
+                last = Some((receipt.clone(), shield, required_shield));
                 if let Some(hooks) = options.hooks {
                     hooks.after_followup(&receipt).await?;
                 }
                 if succeeded && let Some(error) = outcome.release_error {
-                    last = Some(receipt);
+                    last = Some((receipt, shield, required_shield));
                     return Err(error);
                 }
-                last = Some(receipt);
+                last = Some((receipt, shield, required_shield));
                 if !succeeded {
                     break;
                 }
                 if index == 0 && index + 1 < rounds.len() && raw.threshold >= 2 && !executed {
                     opening = Some(crate::call::approval_timepoint(
                         last.as_ref()
+                            .map(|(receipt, ..)| receipt)
                             .ok_or_else(|| CliError::failure("missing retained approval result"))?,
                         &group,
                         actual.call(),
@@ -2950,11 +2963,11 @@ impl AppContext {
             Ok(last.take())
         }
         .await;
-        let result = match attempt {
+        let (result, shield, required_shield) = match attempt {
             Ok(Some(result)) => result,
             Ok(None) => return Ok(None),
             Err(mut error) => {
-                if let Some(receipt) = &last {
+                if let Some((receipt, ..)) = &last {
                     let hash = inner
                         .as_ref()
                         .map(|call| format!("0x{}", hex::encode(call.call().hash())))
@@ -2984,11 +2997,15 @@ impl AppContext {
                 return Err(error);
             }
         };
-        let rendered = if intent.spec().name == "register_subnet" {
+        let rendered = if result.success && intent.spec().name == "register_subnet" {
             self.output.registration_result(&result)
         } else {
-            self.output
-                .result(&result, &format!("submitted {}", intent.spec().name))
+            self.output.result_with_shield_context(
+                &result,
+                &format!("submitted {}", intent.spec().name),
+                shield.enabled,
+                required_shield,
+            )
         };
         if !rendered
             .map_err(|error| known_receipt_error(CliError::failure(error.to_string()), &result))?
