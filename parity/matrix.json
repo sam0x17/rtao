@@ -2707,6 +2707,8 @@
           "rtao_cli::m7_timelock_commands::boundary_ciphertext_roundtrips_as_prefixed_hex_and_oversized_output_is_not_emitted",
           "rtao_cli::m7_timelock_commands::prompted_large_hex_uses_same_decode_path_and_plaintext_is_omitted_from_replay",
           "rtao_cli::m7_timelock_commands::oversized_sparse_ciphertext_is_rejected_before_beacon_and_left_unchanged",
+          "rtao_cli::commands::upgrade::artifacts::tests::regular_files_sparse_oversize_growth_directories_and_symlinks_obey_caps",
+          "rtao_cli::commands::upgrade::artifacts::tests::streaming_cap_refuses_growth_before_appending_and_keeps_previous_bytes",
           "rtao_wallet::messages::tests::oversized_message_hex_refuses_before_decoding",
           "rtao_cli::commands::wallet::m8::history::tests::refuses_foreign_pagination_and_cycles_without_following_them",
           "rtao_cli::commands::wallet::m8::history::tests::malformed_pages_and_aggregate_budget_refuse_without_partial_output"
@@ -8323,11 +8325,11 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/multisig.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `multisig` group"
+          "crates/rtao-cli/src/commands/multisig.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "1184cb186443aa8215e361dded46613e8d39478b"
       },
       {
         "kind": "ported",
@@ -8378,33 +8380,33 @@
         "milestone": "M5–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/stake.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `stake` group"
+          "crates/rtao-cli/src/commands/stake.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "712a6a038799d7384cc682ac6491fd4e1ba72840"
       },
       {
         "kind": "ported",
         "milestone": "M4–M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/subnets.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `subnets` group"
+          "crates/rtao-cli/src/commands/subnets.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "28b14c45f069b65484420e37fa7351f1112998bd"
       },
       {
         "kind": "ported",
         "milestone": "M4–M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/sudo.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `hparams` group"
+          "crates/rtao-cli/src/commands/hparams.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f14dc639d85743a151a12b81c38638071c05e97e"
       },
       {
         "kind": "ported",
@@ -8422,22 +8424,26 @@
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/upgrade.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `upgrade` group"
+          "crates/rtao-cli/src/commands/upgrade.rs",
+          "crates/rtao-cli/src/commands/multisig.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f6878d8b9725b98213253ef5992203862ee65877"
       },
       {
         "kind": "ported",
         "milestone": "M4–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/wallet.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `wallet` group"
+          "crates/rtao-cli/src/commands/wallet.rs",
+          "crates/rtao-cli/src/commands/wallet_m8/mod.rs",
+          "crates/rtao-cli/src/commands/wallet_m8/views.rs",
+          "crates/rtao-cli/src/commands/wallet_m8/history.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e994f7d04bab68e7405788f122f06796eaa538cb"
       },
       {
         "kind": "ported",
@@ -8680,22 +8686,25 @@
         "milestone": "M4–M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/tx.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` generated `tx`"
+          "crates/rtao-cli/src/commands/schema.rs",
+          "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "e2bdf719e50ddb32b17f7aa94b3265be4b7902b5"
       },
       {
         "kind": "ported",
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/upgrade_helpers.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `upgrade`"
+          "crates/rtao-cli/src/commands/upgrade/artifacts.rs",
+          "crates/rtao-cli/src/commands/upgrade/chain.rs",
+          "crates/rtao-cli/src/commands/multisig.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6bfdca77bb4ccaf005f50073e32f7d752591c234"
       },
       {
         "kind": "ported",
@@ -10479,33 +10488,33 @@
         "milestone": "M2-M7",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_null_consensus.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"
+          "parity/e2e_map.toml (optional scenario 4 input; runtime execution remains pending under Q30)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "7fd3fc96df9d6d044cbbf480d9e7b1a7d71acf72"
       },
       {
         "kind": "oracle-only",
         "milestone": "M2-M7",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_pow_registration.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"
+          "parity/e2e_map.toml (optional scenario 14 input; runtime execution remains pending under Q30)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "8c4e62bcb00d7548b228b0738914254a5d9d5472"
       },
       {
         "kind": "oracle-only",
         "milestone": "M2-M7",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_timelock_commitment.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"
+          "parity/e2e_map.toml (optional scenario 19 input; runtime execution remains pending under Q30)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "deffcefc170475adb87760304117a35f47e730aa"
       },
       {
         "kind": "vendored",
@@ -10607,22 +10616,27 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_cli.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
+          "crates/rtao-cli/tests/generated_commands.rs",
+          "crates/rtao-cli/tests/query_contract.rs",
+          "crates/rtao-cli/tests/m8_stake_commands.rs",
+          "crates/rtao-cli/tests/subnets_commands.rs",
+          "crates/rtao-cli/tests/hparams_commands.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "584295b9a001b4ecbf6694113a8ffaf099362008"
       },
       {
-        "kind": "oracle-only",
+        "kind": "ported",
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_cli_commands.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
+          "crates/rtao-cli/tests/generated_commands.rs",
+          "crates/rtao-cli/tests/m8_help_theme.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "110fe05a0c88595be6febdd3d71f19f8cf164b07"
       },
       {
         "kind": "ported",
@@ -10640,11 +10654,14 @@
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_cli_null_pruning.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+          "xtask/src/extract_null_pruning_test_fixtures.rs",
+          "vendor/upstream/extracted/named_tables.json (three authenticated parameter/input tables)",
+          "crates/rtao-neuron/src/owner_ops/trim/tests.rs",
+          "crates/rtao-cli/tests/hparams_commands.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0705e3c90e593202712a08d9ec9ed21a82d622a3"
       },
       {
         "kind": "oracle-only",
@@ -10758,15 +10775,25 @@
         "synced_blob": "97e11173bc2e8d274d3fa70871dccf6892b51074"
       },
       {
-        "kind": "oracle-only",
+        "kind": "ported",
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_intents_table.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"
+          "crates/rtao-intents/tests/intent_plans.rs",
+          "crates/rtao-tx/tests/shield_raw.rs",
+          "crates/rtao-intents/tests/client_transfer_lifecycles.rs",
+          "crates/rtao-intents/src/root_claim.rs",
+          "crates/rtao-client/tests/shield.rs",
+          "crates/rtao-tx/tests/owner_execution.rs",
+          "crates/rtao-intents/src/weights/intents.rs",
+          "crates/rtao-tx/tests/executor.rs",
+          "crates/rtao-intents/tests/multisig_adapter.rs",
+          "crates/rtao-intents/src/staking_claims.rs",
+          "crates/rtao-intents/src/children.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "ee7896ea707810ab76eb5e2db68969c1cf9fa997"
       },
       {
         "kind": "oracle-only",
