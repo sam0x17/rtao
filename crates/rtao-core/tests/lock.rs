@@ -192,7 +192,7 @@ fn canary_provenance_identifies_effective_commit_without_claiming_a_release()
 }
 
 fn patched_fixture() -> Result<DocumentMut, Box<dyn Error>> {
-    Ok("[core]\ntag='v478'\ncommit='1111111111111111111111111111111111111111'\n[core.patch]\nrepo='https://github.com/sam0x17/subtensor.git'\nbranch='rtao-core-patch/v478'\nbase='1111111111111111111111111111111111111111'\nrev='2222222222222222222222222222222222222222'\nupstream_pr='https://github.com/RaoFoundation/subtensor/pull/3242'\nreview_base='1111111111111111111111111111111111111111'\nreview_rev='2222222222222222222222222222222222222222'\nreview_diff_sha256='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\npaths=['sdk/bittensor-core/src/signers/mod.rs','sdk/bittensor-core/src/signers/ledger.rs','sdk/bittensor-core/src/signers/hid.rs']\nprobe=['bittensor_core::signers::ApduTransport','bittensor_core::signers::ledger::LedgerDevice::with_transport']\n".parse()?)
+    Ok("[core]\ntag='v478'\ncommit='1111111111111111111111111111111111111111'\n[core.patch]\nrepo='https://github.com/sam0x17/subtensor.git'\nbranch='rtao-core-patch/v478'\nbase='1111111111111111111111111111111111111111'\nrev='2222222222222222222222222222222222222222'\nupstream_pr='https://github.com/RaoFoundation/subtensor/pull/3242'\nupstream_pr_rev='2222222222222222222222222222222222222222'\nsecurity_issue='https://github.com/RaoFoundation/subtensor/issues/3251'\nreview_base='1111111111111111111111111111111111111111'\nreview_rev='2222222222222222222222222222222222222222'\nreview_diff_sha256='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\npaths=['sdk/bittensor-core/src/signers/mod.rs','sdk/bittensor-core/src/signers/ledger.rs','sdk/bittensor-core/src/signers/hid.rs','sdk/bittensor-core/Cargo.toml','sdk/bittensor-core/src/keys/mod.rs','sdk/bittensor-core/src/keys/encrypted_json.rs']\nprobe=['bittensor_core::signers::ApduTransport','bittensor_core::signers::ledger::LedgerDevice::with_transport']\n".parse()?)
 }
 
 #[test]
@@ -234,6 +234,11 @@ fn patch_provenance_rejects_alternate_sources_and_incomplete_identities()
             "upstream_pr",
             "https://github.com/RaoFoundation/subtensor/pull/1",
         ),
+        ("upstream_pr_rev", "main"),
+        (
+            "security_issue",
+            "https://github.com/RaoFoundation/subtensor/issues/1",
+        ),
         ("review_base", "v478"),
         ("review_rev", "main"),
         ("review_diff_sha256", "abc"),
@@ -252,6 +257,8 @@ fn patch_provenance_rejects_alternate_sources_and_incomplete_identities()
         "base",
         "rev",
         "upstream_pr",
+        "upstream_pr_rev",
+        "security_issue",
         "review_base",
         "review_rev",
         "review_diff_sha256",
