@@ -106,3 +106,10 @@ The [error reference](errors/index.md) and `rtao explain` describe these codes.
 When `fate_unknown` contains a transmitted transaction hash, reconcile that
 attempt before deciding whether to send another one. A timeout does not prove
 that the chain rejected the call.
+
+A registration completion error can carry an already included receipt through
+`TxError::submitted_receipt()`. Inspect and retain it before deciding what to
+do next; `primary_cause()` exposes the completion failure. The receipt's
+`extrinsic_hash` identifies the observed extrinsic, which can be a resolved
+shield's inner transaction. These native recovery fields are omitted from
+canonical Python-compatible JSON.

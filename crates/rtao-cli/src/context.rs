@@ -1171,8 +1171,13 @@ impl AppContext {
         // The raw receipt must reach durable storage before releasing an
         // external signer or performing fallible follow-up work. A failed
         // journal write still releases the source and retains the receipt.
-        let hook_error = match (&result, control.hooks) {
-            (Ok(receipt), Some(hooks)) => hooks.on_result(receipt).await.err(),
+        let observed = match &result {
+            Ok(receipt) => Some(receipt),
+            Err(error) => error.submitted_receipt.as_deref(),
+        };
+        let chain_success = observed.is_some_and(|receipt| receipt.success);
+        let hook_error = match (observed, control.hooks) {
+            (Some(receipt), Some(hooks)) => hooks.on_result(receipt).await.err(),
             _ => None,
         }
         // A broken progress sink never skips the raw receipt hook or signer
@@ -1181,11 +1186,7 @@ impl AppContext {
         let release_error = if let (Some(binding), Some(acquired)) = (&control.factory, &acquired) {
             binding
                 .factory
-                .release(
-                    binding.selection,
-                    acquired.as_ref(),
-                    result.as_ref().is_ok_and(|receipt| receipt.success),
-                )
+                .release(binding.selection, acquired.as_ref(), chain_success)
                 .await
                 .err()
         } else {
@@ -1193,7 +1194,21 @@ impl AppContext {
         };
         // A submission error remains primary when closing the source also
         // fails. Successful submissions retain their receipt for recovery.
-        let result = result?;
+        let result = result.map_err(|mut error| {
+            // Keep completion failure primary even if durable storage or
+            // source release also failed. Neither may erase the receipt.
+            for secondary in [hook_error.as_ref(), release_error.as_ref()]
+                .into_iter()
+                .flatten()
+            {
+                let note = format!("post-submission cleanup also failed: {}", secondary.message);
+                error.help = Some(match error.help.take() {
+                    Some(help) => format!("{help}; {note}"),
+                    None => note,
+                });
+            }
+            error
+        })?;
         Ok(Some(SubmissionOutcome {
             signer_address: plan.signer_address,
             dispatch_owner: proxy_for.unwrap_or(plan.signer_address),
@@ -1299,6 +1314,10 @@ pub(crate) fn known_receipt_error(
             .map(|id| format!(" as {id}"))
             .unwrap_or_default(),
     );
+    let identity = match receipt.extrinsic_hash {
+        Some(hash) => format!("{identity} (transaction 0x{})", hex::encode(hash.0)),
+        None => identity,
+    };
     let recovery = match receipt.fate_unknown.as_ref() {
         Some(hash) => format!("{identity}; {}", crate::error::unknown_fate_help(&hash.0)),
         None => format!("{identity}; inspect that result before retrying"),
@@ -2503,11 +2522,15 @@ impl AppContext {
                 .release(
                     &self.globals,
                     keys.as_ref(),
-                    result.as_ref().is_ok_and(|receipt| {
-                        receipt
+                    match &result {
+                        Ok(outcome) => outcome
                             .as_ref()
-                            .is_some_and(|outcome| outcome.receipt.success)
-                    }),
+                            .is_some_and(|outcome| outcome.receipt.success),
+                        Err(error) => error
+                            .submitted_receipt
+                            .as_deref()
+                            .is_some_and(|receipt| receipt.success),
+                    },
                 )
                 .await
         } else {
@@ -2967,7 +2990,11 @@ impl AppContext {
             Ok(Some(result)) => result,
             Ok(None) => return Ok(None),
             Err(mut error) => {
-                if let Some((receipt, ..)) = &last {
+                let retained = error
+                    .submitted_receipt
+                    .as_deref()
+                    .or_else(|| last.as_ref().map(|(receipt, ..)| receipt));
+                if let Some(receipt) = retained {
                     let hash = inner
                         .as_ref()
                         .map(|call| format!("0x{}", hex::encode(call.call().hash())))

@@ -365,6 +365,7 @@ mod tests {
         let rejection = ExtrinsicResult {
             success: false,
             message: "expired proof".into(),
+            extrinsic_hash: None,
             block_hash: None,
             extrinsic_id: None,
             explorer_url: None,

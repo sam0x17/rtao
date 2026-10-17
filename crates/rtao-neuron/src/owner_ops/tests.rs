@@ -316,6 +316,7 @@ fn receipt_only_completion_and_unknown_fate_are_not_rate_retries() {
     let base = ExtrinsicResult {
         success: false,
         message: "rate".into(),
+        extrinsic_hash: None,
         block_hash: Some(H256([1; 32])),
         extrinsic_id: Some("100-0".into()),
         explorer_url: None,
