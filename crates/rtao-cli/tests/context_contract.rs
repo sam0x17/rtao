@@ -1103,6 +1103,34 @@ async fn preflight_blocks_before_confirmation_and_json_without_yes_never_signs()
     client.close().await;
     Ok(())
 }
+// Client narration fixture; it does not model runtime registration or fees.
+struct ShieldFailurePreview {
+    required: bool,
+}
+impl IntentInterface for ShieldFailurePreview {
+    const SPEC: &'static rtao_catalog::IntentSpec = Preview::SPEC;
+    type Role = Coldkey;
+    type Origin = Signed;
+    type Output = ();
+    const WRAPS: &'static [&'static rtao_runtime::CallDescriptor] = Preview::WRAPS;
+    fn to_json(&self) -> Value {
+        Preview { blocked: false }.to_json()
+    }
+}
+impl Intent for ShieldFailurePreview {
+    fn safety(&self) -> Result<rtao::tx::IntentSafety, IntentError> {
+        let mut safety = Preview { blocked: false }.safety()?;
+        safety.mev_shield_required = self.required;
+        Ok(safety)
+    }
+    fn summary(&self) -> String {
+        Preview { blocked: false }.summary()
+    }
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        Preview { blocked: false }.build(cx).await
+    }
+}
+
 #[tokio::test]
 async fn real_execution_unlocks_once_and_renders_one_canonical_receipt() -> TestResult {
     let (client, chain, keys) = fixture(1_000_000_000).await?;
@@ -1122,6 +1150,123 @@ async fn real_execution_unlocks_once_and_renders_one_canonical_receipt() -> Test
         receipt.to_json()
     );
     client.close().await;
+    // Final transport survives pool refusal, default fallback and unknown fate.
+    for (required, downgraded, unknown) in [
+        (false, false, false),
+        (true, false, false),
+        (false, true, false),
+        (false, false, true),
+        (true, false, true),
+    ] {
+        for (json_mode, quiet) in [(false, false), (false, true), (true, true)] {
+            let (client, chain, keys) = fixture(1_000_000_000).await?;
+            chain.mutate_state(|state| -> TestResult {
+                if !downgraded {
+                    state.seed_python("MevShield", "NextKey", &[], json!(vec![0u8; 1184]))?;
+                }
+                if unknown {
+                    state.queue_submit(rtao_testkit::SubmitScript::Statuses(vec![json!("ready")]));
+                } else {
+                    state.queue_reply(
+                        "author_submitAndWatchExtrinsic",
+                        rtao_testkit::Reply::error(1010, "Invalid Transaction: Payment", None),
+                    );
+                }
+                Ok(())
+            })?;
+            let mut flags = vec!["--yes"];
+            if json_mode {
+                flags.push("--json");
+            }
+            if quiet {
+                flags.push("--quiet");
+            }
+            let (ctx, sink, _) = context(&flags)?;
+            let releases = Mutex::new(Vec::new());
+            let hooks = DurablePlanHooks {
+                unlocks: &keys.unlocks,
+                source_acquisitions: None,
+                releases: &releases,
+                plans: Mutex::new(Vec::new()),
+                raw: Mutex::new(Vec::new()),
+                enriched: Mutex::new(Vec::new()),
+                fail_result: false,
+            };
+            let error = ctx
+                .submit_with_keys_options(
+                    &client,
+                    &ShieldFailurePreview { required },
+                    &keys,
+                    SubmissionOptions {
+                        period: Some(4),
+                        deadline: Some(std::time::Duration::from_secs(5)),
+                        hooks: Some(&hooks),
+                        ..Default::default()
+                    },
+                )
+                .await
+                .err()
+                .ok_or("carrier/fallback receipt must fail")?;
+            assert_eq!(error.code, 1);
+            let receipt = {
+                let raw = hooks.raw.lock().map_err(|_| "raw carrier receipt")?;
+                assert_eq!(raw.len(), 1);
+                raw[0].clone()
+            };
+            assert!(!receipt.success);
+            assert_eq!(receipt.fate_unknown.is_some(), unknown);
+            assert_ne!(receipt.data.get("shielded"), Some(&json!(true)));
+            if !unknown {
+                assert_eq!(
+                    receipt
+                        .error
+                        .as_ref()
+                        .and_then(|error| error.name.as_deref()),
+                    Some("Payment")
+                );
+            }
+            let stderr = sink.text(Stream::Stderr)?;
+            assert_eq!(
+                stderr.contains("the submission used MEV shielding;"),
+                !json_mode && !quiet && !downgraded,
+                "{required}/{downgraded}/{unknown}: {stderr}"
+            );
+            if !json_mode && !downgraded {
+                assert!(!stderr.contains("retry with"), "{stderr}");
+            }
+            if !json_mode && required {
+                assert!(!stderr.contains("--no-mev-shield"), "{stderr}");
+                assert!(stderr.contains("requires MEV shielding") || unknown);
+            }
+            if unknown {
+                assert!(stderr.contains("do not resubmit until its outcome is known"));
+                assert!(!stderr.contains("--no-mev-shield"), "{stderr}");
+                assert!(!stderr.contains("the chain rejected the call"), "{stderr}");
+            }
+            if json_mode {
+                assert_eq!(
+                    serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+                    receipt.to_json()
+                );
+                if !unknown {
+                    assert!(stderr.is_empty());
+                } else {
+                    let diagnostic: Value = serde_json::from_str(&stderr)?;
+                    assert_eq!(diagnostic["error"], receipt.message);
+                }
+            }
+            assert_eq!(
+                chain
+                    .requests()
+                    .iter()
+                    .filter(|r| r.method == "author_submitAndWatchExtrinsic")
+                    .count(),
+                1
+            );
+            client.close().await;
+        }
+    }
+
     // A watched submission can return a failed receipt with native unknown-fate
     // identity. Keep canonical stdout while making that identity usable in CLI
     // recovery, after the actual SDK and durable receipt hook have completed.
@@ -2625,6 +2770,99 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
         result.to_json()
     );
     client.close().await;
+    // A saved operation also retains the last round's actual transport.
+    // The mixed case opens unshielded, then gains a key and encrypts round two.
+    for (required, downgraded, mixed_rounds) in [
+        (false, false, false),
+        (true, false, false),
+        (false, true, false),
+        (false, false, true),
+    ] {
+        let keys = members()?;
+        let (client, chain, _) = fixture(1_000_000_000).await?;
+        let mut factory = factory(&keys);
+        if mixed_rounds {
+            let group = saved_group(&client, &keys).await?;
+            let call = rtao_runtime::calls::system::remark(vec![8, 9])
+                .compose(&client.refresh_runtime().await?)?;
+            publish_pending_after_release(
+                &mut factory,
+                chain.clone(),
+                &group,
+                keys[0].key.account(),
+                &call,
+            );
+            let publish = factory.on_release.take().ok_or("opening publisher")?;
+            let next_chain = chain.clone();
+            factory.on_release = Some(Arc::new(move || {
+                publish()?;
+                next_chain
+                    .mutate_state(|state| {
+                        state.seed_python("MevShield", "NextKey", &[], json!(vec![0u8; 1184]))?;
+                        state.queue_reply(
+                            "author_submitAndWatchExtrinsic",
+                            rtao_testkit::Reply::error(1010, "Invalid Transaction: Payment", None),
+                        );
+                        Ok::<_, rtao::core::CoreError>(())
+                    })
+                    .map_err(|error| rtao_cli::error::CliError::failure(error.to_string()))
+            }));
+        } else {
+            chain.mutate_state(|state| -> TestResult {
+                if !downgraded {
+                    state.seed_python("MevShield", "NextKey", &[], json!(vec![0u8; 1184]))?;
+                }
+                state.queue_reply(
+                    "author_submitAndWatchExtrinsic",
+                    rtao_testkit::Reply::error(1010, "Invalid Transaction: Payment", None),
+                );
+                Ok(())
+            })?;
+        }
+        let (ctx, sink) = saved_context(&keys, &["--yes"], 2)?;
+        let error = ctx
+            .submit_saved_with_factory(
+                &client,
+                &ShieldFailurePreview { required },
+                false,
+                None,
+                &factory,
+                &CallCache::default(),
+            )
+            .await
+            .err()
+            .ok_or("saved carrier/fallback receipt must fail")?;
+        assert_eq!(error.code, 1);
+        let stderr = sink.text(Stream::Stderr)?;
+        assert_eq!(
+            stderr.matches("the submission used MEV shielding;").count(),
+            usize::from(!downgraded),
+            "{stderr}"
+        );
+        if required {
+            assert!(!stderr.contains("--no-mev-shield"), "{stderr}");
+            assert!(stderr.contains("requires MEV shielding"));
+        }
+        let rounds = if mixed_rounds { 2 } else { 1 };
+        assert_eq!(factory.acquired.load(Ordering::SeqCst), rounds);
+        {
+            let released = factory.releases.lock().map_err(|_| "carrier releases")?;
+            assert_eq!(released.len(), rounds);
+            assert_eq!(released.last(), Some(&false));
+            if mixed_rounds {
+                assert_eq!(released.first(), Some(&true));
+            }
+        }
+        assert_eq!(
+            chain
+                .requests()
+                .iter()
+                .filter(|r| r.method == "author_submitAndWatchExtrinsic")
+                .count(),
+            rounds
+        );
+        client.close().await;
+    }
     Ok(())
 }
 
