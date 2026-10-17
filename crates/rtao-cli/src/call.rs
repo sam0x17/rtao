@@ -2575,8 +2575,9 @@ pub fn multisig_replay_command(
     if let Some(backend) = backend {
         tokens.extend(["--signer".into(), backend]);
     }
-    if ctx.globals.network != "finney" {
-        tokens.extend(["-n".into(), ctx.globals.network.clone()]);
+    let (environment, network) = crate::prompt::shareable_network(&ctx.globals.network);
+    if let Some(network) = network {
+        tokens.extend(["-n".into(), network.into()]);
     }
     tokens.extend(["call".into(), target.into()]);
     if let Some(path) = &request.args_file {
@@ -2639,11 +2640,12 @@ pub fn multisig_replay_command(
     if request.role != rtao::signer::SignerRole::Coldkey {
         tokens.extend(["--signer".into(), request.role.as_str().into()]);
     }
-    Ok(tokens
+    let command = tokens
         .iter()
         .map(|token| shell_quote(token))
         .collect::<Vec<_>>()
-        .join(" "))
+        .join(" ");
+    Ok(format!("{environment}{command}"))
 }
 
 /// Build pending approval data from immutable bytes and known public state.

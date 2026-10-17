@@ -647,6 +647,75 @@ fn multisig_replay_uses_rtao_and_preserves_btcli_inside_user_arguments() -> Test
         command,
         "rtao call System.remark --args-file 'btcli user arguments.json' -w 'btcli team' --signatory 'btcli member'"
     );
+
+    let ordinary = command;
+    for (network, _) in rtao_catalog::py::NETWORKS {
+        ctx.globals.network = (*network).into();
+        let replay = call::multisig_replay_command(&ctx, &spec, &group, alice, &labels)?;
+        let expected = if *network == "finney" {
+            ordinary.clone()
+        } else {
+            ordinary.replacen("rtao ", &format!("rtao -n {network} "), 1)
+        };
+        assert_eq!(replay, expected);
+        assert!(!replay.contains("BT_NETWORK"));
+        assert_eq!(ctx.globals.network, *network);
+    }
+    let environment =
+        r#"BT_NETWORK="${BT_NETWORK:?set BT_NETWORK to your configured RPC endpoint}" "#;
+    for endpoint in [
+        "wss://url-user:url-password@rpc.invalid:9944/",
+        "ws://rpc.invalid:9944/private-path-token",
+        "wss://rpc.invalid/?api_key=query-token",
+        "wss://rpc.invalid/#fragment-token",
+        "wss://url-user%40team:url-password%21@rpc.invalid/private-path-token?api_key=query-token#fragment-token",
+    ] {
+        ctx.globals.network = endpoint.into();
+        let before = ctx.client_config()?.network.endpoint().to_owned();
+        let replay = call::multisig_replay_command(&ctx, &spec, &group, alice, &labels)?;
+        assert_eq!(replay, format!("{environment}{ordinary}"));
+        for private in [
+            endpoint,
+            "rpc.invalid",
+            "url-user",
+            "url-password",
+            "private-path-token",
+            "query-token",
+            "fragment-token",
+        ] {
+            assert!(!replay.contains(private));
+        }
+        assert_eq!(ctx.globals.network, endpoint);
+        assert_eq!(ctx.client_config()?.network.endpoint(), before);
+
+        // Hosted Unix fixtures intercept the executable with a shell function;
+        // no real CLI, endpoint, signer or transaction is invoked.
+        #[cfg(unix)]
+        {
+            let script = format!(r#"rtao() {{ printf '%s\n' "$BT_NETWORK"; }}; {replay}"#);
+            for value in [None, Some("")] {
+                let mut shell = std::process::Command::new("sh");
+                shell.arg("-c").arg(&script).env_remove("BT_NETWORK");
+                if let Some(value) = value {
+                    shell.env("BT_NETWORK", value);
+                }
+                let result = shell.output()?;
+                assert!(!result.status.success());
+                assert!(result.stdout.is_empty());
+                assert!(
+                    String::from_utf8(result.stderr)?
+                        .contains("set BT_NETWORK to your configured RPC endpoint")
+                );
+            }
+            let result = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&script)
+                .env("BT_NETWORK", endpoint)
+                .output()?;
+            assert!(result.status.success());
+            assert_eq!(String::from_utf8(result.stdout)?, format!("{endpoint}\n"));
+        }
+    }
     Ok(())
 }
 
