@@ -6954,33 +6954,33 @@
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/coinbase/reveal_commits.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "vendor/upstream/extracted/chain_rules.json (reveal_contract payload and epoch-prefix projection; remaining reveal control flow pending)"
+          "vendor/upstream/extracted/chain_rules.json (reveal_contract payload and epoch-prefix projection)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "32b0f98a75e383a2e34d3328561761ee506084d9"
       },
       {
         "kind": "extracted",
         "milestone": "M1-M2",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/coinbase/run_coinbase.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"
+          "vendor/upstream/extracted/owner_map.json (framework_rules.blocks_until_next_auto_epoch client projection)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "b97ad0e448f879425a1407a4e320802877d2e4ab"
       },
       {
-        "kind": "ported",
+        "kind": "extracted",
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/coinbase/tempo_control.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "vendor/upstream/extracted/owner_map.json (delegated tempo/activity client contract projection; runtime effects excluded)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "98c0081114fb19d18d4f7a76b2fecd67a8b53243"
       },
       {
         "kind": "extracted",
@@ -7094,37 +7094,36 @@
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/subnets/serving.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "rtao_neuron::publisher::{AxonConfig,AxonPublisher}",
+          "rtao_intents::serving::{ServeAxon,ServeAxonTls,ServePrometheus,ResetAxon}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "867c497710872a1226ebd6b5a95f111fd02a9ca2"
       },
       {
         "kind": "ported",
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/subnets/subnet.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "rtao_neuron::OwnerOps::{create_subnet,start} (client orchestration; chain-source attribution pending)",
-          "rtao_tx registration completion follower (Python-derived; chain-source attribution pending)",
-          "rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"
+          "crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)",
+          "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "293d3cd0ea578bc091c7f282357843d81246be8e"
       },
       {
         "kind": "ported",
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/subnets/weights.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "rtao_neuron::weights::{WeightScheduler,RevealWatcher} (selected preparation and actual-epoch observation; direct chain attribution pending)",
-          "rtao_intents::weights (Python-derived call/preparation contracts)",
-          "rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"
+          "crates/rtao-neuron/src/weights.rs",
+          "crates/rtao-neuron/src/weights/{reveal,submit}.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2f8569bc0a877de50d478ef46489f2966398b48e"
       },
       {
         "kind": "ported",
@@ -7144,11 +7143,13 @@
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/utils/rate_limiting.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "rtao_intents::hyperparameters::{HyperparamPlanner,owner_rate_key}",
+          "vendor/upstream/extracted/owner_map.json (selected owner policy source projection)",
+          "vendor/upstream/extracted/chain_rules.json (selected production/fast rate-limit projection)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb"
       },
       {
         "kind": "extracted",
@@ -8083,11 +8084,13 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/call.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `call`"
+          "crates/rtao-cli/src/call.rs",
+          "crates/rtao-cli/tests/raw_call_contract.rs",
+          "crates/rtao-cli/tests/call_contract.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "4b05fe2a6d40baeaeea4ed11f49998f80d2615bb"
       },
       {
         "kind": "ported",
@@ -8452,11 +8455,14 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/context.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` application context"
+          "crates/rtao-cli/src/context.rs",
+          "crates/rtao-cli/src/context/registration.rs",
+          "crates/rtao-cli/src/error.rs",
+          "crates/rtao-cli/src/output.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "081eed0005c58f9834e804b388a135702c07de8d"
       },
       {
         "kind": "ported",
@@ -8486,11 +8492,13 @@
         "milestone": "M4–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/helpers.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` shared helpers"
+          "crates/rtao-cli/src/commands/stake_picker.rs",
+          "crates/rtao-cli/src/commands/wallet.rs",
+          "crates/rtao-cli/src/commands/wallet_m8/views.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cfe78cc078cafb30ee1e69d80014c4820a2f26ea"
       },
       {
         "kind": "ported",
@@ -8509,11 +8517,12 @@
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/intent_prompts.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` generated-`tx` prompt policies [I]"
+          "crates/rtao-cli/src/intent_prompts.rs",
+          "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "0c37eb9c0c67f303ffa0d36035528d434b982764"
       },
       {
         "kind": "ported",
@@ -8558,11 +8567,16 @@
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/multisig_helpers.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `multisig`"
+          "crates/rtao-cli/src/call.rs",
+          "crates/rtao-cli/src/multisig.rs",
+          "crates/rtao-cli/src/context/direct_multisig.rs",
+          "crates/rtao-cli/src/commands/multisig.rs",
+          "crates/rtao-cli/src/books.rs",
+          "crates/rtao-cli/src/commands/wallet.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "21387c7cd8c95df13fb77bf33e60788236186605"
       },
       {
         "kind": "ported",
@@ -8581,22 +8595,25 @@
         "milestone": "M4–M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/output.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` output (tables via `comfy-table`, JSON)"
+          "crates/rtao-cli/src/output.rs",
+          "rtao_cli::commands specialized human renderers"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "69670cd9ff4d21625247c730398585379e04f992"
       },
       {
         "kind": "ported",
         "milestone": "M4",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/prompt.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` prompts and pickers"
+          "crates/rtao-cli/src/prompt.rs",
+          "crates/rtao-cli/src/application.rs",
+          "crates/rtao-cli/src/main.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a360f0cdcde1f1d32ae5dff8dd69623af0157d45"
       },
       {
         "kind": "ported",
@@ -8616,11 +8633,13 @@
         "milestone": "M6",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/root_helpers.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `root`"
+          "crates/rtao-cli/src/root_helpers/mod.rs",
+          "crates/rtao-cli/src/commands/root.rs",
+          "crates/rtao-cli/src/commands/stake_picker.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "20d0971e95db30a68212b7876eb99f83de43264f"
       },
       {
         "kind": "ported",
@@ -8638,22 +8657,23 @@
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/stake_exit.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `stake unstake-all`, `unstake-all-alpha`"
+          "crates/rtao-cli/src/commands/stake_exit.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cb3c9e17c0100dcc56b9e6eac493aad946bea7c4"
       },
       {
         "kind": "ported",
         "milestone": "M8",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/stake_picker.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` `stake wizard` and pickers"
+          "crates/rtao-cli/src/commands/stake_picker.rs",
+          "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "97a20647a5f779895aaef117d0813b3b6185b2a2"
       },
       {
         "kind": "ported",
@@ -9306,11 +9326,15 @@
         "milestone": "M2–M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/executor.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "`rtao_tx::{Executor, Plan, ExecuteOptions}`; `rtao_client::{shield, compose}`; completion follower"
+          "crates/rtao-tx/src/executor.rs",
+          "crates/rtao-tx/src/registration.rs",
+          "crates/rtao-tx/src/offline.rs",
+          "crates/rtao-client/src/shield.rs",
+          "crates/rtao-client/src/compose.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "93e41ea0474e702ccdce39eb57f5b6f64dcac074"
       },
       {
         "kind": "n/a",
