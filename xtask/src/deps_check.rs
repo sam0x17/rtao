@@ -312,7 +312,11 @@ fn layer(name: &str) -> Option<u8> {
         "rtao-wallet" | "rtao-client" => 5,
         "rtao-tx" | "rtao-reads" | "rtao-evm" => 6,
         "rtao-intents" | "rtao-metagraph" | "rtao-btauth" => 7,
-        "rtao-neuron" => 8,
+        "rtao-neuron"
+        | "rtao-compat-synapse"
+        | "rtao-compat-epistula"
+        | "rtao-transport-quic"
+        | "rtao-remote-signer" => 8,
         "rtao" => 9,
         "rtao-cli" => 10,
         "rtao-testkit" | "xtask" => 11,
