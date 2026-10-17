@@ -14,6 +14,40 @@ infrastructure, scheduled, oracle and release workflows are inactive drafts
 in `.github/deferred-workflows/`. No workflow was dispatched during
 the cleanup itself. Subsequent client checkpoints use hosted CI as recorded below.
 
+## M10 implementation, 2026-10-17
+
+At the user's request to work through the entire plan, optional M10 is
+implemented in source at `d59efdd` through `277095e` (not yet pushed); see
+[M10 execution record](m10.md). Four new crates: `rtao-compat-synapse`
+(M10-01), `rtao-compat-epistula` (M10-02), `rtao-transport-quic` (M10-03)
+and `rtao-remote-signer` (M10-04). The facade adds `compat-synapse`,
+`compat-epistula`, `transport-quic`, `remote-signer` and
+`remote-signer-server`, all in `full`, exposed as
+`rtao::compat::{synapse, epistula}`, `rtao::quic` and `rtao::remote_signer`.
+`RemoteSigner` is a separate crate rather than an `rtao-signer` feature
+because `rtao-btauth` depends on `rtao-signer` (recorded plan deviation).
+
+Local evidence on `workstation`, pinned to stable CPUs: workspace Clippy clean;
+3,384 of 3,385 tests pass (the remaining one is hosted-only by design);
+doctests, strict parity and the local supply and features gates pass.
+Local interop: Synapse against `bittensor` 10.5.0 39/39 (Rust Dendrite to
+Python Axon) and 37/37 (Python Dendrite to Rust Axon), with Python-to-Python
+37/37, Rust-to-Rust 39/39 and Python verification of a Rust signature 1/1;
+Epistula all four stages against the BitMind and Apex Python references
+(gobt by byte-exact vectors only); btlightning Python bindings at `53c090b`
+58/58; remote signer Python client to Rust daemon 10/10 and Rust client to
+Python peer 2/2.
+
+Pending hosted execution: the `pr.yml` dispatch input `m10_interop=true`
+jobs `m10-interop` and `remote-signer-localnet`. The latter carries M10 exit
+check 3 (a localnet transfer signed through the reference server, which must
+refuse replayed and tampered requests); `workstation` has no Docker, so it has
+no result yet. Ordinary hosted checks for the M10 commits are also pending.
+M10 steps remain unchecked in PLAN.md until that evidence exists.
+
+`workstation`'s host CPU faults under load on CPUs 4, 5, 12 and 13;
+AGENTS.md pins local work to other cores. CI hardware is authoritative.
+
 ## M2-26 closure, 2026-10-17
 
 Development moved to `workstation`. The combined core patch is now pinned at fork
@@ -28,7 +62,7 @@ Local evidence on `workstation`: 72 fork `bittensor-core` library tests, 250
 `rtao-core`/`rtao-core-ext`/`rtao-signer`/`rtao-wallet` tests and
 `cargo xtask pin --check` against the real fork revision pass. Compatibility
 reports were regenerated for the new core revision. Hosted CI for the closing
-commit: HOSTED_RUN_PENDING.
+commit: [run 39016798208](https://github.com/sam0x17/rtao/actions/runs/39016798208) at `1bc4598` passes all six required jobs with **3,205 tests passed, zero failed and four skipped**, plus doctests and documentation. (The first attempt at `d523a16` hit the then 45-minute job limit; a re-run exposed one timing-sensitive admission test, whose overall deadline `1bc4598` widened.)
 
 The active M0-M9 register is **127/127 complete**. Earlier sections describe
 their own snapshots, including the 126/127 state below.

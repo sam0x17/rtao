@@ -36,14 +36,20 @@ python3 -m venv "$root/synapse-py"
 python3 -m venv "$root/epistula-py"
 "$root/epistula-py/bin/pip" install --quiet -r "$repo/ci/interop/epistula/requirements.txt"
 
-# btlightning Python bindings at the reviewed commit, built outside the rtao
-# checkout so rtao's .cargo/config.toml (PYO3_NO_PYTHON=1) does not apply.
-git clone --quiet https://github.com/inference-labs-inc/btlightning.git "$upstream/btlightning"
-git -C "$upstream/btlightning" checkout --quiet 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0
+# btlightning Python bindings at the reviewed commit, built in a temporary
+# directory outside the rtao checkout so rtao's .cargo/config.toml
+# (PYO3_NO_PYTHON=1) does not apply.
+lightning=$(mktemp -d "${RUNNER_TEMP:-/tmp}/btlightning.XXXXXX")
+trap 'rm -rf "$lightning"' EXIT
+case "$lightning" in
+  "$repo"/*) echo "btlightning must build outside the rtao checkout" >&2; exit 2 ;;
+esac
+git clone --quiet https://github.com/inference-labs-inc/btlightning.git "$lightning/src"
+git -C "$lightning/src" checkout --quiet 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0
 python3 -m venv "$root/quic-py"
 "$root/quic-py/bin/pip" install --quiet "maturin>=1.0,<2.0"
-(cd "$upstream/btlightning/crates/btlightning-py" &&
-  CARGO_TARGET_DIR="$root/btlightning-target" VIRTUAL_ENV="$root/quic-py" \
+(cd "$lightning/src/crates/btlightning-py" &&
+  CARGO_TARGET_DIR="$lightning/target" VIRTUAL_ENV="$root/quic-py" \
     PATH="$root/quic-py/bin:$PATH" maturin develop --release --quiet)
 
 cd "$repo"

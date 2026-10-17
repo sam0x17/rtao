@@ -802,7 +802,7 @@ rtao/
 │  ├─ rtao-catalog/        # GENERATED data: intent/read/error specs, ErrorCode, extracted Python + runtime tables
 │  ├─ rtao-runtime/        # GENERATED chain descriptors + typed call builders; hand models; shape hashes; verify_surface; RuntimeHandle, CallBytes (no I/O)
 │  ├─ rtao-rpc/            # tokio-tungstenite JSON-RPC session implementing subxt_rpcs::client::RpcClientT
-│  ├─ rtao-signer/         # Signer trait, roles, KeySource<R>, Keypair/Ledger/Vault/Extension signers (Remote in M10); extension bridge server and client; Vault page server and QR
+│  ├─ rtao-signer/         # Signer trait, roles, KeySource<R>, Keypair/Ledger/Vault/Extension signers; extension bridge server and client; Vault page server and QR
 │  ├─ rtao-wallet/         # btcli wallet layout, keyfiles (plaintext always; encrypted with feature), passwords
 │  ├─ rtao-client/         # Client, Snapshot, View, RuntimeCache, ReadPlan, HeadTracker, submission, shield, compose, waits, config (btcli files), ClientError
 │  ├─ rtao-tx/             # Intent traits, Executor, Plan, Policy, ExtrinsicResult, ChainError/TxError, classify, multisig account object, timelock
@@ -815,7 +815,10 @@ rtao/
 │  ├─ rtao-cli/            # binary `rtao` (btcli-equivalent); its [[bin]] sets doc = false (§12.8: it would overwrite the facade's docs)
 │  ├─ rtao-testkit/        # FakeNode (socket), FakeChain (RpcClientT), RecordingView, Localnet, Scenario, fixtures, oracle loaders, the Ledger emulator harness (§11.9)
 │  ├─ rtao/                # facade: re-exports + role profiles (the one dependency subnet code needs); rtao::blocking
-│  └─ (post-parity, optional) rtao-compat-synapse/, rtao-compat-epistula/, rtao-transport-quic/
+│  ├─ rtao-compat-synapse/ # M10 (post-parity): bittensor==10.5.0 Synapse/Axon/Dendrite wire compatibility (§7.5)
+│  ├─ rtao-compat-epistula/ # M10: Epistula v2 signed headers with upstream dialect presets (§7.5)
+│  ├─ rtao-transport-quic/ # M10: btlightning-compatible QUIC on quinn 0.11, ring only (§7.5)
+│  └─ rtao-remote-signer/  # M10: rtao-remote-signer/1 client (RemoteSigner), reference server, rtao-remote-signerd (§6.5, §7.5)
 ├─ xtask/                  # pin, import-upstream, extract, regen, parity, staged, core-surface, deps-check, drift, oracle,
 │                          # record, docs, compat, localnet-image, localnet (bootstrap, run, smoke, up/down), probe, release-notes, pr-u4-proof,
 │                          # fuzz, bench (optional hosted), template (check), upstream (parity-tag), ci (issue), lint-upstream,
@@ -844,19 +847,27 @@ rtao/
 | `rtao-catalog` | GENERATED, data only (§4.1) | `INTENTS: [IntentSpec; 83]`, `READS: [ReadSpec; 102]`, `ErrorCode`, `CHAIN_ERRORS`, `py::*` (extracted Python tables), `rt::*` (extracted runtime tables: custom codes, fee filters, `MAX_SHIELD_ERA_PERIOD`, `rate_limits`, chain rules), `hyperparams::TABLE` (a generated `HyperparamTable`, §5.5) | none | `rtao-primitives` |
 | `rtao-runtime` | chain surface (§3.7, §8.1) | GENERATED `storage::*`, `calls::*` (typed builders + `CallDescriptor`s), `runtime_apis::*`, `constants::*`, `events::*`, `errors::MODULE_ERRORS`, `extensions::EXPECTED`, `SelectiveMetagraphIndex`, `shapes`; hand-written `models::*`; `ShapeHash`, `verify_surface`, `SurfaceReport`; `RuntimeHandle`, `RuntimeEntry`, `MetadataLevel`, `CallBytes`, `ComposeError` (no I/O, §3.7) | none | `rtao-core`, `rtao-primitives` |
 | `rtao-rpc` | transport (§3.2) | `Session`, `SessionConfig`, `EndpointPool`, `ReadMethod`, `RpcError`, `PolicyRefusal`, `RefusalKind`, `SubmitError`, `SessionEvent`, `SessionState`, `RateLimit`; `impl subxt_rpcs::client::RpcClientT for Session` | `rate-limit` (default), `metrics` | none (third-party only; generated `py_rpc.rs` constants) |
-| `rtao-signer` | signing seam (§6.3) | `Signer`, `SignerCaps`, `SigningRequest`, `SigningContext`, `MultiSignature`, `Role`, `Coldkey`, `Hotkey`, `SignerRole`, `KeySource<R>`, `DynKeySource`, `KeypairSigner`, `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `extension::{BridgeServer, BridgeClient, connect_extension_signer, ensure_bridge, run_bridge, stop_bridge_daemon}`, `vault::{VaultSigner, VaultSessionServer, VaultError, VaultPageError, scan_vault_address}`, `RemoteSigner` (M10) | `ledger`, `vault` (the one-shot page server on axum with a hyper WebSocket upgrade, and the QR encoder, §6.5), `extension` (bridge client on `tokio-tungstenite`, bridge server on axum with a hyper upgrade, §6.5), `remote` (M10, outside `full`), `test-util` (makes the `LedgerBackend` seam and `LedgerSigner::with_backend` public for `rtao-testkit`, §6.5) | `rtao-core`, `rtao-primitives` |
+| `rtao-signer` | signing seam (§6.3) | `Signer`, `SignerCaps`, `SigningRequest`, `SigningContext`, `MultiSignature`, `Role`, `Coldkey`, `Hotkey`, `SignerRole`, `KeySource<R>`, `DynKeySource`, `KeypairSigner`, `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `extension::{BridgeServer, BridgeClient, connect_extension_signer, ensure_bridge, run_bridge, stop_bridge_daemon}`, `vault::{VaultSigner, VaultSessionServer, VaultError, VaultPageError, scan_vault_address}` (`RemoteSigner` is in `rtao-remote-signer`) | `ledger`, `vault` (the one-shot page server on axum with a hyper WebSocket upgrade, and the QR encoder, §6.5), `extension` (bridge client on `tokio-tungstenite`, bridge server on axum with a hyper upgrade, §6.5), `test-util` (makes the `LedgerBackend` seam and `LedgerSigner::with_backend` public for `rtao-testkit`, §6.5) | `rtao-core`, `rtao-primitives` |
 | `rtao-wallet` | btcli-compatible wallets (§6.1-6.2) | `Wallet`, `WalletRef`, `HotkeyFile`, `ColdkeyFile`, `PasswordSource`, `PasswordSources`, `PromptPolicy`, `resolve_wallet_password`, create/regen | `encrypted` (→ `rtao-core/host`), `keychain` (macOS), `keyring` (Linux, rtao extra), `prompt` | `rtao-signer`, `rtao-core` |
 | `rtao-client` | chain access (§3) | `Client` (`connect`, `from_rpc`, `nonces()`, `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`), `ClientConfig`, `ClientError`, `Network`, `HeadPolicy`, `Snapshot`, `View`, `DynView`, `RuntimeCache` (and re-exports of `rtao_runtime::{RuntimeHandle, MetadataLevel, CallBytes, ComposeError}`), `ReadPlan`, `HeadTracker`, `BlockHeader`, `BlockInfo`, `EpochEvent`, `WaitError`, `Events`, `EventRecord`, `SubmitOptions`, `SubmitFailure`, `Wait`, `Mortality`, `ShieldPeriod`, `ShieldCiphertext`, `NonceManager`, `NonceLease`, `ExtrinsicReport`, `PoolRejection`, `UnsignedExtrinsic`, `compose::*`, `config` (btcli files and caches, §10.2), `EpochClock`, `EpochStatus`, `wait_for_*`, `blocking::BlockingRuntime` | `blocking` (the runtime thread only; the facades are in `rtao::blocking`), `subxt` (escape hatch), `metrics`, `test-util` | `rtao-rpc`, `rtao-runtime`, `rtao-catalog`, `rtao-signer`, `rtao-core` |
 | `rtao-tx` | product layer for writes (§4.2-4.7) | `IntentInterface`, `Intent`, `DynIntent`, `BuildCx`, `PreflightCx`, `Built`, `IntentPreflight`, `Spend` (re-exported from `rtao-primitives`), `Executor`, `ExecuteOptions`, `PlanOptions`, `ShieldOptions`, `Plan`, `Policy`, `ExtrinsicResult<O>`, `ChainError`, `PolicyError`, `TxError`, `classify`, `multisig::{Multisig, ApproveOptions}` and the multisig funds preflight (§3.12, §4.6), `timelock::{seal, open, Timelocked, Reveal, OpenOptions, TimelockError, DrandClient}` (§9.8) | none | `rtao-client`, `rtao-catalog`, `rtao-signer` |
 | `rtao-intents` | the 83 intents (§4.2-4.5) | one struct per op (`AddStake`, `SetWeights`, …), `AnyIntent`, `weights::{conform, TimelockCommitter}`, `pow::PowSolver`, `hyperparameters::{Hyperparameter, to_raw}` (`to_raw` delegates to `rtao_catalog::hyperparams::TABLE`, §5.5), `MultisigAdapter`, `MultisigThreshold1Adapter` | one feature per Python group (`staking`, `weights`, `registration`, `transfer`, `evm`, `children`, `coldkey`, `collateral`, `lock`, `governance`, `hyperparameters`, `identity`, `root`, `serving`, `proxy`, `multisig`, `crowdloan`, `leasing`, `association`, `batch`), `all`, `pow` (→ core `host`), `pow-gpu` | `rtao-tx`, `rtao-reads` |
 | `rtao-reads` | the 102 reads (§4.8) | `ReadName`, `ReadSpec`, `ParamSpec`, `dispatch`, `ReadError`, read fns, 14 namespace types (`Balances`, `Chain`, `Delegation`, `Epochs`, `Hyperparameters`, `Identity`, `Leasing`, `Locks`, `Collateral`, `Neurons`, `Prices`, `Staking`, `Subnets`, `Weights`), read output models, `commitments::{NeuronCommitment, CommitmentMap, fetch_commitments, fetch_commitment_map}` (§8.2) | none | `rtao-client`, `rtao-catalog`, `rtao-runtime` |
 | `rtao-metagraph` | metagraph (§8.2-8.5) | `Metagraph`, `MetagraphNeuron`, `MetagraphView`, `NeuronRef`, `SubnetsMetagraphExt` (`metagraph`, `metagraph_with`), `MetagraphOptions`, `Preset`, `MetagraphSync`, `MetagraphHandle`, `MetagraphDiff`, `SyncPolicy`, `persist::{save, load}` | `persist` | `rtao-reads`, `rtao-runtime` |
-| `rtao-btauth` | btauth/1 (§7) | `build_payload`, `sign`, `Verifier` (`authenticate`, `Authenticated::commit`, `verify`), `VerifyConfig`, `WrappedPolicy`, `Caller`, `AuthError`, `NonceStore`, `InMemoryNonceStore`; `server::{BtAuthLayer, VerifiedCaller, CallerPolicy, MetagraphPolicy, PerHotkeyLimiter, Json}` (`Json<T>`: the `Value`-first extractor, §7.2); `client::{SignedClient, FanOut}`; `RedisNonceStore`; `legacy::verify_v10` | `server`, `client`, `redis`, `metagraph-policy`, `legacy-v10` | `rtao-signer`, `rtao-core`, `rtao-primitives` (`AxonTarget`); `rtao-metagraph` (opt) |
+| `rtao-btauth` | btauth/1 (§7) | `build_payload`, `sign`, `Verifier` (`authenticate`, `Authenticated::commit`, `verify`), `VerifyConfig`, `WrappedPolicy`, `Caller`, `AuthError`, `NonceStore`, `InMemoryNonceStore`; `server::{BtAuthLayer, VerifiedCaller, CallerPolicy, MetagraphPolicy, PerHotkeyLimiter, Json}` (`Json<T>`: the `Value`-first extractor, §7.2); `client::{SignedClient, FanOut}`; `RedisNonceStore`; `legacy::{verify_v10, verify_v10_for, decode_v10_signature}` (§7.4) | `server`, `client`, `redis`, `metagraph-policy`, `legacy-v10` | `rtao-signer`, `rtao-core`, `rtao-primitives` (`AxonTarget`); `rtao-metagraph` (opt) |
 | `rtao-neuron` | framework (§9) | `NeuronConfig`, `NeuronRuntime`, `NeuronCx`, `StateCell`, `Validator`, `Miner`, `StepPolicy`, `WeightsProposal`, `WeightScheduler`, `WeightPolicy`, `AxonPublisher`, `Registration`, `OwnerOps`, `HyperparamPlanner`, `OwnerMonitor`, `StateStore`, `EmaScores`, `telemetry`, `anyhow` (re-export, §2.5) | `validator`, `miner`, `owner`, `prometheus` (default), `auto-update` | `rtao-intents`, `rtao-metagraph`, `rtao-btauth`, `rtao-wallet` |
 | `rtao-evm` | `PY/evm/*` parity (§6.6) | `EvmKeystore`, `Precompile`/`PRECOMPILES` and ABI helpers (ABIs from `PY/evm/abi/*.json`), `EvmRpc`, `EvmNetwork`, `association_proof`, wei/rao conversions | none | `rtao-client`, `rtao-wallet` |
+| `rtao-compat-synapse` | v10 Synapse/Axon/Dendrite compatibility, M10 (§7.5) | `Synapse`, `Envelope`, `TerminalInfo`, `BaseSynapse`, `parse_head`, `PyValue`, `PyDict`, `get_hash`, `default_verify`, `V10VerifyPolicy`, `BoundedNonceTable`, `VerifiedHead`; `Axon`, `V10AxonConfig`, `Hooks`, `DefaultHooks`, `Reply`, `SynapseError`; `Dendrite`, `CallOptions`, `UuidMode`, `PreparedRequest`; `tensor::Tensor` | `axon`, `dendrite`, `tensor` (all default) | `rtao-btauth` (`legacy-v10`), `rtao-signer`, `rtao-core`, `rtao-primitives` |
+| `rtao-compat-epistula` | Epistula v2, M10 (§7.5) | `Dialect` (`RTAO`, `SPEC`, `BITMIND`, `GOBT`, `APEX`), `sign_headers`, `SignOptions`, `EpistulaHeaders`, `Verifier`, `Authenticated`, `EpistulaCaller`, `ReplayPolicy`; `server::{EpistulaLayer, DualAuthLayer, VerifiedEpistula, StatusMap}`; `client::{sign_reqwest, sign_reqwest_with_digest, EpistulaClient}`; `secret::SecretSigFilter`; `apex::canonical_json` | `server`, `client`, `metagraph-policy`, `redis`, `secret-filter` (none default) | `rtao-btauth`, `rtao-signer`, `rtao-core`, `rtao-primitives` |
+| `rtao-transport-quic` | btlightning-compatible QUIC, M10 (§7.5) | `QuicClient`, `QuicClientConfig`, `QuicTarget`, `Reply`; `QuicServer`, `QuicServerConfig`, `QuicRouter`, `ServerStats`, `server::{HotkeyPolicy, SourcePolicy, Caller, HandlerError, ChunkSender}`; `wire`, `data::{to_data, from_data}`, `auth`, `tls` | `client`, `server` (both default) | `rtao-signer`, `rtao-core`, `rtao-primitives`; `rtao-btauth` (`server`, nonce store) |
+| `rtao-remote-signer` | `rtao-remote-signer/1`, M10 (§6.5, §7.5) | `wire` (`PROTOCOL`, `SIGN_PATH`, `ACCOUNTS_PATH`, request and response bodies); `RemoteSigner`, `RemoteSignerConfig`, `RemoteSignerError`; `server::{RemoteSignerServer, ServerConfig, RemotePolicy, ClientAllowlist, rebuild, RuntimeSource, PinnedRuntimeSource, ClientRuntimeSource}`; `daemon::{Daemon, DaemonConfig}`; binary `rtao-remote-signerd` | `client`, `server`, `server-online`, `server-bin`, `redis` (none default) | `rtao-btauth`, `rtao-signer`, `rtao-core`, `rtao-primitives`; `rtao-runtime`, `rtao-tx` (`server`), `rtao-client` (`server-online`), `rtao-wallet` (`server-bin`) |
 | `rtao-cli` | `rtao` binary (§10) | — | `ledger`, `vault`, `extension`, `evm` (all default on) | `rtao` (`full`) |
 | `rtao-testkit` | test infrastructure (§11) | `FakeNode`, `FakeChain`, `FakeState`, `Fault`, `RecordingView`, `Localnet`, `LocalnetProfile`, `Scenario`, `PinProxy` (block-pinning JSON-RPC proxy for interop lane 9, §11.6), `fixtures::*`, `oracle::*`, `ledger_emu::*` (the Speculos harness, with the Speculos TCP and replay transports that `LedgerDevice::with_transport` takes from the core patch, §1.11, §11.9) | `docker`, `interop`, `core-oracle`, `ledger-emu` (each gates its own `[[test]]` target, §11.1) | `rtao-client`, `rtao-rpc`, `rtao-tx`, `rtao-wallet` (plus `subxt-rpcs` for `FakeChain`), `rtao-signer` (feature `ledger-emu` enables its `test-util`, §2.3 rule 8) |
 | `rtao` | facade (§2.4) | `prelude` (contents per feature, §2.4), re-exports per feature, `blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` (ports of `PY/sync.py` and `PY/_subtensor.py`, driven by `rtao_client::blocking::BlockingRuntime`; shared clients keyed by canonical endpoint, `PY/_subtensor.py:129-150`; `SyncClient` exposes all 14 namespaces, where Python's has 13, D-027) | §2.4 | all, optional per feature |
+
+The four M10 crates are optional and post-parity. `RemoteSigner` was planned as an `rtao-signer` feature, but
+`rtao-btauth` depends on `rtao-signer` and the remote signer authenticates with btauth/1, so the feature would
+create a dependency cycle. It is a separate crate, exposed as `rtao::remote_signer` (a documented plan deviation).
 
 Two crates need a word of justification:
 
@@ -876,7 +887,8 @@ L3  rtao-catalog → primitives · rtao-runtime → core, primitives · rtao-rpc
 L4  rtao-wallet → signer, core · rtao-client → rpc, runtime, catalog, signer, core
 L5  rtao-tx → client, catalog, signer · rtao-reads → client, catalog, runtime · rtao-evm → client, wallet
 L6  rtao-intents → tx, reads · rtao-metagraph → reads, runtime · rtao-btauth → signer, core, primitives (+ metagraph, optional)
-L7  rtao-neuron → intents, metagraph, btauth, wallet
+L7  rtao-neuron → intents, metagraph, btauth, wallet · rtao-compat-synapse, rtao-compat-epistula, rtao-transport-quic → btauth, signer,
+    core, primitives · rtao-remote-signer → btauth, signer, core, primitives (+ runtime, tx, client, wallet per feature)
 L8  rtao (facade, incl. rtao::blocking) · rtao-cli → rtao · rtao-testkit (dev) · xtask (tooling)
 ```
 
@@ -937,15 +949,22 @@ pow-gpu         = ["pow", "rtao-intents/pow-gpu"]                  # OpenCL via 
 ledger          = ["rtao-signer/ledger"]
 vault           = ["rtao-signer/vault"]
 extension       = ["rtao-signer/extension"]
-remote-signer   = ["rtao-signer/remote"]                          # lands with RemoteSigner in M10; not part of `full`
 keychain        = ["rtao-wallet/keychain"]
 evm             = ["dep:rtao-evm"]
 blocking        = ["intents-all", "metagraph", "wallet", "rtao-client/blocking"]  # rtao::blocking: SyncClient, Subtensor, set_weights (PY/sync.py, PY/_subtensor.py)
 prometheus      = ["rtao-neuron?/prometheus", "rtao-rpc/metrics"]
 subxt           = ["rtao-client/subxt"]                            # OnlineClient over the same Session (LegacyBackend)
+# M10 (post-parity, §7.5)
+compat-synapse  = ["dep:rtao-compat-synapse", "rtao-compat-synapse/axon", "rtao-compat-synapse/dendrite",
+                   "rtao-compat-synapse/tensor"]                   # rtao::compat::synapse
+compat-epistula = ["dep:rtao-compat-epistula", "rtao-compat-epistula/server", "rtao-compat-epistula/client"]
+transport-quic  = ["dep:rtao-transport-quic", "rtao-transport-quic/client", "rtao-transport-quic/server"]  # rtao::quic
+remote-signer   = ["tx", "btauth-client", "dep:rtao-remote-signer", "rtao-remote-signer/client"]   # rtao::remote_signer
+remote-signer-server = ["remote-signer", "rtao-remote-signer/server-online"]
 full            = ["intents-all", "metagraph", "wallet-encrypted", "btauth-server", "btauth-client", "redis",
                    "neuron", "rtao-neuron/validator", "rtao-neuron/miner", "rtao-neuron/owner",
-                   "pow", "ledger", "vault", "extension", "keychain", "evm", "blocking", "prometheus"]
+                   "pow", "ledger", "vault", "extension", "keychain", "evm", "blocking", "prometheus",
+                   "compat-synapse", "compat-epistula", "transport-quic", "remote-signer", "remote-signer-server"]
 ```
 
 | Profile | Features | `host` | Typical binary |
@@ -974,6 +993,9 @@ modules and prelude items on its own features:
 | `neuron` | `rtao::neuron` | `NeuronConfig`, `NeuronRuntime`, `NeuronCx`, `Validator`, `Miner`, `StateCell`, `WeightsProposal` |
 | `evm` | `rtao::evm` | — |
 | `blocking` | `rtao::blocking` | — |
+| `compat-synapse`, `compat-epistula` | `rtao::compat::{synapse, epistula}` | — |
+| `transport-quic` | `rtao::quic` | — |
+| `remote-signer` (`remote-signer-server` adds the server) | `rtao::remote_signer` | — |
 
 `pr-gates` compiles the plan's three examples as `crates/rtao/examples/{validator,miner,owner}.rs`, each with
 `required-features` set to its profile, so a profile that stops exposing what its example uses fails the build. Each
@@ -3455,7 +3477,7 @@ signer acquisition.
 | `ColdkeyFile` / `Wallet::coldkey_only()` | yes | no | cold-wallet machines |
 | `Wallet` | yes (unlock via §6.2; encrypted needs `encrypted`) | yes | CLI and owner tooling default |
 | `KeypairSigner` (URI, mnemonic, seed, unlocked) | yes | yes | a bare signer signs either role, as in Python |
-| `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `RemoteSigner` (M10) | yes | yes (bare signers) | normally coldkey |
+| `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `rtao_remote_signer::RemoteSigner` (M10) | yes | yes (bare signers) | normally coldkey |
 | Custom keyed source | if implemented | if implemented | implement the public-view and supported role traits; no exported `KeyedWallet` struct |
 
 There are no GATs in these signatures. B's `type Signer<'a>` is replaced by `Arc<dyn Signer>` [J-PD §4 B].
@@ -3504,7 +3526,7 @@ independent Python or device parity. M2-S02 is fixed by the pinned combined core
 | `LedgerSigner` | `ledger` | the core's `LedgerDevice` behind the `LedgerBackend` seam (below): `sign(account, index, call ‖ extra ‖ additional, proof)`; proof = `generate_extrinsic_proof(call, extra, additional, metadata_v15, chain_info)` (`CORE/digest/mod.rs:117`) | METADATA_HASH \| UNSIGNED_TX | ed25519 at `m/44'/354'/account'/0'/index'`; one device mutex across whole operations; `spawn_blocking`; Polkadot generic app ≥ 100.0.5 ([R] G §4.4); refuses raw signing; tested against Ledger's emulator (§11.9) |
 | `VaultSigner` | `vault` | port of `PY/vault/uos.py` (UOS framing, multipart envelope) plus `prepare_call`/`submit_signature`; serves upstream `PY/vault/static/*` verbatim (embedded with `include_bytes!` from `vendor/`, Apache-2.0) from `VaultSessionServer`, a one-shot loopback server on an ephemeral port (`PY/vault/server.py:50-242`): `/` serves `vault.html`, `/bittensor-chain-specs.png` the chain-specs QR, and `/ws` is a WebSocket upgraded like the extension bridge's (axum, then `hyper::upgrade::on` and tokio-tungstenite at the workspace version, §2.3 rule 2); the page sends a hello with `role: "vault"` and the session id (a stale session is closed with 1008, a replaced tab with 1012), receives `sign-request`/`scan-request`/`result` and answers `signature`/`scanned`/`error`; UOS frames are rendered as SVG data URIs with one automatically selected numeric/alphanumeric/byte segment, no segment splitting, error correction M and a 4-module quiet zone (binary UOS frames remain byte mode) (`PY/vault/qr.py:15-28`); `scan_vault_address` parses `substrate:<ss58>:<genesis>` or a bare ss58 (`PY/vault/scan.py:21-49`); `vault::{VaultSessionServer, VaultError, VaultPageError, scan_vault_address}` mirror `PY/vault/__init__.py`'s `__all__` | UNSIGNED_TX \| OUT_OF_BAND | shield setup runs before the short era; the inner scan precedes sealing and the carrier scan, and both approvals must finish within that era |
 | `ExtensionSigner` | `extension` | the v11 bridge protocol on `127.0.0.1:39295`, token in `~/.bittensor/extension_bridge.token`, serving upstream `PY/extension/static/bridge.html` verbatim (`PY/extension/bridge.py:17-40`) | PAYLOAD_JSON | wire-compatible with the Python daemon |
-| `RemoteSigner` (M10) | `remote` | rtao addition: `POST /sign` with the `SigningRequest` minus secrets, authenticated by btauth/1 with a separate client key; it ships with its wire schema, a reference server that decodes and policy-checks the call before signing, and replay tests, and stays outside `full` until then (§14 M10) | any | HSM/KMS deployments |
+| `RemoteSigner` (M10) | crate `rtao-remote-signer`, feature `client`; facade `remote-signer` | rtao addition (D-031), protocol `rtao-remote-signer/1`: `POST /sign` with the `SigningRequest` minus secrets and `GET /accounts`, authenticated by btauth/1 with a client key that must differ from the signing account; the returned signature is verified locally against the client's own payload, and raw message signing is refused. The reference server (`server`, daemon `rtao-remote-signerd`) decodes the call against its trusted runtime, re-derives the signed bytes and applies `rtao_tx::Policy` and allowlists before signing (§7.5). A separate crate because an `rtao-signer` feature would form a cycle through `rtao-btauth` | any | HSM/KMS deployments |
 
 Fee-free hotkey calls (weights, serving, `associate_evm_key`, `pow_register`, `set_commitment`) are `Pays::No`, so a
 zero-balance hotkey can run a validator ([R] C1 §0 item 4). Fee-bearing hotkey calls on the runtime allow-list are
@@ -3834,8 +3856,92 @@ vector capacity, transport storage, parsed JSON or aggregate concurrent memory.
 `legacy::verify_v10(headers, body_hash: &str) -> Result<AccountId, AuthError>` is a line-for-line port of upstream's
 documented bridge recipe (`UP/docs/guides/signed-requests.mdx:291-321`). It checks the sr25519 signature over
 `"{nonce}.{sender}.{receiver}.{uuid}.{body_hash}"` from the `bt_header_*` headers. The subnet supplies `body_hash`,
-because it depends on the schema. As in the recipe, freshness is the caller's job. Full v10 Synapse emulation, Epistula
-and QUIC are outside the v11 parity target. They are post-parity optional crates (§17).
+because it depends on the schema. As in the recipe, freshness is the caller's job.
+
+M10 added two stricter helpers to the same module. `legacy::decode_v10_signature` decodes signature text with
+bittensor-wallet 4.1's exact rules (a leading `0x` is required, every leading `0x` is removed, the rest is strict
+hexadecimal and must be 64 bytes) and returns Python's error text. `legacy::verify_v10_for(sender, nonce, uuid,
+body_hash, signature, me)` verifies exactly as Python's `default_verify`: the message uses the canonical decimal nonce
+and the verifier's own hotkey (SS58 prefix 42) rather than the request's `bt_header_axon_hotkey`, and an absent uuid or
+body hash renders as `None`. Freshness and replay remain the caller's job. `rtao-compat-synapse` builds its verifier on
+`verify_v10_for` and adds the nonce window and table (§7.5). Full v10 Synapse emulation, Epistula and QUIC are outside
+the v11 parity target and live in the post-parity crates of §7.5.
+
+### 7.5 Post-parity compatibility crates (M10)
+
+M10 (PLAN.md §12.12) is optional and post-parity. Its four crates sit at the neuron dependency layer (§2.3), are
+exposed through facade features (§2.4) and are part of `full`. Each was written from a byte-exact specification (of
+its upstream protocol, or for the remote signer of its own wire schema), reviewed adversarially, and carries regression tests for every fixed finding. Upstream Python references
+are used only in local or hosted interop runs, never in PR gates.
+
+**`rtao-compat-synapse`** (facade `compat-synapse`, module `rtao::compat::synapse`). Wire compatibility with
+`bittensor==10.5.0`. A subnet declares each synapse as a serde struct implementing `Synapse` (`NAME`,
+`REQUIRED_HASH_FIELDS`, `REQUIRED_FIELDS`, `FROZEN_FIELDS`); `Envelope<S>` carries Python's base fields around it.
+The body hash reproduces Python's `str()`/`repr()` rendering (`PyValue`, `get_hash`); `PyDict` keeps dict insertion
+order. `Axon` (axum) attaches a forward handler per synapse with `Hooks` for blacklist, extra verification and
+priority, and serves JSON or streaming replies; `Dendrite` (reqwest) offers `call`, `forward`, `call_stream` and
+`prepare`/`send_prepared`. Feature `tensor` adds the msgpack-numpy `Tensor` form. Security choices, all compatible
+with honest v10.5.0 peers: the nonce window always applies (the unsigned `bt_header_dendrite_version` cannot disable
+it), nonces more than 60 s ahead are refused, timeout widening is capped at 300 s, and the nonce table is bounded
+(`BoundedNonceTable`: 100,000 entries, at most 1,024 live `hotkey:uuid` keys per hotkey, 503 when full, expiry once no
+replay could pass the window). Forward handlers receive the verified header identity, and the body's `dendrite` and
+`axon` objects are replaced before forwarding. The axon does not sign attacker-chosen text before verification, and
+request (16 MiB) and response (64 MiB) bodies are limited. `V10VerifyPolicy::python` restores Python's behaviour for
+differential tests only. Interop on workstation against real bittensor 10.5.0 (`ci/interop/synapse`): Rust dendrite to
+Python axon 39/39, Python dendrite to Rust axon 37/37, Python to Python baseline 37/37, Rust to Rust 39/39, and
+Python verifies a Rust signature 1/1.
+
+**`rtao-compat-epistula`** (facade `compat-epistula`, module `rtao::compat::epistula`). Epistula v2 signs
+`sha256(body) "." uuid "." timestamp_ms "." receiver`. `Dialect` presets select the upstream variant: `RTAO`
+(default; BitMind wire format, canonical timestamps, 15 s age, 2 s future bound, uuid replay store), `SPEC`
+(reference signer; tests only), `BITMIND`, `GOBT` and `APEX`. `sign_headers` and `Verifier` are pure apart from the
+replay commit, which uses `rtao_btauth::NonceStore` keyed by a sha256 of the uuid (or signature), so btauth stores can
+be shared; a replay-enforcing verifier requires bounded age and future skew and a store that retains entries longer
+than their sum. `server::EpistulaLayer` checks headers and freshness at the request head and bounds the body read,
+policy and commit by a body deadline (default 30 s, shortened to fit the store's retention; `with_body_deadline` refuses
+a longer one); `DualAuthLayer` accepts Epistula or btauth/1 on one router. Because Epistula does not sign the method, path or query, a btauth
+`Caller` is inserted only with `with_btauth_caller(true)`. Duplicate headers, oversized fields, `0x0x` signatures and
+malformed uuids are refused before any curve operation, and verification never echoes the signed message. The optional
+`secret::SecretSigFilter` is a pre-body DoS filter. Interop: all four stages against the pinned BitMind and Apex
+Python references pass; gobt (Go) has not been executed and is covered by byte-exact message vectors only.
+
+**`rtao-transport-quic`** (facade `transport-quic`, module `rtao::quic`). The btlightning wire protocol (commit
+`53c090b`, v0.2.15) reimplemented on quinn 0.11 with the ring provider, with no dependency on btlightning or its
+`sp-core 34`. ALPN `btlightning`, TLS 1.3 with a self-signed server certificate, length-prefixed MessagePack frames
+with positional arrays, and an sr25519 handshake bound to the certificate fingerprint. `QuicClient` (`connect`,
+`query`, `query_typed`, `query_stream`, `query_many`, `retain_targets`) and `QuicServer` with `QuicRouter` (`unary_fn`,
+`typed`, `streaming_fn`). Differences, none visible on the wire: the client verifies the TLS 1.3 `CertificateVerify`
+signature (btlightning's client accepts any signature, so a relay could present a miner's public certificate; this
+weakness was not filed upstream), and a target may pin a fingerprint; the server authorizes per QUIC connection with
+one validator identity per connection; replay protection uses `rtao_btauth::NonceStore` keyed by validator and nonce,
+retains nonces for the signature age plus the 60 s future skew (plus a 60 s clock-step margin by default) and fails closed when
+full; a `HotkeyPolicy` runs before a nonce is stored (`bind` warns when none is set); unauthenticated connections are
+capped globally (256) and per source (16, IPv6 grouped by /64), evicted oldest-first from the busiest source, limited to
+64 KiB first frames and closed after the handshake timeout; reply writes have deadlines and a streaming reply is never
+cut inside a frame. Interop with btlightning's Python bindings built from `53c090b`: 58/58, unary and streaming, in both
+directions.
+
+**`rtao-remote-signer`** (facade `remote-signer` and `remote-signer-server`, module `rtao::remote_signer`; CLI
+`--signer remote`). The rtao-authored `rtao-remote-signer/1` protocol (D-031; no Python counterpart). `RemoteSigner`
+implements `rtao_signer::Signer`: it sends the public views of a prepared transaction to `POST <url>/sign` and lists
+accounts with `GET <url>/accounts`, authenticated with btauth/1 by a client key that must differ from the signing
+account, and verifies the returned signature locally before use. The reference `RemoteSignerServer` runs behind
+`BtAuthLayer` with a client allowlist; its handler decodes the call strictly against the server's own trusted runtime,
+re-derives the signed extension bytes and the payload from the structured views, checks era and call policy
+(`rtao_tx::Policy`, call and destination allowlists, spend and fee caps on modeled transfers) and signs only the bytes
+it derived, then self-verifies. Replays are refused by the btauth/1 nonce store, tampering in transit by the btauth/1
+body signature, and inconsistent requests by the re-derivation (`422 tampered_request`). `rtao-remote-signerd`
+(feature `server-bin`) reads a TOML configuration with secrets taken only from environment variables, serves TLS or
+loopback HTTP, and bounds every connection. Interop: a Python client using bittensor-wallet keys against the Rust daemon
+10/10, and the Rust client against a Python peer 2/2. The localnet exit check (sign and submit a localnet transfer, and
+refuse replayed and tampered requests) runs in the hosted job `remote-signer-localnet`; its result is pending hosted
+execution.
+
+**Hosted interop.** `.github/workflows/pr.yml` takes a `workflow_dispatch` input `m10_interop` that runs `m10-interop`
+(`ci/interop/m10-hosted.sh`, with hash-pinned Python environments and pinned upstream files) and
+`remote-signer-localnet` (`ci/interop/remote-signer/localnet.sh`). Neither has run yet; the interop counts above come
+from local runs on workstation. `NOTICE` carries the MIT attributions (bittensor v10.5.0, btwallet v4.1.0, BitMind, Apex,
+gobt, btlightning) and the Apache-2.0 polkadot-sdk SS58 decoder.
 
 ---
 
@@ -4644,8 +4750,9 @@ fn tx_command() -> clap::Command {
 - **Global flags** are a port of `PY/cli/globals.py`: `-n/--network`, `-w/--wallet`, `-H/--wallet-hotkey`,
   `--wallet-path`, `--wallet-password-file`, `--json`, `-y/--yes` (`--no-prompt`), `--dry-run`, `-q`, `-v/-vv/-vvv`,
   `--proxy-for`, `--force-proxy-type`, `--signatory`, `--signer wallet|ledger|vault|extension` (plus `remote`, an
-  rtao addition that lands with `RemoteSigner` in M10, D-031; Python offers wallet, extension, ledger and vault,
-  `PY/cli/globals.py:276-286`),
+  rtao addition from M10 behind the CLI feature `remote-signer`, D-031, with `--remote-signer-url`,
+  `--remote-signer-client-key`, `--remote-signer-receiver`, `--remote-signer-ca` and `--remote-signer-timeout`;
+  Python offers wallet, extension, ledger and vault, `PY/cli/globals.py:276-286`),
   `--signer-address`, `--ledger`, `--ledger-account`, `--ledger-index`, `--extension-bridge|browser|source`,
   `--keychain-password`, `--macos-password`, `--mev-shield/--no-mev-shield`, `--fallback-endpoints`,
   `--archive-endpoints`, `--retry-forever`.
@@ -5818,7 +5925,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 | 7 | Dropping the downstream `w3f-bls` patch | two sources → E0277 | PR-U4 merges **and** the localnet decrypt proof (§11.4 test 16) passes |
 | 8 | Pure-Rust reimplementation of NaCl, Fernet or Ansible keyfile crypto | the core owns COMPAT bytes; no-host neurons only need plaintext hotkeys | PR-U6 is declined **and** no-host coldkey unlock becomes a requirement |
 | 9 | Following `CommitRevealWeightsVersion` or `WeightsVersionKey` automatically | both are upgrade levers | never (new client formats ship as rtao releases) |
-| 10 | Full v10 Synapse/Axon/Dendrite emulation, Epistula, btlightning QUIC | outside the v11 parity target; btlightning pulls crates.io `sp-core 34` next to the fork's 37 ([P] C §7.6) | post-parity M10, or earlier if a migrating subnet needs it |
+| 10 | Full v10 Synapse/Axon/Dendrite emulation, Epistula, btlightning QUIC | outside the v11 parity target; btlightning pulls crates.io `sp-core 34` next to the fork's 37 ([P] C §7.6) | post-parity M10, or earlier if a migrating subnet needs it (implemented in M10, §7.5) |
 | 11 | Light client (smoldot) | finney's chain spec lacks a `lightSyncState` and needs a custom warp checkpoint ([R] F §0.7) | upstream ships a light-client-ready chain spec |
 | 12 | crates.io publication | user decision; git dependencies and `[patch]` | never (unless the user changes the constraint) |
 | 13 | Python at build or run time, or in PR gates | 100%-Rust goal | never |
@@ -5830,7 +5937,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 | 19 | Dense weight or bond matrices | 6.25M cells at 2,500 UIDs | never |
 | 20 | Client-side stake-weight recomputation for refusals | false-negative risk | upstream exposes a stake-weight runtime API with the pallet's exact semantics |
 | 21 | Proposing `sdk/bittensor-rs` upstream before parity | the proposal needs a faithful twin first; the path is kept open by the dual license and lint-clean staged code | after M8 |
-| 22 | `RemoteSigner` (`--signer remote`) before parity | an rtao addition with no Python counterpart; it needs a wire schema, a reference server that policy-checks before signing, and replay tests before it can ship | M10 (§14) |
+| 22 | `RemoteSigner` (`--signer remote`) before parity | an rtao addition with no Python counterpart; it needs a wire schema, a reference server that policy-checks before signing, and replay tests before it can ship | M10 (§14); implemented as `rtao-remote-signer` (§6.5, §7.5) |
 | 23 | A `btcli` shim next to the `rtao` binary | the user chose `rtao` only (§15.2 Q3); shared configuration files (§10.2) would let a shim surprise users who have both | the user asks for one |
 | 24 | A uhid virtual-HID bridge that runs the core's unmodified HID path against Speculos | unverified on GitHub-hosted runners (it needs the `uhid` module and root), impossible on Docker Desktop, Linux-only, and it adds only the HID framing that the device run covers on real hardware (§11.9) | deferred; any future transport redesign requires separate scope (§1.11) |
 
@@ -6020,7 +6127,7 @@ divergences. Classes:
 | D-028 | `result.chain_error_from_dispatch (nested module errors)` | resolved through the package's generated table (`PY/result.py:636-656`) | resolved through the block's runtime, as top-level errors are (§4.7) | improved | `rtao_client::nested_module_receipt::every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_upgrade` | Active source and independent review; hosted validation pending; no new filing |
 | D-029 | `btcli tools / list_tools` | 9 keys per tool (`PY/intents/registry.py:43-66`) | adds `rust {type, role, output, cli}` | addition | `rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_83_ops`; `rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata` | Active source; hosted validation pending; no new filing |
 | D-030 | `btcli tx` | no era flag (period 128, `PY/settings.py:22`) | `--period <n>` | addition | `rtao_cli::generated_commands::generated_transfer_submits_real_semantic_bytes_hooks_and_requested_period`; `rtao_cli::generated_commands::invalid_period_refuses_before_unlock_and_any_submission` | Active source; hosted validation pending; no new filing |
-| D-031 | --signer | wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`) | adds `remote` (lands with `RemoteSigner` in M10) | addition |  | Pending: Intentionally deferred to M10: RemoteSigner and the remote CLI selection are outside the through-M9 acceptance scope. No implementation or fixture is claimed for this addition. |
+| D-031 | --signer | wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`) | adds `remote` (M10 `RemoteSigner` in `rtao-remote-signer`, CLI feature `remote-signer`, §6.5, §7.5) | addition | `rtao_remote_signer::server::s2_a_verbatim_replay_is_refused_by_the_nonce_store`; `rtao_remote_signer::server::s3_tampering_in_transit_breaks_the_btauth_signature`; `rtao_cli::signer_backends::native::remote_tests::remote_backend_discovers_acquires_and_signs_through_a_loopback_server` (full list in `parity/divergences.toml`) | Active source; local tests only; the hosted `remote-signer-localnet` exit check is pending; no new filing |
 | D-032 | btauth server adapter | the recipe applies policy after `verify`, so a replayed request from a denied hotkey gets 401 (`signed-requests.mdx:143-156`) | authenticate → policy → commit → limit: the same request gets 403; `Verifier::verify` keeps Python's order (§7.2) | addition | `rtao_btauth::server::authentication_policy_commit_limit_order_protects_capacity_and_tokens`; `rtao_btauth::server::replay_does_not_spend_limiter_tokens`; `rtao_btauth::conformance::authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_replay_last` | Active source; hosted validation pending; no new filing |
 | D-033 | `timelock.encrypt` | `reveal_in`, `reveal_at` or `reveal_round` | adds `Reveal::InBlocks(n)` (§9.8) | addition | `timelock_reveal_in_blocks` | — |
 | D-034 | `multisig_approve` plan | sends a hash-only `approve_as_multi` at the threshold without comment | same call, plus the warning "this approval cannot execute the call; send multisig_execute" (§3.12) | addition | `approve_at_threshold_warns` | — |

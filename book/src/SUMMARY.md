@@ -14,6 +14,7 @@
 - [External signers and timelocks](signers.md)
 - [Ledger signing](ledger.md)
 - [EVM accounts and commands](evm.md)
+- [Compatibility crates and remote signing](compat-crates.md)
 - [Testing your subnet](testing.md)
 - [Upgrades and compatibility](upgrades.md)
 - [Chain concepts](concepts.md)
