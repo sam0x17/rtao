@@ -425,13 +425,18 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 id = "D-053"
 upstream_symbol = "bittensor.masked_input.masked_input"
 python_behavior = "Uses the interpreter-selected input codec and terminal signal bindings; getpass supplies hidden controlling-terminal fallback."
-rtao_behavior = "Uses UTF-8 and fixed Ctrl-C/backspace/Ctrl-U/Ctrl-D bindings in owned Unix star and hidden editors. Ctrl-C restores terminal settings before cancellation in every parser state. An opt-in CancellableTerminal has an invocation-scoped cancel handle and bounded poll waits for ordinary and secret input, including escape parsing; cancellation restores owned terminal settings and forbids fallback/retry. It installs no signal handler, so standalone external signals have no restoration guarantee. Other ASCII control bytes are ignored; remapped signal keys are not interpreted. Invalid UTF-8 is replaced during editing and rejected by the warned plain-line fallback. Windows is unsupported."
+rtao_behavior = "Uses UTF-8 and fixed Ctrl-C/backspace/Ctrl-U/Ctrl-D bindings in owned Unix star and hidden editors. Physical Ctrl-C restores terminal settings before publishing cancellation. CancellableTerminal shares a latched invocation handle with bounded input/escape polling and no fallback/retry after cancellation. Main alone registers Unix SIGINT before prompts; library contexts install no handler. AppContext refuses new work/private acquisition, closes a simultaneous-ready client, and retains started boxed work through receipt hooks and signer release. Original results and recovery identities survive; final status is 130 and success replay is suppressed. Blocked OS/native work, arbitrary futures and competing stdin readers have no forced shutdown bound. Other ASCII control bytes are ignored; remapped signal keys are not interpreted. Invalid UTF-8 is replaced during editing and rejected by the warned plain-line fallback. Windows is unsupported."
 rationale = "The native String API has no interpreter codec. Disabling ISIG while interpreting fixed control keys avoids process termination, core dumps or suspension from those keys before Rust can restore termios. The controlling-terminal fallback shares the owned guard instead of raising SIGINT before restoration."
 decision = "PLAN.md execution rule 5 design-gap resolution; docs/plan/architecture.md section 10.3"
 status = "active"
 class = "improved"
 milestone = "M8"
 pinning_tests = [
+  "rtao_cli::prompt::tests::cancellation_observers_cover_registered_late_and_multiple_waiters",
+  "rtao_cli::interrupt_tests::invocation_watcher_is_aborted_on_normal_completion",
+  "rtao_cli::context_contract::invocation_interrupt_refuses_preconnect_pending_and_ready_clients_without_work",
+  "rtao_cli::context_contract::interrupted_watched_submission_retains_exact_hash_hooks_and_signer_release",
+  "rtao_cli::context_contract::interrupted_success_keeps_value_and_drains_cosmetic_names_without_replay",
   "rtao_cli::prompt::masked_input::tests::unicode_entry_echoes_one_star_per_decoded_character_and_no_plaintext",
   "rtao_cli::prompt::masked_input::tests::cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes",
   "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_is_hidden_and_uses_owned_editing_and_restoration",

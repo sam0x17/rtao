@@ -6812,6 +6812,8 @@ async fn registration_read_failure_persists_direct_and_saved_receipts_before_rel
                         saved_context(&members, &["--yes", "--json", "--no-mev-shield"], 1)?;
                     ctx.books.multisigs[0]["threshold"] = json!(1);
                 }
+                let interruption = rtao_cli::prompt::TerminalCancel::default();
+                ctx = ctx.with_interruption(interruption.clone());
                 let releases = if saved {
                     &member.releases
                 } else {
@@ -6912,7 +6914,7 @@ async fn registration_read_failure_persists_direct_and_saved_receipts_before_rel
                             completion_read.notified(),
                         )
                         .await?;
-                        client.close().await;
+                        interruption.cancel();
                     }
                     Ok::<(), Box<dyn std::error::Error>>(())
                 };
@@ -6923,6 +6925,10 @@ async fn registration_read_failure_persists_direct_and_saved_receipts_before_rel
                     .err()
                     .ok_or("post-inclusion completion must remain an error")?;
                 assert_eq!(error.code, 1);
+                assert_eq!(
+                    interruption.exit_code(error.code),
+                    if connection_closed { 130 } else { 1 }
+                );
                 if connection_closed {
                     assert_eq!(error.message, "connection is not ready");
                     assert!(matches!(
@@ -6977,5 +6983,239 @@ async fn registration_read_failure_persists_direct_and_saved_receipts_before_rel
             }
         }
     }
+    Ok(())
+}
+
+struct CancellingConnector {
+    client: Client,
+    cancel: rtao_cli::prompt::TerminalCancel,
+    calls: AtomicUsize,
+    pending: bool,
+}
+impl rtao_cli::context::ConnectionFactory for CancellingConnector {
+    fn connect<'a>(
+        &'a self,
+        _: ClientConfig,
+    ) -> BoxFuture<'a, Result<Client, rtao_cli::error::CliError>> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async move {
+            self.cancel.cancel();
+            if self.pending {
+                std::future::pending::<()>().await;
+            }
+            Ok(self.client.clone())
+        })
+    }
+}
+
+#[tokio::test]
+async fn invocation_interrupt_refuses_preconnect_pending_and_ready_clients_without_work()
+-> TestResult {
+    for (pre_cancelled, pending) in [(true, false), (false, true), (false, false)] {
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        let (ctx, sink, reads) = context(&["--signer", "extension"])?;
+        let cancel = rtao_cli::prompt::TerminalCancel::default();
+        let ctx = ctx.with_interruption(cancel.clone());
+        let factory = DirectExternalFactory::new(&keys, false);
+        let connector = CancellingConnector {
+            client: client.clone(),
+            cancel: cancel.clone(),
+            calls: AtomicUsize::new(0),
+            pending,
+        };
+        if pre_cancelled {
+            cancel.cancel();
+        }
+        let work = AtomicUsize::new(0);
+        let error = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            ctx.run_with(&connector, |_| async {
+                work.fetch_add(1, Ordering::SeqCst);
+                let _ = ctx
+                    .signing_keys(SignerRole::Coldkey, Some(&factory))
+                    .await?;
+                Ok(())
+            }),
+        )
+        .await?
+        .err()
+        .ok_or("interrupt refusal")?;
+        assert_eq!(error.code, 130);
+        assert_eq!(
+            connector.calls.load(Ordering::SeqCst),
+            usize::from(!pre_cancelled)
+        );
+        assert_eq!(work.load(Ordering::SeqCst), 0);
+        assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        if !pre_cancelled && !pending {
+            assert!(client.is_closed());
+        }
+        // The private API independently refuses an already interrupted context.
+        assert_eq!(
+            ctx.signing_keys(SignerRole::Coldkey, Some(&factory))
+                .await
+                .err()
+                .ok_or("private refusal")?
+                .code,
+            130
+        );
+        assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn interrupted_watched_submission_retains_exact_hash_hooks_and_signer_release() -> TestResult
+{
+    let (client, chain, keys) = fixture(1_000_000_000).await?;
+    let submitted = Arc::new(tokio::sync::Notify::new());
+    chain.mutate_state(|state| {
+        state.queue_submit(rtao_testkit::SubmitScript::Statuses(vec![json!("ready")]));
+        let submitted = submitted.clone();
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+            let result = state.dispatch(request);
+            submitted.notify_one();
+            result
+        });
+    });
+    let (mut ctx, sink, _) = context(&[
+        "--yes",
+        "--json",
+        "--no-mev-shield",
+        "--signer",
+        "extension",
+    ])?;
+    let cancel = rtao_cli::prompt::TerminalCancel::default();
+    ctx = ctx.with_interruption(cancel.clone());
+    let factory = DirectExternalFactory::new(&keys, false);
+    let hooks = DurablePlanHooks {
+        unlocks: &keys.unlocks,
+        source_acquisitions: None,
+        releases: &factory.released,
+        plans: Mutex::new(Vec::new()),
+        raw: Mutex::new(Vec::new()),
+        enriched: Mutex::new(Vec::new()),
+        fail_result: false,
+    };
+    let runner = ctx.clone();
+    let connector = Connected(client.clone());
+    let context = &mut ctx;
+    let factory_ref = &factory;
+    let hooks_ref = &hooks;
+    let operation = Box::pin(runner.run_with(&connector, |connected| async move {
+        context
+            .submit_with_options(
+                &connected,
+                &Preview { blocked: false },
+                SubmissionOptions {
+                    hooks: Some(hooks_ref),
+                    deadline: Some(std::time::Duration::from_secs(5)),
+                    ..Default::default()
+                },
+                Some(factory_ref),
+                &mut Default::default(),
+            )
+            .await
+    }));
+    let interrupt = async {
+        tokio::time::timeout(std::time::Duration::from_secs(2), submitted.notified()).await?;
+        cancel.cancel();
+        Ok::<(), Box<dyn std::error::Error>>(())
+    };
+    let (result, interrupted) = tokio::time::timeout(std::time::Duration::from_secs(8), async {
+        tokio::join!(operation, interrupt)
+    })
+    .await?;
+    interrupted?;
+    let error = result.err().ok_or("unknown fate remains an error")?;
+    assert_eq!(error.code, 1);
+    assert_eq!(cancel.exit_code(error.code), 130);
+    assert!(client.is_closed());
+    assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        *factory.released.lock().map_err(|_| "release")?,
+        vec![false]
+    );
+    let raw = hooks.raw.lock().map_err(|_| "raw")?;
+    assert_eq!(raw.len(), 1);
+    let receipt = &raw[0];
+    let hash = receipt.fate_unknown.ok_or("unknown-fate identity")?;
+    assert!(!receipt.success);
+    let bytes = chain.mutate_state(|state| state.submissions.clone());
+    assert_eq!(bytes.len(), 1);
+    assert_eq!(
+        chain
+            .requests()
+            .iter()
+            .filter(|request| request.method.starts_with("author_submit"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        rtao::core::ops::extrinsic_lookup::find(
+            &json!({"block":{"extrinsics":[format!("0x{}", hex::encode(&bytes[0]))]}}),
+            hash.0
+        )?,
+        Some(0)
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+        receipt.to_json()
+    );
+    let recovery = format!("{} {:?}", sink.text(Stream::Stderr)?, error.help);
+    assert!(recovery.contains(&hex::encode(hash.0)));
+    assert!(recovery.contains("do not resubmit until its outcome is known"));
+    assert!(!recovery.contains("check the endpoint"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn interrupted_success_keeps_value_and_drains_cosmetic_names_without_replay() -> TestResult {
+    let (client, chain, _) = fixture(1_000_000_000).await?;
+    let (ctx, sink, _) = context(&[])?;
+    let cancel = rtao_cli::prompt::TerminalCancel::default();
+    let ctx = ctx.with_interruption(cancel.clone());
+    let pending_names = Arc::new(tokio::sync::Notify::new());
+    chain.mutate_state(|state| {
+        let pending_names = pending_names.clone();
+        state.set_handler("state_getKeysPaged", move |_, _| {
+            pending_names.notify_one();
+            rtao_testkit::Reply::silent()
+        });
+    });
+    let connector = Connected(client.clone());
+    let operation = ctx.run_with(&connector, |connected| async move {
+        connected.closed().await;
+        Ok(77)
+    });
+    let interrupt = async {
+        tokio::time::timeout(std::time::Duration::from_secs(2), pending_names.notified()).await?;
+        cancel.cancel();
+        Ok::<(), Box<dyn std::error::Error>>(())
+    };
+    let (result, interrupted) = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+        tokio::join!(operation, interrupt)
+    })
+    .await?;
+    interrupted?;
+    assert_eq!(result?, 77);
+    assert!(client.is_closed());
+    assert_eq!(cancel.exit_code(0), 130);
+    let mut history = rtao_cli::prompt::PromptHistory::default();
+    history.record_answers(vec!["--amount".into(), "1".into()]);
+    ctx.finish_prompts(
+        &mut history,
+        &["rtao".into(), "tx".into(), "transfer".into()],
+        true,
+    )?;
+    assert!(sink.text(Stream::Stdout)?.is_empty());
+    assert!(sink.text(Stream::Stderr)?.is_empty());
     Ok(())
 }

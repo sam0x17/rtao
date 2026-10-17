@@ -51,6 +51,9 @@ pub struct AppContext {
     pub passwords: PasswordSources,
     /// Injected terminal authority for prompts and non-interactive refusal.
     pub terminal: Arc<Mutex<Box<dyn Terminal>>>,
+    /// Optional invocation-local interrupt latch. Library contexts install no
+    /// process signal handler; clones share this handle when explicitly bound.
+    pub interruption: Option<crate::prompt::TerminalCancel>,
 }
 impl AppContext {
     // py: sdk/python/bittensor/cli/context.py:711-714
@@ -100,6 +103,39 @@ impl AppContext {
             output,
             passwords,
             terminal,
+            interruption: None,
+        }
+    }
+    /// Bind an invocation handle without installing any signal handler.
+    pub fn with_interruption(mut self, interruption: crate::prompt::TerminalCancel) -> Self {
+        self.interruption = Some(interruption);
+        self
+    }
+    /// Whether an explicitly bound invocation has been interrupted.
+    pub fn is_interrupted(&self) -> bool {
+        self.interruption
+            .as_ref()
+            .is_some_and(crate::prompt::TerminalCancel::is_cancelled)
+    }
+    /// Emit successful prompt replay guidance only for an uninterrupted command.
+    pub fn finish_prompts(
+        &self,
+        history: &mut crate::prompt::PromptHistory,
+        original_argv: &[String],
+        success: bool,
+    ) -> Result<(), CliError> {
+        crate::application::finish_prompts(
+            &self.output,
+            history,
+            original_argv,
+            success && !self.is_interrupted(),
+        )
+    }
+    pub(crate) fn ensure_not_interrupted(&self) -> Result<(), CliError> {
+        if self.is_interrupted() {
+            Err(CliError::aborted())
+        } else {
+            Ok(())
         }
     }
     /// Open public wallet layout and bind explicit CLI password sources.
@@ -1075,6 +1111,7 @@ impl AppContext {
         if let Some(hooks) = control.hooks {
             hooks.before_submit_with_plan(&plan).await?;
         }
+        self.ensure_not_interrupted()?;
         let acquired = match &control.factory {
             Some(binding) => Some(binding.factory.source(self, binding.selection).await?),
             None => None,
@@ -2118,6 +2155,7 @@ impl AppContext {
         role: SignerRole,
         external: Option<&dyn ExternalSignerFactory>,
     ) -> Result<Arc<dyn DynKeySource>, CliError> {
+        self.ensure_not_interrupted()?;
         let backend = crate::globals::normalize_signer_backend(
             self.globals.signer_backend.as_deref().unwrap_or("wallet"),
         );
@@ -2230,8 +2268,14 @@ impl AppContext {
         }
         Ok(context)
     }
-    /// Connect through a supplied boundary, run typed SDK work and always close
-    /// the connected client after the work returns.
+    /// Connect through a supplied boundary, retaining started work until its
+    /// receipt hooks and signer release complete, including after interruption.
+    ///
+    /// Interruption closes the client and drains the exact same boxed future;
+    /// it never drops/restarts potentially transmitted work. The original result
+    /// remains authoritative; the invocation latch supplies final status 130.
+    /// Arbitrary work, native providers and blocked OS operations have no forced
+    /// shutdown bound. Callers must not externally abort this coordinator.
     pub async fn run_with<T, F, Fut>(
         &self,
         connector: &dyn ConnectionFactory,
@@ -2241,11 +2285,33 @@ impl AppContext {
         F: FnOnce(Client) -> Fut,
         Fut: Future<Output = Result<T, CliError>>,
     {
-        let client = connector
-            .connect(self.client_config()?)
-            .await
-            .map_err(|error| error.for_network(&self.globals.network))?;
-        let result = async {
+        self.ensure_not_interrupted()?;
+        let mut connecting = connector.connect(self.client_config()?);
+        let connected = if let Some(cancel) = &self.interruption {
+            tokio::select! {
+                biased;
+                // If both are ready, take ownership of the client and close it
+                // below. A ready client must never disappear into the loser.
+                result = &mut connecting => result,
+                _ = cancel.cancelled() => return Err(CliError::aborted()),
+            }
+        } else {
+            connecting.await
+        };
+        let client = connected.map_err(|error| {
+            if self.is_interrupted() {
+                error
+            } else {
+                error.for_network(&self.globals.network)
+            }
+        })?;
+        if self.is_interrupted() {
+            client.close().await;
+            return Err(CliError::aborted());
+        }
+        // Construct once, on the heap, before entering select branches. Work is
+        // also boxed at its creation to avoid duplicated large async stack slots.
+        let mut execution = Box::pin(async {
             self.output
                 .update_token_symbols(
                     client
@@ -2255,6 +2321,7 @@ impl AppContext {
                         .map(|(netuid, symbol)| (netuid.get(), symbol.into())),
                 )
                 .map_err(|e| CliError::failure(e.to_string()))?;
+            self.ensure_not_interrupted()?;
             let fresh = match &self.config_store {
                 Some(store) => store
                     .subnet_names_fresh(&self.globals.network)
@@ -2262,6 +2329,7 @@ impl AppContext {
                     .unwrap_or(false),
                 None => false,
             };
+            self.ensure_not_interrupted()?;
             let mut names_task = if fresh {
                 None
             } else {
@@ -2270,31 +2338,65 @@ impl AppContext {
                     rtao::reads::generated::interfaces::subnet_names(&source).await
                 })))
             };
-            let result = work(client.clone()).await;
+            self.ensure_not_interrupted()?;
+            let result = Box::pin(work(client.clone())).await;
             if let Some(task) = names_task.as_mut() {
-                if result.is_err() {
+                if result.is_err() || self.is_interrupted() {
                     task.0.abort();
                     let _ = (&mut task.0).await;
-                } else if let Ok(Ok(names)) = (&mut task.0).await {
-                    self.output
-                        .update_subnet_names(
-                            names
-                                .iter()
-                                .map(|(netuid, name)| (netuid.get(), name.clone())),
-                        )
-                        .map_err(|e| CliError::failure(e.to_string()))?;
-                    if let Some(store) = &self.config_store {
-                        let _ = store
-                            .save_subnet_names(&self.globals.network, names.into())
-                            .await;
+                } else {
+                    let names = if let Some(cancel) = &self.interruption {
+                        tokio::select! {
+                            biased;
+                            _ = cancel.cancelled() => {
+                                task.0.abort();
+                                (&mut task.0).await
+                            }
+                            names = &mut task.0 => names,
+                        }
+                    } else {
+                        (&mut task.0).await
+                    };
+                    if let Ok(Ok(names)) = names
+                        && !self.is_interrupted()
+                    {
+                        self.output
+                            .update_subnet_names(
+                                names
+                                    .iter()
+                                    .map(|(netuid, name)| (netuid.get(), name.clone())),
+                            )
+                            .map_err(|e| CliError::failure(e.to_string()))?;
+                        if let Some(store) = &self.config_store {
+                            let _ = store
+                                .save_subnet_names(&self.globals.network, names.into())
+                                .await;
+                        }
                     }
                 }
             }
             result
-        }
-        .await;
+        });
+        let result = if let Some(cancel) = &self.interruption {
+            tokio::select! {
+                biased;
+                _ = cancel.cancelled() => {
+                    // Publish happened without output/terminal locks. Closing
+                    // interrupts RPC waits; retain this future for recovery.
+                    client.close().await;
+                    execution.await
+                }
+                result = &mut execution => result,
+            }
+        } else {
+            execution.await
+        };
         client.close().await;
-        result.map_err(|error| error.for_network(&self.globals.network))
+        if self.is_interrupted() {
+            result
+        } else {
+            result.map_err(|error| error.for_network(&self.globals.network))
+        }
     }
 }
 
