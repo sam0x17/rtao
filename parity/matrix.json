@@ -2627,8 +2627,17 @@
       {
         "id": "D-031",
         "oracle": "unverified",
-        "rtao": "pending",
-        "tests": []
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::globals::tests::remote_backend_parses_with_its_options_and_is_external",
+          "rtao_cli::signer_backends::native::remote_tests::remote_requires_a_url_and_a_client_key",
+          "rtao_cli::signer_backends::native::remote_tests::remote_backend_discovers_acquires_and_signs_through_a_loopback_server",
+          "rtao_remote_signer::server::s2_a_verbatim_replay_is_refused_by_the_nonce_store",
+          "rtao_remote_signer::server::s3_tampering_in_transit_breaks_the_btauth_signature",
+          "rtao_remote_signer::server::s6_internally_inconsistent_authenticated_bodies_are_tampered",
+          "rtao_remote_signer::server::s10_policy_limits_calls_and_destinations",
+          "rtao_remote_signer::client::c2_signatures_over_other_bytes_or_for_other_accounts_are_refused"
+        ]
       },
       {
         "id": "D-032",
