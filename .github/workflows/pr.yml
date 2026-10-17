@@ -52,7 +52,7 @@ jobs:
   check:
     if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
