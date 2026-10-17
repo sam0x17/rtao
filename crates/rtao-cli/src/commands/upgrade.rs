@@ -473,16 +473,13 @@ fn detail(ctx: &AppContext, title: &str, payload: Value) -> Result<(), CliError>
 }
 
 fn sign_command(ctx: &AppContext, url: &str) -> String {
-    let prefix = if ctx.globals.network == "finney" {
-        "btcli".into()
-    } else {
-        format!(
-            "btcli -n {}",
-            crate::prompt::shell_quote(&ctx.globals.network)
-        )
+    let (environment, network) = crate::prompt::shareable_network(&ctx.globals.network);
+    let prefix = match network {
+        Some(network) => format!("btcli -n {}", crate::prompt::shell_quote(network)),
+        None => "btcli".into(),
     };
     format!(
-        "{prefix} upgrade sign --url {} -w <your-wallet>",
+        "{environment}{prefix} upgrade sign --url {} -w <your-wallet>",
         crate::prompt::shell_quote(url)
     )
 }
