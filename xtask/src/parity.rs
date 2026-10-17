@@ -39,6 +39,9 @@ fn third_party_licenses(source: &str) -> Result<BTreeSet<&'static str>> {
         licenses.insert(match license {
             "MIT" => "MIT",
             "Apache-2.0" => "Apache-2.0",
+            // CPython ports carry PSF-2.0, whose exact notice and retained
+            // license file have their own dedicated checks.
+            "PSF-2.0" => continue,
             other => bail!("unsupported third-party attribution license {other:?}: {line}"),
         });
     }
