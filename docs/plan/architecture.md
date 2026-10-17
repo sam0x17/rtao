@@ -4691,6 +4691,9 @@ fn tx_command() -> clap::Command {
   flag and the raw answer text; native clap switches have no value slot. Other
   alternative groups retain their existing parser behavior. Source review and
   authored fixtures do not establish an executed Python comparison.
+- **Connection labels (D-074).** Named networks retain their labels. Custom RPC URLs in connection diagnostics use
+  the existing `safe_endpoint` formatter, excluding user information, path, query and fragment while retaining the
+  configured endpoint for routing. This confidentiality correction applies to human, quiet and JSON errors.
 - **JSON is the parity contract.** It is **value-equal** to btcli's: parsed JSON equality, with `Balance` strings
   byte-equal through §5.3, enforced by the read oracle and the interop lanes (lane 9 runs every hand-written command
   against btcli at a pinned block, §11.6).
