@@ -2738,7 +2738,7 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
             events: success_events(Some((keys[0].key.account(), &group, inner.hash()))),
         })
     });
-    let factory = factory(&keys);
+    let member_factory = factory(&keys);
     let cache = CallCache::default();
     let (ctx, sink) = saved_context(&keys, &["--yes", "--json", "--no-mev-shield"], 3)?;
     let result = ctx
@@ -2747,14 +2747,17 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
             &Preview { blocked: false },
             false,
             None,
-            &factory,
+            &member_factory,
             &cache,
         )
         .await?
         .ok_or("receipt")?;
     assert!(result.success);
-    assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
-    assert_eq!(*factory.releases.lock().map_err(|_| "release")?, vec![true]);
+    assert_eq!(member_factory.acquired.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        *member_factory.releases.lock().map_err(|_| "release")?,
+        vec![true]
+    );
     assert_eq!(keys[0].unlocks.load(Ordering::SeqCst), 1);
     assert_eq!(keys[1].unlocks.load(Ordering::SeqCst), 0);
     assert_eq!(
