@@ -4716,7 +4716,14 @@ fn tx_command() -> clap::Command {
 
 The public `rtao_cli::prompt::masked_input` and `LiveTerminal` use a UTF-8 Unix editor with star feedback on stdin. The controlling-terminal fallback uses the same editor without stars; an unavailable terminal permits the warned plain-line fallback for direct callers. CLI password policy still requires a terminal. Editing replaces invalid UTF-8 with U+FFFD, while plain-line input rejects invalid UTF-8. Windows is outside the supported platform set.
 
-D-053 records the native terminal contract under execution rule 5. Python selects its interpreter input codec and relies on interpreter signal handling. Rust instead uses fixed Ctrl-C, backspace, Ctrl-U and Ctrl-D bindings and disables ISIG while the editor owns the terminal. Ctrl-C is recognized during escape parsing too, and restoration precedes cancellation. Other ASCII control bytes are ignored, including Ctrl-\ and Ctrl-Z; remapped terminal signal keys are not interpreted. This avoids termination, core dumps or suspension from those control bytes before restoration. No process signal handler is installed, so external signals have no restoration guarantee. Injected fixtures cover both feedback modes and fallback selection; they do not establish executed native-platform coverage.
+D-053 records the native terminal contract under execution rule 5. Python selects its interpreter input codec and relies on interpreter signal handling. Rust instead uses fixed Ctrl-C, backspace, Ctrl-U and Ctrl-D bindings and disables ISIG while the editor owns the terminal. Ctrl-C is recognized during escape parsing too, and restoration precedes cancellation. Other ASCII control bytes are ignored, including Ctrl-\ and Ctrl-Z; remapped terminal signal keys are not interpreted. This avoids termination, core dumps or suspension from those control bytes before restoration. No process signal handler is installed, so standalone external signals have no restoration guarantee. Injected fixtures cover both feedback modes and fallback selection; they do not establish executed native-platform coverage.
+
+The opt-in `CancellableTerminal` adds an invocation-scoped, independently clonable cancel handle. Unix ordinary,
+star and hidden input check it between bounded poll waits, including escape parsing; cancellation restores owned
+terminal settings and does not retry or fall back to plain input. Poll accepts valid descriptors beyond FD_SETSIZE,
+and EINTR retries share one monotonic wait budget. This is an input primitive, not a SIGINT coordinator. Blocked
+output/OS operations and competing stdin readers have no universal shutdown bound; legacy `LiveTerminal` remains
+available. Source fixtures do not establish native terminal execution.
 
 ### 10.4 rtao-only commands
 
