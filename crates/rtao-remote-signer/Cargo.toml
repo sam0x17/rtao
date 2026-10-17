@@ -1,0 +1,158 @@
+[package]
+name = "rtao-remote-signer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "(MIT OR Apache-2.0) AND Apache-2.0"
+repository.workspace = true
+description = "Policy-checked remote transaction signing over btauth/1 (rtao-remote-signer/1)."
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+features = ["client", "server-bin", "redis"]
+
+[lints]
+workspace = true
+
+[features]
+# The wire module is always compiled.
+client = [
+    "dep:rtao-btauth",
+    "rtao-btauth/client",
+    "dep:reqwest",
+    "dep:url",
+    "dep:tokio",
+    "dep:rustls",
+    "dep:rustls-pki-types",
+    "dep:http",
+]
+server = [
+    "dep:rtao-btauth",
+    "rtao-btauth/server",
+    "dep:rtao-runtime",
+    "dep:rtao-tx",
+    "dep:axum",
+    "dep:tokio",
+    "dep:tracing",
+    "dep:http",
+    "dep:smallvec",
+]
+server-online = ["server", "dep:rtao-client"]
+server-bin = [
+    "server-online",
+    "dep:toml",
+    "dep:clap",
+    "dep:rtao-wallet",
+    "rtao-wallet/encrypted",
+    "dep:secrecy",
+    "dep:tokio-rustls",
+    "dep:hyper",
+    "dep:hyper-util",
+    "dep:rustls",
+    "dep:rustls-pki-types",
+    "dep:tracing-subscriber",
+]
+redis = ["server", "rtao-btauth/redis"]
+
+[dependencies]
+rtao-signer = { workspace = true }
+rtao-primitives = { workspace = true }
+rtao-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+blake2 = { workspace = true }
+rtao-btauth = { workspace = true, optional = true }
+rtao-runtime = { workspace = true, optional = true }
+rtao-tx = { workspace = true, optional = true }
+rtao-client = { workspace = true, optional = true }
+rtao-wallet = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+rustls-pki-types = { workspace = true, optional = true, features = ["std"] }
+http = { workspace = true, optional = true }
+axum = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+smallvec = { version = "1", optional = true }
+toml = { version = "0.8", optional = true, default-features = false, features = ["parse"] }
+clap = { workspace = true, optional = true }
+secrecy = { workspace = true, optional = true }
+tokio-rustls = { workspace = true, optional = true }
+hyper = { workspace = true, optional = true }
+hyper-util = { workspace = true, optional = true, features = ["service"] }
+tracing-subscriber = { version = "0.3", optional = true, default-features = false, features = ["fmt"] }
+
+[dev-dependencies]
+rtao-testkit = { workspace = true }
+rtao-btauth = { workspace = true, features = ["client", "server"] }
+rtao-runtime = { workspace = true }
+rtao-client = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+tower = { workspace = true }
+http-body-util = { workspace = true }
+num-bigint = { workspace = true }
+reqwest = { workspace = true }
+rustls = { workspace = true }
+rcgen = { workspace = true }
+http = { workspace = true }
+axum = { workspace = true }
+sha2 = { workspace = true }
+rtao-wallet = { workspace = true }
+rtao-core = { workspace = true }
+url = { workspace = true }
+hex = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
+
+[[bin]]
+name = "rtao-remote-signerd"
+path = "src/bin/rtao-remote-signerd.rs"
+required-features = ["server-bin"]
+doc = false
+
+[[test]]
+name = "wire"
+path = "tests/wire.rs"
+
+[[test]]
+name = "rebuild"
+path = "tests/rebuild.rs"
+required-features = ["server"]
+
+[[test]]
+name = "server"
+path = "tests/server.rs"
+required-features = ["server"]
+
+[[test]]
+name = "audit"
+path = "tests/audit.rs"
+required-features = ["server"]
+
+[[test]]
+name = "client"
+path = "tests/client.rs"
+required-features = ["client", "server"]
+
+[[test]]
+name = "daemon"
+path = "tests/daemon.rs"
+required-features = ["server-bin", "client"]
+
+[[test]]
+name = "interop"
+path = "tests/interop.rs"
+required-features = ["client"]
+
+[[test]]
+name = "online"
+path = "tests/online.rs"
+required-features = ["client", "server-online"]
+
+[[test]]
+name = "localnet"
+path = "tests/localnet.rs"
+required-features = ["client", "server-online"]

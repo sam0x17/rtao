@@ -1,0 +1,724 @@
+{
+ "ping": {
+  "status": 200,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "content-type": "application/json",
+   "name": "Synapse",
+   "bt_header_axon_status_code": "200",
+   "bt_header_axon_status_message": "Success",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+  },
+  "body": {
+   "name": "Synapse",
+   "timeout": 12.0,
+   "total_size": 2645,
+   "header_size": 0,
+   "dendrite": {
+    "status_code": null,
+    "status_message": null,
+    "process_time": null,
+    "ip": "203.0.113.7",
+    "port": null,
+    "version": 10005000,
+    "nonce": 1792223450308790193,
+    "uuid": "00000000-0000-0000-0000-000000000001",
+    "hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    "signature": "0x6a067a8a8959b5f57041122f3e000a970ef383afac00ef909de9c7d47b157f44a66df2ed3124caa7763d93d406e202cd396b6d7f332725c4cfc5b1de2091be8a"
+   },
+   "axon": {
+    "status_code": 200,
+    "status_message": "Success",
+    "process_time": 2.2172927856445312e-05,
+    "ip": "198.51.100.9",
+    "port": 18093,
+    "version": null,
+    "nonce": null,
+    "uuid": null,
+    "hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    "signature": null
+   },
+   "computed_body_hash": ""
+  }
+ },
+ "unknown_route": {
+  "status": 404,
+  "header_names": [
+   "bt_header_axon_process_time",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "404",
+   "bt_header_axon_status_message": "Synapse name 'Nope' not found. Available synapses ['Synapse', 'Mixed', 'Req', 'LegacyHashed', 'Tens', 'Deny', 'Status404', 'Boom', 'Slow', 'NanResp', 'WhoAmI', 'Echo', 'NanReq']",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Synapse name 'Nope' not found. Available synapses ['Synapse', 'Mixed', 'Req', 'LegacyHashed', 'Tens', 'Deny', 'Status404', 'Boom', 'Slow', 'NanResp', 'WhoAmI', 'Echo', 'NanReq']"
+  }
+ },
+ "blacklisted": {
+  "status": 403,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Deny",
+   "bt_header_axon_status_code": "403",
+   "bt_header_axon_status_message": "Forbidden. Key is blacklisted: denied by test.",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Forbidden. Key is blacklisted: denied by test."
+  }
+ },
+ "missing_signature": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: Missing Signature",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: Missing Signature"
+  }
+ },
+ "signature_without_0x": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: Invalid signature format. Expected hex string.",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: Invalid signature format. Expected hex string."
+  }
+ },
+ "signature_63_bytes": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: Invalid SR25519 signature.",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: Invalid SR25519 signature."
+  }
+ },
+ "missing_hotkey": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: No SS58 formatted address or public key provided.",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: No SS58 formatted address or public key provided."
+  }
+ },
+ "bad_hotkey": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: Invalid SS58 address: Base 58 requirement is violated",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "0OIl",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: Invalid SS58 address: Base 58 requirement is violated"
+  }
+ },
+ "header_parse_failure": {
+  "status": 500,
+  "header_names": [
+   "bt_header_axon_process_time",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "500",
+   "bt_header_axon_status_message": "Internal Server Error #5b672e2c-a3f1-4583-90a2-caec96b3f4ac",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Internal Server Error #5b672e2c-a3f1-4583-90a2-caec96b3f4ac"
+  }
+ },
+ "invalid_json": {
+  "status": 422,
+  "header_names": [
+   "content-type"
+  ],
+  "headers": {
+   "content-type": "application/json"
+  },
+  "body": {
+   "detail": [
+    {
+     "type": "json_invalid",
+     "loc": [
+      "body",
+      1
+     ],
+     "msg": "JSON decode error",
+     "input": {},
+     "ctx": {
+      "error": "Expecting property name enclosed in double quotes"
+     }
+    }
+   ]
+  }
+ },
+ "empty_body": {
+  "status": 500,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "500",
+   "bt_header_axon_status_message": "Internal Server Error #c025cfcc-347a-462f-82e6-0fde9a682d85",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Internal Server Error #c025cfcc-347a-462f-82e6-0fde9a682d85"
+  }
+ },
+ "text_plain": {
+  "status": 500,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "500",
+   "bt_header_axon_status_message": "Internal Server Error #778311a6-e977-409c-8236-88faf263cf6f",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Internal Server Error #778311a6-e977-409c-8236-88faf263cf6f"
+  }
+ },
+ "status_404": {
+  "status": 404,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_status_code",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "content-type": "application/json",
+   "name": "Status404",
+   "bt_header_axon_status_code": "404",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+  },
+  "body": {
+   "name": "Status404",
+   "timeout": 12.0,
+   "total_size": 2647,
+   "header_size": 0,
+   "dendrite": {
+    "status_code": null,
+    "status_message": null,
+    "process_time": null,
+    "ip": "203.0.113.7",
+    "port": null,
+    "version": 10005000,
+    "nonce": 1792223450368851820,
+    "uuid": "00000000-0000-0000-0000-00000000000d",
+    "hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    "signature": "0xfaca3943cacf3fcad588555d6a2041889e54437dda8b5eab46df8b856d4c6a1461f90e407f788a621d0fc0adc4d3a4d562e2218ddc6e5faaa3f4e3ce2da7bb81"
+   },
+   "axon": {
+    "status_code": 404,
+    "status_message": null,
+    "process_time": 2.8848648071289062e-05,
+    "ip": "198.51.100.9",
+    "port": 18093,
+    "version": null,
+    "nonce": null,
+    "uuid": null,
+    "hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    "signature": null
+   },
+   "computed_body_hash": ""
+  }
+ },
+ "boom": {
+  "status": 500,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Boom",
+   "bt_header_axon_status_code": "500",
+   "bt_header_axon_status_message": "Internal Server Error #44727db4-1c63-476c-90fa-07dd45a8d0d3",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Internal Server Error #44727db4-1c63-476c-90fa-07dd45a8d0d3"
+  }
+ },
+ "hash_header_tampered": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Mixed",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: Signature mismatch with 1792223450379842766.5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY.5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty.00000000-0000-0000-0000-00000000000f.a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a and 0x60ec8587e548d09e1211ac8d19fd6cfa1c658b44e8c5e542b27819ec89c5ce77ebedf3e36720ef6ec8389624dc19a6e8829fba5ab4bfbbc4556a5c7ec9cfd288",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "4a3322ae93694fead827169a8b648e5e8ad14801f004f3d938da29c1a48b7090",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: Signature mismatch with 1792223450379842766.5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY.5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty.00000000-0000-0000-0000-00000000000f.a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a and 0x60ec8587e548d09e1211ac8d19fd6cfa1c658b44e8c5e542b27819ec89c5ce77ebedf3e36720ef6ec8389624dc19a6e8829fba5ab4bfbbc4556a5c7ec9cfd288"
+  }
+ },
+ "extra_segment": {
+  "status": 404,
+  "header_names": [
+   "content-type"
+  ],
+  "headers": {
+   "content-type": "application/json"
+  },
+  "body": {
+   "detail": "Not Found"
+  }
+ },
+ "extra_segment_unsigned": {
+  "status": 401,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_nonce",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_signature",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_axon_uuid",
+   "bt_header_axon_version",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_port",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "name": "Synapse",
+   "bt_header_axon_status_code": "401",
+   "bt_header_axon_status_message": "Not Verified with error: Missing Signature",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+   "content-type": "application/json"
+  },
+  "body": {
+   "message": "Not Verified with error: Missing Signature"
+  }
+ },
+ "put_method": {
+  "status": 405,
+  "header_names": [
+   "allow",
+   "content-type"
+  ],
+  "headers": {
+   "allow": "POST, GET",
+   "content-type": "application/json"
+  },
+  "body": {
+   "detail": "Method Not Allowed"
+  }
+ },
+ "percent_encoded": {
+  "status": 200,
+  "header_names": [
+   "bt_header_axon_hotkey",
+   "bt_header_axon_ip",
+   "bt_header_axon_port",
+   "bt_header_axon_process_time",
+   "bt_header_axon_status_code",
+   "bt_header_axon_status_message",
+   "bt_header_dendrite_hotkey",
+   "bt_header_dendrite_ip",
+   "bt_header_dendrite_nonce",
+   "bt_header_dendrite_signature",
+   "bt_header_dendrite_uuid",
+   "bt_header_dendrite_version",
+   "computed_body_hash",
+   "content-type",
+   "header_size",
+   "name",
+   "timeout",
+   "total_size"
+  ],
+  "headers": {
+   "content-type": "application/json",
+   "name": "Synapse",
+   "bt_header_axon_status_code": "200",
+   "bt_header_axon_status_message": "Success",
+   "bt_header_axon_hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+   "bt_header_dendrite_hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+   "computed_body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+  },
+  "body": {
+   "name": "Synapse",
+   "timeout": 12.0,
+   "total_size": 2645,
+   "header_size": 0,
+   "dendrite": {
+    "status_code": null,
+    "status_message": null,
+    "process_time": null,
+    "ip": "203.0.113.7",
+    "port": null,
+    "version": 10005000,
+    "nonce": 1792223450439842554,
+    "uuid": "00000000-0000-0000-0000-000000000013",
+    "hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    "signature": "0xa8087fe417509bfa37a6573a34b1a55c37afc0e134aa83b3c4afabb1590b5644ddaadeecc4eb99d5e634388379bdf8e13e06187aaa4696957c3640d17a26cb8b"
+   },
+   "axon": {
+    "status_code": 200,
+    "status_message": "Success",
+    "process_time": 6.4373016357421875e-06,
+    "ip": "198.51.100.9",
+    "port": 18093,
+    "version": null,
+    "nonce": null,
+    "uuid": null,
+    "hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    "signature": null
+   },
+   "computed_body_hash": ""
+  }
+ }
+}

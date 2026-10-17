@@ -73,7 +73,8 @@ pub const HEADER_SIGNATURE: &str = "X-Bittensor-Signature";
 // while 58^49 >2^287. The shorter prefix-zero form, including leading zero
 // characters, takes at most 48 bytes. Hex public keys are not accepted by the
 // pinned core's public_key_from_ss58/from_ss58check entry point.
-const MAX_SENDER_SS58_BYTES: usize = 49;
+/// Longest accepted AccountId32 SS58 sender spelling, checked before decoding.
+pub const MAX_SENDER_SS58_BYTES: usize = 49;
 const MAX_AUTH_FIELD_BYTES: usize = 4_096;
 const MAX_AUTH_TOTAL_BYTES: usize = 8_192;
 const AUTH_BUDGET_ERROR: &str =
@@ -546,7 +547,11 @@ fn text_header<'a>(headers: &'a HeaderMap, name: &str) -> Result<Option<&'a str>
         .transpose()
 }
 
-fn check_auth_header_budget(
+/// Refuse authentication headers above the D-054 budgets before parsing.
+///
+/// Each named header value, and `additional_bytes`, must fit 4,096 bytes; all
+/// of them together, counting duplicate values, must fit 8,192 bytes.
+pub fn check_auth_header_budget(
     headers: &HeaderMap,
     names: &[&str],
     additional_bytes: usize,

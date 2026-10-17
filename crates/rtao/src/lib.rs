@@ -56,6 +56,29 @@ pub use rtao_tx as tx;
 #[cfg_attr(docsrs, doc(cfg(feature = "wallet")))]
 pub use rtao_wallet as wallet;
 
+/// Compatibility crates for subnets migrating from pre-v11 protocols.
+#[cfg(any(feature = "compat-synapse", feature = "compat-epistula"))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "compat-synapse", feature = "compat-epistula")))
+)]
+pub mod compat {
+    /// Epistula v2 signed headers with dialect presets.
+    #[cfg(feature = "compat-epistula")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "compat-epistula")))]
+    pub use rtao_compat_epistula as epistula;
+    /// v10 Synapse, Axon and Dendrite wire compatibility.
+    #[cfg(feature = "compat-synapse")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "compat-synapse")))]
+    pub use rtao_compat_synapse as synapse;
+}
+#[cfg(feature = "transport-quic")]
+#[cfg_attr(docsrs, doc(cfg(feature = "transport-quic")))]
+pub use rtao_transport_quic as quic;
+#[cfg(feature = "remote-signer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "remote-signer")))]
+pub use rtao_remote_signer as remote_signer;
+
 /// Traits and common types for fluent client and snapshot reads.
 pub mod prelude {
     #[cfg(feature = "tx")]

@@ -98,6 +98,7 @@ pub fn command() -> Command {
                         "vault",
                         "ledger",
                         "extension",
+                        "remote",
                     ])
                     .help("Key role or signing backend."),
             ),
@@ -411,10 +412,12 @@ impl RawCallRequest {
             "coldkey" => (SignerRole::Coldkey, None),
             "hotkey" => (SignerRole::Hotkey, None),
             "wallet" => (SignerRole::Coldkey, None),
-            "vault" | "ledger" | "extension" => (SignerRole::Coldkey, Some(selected.to_owned())),
+            "vault" | "ledger" | "extension" | "remote" => {
+                (SignerRole::Coldkey, Some(selected.to_owned()))
+            }
             _ => {
                 return Err(CliError::input(
-                    "--signer must be coldkey, hotkey, wallet, vault, ledger, or extension",
+                    "--signer must be coldkey, hotkey, wallet, vault, ledger, extension, or remote",
                 ));
             }
         };
@@ -1698,7 +1701,9 @@ fn signing_rounds(
             .and_then(|entry| entry.get("signer"))
             .and_then(Json::as_str)
             .map(crate::globals::normalize_signer_backend)
-            .filter(|backend| ["vault", "ledger", "extension"].contains(&backend.as_str()))
+            .filter(|backend| {
+                ["vault", "ledger", "extension", "remote"].contains(&backend.as_str())
+            })
     };
     let member = |reference: &str,
                   wallet_only: bool,
@@ -1715,7 +1720,7 @@ fn signing_rounds(
             })
             .unwrap_or((reference, None));
         if let Some(forced) = &forced
-            && !["wallet", "vault", "ledger", "extension"].contains(&forced.as_str())
+            && !["wallet", "vault", "ledger", "extension", "remote"].contains(&forced.as_str())
         {
             return Err(CliError::input(format!(
                 "unknown backend {forced:?} in --signatory"
@@ -2057,17 +2062,17 @@ fn prompt_member_backend(
     }
     let mut spec = crate::prompt::PromptSpec::new("member_backend", "--signer");
     spec.default = Some("vault".into());
-    spec.placeholder = Some("vault/ledger/extension".into());
+    spec.placeholder = Some("vault/ledger/extension/remote".into());
     spec.help = Some(format!(
         "How does member {reference} sign? It has no local wallet or saved tag."
     ));
     let (backend, _) = crate::prompt::ask_with(&prompt, &mut **terminal, &spec, |raw| {
         let raw = raw.to_lowercase();
-        if ["vault", "ledger", "extension"].contains(&raw.as_str()) {
+        if ["vault", "ledger", "extension", "remote"].contains(&raw.as_str()) {
             Ok(raw)
         } else {
             Err(crate::prompt::PromptValidation::Message(
-                "choose one of: extension, ledger, vault".into(),
+                "choose one of: extension, ledger, remote, vault".into(),
             ))
         }
     })
@@ -2516,7 +2521,7 @@ fn raw_contact_backend(ctx: &AppContext, reference: &str) -> Option<String> {
     let entry = ctx.books.address_entry(reference)?;
     let backend =
         crate::globals::normalize_signer_backend(entry.get("signer").and_then(Json::as_str)?);
-    ["vault", "ledger", "extension"]
+    ["vault", "ledger", "extension", "remote"]
         .contains(&backend.as_str())
         .then_some(backend)
 }
