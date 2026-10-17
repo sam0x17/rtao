@@ -4300,11 +4300,14 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
       failing reveal with `log::trace` and no event (`coinbase/reveal_commits.rs:188-202`). On a miss the watcher
       therefore reads, at the first block of the reveal epoch, `ValidatorPermit[uid]`, the hotkey's stake against
       `StakeThreshold`, `WeightsVersionKey`, `SubnetworkN`, `MinAllowedWeights` and `Uids[netuid][hotkey]`, and sets
-      `reason` to the first failing check, or to `drand_round` when `Drand.LastStoredRound < round`.
+      `reason` to the first failing check, or to `drand_round` when `Drand.LastStoredRound < round`. Permit
+      attribution matches the pallet: Null always requires a permit, while Yuma exempts a self row and the registered
+      subnet owner.
     - It warns before the reveal epoch when the permit was lost at the intervening epoch boundary.
     - Tests: a `FakeChain` case with finality lag 3 asserts that the predictor receives the best block's number and
       state; a `FakeChain` case whose inclusion slips past an epoch boundary asserts that the watcher follows the
-      actual epoch and raises no miss.
+      actual epoch and raises no miss. The missed-round fixture also covers a Yuma owner without a permit and the
+      corresponding Null control.
 
 **Version key policy**: `VersionKey::{Zero (v11 default, UP/docs/migration.mdx:400-404), Fixed(u64)}`. There is no
 "follow the chain's `WeightsVersionKey`" mode, because that defeats the owner's forced-upgrade lever (C's open question
@@ -4699,8 +4702,9 @@ fn tx_command() -> clap::Command {
 - **Connection labels (D-074).** Named networks retain their labels. Custom RPC URLs in connection diagnostics use
   the existing `safe_endpoint` formatter, excluding user information, path, query and fragment while retaining the
   configured endpoint for routing. This confidentiality correction applies to human, quiet and JSON errors.
-  Shareable multisig and upgrade commands require a nonempty private `BT_NETWORK` for custom endpoints rather than
-  embedding the configured URL. Named-network commands remain unchanged; the operator chooses the intended endpoint.
+  Generic replay and success hints, plus shareable multisig and upgrade commands, require a nonempty private
+  `BT_NETWORK` for custom endpoints rather than embedding the configured URL. Named-network commands remain
+  unchanged; the operator chooses the intended endpoint.
 - **Shield failure guidance (D-075).** Retain the actual transport after fallback, including the last saved approval
   round. Human carrier failures explain free-TAO fees without unconditional opt-out advice; known mandatory shields
   cannot be disabled. Missing inner metadata does not prove rejection, and unknown fate requires inspection before

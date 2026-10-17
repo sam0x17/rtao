@@ -584,7 +584,9 @@ async fn first_check(
         return Ok(Some(RevealMissReason::VersionKey));
     }
     let self_only = pending.uids == [Uid(uid)];
-    if (super::consensus_null(&consensus)? || !self_only)
+    let null_consensus = super::consensus_null(&consensus)?;
+    let yuma_owner = !null_consensus && owner.raw() == &pending.hotkey;
+    if (null_consensus || (!self_only && !yuma_owner))
         && permits.get(usize::from(uid)) != Some(&true)
     {
         return Ok(Some(RevealMissReason::Permit));
@@ -798,6 +800,16 @@ mod tests {
     async fn round_arriving_after_actual_epoch_is_still_attributed_to_drand() -> anyhow::Result<()>
     {
         let (chain, client, mut watcher, metrics) = slipped().await?;
+        chain.mutate_state(|state| {
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "ValidatorPermit",
+                (NetUid(1),),
+                vec![false, false, false],
+            )
+        })?;
         watcher
             .observe(&client, &header(&chain, 120)?, &metrics)
             .await?;
@@ -813,6 +825,37 @@ mod tests {
             metrics
                 .render()
                 .contains("rtao_weights_reveal_missed_total{mech=\"0\",reason=\"drand_round\"} 1")
+        );
+        client.close().await;
+
+        let (chain, client, mut watcher, metrics) = slipped().await?;
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "ValidatorPermit",
+                (NetUid(1),),
+                vec![false, false, false],
+            )?;
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "SubnetEpochConsensus",
+                (NetUid(1),),
+                "Null",
+            )
+        })?;
+        watcher
+            .observe(&client, &header(&chain, 120)?, &metrics)
+            .await?;
+        watcher
+            .observe(&client, &header(&chain, 130)?, &metrics)
+            .await?;
+        assert_eq!(
+            watcher.outcomes().front().expect("Null miss").missed,
+            Some(RevealMissReason::Permit)
         );
         client.close().await;
         Ok(())
