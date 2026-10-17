@@ -3,7 +3,7 @@
   "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
   "host": "x86_64-unknown-linux-gnu",
   "machine": "13th Gen Intel(R) Core(TM) i9-13900KF",
-  "measured_unix_seconds": 1792219736,
+  "measured_unix_seconds": 1792229482,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1435,12 +1435,14 @@
   "schema": 1,
   "source": {
     "dependency_inputs": {
-      "Cargo.lock": "064b5371bf603c3741bb901064198cff2d4d30acc0d8be11fde38390c5a9ce3d",
-      "Cargo.toml": "57668e95700c652db9dea1769b73d8238d98a373b67467dee8c1e83dd7c0d09f",
-      "crates/rtao-btauth/Cargo.toml": "2ec334a952e0632616d130577e3874270f5dd45eced88b2e1108c2ec45d85ef5",
+      "Cargo.lock": "f1942896e0d74d36df1f08a855c3045a22b327cfe8f279959ad6f5dd6e89270a",
+      "Cargo.toml": "21fdb33f5b38607fe6863f3ce739a37a3691fb203812a98b5d89f6ccc1ddf42f",
+      "crates/rtao-btauth/Cargo.toml": "ffd0281f384fa001209f59fc9282e2d5a7c5ddb66fa7e72ab5ab34af25a3e38c",
       "crates/rtao-catalog/Cargo.toml": "477b530677c985adcb6cb5a1ddfd022c6d509b82c4f7b24c67328324ab9db566",
-      "crates/rtao-cli/Cargo.toml": "655f58da7ac5e7fd01868ec8e57c77ae0fc98074b11ed429756e6fca7b381e0d",
+      "crates/rtao-cli/Cargo.toml": "2e4aa7365d39632658f9c14c3cd3a10b94c7516310776bec4dcbcc40c978d216",
       "crates/rtao-client/Cargo.toml": "bab440f372af00d0fde2cc059d7a69f9c6dc6a928585a5bba8521d6a93546a71",
+      "crates/rtao-compat-epistula/Cargo.toml": "59bddef44a09bfff716caf136bee71919f28c453d6ef4194ee486c1dc8e73921",
+      "crates/rtao-compat-synapse/Cargo.toml": "54e91a8471a8905b405101a63277c44859e0ea0438b733d1dbf3c3cab62eac95",
       "crates/rtao-core-ext/Cargo.toml": "4c51997601bb649d98769711be7ee7e7ec829667b517fb47d8203a936c112379",
       "crates/rtao-core/Cargo.toml": "7e8e242565c70e19b1ef1048efc8f0d551b819a4bc6ebe534ecc3d9d90d8a641",
       "crates/rtao-evm/Cargo.toml": "bf8e3c48f793e69169494f5dbff53f2401f4e45f35bab332c185c00f957b6477",
@@ -1449,19 +1451,21 @@
       "crates/rtao-neuron/Cargo.toml": "5976d3ecc6f74718bc752d0c752b186b88e0f8772f99cb6d685e7c7608a9c3fb",
       "crates/rtao-primitives/Cargo.toml": "517f8cef4f38459031bb850af5e8c0c5443309a3d0caf634659a7b3b604cf03a",
       "crates/rtao-reads/Cargo.toml": "ce8a146b4f3b37712c6fff3e81851f51d4d82f62ff9845d86996d7bf57b99218",
+      "crates/rtao-remote-signer/Cargo.toml": "4e97a523db26945ff23ca3c0a468d0a46b05f4365de005d860a7dd99fcbac2ac",
       "crates/rtao-rpc/Cargo.toml": "9f3b2559b2544105bc2aa54bc37d89a271c5a2d7322f3328ca6f8c4bc6c9896d",
       "crates/rtao-runtime/Cargo.toml": "cc16de476efe18f5248642e954cc8205220cee9efa573a7bd0c1b77daf5d4c89",
       "crates/rtao-signer/Cargo.toml": "460670e226377cee712f242ccb4b9a64e91488b381cf9fc070f14402e04e8fcc",
       "crates/rtao-testkit/Cargo.toml": "5a644b42276ef3342fb038777f54b1bb84f6c852d1c94515812fee64e59c847e",
+      "crates/rtao-transport-quic/Cargo.toml": "93cf639331899b6a27055cd714c42eea19c1a33c667cc3a6540633ed5dcb6f3a",
       "crates/rtao-tx/Cargo.toml": "e52989ec886ebe9c951c8ef6e90c9cab8e9881ecdfe41ca110bb681b4477e8bf",
       "crates/rtao-wallet/Cargo.toml": "83d6a456e2c159f029f1bc628373f5e5b36fc75d422ca388cbf0641a22841146",
-      "crates/rtao/Cargo.toml": "aa67a88fc1148cca1f054992f1f54c1f54f3074b68c5374c16692d5e0001f2c6",
+      "crates/rtao/Cargo.toml": "9811aced73106e0f3b098a6a587941c340d7ad5b551080cfcf5eaae853506521",
       "upstream.toml": "de6fc368f98a46eb54587bc0b62c22dcc5b68aa6aca8cf2c446f92892bbb4d6a",
       "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
     },
-    "dependency_inputs_sha256": "42c89e3970b26479299808f9c176cba20671daf043b20118d2281cebaf0214f7",
+    "dependency_inputs_sha256": "ad86ddfa15c4ce0f24a10823f97537a077a078c0851099841bfe550d44f382d9",
     "dirty": false,
-    "head_commit": "c0d5126b7dcf9c2cb048093a587514b1f57fc4fb"
+    "head_commit": "4f0dfbd938e0e047cef2a5a0b1a3690e738c34e5"
   },
   "target": "aarch64-apple-darwin"
 }
