@@ -1275,7 +1275,7 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 195-line CLI m
 
 [[file]]
 py = "sdk/python/bittensor/cli/context.py"
-rs = ["crates/rtao-cli/src/context.rs", "crates/rtao-cli/src/context/registration.rs", "crates/rtao-cli/src/context/direct_multisig.rs", "crates/rtao-cli/src/error.rs", "crates/rtao-cli/src/output.rs", "crates/rtao-cli/src/main.rs"]
+rs = ["crates/rtao-cli/src/context.rs", "crates/rtao-cli/src/context/registration.rs", "crates/rtao-cli/src/error.rs", "crates/rtao-cli/src/output.rs"]
 kind = "ported"
 synced_blob = "081eed0005c58f9834e804b388a135702c07de8d"
 synced_tag = "v478"
@@ -1383,7 +1383,7 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 2484-line/89-d
 
 [[file]]
 py = "sdk/python/bittensor/cli/prompt.py"
-rs = ["crates/rtao-cli/src/prompt.rs", "crates/rtao-cli/src/application.rs", "crates/rtao-cli/src/context.rs", "crates/rtao-cli/src/main.rs"]
+rs = ["crates/rtao-cli/src/prompt.rs", "crates/rtao-cli/src/application.rs", "crates/rtao-cli/src/main.rs"]
 kind = "ported"
 synced_blob = "a360f0cdcde1f1d32ae5dff8dd69623af0157d45"
 synced_tag = "v478"
@@ -1401,7 +1401,7 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 266-line modul
 
 [[file]]
 py = "sdk/python/bittensor/cli/root_helpers.py"
-rs = ["crates/rtao-cli/src/root_helpers/mod.rs", "crates/rtao-cli/src/commands/root.rs", "crates/rtao-cli/src/commands/stake_picker.rs", "crates/rtao-cli/src/commands/generated.rs"]
+rs = ["crates/rtao-cli/src/root_helpers/mod.rs", "crates/rtao-cli/src/commands/root.rs", "crates/rtao-cli/src/commands/stake_picker.rs"]
 kind = "ported"
 synced_blob = "20d0971e95db30a68212b7876eb99f83de43264f"
 synced_tag = "v478"
