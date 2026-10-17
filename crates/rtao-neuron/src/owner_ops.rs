@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/subnet.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Owner orchestration over reviewed intents and live chain windows.
 
 mod routing;

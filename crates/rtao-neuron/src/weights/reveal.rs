@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/weights.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Follow the included commit's actual epoch and retain reveal diagnostics.
 
 use super::WeightPreflight;
