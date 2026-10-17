@@ -114,30 +114,30 @@ notes = "Full 2867-line source disposition through 9af5324: selected owner_map e
 
 [[file]]
 py = "pallets/subtensor/src/coinbase/reveal_commits.rs"
-rs = ["vendor/upstream/extracted/chain_rules.json (reveal_contract payload and epoch-prefix projection; remaining reveal control flow pending)"]
+rs = ["vendor/upstream/extracted/chain_rules.json (reveal_contract payload and epoch-prefix projection)"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "32b0f98a75e383a2e34d3328561761ee506084d9"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Source implementation 2026-10-15: extract_reveal_contract.rs authenticates chain/core source, extracts modern/legacy payload field order, types and freeze_struct labels, compares the modern layout with core WeightsTlockPayload used by commit_payload, and checks current_epoch_with_lookahead minus reveal period with saturating subtraction. Negative fixtures change field type/order, core layout and epoch expressions. Output is reveal_contract in chain_rules.json; hosted generation/tests remain unexecuted. Keep pending: queue expiry, missing-pulse retention, ciphertext/signature parsing, hotkey/legacy fallback, dispatch failure and success-event rules are not yet source-to-consumer reconciled."
+notes = "Source reconciliation 2026-10-16: complete authenticated 212-line module, both payload structs and sole reveal method reviewed. extract_reveal_contract.rs authenticates chain/core inputs, checks modern/legacy SCALE field order and types, freeze labels and the modern core payload used by commit_payload; it guards only the first three epoch bindings (current_epoch_with_lookahead, reveal period, saturating subtraction). Existing mutation fixtures reject payload, implementation/signature and prefix drift. Native clients construct/encrypt canonical modern payloads through the pinned core and observe actual inclusion/reveal events; they do not execute this runtime method. Remaining complete method scope is runtime-owned: mechanism iteration/indexing, expired-queue removal, early return, taking the reveal queue, missing-pulse retention/reinsertion, ciphertext/signature/header/decryption rejection, hotkey equality and legacy fallback, mechanism-weight dispatch and success-only event emission. No mirror of runtime queue mutation, decryption admission, fallback acceptance or event production is required or claimed. This is source reconciliation of the extracted client contract, not whole-runtime execution or Python oracle evidence. Matching full hosted checkpoint and named extractor/payload/crypto PASS records remain required before adoption; later mapping alone grants no milestone acceptance."
 
 [[file]]
 py = "pallets/subtensor/src/coinbase/run_coinbase.rs"
-rs = ["custom codes, coldkey-pays-fee calls, `MAX_SHIELD_ERA_PERIOD`, epoch and reveal rules (§4.9 layer 5)"]
+rs = ["vendor/upstream/extracted/owner_map.json (framework_rules.blocks_until_next_auto_epoch client projection)"]
 kind = "extracted"
-synced_blob = "pending"
+synced_blob = "b97ad0e448f879425a1407a4e320802877d2e4ab"
 synced_tag = "v478"
 milestone = "M1-M2"
-notes = "Source audit 2026-10-15: extract_owner_map.rs authenticates blocks_until_next_auto_epoch for owner policy. This is a narrow existing extraction, not proof of the original broad epoch/reveal rule claim; keep pending for the remaining source scope."
+notes = "Source reconciliation 2026-10-16: complete authenticated 1,277-line module, two conversion macros and all 22 methods reviewed. The extracted client contract is owner_map.json values.framework_rules.blocks_until_next_auto_epoch: authenticated provenance and exact tokenized body comparison preserve tempo-zero u64::MAX and saturating LastEpochBlock+tempo-minus-current-block. Signatures are recorded, while full impl context and the other scheduling helper bodies are not automatically guarded. HyperparamPlanner consumes this automatic projection for freeze checks. Native epoch reads call GET_NEXT_EPOCH_START_BLOCK directly and combine its supplied answer with stored timing fields at one snapshot; this does not execute the runtime getter. D-006 staged epoch_schedule separately preserves the due-pending, counter>tempo and elapsed>=tempo predicate, bounded tempo+1 increment and post-coinbase commit epoch under a successful-epoch assumption. Actual inclusion queues and observed epoch notices guide reveal tracking. Client simulation assumes successful epochs; it does not predict future cap/Null-slot deferrals, input inconsistency or owner triggers, or execute runtime emission drains and storage writes. Issuance credits, swaps/reservoirs, emission allocations, owner/lease/collateral handling, parent-child dividends, stake mutations and basket-deposit queues remain runtime-owned economics. The former generic custom-code, fee-payer, shield-era and reveal-rule mapping is not this file's extracted contract. Complete source review and authored timing/consumer fixtures establish no runtime-economics execution, live-chain guarantee, Python oracle or milestone acceptance; current full hosted CI, qualified named PASS and source binding remain required."
 
 [[file]]
 py = "pallets/subtensor/src/coinbase/tempo_control.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["vendor/upstream/extracted/owner_map.json (delegated tempo/activity client contract projection; runtime effects excluded)"]
+kind = "extracted"
+synced_blob = "98c0081114fb19d18d4f7a76b2fecd67a8b53243"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 127-line/three-method module reviewed. owner_map.json extracts the client-used AdminUtils delegation, TempoUpdate=11/fixed MinTempo and owner-hyperparameter cooldown contracts; its guards prove selected linkage/presence, not full runtime branch order or state effects. do_set_tempo owner bounds/fixed cooldown and both-origin freeze/cycle reset, and do_set_activity_cutoff_factor bounds plus owner-only freeze/cooldown versus root bypass, are individually source-dispositioned. HyperparamPlanner and native unit tables consume the normal owner projection; root authority, actual setter writes and last-block recording remain runtime-owned. do_trigger_epoch is explicitly Python RAW_ONLY: the generated raw call builder exists, while owner admission, commit-reveal refusal, pending/automatic-window/cooldown guards, storage writes and event execution are chain obligations. epoch_status and staged epoch_schedule consume supplied pending state; fixtures do not execute trigger or runtime deferral. Eleven exact qualified Rust PASS records retain their historical 7997ec0/38949537519 (3145/4) provenance; twelve owning plus five discovery/dependency inputs are byte-identical at 394e21b. Non-Python source changes cannot auto-bless: parity_report requires explicit consumer evidence. This records client-source reconciliation only, not whole runtime semantic projection, Python differential execution or milestone acceptance. Historical witnesses do not certify later source edits; current C1 provenance is retained separately."
 
 [[file]]
 py = "pallets/subtensor/src/rpc_info/basket_info.rs"
@@ -222,30 +222,30 @@ notes = "Source reconciliation 2026-10-15: this exact authenticated source contr
 
 [[file]]
 py = "pallets/subtensor/src/subnets/serving.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+rs = ["rtao_neuron::publisher::{AxonConfig,AxonPublisher}","rtao_intents::serving::{ServeAxon,ServeAxonTls,ServePrometheus,ResetAxon}","rtao_runtime::models::{AxonInfo,PrometheusInfo,NeuronCertificate}"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "867c497710872a1226ebd6b5a95f111fd02a9ca2"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Source reconciliation 2026-10-16 covers all 12 functions and the client projection: typed axon/TLS/Prometheus/reset requests, selected axon endpoint/certificate reconciliation, nonzero publisher ports and the inclusive saturating serving cooldown with zero-limit/zero-last exemptions. Framework global-IP policy and D-017 certificate bounds remain explicit client policy; typed direct intents preserve Python request construction. Signed-origin/subnet/hotkey admission, runtime IP/port validation and ordering, absent-record getter defaults, Axons/Prometheus/NeuronCertificates writes and serving events remain chain-owned. Native storage retains Option rather than claiming the pallet zero-filled getter. Named publisher and controlled signed serving-lifecycle fixtures witness client behavior only; there is no automatic Prometheus scheduler or serving semantic extraction. Source identity plus manual predicate review supplies this pinned source reconciliation; runtime enforcement, endpoint reachability and TLS operation are unverified."
 
 [[file]]
 py = "pallets/subtensor/src/subnets/subnet.rs"
-rs = ["rtao_neuron::OwnerOps::{create_subnet,start} (client orchestration; chain-source attribution pending)","rtao_tx registration completion follower (Python-derived; chain-source attribution pending)","rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"]
+rs = ["crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)", "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)", "crates/rtao-runtime/src/generated/{calls,storage,events}.rs (metadata-derived client surfaces)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "293d3cd0ea578bc091c7f282357843d81246be8e"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Full 688-line source disposition through 9af5324: actual clients compose registration/activation calls, follow immediate or queued NetworkAdded with owner/hotkey/height correlation, and recheck mutable start delay. ID allocation, pruning, escrow/payment, initialization, pool economics, authority and storage/event writes stay runtime-owned. No required client behavior gap found. Keep pending: concrete consumers currently have Python/metadata attribution, not a canonical direct subnet.rs header; do not claim a chain-source port or refund implementation. Hosted acceptance remains pending."
+notes = "Source reconciliation 2026-10-16 after a complete 688-line disposition: directly attributed clients compose registration/activation calls, follow immediate or queued NetworkAdded with owner/hotkey/height correlation, and recheck mutable start delay. ID allocation, pruning, escrow/payment, initialization, pool economics, authority and storage/event writes stay runtime-owned. This selective client port does not claim a runtime implementation or refund behavior. Hosted client acceptance is recorded separately."
 
 [[file]]
 py = "pallets/subtensor/src/subnets/weights.rs"
-rs = ["rtao_neuron::weights::{WeightScheduler,RevealWatcher} (selected preparation and actual-epoch observation; direct chain attribution pending)","rtao_intents::weights (Python-derived call/preparation contracts)","rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"]
+rs = ["crates/rtao-neuron/src/weights.rs", "crates/rtao-neuron/src/weights/{reveal,submit}.rs", "crates/rtao-intents/src/weights (Python-derived preparation contracts)", "crates/rtao-runtime/src/generated/{calls,storage,events}.rs (metadata-derived client surfaces)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "2f8569bc0a877de50d478ef46489f2966398b48e"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Full 1551-line source disposition through 9af5324: clients prepare current mechanism calls and observe actual inclusion/reveal epochs. Reveal miss attribution now mirrors Null's unconditional permit requirement and Yuma's self-row and registered-owner exemptions. Runtime dispatch weights, admission, queue priority/eviction, storage/event updates and legacy batch processing remain chain-owned. Keep pending because actual direct chain attribution is incomplete; Python weight math, core scheduling and separate reveal-contract extraction do not establish a whole-file port. Hosted execution of the diagnostic repair also remains pending."
+notes = "Source reconciliation 2026-10-16 after a complete 1551-line disposition: directly attributed clients prepare current mechanism calls and observe actual inclusion/reveal epochs. Reveal miss attribution mirrors Null's unconditional permit requirement and Yuma's self-row and registered-owner exemptions. Runtime dispatch weights, admission, queue priority/eviction, storage/event updates and legacy batch processing remain chain-owned. Python weight math, core scheduling and separate reveal-contract extraction retain their own attribution; this row does not claim a whole-runtime port. Hosted client acceptance is recorded separately."
 
 [[file]]
 py = "pallets/subtensor/src/utils/misc.rs"
@@ -258,12 +258,12 @@ notes = "Full 1113-line source disposition through 9af5324: owner planning mirro
 
 [[file]]
 py = "pallets/subtensor/src/utils/rate_limiting.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+rs = ["rtao_intents::hyperparameters::{HyperparamPlanner,owner_rate_key}","rtao_catalog::owner_map::{OWNER_HYPERPARAMETERS,OWNER_OPERATION_RULES,OwnerCooldown,OwnerRateKind}","rtao_catalog::rt::rate_limits","xtask::extract::resolved::{chain,owner_map} (scoped source projections)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "998a036dd6f9e8cadcf9275a80f9f5772c9246fb"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Source reconciliation 2026-10-16 accounts for all 22 functions, two enums and 51 variants. HyperparamPlanner mirrors the supported owner subset: current-tempo saturating products, first-use sentinel, inclusive >= admission, exact owner-hyperparameter keys and transaction codes 4/7/8/9/11. Authenticated owner projections supply 34 parameter names over 33 setters and four operation rules. Chain extraction retains eight selected rule records; its stored bodies and owner-map guards do not certify every declaration or the full shared predicate/key-routing semantics. Runtime storage writes/removals, global subnet-registration admission, children/take/AddStakeBurn admission, unsupported owner keys and lossy conversions remain chain-owned. Legacy Pallet exceeds_* predicates reject equality with <= and are not substituted for the owner rule. Exact named planner/setter/extractor fixtures and owner-retry fixtures witness client contracts only; actual runtime rate enforcement remains unverified."
 
 [[file]]
 py = "runtime/src/check_mortality.rs"
@@ -978,12 +978,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/cli/call.py"
-rs = ["`rtao-cli` `call`"]
+rs = ["crates/rtao-cli/src/call.rs", "crates/rtao-cli/tests/raw_call_contract.rs", "crates/rtao-cli/tests/call_contract.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "4b05fe2a6d40baeaeea4ed11f49998f80d2615bb"
 synced_tag = "v478"
 milestone = "M4"
-notes = "raw call; the CLI builds its executor without a `Policy`, as btcli does (`cli/context.py:1990-1994`), so there is no `--allow-raw` flag; same wrapper nesting as intents (§10.1)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 597-line raw-call module and actual changed consumers reviewed. Metadata-checked composition keeps Sudo inside Proxy; CLI executor has no default Policy or --allow-raw flag. Public member/backend planning, ordered pre-confirmation review, absent-key default shield fallback versus forced/required refusal, immutable approval calls, original-opening/timepoint checks, executed-stop, ordinary source release, cache/followup and replay are traced. Later repairs retain natural stable aliases, exact single/picker wallet source, narrow repeated-member namespace and separate display labels. Central replay rendering preserves named networks and replaces private endpoint URLs with an explicit operator-supplied BT_NETWORK guard. Typed roles, checked integer/input/depth bounds, native presentation and stronger identity guards remain adaptations. Fixtures/fakes establish client contracts only; separate Python/live-chain, device/browser, active-shield cryptography and canceled-future cleanup claims remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/cli/call_names.py"
@@ -1275,12 +1275,12 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 195-line CLI m
 
 [[file]]
 py = "sdk/python/bittensor/cli/context.py"
-rs = ["`rtao-cli` application context"]
+rs = ["crates/rtao-cli/src/context.rs", "crates/rtao-cli/src/context/registration.rs", "crates/rtao-cli/src/context/direct_multisig.rs", "crates/rtao-cli/src/error.rs", "crates/rtao-cli/src/output.rs", "crates/rtao-cli/src/main.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "081eed0005c58f9834e804b388a135702c07de8d"
 synced_tag = "v478"
 milestone = "M4"
-notes = "Source audit 2026-10-15: live burned/root registration uses context::registration for the exact burn/lock suffix, cost row and root recycling notes before confirmation/unlock. Direct register_subnet now discloses the exact grouped nine-digit creation quote, cost card and all four pinned queue/prune flows; --yes retains the quote/card and omits disclosure-only queue reads. Independent source review found no remaining implementation issue. Authored context_contract fixtures: live_registration_review_discloses_exact_burn_lock_and_root_recycling_before_unlock, dry_run_registration_keeps_the_sdk_summary_and_machine_schema, subnet_creation_review_quotes_exact_cost_and_all_queue_flows_before_unlock, subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_reads and subnet_creation_unreadable_quote_refuses_before_confirmation_or_signing. Keep pending for the full application-context surface audit and this read/error difference: Python fetches a subnet preview during dry-run then discards it; native preserves the dry-run SDK summary/machine schema without those unused disclosure reads. No execution or acceptance is claimed."
+notes = "Source reconciliation 2026-10-16: complete authenticated 2140-line application-context module, all 60 declarations and 22 behavior groups, and later native consumers reviewed. Address/session resolution, local and external signers, saved multisigs, proxy/shield routing, staged review and fee checks, dry-run output, registration disclosure and completion, root-yield followup, receipt retention, direct approvals, connection lifecycle, diagnostics and interruption cleanup have concrete homes. Private endpoint URLs are removed from central replay output and replaced with an explicit operator-supplied BT_NETWORK guard while named networks remain exact. Native typed errors/accounts/balances, bounded acquisition, stricter cache and receipt identity, retained postsubmission recovery and D-053 cancellation scope are explicit adaptations. Python's unused dry-run subnet-preview read is deliberately omitted while the SDK summary and machine schema are preserved. Scoped fixtures establish client contracts only; no complete Python oracle, live-chain, hardware/platform/release or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/globals.py"
@@ -1302,12 +1302,12 @@ notes = "Terminal palette remains presentation-only. The semantic NoArgsIsHelpEr
 
 [[file]]
 py = "sdk/python/bittensor/cli/helpers.py"
-rs = ["`rtao-cli` shared helpers"]
+rs = ["crates/rtao-cli/src/commands/stake_picker.rs", "crates/rtao-cli/src/commands/wallet.rs", "crates/rtao-cli/src/commands/wallet_m8/views.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "cfe78cc078cafb30ee1e69d80014c4820a2f26ea"
 synced_tag = "v478"
 milestone = "M4–M8"
-notes = "`wallet balance`/`inspect` rows (M4); overview and registration rows (M8); its read calls set several read milestones ([parity-inventory.md section 2.4](parity-inventory.md#24-read-milestones))"
+notes = "Source reconciliation 2026-10-16: complete authenticated 813-line/34-function helper module and actual wallet balance/inspect, stake, overview and registration consumers reviewed. Shared picker lookup preserves natural wallet/hotkey alias order, first local alias before nonempty contacts, then chain identity. Checked valuation/free/basket totals, root principal/accrual/ratio, locked-subset records, optional UID zero and local/chain-owned registrations are retained. Overview dust distinguishes whole subnets and individual positions, reports hidden value on stderr and suppresses the message in quiet; raw JSON keeps all positions. Exact helper attribution is present in each concrete home. Native u64/u16/accounts, typed records and Snapshot/request scheduling remain adaptations. Matching hosted evidence and separate oracle/live/platform/milestone acceptance remain distinct."
 
 [[file]]
 py = "sdk/python/bittensor/cli/hyperparams_view.py"
@@ -1320,12 +1320,12 @@ notes = "Source reconciliation 2026-10-15: authenticated blob c778b47718b99085de
 
 [[file]]
 py = "sdk/python/bittensor/cli/intent_prompts.py"
-rs = ["`rtao-cli` generated-`tx` prompt policies [I]"]
+rs = ["crates/rtao-cli/src/intent_prompts.rs", "crates/rtao-cli/src/commands/generated.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0c37eb9c0c67f303ffa0d36035528d434b982764"
 synced_tag = "v478"
 milestone = "M4"
-notes = "imported by `cli/tx.py`"
+notes = "Source reconciliation 2026-10-16: complete authenticated 177-line module and actual generated consumers reviewed. All fourteen operation policies, source/target order, supplied/nonprompting behavior, notice, decorators and root-hotkey validation have native homes. Both original three-field fixtures are present. Typed PromptFlow/free_balance replace Python callable dataclasses. Named hosted evidence and separate pytest/live/platform/milestone acceptance remain distinct."
 
 [[file]]
 py = "sdk/python/bittensor/cli/logs.py"
@@ -1356,12 +1356,12 @@ notes = "Source reconciliation: complete authenticated 211-line module and all f
 
 [[file]]
 py = "sdk/python/bittensor/cli/multisig_helpers.py"
-rs = ["`rtao-cli` `multisig`"]
+rs = ["crates/rtao-cli/src/call.rs", "crates/rtao-cli/src/multisig.rs", "crates/rtao-cli/src/context/direct_multisig.rs", "crates/rtao-cli/src/commands/multisig.rs", "crates/rtao-cli/src/books.rs", "crates/rtao-cli/src/commands/wallet.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "21387c7cd8c95df13fb77bf33e60788236186605"
 synced_tag = "v478"
 milestone = "M5"
-notes = "saved multisigs, approvals, pending operations (§10.5)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 1455-line module, all fifty outer definitions/two nested parsers and actual consumers reviewed. Public refs/labels/replay, saved groups, member backends/rounds, pending/cache/opening/event/followup and direct generated intent enrichment have concrete homes. Stable natural aliases preserve last-alias admission/display and first address-driven source, with exact selected-wallet binding and restricted repeated-member namespaces. Wallet listing derives a display address from the resolvable subset while retaining unresolved refs and strict signing refusal; canonical secondary attribution is present. Native u16/accounts/bytes, bounded input/cache, cycle guards and stronger receipt/cache identity plus D041/D060 remain adaptations. Scoped fake-transport witnesses establish no Python/oracle, device, live-chain or milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/cli/null_pruning.py"
@@ -1374,21 +1374,21 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 392-line modul
 
 [[file]]
 py = "sdk/python/bittensor/cli/output.py"
-rs = ["`rtao-cli` output (tables via `comfy-table`, JSON)"]
+rs = ["crates/rtao-cli/src/output.rs", "rtao_cli::commands specialized human renderers"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "69670cd9ff4d21625247c730398585379e04f992"
 synced_tag = "v478"
 milestone = "M4–M8"
-notes = "JSON value-equal from M4; `PyJsonFormatter` for `print_json` `:562` in M8 (§10.3)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 2484-line/89-declaration module rebound to actual native output and specialized callers. Shared machine payloads preserve explicit records or Python zip/duplicate fallback; human controls are escaped before layout. History/catalog, wallet metadata, pending commands/members, mnemonic hint, subnet legend, conditional locked cells/yield guidance, overview subtotals/lock targets/dust notices, conviction guidance/primary totals, co-signer advice and compact registration fields are traced. Plain table/detail/tree layouts, links/styles/activity state, typed serializers and checked native balances are explicit adaptations. Changed table assertions retain content/visible-row checks. Immediate context and constructed queued formatting do not establish saved-round lifecycle execution. Named hosted evidence and separate Python oracle/live/platform/milestone acceptance remain distinct."
 
 [[file]]
 py = "sdk/python/bittensor/cli/prompt.py"
-rs = ["`rtao-cli` prompts and pickers"]
+rs = ["crates/rtao-cli/src/prompt.rs", "crates/rtao-cli/src/application.rs", "crates/rtao-cli/src/context.rs", "crates/rtao-cli/src/main.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "a360f0cdcde1f1d32ae5dff8dd69623af0157d45"
 synced_tag = "v478"
 milestone = "M4"
-notes = "prompts and flags match, not terminal rendering (§10.3)"
+notes = "Source reconciliation 2026-10-16: complete authenticated 718-line module and all definitions compared with current native prompting, application parsing and real entrypoint consumers. Typed PromptSpec/PromptFlow and invocation-owned history preserve both-TTY human gating, aggregate missing-field diagnostics/help, defaults, retry/abort130, supplied-value detection, wallet/hotkey confirmation order and skips, local-key multisig refusal, public target resolution and cached names. Generic acquisition uses actual clap value parsers, declaration order, typed shape cues, supported address pickers and final complete-command validation; signing wallets precede missing values on the reviewed tx/unlock routes. Single successful completion combines public replay and native SDK guidance; failure, dry-run, JSON and quiet boundaries remain explicit. Replay preserves named networks and replaces custom endpoint URLs with an explicit operator-supplied BT_NETWORK guard. D-072 records canonical no-value flag injection for the two required conviction boolean pairs rather than identical Python raw boolean argv/error behavior. Checked native types, single handler dispatch, terminal-control escaping and secret omission remain deliberate adaptations. Separate command bodies and Python test-file rows retain their own dispositions. This source review claims no complete Python pytest/oracle equivalence, live-chain, hardware/platform/release validation or milestone acceptance."
 
 [[file]]
 py = "sdk/python/bittensor/cli/query.py"
@@ -1401,12 +1401,12 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 266-line modul
 
 [[file]]
 py = "sdk/python/bittensor/cli/root_helpers.py"
-rs = ["`rtao-cli` `root`"]
+rs = ["crates/rtao-cli/src/root_helpers/mod.rs", "crates/rtao-cli/src/commands/root.rs", "crates/rtao-cli/src/commands/stake_picker.rs", "crates/rtao-cli/src/commands/generated.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "20d0971e95db30a68212b7876eb99f83de43264f"
 synced_tag = "v478"
 milestone = "M6"
-notes = "§10.5; imports `basket_index`"
+notes = "Source reconciliation 2026-10-16: complete authenticated 526-line module, all outer/nested definitions and actual root/generated-claim consumers reviewed. RootPosition records retain principal, accrued yield, exact ratio rounding and dust behavior under checked native u64 balances. Both component reads share a snapshot; duplicate overwrite, canonical address ordering, sequential owner aggregation and stable total ordering are retained. Local wallet selection precedes reads; address/UID/name selectors preserve natural whole-wallet/hotkey groups, contact order and NAV-ordered identities. Claim/fund pickers retain total filtering, defaults/singletons, 20-row pagination, reserved numeric/address keys, first label and matching-prefix-key counts; selected labels and rates survive to callers. Human position columns, cached subnet names/units, holdings/footer/legend and canonical stderr detail hint preserve semantics while JSON returns its full typed payload first. Typed addresses, checked UID/native money bounds, Result-based overflow refusal and native layout/tool names are explicit adaptations. Unused filter_claimable_positions has no standalone exported native callable and no pinned product caller; no Python API-name parity is claimed for that convenience helper. Basket-index internals and root command bodies keep separate rows. No complete Python pytest/oracle, fresh multiwallet-tie transcript, live-chain, hardware/platform/release or milestone acceptance is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/secrets.py"
@@ -1419,21 +1419,21 @@ notes = "Source reconciliation 2026-10-15: exact authenticated source compared w
 
 [[file]]
 py = "sdk/python/bittensor/cli/stake_exit.py"
-rs = ["`rtao-cli` `stake unstake-all`, `unstake-all-alpha`"]
+rs = ["crates/rtao-cli/src/commands/stake_exit.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "cb3c9e17c0100dcc56b9e6eac493aad946bea7c4"
 synced_tag = "v478"
 milestone = "M8"
-notes = "`mount_stake_exit_commands` `:212-222`"
+notes = "Source reconciliation 2026-10-16: complete authenticated 222-line module and actual request/discovery/submission callers reviewed. Runtime-order positive hotkeys, alpha-only root exclusion, effective public owner, singleton/atomic batch and shield/proxy rules are traced. SE01 restores full intent help, Docs links and root-sensitive guidance. Shared picker/context/globals supply integration. Native u64/accounts/results, saved/external public owner support and D030 remain adaptations. Bulk submission witnesses are dry-run; full interactive/proxy/device matrices and milestone acceptance remain unverified."
 
 [[file]]
 py = "sdk/python/bittensor/cli/stake_picker.py"
-rs = ["`rtao-cli` `stake wizard` and pickers"]
+rs = ["crates/rtao-cli/src/commands/stake_picker.rs", "crates/rtao-cli/src/commands/generated.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "97a20647a5f779895aaef117d0813b3b6185b2a2"
 synced_tag = "v478"
 milestone = "M8"
-notes = "§10.6 M8"
+notes = "Source reconciliation 2026-10-16: complete authenticated 676-line module and actual synchronous/connected consumers reviewed. Natural named-key order, destination deduplication, decimal choices, canonical replay, effective owner, subnet/position sorting, lock hints and hidden dust are traced. SP01 synchronous selection, SP02 owner labels and SP03 menu content are repaired. Native u64/u16, typed flows, public external accounts and plain rendering remain adaptations. Named hosted evidence and separate pytest/live/platform/milestone acceptance remain distinct."
 
 [[file]]
 py = "sdk/python/bittensor/cli/tx.py"
@@ -1941,12 +1941,12 @@ notes = "Source reconciliation 2026-10-15: complete authenticated file, preparat
 
 [[file]]
 py = "sdk/python/bittensor/executor.py"
-rs = ["`rtao_tx::{Executor, Plan, ExecuteOptions}`; `rtao_client::{shield, compose}`; completion follower"]
+rs = ["crates/rtao-tx/src/executor.rs", "crates/rtao-tx/src/registration.rs", "crates/rtao-tx/src/offline.rs", "crates/rtao-client/src/shield.rs", "crates/rtao-client/src/compose.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "93e41ea0474e702ccdce39eb57f5b6f64dcac074"
 synced_tag = "v478"
 milestone = "M2–M5"
-notes = "defaults `:782-788`; `nest_origin_wrappers` `:99-121, 175-219` (§3.12); shield `:897-1214` (§3.11, M4); `_complete_subnet_registration` `:333-568` (§3.13, M4); constants `:45-66` extracted"
+notes = "Source reconciliation 2026-10-16: complete authenticated 1319-line module and all 40 definitions reviewed against actual planning, typed/dynamic execution, nested origin and fee policy, shield, offline and registration consumers plus substantive fixture bodies. Native AccountId/ProxyType/CryptoType, checked u64 balances/nonces, immutable stamped calls/signatures and bounded progress channels adapt Python dynamic inputs and callbacks. SDK preparation preserves identity and completes before fresh shield anchor/nonce selection, including Arc sources; camera/phone readiness remains unverified. Clear pure-proxy execution adds creation data; explicit shield retains the Python shield-only map. Registered D-069/070/071 cover stricter registration, eligible owner replanning and observed-head retry pacing; registration completion errors retain the original submitted receipt without retrying. D-049 covers finalized canonical shield absence and hash-bearing unresolved failures. D-008/012/013/018/021/023/024/025/026/028/029/041/059/060 remain applicable. No fresh Python oracle, live-chain decryption, hardware/platform execution or milestone acceptance is claimed; M2-S02 remains separate and open."
 
 [[file]]
 py = "sdk/python/bittensor/extension/__init__.py"
