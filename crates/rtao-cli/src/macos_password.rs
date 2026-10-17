@@ -621,8 +621,188 @@ mod tests {
         }
     }
 
+    // Exercise the public wallet resolver through the actual native adapter. The
+    // parent test removes only password variables in a separate process; no
+    // keyfile, encryption, real Keychain or dialog process is needed.
+    async fn deferred_adapter_wallet_resolution() {
+        use rtao::wallet::{PasswordSources, Wallet, WalletError, resolve_wallet_password};
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        struct CountedRunner {
+            runner: Runner,
+            calls: Arc<AtomicUsize>,
+        }
+        impl ProcessRunner for CountedRunner {
+            fn which(&self, name: &OsStr) -> Option<PathBuf> {
+                self.runner.which(name)
+            }
+            fn run(&mut self, command: ProcessCommand) -> ProcessFuture<'_> {
+                self.calls.fetch_add(1, Ordering::SeqCst);
+                self.runner.run(command)
+            }
+        }
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let runner = CountedRunner {
+            runner: Runner {
+                results: VecDeque::from([
+                    output(true, b"  stored-adapter-private\r\n", b""),
+                    output(false, b"native-output-private", b"native-error-private"),
+                    output(false, b"", b"missing"),
+                    output(true, b"text returned: dialog-adapter-private\r\n", b""),
+                    output(false, b"", b"missing"),
+                    output(false, b"native-output-private", b"native-error-private"),
+                    Err(ProcessError::Spawn),
+                ]),
+                ..Default::default()
+            },
+            calls: calls.clone(),
+        };
+        let native = Arc::new(NativePasswordAdapter::new(MacosPasswords::with_platform(
+            runner, true,
+        )));
+        let wallet =
+            Wallet::new("native-resolution", "default", "native-password-fixture").unwrap();
+        let mut sources = PasswordSources {
+            native_provider: Some(native.clone()),
+            ..Default::default()
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert!(
+            resolve_wallet_password(&wallet, &sources)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        sources.keychain = true;
+        sources.macos_prompt = true;
+        sources.password = Some(SecretString::new("explicit-adapter-private".into()));
+        assert_eq!(
+            resolve_wallet_password(&wallet, &sources)
+                .await
+                .unwrap()
+                .unwrap()
+                .expose_secret(),
+            "explicit-adapter-private"
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+
+        sources.password = None;
+        assert_eq!(
+            resolve_wallet_password(&wallet, &sources)
+                .await
+                .unwrap()
+                .unwrap()
+                .expose_secret(),
+            "stored-adapter-private"
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+        sources.macos_prompt = false;
+        let missing = resolve_wallet_password(&wallet, &sources)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(&missing, WalletError::KeychainMissing(name) if name == "native-resolution")
+        );
+        assert!(
+            missing
+                .to_string()
+                .contains("rtao wallet keychain save -w native-resolution")
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+
+        sources.macos_prompt = true;
+        assert_eq!(
+            resolve_wallet_password(&wallet, &sources)
+                .await
+                .unwrap()
+                .unwrap()
+                .expose_secret(),
+            "dialog-adapter-private"
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 4);
+        let dialog = resolve_wallet_password(&wallet, &sources)
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            &dialog,
+            WalletError::NativePassword("macOS password prompt failed")
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 6);
+        let access = resolve_wallet_password(&wallet, &sources)
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            &access,
+            WalletError::NativePassword("could not access macOS Keychain")
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 7);
+        for error in [missing, dialog, access] {
+            let diagnostic = format!("{error:?} {error}");
+            for secret in ["native-output-private", "native-error-private"] {
+                assert!(!diagnostic.contains(secret));
+            }
+        }
+
+        drop(sources);
+        let native = Arc::try_unwrap(native).unwrap_or_else(|_| panic!("native adapter retained"));
+        let runner = native.into_inner().into_runner().runner;
+        assert!(runner.results.is_empty());
+        assert_eq!(runner.seen.len(), 7);
+        for index in [0, 1, 2, 4, 6] {
+            let command = &runner.seen[index];
+            assert_eq!(command.program, PathBuf::from("/usr/bin/security"));
+            assert_eq!(
+                args(command),
+                [
+                    "find-generic-password",
+                    "-s",
+                    "bittensor.coldkey",
+                    "-a",
+                    "native-resolution",
+                    "-w"
+                ]
+            );
+            assert!(command.input.is_none());
+        }
+        for index in [3, 5] {
+            let command = &runner.seen[index];
+            assert_eq!(command.program, PathBuf::from("osascript"));
+            assert_eq!(
+                args(command),
+                [
+                    "-e",
+                    "set dlg to display dialog \"Enter the password for wallet 'native-resolution'.\" with title \"Unlock native-resolution coldkey\" default answer \"\" with hidden answer buttons {\"Cancel\", \"OK\"} default button \"OK\"\nreturn text returned of dlg"
+                ]
+            );
+            assert!(command.input.is_none());
+        }
+        for command in runner.seen {
+            let diagnostic = format!("{command:?}");
+            for secret in [
+                "stored-adapter-private",
+                "dialog-adapter-private",
+                "explicit-adapter-private",
+                "native-output-private",
+                "native-error-private",
+            ] {
+                assert!(!diagnostic.contains(secret));
+            }
+        }
+    }
+
     #[tokio::test]
     async fn missing_entry_only_falls_through_with_dialog_flag() {
+        const CHILD: &str = "RTAO_NATIVE_PASSWORD_ADAPTER_CHILD";
+        if std::env::var_os(CHILD).is_some() {
+            deferred_adapter_wallet_resolution().await;
+            return;
+        }
         let runner = Runner {
             results: VecDeque::from([output(false, b"", b"")]),
             ..Default::default()
@@ -665,5 +845,37 @@ mod tests {
             "stored"
         );
         assert_eq!(native.into_runner().seen.len(), 1);
+
+        let wallet =
+            rtao::wallet::Wallet::new("native-resolution", "default", "native-password-fixture")
+                .unwrap();
+        let child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "macos_password::tests::missing_entry_only_falls_through_with_dialog_flag",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .env_remove("BT_WALLET_PASSWORD")
+            .env_remove("BT_WALLET_PASSWORD_FILE")
+            .env_remove(rtao::wallet::env_var_name(wallet.coldkey_file().path()))
+            .stdin(std::process::Stdio::null())
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8(child.stdout).unwrap();
+        let stderr = String::from_utf8(child.stderr).unwrap();
+        for text in [&stdout, &stderr] {
+            for secret in [
+                "stored-adapter-private",
+                "dialog-adapter-private",
+                "explicit-adapter-private",
+                "native-output-private",
+                "native-error-private",
+            ] {
+                assert!(!text.contains(secret));
+            }
+        }
+        assert!(child.status.success(), "{stdout}\n{stderr}");
+        assert!(stdout.contains("1 passed;"), "adapter child did not run");
     }
 }
