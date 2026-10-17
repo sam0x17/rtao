@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/harness/samples.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_reads_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
@@ -118,6 +119,158 @@ pub fn intent_args(op: &str, original: &Value) -> Result<Value, CoreError> {
         args["dest_hotkey_ss58"] = json!(OTHER_HOT.to_string());
     }
     Ok(args)
+}
+
+/// Required root-origin money cases, separate from canonical upstream samples.
+pub const ROOT_NATIVE_AMOUNT_OPS: [&str; 6] = [
+    "remove_stake",
+    "remove_stake_limit",
+    "move_stake",
+    "swap_stake",
+    "move_swap_stake",
+    "transfer_stake",
+];
+/// Identity of each reviewed root-origin supplementary input.
+pub const ROOT_NATIVE_AMOUNT_ID: &str = "root-native-decimal";
+
+/// Require all six exact original-identity root inputs, once each.
+///
+/// These are authored inputs, not recorded Python outputs. Original sample
+/// addresses come from the pinned harness; native scenario rewriting happens
+/// only after this check. One decimal rao above a whole token catches rounding.
+pub fn root_native_amount_inputs(
+    document: &Value,
+) -> Result<Vec<(&'static str, &Value)>, CoreError> {
+    let entries = document["intents"]
+        .as_object()
+        .ok_or_else(|| invalid("extra intent inputs"))?;
+    let hot = "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM";
+    let destination = "5G6Fyo6U2fDhJXDJGp4Dr6XViVCdPcryiyLBDsusguSRcYvJ";
+    let receiver = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty";
+    let expected = [
+        json!({"hotkey_ss58":hot,"netuid":0,"amount_alpha":"1.000000001","slippage_protection":false,"claim":false}),
+        json!({"hotkey_ss58":hot,"netuid":0,"amount_alpha":"1.000000001","limit_price_rao":1_000_000_000u64,"allow_partial":false,"claim":false}),
+        json!({"origin_hotkey_ss58":hot,"origin_netuid":0,"dest_hotkey_ss58":destination,"dest_netuid":2,"amount_alpha":"1.000000001","slippage_protection":false,"claim":false}),
+        json!({"hotkey_ss58":hot,"origin_netuid":0,"dest_netuid":2,"amount_alpha":"1.000000001","slippage_protection":false}),
+        json!({"origin_hotkey_ss58":hot,"origin_netuid":0,"dest_hotkey_ss58":destination,"dest_netuid":2,"amount_alpha":"1.000000001","slippage_protection":false}),
+        json!({"dest_coldkey_ss58":receiver,"hotkey_ss58":hot,"origin_netuid":0,"dest_netuid":2,"amount_alpha":"1.000000001"}),
+    ];
+    let mut selected = Vec::with_capacity(6);
+    for (op, expected) in ROOT_NATIVE_AMOUNT_OPS.into_iter().zip(expected) {
+        let rows = entries
+            .get(op)
+            .and_then(Value::as_array)
+            .ok_or_else(|| invalid(format!("missing root input {op}")))?;
+        let rows = rows
+            .iter()
+            .filter(|row| row["id"] == ROOT_NATIVE_AMOUNT_ID)
+            .collect::<Vec<_>>();
+        if rows.len() != 1 || rows[0]["args"] != expected {
+            return Err(invalid(format!(
+                "root input {op} must retain its exact amount and original origin/destination identities"
+            )));
+        }
+        selected.push((op, rows[0]));
+    }
+    let count = entries
+        .values()
+        .filter_map(Value::as_array)
+        .flatten()
+        .filter(|row| row["id"] == ROOT_NATIVE_AMOUNT_ID)
+        .count();
+    if count != selected.len() {
+        return Err(invalid(
+            "root sample identity appeared outside its six reviewed operations",
+        ));
+    }
+    Ok(selected)
+}
+
+/// Independent V478 SCALE bytes for a root input after optional scenario rewriting.
+///
+/// No call builder, amount parser or runtime encoder supplies these bytes.
+/// Addresses/subnets are supplied by the inspected input; the fixed amount and
+/// layouts independently pin exact money, call argument order and batch dust.
+pub fn root_native_amount_call(op: &str, args: &Value) -> Result<Vec<u8>, CoreError> {
+    const RAO: u64 = 1_000_000_001;
+    let field = if matches!(op, "remove_stake" | "remove_stake_limit") {
+        "netuid"
+    } else {
+        "origin_netuid"
+    };
+    if args[field] != 0 || args["amount_alpha"] != "1.000000001" {
+        return Err(invalid(
+            "root byte witness requires root origin and exact decimal amount",
+        ));
+    }
+    let account = |field: &str| -> Result<AccountId, CoreError> {
+        args[field]
+            .as_str()
+            .ok_or_else(|| invalid(format!("root input {field}")))?
+            .parse()
+            .map_err(|error| invalid(format!("root account: {error}")))
+    };
+    let hot = account(if matches!(op, "move_stake" | "move_swap_stake") {
+        "origin_hotkey_ss58"
+    } else {
+        "hotkey_ss58"
+    })?;
+    let destination = || -> Result<u16, CoreError> {
+        args["dest_netuid"]
+            .as_u64()
+            .and_then(|value| u16::try_from(value).ok())
+            .filter(|value| *value != 0)
+            .ok_or_else(|| invalid("root destination subnet must remain positive"))
+    };
+    let append_move = |bytes: &mut Vec<u8>, destination_hot: AccountId, netuid: u16| {
+        bytes.extend_from_slice(&[7, 85]);
+        bytes.extend_from_slice(hot.as_bytes());
+        bytes.extend_from_slice(destination_hot.as_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&netuid.to_le_bytes());
+        bytes.extend_from_slice(&RAO.to_le_bytes());
+    };
+    let append_swap = |bytes: &mut Vec<u8>, hot: AccountId, rao: u64, netuid: u16| {
+        bytes.extend_from_slice(&[7, 87]);
+        bytes.extend_from_slice(hot.as_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&netuid.to_le_bytes());
+        bytes.extend_from_slice(&rao.to_le_bytes());
+    };
+    let mut bytes = Vec::new();
+    match op {
+        "remove_stake" | "remove_stake_limit" => {
+            bytes.extend_from_slice(&[7, if op == "remove_stake" { 3 } else { 89 }]);
+            bytes.extend_from_slice(hot.as_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&RAO.to_le_bytes());
+            if op == "remove_stake_limit" {
+                bytes.extend_from_slice(&1_000_000_000u64.to_le_bytes());
+                bytes.push(0);
+            }
+        }
+        "move_stake" => append_move(&mut bytes, account("dest_hotkey_ss58")?, destination()?),
+        "swap_stake" => append_swap(&mut bytes, hot, RAO, destination()?),
+        "move_swap_stake" => {
+            let destination_hot = account("dest_hotkey_ss58")?;
+            if hot == destination_hot {
+                return Err(invalid("move-swap needs distinct public hotkeys"));
+            }
+            bytes.extend_from_slice(&[11, 2, 8]); // batch_all + compact two-call length.
+            append_move(&mut bytes, destination_hot, 0);
+            append_swap(&mut bytes, destination_hot, RAO - 1, destination()?);
+        }
+        "transfer_stake" => {
+            bytes.extend_from_slice(&[7, 86]);
+            bytes.extend_from_slice(account("dest_coldkey_ss58")?.as_bytes());
+            bytes.extend_from_slice(hot.as_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&destination()?.to_le_bytes());
+            bytes.extend_from_slice(&RAO.to_le_bytes());
+        }
+        _ => return Err(invalid("unreviewed root amount operation")),
+    }
+    Ok(bytes)
 }
 
 fn preview(hotkey: AccountId) -> Value {

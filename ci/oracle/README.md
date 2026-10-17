@@ -33,9 +33,12 @@ trees, schemas, preflights, plans, fee/spend/extras and the complete seeded stat
 Timelock ciphertext/reveal-round fields carry explicit exclusions. Read dumps
 use upstream's `_jsonable` at head and block 90 and record every storage,
 runtime-API and constant touch. Each sample has a seed file. Reviewed branch
-samples extend `samples_extra.json`. The reviewed inputs add twelve intent
-branches and fifteen read branches, for 21 intent cases and 60 head/pinned
-read cases. Expected outputs are produced only by the hosted upstream code.
+samples extend `samples_extra.json`. The reviewed inputs include eighteen intent
+branches and fifteen read branches. M2 selects twelve intent extras for 21 intent
+cases and 60 head/pinned read cases. The six root-origin amount extras require
+`all` scope, bringing that scope to 101 intent cases. Ordinary Rust input checks
+build and plan them without recording Python results; expected Python outputs
+are produced only by optional hosted upstream execution.
 
 Each extra has `id`, `review`, and `args` (intent) or `params` (read).
 Optional `storage` entries contain `container`, `name`, `params`, and `value`;

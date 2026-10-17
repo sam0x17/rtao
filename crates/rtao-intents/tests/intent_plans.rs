@@ -19,8 +19,9 @@ use rtao_testkit::{
     FakeChain, FakeState,
     fixtures::{
         catalog_samples::{
-            COLD, HOT, OTHER_HOT, SUBNET, intent_args as scenario_args,
-            intent_state as seeded_state, literal, scenario_netuid,
+            COLD, HOT, OTHER_HOT, ROOT_NATIVE_AMOUNT_ID, SUBNET, intent_args as scenario_args,
+            intent_state as seeded_state, literal, root_native_amount_call,
+            root_native_amount_inputs, scenario_netuid,
         },
         decode_fixed_hex,
     },
@@ -211,6 +212,10 @@ async fn plan_case(
         apply_extra(&mut state, extra)?;
     }
     bind_sample_work(&state, spec.name, &mut args)?;
+    let root_expected = extra
+        .filter(|sample| sample["id"] == ROOT_NATIVE_AMOUNT_ID)
+        .map(|_| root_native_amount_call(spec.name, &args))
+        .transpose()?;
     let fake = FakeChain::from_state(state);
     let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
     config.track_heads = false;
@@ -220,6 +225,21 @@ async fn plan_case(
     let keys = PublicKeys::default();
     let result = async {
         let intent = AnyIntent::from_tool(spec.name, args)?;
+        if root_expected.is_some() {
+            let amount = match &intent {
+                AnyIntent::RemoveStake(intent) => &intent.amount_alpha,
+                AnyIntent::RemoveStakeLimit(intent) => &intent.amount_alpha,
+                AnyIntent::MoveStake(intent) => &intent.amount_alpha,
+                AnyIntent::SwapStake(intent) => &intent.amount_alpha,
+                AnyIntent::MoveSwapStake(intent) => &intent.amount_alpha,
+                AnyIntent::TransferStake(intent) => &intent.amount_alpha,
+                _ => bail!("root sample selected a different intent family"),
+            };
+            ensure!(
+                matches!(amount.resolve(NetUid::ROOT, false)?, rtao_primitives::ResolvedAmount::Exact(value) if value.netuid == NetUid::ROOT && value.rao == 1_000_000_001),
+                "root sample lost exact native TAO denomination"
+            );
+        }
         let expected_role = expected_role.unwrap_or(spec.signer.parse()?);
         let plan = Executor::new(client.clone())
             .with_clock(Arc::new(FixtureClock))
@@ -242,6 +262,9 @@ async fn plan_case(
             plan.violations
         );
         ensure!(!plan.call().as_bytes().is_empty(), "empty composed call");
+        if let Some(expected) = &root_expected {
+            ensure!(plan.call().as_bytes() == expected, "root input {0} changed independent call arguments", spec.name);
+        }
         ensure!(
             plan.signer == expected_role,
             "plan selected the wrong signing role"
@@ -706,6 +729,8 @@ async fn reviewed_supplementary_inputs_plan_with_fake_chain() -> Result<()> {
         document["schema"] == 1,
         "review supplementary sample schema"
     );
+    // A shrinking extras table must not erase a required root branch.
+    root_native_amount_inputs(&document)?;
     let inputs = document["intents"]
         .as_object()
         .context("extra intent samples")?;
@@ -770,6 +795,24 @@ async fn root_denominations_and_hotkey_batch_plan_with_fake_chain() -> Result<()
         plan_case(runtime.clone(), spec, args, None, None)
             .await
             .with_context(|| format!("root-denominated {op}"))?;
+    }
+    let document: Value = rtao_primitives::json::from_slice(include_bytes!(
+        "../../../vendor/oracle/samples_extra.json"
+    ))?;
+    for (op, sample) in root_native_amount_inputs(&document)? {
+        let spec = INTENTS
+            .iter()
+            .find(|spec| spec.name == op)
+            .context("root extra catalog op")?;
+        plan_case(
+            runtime.clone(),
+            spec,
+            scenario_args(op, &sample["args"])?,
+            Some(sample),
+            None,
+        )
+        .await
+        .with_context(|| format!("root supplementary {op}"))?;
     }
     let spec = INTENTS
         .iter()

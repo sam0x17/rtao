@@ -270,6 +270,102 @@
         },
         "review": "Pinned v478 sdk/python/bittensor/intents/transfer.py; explicit keep_alive. Inputs only; hosted upstream execution supplies expected results."
       }
+    ],
+    "remove_stake": [
+      {
+        "id": "root-native-decimal",
+        "args": {
+          "hotkey_ss58": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM",
+          "netuid": 0,
+          "amount_alpha": "1.000000001",
+          "slippage_protection": false,
+          "claim": false
+        },
+        "runtime": [
+          {
+            "container": "BetaBasketRuntimeApi",
+            "name": "get_basket_payout",
+            "value": 0
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/intents/staking.py and _money.py: root origin keeps TAO units; exact 1.000000001 token input is 1000000001 rao. Distinct sample hotkeys/coldkey and destination subnet 2 retain their relationships. Inputs only; expected Python results remain unrecorded and require optional hosted scope all."
+      }
+    ],
+    "remove_stake_limit": [
+      {
+        "id": "root-native-decimal",
+        "args": {
+          "hotkey_ss58": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM",
+          "netuid": 0,
+          "amount_alpha": "1.000000001",
+          "limit_price_rao": 1000000000,
+          "allow_partial": false,
+          "claim": false
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/staking.py and _money.py: root origin keeps TAO units; exact 1.000000001 token input is 1000000001 rao. Distinct sample hotkeys/coldkey and destination subnet 2 retain their relationships. Inputs only; expected Python results remain unrecorded and require optional hosted scope all."
+      }
+    ],
+    "move_stake": [
+      {
+        "id": "root-native-decimal",
+        "args": {
+          "origin_hotkey_ss58": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM",
+          "origin_netuid": 0,
+          "dest_hotkey_ss58": "5G6Fyo6U2fDhJXDJGp4Dr6XViVCdPcryiyLBDsusguSRcYvJ",
+          "dest_netuid": 2,
+          "amount_alpha": "1.000000001",
+          "slippage_protection": false,
+          "claim": false
+        },
+        "runtime": [
+          {
+            "container": "BetaBasketRuntimeApi",
+            "name": "get_basket_payout",
+            "value": 0
+          }
+        ],
+        "review": "Pinned v478 sdk/python/bittensor/intents/staking.py and _money.py: root origin keeps TAO units; exact 1.000000001 token input is 1000000001 rao. Distinct sample hotkeys/coldkey and destination subnet 2 retain their relationships. Inputs only; expected Python results remain unrecorded and require optional hosted scope all."
+      }
+    ],
+    "swap_stake": [
+      {
+        "id": "root-native-decimal",
+        "args": {
+          "hotkey_ss58": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM",
+          "origin_netuid": 0,
+          "dest_netuid": 2,
+          "amount_alpha": "1.000000001",
+          "slippage_protection": false
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/staking.py and _money.py: root origin keeps TAO units; exact 1.000000001 token input is 1000000001 rao. Distinct sample hotkeys/coldkey and destination subnet 2 retain their relationships. Inputs only; expected Python results remain unrecorded and require optional hosted scope all."
+      }
+    ],
+    "move_swap_stake": [
+      {
+        "id": "root-native-decimal",
+        "args": {
+          "origin_hotkey_ss58": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM",
+          "origin_netuid": 0,
+          "dest_hotkey_ss58": "5G6Fyo6U2fDhJXDJGp4Dr6XViVCdPcryiyLBDsusguSRcYvJ",
+          "dest_netuid": 2,
+          "amount_alpha": "1.000000001",
+          "slippage_protection": false
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/staking.py and _money.py: root origin keeps TAO units; exact 1.000000001 token input is 1000000001 rao. Distinct sample hotkeys/coldkey and destination subnet 2 retain their relationships. Inputs only; expected Python results remain unrecorded and require optional hosted scope all."
+      }
+    ],
+    "transfer_stake": [
+      {
+        "id": "root-native-decimal",
+        "args": {
+          "dest_coldkey_ss58": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+          "hotkey_ss58": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM",
+          "origin_netuid": 0,
+          "dest_netuid": 2,
+          "amount_alpha": "1.000000001"
+        },
+        "review": "Pinned v478 sdk/python/bittensor/intents/staking.py and _money.py: root origin keeps TAO units; exact 1.000000001 token input is 1000000001 rao. Distinct sample hotkeys/coldkey and destination subnet 2 retain their relationships. Inputs only; expected Python results remain unrecorded and require optional hosted scope all."
+      }
     ]
   },
   "reads": {
