@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "/// Upstream core release, or `canary:main` for a disposable canary build.\npub const BITTENSOR_CORE_TAG: &str = {tag:?};\n\
          /// Base upstream core commit, or resolved disposable canary commit; excludes a carried patch.\npub const BITTENSOR_CORE_COMMIT: &str = {commit:?};\n\
          /// Source branch resolved for a disposable canary; empty for a release build.\npub const BITTENSOR_CORE_BRANCH: &str = {branch:?};\n\
-         /// Carried PR-U17 core revision; empty when using the upstream core directly.\npub const BITTENSOR_CORE_PATCH_COMMIT: &str = {patch_commit:?};\n\
+         /// Carried bounded core-patch revision; empty when using upstream directly.\npub const BITTENSOR_CORE_PATCH_COMMIT: &str = {patch_commit:?};\n\
          /// Complete Cargo Git source for the carried core patch; empty without a patch.\npub const BITTENSOR_CORE_PATCH_SOURCE: &str = {patch_source:?};\n"
     );
     fs::write(
