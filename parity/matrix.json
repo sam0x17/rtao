@@ -3,8 +3,7 @@
     "client-contract": 11,
     "hosted-scenario-source": 6,
     "intent-plan": 72,
-    "not-required": 2,
-    "pending": 18,
+    "not-required": 20,
     "read-fixture": 6
   },
   "families": {
@@ -3702,57 +3701,57 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "pyt:e2e/test_null_consensus.py::test_null_yuma_null_emissions_via_python_sdk",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "pyt:e2e/test_pow_registration.py::test_pow_register_unfunded_coldkey_and_owner_toggle",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "pyt:e2e/test_timelock_commitment.py::test_timelocked_commitment_reveals_via_python_sdk",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_account_object_m_of_n_executes",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_add_stake_increases_stake",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -3829,13 +3828,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_coldkey_swap_announcement_flow",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -3853,24 +3852,24 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_crowdloan_create_read_update",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_delegation_lifecycle",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -3903,13 +3902,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_identity_coldkey_and_subnet",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -3983,46 +3982,46 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_nonexistent_subnet_maps_to_semantic_code",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_owned_subnet_is_registered",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_owner_sets_hyperparameter",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_pending_op_open_read_cancel",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -4066,13 +4065,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_proxy_flow",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -4103,13 +4102,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_regular_commitment_stays_readable",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -4156,13 +4155,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_submit_shielded_runs_full_pipeline",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -4180,13 +4179,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_timelocked_commitment_reveals_plaintext",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
@@ -4205,13 +4204,13 @@
       },
       {
         "evidence": {
-          "runtime": "unverified",
+          "runtime": "not-applicable",
           "runtime_limits": [],
-          "scope": "pending"
+          "scope": "not-required"
         },
         "name": "test_typed_reads",
         "oracle": "unverified",
-        "rtao": "pending",
+        "rtao": "not_required",
         "test": null
       },
       {
