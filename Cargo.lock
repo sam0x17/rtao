@@ -6299,6 +6299,7 @@ dependencies = [
  "bittensor-core",
  "blake2",
  "bytes",
+ "docify",
  "frame-metadata",
  "futures",
  "hex",

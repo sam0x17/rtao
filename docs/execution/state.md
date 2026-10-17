@@ -37,16 +37,29 @@ commands, actual carrier transport narration, retained included receipts after
 registration completion errors, opt-in terminal cancellation, and e2e-backed
 Docify examples. These changes add two ordinary test functions, so the next
 expected inventory is **3,198 tests and four skips**. Central SIGINT coordination
-is still an unapplied proposal; the terminal primitive alone installs no
+remains unfinished; the terminal primitive alone installs no
 signal handler. M4-S5 remains open pending execution of its three source repairs.
 
-The new testkit development edge uses already pinned Docify 0.2.9. Its lock
-edge must be resolved in bounded hosted CI and reviewed before adopting it.
-Dependency and divergence reports then need hosted refresh: source map stays
+Lock-only hosted [38987915743](https://github.com/sam0x17/rtao/actions/runs/38987915743)
+succeeds at exact `9557fc0dcaa8b6752d448e8db32a718d5aefd367`. Independent
+inspection and root refetch authenticate the sole 11-byte addition of the
+already pinned Docify 0.2.9 to testkit's dependency list. No package identity or
+other lock bytes change; the fuzz lock stays identical. Only that reviewed root
+lock edge is adopted. The retained inspection/adoption records are
+`testkit-docify-9557fc0-lock-inspection.json` and
+`testkit-docify-9557fc0-lock-adoption.json`. This preparation runs no full tests.
+
+Dependency and divergence reports still need hosted refresh: source map stays
 322/357 reconciled with 35 pending; the divergence register is 76 while the
 last generated matrix records 73. Source preparation uses a skip-CI push so
 ordinary locked gates do not start with known stale locks/reports. No local
 Cargo, codegen, build or test runs. Local `target/` remains absent.
+
+The active M0-M9 checklist has 78 of 127 unique step IDs checked (61.4%).
+Optional M10 and removed Q30 requirements are excluded. This measures formal
+step acceptance without weighting effort. Source reconciliation is 322 of 357
+rows (90.2%), including non-port dispositions; it measures a separate review
+inventory. M0/M1 are accepted; whole M2/M3 and M4-M9 remain open.
 
 The current green run accepts none of the newer behavior, held map proposals,
 M4-S5, M2-S02 or later milestones. M0/M1 and previously accepted individual
