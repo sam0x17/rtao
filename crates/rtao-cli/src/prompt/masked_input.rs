@@ -2,6 +2,8 @@
 //! Star-echo secret editor with injected input and output boundaries.
 
 #[cfg(any(unix, test))]
+use super::TerminalCancel;
+#[cfg(any(unix, test))]
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use std::io::{self, BufRead, Write};
@@ -12,6 +14,10 @@ const ERASE: &str = "\u{8} \u{8}";
 
 #[cfg(any(unix, test))]
 trait MaskedIo {
+    fn check_cancelled(&self) -> io::Result<()> {
+        Ok(())
+    }
+    fn cancel(&self) {}
     fn begin(&mut self) -> io::Result<()>;
     fn restore(&mut self) -> io::Result<()>;
     fn read_byte(&mut self, byte: &mut [u8; 1]) -> io::Result<usize>;
@@ -102,25 +108,36 @@ impl Utf8Decoder {
 
 #[cfg(any(unix, test))]
 fn read_key_byte(io: &mut impl MaskedIo, byte: &mut [u8; 1]) -> io::Result<usize> {
+    io.check_cancelled()?;
     let count = io.read_byte(byte)?;
+    io.check_cancelled()?;
     // ISIG is disabled, so interruption must apply to every consumed byte,
     // including a byte swallowed while recognizing an escape sequence.
     if count != 0 && byte[0] == b'\x03' {
+        io.cancel();
         return Err(io::ErrorKind::Interrupted.into());
     }
     Ok(count)
 }
 
 #[cfg(any(unix, test))]
+fn escape_ready(io: &mut impl MaskedIo) -> io::Result<bool> {
+    io.check_cancelled()?;
+    let ready = io.escape_byte_ready()?;
+    io.check_cancelled()?;
+    Ok(ready)
+}
+
+#[cfg(any(unix, test))]
 fn discard_escape(io: &mut impl MaskedIo) -> io::Result<()> {
-    if !io.escape_byte_ready()? {
+    if !escape_ready(io)? {
         return Ok(());
     }
     let mut byte = Zeroizing::new([0; 1]);
     if read_key_byte(io, &mut byte)? == 0 || !matches!(byte[0], b'[' | b'O') {
         return Ok(());
     }
-    while io.escape_byte_ready()? {
+    while escape_ready(io)? {
         if read_key_byte(io, &mut byte)? == 0 {
             return Ok(());
         }
@@ -188,6 +205,10 @@ fn run_terminal(
     prompt: &str,
     feedback: Feedback,
 ) -> Result<SecretString, MaskedFailure> {
+    io.check_cancelled().map_err(|error| MaskedFailure {
+        error,
+        may_fallback: false,
+    })?;
     io.echo(prompt).map_err(|error| MaskedFailure {
         error,
         may_fallback: true,
@@ -201,6 +222,10 @@ fn run_terminal(
             may_fallback: false,
         });
     }
+    io.check_cancelled().map_err(|error| MaskedFailure {
+        error,
+        may_fallback: false,
+    })?;
     result
         .and_then(|secret| newline.map(|()| secret))
         .map_err(|error| {
@@ -269,6 +294,10 @@ fn read_plain_line(
             break;
         }
     }
+    finish_plain_line(bytes)
+}
+
+fn finish_plain_line(mut bytes: Zeroizing<Vec<u8>>) -> io::Result<SecretString> {
     if bytes.last() == Some(&b'\n') {
         if let Some(byte) = bytes.last_mut() {
             byte.zeroize();
@@ -281,8 +310,12 @@ fn read_plain_line(
             bytes.pop();
         }
     }
+    line_from_bytes(bytes).map(SecretString::new)
+}
+
+fn line_from_bytes(mut bytes: Zeroizing<Vec<u8>>) -> io::Result<String> {
     match String::from_utf8(std::mem::take(&mut *bytes)) {
-        Ok(line) => Ok(SecretString::new(line)),
+        Ok(line) => Ok(line),
         Err(error) => {
             let _discarded = Zeroizing::new(error.into_bytes());
             Err(io::ErrorKind::InvalidData.into())
@@ -290,32 +323,95 @@ fn read_plain_line(
     }
 }
 
+// The cancellable path consumes exactly one byte per call, so an ordinary
+// prompt cannot leave a stdio read-ahead buffer ahead of a later secret read.
+// Input scratch buffers, including a discarded UTF-8 error, are zeroizing.
+#[cfg(any(unix, test))]
+fn read_line_bytes(
+    cancel: &TerminalCancel,
+    mut read_byte: impl FnMut(&mut [u8; 1]) -> io::Result<usize>,
+) -> io::Result<Zeroizing<Vec<u8>>> {
+    let mut bytes = Zeroizing::new(Vec::new());
+    let mut byte = Zeroizing::new([0; 1]);
+    loop {
+        cancel.check_io()?;
+        let count = read_byte(&mut byte)?;
+        cancel.check_io()?;
+        if count == 0 {
+            return if bytes.is_empty() {
+                Err(io::ErrorKind::UnexpectedEof.into())
+            } else {
+                Ok(bytes)
+            };
+        }
+        let required = bytes
+            .len()
+            .checked_add(1)
+            .ok_or(io::ErrorKind::OutOfMemory)?;
+        if required > bytes.capacity() {
+            let capacity = required.max(bytes.capacity().saturating_mul(2));
+            let mut replacement = Zeroizing::new(Vec::with_capacity(capacity));
+            replacement.extend_from_slice(&bytes);
+            bytes = replacement;
+        }
+        bytes.push(byte[0]);
+        if byte[0] == b'\n' {
+            return Ok(bytes);
+        }
+    }
+}
+
 #[cfg(unix)]
 mod posix {
     use super::*;
-    use nix::sys::{
-        select::{FdSet, select},
-        termios::{LocalFlags, SetArg, SpecialCharacterIndices, Termios, tcgetattr, tcsetattr},
-        time::{TimeVal, TimeValLike},
+    use nix::{
+        errno::Errno,
+        poll::{PollFd, PollFlags, poll},
+        sys::termios::{
+            LocalFlags, SetArg, SpecialCharacterIndices, Termios, tcgetattr, tcsetattr,
+        },
     };
-    use std::{fs::OpenOptions, io::IsTerminal, os::fd::AsFd};
+    use std::{
+        fs::OpenOptions,
+        io::IsTerminal,
+        os::fd::AsFd,
+        time::{Duration, Instant},
+    };
 
     struct PosixIo<'a, Fd: AsFd> {
         input: &'a Fd,
         output: &'a mut dyn Write,
         original: Option<Termios>,
+        cancel: Option<&'a TerminalCancel>,
     }
     impl<Fd: AsFd> PosixIo<'_, Fd> {
+        fn mode_action(&self) -> SetArg {
+            // Opt-in cancellation must not wait for pending output to drain.
+            if self.cancel.is_some() {
+                SetArg::TCSANOW
+            } else {
+                SetArg::TCSADRAIN
+            }
+        }
         fn restore_original(&mut self) -> io::Result<()> {
             if let Some(original) = &self.original {
-                tcsetattr(self.input, SetArg::TCSADRAIN, original)?;
+                tcsetattr(self.input, self.mode_action(), original)?;
                 self.original = None;
             }
             Ok(())
         }
     }
     impl<Fd: AsFd> MaskedIo for PosixIo<'_, Fd> {
+        fn check_cancelled(&self) -> io::Result<()> {
+            check_cancelled(self.cancel)
+        }
+        fn cancel(&self) {
+            if let Some(cancel) = self.cancel {
+                cancel.cancel();
+            }
+        }
         fn begin(&mut self) -> io::Result<()> {
+            self.check_cancelled()?;
             let original = tcgetattr(self.input)?;
             let mut mode = original.clone();
             self.original = Some(original);
@@ -326,24 +422,19 @@ mod posix {
             mode.control_chars[SpecialCharacterIndices::VTIME as usize] = 0;
             // read_key_byte handles the interrupt key in every parser state;
             // restore before returning rather than terminating before Drop.
-            tcsetattr(self.input, SetArg::TCSADRAIN, &mode)?;
+            tcsetattr(self.input, self.mode_action(), &mode)?;
             Ok(())
         }
         fn restore(&mut self) -> io::Result<()> {
             self.restore_original()
         }
         fn read_byte(&mut self, byte: &mut [u8; 1]) -> io::Result<usize> {
-            // Bypass StdinLock's read-ahead buffer: select must see every byte
+            // Bypass StdinLock's read-ahead buffer: poll must see every byte
             // remaining after ESC, including an immediately following Enter.
-            nix::unistd::read(self.input, byte).map_err(Into::into)
+            read_byte(self.input, self.cancel, byte)
         }
         fn escape_byte_ready(&mut self) -> io::Result<bool> {
-            let mut readable = FdSet::new();
-            readable.insert(self.input.as_fd());
-            let mut timeout = TimeVal::milliseconds(50);
-            select(None, &mut readable, None, None, &mut timeout)
-                .map(|ready| ready != 0)
-                .map_err(Into::into)
+            readable(self.input, self.cancel)
         }
         fn echo(&mut self, text: &str) -> io::Result<()> {
             self.output.write_all(text.as_bytes())?;
@@ -358,7 +449,101 @@ mod posix {
         }
     }
 
-    pub(super) fn read(prompt: &str) -> io::Result<SecretString> {
+    fn check_cancelled(cancel: Option<&TerminalCancel>) -> io::Result<()> {
+        cancel.map_or(Ok(()), TerminalCancel::check_io)
+    }
+
+    pub(super) fn readable(input: &impl AsFd, cancel: Option<&TerminalCancel>) -> io::Result<bool> {
+        let started = Instant::now();
+        wait_readable(
+            cancel,
+            || Duration::from_millis(50).saturating_sub(started.elapsed()),
+            |timeout| {
+                // PollFd carries the borrowed descriptor directly. Unlike
+                // FdSet, it supports descriptors at or above FD_SETSIZE.
+                let mut descriptors = [PollFd::new(input.as_fd(), PollFlags::POLLIN)];
+                match poll(&mut descriptors, timeout) {
+                    Ok(0) => Ok(None),
+                    Ok(_) => descriptors[0].revents().map(Some).ok_or(Errno::EIO),
+                    Err(error) => Err(error),
+                }
+            },
+        )
+    }
+
+    pub(super) fn wait_readable(
+        cancel: Option<&TerminalCancel>,
+        mut remaining: impl FnMut() -> Duration,
+        mut poll_once: impl FnMut(u16) -> nix::Result<Option<PollFlags>>,
+    ) -> io::Result<bool> {
+        loop {
+            check_cancelled(cancel)?;
+            let remaining = remaining();
+            if remaining.is_zero() {
+                return Ok(false);
+            }
+            // Round up so sub-millisecond time remains a bounded wait. Every
+            // EINTR retry uses the same monotonic budget, including ESC waits.
+            let timeout = u16::try_from(remaining.as_nanos().div_ceil(1_000_000))
+                .unwrap_or(50)
+                .min(50);
+            let events = poll_once(timeout);
+            check_cancelled(cancel)?;
+            let events = match events {
+                Err(Errno::EINTR) => continue,
+                result => result?,
+            };
+            let Some(events) = events else {
+                return Ok(false);
+            };
+            if events.contains(PollFlags::POLLNVAL) {
+                return Err(Errno::EBADF.into());
+            }
+            // HUP can accompany buffered input. Let read drain it and then
+            // observe EOF; treating HUP as a timeout would spin indefinitely.
+            if events.intersects(PollFlags::POLLIN | PollFlags::POLLHUP) {
+                return Ok(true);
+            }
+            if events.is_empty() {
+                return Ok(false);
+            }
+            return Err(Errno::EIO.into());
+        }
+    }
+
+    fn read_byte(
+        input: &impl AsFd,
+        cancel: Option<&TerminalCancel>,
+        byte: &mut [u8; 1],
+    ) -> io::Result<usize> {
+        loop {
+            check_cancelled(cancel)?;
+            if cancel.is_some() {
+                while !readable(input, cancel)? {}
+            }
+            let result = nix::unistd::read(input, byte);
+            check_cancelled(cancel)?;
+            match result {
+                Err(Errno::EINTR) if cancel.is_some() => continue,
+                result => return result.map_err(Into::into),
+            }
+        }
+    }
+
+    pub(super) fn read_line(prompt: &str, cancel: &TerminalCancel) -> io::Result<String> {
+        cancel.check_io()?;
+        let stdin = io::stdin().lock();
+        let mut stderr = io::stderr().lock();
+        stderr.write_all(prompt.as_bytes())?;
+        stderr.flush()?;
+        drop(stderr);
+        let bytes = read_line_bytes(cancel, |byte| read_byte(&stdin, Some(cancel), byte))?;
+        cancel.check_io()?;
+        line_from_bytes(bytes)
+    }
+
+    pub(super) fn read(prompt: &str, cancel: Option<&TerminalCancel>) -> io::Result<SecretString> {
+        check_cancelled(cancel)?;
         if io::stdin().is_terminal() {
             let stdin = io::stdin().lock();
             let mut stderr = io::stderr().lock();
@@ -366,6 +551,7 @@ mod posix {
                 input: &stdin,
                 output: &mut stderr,
                 original: None,
+                cancel,
             };
             match run_masked(&mut terminal, prompt) {
                 Ok(secret) => return Ok(secret),
@@ -373,16 +559,18 @@ mod posix {
                 Err(_) => {}
             }
         }
-        fallback(prompt)
+        fallback(prompt, cancel)
     }
 
-    fn fallback(prompt: &str) -> io::Result<SecretString> {
+    fn fallback(prompt: &str, cancel: Option<&TerminalCancel>) -> io::Result<SecretString> {
+        check_cancelled(cancel)?;
         // Python's getpass first tries the controlling terminal, even when
         // standard input is a pipe. Only an unavailable terminal permits the
         // explicit warned plain-line fallback.
         fallback_with(
             prompt,
             || {
+                check_cancelled(cancel)?;
                 let terminal = OpenOptions::new().read(true).write(true).open("/dev/tty")?;
                 if !terminal.is_terminal() {
                     return Err(io::ErrorKind::Unsupported.into());
@@ -398,17 +586,46 @@ mod posix {
                     input: &terminal,
                     output: &mut output,
                     original: None,
+                    cancel,
                 };
                 run_terminal(&mut io, prompt, Feedback::Hidden).map_err(|failure| failure.error)
             },
-            |prompt| read_plain_line(&mut io::stdin().lock(), &mut io::stderr().lock(), prompt),
+            |prompt| {
+                check_cancelled(cancel)?;
+                match cancel {
+                    None => {
+                        read_plain_line(&mut io::stdin().lock(), &mut io::stderr().lock(), prompt)
+                    }
+                    Some(cancel) => {
+                        let stdin = io::stdin().lock();
+                        let mut stderr = io::stderr().lock();
+                        stderr.write_all(b"Warning: Password input may be echoed.\n")?;
+                        stderr.write_all(prompt.as_bytes())?;
+                        stderr.flush()?;
+                        let bytes =
+                            read_line_bytes(cancel, |byte| read_byte(&stdin, Some(cancel), byte))?;
+                        cancel.check_io()?;
+                        finish_plain_line(bytes)
+                    }
+                }
+            },
         )
     }
 }
 
 #[cfg(unix)]
 pub(super) fn read(prompt: &str) -> io::Result<SecretString> {
-    posix::read(prompt)
+    posix::read(prompt, None)
+}
+
+#[cfg(unix)]
+pub(super) fn read_cancellable(prompt: &str, cancel: &TerminalCancel) -> io::Result<SecretString> {
+    posix::read(prompt, Some(cancel))
+}
+
+#[cfg(unix)]
+pub(super) fn read_line_cancellable(prompt: &str, cancel: &TerminalCancel) -> io::Result<String> {
+    posix::read_line(prompt, cancel)
 }
 
 #[cfg(not(unix))]
@@ -441,6 +658,10 @@ mod tests {
         read_error: Option<io::ErrorKind>,
         restore_error: bool,
         fail_star: bool,
+        cancel: TerminalCancel,
+        cancel_after_reads: Option<usize>,
+        cancel_on_ready: bool,
+        reads: usize,
     }
     impl FakeIo {
         fn with_input(bytes: &[u8]) -> Self {
@@ -451,6 +672,12 @@ mod tests {
         }
     }
     impl MaskedIo for FakeIo {
+        fn check_cancelled(&self) -> io::Result<()> {
+            self.cancel.check_io()
+        }
+        fn cancel(&self) {
+            self.cancel.cancel();
+        }
         fn begin(&mut self) -> io::Result<()> {
             self.operations.push("begin");
             if self.begin_error {
@@ -469,6 +696,10 @@ mod tests {
         }
         fn read_byte(&mut self, byte: &mut [u8; 1]) -> io::Result<usize> {
             self.operations.push("read");
+            self.reads += 1;
+            if self.cancel_after_reads == Some(self.reads) {
+                self.cancel.cancel();
+            }
             if let Some(error) = self.read_error.take() {
                 return Err(error.into());
             }
@@ -482,6 +713,9 @@ mod tests {
         }
         fn escape_byte_ready(&mut self) -> io::Result<bool> {
             self.operations.push("ready");
+            if self.cancel_on_ready {
+                self.cancel.cancel();
+            }
             Ok(self.ready.pop_front().unwrap_or(!self.input.is_empty()))
         }
         fn echo(&mut self, text: &str) -> io::Result<()> {
@@ -594,10 +828,137 @@ mod tests {
                 "Password: \n" | "Password: *\n"
             ));
         }
+        // The same handle can be set while a read returns a private byte,
+        // including while the UTF-8 decoder retains an incomplete character.
+        for (input, after, stars) in [
+            (b"secret-unused\n".as_slice(), 4, 3),
+            (b"a\xe2\x82unused\n".as_slice(), 3, 1),
+        ] {
+            for feedback in [Feedback::Stars, Feedback::Hidden] {
+                let mut terminal = FakeIo {
+                    cancel_after_reads: Some(after),
+                    ..FakeIo::with_input(input)
+                };
+                let error = run_terminal(&mut terminal, "Password: ", feedback)
+                    .err()
+                    .unwrap();
+                assert_eq!(error.error.kind(), io::ErrorKind::Interrupted);
+                assert!(!error.may_fallback);
+                assert!(terminal.cancel.is_cancelled());
+                assert_eq!(terminal.reads, after);
+                assert_eq!(terminal.input.len(), input.len() - after);
+                assert!(terminal.operations.ends_with(&["restore", "newline"]));
+                assert_eq!(
+                    terminal.output,
+                    format!(
+                        "Password: {}\n",
+                        match feedback {
+                            Feedback::Stars => "*".repeat(stars),
+                            Feedback::Hidden => String::new(),
+                        }
+                    )
+                );
+                assert!(!terminal.output.contains("secret"));
+            }
+        }
+        let mut terminal = FakeIo::with_input(b"unread\n");
+        terminal.cancel.cancel();
+        assert!(!failure(&mut terminal).may_fallback);
+        assert!(terminal.operations.is_empty());
     }
 
     #[test]
     fn cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes() {
+        #[cfg(unix)]
+        {
+            use nix::{errno::Errno, poll::PollFlags};
+            use std::time::Duration;
+
+            // EINTR must not renew the ESC/cancellation polling window.
+            let mut remaining = [50, 20, 1, 0].into_iter();
+            let mut timeouts = Vec::new();
+            assert!(
+                !posix::wait_readable(
+                    None,
+                    || Duration::from_millis(remaining.next().unwrap()),
+                    |timeout| {
+                        timeouts.push(timeout);
+                        Err(Errno::EINTR)
+                    },
+                )
+                .unwrap()
+            );
+            assert_eq!(timeouts, [50, 20, 1]);
+            for events in [
+                PollFlags::POLLIN,
+                PollFlags::POLLHUP,
+                PollFlags::POLLIN | PollFlags::POLLHUP,
+            ] {
+                assert!(
+                    posix::wait_readable(
+                        None,
+                        || Duration::from_micros(1),
+                        |timeout| {
+                            assert_eq!(timeout, 1);
+                            Ok(Some(events))
+                        },
+                    )
+                    .unwrap()
+                );
+            }
+            for (events, expected) in [
+                (PollFlags::POLLERR, Errno::EIO),
+                (PollFlags::POLLNVAL, Errno::EBADF),
+                (PollFlags::POLLNVAL | PollFlags::POLLIN, Errno::EBADF),
+            ] {
+                let error =
+                    posix::wait_readable(None, || Duration::from_millis(50), |_| Ok(Some(events)))
+                        .err()
+                        .unwrap();
+                assert_eq!(error.raw_os_error(), Some(expected as i32));
+            }
+            for interrupted in [false, true] {
+                let cancel = TerminalCancel::default();
+                let coordinator = cancel.clone();
+                let error = posix::wait_readable(
+                    Some(&cancel),
+                    || Duration::from_millis(50),
+                    |_| {
+                        coordinator.cancel();
+                        if interrupted {
+                            Err(Errno::EINTR)
+                        } else {
+                            Ok(Some(PollFlags::POLLIN))
+                        }
+                    },
+                )
+                .err()
+                .unwrap();
+                assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+                assert_eq!(
+                    posix::wait_readable(
+                        Some(&cancel),
+                        || panic!("cancellation must precede another wait"),
+                        |_| panic!("cancellation must precede another poll"),
+                    )
+                    .err()
+                    .unwrap()
+                    .kind(),
+                    io::ErrorKind::Interrupted
+                );
+            }
+            // Exercise the actual poll boundary with buffered data followed by
+            // hangup. A closed peer is readable until read observes EOF.
+            let (input, output) = nix::unistd::pipe().unwrap();
+            nix::unistd::write(&output, b"x").unwrap();
+            drop(output);
+            assert!(posix::readable(&input, None).unwrap());
+            let mut byte = [0; 1];
+            assert_eq!(nix::unistd::read(&input, &mut byte).unwrap(), 1);
+            assert_eq!(byte, *b"x");
+            assert!(posix::readable(&input, None).unwrap());
+            assert_eq!(nix::unistd::read(&input, &mut byte).unwrap(), 0);
+        }
         for input in [
             b"a\x1b\x03unused\n".as_slice(),
             b"a\x1b[\x03unused\n",
@@ -622,6 +983,34 @@ mod tests {
                 assert_eq!(terminal.input.into_iter().collect::<Vec<_>>(), b"unused\n");
             }
         }
+        for feedback in [Feedback::Stars, Feedback::Hidden] {
+            let mut terminal = FakeIo {
+                cancel_on_ready: true,
+                ..FakeIo::with_input(b"secret\x1b[1;5Dunused\n")
+            };
+            let error = run_terminal(&mut terminal, "Password: ", feedback)
+                .err()
+                .unwrap();
+            assert_eq!(error.error.kind(), io::ErrorKind::Interrupted);
+            assert!(!error.may_fallback);
+            assert!(terminal.cancel.is_cancelled());
+            assert!(
+                terminal
+                    .operations
+                    .ends_with(&["ready", "restore", "newline"])
+            );
+            assert_eq!(
+                terminal.output,
+                match feedback {
+                    Feedback::Stars => "Password: ******\n",
+                    Feedback::Hidden => "Password: \n",
+                }
+            );
+            assert_eq!(
+                terminal.input.into_iter().collect::<Vec<_>>(),
+                b"[1;5Dunused\n"
+            );
+        }
     }
 
     #[test]
@@ -645,22 +1034,40 @@ mod tests {
 
     #[test]
     fn controlling_terminal_fallback_cancellation_restores_and_never_retries_plain_input() {
-        let error = fallback_with(
-            "Password: ",
-            || Ok(FakeIo::with_input(b"secret\x03unused\n")),
-            |mut terminal, prompt| {
-                let result = run_terminal(&mut terminal, prompt, Feedback::Hidden)
-                    .map_err(|failure| failure.error);
-                assert_eq!(terminal.output, "Password: \n");
-                assert!(terminal.operations.ends_with(&["restore", "newline"]));
-                assert_eq!(terminal.input.into_iter().collect::<Vec<_>>(), b"unused\n");
-                result
-            },
-            |_| panic!("cancellation must not start a visible-input retry"),
-        )
-        .err()
-        .unwrap();
-        assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+        for external_cancel in [false, true] {
+            let error = fallback_with(
+                "Password: ",
+                || {
+                    Ok(FakeIo {
+                        cancel_on_ready: external_cancel,
+                        ..FakeIo::with_input(if external_cancel {
+                            b"secret\x1b[Aunused\n"
+                        } else {
+                            b"secret\x03unused\n"
+                        })
+                    })
+                },
+                |mut terminal, prompt| {
+                    let result = run_terminal(&mut terminal, prompt, Feedback::Hidden)
+                        .map_err(|failure| failure.error);
+                    assert_eq!(terminal.output, "Password: \n");
+                    assert!(terminal.operations.ends_with(&["restore", "newline"]));
+                    assert_eq!(
+                        terminal.input.into_iter().collect::<Vec<_>>(),
+                        if external_cancel {
+                            b"[Aunused\n".as_slice()
+                        } else {
+                            b"unused\n"
+                        }
+                    );
+                    result
+                },
+                |_| panic!("cancellation must not start a visible-input retry"),
+            )
+            .err()
+            .unwrap();
+            assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+        }
     }
 
     #[test]
@@ -774,6 +1181,38 @@ mod tests {
 
     #[test]
     fn fallback_handles_fragmented_utf8_growth_and_preserves_plain_control_bytes() {
+        // Cancellable ordinary input preserves read_line's newline and partial
+        // EOF contract without consuming the following line.
+        for (raw, expected) in [("é🦀\r\nunused\n", "é🦀\r\n"), ("partial", "partial")] {
+            let cancel = TerminalCancel::default();
+            let mut input = Cursor::new(raw.as_bytes());
+            let bytes =
+                read_line_bytes(&cancel, |byte| std::io::Read::read(&mut input, byte)).unwrap();
+            assert_eq!(line_from_bytes(bytes).unwrap(), expected);
+            assert_eq!(input.position(), expected.len() as u64);
+        }
+        let cancel = TerminalCancel::default();
+        let coordinator = cancel.clone();
+        let mut input = Cursor::new(b"private-line\nunused");
+        let error = read_line_bytes(&cancel, |byte| {
+            let count = std::io::Read::read(&mut input, byte)?;
+            if input.position() == 3 {
+                coordinator.cancel();
+            }
+            Ok(count)
+        })
+        .err()
+        .unwrap();
+        assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+        assert_eq!(input.position(), 3);
+        assert_eq!(
+            read_line_bytes(&cancel, |_| panic!("a cancelled reader must not retry"))
+                .err()
+                .unwrap()
+                .kind(),
+            io::ErrorKind::Interrupted
+        );
+
         let line = format!(" {} \t\x08\x15", "é🦀".repeat(80));
         let mut input = BufReader::with_capacity(3, Cursor::new(line.as_bytes()));
         let mut output = Vec::new();

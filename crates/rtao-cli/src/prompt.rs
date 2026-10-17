@@ -11,7 +11,10 @@ use std::{
     fmt,
     future::Future,
     io::{self, IsTerminal, Write},
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 /// A prompt failure with an explicit command-line exit status.
@@ -124,6 +127,98 @@ impl Terminal for SharedTerminal {
 /// Standard-input/stderr terminal with star-masked secret entry.
 #[derive(Default)]
 pub struct LiveTerminal;
+
+/// One invocation's independently clonable terminal cancellation handle.
+///
+/// Setting it needs no terminal lock. It installs no signal handler and never
+/// resets: a later invocation must create its own handle.
+#[derive(Clone, Debug, Default)]
+pub struct TerminalCancel(Arc<AtomicBool>);
+impl TerminalCancel {
+    /// Abort reads using this handle; clones observe the same cancellation.
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+    /// Whether this invocation's terminal reads have been cancelled.
+    pub fn is_cancelled(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
+    fn check(&self) -> Result<(), PromptError> {
+        if self.is_cancelled() {
+            Err(PromptError::Aborted)
+        } else {
+            Ok(())
+        }
+    }
+    #[cfg(any(unix, test))]
+    fn check_io(&self) -> io::Result<()> {
+        self.check().map_err(|_| io::ErrorKind::Interrupted.into())
+    }
+}
+
+/// Opt-in Unix terminal with invocation-local cancellation during input waits.
+///
+/// Ordinary input and the owned star/hidden editor use 50 ms readiness polls
+/// between cancellation checks. Terminal settings are restored before an aborted
+/// secret read returns. Existing prompt/TTY policy still decides whether input is
+/// allowed. Output writes and OS terminal operations have no time bound.
+///
+/// This terminal installs no signal handler. Non-Unix reads refuse rather than
+/// entering a blocking compatibility reader; [`LiveTerminal`] is unchanged.
+pub struct CancellableTerminal {
+    cancel: TerminalCancel,
+}
+impl CancellableTerminal {
+    /// Bind the same handle that the invocation's coordinator retains.
+    pub fn new(cancel: TerminalCancel) -> Self {
+        Self { cancel }
+    }
+}
+impl Terminal for CancellableTerminal {
+    fn stdin_is_tty(&self) -> bool {
+        io::stdin().is_terminal()
+    }
+    fn stderr_is_tty(&self) -> bool {
+        io::stderr().is_terminal()
+    }
+    fn read_line(&mut self, label: &str) -> Result<String, PromptError> {
+        self.cancel.check()?;
+        if !self.stdin_is_tty() || !self.stderr_is_tty() {
+            return Err(PromptError::Unavailable);
+        }
+        #[cfg(unix)]
+        {
+            masked_input::read_line_cancellable(&crate::output::terminal_text(label), &self.cancel)
+                .map_err(input_error)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = label;
+            Err(PromptError::Unavailable)
+        }
+    }
+    fn read_secret(&mut self, label: &str) -> Result<SecretString, PromptError> {
+        self.cancel.check()?;
+        if !self.stdin_is_tty() {
+            return Err(PromptError::Unavailable);
+        }
+        #[cfg(unix)]
+        {
+            masked_input::read_cancellable(&crate::output::terminal_text(label), &self.cancel)
+                .map_err(input_error)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = label;
+            Err(PromptError::Unavailable)
+        }
+    }
+    fn message(&mut self, message: &str) -> Result<(), PromptError> {
+        // Cleanup diagnostics remain available after input cancellation.
+        LiveTerminal.message(message)
+    }
+}
+
 fn input_error(error: io::Error) -> PromptError {
     match error.kind() {
         io::ErrorKind::Interrupted | io::ErrorKind::UnexpectedEof => PromptError::Aborted,
@@ -1571,6 +1666,21 @@ mod tests {
             ["password cannot be empty", "passwords do not match"]
         );
         assert!(!format!("{:?}", terminal.messages).contains("private"));
+
+        let mut terminal = FakeTerminal::interactive();
+        terminal.hidden = [
+            Err(PromptError::Aborted),
+            Ok(SecretString::new("unused-secret".into())),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            prompt_password(&PromptContext::default(), &mut terminal, "Unlock: ", true).err(),
+            Some(PromptError::Aborted)
+        );
+        assert_eq!(terminal.reads, ["Unlock: "]);
+        assert!(terminal.messages.is_empty());
+        assert_eq!(terminal.hidden.len(), 1);
     }
 
     #[test]
@@ -1618,6 +1728,20 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error.exit_code(), 130);
+
+        let cancel = TerminalCancel::default();
+        let coordinator = cancel.clone();
+        let other_invocation = TerminalCancel::default();
+        let mut terminal = CancellableTerminal::new(cancel);
+        coordinator.cancel();
+        coordinator.cancel();
+        assert!(coordinator.is_cancelled());
+        assert!(!other_invocation.is_cancelled());
+        assert_eq!(terminal.read_line("ordinary"), Err(PromptError::Aborted));
+        assert_eq!(
+            terminal.read_secret("hidden").err(),
+            Some(PromptError::Aborted)
+        );
     }
 
     #[tokio::test]
