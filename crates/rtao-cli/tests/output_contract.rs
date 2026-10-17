@@ -834,6 +834,64 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
             assert_eq!(result.to_json(), canonical);
         }
     }
+    // Contextual human advice leaves the canonical SDK error fields unchanged.
+    for (required, unknown, inner_confirmed) in [
+        (false, false, false),
+        (true, false, false),
+        (false, true, false),
+        (true, true, false),
+        (true, false, true),
+    ] {
+        for (json_mode, quiet) in [(false, false), (false, true), (true, false), (true, true)] {
+            let (output, sink) = capture(json_mode, quiet);
+            let mut result = outcome(false);
+            result.error = Some(ChainError::new("Payment fixture", Some("Payment".into())));
+            result.message = "Payment fixture".into();
+            result.data.clear();
+            if inner_confirmed {
+                result.data.insert("shielded".into(), json!(true));
+            }
+            if unknown {
+                result.fate_unknown = Some(rtao::primitives::H256([81; 32]));
+            }
+            let canonical = result.to_json();
+            assert!(!output.result_with_shield_context(
+                &result,
+                "unused success",
+                true,
+                required
+            )?);
+            assert_eq!(result.to_json(), canonical);
+            let stderr = sink.text(Stream::Stderr)?;
+            assert_eq!(
+                stderr.contains("the submission used MEV shielding;"),
+                !json_mode && !quiet && !inner_confirmed,
+                "{stderr}"
+            );
+            if json_mode {
+                assert_eq!(
+                    serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+                    canonical
+                );
+                if unknown {
+                    let diagnostic: Value = serde_json::from_str(&stderr)?;
+                    assert_eq!(diagnostic["error"], result.message);
+                    assert!(!stderr.contains("--no-mev-shield"));
+                } else {
+                    assert!(stderr.is_empty());
+                }
+            } else {
+                assert!(!stderr.contains("retry with"), "{stderr}");
+                if required || unknown {
+                    assert!(!stderr.contains("--no-mev-shield"), "{stderr}");
+                    if unknown {
+                        assert!(stderr.contains("do not resubmit until its outcome is known"));
+                        assert!(!stderr.contains("the chain rejected the call"));
+                    }
+                }
+            }
+        }
+    }
     let address = rtao::primitives::AccountId([32; 32]).to_string();
     let name = hostile("receipt-name");
     let subnet_name = hostile("receipt-subnet");

@@ -3,6 +3,24 @@
 schema = 1
 
 [[divergences]]
+id = "D-075"
+upstream_symbol = "bittensor.cli.context.AppContext.submit shield carrier failure narration"
+python_behavior = "Adds a carrier-fee explanation and unconditional no-mev-shield advice after a failed shielded attempt without a confirmed inner result; Payment descriptions and remediation can repeat the advice."
+rtao_behavior = "Retains the actual post-fallback shield choice for direct and saved-round receipts. Human carrier failures explain the free-TAO fee and exclude inherited Payment opt-out clauses when shielding is known mandatory or the inner result is unconfirmed. Optional opt-out guidance is conditional on operation support; unknown fate keeps inspection guidance without definite rejection or resubmission advice. Quiet suppresses added chatter; canonical receipt JSON retains upstream Payment fields."
+rationale = "A carrier fee cannot be paid with alpha, but a mandatory shield cannot be disabled. Missing inner-result metadata also occurs for unknown fate and does not prove rejection."
+decision = "PLAN.md execution rule 5 safe native narration; actual SDK receipts and direct/saved transport choices source-reviewed on 2026-10-16"
+status = "active"
+class = "improved"
+milestone = "M4"
+pinning_tests = [
+  "rtao_cli::context_contract::real_execution_unlocks_once_and_renders_one_canonical_receipt",
+  "rtao_cli::context_contract::saved_semantic_executed_first_round_stops_and_emits_one_receipt",
+  "rtao_cli::output_contract::receipts_emit_canonical_domain_shape_including_failures_on_stdout",
+]
+upstream_report = "Independent source review and existing actual-executor, saved-round and receipt fixtures extended; hosted execution pending. Requirement narration retains the static semantic flag rather than later safety_at changes; optional advice stays conditional. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L1639-L1647"
+
+[[divergences]]
 id = "D-074"
 upstream_symbol = "bittensor.cli.context.AppContext.run connection diagnostics"
 python_behavior = "Formats the configured network string directly into the could-not-reach diagnostic, including a custom RPC URL."

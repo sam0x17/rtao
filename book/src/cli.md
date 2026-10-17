@@ -15,6 +15,12 @@ Connection errors name the selected network. For a custom RPC URL, the label
 omits credentials, path, query and fragment; the connection still uses the
 configured endpoint. This protects endpoint tokens in human and JSON errors.
 
+MEV-shield carrier fees require free TAO; alpha cannot pay them. A failed
+carrier message follows the transport actually used after fallback. Required
+shielding cannot be disabled. An unknown outcome requires transaction
+inspection before another submission. Canonical receipt JSON retains the
+upstream Payment fields; supplemental carrier guidance is human output.
+
 `--quiet` suppresses chatter while retaining primary output and errors.
 Transaction commands review their calls before signing. `--yes` approves the
 review; unattended JSON or piped sessions must supply it for a mutation.
