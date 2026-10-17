@@ -1281,9 +1281,13 @@ mod tests {
             third_party_licenses(source)?,
             BTreeSet::from(["Apache-2.0", "MIT"])
         );
-        let subtensor = format!("{ATTRIBUTION}sdk/python/bittensor/axon.py @ abc{ATTRIBUTION_END}\n");
+        let subtensor =
+            format!("{ATTRIBUTION}sdk/python/bittensor/axon.py @ abc{ATTRIBUTION_END}\n");
         assert!(third_party_licenses(&subtensor)?.is_empty());
-        assert!(third_party_licenses("// Derived from x/y z.py @ v1 (GPL-3.0); modified by rtao.\n").is_err());
+        assert!(
+            third_party_licenses("// Derived from x/y z.py @ v1 (GPL-3.0); modified by rtao.\n")
+                .is_err()
+        );
         assert!(third_party_licenses("// Derived from x/y z.py @ v1 (MIT)\n").is_err());
         Ok(())
     }

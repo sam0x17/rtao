@@ -72,12 +72,12 @@ pub mod compat {
     #[cfg_attr(docsrs, doc(cfg(feature = "compat-synapse")))]
     pub use rtao_compat_synapse as synapse;
 }
-#[cfg(feature = "transport-quic")]
-#[cfg_attr(docsrs, doc(cfg(feature = "transport-quic")))]
-pub use rtao_transport_quic as quic;
 #[cfg(feature = "remote-signer")]
 #[cfg_attr(docsrs, doc(cfg(feature = "remote-signer")))]
 pub use rtao_remote_signer as remote_signer;
+#[cfg(feature = "transport-quic")]
+#[cfg_attr(docsrs, doc(cfg(feature = "transport-quic")))]
+pub use rtao_transport_quic as quic;
 
 /// Traits and common types for fluent client and snapshot reads.
 pub mod prelude {
