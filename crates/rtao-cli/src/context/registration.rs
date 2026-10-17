@@ -80,10 +80,10 @@ fn progress(output: &Output, progress: rtao::tx::Progress) -> Result<(), CliErro
 }
 
 /// Drain bounded progress while preserving the submission future and its receipt.
-pub(super) async fn with_progress<F: std::future::Future>(
+pub(super) async fn with_progress<F: std::future::Future + ?Sized>(
     output: &Output,
     mut receiver: tokio::sync::mpsc::Receiver<rtao::tx::Progress>,
-    operation: F,
+    mut operation: std::pin::Pin<Box<F>>,
 ) -> (F::Output, Option<CliError>) {
     let mut render_error = None;
     let mut render = |value| {
@@ -91,7 +91,6 @@ pub(super) async fn with_progress<F: std::future::Future>(
             render_error = progress(output, value).err();
         }
     };
-    tokio::pin!(operation);
     let result = loop {
         tokio::select! {
             result = &mut operation => break result,
