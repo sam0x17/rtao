@@ -1,4 +1,4 @@
-//! Maintain the narrowly scoped PR-U17 patch and prove it remains test-only.
+//! Maintain the bounded core patch and authenticate every carried source change.
 
 use std::{
     collections::BTreeSet,
@@ -15,11 +15,20 @@ use crate::pin::{atomic_write, cached_repo, git, read_document};
 
 const UPSTREAM: &str = "https://github.com/RaoFoundation/subtensor.git";
 const FORK: &str = "https://github.com/sam0x17/subtensor.git";
-const PR: &str = "https://github.com/RaoFoundation/subtensor/pull/3242";
-const PATHS: [&str; 3] = [
+const LEDGER_PR: &str = "https://github.com/RaoFoundation/subtensor/pull/3242";
+const SECURITY_ISSUE: &str = "https://github.com/RaoFoundation/subtensor/issues/3251";
+const LEDGER_PATHS: [&str; 3] = [
     "sdk/bittensor-core/src/signers/mod.rs",
     "sdk/bittensor-core/src/signers/ledger.rs",
     "sdk/bittensor-core/src/signers/hid.rs",
+];
+const PATHS: [&str; 6] = [
+    "sdk/bittensor-core/src/signers/mod.rs",
+    "sdk/bittensor-core/src/signers/ledger.rs",
+    "sdk/bittensor-core/src/signers/hid.rs",
+    "sdk/bittensor-core/Cargo.toml",
+    "sdk/bittensor-core/src/keys/mod.rs",
+    "sdk/bittensor-core/src/keys/encrypted_json.rs",
 ];
 const PROBES: [&str; 2] = [
     "bittensor_core::signers::ApduTransport",
@@ -80,8 +89,12 @@ fn validate_patch(patch: &Item) -> Result<()> {
     ensure!(patch.is_table(), "core.patch must be a table");
     ensure!(field(patch, "repo")? == FORK, "unexpected core patch fork");
     ensure!(
-        field(patch, "upstream_pr")? == PR,
+        field(patch, "upstream_pr")? == LEDGER_PR,
         "unexpected core patch PR"
+    );
+    ensure!(
+        field(patch, "security_issue")? == SECURITY_ISSUE,
+        "unexpected core patch security issue"
     );
     let core_tag = field(patch, "branch")?
         .strip_prefix("rtao-core-patch/")
@@ -103,6 +116,10 @@ fn validate_patch(patch: &Item) -> Result<()> {
         strings(patch, "probe")? == PROBES.into_iter().map(str::to_owned).collect(),
         "core patch obsolescence probes changed"
     );
+    ensure!(
+        hash(field(patch, "upstream_pr_rev")?),
+        "invalid core patch upstream_pr_rev"
+    );
     for key in ["review_base", "review_rev", "review_diff_sha256"] {
         let value = field(patch, key)?;
         ensure!(
@@ -111,7 +128,7 @@ fn validate_patch(patch: &Item) -> Result<()> {
             } else {
                 hash(value)
             },
-            "invalid PR-U17 {key}"
+            "invalid core patch {key}"
         );
     }
     Ok(())
@@ -287,7 +304,7 @@ fn ancestor(repo: &Path, base: &str, rev: &str) -> Result<bool> {
     }
 }
 
-fn verify_diff(repo: &Path, base: &str, rev: &str) -> Result<()> {
+fn verify_diff_paths(repo: &Path, base: &str, rev: &str, paths: &[&str]) -> Result<()> {
     ensure!(
         ancestor(repo, base, rev)?,
         "core patch does not descend from core.commit"
@@ -311,7 +328,7 @@ fn verify_diff(repo: &Path, base: &str, rev: &str) -> Result<()> {
         );
         let path = std::str::from_utf8(pair.get(1).context("diff path missing")?)?;
         ensure!(
-            PATHS.contains(&path),
+            paths.contains(&path),
             "core patch changed forbidden path {path}"
         );
         for reference in [base, rev] {
@@ -325,7 +342,11 @@ fn verify_diff(repo: &Path, base: &str, rev: &str) -> Result<()> {
     Ok(())
 }
 
-fn diff_digest(repo: &Path, base: &str, rev: &str) -> Result<String> {
+fn verify_diff(repo: &Path, base: &str, rev: &str) -> Result<()> {
+    verify_diff_paths(repo, base, rev, &PATHS)
+}
+
+fn diff_digest_paths(repo: &Path, base: &str, rev: &str, paths: &[&str]) -> Result<String> {
     use sha2::Digest;
     // Each path is a separate argument. Keep the exact diff bytes as provenance
     // while the path/regular-file allowlist is verified independently.
@@ -339,8 +360,12 @@ fn diff_digest(repo: &Path, base: &str, rev: &str) -> Result<String> {
         rev,
         "--",
     ];
-    arguments.extend(PATHS);
+    arguments.extend(paths);
     Ok(hex::encode(sha2::Sha256::digest(git(repo, &arguments)?)))
+}
+
+fn diff_digest(repo: &Path, base: &str, rev: &str) -> Result<String> {
+    diff_digest_paths(repo, base, rev, &PATHS)
 }
 
 fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
@@ -349,7 +374,7 @@ fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
     verify_diff(repo, review_base, review_rev)?;
     ensure!(
         diff_digest(repo, review_base, review_rev)? == field(entry, "review_diff_sha256")?,
-        "recorded PR-U17 diff changed"
+        "recorded core patch diff changed"
     );
     let base = field(entry, "base")?;
     let expected = if base == review_base {
@@ -363,9 +388,57 @@ fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
     )?;
     ensure!(
         expected == actual,
-        "carried core tree differs from applying the recorded PR-U17 diff; review the conflict resolution"
+        "carried core tree differs from applying the recorded core patch; review the conflict resolution"
     );
     Ok(())
+}
+
+fn verify_security_source_text(manifest: &str, keys: &str, encrypted_json: &str) -> Result<()> {
+    ensure!(
+        manifest.contains("ed25519-zebra = { version = \"4.0\", default-features = false }"),
+        "core patch lost its bounded ed25519-zebra dependency"
+    );
+    for required in [
+        "use ed25519_zebra::{SigningKey, VerificationKey};",
+        "struct WipingEd25519Pair",
+        "secret: Zeroizing<SigningKey>",
+        "Ed25519(Zeroizing<SigningKey>)",
+        "needs_drop::<Zeroizing<SigningKey>>()",
+        "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+        "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+    ] {
+        ensure!(
+            keys.contains(required),
+            "core patch lost Ed25519 erasure/regression guard: {required}"
+        );
+    }
+    ensure!(
+        !keys.contains("Ed25519(ed25519::Pair)"),
+        "core patch restored the non-wiping Ed25519 signing owner"
+    );
+    for required in [
+        "WipingEd25519Pair::from_seed_slice(seed)",
+        "KeypairInner::Ed25519(pair.into_secret())",
+    ] {
+        ensure!(
+            encrypted_json.contains(required),
+            "encrypted JSON import bypasses the wiping Ed25519 owner: {required}"
+        );
+    }
+    Ok(())
+}
+
+fn verify_security_source(repo: &Path, rev: &str) -> Result<()> {
+    let source = |path: &str| -> Result<String> {
+        String::from_utf8(git(repo, &["show", &format!("{rev}:{path}")])?)
+            .with_context(|| format!("non-UTF-8 core patch source: {path}"))
+    };
+    verify_security_source_text(
+        &source("sdk/bittensor-core/Cargo.toml")?,
+        &source("sdk/bittensor-core/src/keys/mod.rs")?,
+        &source("sdk/bittensor-core/src/keys/encrypted_json.rs")?,
+    )
 }
 
 fn applied_review_tree(
@@ -414,7 +487,7 @@ fn applied_review_tree(
                 review_rev,
             ],
         )?;
-        ensure!(diff.len() <= 1_048_576, "PR-U17 diff exceeds 1 MiB");
+        ensure!(diff.len() <= 1_048_576, "core patch diff exceeds 1 MiB");
         let mut child = command()
             .args(["apply", "--cached", "--3way", "-"])
             .stdin(Stdio::piped())
@@ -429,7 +502,7 @@ fn applied_review_tree(
         let output = child.wait_with_output()?;
         ensure!(
             output.status.success(),
-            "core-patch-conflict: recorded PR-U17 does not apply to core base: {}",
+            "core-patch-conflict: recorded core patch does not apply to core base: {}",
             String::from_utf8_lossy(&output.stderr)
         );
         let output = command().arg("write-tree").output()?;
@@ -561,9 +634,7 @@ fn probe(root: &Path, pins: &DocumentMut, patched: bool) -> Result<Output> {
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
-    } else if output.status.success() {
-        bail!("PR-U17 shipped: drop the core patch");
-    } else {
+    } else if !output.status.success() {
         ensure!(
             missing,
             "unpatched probe failed for a reason other than missing PR-U17 symbols:\n{}\n{}",
@@ -589,15 +660,14 @@ pub(crate) fn verify(root: &Path, pins: &DocumentMut) -> Result<()> {
             .context("patch source cache missing; prepare it explicitly in hosted CI")?;
         verify_diff(&repo, field(patch, "base")?, rev)?;
         verify_review(&repo, patch)?;
-        // This merge commit is populated only by the maintained command when
-        // GitHub reports the PR merged; no branch or comparison heuristic is used.
-        if let Some(merged) = patch.get("merge_commit").and_then(Item::as_str) {
-            ensure!(hash(merged), "invalid PR-U17 merge commit");
-            ensure!(
-                !ancestor(&repo, merged, field(&pins["core"], "commit")?)?,
-                "PR-U17 shipped: drop the core patch"
-            );
-        }
+        let review_base = field(patch, "review_base")?;
+        let upstream_pr_rev = field(patch, "upstream_pr_rev")?;
+        verify_diff_paths(&repo, review_base, upstream_pr_rev, &LEDGER_PATHS)?;
+        ensure!(
+            ancestor(&repo, upstream_pr_rev, field(patch, "review_rev")?)?,
+            "recorded Ledger PR revision is not part of the combined core patch"
+        );
+        verify_security_source(&repo, rev)?;
         probe(root, pins, true)?;
         probe(root, pins, false)?;
     }
@@ -611,12 +681,12 @@ pub(crate) fn prepare_cache(root: &Path, pins: &DocumentMut) -> Result<()> {
     };
     hosted_root()?;
     let repo = cached_repo(root)?;
-    for revision in [field(entry, "rev")?, field(entry, "review_rev")?] {
+    for revision in [
+        field(entry, "rev")?,
+        field(entry, "review_rev")?,
+        field(entry, "upstream_pr_rev")?,
+    ] {
         git(&repo, &["fetch", "--filter=blob:none", FORK, revision])?;
-    }
-    if let Some(merge) = entry.get("merge_commit").and_then(Item::as_str) {
-        ensure!(hash(merge), "invalid PR-U17 merge commit");
-        git(&repo, &["fetch", "--filter=blob:none", "origin", merge])?;
     }
     Ok(())
 }
@@ -672,7 +742,7 @@ fn pr_commits(repo: &Path, pr: &Json) -> Result<(String, String, Vec<String>)> {
     );
     git(repo, &["fetch", "--filter=blob:none", FORK, &head])?;
     let base = base.context("PR base missing")?;
-    verify_diff(repo, &base, &head)?;
+    verify_diff_paths(repo, &base, &head, &LEDGER_PATHS)?;
     Ok((base, head, commits))
 }
 
@@ -736,26 +806,50 @@ pub(crate) fn rebase_candidate(
         pr["state"] == "open" || pr["merged"] == true,
         "PR-U17 was closed without merging; user decision required (PLAN rule 6)"
     );
-    if pr["merged"] == true {
-        let merge = pr["merge_commit_sha"]
-            .as_str()
-            .context("merged PR missing commit")?;
-        ensure!(hash(merge), "invalid PR merge commit");
-        git(&repo, &["fetch", "--filter=blob:none", "origin", merge])?;
-        if ancestor(&repo, merge, &base)? {
-            next["core"]
-                .as_table_like_mut()
-                .context("core table missing")?
-                .remove("patch");
-            let mut manifest = read_document(&root.join("Cargo.toml"))?;
-            remove_tables(&mut manifest)?;
-            atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
-            println!("PR-U17 shipped: dropped the core patch from the release candidate.");
-            return Ok(());
-        }
-    }
-    let (review_base, review_rev, commits) = pr_commits(&repo, &pr)?;
-    let review_diff = diff_digest(&repo, &review_base, &review_rev)?;
+    let issue = gh(&["api", "repos/RaoFoundation/subtensor/issues/3251"])?;
+    ensure!(
+        issue["html_url"] == SECURITY_ISSUE
+            && issue["number"] == 3251
+            && issue.get("pull_request").is_none(),
+        "core patch security issue identity changed"
+    );
+    let (ledger_base, ledger_rev, _) = pr_commits(&repo, &pr)?;
+    let previous = previous_patch.context(
+        "combined core patch provenance is required before rebasing; review the Ledger and security deltas together",
+    )?;
+    ensure!(
+        field(previous, "upstream_pr_rev")? == ledger_rev,
+        "PR-U17 changed after the combined core patch review; review the new PR revision first"
+    );
+    ensure!(
+        field(previous, "review_base")? == ledger_base,
+        "combined core patch review base differs from PR-U17"
+    );
+    let review_base = field(previous, "review_base")?.to_owned();
+    let review_rev = field(previous, "review_rev")?.to_owned();
+    git(&repo, &["fetch", "--filter=blob:none", FORK, &review_rev])?;
+    verify_review(&repo, previous)?;
+    ensure!(
+        ancestor(&repo, &ledger_rev, &review_rev)?,
+        "PR-U17 is not an ancestor of the combined core patch review"
+    );
+    let review_diff = field(previous, "review_diff_sha256")?.to_owned();
+    let commits = git_text(
+        &repo,
+        &[
+            "rev-list",
+            "--reverse",
+            "--ancestry-path",
+            &format!("{review_base}..{review_rev}"),
+        ],
+    )?
+    .lines()
+    .map(str::to_owned)
+    .collect::<Vec<_>>();
+    ensure!(
+        !commits.is_empty() && commits.len() <= 20 && commits.iter().all(|commit| hash(commit)),
+        "combined core patch needs 1..=20 linear commits"
+    );
     let branch = format!("rtao-core-patch/{target}");
     let remote = git_text(
         &repo,
@@ -791,7 +885,9 @@ pub(crate) fn rebase_candidate(
             ("branch", &branch),
             ("rev", rev),
             ("base", &base),
-            ("upstream_pr", PR),
+            ("upstream_pr", LEDGER_PR),
+            ("upstream_pr_rev", &ledger_rev),
+            ("security_issue", SECURITY_ISSUE),
             ("review_base", &review_base),
             ("review_rev", &review_rev),
             ("review_diff_sha256", &review_diff),
@@ -804,16 +900,6 @@ pub(crate) fn rebase_candidate(
                 array.push(*item);
             }
             entry.insert(key, value(array));
-        }
-        if pr["merged"] == true {
-            entry.insert(
-                "merge_commit",
-                value(
-                    pr["merge_commit_sha"]
-                        .as_str()
-                        .context("merge commit missing")?,
-                ),
-            );
         }
         Ok(Item::Table(entry))
     };
@@ -829,7 +915,7 @@ pub(crate) fn rebase_candidate(
         let entry = entry_for(remote)?;
         if verify_review(&repo, &entry).is_ok() {
             // This includes the initial v478 branch, which can point directly
-            // at PR-U17's existing commit. Hosted CI only reads the fork.
+            // at the already reviewed combined commit. Hosted CI only reads the fork.
             let mut prepared = next.clone();
             prepared["core"]["patch"] = entry;
             let mut manifest = read_document(&root.join("Cargo.toml"))?;
@@ -838,16 +924,16 @@ pub(crate) fn rebase_candidate(
             atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
             *next = prepared;
             println!(
-                "Adopted existing append-only PR-U17 branch {branch} at {remote}; validate the hosted candidate before source adoption."
+                "Adopted existing append-only core patch branch {branch} at {remote}; validate the hosted candidate before source adoption."
             );
             return Ok(());
         }
         let previous = previous_same.context(
-            "existing patch branch differs from current PR-U17; inspect it before adopting",
+            "existing patch branch differs from the reviewed core patch; inspect it before adopting",
         )?;
         ensure!(
             field(previous, "rev")? == remote,
-            "unrecorded patch branch differs from current PR-U17; inspect it before adopting"
+            "unrecorded patch branch differs from the reviewed core patch; inspect it before adopting"
         );
         verify_review(&repo, previous)?;
     } else {
@@ -905,7 +991,7 @@ pub(crate) fn rebase_candidate(
                 "user.email=core-patch@users.noreply.github.com",
                 "commit",
                 "-m",
-                "Replace the previous PR-U17 delta with its reviewed revision",
+                "Replace the previous core patch delta with its reviewed revision",
             ],
         )?;
     }
@@ -982,6 +1068,9 @@ fn write_candidate(
         "schema": 1, "status":"publication-required", "repo":FORK,
         "branch":field(entry,"branch")?, "base":base, "publication_parent":publication_parent,
         "candidate_rev":rev, "candidate_rev_is_advisory":true,
+        "upstream_pr":field(entry,"upstream_pr")?,
+        "upstream_pr_rev":field(entry,"upstream_pr_rev")?,
+        "security_issue":field(entry,"security_issue")?,
         "review_base":field(entry,"review_base")?, "review_rev":field(entry,"review_rev")?,
         "review_diff_sha256":field(entry,"review_diff_sha256")?,
         "patch_sha256":hex::encode(sha2::Sha256::digest(&patch)), "patch_bytes":patch.len(),
@@ -1055,7 +1144,9 @@ mod tests {
             ("branch", "rtao-core-patch/v478"),
             ("rev", &rev),
             ("base", &base),
-            ("upstream_pr", PR),
+            ("upstream_pr", LEDGER_PR),
+            ("upstream_pr_rev", &rev),
+            ("security_issue", SECURITY_ISSUE),
             ("review_base", &base),
             ("review_rev", &rev),
             ("review_diff_sha256", &"a".repeat(64)),
@@ -1127,6 +1218,34 @@ mod tests {
             assert!(!missing_symbols(combined.as_bytes(), directory)?);
         }
         assert!(!missing_symbols(b"download failed", directory)?);
+        Ok(())
+    }
+
+    #[test]
+    fn ed25519_source_guard_requires_wiping_ownership_and_chain_vectors() -> Result<()> {
+        let manifest = "ed25519-zebra = { version = \"4.0\", default-features = false }";
+        let keys = r#"
+use ed25519_zebra::{SigningKey, VerificationKey};
+struct WipingEd25519Pair { secret: Zeroizing<SigningKey> }
+enum KeypairInner { Ed25519(Zeroizing<SigningKey>) }
+fn check() { needs_drop::<Zeroizing<SigningKey>>(); }
+// RFC 8032
+// 9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
+// d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+// e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b
+"#;
+        let encrypted =
+            "WipingEd25519Pair::from_seed_slice(seed); KeypairInner::Ed25519(pair.into_secret());";
+        verify_security_source_text(manifest, keys, encrypted)?;
+        assert!(
+            verify_security_source_text(
+                manifest,
+                &keys.replace("Ed25519(Zeroizing<SigningKey>)", "Ed25519(ed25519::Pair)"),
+                encrypted,
+            )
+            .is_err()
+        );
+        assert!(verify_security_source_text(manifest, keys, "").is_err());
         Ok(())
     }
 
