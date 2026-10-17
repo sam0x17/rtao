@@ -116,7 +116,9 @@ axons give concurrent calls sharing one uuid. The `tensor` feature provides
 the msgpack-numpy `Tensor` field type.
 
 Interop was run locally against real bittensor 10.5.0: Rust dendrite to Python
-axon 39/39 and Python dendrite to Rust axon 37/37.
+axon 39/39 and Python dendrite to Rust axon 37/37. The hosted `m10-interop` job
+in [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) passed the same checks against
+`bittensor==10.5.0`.
 
 ## Epistula v2
 
@@ -237,7 +239,9 @@ certificate, which btlightning's own client does not, and checks a pinned
 target from chain axon fields; the chain does not mark QUIC endpoints, so the
 operator decides which addresses speak QUIC. `retain_targets` closes
 connections to miners that left the set. Local interop with btlightning's
-Python bindings passed 58/58 in both directions, unary and streaming.
+Python bindings passed 58/58 in both directions, unary and streaming; the
+hosted `m10-interop` job in [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084)
+passed 56/56, streaming included.
 
 ## Remote signing
 
@@ -347,4 +351,5 @@ let signer: Arc<dyn rtao::signer::Signer> = Arc::new(signer);
 Interop passed locally for a Python client using bittensor-wallet keys against
 the Rust daemon (10/10) and the Rust client against a Python peer (2/2). The
 localnet check, which signs and submits a transfer and refuses replayed and
-tampered requests, runs in a hosted job whose result is pending.
+tampered requests, passed in the hosted `remote-signer-localnet` job of
+[run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084).

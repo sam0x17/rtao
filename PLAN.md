@@ -1619,6 +1619,12 @@ the closing commit is recorded in
 [development state](docs/execution/state.md). Optional
 live/oracle/interop/device evidence remains explicitly unexecuted under Q30.
 
+**M10 exit, 2026-10-17.** The optional M10 was implemented at the user's request and
+all four of its exit checks passed in hosted runs at `3479cdf`
+([§12.12](#1212-m10-optional-post-parity-compatibility-crates)). M10-01 to M10-04
+are checked, so the whole plan, M0 to M10, is complete: 127/127 active steps plus
+M10's four.
+
 **Security passes by cold readers** (Q19). M2, M3, M4 and M7 each end with a security pass, and M9 with the full review.
 A local cold reader does each one: a fresh-context reviewer (a new agent session, or a person, that took no part in the
 implementation) that receives only the repository at the milestone's final commit, the milestone diff
@@ -2294,10 +2300,10 @@ feature `remote-signer` and path `rtao::remote_signer`, `--signer remote`, D-031
 Python counterpart (Python's `--signer` offers wallet, extension, ledger and vault), and it needs a wire schema, a
 reference server and replay tests before it can ship.
 
-- [ ] **M10-01** `rtao-compat-synapse` (v10 Synapse, Axon and Dendrite compatibility).
-- [ ] **M10-02** `rtao-compat-epistula`.
-- [ ] **M10-03** `rtao-transport-quic` (btlightning).
-- [ ] **M10-04** `RemoteSigner`: the wire schema (`POST /sign` with the `SigningRequest` minus secrets, authenticated by
+- [x] **M10-01** `rtao-compat-synapse` (v10 Synapse, Axon and Dendrite compatibility).
+- [x] **M10-02** `rtao-compat-epistula`.
+- [x] **M10-03** `rtao-transport-quic` (btlightning).
+- [x] **M10-04** `RemoteSigner`: the wire schema (`POST /sign` with the `SigningRequest` minus secrets, authenticated by
       btauth/1 with a separate client key), a reference server that decodes and policy-checks the call before signing,
       and replay tests; facade feature `remote-signer` and `--signer remote`.
 
@@ -2310,8 +2316,9 @@ reference server and replay tests before it can ship.
 4. C1-C7.
 
 **Implementation note (2026-10-17).** The user asked to work through the entire plan, so M10 was implemented at
-`d59efdd` (formatting, report and layering follow-ups through `277095e`, not yet pushed);
-[execution record](docs/execution/m10.md). The checkboxes stay open until the hosted exit checks below have results.
+`d59efdd` (formatting, report, layering and license follow-ups through `3479cdf`, all pushed to `main`);
+[execution record](docs/execution/m10.md). All four exit checks passed in hosted runs at `3479cdf`, so M10-01 to
+M10-04 are checked.
 
 - `rtao-compat-synapse`: v10 Synapse, Axon (axum) and Dendrite (reqwest) compatible with `bittensor==10.5.0`, including
   the Python-repr body hash, a strict nonce table (60 s future skew, per-hotkey limit), tensors and streaming. Local
@@ -2340,11 +2347,17 @@ reference server and replay tests before it can ship.
   recognises third-party derivation headers.
 - Local validation on `sam-drone` (pinned to stable CPUs): workspace Clippy clean, 3,384 of 3,385 tests pass (the one
   failure is hosted-only by design), doctests, strict parity and the local supply and features gates pass.
-- Pending hosted execution: the `pr.yml` dispatch input `m10_interop=true` runs `m10-interop`
-  (`ci/interop/m10-hosted.sh`, hash-pinned Python environments) and `remote-signer-localnet`
-  (`ci/interop/remote-signer/localnet.sh`). Exit check 3 (localnet transfer through the reference server, refusing
-  replayed and tampered requests) has no result yet because `sam-drone` has no Docker; exit checks 1 and 2 have local
-  results only. Ordinary hosted checks for the M10 commits are also pending.
+- Hosted exit checks at `3479cdf`. Dispatch
+  [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) (`pr.yml` with `m10_interop=true`):
+  job `m10-interop` (`ci/interop/m10-hosted.sh`, hash-pinned Python environments) passes Synapse interop against
+  `bittensor==10.5.0` (Rust Dendrite to Python Axon 39 checks, Python Dendrite to Rust Axon 37, Python-to-Python 37,
+  Rust-to-Rust 39; exit check 1), all Epistula stages against the BitMind and Apex references (gobt by vectors only),
+  QUIC interop against btlightning's Python bindings built at `53c090b` with 56/56 including streaming (exit check 2)
+  and remote-signer interop; job `remote-signer-localnet` (`ci/interop/remote-signer/localnet.sh`) passes
+  `remote_signer_signs_a_localnet_transfer_and_refuses_replay_and_tamper` (exit check 3). Ordinary
+  [run 39027391242](https://github.com/sam0x17/rtao/actions/runs/39027391242) passes all six required jobs (check,
+  features, supply, msrv, no-host, semver) with 3,386 tests passed, none failed and five skipped, plus doctests and
+  docs (exit check 4, C1-C7).
 
 ### 12.13 Dependency order and external prerequisites
 
@@ -2682,7 +2695,7 @@ Deliberately not done, or not yet ([architecture §17](docs/plan/architecture.md
 | pure-Rust NaCl, Fernet or Ansible keyfile crypto | the core owns COMPAT bytes; neurons need only plaintext hotkeys | PR-U6 is declined and no-host coldkey unlock becomes a requirement |
 | following `CommitRevealWeightsVersion` or `WeightsVersionKey` automatically | both are upgrade levers | never |
 | v10 Synapse/Axon/Dendrite emulation, Epistula, btlightning QUIC | outside the v11 parity target | M10, or earlier if a migrating subnet needs it |
-| `RemoteSigner` (`--signer remote`) | an rtao addition with no Python counterpart; it needs a wire schema, a reference server and replay tests before it can ship | M10 (crate `rtao-remote-signer`, implemented 2026-10-17; hosted exit check pending) |
+| `RemoteSigner` (`--signer remote`) | an rtao addition with no Python counterpart; it needs a wire schema, a reference server and replay tests before it can ship | M10 (crate `rtao-remote-signer`, implemented 2026-10-17; localnet exit check passed in hosted [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084)) |
 | light client (smoldot) | finney's chain spec lacks a `lightSyncState` | upstream ships a light-client-ready spec |
 | crates.io publication | user decision | the user changes the constraint |
 | a `btcli` shim next to the `rtao` binary | the user chose `rtao` only (Q3); with shared configuration files a shim could surprise users who have both | the user asks for one |
@@ -3134,3 +3147,4 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-16 | Six root-subnet supplementary inputs | M5 audit found the six named root amount cases absent from samples_extra.json despite native rewritten coverage. Add exactly remove_stake, remove_stake_limit, move_stake, swap_stake, move_swap_stake and transfer_stake inputs with original pinned identities and exact decimal 1.000000001. Three existing tests retain source identities and root TAO denomination, independently encode V478 call bytes and pin move-swap full move followed by one-rao-less swap. Enable existing staking on xtask intent dependency, with no new package/version or local resolution. Independent source review and installed formatting/whitespace pass; no Python expected outputs or hosted execution claimed. Named-test inventory stays 3,203/four skips. Adopt source only, keep steps and mappings held; remove seven disposable builder/afterimage files after exact hash/process checks, retaining tracked source and bounded patch/proof. |
 | 2026-10-17 | M2-26 final security pass and M2-S02 closure | Move development to sam-drone and update AGENTS.md for local builds. A fresh four-lens cold-reader pass (Ed25519 erasure, signing compatibility, keyfile/password/redaction, patch provenance), each finding checked by three adversarial verifiers, confirms four low-severity issues: an unwiped SCALE derivation preimage and plain PKCS8 import arrays in the fork, an undocumented re-export of upstream's unrepaired plaintext keyfile codec, and a substring-only core-patch source guard with a tautological test. Repair them: fork commit 626f2a4f wipes both copies and adds zeroize and Substrate-vector tests; rtao_core::keyfiles documents the limitation; the guard now parses every core source with syn. Pin the new revision (combined diff SHA-256 8cf8ff28...c489) in manifests, locks, upstream.toml and doctor. Locally, 72 fork core tests, 250 core/signer/wallet tests and pin --check pass. Close M2-S02, check M2-26 and record 127/127; hosted CI for the closing commit is in docs/execution/state.md. No new upstream filing. |
 | 2026-10-17 | M10 implementation (optional, user-requested) | At the user's request to work through the whole plan, implement M10-01 to M10-04 as `rtao-compat-synapse`, `rtao-compat-epistula`, `rtao-transport-quic` and `rtao-remote-signer`, with facade features `compat-synapse`, `compat-epistula`, `transport-quic`, `remote-signer` and `remote-signer-server` (all in `full`). Deviation: `RemoteSigner` is a separate crate exposed as `rtao::remote_signer`, not an `rtao-signer` feature, because `rtao-btauth` depends on `rtao-signer`. Each crate was adversarially reviewed and every actionable finding fixed with regression tests. Local interop on sam-drone: Synapse 39/39 and 37/37 against bittensor 10.5.0, Epistula all stages against BitMind and Apex (gobt by vectors only), btlightning 58/58, remote signer 10/10 and 2/2. Local workspace Clippy is clean and 3,384/3,385 tests pass (one hosted-only). Add the `m10_interop` dispatch jobs `m10-interop` and `remote-signer-localnet` and raise the check job limit to 75 minutes; the localnet exit check and both jobs await hosted execution, so M10 steps stay unchecked. sam-drone's i9-13900KF faults under load on CPUs 4, 5, 12 and 13; AGENTS.md pins local work to other cores and CI hardware remains authoritative. No new upstream filing (the btlightning client's missing handshake-signature check is noted only). |
+| 2026-10-17 | M10 exit | Commits d59efdd..3479cdf are pushed to main. Ordinary run 39027391242 at 3479cdf passes all six required jobs (check, features, supply, msrv, no-host, semver) with 3,386 tests passed, none failed and five skipped, plus doctests and docs (exit check 4, C1-C7). Dispatch run 39027402084 (`m10_interop=true`) at 3479cdf passes both M10 jobs: `m10-interop` runs Synapse interop against bittensor==10.5.0 (Rust Dendrite to Python Axon 39 checks, Python Dendrite to Rust Axon 37, Python-to-Python 37, Rust-to-Rust 39; exit check 1), all Epistula stages against the BitMind and Apex references (gobt by vectors only), QUIC interop against btlightning's Python bindings built at 53c090b with 56/56 including streaming (exit check 2) and remote-signer interop; `remote-signer-localnet` signs a localnet transfer through the reference server and refuses replayed and tampered requests (exit check 3). Check M10-01 to M10-04 and update D-031. The full plan, M0 to M10, is complete: 127/127 active steps plus M10's four. No new upstream filing. |

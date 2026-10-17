@@ -1131,7 +1131,7 @@ id = "D-031"
 upstream_symbol = "--signer"
 python_behavior = "wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`)"
 rtao_behavior = "adds `remote` (M10 `RemoteSigner`): with the CLI feature `remote-signer`, `--signer remote` and `--signatory NAME=remote` select a client for the `rtao-remote-signer/1` protocol configured by `--remote-signer-url`, `--remote-signer-client-key`, `--remote-signer-receiver`, `--remote-signer-ca` and `--remote-signer-timeout` (or the matching environment and config values); the reference server refuses replayed, tampered and out-of-policy requests"
-rationale = "Implemented in M10 as the separate crate rtao-remote-signer, exposed as rtao::remote_signer, rather than inside rtao-signer behind a remote feature, because rtao-btauth depends on rtao-signer and the btauth/1 client authentication would otherwise form a dependency cycle. The CLI refuses remote selection without a URL and client key, and without the CLI feature. The reference server decodes the call against its trusted runtime, re-derives the signing payload, applies rtao_tx::Policy and its allowlists, and refuses replayed or tampered requests; the client refuses signatures over other bytes or for other accounts. Python has no remote signer, so this is an rtao addition. The localnet exit check (sign and submit a localnet transfer, refuse replayed and tampered requests) runs in the hosted remote-signer-localnet job and its result is pending hosted execution."
+rationale = "Implemented in M10 as the separate crate rtao-remote-signer, exposed as rtao::remote_signer, rather than inside rtao-signer behind a remote feature, because rtao-btauth depends on rtao-signer and the btauth/1 client authentication would otherwise form a dependency cycle. The CLI refuses remote selection without a URL and client key, and without the CLI feature. The reference server decodes the call against its trusted runtime, re-derives the signing payload, applies rtao_tx::Policy and its allowlists, and refuses replayed or tampered requests; the client refuses signatures over other bytes or for other accounts. Python has no remote signer, so this is an rtao addition. The localnet exit check (sign and submit a localnet transfer, refuse replayed and tampered requests) runs in the hosted remote-signer-localnet job and passed in hosted run 39027402084 at 3479cdf."
 status = "active"
 class = "addition"
 milestone = "M10"
@@ -1146,7 +1146,7 @@ pinning_tests = [
   "rtao_remote_signer::client::c2_signatures_over_other_bytes_or_for_other_accounts_are_refused",
 ]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "rtao addition with no Python counterpart; no defect alleged and no new upstream filing. Named regression bodies were source-reviewed and run locally; hosted execution of the remote-signer-localnet exit check remains pending."
+upstream_report = "rtao addition with no Python counterpart; no defect alleged and no new upstream filing. Named regression bodies were source-reviewed and run locally; the remote-signer-localnet exit check passed in hosted run 39027402084 at 3479cdf."
 
 [[divergences]]
 id = "D-032"
