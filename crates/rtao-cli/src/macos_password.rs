@@ -750,7 +750,9 @@ mod tests {
         }
 
         drop(sources);
-        let native = Arc::try_unwrap(native).expect("native adapter retained");
+        let native = Arc::try_unwrap(native)
+            .ok()
+            .expect("native adapter retained");
         let runner = native.into_inner().into_runner().runner;
         assert!(runner.results.is_empty());
         assert_eq!(runner.seen.len(), 7);
