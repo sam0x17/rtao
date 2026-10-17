@@ -27,7 +27,7 @@ w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478"
 ruint = { path = "../../patches/ruint" }
 
 [patch."https://github.com/RaoFoundation/subtensor.git"]
-bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "774cc3ac78e442bfde7ef399b36f79e4bec4d460" }
+bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "5a43348e8dc95311e9750781a28a33380c454409" }
 
 [patch."https://github.com/sam0x17/subtensor.git"]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }

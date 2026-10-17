@@ -57,7 +57,7 @@ fn patch_identity<'a>(
     }
     let repo = "https://github.com/sam0x17/subtensor.git";
     if patch.get("repo").and_then(Item::as_str) != Some(repo) {
-        return Err("core.patch.repo must be the maintained PR-U17 fork");
+        return Err("core.patch.repo must be the maintained core-patch fork");
     }
     if !tag.strip_prefix('v').is_some_and(|version| {
         !version.is_empty() && version.bytes().all(|byte| byte.is_ascii_digit())
@@ -80,6 +80,18 @@ fn patch_identity<'a>(
         != Some("https://github.com/RaoFoundation/subtensor/pull/3242")
     {
         return Err("core.patch.upstream_pr differs from PR-U17");
+    }
+    if !patch
+        .get("upstream_pr_rev")
+        .and_then(Item::as_str)
+        .is_some_and(full_commit)
+    {
+        return Err("core.patch.upstream_pr_rev must be a full Git commit");
+    }
+    if patch.get("security_issue").and_then(Item::as_str)
+        != Some("https://github.com/RaoFoundation/subtensor/issues/3251")
+    {
+        return Err("core.patch.security_issue differs from M2-S02");
     }
     for field in ["review_base", "review_rev"] {
         if !patch
@@ -117,6 +129,9 @@ fn patch_identity<'a>(
                 "sdk/bittensor-core/src/signers/mod.rs",
                 "sdk/bittensor-core/src/signers/ledger.rs",
                 "sdk/bittensor-core/src/signers/hid.rs",
+                "sdk/bittensor-core/Cargo.toml",
+                "sdk/bittensor-core/src/keys/mod.rs",
+                "sdk/bittensor-core/src/keys/encrypted_json.rs",
             ][..],
         ),
         (
@@ -140,7 +155,7 @@ fn patch_identity<'a>(
                     == 1
             })
         {
-            return Err("core.patch path/probe inventory differs from PR-U17");
+            return Err("core.patch path/probe inventory differs from the bounded core patch");
         }
     }
     Ok((revision, format!("git+{repo}?rev={revision}#{revision}")))
