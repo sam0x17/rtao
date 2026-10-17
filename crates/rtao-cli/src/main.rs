@@ -18,8 +18,8 @@ use rtao_cli::{
     },
     context::AppContext,
     error::CliError,
-    output::{DiagnosticContext, terminal_text},
-    prompt::{LiveTerminal, PromptContext, SharedTerminal},
+    output::{DiagnosticContext, Output, OutputOptions, terminal_text},
+    prompt::{CancellableTerminal, PromptContext, SharedTerminal, TerminalCancel},
 };
 use std::{
     env,
@@ -73,7 +73,39 @@ fn fast_path_parse_error(error: clap::Error) -> CliError {
     }
 }
 
-async fn run() -> Result<(), CliError> {
+// Main owns process signals. Library contexts and tests only receive a latch.
+// Tokio does not restore the process default SIGINT handler when this is dropped.
+struct InterruptWatcher(tokio::task::JoinHandle<()>);
+impl InterruptWatcher {
+    fn spawn(future: impl std::future::Future<Output = ()> + Send + 'static) -> Self {
+        Self(tokio::spawn(future))
+    }
+    #[cfg(unix)]
+    fn register(cancel: TerminalCancel) -> Result<Self, CliError> {
+        // Register synchronously, before any prompt can block this worker.
+        let mut signal = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+            .map_err(|_| CliError::failure("could not register interrupt handling"))?;
+        Ok(Self::spawn(async move {
+            if signal.recv().await.is_some() {
+                // Never acquire a terminal/output lock before publishing.
+                cancel.cancel();
+            }
+        }))
+    }
+    #[cfg(not(unix))]
+    fn register(_: TerminalCancel) -> Result<Self, CliError> {
+        Err(CliError::failure(
+            "invocation interrupt handling requires Unix",
+        ))
+    }
+}
+impl Drop for InterruptWatcher {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), CliError> {
     let mut argv = env::args_os().collect::<Vec<_>>();
     #[allow(deprecated)]
     if let Some(home) = env::home_dir() {
@@ -133,6 +165,7 @@ async fn run() -> Result<(), CliError> {
             ),
         );
     }
+    let _interrupt_watcher = InterruptWatcher::register(cancel.clone())?;
     let paths = rtao::client::config::Paths::from_process()
         .map_err(|e| CliError::failure(e.to_string()))?;
     let store = rtao::client::config::Store::new(paths);
@@ -145,7 +178,14 @@ async fn run() -> Result<(), CliError> {
         quiet: config.get("quiet").is_some_and(truthy),
         ..Default::default()
     };
-    let terminal: SharedTerminal = Arc::new(Mutex::new(Box::new(LiveTerminal)));
+    *final_output = Output::process(OutputOptions {
+        json_mode: context.json || argv.iter().any(|arg| arg == "--json"),
+        quiet: context.quiet || argv.iter().any(|arg| arg == "--quiet" || arg == "-q"),
+        network: None,
+    });
+    let terminal: SharedTerminal = Arc::new(Mutex::new(Box::new(CancellableTerminal::new(
+        cancel.clone(),
+    ))));
     let mut prompting = terminal.clone();
     let completion_tree = command.clone();
     let replay_args = argv
@@ -177,7 +217,7 @@ async fn run() -> Result<(), CliError> {
             terminal.clone(),
         )
         .await?;
-        prepared_context = Some(app);
+        prepared_context = Some(app.with_interruption(cancel.clone()));
     }
     let parsed_invocation = match prepared_context.as_mut() {
         Some(app) => application::parse_with_context(command, argv, app, prompt_history),
@@ -290,23 +330,26 @@ async fn run() -> Result<(), CliError> {
     };
     let mut app = match prepared_context {
         Some(app) => app,
-        None => {
-            AppContext::from_store(
-                &invocation.matches,
-                leaf,
-                &reserved,
-                &store,
-                &home,
-                |name| env::var(name).ok(),
-                terminal,
-            )
-            .await?
-        }
+        None => AppContext::from_store(
+            &invocation.matches,
+            leaf,
+            &reserved,
+            &store,
+            &home,
+            |name| env::var(name).ok(),
+            terminal,
+        )
+        .await?
+        .with_interruption(cancel.clone()),
     };
+    *final_output = app.output.clone();
+    if cancel.is_cancelled() {
+        return Err(CliError::aborted());
+    }
     rtao_cli::logs::setup_logging(app.globals.verbosity, app.globals.quiet)
         .map_err(|e| CliError::failure(e.to_string()))?;
     let replay = invocation.history.replay_command(&replay_args);
-    let result = async {
+    let result = Box::pin(async {
         // Async handlers borrow argv; final success guidance still needs it.
         let replay_args = replay_args.as_slice();
         match name {
@@ -700,21 +743,17 @@ async fn run() -> Result<(), CliError> {
             }
             _ => Err(CliError::input(format!("unknown command {name:?}"))),
         }
-    }
+    })
     .await;
     if let Err(error) = &result
         && !error.message.is_empty()
+        && !(cancel.is_cancelled() && error.code == 130)
     {
         app.output
             .cli_error(error)
             .map_err(|e| CliError::failure(e.to_string()))?;
     }
-    application::finish_prompts(
-        &app.output,
-        &mut invocation.history,
-        &replay_args,
-        result.is_ok(),
-    )?;
+    app.finish_prompts(&mut invocation.history, &replay_args, result.is_ok())?;
     // Rendering has already emitted structured diagnostics for command errors.
     result.map_err(|mut error| {
         error.message.clear();
@@ -734,17 +773,67 @@ fn truthy(value: &serde_json::Value) -> bool {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    match run().await {
-        Ok(()) => ExitCode::SUCCESS,
+    let cancel = TerminalCancel::default();
+    let argv = env::args_os().collect::<Vec<_>>();
+    let mut output = Output::process(OutputOptions {
+        json_mode: argv.iter().any(|arg| arg == "--json"),
+        quiet: argv.iter().any(|arg| arg == "--quiet" || arg == "-q"),
+        network: None,
+    });
+    let result = Box::pin(run(cancel.clone(), &mut output)).await;
+    if cancel.is_cancelled() {
+        // Human chatter only. Keep any primary recovery diagnostic below;
+        // neither this notice nor final disposition replaces the result.
+        let _ = output.message("aborted.");
+    }
+    match result {
+        Ok(()) => ExitCode::from(cancel.exit_code(0)),
         Err(error) => {
-            if !error.message.is_empty() {
+            if !error.message.is_empty() && !(cancel.is_cancelled() && error.code == 130) {
                 if error.code == 0 {
                     print!("{}", error.message);
                 } else {
                     eprintln!("rtao: {}", terminal_text(&error.message));
                 }
             }
-            ExitCode::from(error.code)
+            ExitCode::from(cancel.exit_code(error.code))
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod interrupt_tests {
+    use super::*;
+
+    struct Dropped(Option<tokio::sync::oneshot::Sender<()>>);
+    impl Drop for Dropped {
+        fn drop(&mut self) {
+            if let Some(sender) = self.0.take() {
+                let _ = sender.send(());
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn invocation_watcher_is_aborted_on_normal_completion() {
+        let cancel = TerminalCancel::default();
+        let receiver_cancel = cancel.clone();
+        let (started, ready) = tokio::sync::oneshot::channel();
+        let (dropped, finished) = tokio::sync::oneshot::channel();
+        let guard = Dropped(Some(dropped));
+        let watcher = InterruptWatcher::spawn(async move {
+            let _guard = guard;
+            let _ = started.send(());
+            std::future::pending::<()>().await;
+            receiver_cancel.cancel();
+        });
+        ready.await.unwrap();
+        drop(watcher);
+        tokio::time::timeout(std::time::Duration::from_secs(2), finished)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!cancel.is_cancelled());
     }
 }

@@ -114,7 +114,6 @@ fn read_key_byte(io: &mut impl MaskedIo, byte: &mut [u8; 1]) -> io::Result<usize
     // ISIG is disabled, so interruption must apply to every consumed byte,
     // including a byte swallowed while recognizing an escape sequence.
     if count != 0 && byte[0] == b'\x03' {
-        io.cancel();
         return Err(io::ErrorKind::Interrupted.into());
     }
     Ok(count)
@@ -215,6 +214,11 @@ fn run_terminal(
     })?;
     let result = io.begin().and_then(|()| edit(io, feedback));
     let restored = io.restore();
+    if matches!(&result, Err(error) if error.kind() == io::ErrorKind::Interrupted) {
+        // Physical Ctrl-C is latched only after owned restoration was attempted,
+        // including when its error must remain the primary diagnostic.
+        io.cancel();
+    }
     let newline = io.echo("\n");
     if let Err(error) = restored {
         return Err(MaskedFailure {
@@ -676,6 +680,10 @@ mod tests {
             self.cancel.check_io()
         }
         fn cancel(&self) {
+            assert!(
+                self.operations.contains(&"restore"),
+                "physical abort published before restoration"
+            );
             self.cancel.cancel();
         }
         fn begin(&mut self) -> io::Result<()> {
@@ -820,6 +828,7 @@ mod tests {
             let mut terminal = FakeIo::with_input(b"a\x03unused");
             terminal.read_error = read_error;
             let error = failure(&mut terminal);
+            assert!(terminal.cancel.is_cancelled());
             assert_eq!(error.error.kind(), io::ErrorKind::Interrupted);
             assert!(!error.may_fallback);
             assert!(terminal.operations.ends_with(&["restore", "newline"]));

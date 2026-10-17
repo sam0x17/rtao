@@ -2020,6 +2020,7 @@ fn signer_address_for_backend(
         output: ctx.output.clone(),
         passwords: ctx.passwords.clone(),
         terminal: ctx.terminal.clone(),
+        interruption: ctx.interruption.clone(),
     };
     let resolved = selected.external_signer_address()?;
     if selected

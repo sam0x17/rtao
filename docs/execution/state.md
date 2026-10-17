@@ -31,14 +31,21 @@ source identities. The 753,263-byte main log has SHA256
 `998aa1af35b6fbbb46cb4e94a9023f364c0875b49346b7f5a5d8d8e88b21a87b`;
 its raw bytes were inspected in memory and not retained.
 
-Newer reviewed source through `333a8a5` remains outside this result. It adds
+Newer reviewed client source remains outside this result. It adds
 raised diagnostic metadata, endpoint-secret protection in errors and shareable
 commands, actual carrier transport narration, retained included receipts after
 registration completion errors, opt-in terminal cancellation, and e2e-backed
-Docify examples. These changes add two ordinary test functions, so the next
-expected inventory is **3,198 tests and four skips**. Central SIGINT coordination
-remains unfinished; the terminal primitive alone installs no
-signal handler. M4-S5 remains open pending execution of its three source repairs.
+Docify examples. The subsequent invocation coordinator connects terminal and
+async cancellation, registers SIGINT only in main, closes acquired clients and
+retains exact started work through receipt hooks and signer release. Original
+results survive; a separate latch supplies final status 130 and suppresses
+successful replay. Independent source review finds no concrete defect; real
+signal/terminal behavior and hosted execution remain unverified. Five new
+coordinator tests bring the expected inventory to **3,203 tests and four skips**.
+The existing native-password test now joins public wallet resolution to the
+actual adapter with an injected process runner, covering lazy source precedence,
+exact argv, explicit dialog fallback and redacted errors. No real native process
+runs. M4-S5 remains open pending execution of its three source repairs.
 
 Lock-only hosted [38987915743](https://github.com/sam0x17/rtao/actions/runs/38987915743)
 succeeds at exact `9557fc0dcaa8b6752d448e8db32a718d5aefd367`. Independent
