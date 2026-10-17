@@ -222,7 +222,7 @@ notes = "Source reconciliation 2026-10-15: this exact authenticated source contr
 
 [[file]]
 py = "pallets/subtensor/src/subnets/serving.rs"
-rs = ["rtao_neuron::publisher::{AxonConfig,AxonPublisher}","rtao_intents::serving::{ServeAxon,ServeAxonTls,ServePrometheus,ResetAxon}","rtao_runtime::models::{AxonInfo,PrometheusInfo,NeuronCertificate}"]
+rs = ["rtao_neuron::publisher::{AxonConfig,AxonPublisher}","rtao_intents::serving::{ServeAxon,ServeAxonTls,ServePrometheus,ResetAxon}"]
 kind = "ported"
 synced_blob = "867c497710872a1226ebd6b5a95f111fd02a9ca2"
 synced_tag = "v478"
@@ -231,7 +231,7 @@ notes = "Source reconciliation 2026-10-16 covers all 12 functions and the client
 
 [[file]]
 py = "pallets/subtensor/src/subnets/subnet.rs"
-rs = ["crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)", "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)", "crates/rtao-runtime/src/generated/{calls,storage,events}.rs (metadata-derived client surfaces)"]
+rs = ["crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)", "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)"]
 kind = "ported"
 synced_blob = "293d3cd0ea578bc091c7f282357843d81246be8e"
 synced_tag = "v478"
@@ -240,7 +240,7 @@ notes = "Source reconciliation 2026-10-16 after a complete 688-line disposition:
 
 [[file]]
 py = "pallets/subtensor/src/subnets/weights.rs"
-rs = ["crates/rtao-neuron/src/weights.rs", "crates/rtao-neuron/src/weights/{reveal,submit}.rs", "crates/rtao-intents/src/weights (Python-derived preparation contracts)", "crates/rtao-runtime/src/generated/{calls,storage,events}.rs (metadata-derived client surfaces)"]
+rs = ["crates/rtao-neuron/src/weights.rs", "crates/rtao-neuron/src/weights/{reveal,submit}.rs"]
 kind = "ported"
 synced_blob = "2f8569bc0a877de50d478ef46489f2966398b48e"
 synced_tag = "v478"
@@ -258,7 +258,7 @@ notes = "Full 1113-line source disposition through 9af5324: owner planning mirro
 
 [[file]]
 py = "pallets/subtensor/src/utils/rate_limiting.rs"
-rs = ["rtao_intents::hyperparameters::{HyperparamPlanner,owner_rate_key}","rtao_catalog::owner_map::{OWNER_HYPERPARAMETERS,OWNER_OPERATION_RULES,OwnerCooldown,OwnerRateKind}","rtao_catalog::rt::rate_limits","xtask::extract::resolved::{chain,owner_map} (scoped source projections)"]
+rs = ["rtao_intents::hyperparameters::{HyperparamPlanner,owner_rate_key}","vendor/upstream/extracted/owner_map.json (selected owner policy source projection)","vendor/upstream/extracted/chain_rules.json (selected production/fast rate-limit projection)"]
 kind = "ported"
 synced_blob = "998a036dd6f9e8cadcf9275a80f9f5772c9246fb"
 synced_tag = "v478"
