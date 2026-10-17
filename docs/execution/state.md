@@ -17,7 +17,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## M10 implementation, 2026-10-17
 
 At the user's request to work through the entire plan, optional M10 is
-implemented in source at `d59efdd` through `277095e` (not yet pushed); see
+implemented at `d59efdd` through `3479cdf`, all pushed to `main`; see
 [M10 execution record](m10.md). Four new crates: `rtao-compat-synapse`
 (M10-01), `rtao-compat-epistula` (M10-02), `rtao-transport-quic` (M10-03)
 and `rtao-remote-signer` (M10-04). The facade adds `compat-synapse`,
@@ -38,12 +38,26 @@ Epistula all four stages against the BitMind and Apex Python references
 58/58; remote signer Python client to Rust daemon 10/10 and Rust client to
 Python peer 2/2.
 
-Pending hosted execution: the `pr.yml` dispatch input `m10_interop=true`
-jobs `m10-interop` and `remote-signer-localnet`. The latter carries M10 exit
-check 3 (a localnet transfer signed through the reference server, which must
-refuse replayed and tampered requests); `workstation` has no Docker, so it has
-no result yet. Ordinary hosted checks for the M10 commits are also pending.
-M10 steps remain unchecked in PLAN.md until that evidence exists.
+Hosted evidence at `3479cdfd41c14cc5c87dd9034d25bdd097ce395f`:
+
+- Ordinary [run 39027391242](https://github.com/sam0x17/rtao/actions/runs/39027391242):
+  all six required jobs (check, features, supply, msrv, no-host, semver)
+  succeed; 3,386 tests pass, none fail, five are skipped; doctests and docs
+  pass (exit check 4, C1-C7).
+- Dispatch [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084)
+  (`pr.yml` with `m10_interop=true`): job `m10-interop` passes Synapse
+  interop against `bittensor==10.5.0` (Rust Dendrite to Python Axon 39
+  checks, Python Dendrite to Rust Axon 37, Python-to-Python 37, Rust-to-Rust
+  39; exit check 1), all Epistula stages against the BitMind and Apex
+  references (gobt by vectors only), QUIC interop against btlightning's
+  Python bindings built at `53c090b` with 56/56 including streaming (exit
+  check 2) and remote-signer interop. Job `remote-signer-localnet` passes
+  `remote_signer_signs_a_localnet_transfer_and_refuses_replay_and_tamper`
+  and reports "remote-signer localnet exit check: ok" (exit check 3).
+
+All four M10 exit checks pass and M10-01 to M10-04 are checked in PLAN.md.
+The whole plan, including optional M10, is complete: 127/127 active M0-M9
+steps plus M10's four.
 
 `workstation`'s host CPU faults under load on CPUs 4, 5, 12 and 13;
 AGENTS.md pins local work to other cores. CI hardware is authoritative.

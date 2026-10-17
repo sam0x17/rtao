@@ -3934,13 +3934,15 @@ body signature, and inconsistent requests by the re-derivation (`422 tampered_re
 (feature `server-bin`) reads a TOML configuration with secrets taken only from environment variables, serves TLS or
 loopback HTTP, and bounds every connection. Interop: a Python client using bittensor-wallet keys against the Rust daemon
 10/10, and the Rust client against a Python peer 2/2. The localnet exit check (sign and submit a localnet transfer, and
-refuse replayed and tampered requests) runs in the hosted job `remote-signer-localnet`; its result is pending hosted
-execution.
+refuse replayed and tampered requests) runs in the hosted job `remote-signer-localnet` and passed in
+[run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) at `3479cdf`.
 
 **Hosted interop.** `.github/workflows/pr.yml` takes a `workflow_dispatch` input `m10_interop` that runs `m10-interop`
 (`ci/interop/m10-hosted.sh`, with hash-pinned Python environments and pinned upstream files) and
-`remote-signer-localnet` (`ci/interop/remote-signer/localnet.sh`). Neither has run yet; the interop counts above come
-from local runs on workstation. `NOTICE` carries the MIT attributions (bittensor v10.5.0, btwallet v4.1.0, BitMind, Apex,
+`remote-signer-localnet` (`ci/interop/remote-signer/localnet.sh`). Both passed in [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) at
+`3479cdf`: Synapse against `bittensor==10.5.0` (39, 37, 37 and 39 checks), all Epistula stages against the BitMind and
+Apex references, btlightning's Python bindings 56/56 including streaming, and the localnet exit check. The other interop
+counts above come from local runs on workstation. `NOTICE` carries the MIT attributions (bittensor v10.5.0, btwallet v4.1.0, BitMind, Apex,
 gobt, btlightning) and the Apache-2.0 polkadot-sdk SS58 decoder.
 
 ---
@@ -6127,7 +6129,7 @@ divergences. Classes:
 | D-028 | `result.chain_error_from_dispatch (nested module errors)` | resolved through the package's generated table (`PY/result.py:636-656`) | resolved through the block's runtime, as top-level errors are (§4.7) | improved | `rtao_client::nested_module_receipt::every_nested_module_wrapper_uses_supplied_blocks_parent_runtime_after_upgrade` | Active source and independent review; hosted validation pending; no new filing |
 | D-029 | `btcli tools / list_tools` | 9 keys per tool (`PY/intents/registry.py:43-66`) | adds `rust {type, role, output, cli}` | addition | `rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_83_ops`; `rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata` | Active source; hosted validation pending; no new filing |
 | D-030 | `btcli tx` | no era flag (period 128, `PY/settings.py:22`) | `--period <n>` | addition | `rtao_cli::generated_commands::generated_transfer_submits_real_semantic_bytes_hooks_and_requested_period`; `rtao_cli::generated_commands::invalid_period_refuses_before_unlock_and_any_submission` | Active source; hosted validation pending; no new filing |
-| D-031 | --signer | wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`) | adds `remote` (M10 `RemoteSigner` in `rtao-remote-signer`, CLI feature `remote-signer`, §6.5, §7.5) | addition | `rtao_remote_signer::server::s2_a_verbatim_replay_is_refused_by_the_nonce_store`; `rtao_remote_signer::server::s3_tampering_in_transit_breaks_the_btauth_signature`; `rtao_cli::signer_backends::native::remote_tests::remote_backend_discovers_acquires_and_signs_through_a_loopback_server` (full list in `parity/divergences.toml`) | Active source; local tests only; the hosted `remote-signer-localnet` exit check is pending; no new filing |
+| D-031 | --signer | wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`) | adds `remote` (M10 `RemoteSigner` in `rtao-remote-signer`, CLI feature `remote-signer`, §6.5, §7.5) | addition | `rtao_remote_signer::server::s2_a_verbatim_replay_is_refused_by_the_nonce_store`; `rtao_remote_signer::server::s3_tampering_in_transit_breaks_the_btauth_signature`; `rtao_cli::signer_backends::native::remote_tests::remote_backend_discovers_acquires_and_signs_through_a_loopback_server` (full list in `parity/divergences.toml`) | Active; the localnet exit check passed in hosted `remote-signer-localnet` ([run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084)); no new filing |
 | D-032 | btauth server adapter | the recipe applies policy after `verify`, so a replayed request from a denied hotkey gets 401 (`signed-requests.mdx:143-156`) | authenticate → policy → commit → limit: the same request gets 403; `Verifier::verify` keeps Python's order (§7.2) | addition | `rtao_btauth::server::authentication_policy_commit_limit_order_protects_capacity_and_tokens`; `rtao_btauth::server::replay_does_not_spend_limiter_tokens`; `rtao_btauth::conformance::authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_replay_last` | Active source; hosted validation pending; no new filing |
 | D-033 | `timelock.encrypt` | `reveal_in`, `reveal_at` or `reveal_round` | adds `Reveal::InBlocks(n)` (§9.8) | addition | `timelock_reveal_in_blocks` | — |
 | D-034 | `multisig_approve` plan | sends a hash-only `approve_as_multi` at the threshold without comment | same call, plus the warning "this approval cannot execute the call; send multisig_execute" (§3.12) | addition | `approve_at_threshold_warns` | — |
