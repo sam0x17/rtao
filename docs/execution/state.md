@@ -16,6 +16,48 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## Current client checkpoint, 2026-10-16
 
+Hosted [38984859167](https://github.com/sam0x17/rtao/actions/runs/38984859167)
+passes at exact `892aa9d007a7ee43b99f31fcaaca37ed75eb75da`: **3,196 tests
+passed, zero failed, four skipped**, nine doctests across 19 suites, successful
+documentation upload and all six required jobs. All eight failures from
+`28f00a5` have exact qualified PASS records, including all seven stack-overflow
+cases on normal stacks and the saved registration cost disclosure. This
+checkpoint also executes the typed password-help and unknown-fate output fixes.
+
+The bounded `client-3196-892aa9d-checkpoint.json` is 469,793 bytes, SHA256
+`80b4f5f3db680a9b298bff207638107e07e6acfeb6c7bb768cd14a4326b47372`.
+It authenticates all 3,196 unique qualified PASS records and 167 committed
+source identities. The 753,263-byte main log has SHA256
+`998aa1af35b6fbbb46cb4e94a9023f364c0875b49346b7f5a5d8d8e88b21a87b`;
+its raw bytes were inspected in memory and not retained.
+
+Newer reviewed source through `333a8a5` remains outside this result. It adds
+raised diagnostic metadata, endpoint-secret protection in errors and shareable
+commands, actual carrier transport narration, retained included receipts after
+registration completion errors, opt-in terminal cancellation, and e2e-backed
+Docify examples. These changes add two ordinary test functions, so the next
+expected inventory is **3,198 tests and four skips**. Central SIGINT coordination
+is still an unapplied proposal; the terminal primitive alone installs no
+signal handler. M4-S5 remains open pending execution of its three source repairs.
+
+The new testkit development edge uses already pinned Docify 0.2.9. Its lock
+edge must be resolved in bounded hosted CI and reviewed before adopting it.
+Dependency and divergence reports then need hosted refresh: source map stays
+322/357 reconciled with 35 pending; the divergence register is 76 while the
+last generated matrix records 73. Source preparation uses a skip-CI push so
+ordinary locked gates do not start with known stale locks/reports. No local
+Cargo, codegen, build or test runs. Local `target/` remains absent.
+
+The current green run accepts none of the newer behavior, held map proposals,
+M4-S5, M2-S02 or later milestones. M0/M1 and previously accepted individual
+steps retain their recorded evidence. The pending M2-S02 dependency/risk
+decision is unchanged; no repeat question or inference of approval is made.
+
+### Earlier narration/display checkpoints (historical)
+
+The following records describe prior states; live/uncommitted wording belongs
+to those checkpoints and is superseded by the current result above.
+
 The latest full run, [38979569522](https://github.com/sam0x17/rtao/actions/runs/38979569522),
 at `4b9d0f4ae2c14cdfb87dc5d2881a9c8955f063cd` finishes with **3,195 passed,
 one failed and four skipped**. All five supporting jobs pass, including
