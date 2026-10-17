@@ -1169,7 +1169,13 @@ async fn real_execution_unlocks_once_and_renders_one_canonical_receipt() -> Test
                 } else {
                     state.queue_reply(
                         "author_submitAndWatchExtrinsic",
-                        rtao_testkit::Reply::error(1010, "Invalid Transaction: Payment", None),
+                        rtao_testkit::Reply::error(
+                            1010,
+                            "Invalid Transaction",
+                            Some(json!(
+                                "Inability to pay some fees, e.g. because account balance is too low"
+                            )),
+                        ),
                     );
                 }
                 Ok(())
@@ -2804,7 +2810,13 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
                         state.seed_python("MevShield", "NextKey", &[], json!(vec![0u8; 1184]))?;
                         state.queue_reply(
                             "author_submitAndWatchExtrinsic",
-                            rtao_testkit::Reply::error(1010, "Invalid Transaction: Payment", None),
+                            rtao_testkit::Reply::error(
+                                1010,
+                                "Invalid Transaction",
+                                Some(json!(
+                                    "Inability to pay some fees, e.g. because account balance is too low"
+                                )),
+                            ),
                         );
                         Ok::<_, rtao::core::CoreError>(())
                     })
@@ -2817,7 +2829,13 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
                 }
                 state.queue_reply(
                     "author_submitAndWatchExtrinsic",
-                    rtao_testkit::Reply::error(1010, "Invalid Transaction: Payment", None),
+                    rtao_testkit::Reply::error(
+                        1010,
+                        "Invalid Transaction",
+                        Some(json!(
+                            "Inability to pay some fees, e.g. because account balance is too low"
+                        )),
+                    ),
                 );
                 Ok(())
             })?;
@@ -3298,7 +3316,10 @@ async fn saved_semantic_identity_error_stays_primary_when_source_close_also_fail
             .message
             .contains("does not match the reviewed approval member")
     );
-    assert!(error.help.is_none());
+    assert_eq!(
+        error.help.as_deref(),
+        Some("post-submission cleanup also failed: fixture close failed")
+    );
     assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
     assert_eq!(
         *factory.releases.lock().map_err(|_| "releases")?,
