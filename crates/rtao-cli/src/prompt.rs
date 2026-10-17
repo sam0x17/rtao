@@ -1291,7 +1291,15 @@ impl PromptHistory {
     }
 }
 fn command_line(argv: &[String], answers: &[String], drop_dry: bool) -> String {
+    enum ReplayNetwork {
+        Named {
+            position: usize,
+            arguments: Vec<String>,
+        },
+        Private(&'static str),
+    }
     let mut tokens = Vec::new();
+    let mut replay_network = None;
     if let Some(program) = argv.first() {
         tokens.push(
             std::path::Path::new(program)
@@ -1303,6 +1311,32 @@ fn command_line(argv: &[String], answers: &[String], drop_dry: bool) -> String {
     }
     let mut arguments = argv.iter().skip(1).chain(answers);
     while let Some(token) = arguments.next() {
+        let network = if matches!(token.as_str(), "--network" | "-n") {
+            arguments
+                .next()
+                .map(|value| (value.as_str(), vec![token.clone(), value.clone()]))
+        } else if let Some(value) = token.strip_prefix("--network=") {
+            Some((value, vec![token.clone()]))
+        } else if let Some(value) = token.strip_prefix("-n=") {
+            Some((value, vec![token.clone()]))
+        } else {
+            token
+                .strip_prefix("-n")
+                .filter(|value| !value.is_empty())
+                .map(|value| (value, vec![token.clone()]))
+        };
+        if let Some((network, original)) = network {
+            let (environment, _) = shareable_network(network);
+            replay_network = Some(if environment.is_empty() {
+                ReplayNetwork::Named {
+                    position: tokens.len(),
+                    arguments: original,
+                }
+            } else {
+                ReplayNetwork::Private(environment)
+            });
+            continue;
+        }
         let (flag, inline_value) = token
             .split_once('=')
             .map_or((token.as_str(), false), |(flag, _)| (flag, true));
@@ -1324,11 +1358,24 @@ fn command_line(argv: &[String], answers: &[String], drop_dry: bool) -> String {
             tokens.push(token.clone());
         }
     }
-    tokens
+    let environment = match replay_network {
+        Some(ReplayNetwork::Named {
+            position,
+            arguments,
+        }) => {
+            let position = position.min(tokens.len());
+            tokens.splice(position..position, arguments);
+            ""
+        }
+        Some(ReplayNetwork::Private(environment)) => environment,
+        None => "",
+    };
+    let command = tokens
         .iter()
         .map(|token| shell_quote(token))
         .collect::<Vec<_>>()
-        .join(" ")
+        .join(" ");
+    format!("{environment}{command}")
 }
 /// Keep named-network hints exact; require private endpoints from the operator.
 pub(crate) fn shareable_network(network: &str) -> (&'static str, Option<&str>) {
@@ -1900,6 +1947,59 @@ mod tests {
             "rtao wallet regen-coldkey --wallet-password-file public-password-file --wallet visible --netuid 2"
         );
         assert!(!history.flush_hint(&argv, 0).unwrap().contains("private"));
+    }
+
+    #[test]
+    fn replay_requires_private_network_from_the_environment_in_every_supported_form() {
+        let private = "wss://rpc-user:rpc-password@private.invalid/secret-path?token=secret-query";
+        let guard =
+            r#"BT_NETWORK="${BT_NETWORK:?set BT_NETWORK to your configured RPC endpoint}" "#;
+        for arguments in [
+            vec!["--network".into(), private.into()],
+            vec![format!("--network={private}")],
+            vec!["-n".into(), private.into()],
+            vec![format!("-n={private}")],
+            vec![format!("-n{private}")],
+        ] {
+            let mut argv = vec!["rtao".into()];
+            argv.extend(arguments);
+            argv.extend(["tx".into(), "transfer".into()]);
+            let mut history = PromptHistory::default();
+            history.record_answers(vec!["--netuid".into(), "2".into()]);
+            let replay = history.replay_command(&argv);
+            assert_eq!(replay, format!("{guard}rtao tx transfer --netuid 2"));
+            for secret in [
+                "rpc-user",
+                "rpc-password",
+                "private.invalid",
+                "secret-path",
+                "secret-query",
+            ] {
+                assert!(!replay.contains(secret));
+            }
+            assert!(
+                history
+                    .flush_hint(&argv, 0)
+                    .expect("success hint")
+                    .contains(&format!("{guard}rtao tx transfer --netuid 2"))
+            );
+        }
+        for (arguments, expected) in [
+            (vec!["--network", "finney"], "--network finney"),
+            (vec!["--network=test"], "--network=test"),
+            (vec!["-n", "local"], "-n local"),
+            (vec!["-ntest"], "-ntest"),
+        ] {
+            let argv = [vec!["rtao"], arguments, vec!["subnets", "list"]]
+                .concat()
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                PromptHistory::default().replay_command(&argv),
+                format!("rtao {expected} subnets list")
+            );
+        }
     }
 
     #[test]

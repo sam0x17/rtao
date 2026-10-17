@@ -212,6 +212,8 @@ fn finish_keeps_public_newlines_inside_escaped_hint_lines_and_omits_secret_flags
     let output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
     let original = [
         "rtao",
+        "--network",
+        "wss://rpc-user:rpc-password@private.invalid/secret-path?token=secret-query",
         "wallet",
         "regen-coldkey",
         "--mnemonic",
@@ -228,6 +230,18 @@ fn finish_keeps_public_newlines_inside_escaped_hint_lines_and_omits_secret_flags
     assert!(hints.contains(r"public\nforged\x1b[2J"));
     assert!(hints.contains(r"native sdk expression\nforged"));
     assert!(!hints.contains("private-phrase") && !hints.contains("private-json"));
+    assert!(hints.contains(
+        r#"BT_NETWORK="${BT_NETWORK:?set BT_NETWORK to your configured RPC endpoint}" rtao wallet"#
+    ));
+    for secret in [
+        "rpc-user",
+        "rpc-password",
+        "private.invalid",
+        "secret-path",
+        "secret-query",
+    ] {
+        assert!(!hints.contains(secret));
+    }
     assert!(!hints.contains("bt.Subtensor"));
     assert!(sink.text(Stream::Stdout)?.is_empty());
     Ok(())
