@@ -735,7 +735,16 @@ async fn subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_r
         .err()
         .ok_or("saved review sentinel")?;
     assert_eq!(error.message, "review finished sentinel");
-    assert!(sink.text(Stream::Stdout)?.contains("2.000000000 TAO"));
+    let card = sink.text(Stream::Stdout)?;
+    let transaction = card
+        .split_once("\nTransaction\n")
+        .ok_or("Transaction review missing")?
+        .1;
+    assert!(
+        transaction
+            .lines()
+            .any(|line| line.split_whitespace().eq(["cost", "τ2.000000000"]))
+    );
     assert_eq!(factory.acquired.load(Ordering::SeqCst), 0);
     assert!(
         member_keys

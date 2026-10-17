@@ -1112,7 +1112,9 @@ impl AppContext {
             progress,
             ..Default::default()
         };
-        let operation = async {
+        // Keep the SDK future out of this frame and both progress branches;
+        // composed client operations otherwise duplicate its large inline state.
+        let operation = Box::pin(async {
             if acquired.is_some() {
                 let actual = match role {
                     SignerRole::Hotkey => signing.hotkey_address(),
@@ -1155,7 +1157,7 @@ impl AppContext {
                 executor.execute_dyn(intent, signing, &opts).await
             }
             .map_err(CliError::transaction)
-        };
+        });
         let (result, progress_error) = match progress_receiver {
             Some(receiver) => registration::with_progress(&self.output, receiver, operation).await,
             None => (operation.await, None),
