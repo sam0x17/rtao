@@ -3,6 +3,20 @@
 schema = 1
 
 [[divergences]]
+id = "D-074"
+upstream_symbol = "bittensor.cli.context.AppContext.run connection diagnostics"
+python_behavior = "Formats the configured network string directly into the could-not-reach diagnostic, including a custom RPC URL."
+rtao_behavior = "Preserves named networks but renders custom RPC network URLs through the existing safe_endpoint formatter, excluding user information, path, query and fragment. Routing still uses the original configured endpoint. Human, quiet and JSON diagnostics share this sanitized label."
+rationale = "A configured RPC URL can carry authentication credentials or tokens. Terminal escaping does not conceal ordinary secret bytes; diagnostic labels must not disclose them."
+decision = "PLAN.md execution rule 5 confidentiality correction; M4-S5 independent security review and actual network resolution source inspected on 2026-10-16"
+status = "active"
+class = "stricter"
+milestone = "M4"
+pinning_tests = ["rtao_cli::context_contract::cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed"]
+upstream_report = "Native source repair and authored credential-bearing DNS/IPv6 endpoint fixtures; hosted execution pending. Related shareable-command sinks remain open in M4-S5. No new upstream filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L2039-L2043"
+
+[[divergences]]
 id = "D-073"
 upstream_symbol = "bittensor.cli.context.AppContext._maybe_offer_root_claim"
 python_behavior = "Reads leftover root yield for the configured wallet's public coldkey, even when an external signer or proxy dispatched the unstake for another account."

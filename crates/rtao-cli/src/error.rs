@@ -108,6 +108,11 @@ impl CliError {
         }
         if matches!(self.diagnostic, Some(CliDiagnostic::Connection)) {
             self.diagnostic = None;
+            let network = if network.starts_with("ws://") || network.starts_with("wss://") {
+                rtao_rpc::policy::safe_endpoint(network)
+            } else {
+                network.to_owned()
+            };
             self.message = format!("could not reach {network}: {}", self.message);
             let retry = "check the endpoint and network connection, then retry";
             self.help = Some(match self.help.take() {
