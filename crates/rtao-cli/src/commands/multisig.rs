@@ -66,8 +66,7 @@ fn input(error: impl std::fmt::Display) -> CliError {
 fn prompt_error(error: PromptError) -> CliError {
     CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 fn option(id: &'static str, long: &'static str, help: &'static str) -> Arg {

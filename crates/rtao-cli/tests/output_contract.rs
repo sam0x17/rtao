@@ -1048,6 +1048,100 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
     )).as_ref()));
     assert!(!text.contains("older (5old)"));
     assert_safe_human_text(&text, &["chain-name", "chain-subnet"]);
+
+    // Raised direct and nested chain failures keep the original explicit code,
+    // name, description, docs and later recovery additions at final rendering.
+    let mut classified = error.clone();
+    classified.code = rtao_catalog::ErrorCode::Expired;
+    for cause in [
+        rtao::tx::TxError::Chain(classified.clone()),
+        rtao::tx::TxError::Intent(rtao::tx::IntentError::Chain(classified.clone())),
+    ] {
+        let mut cli = rtao_cli::error::CliError::from(cause);
+        cli.message = format!("operation context: {}", cli.message);
+        cli.help = Some(format!(
+            "{}; the transaction was already submitted as 12-3; inspect that result before retrying",
+            cli.help.as_deref().ok_or("chain remediation")?,
+        ));
+        let mut expected = classified
+            .clone()
+            .with_remediation(cli.help.as_deref().ok_or("composed recovery help")?);
+        expected.message = cli.message.clone();
+        for quiet in [false, true] {
+            let (machine, sink) = capture(true, quiet);
+            machine.cli_error(&cli)?;
+            assert_eq!(
+                serde_json::from_str::<Value>(&sink.text(Stream::Stderr)?)?,
+                expected.to_json()
+            );
+            assert!(sink.text(Stream::Stdout)?.is_empty());
+            let (human, sink) = capture(false, quiet);
+            human.cli_error(&cli)?;
+            let text = sink.text(Stream::Stderr)?;
+            assert!(text.contains("error[expired]: operation context:"));
+            assert!(text.contains("HotKeyNotRegisteredInSubNet"));
+            assert!(text.contains("the transaction was already submitted as 12-3"));
+            assert!(text.contains(expected.docs_url().as_deref().ok_or("chain docs")?));
+            assert!(text.contains(&diagnostic(
+                expected.description().ok_or("chain description")?
+            )));
+        }
+        cli.message.clear();
+        let (output, sink) = capture(true, false);
+        output.cli_error(&cli)?;
+        assert!(sink.text(Stream::Stderr)?.is_empty());
+    }
+    for quiet in [false, true] {
+        let policy =
+            rtao_cli::error::CliError::from(rtao::tx::TxError::Policy(rtao::tx::PolicyError {
+                violations: vec!["policy fixture".into()],
+            }));
+        let docs = format!("{}/errors/policy-violation", rtao_catalog::py::DOCS_URL);
+        let help = rtao_catalog::py::REMEDIATION
+            .iter()
+            .find_map(|(code, help)| {
+                (*code == rtao_catalog::ErrorCode::PolicyViolation).then_some(*help)
+            })
+            .ok_or("policy remediation")?;
+        let (machine, sink) = capture(true, quiet);
+        machine.cli_error(&policy)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stderr)?)?,
+            json!({"error":"policy fixture","help":help,"see":docs}),
+        );
+        let (human, sink) = capture(false, quiet);
+        human.cli_error(&policy)?;
+        let text = sink.text(Stream::Stderr)?;
+        assert!(text.contains("error: policy fixture"));
+        assert!(text.contains(help));
+        assert!(text.contains(&docs));
+
+        let hash = rtao_rpc::H256::from([37; 32]);
+        let unknown = rtao_cli::error::CliError::from(rtao::tx::TxError::Rpc(
+            rtao_rpc::RpcError::FateUnknown { hash },
+        ));
+        assert!(unknown.diagnostic.is_none());
+        let (output, sink) = capture(true, quiet);
+        output.cli_error(&unknown)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stderr)?)?,
+            json!({"error":unknown.message,"help":unknown.help}),
+        );
+        assert!(
+            unknown
+                .help
+                .as_deref()
+                .ok_or("unknown fate help")?
+                .contains(&hex::encode(hash.0))
+        );
+        let plain = rtao_cli::error::CliError::failure("plain fixture").with_help("plain help");
+        let (output, sink) = capture(true, quiet);
+        output.cli_error(&plain)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stderr)?)?,
+            json!({"error":"plain fixture","help":"plain help"}),
+        );
+    }
     Ok(())
 }
 

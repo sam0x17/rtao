@@ -1997,8 +1997,7 @@ fn signing_rounds(
     })
     .map_err(|error| CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     })?;
     drop(terminal);
     member(&selected, false, true).map(|member| vec![member])
@@ -2073,8 +2072,7 @@ fn prompt_member_backend(
     })
     .map_err(|error| CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     })?;
     drop(terminal);
     if let Some(entry) = ctx

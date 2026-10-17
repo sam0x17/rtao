@@ -69,8 +69,7 @@ fn run_doctor(mut args: impl Iterator<Item = OsString>) -> Result<(), CliError> 
 fn fast_path_parse_error(error: clap::Error) -> CliError {
     CliError {
         code: if error.use_stderr() { 2 } else { 0 },
-        message: error.to_string(),
-        help: None,
+        ..CliError::failure(error.to_string())
     }
 }
 
@@ -707,13 +706,7 @@ async fn run() -> Result<(), CliError> {
         && !error.message.is_empty()
     {
         app.output
-            .error(
-                &error.message,
-                DiagnosticContext {
-                    help: error.help.as_deref(),
-                    ..Default::default()
-                },
-            )
+            .cli_error(error)
             .map_err(|e| CliError::failure(e.to_string()))?;
     }
     application::finish_prompts(

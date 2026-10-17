@@ -449,8 +449,7 @@ pub(super) async fn run_local(
         } else {
             Err(CliError {
                 code: 1,
-                message: String::new(),
-                help: None,
+                ..crate::error::CliError::failure(String::new())
             })
         };
     }
