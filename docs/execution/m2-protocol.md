@@ -3,9 +3,9 @@
 ## Current source and scope
 
 Current work follows [PLAN.md Q30](../../PLAN.md#current-execution-scope-q30-2026-10-14): client
-source and bounded free `ubuntu-latest` checks. M2-S02 remains open and
-unaccepted, so M2-26 and the M2 milestone exit remain open. The record below
-preserves earlier source snapshots and their measured results.
+source and bounded free `ubuntu-latest` checks. M2-S02 is fixed by the
+combined core patch at fork rev `626f2a4f`, and M2-26 is complete. The record
+below preserves earlier source snapshots and their measured results.
 
 ## Historical preparation and validation
 

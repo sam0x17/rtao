@@ -114,10 +114,11 @@ uses formatted scheme labels. Library code selects a typed `CryptoType`
 instead of Python's root string parsing/formatting helpers.
 
 Signer clones share the upstream keypair until the final `Arc` owner drops.
-Guarded SDK buffers do not prove erasure of all signing material: the pinned
-Ed25519 pair has no guaranteed final-drop wipe. M2-S02 remains open and
-unaccepted; dependency internals, allocator and OS copies remain outside the
-SDK's erasure guarantees.
+The pinned core stores Ed25519 signing state in a wiping
+`Zeroizing<SigningKey>` owner, so the final drop wipes the stored seed,
+expanded scalar and nonce prefix (M2-S02 is fixed). This does not cover
+allocator or OS copies, stack copies left by moving the key, short-lived values
+inside cryptographic dependencies and KDFs, or caller-owned inputs.
 
 ## Generic keyfiles
 

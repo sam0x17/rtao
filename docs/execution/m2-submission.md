@@ -15,7 +15,8 @@ closes S04 within its FakeChain limits; the earlier executor-pending note below
 is historical. It does not establish live inclusion/finality behavior.
 
 Current substantial checks belong in free `ubuntu-latest` CI under Q30. M2-S02
-remains open and unaccepted, so M2-26 and the milestone exit remain open.
+is fixed by the combined core patch at fork rev `626f2a4f`, and M2-26 is
+complete.
 
 ## Historical preparation and validation
 

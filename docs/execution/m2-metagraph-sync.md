@@ -12,7 +12,8 @@ source, so the initial M2 policy-error statement below is historical.
 
 Current checks use fixtures and fake transports in free `ubuntu-latest` CI
 under Q30. Localnet integration is optional and Q29 waives the soak. M2-S02
-remains open/unaccepted; this document accepts no M2 milestone exit.
+is fixed by the combined core patch at fork rev `626f2a4f`, and M2-26 is
+complete; this document records no separate milestone acceptance.
 
 ## Historical preparation and validation
 

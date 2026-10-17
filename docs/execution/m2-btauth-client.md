@@ -13,7 +13,8 @@ inferred from that RPC proof.
 
 Substantial validation belongs in bounded free `ubuntu-latest` CI under Q30.
 Do not restore the historical workspace, build it locally or install tools.
-M2-S02 remains open and unaccepted; the M2 milestone exit remains open.
+M2-S02 is fixed by the combined core patch at fork rev `626f2a4f`, and
+M2-26 is complete.
 
 ## Historical preparation and validation
 

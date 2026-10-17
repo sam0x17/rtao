@@ -7,8 +7,8 @@ TLS-probe source; a recipe change may justify a bounded free hosted check.
 The [validator-image workflow draft](../../.github/deferred-workflows/validator-image.yml)
 is inactive. No local image build/container, GHCR setup or deployment is
 required. Q29 waives the testnet soak and its funding/registration/host setup.
-Image execution and its container-TLS result remain unverified. M2-S02 remains
-open and unaccepted, so the M2 milestone exit remains open.
+Image execution and its container-TLS result remain unverified. M2-S02 is
+fixed by the combined core patch at fork rev `626f2a4f`, and M2-26 is complete.
 
 ## Historical preparation and validation
 

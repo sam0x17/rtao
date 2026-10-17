@@ -18,7 +18,8 @@ strict M8, source/e2e reconciliation or oracle behavioral parity.
 The oracle workflow is an inactive [draft](../../.github/deferred-workflows/oracle.yml).
 Any future refresh needs a bounded reviewed hosted entry point; no local
 container, GHCR deployment or automatic upkeep is a development prerequisite.
-M2-S02 remains open/unaccepted and the M2 milestone exit remains open.
+M2-S02 is fixed by the combined core patch at fork rev `626f2a4f`, and
+M2-26 is complete.
 
 ## Historical preparation and validation
 

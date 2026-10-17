@@ -14,6 +14,25 @@ infrastructure, scheduled, oracle and release workflows are inactive drafts
 in `.github/deferred-workflows/`. No workflow was dispatched during
 the cleanup itself. Subsequent client checkpoints use hosted CI as recorded below.
 
+## M2-26 closure, 2026-10-17
+
+Development moved to `sam-drone`. The combined core patch is now pinned at fork
+revision `626f2a4f1f67ab731c1fc3884828751496bc125d` (combined six-path diff
+SHA-256 `8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489`).
+It stores Ed25519 signing state as `Zeroizing<ed25519_zebra::SigningKey>` and
+also wipes the hard-derivation preimage and decrypted PKCS8 import copies.
+M2-S02 is fixed and the fresh M2-26 cold-reader pass is complete; see
+[M2 security](../security/m2.md#final-m2-26-security-pass-2026-10-17).
+
+Local evidence on `sam-drone`: 72 fork `bittensor-core` library tests, 250
+`rtao-core`/`rtao-core-ext`/`rtao-signer`/`rtao-wallet` tests and
+`cargo xtask pin --check` against the real fork revision pass. Compatibility
+reports were regenerated for the new core revision. Hosted CI for the closing
+commit: HOSTED_RUN_PENDING.
+
+The active M0-M9 register is **127/127 complete**. Earlier sections describe
+their own snapshots, including the 126/127 state below.
+
 ## Final client-source checkpoint, 2026-10-17
 
 Hosted [38999377082](https://github.com/sam0x17/rtao/actions/runs/38999377082)

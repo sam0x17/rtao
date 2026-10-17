@@ -10,10 +10,56 @@ twelve parser/public-view/core-differential regressions. See the
 for S01/S03/S04/S05 repairs and their execution limits. This is evidence for
 that exact source, not a new current-checkpoint or platform run.
 
-M2-S02 remains open and unaccepted: the opaque Ed25519 object lacks guaranteed
-final-drop erasure. Passing CI or wiping exported buffers does not close that
-owning boundary. M2-26 and the M2 milestone exit remain open. Substantial
-validation belongs in free hosted `ubuntu-latest` CI under Q30.
+M2-S02 is fixed by the combined core patch pinned at fork
+`sam0x17/subtensor` rev `626f2a4f1f67ab731c1fc3884828751496bc125d` (branch
+`rtao-core-patch/v478`, base v478 `850f2755bb05a3851f948489f0ab27b0645cebce`).
+Its commits are `eafe84e8` (Ledger PR #3242), `774cc3ac` (ownership repair),
+`5a43348e` (derivation correction) and `626f2a4f` (wipe the derivation preimage
+and PKCS8 import copies). The combined six-path diff SHA-256 is
+`8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489`. The stored
+Ed25519 key is `Zeroizing<ed25519_zebra::SigningKey>`; zebra 4.2.0 derives
+`Zeroize` over the seed, expanded scalar and nonce prefix, so final drop wipes
+it. Public keys and signatures are byte-identical: the RFC 8032 vector and the
+Substrate `//Alice` and `//Bob` Ed25519 vectors pass.
+
+The M2-26 final cold-reader security pass on 2026-10-17 used four independent
+fresh-context reviewers (Ed25519 erasure, signing compatibility,
+keyfile/password/redaction and patch provenance). Three skeptics verified each
+finding, and only findings with at least two confirmations were kept. Four
+low-severity findings were confirmed and repaired:
+
+- Hard-junction derivation hashed the parent seed through an unwiped SCALE
+  `using_encoded` Vec. It now uses a fixed `Zeroizing` preimage buffer with
+  identical bytes.
+- Encrypted-JSON import kept decrypted PKCS8 secrets in plain stack arrays.
+  They are now `Zeroizing`.
+- `rtao_core::keyfiles` re-exports the unrepaired upstream plaintext codec and
+  environment-password functions. The module rustdoc now documents this and
+  points users to `rtao_core::keyfile_json` and the `rtao_wallet` password
+  sources.
+- The xtask core-patch Ed25519 source guard was a substring check with a
+  tautological `needs_drop` test. It is now a syn-based structural guard over
+  every core source file. It rejects any `ed25519::Pair` type position or
+  import, requires the exact `Zeroizing<SigningKey>` owner and variant, the
+  named regression tests and vectors, and forbids the unwiped `using_encoded`
+  derivation. Fork tests `zeroize_clears_every_signing_key_secret` and
+  `hard_derivation_keeps_substrate_vectors` cover the repairs.
+
+Verifiers refuted the remaining candidates: inherited `sp_core` `from_string`
+seed copies, unnamed Copy move copies (covered by the stack-copy limit
+below), a missing Debug test for `GeneratedKey`/`RegenerateFrom` and the fuzz
+workspace's use of the unpatched core.
+
+Local evidence on sam-drone: the fork's bittensor-core library tests (72)
+pass, the rtao-core, core-ext, signer and wallet tests (250) pass, and
+`cargo xtask pin --check` passes against the real fork rev. Hosted CI for the
+final head is recorded in [state.md](state.md). M2-26 is complete.
+
+Limits remain explicit. No claim covers erasure of allocator or OS copies,
+stack copies left by moving the Copy `SigningKey`, short-lived values inside
+zebra, blake2, schnorrkel or the KDFs, or caller-owned inputs. No hardware or
+platform execution is claimed. Substantial validation belongs in free hosted
+`ubuntu-latest` CI under Q30.
 
 ## Historical preparation and validation
 
@@ -46,9 +92,10 @@ keys are ordinary JSON object keys here, following Python's semantics.
 These guards do not wipe caller-borrowed input, transferred output buffers,
 third-party KDF internals or chunks freed by earlier wallet-reader buffer
 growth. The pinned core separately zeroizes retained mnemonic and seed
-buffers. Rtao cannot wipe the opaque signing pair: the pinned Ed25519 Pair is
-Copy/Clone without a guaranteed secret wipe on Drop. M2-S02 remains open and
-unaccepted.
+buffers. At that snapshot Rtao could not wipe the opaque signing pair: the
+pinned Ed25519 Pair was Copy/Clone without a guaranteed secret wipe on Drop,
+and M2-S02 remained open and unaccepted. The current section above records its
+later fix by the combined core patch.
 Historical test results below predate the parser repair.
 
 The serving boundary also enforces approved D-017: decoded certificates over 65 bytes fail after IP validation and complete hex parsing. Ten serving tests pass on current Rust and Rust 1.89. The length error has lower priority than Python's IP and fromhex errors.

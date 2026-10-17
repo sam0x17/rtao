@@ -14,7 +14,8 @@ The current `parity/pending.toml` arrays for intents and reads are empty. The
 74/87 inventories, pending exports/divergences and matrix totals below describe
 the initial M2 snapshots; they are not the current source inventory. Full source
 checks and report generation belong in bounded free `ubuntu-latest` CI.
-M2-S02 remains open/unaccepted, so M2-26 and M2 exit remain open.
+M2-S02 is fixed by the combined core patch at fork rev `626f2a4f`, and
+M2-26 is complete.
 
 ## Historical preparation and validation
 

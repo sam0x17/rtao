@@ -393,37 +393,138 @@ fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
     Ok(())
 }
 
-fn verify_security_source_text(manifest: &str, keys: &str, encrypted_json: &str) -> Result<()> {
+// The Ed25519 erasure repair is checked structurally, so comments, aliases or
+// a second field cannot satisfy or evade it. Every Rust file of the patched
+// core is parsed; no type position may name `ed25519::Pair` (it does not wipe
+// its expanded key), the stored variant and derivation owner must hold
+// `Zeroizing<SigningKey>`, and the meaningful regressions must remain tests.
+fn verify_security_source_text(manifest: &str, sources: &[(String, String)]) -> Result<()> {
+    use syn::visit::Visit;
     ensure!(
         manifest.contains("ed25519-zebra = { version = \"4.0\", default-features = false }"),
         "core patch lost its bounded ed25519-zebra dependency"
     );
+    fn tokens(value: &impl quote::ToTokens) -> String {
+        value.to_token_stream().to_string().replace(' ', "")
+    }
+    struct PairTypes(Vec<String>);
+    impl<'ast> Visit<'ast> for PairTypes {
+        fn visit_type_path(&mut self, node: &'ast syn::TypePath) {
+            let path = tokens(&node.path);
+            if path == "Pair" || path.ends_with("ed25519::Pair") {
+                self.0.push(path);
+            }
+            syn::visit::visit_type_path(self, node);
+        }
+        fn visit_use_tree(&mut self, node: &'ast syn::UseTree) {
+            let tree = tokens(node);
+            if tree.contains("ed25519::Pair")
+                || tree.contains("ed25519::{") && tree.contains("Pair")
+            {
+                self.0.push(format!("use {tree}"));
+            }
+            syn::visit::visit_use_tree(self, node);
+        }
+    }
+    let mut keys = None;
+    let mut encrypted = None;
+    for (path, text) in sources {
+        let file = syn::parse_file(text)
+            .with_context(|| format!("core patch source does not parse: {path}"))?;
+        let mut found = PairTypes(Vec::new());
+        found.visit_file(&file);
+        ensure!(
+            found.0.is_empty(),
+            "core patch names a non-wiping Ed25519 pair type in {path}: {:?}",
+            found.0
+        );
+        if path.ends_with("src/keys/mod.rs") {
+            keys = Some((file, text));
+        } else if path.ends_with("src/keys/encrypted_json.rs") {
+            encrypted = Some(text);
+        }
+    }
+    let (keys, keys_text) = keys.context("core patch lost keys/mod.rs")?;
+    let encrypted = encrypted.context("core patch lost keys/encrypted_json.rs")?;
+    let mut stored = None;
+    let mut owner = None;
+    let mut tests = std::collections::BTreeSet::new();
+    struct Items<'a> {
+        stored: &'a mut Option<String>,
+        owner: &'a mut Option<String>,
+        tests: &'a mut std::collections::BTreeSet<String>,
+    }
+    impl<'ast> Visit<'ast> for Items<'_> {
+        fn visit_item_enum(&mut self, node: &'ast syn::ItemEnum) {
+            if node.ident == "KeypairInner" {
+                for variant in &node.variants {
+                    if variant.ident == "Ed25519" {
+                        *self.stored = Some(tokens(&variant.fields));
+                    }
+                }
+            }
+            syn::visit::visit_item_enum(self, node);
+        }
+        fn visit_item_struct(&mut self, node: &'ast syn::ItemStruct) {
+            if node.ident == "WipingEd25519Pair" {
+                *self.owner = Some(tokens(&node.fields));
+            }
+            syn::visit::visit_item_struct(self, node);
+        }
+        fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
+            if node.attrs.iter().any(|attr| attr.path().is_ident("test")) {
+                self.tests.insert(node.sig.ident.to_string());
+            }
+            syn::visit::visit_item_fn(self, node);
+        }
+    }
+    Items {
+        stored: &mut stored,
+        owner: &mut owner,
+        tests: &mut tests,
+    }
+    .visit_file(&keys);
+    ensure!(
+        stored.as_deref() == Some("(Zeroizing<SigningKey>)"),
+        "core patch stores Ed25519 signing state without the wiping owner: {stored:?}"
+    );
+    ensure!(
+        owner.as_deref() == Some("{secret:Zeroizing<SigningKey>,}"),
+        "core patch derivation owner is not exactly Zeroizing<SigningKey>: {owner:?}"
+    );
+    for test in [
+        "ed25519_signing_object_has_a_wiping_owner_and_keeps_chain_bytes",
+        "zeroize_clears_every_signing_key_secret",
+        "hard_derivation_keeps_substrate_vectors",
+    ] {
+        ensure!(
+            tests.contains(test),
+            "core patch lost Ed25519 erasure regression test {test}"
+        );
+    }
     for required in [
-        "use ed25519_zebra::{SigningKey, VerificationKey};",
-        "struct WipingEd25519Pair",
-        "secret: Zeroizing<SigningKey>",
-        "Ed25519(Zeroizing<SigningKey>)",
-        "needs_drop::<Zeroizing<SigningKey>>()",
         "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
         "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
         "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+        "88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee",
     ] {
         ensure!(
-            keys.contains(required),
-            "core patch lost Ed25519 erasure/regression guard: {required}"
+            keys_text.contains(required),
+            "core patch lost an Ed25519 compatibility vector: {required}"
         );
     }
     ensure!(
-        !keys.contains("Ed25519(ed25519::Pair)"),
-        "core patch restored the non-wiping Ed25519 signing owner"
+        !keys_text.contains(".using_encoded(sp_core::hashing::blake2_256)"),
+        "core patch derives Ed25519 junctions through an unwiped encoding buffer"
     );
     for required in [
         "WipingEd25519Pair::from_seed_slice(seed)",
         "KeypairInner::Ed25519(pair.into_secret())",
+        "Zeroizing::new([0u8; SEC_LENGTH])",
     ] {
         ensure!(
-            encrypted_json.contains(required),
-            "encrypted JSON import bypasses the wiping Ed25519 owner: {required}"
+            encrypted.contains(required),
+            "encrypted JSON import bypasses a wiping Ed25519 owner: {required}"
         );
     }
     Ok(())
@@ -434,11 +535,23 @@ fn verify_security_source(repo: &Path, rev: &str) -> Result<()> {
         String::from_utf8(git(repo, &["show", &format!("{rev}:{path}")])?)
             .with_context(|| format!("non-UTF-8 core patch source: {path}"))
     };
-    verify_security_source_text(
-        &source("sdk/bittensor-core/Cargo.toml")?,
-        &source("sdk/bittensor-core/src/keys/mod.rs")?,
-        &source("sdk/bittensor-core/src/keys/encrypted_json.rs")?,
-    )
+    let listing = String::from_utf8(git(
+        repo,
+        &[
+            "ls-tree",
+            "-r",
+            "--name-only",
+            rev,
+            "--",
+            "sdk/bittensor-core/src",
+        ],
+    )?)
+    .context("non-UTF-8 core patch file listing")?;
+    let mut sources = Vec::new();
+    for path in listing.lines().filter(|path| path.ends_with(".rs")) {
+        sources.push((path.to_owned(), source(path)?));
+    }
+    verify_security_source_text(&source("sdk/bittensor-core/Cargo.toml")?, &sources)
 }
 
 fn applied_review_tree(
@@ -1226,26 +1339,68 @@ mod tests {
         let manifest = "ed25519-zebra = { version = \"4.0\", default-features = false }";
         let keys = r#"
 use ed25519_zebra::{SigningKey, VerificationKey};
-struct WipingEd25519Pair { secret: Zeroizing<SigningKey> }
-enum KeypairInner { Ed25519(Zeroizing<SigningKey>) }
-fn check() { needs_drop::<Zeroizing<SigningKey>>(); }
-// RFC 8032
-// 9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
-// d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
-// e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b
+use sp_core::ed25519;
+struct WipingEd25519Pair { secret: Zeroizing<SigningKey>, }
+enum KeypairInner { Ed25519(Zeroizing<SigningKey>), PublicOnly }
+fn verify() -> bool { ed25519::Pair::verify(&s, m, &p) }
+const V: [&str; 4] = [
+    "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+    "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+    "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+    "88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee",
+];
+#[test] fn ed25519_signing_object_has_a_wiping_owner_and_keeps_chain_bytes() {}
+#[test] fn zeroize_clears_every_signing_key_secret() {}
+#[test] fn hard_derivation_keeps_substrate_vectors() {}
 "#;
-        let encrypted =
-            "WipingEd25519Pair::from_seed_slice(seed); KeypairInner::Ed25519(pair.into_secret());";
-        verify_security_source_text(manifest, keys, encrypted)?;
+        let encrypted = "fn f() { WipingEd25519Pair::from_seed_slice(seed); KeypairInner::Ed25519(pair.into_secret()); Zeroizing::new([0u8; SEC_LENGTH]); }";
+        let sources = |keys: &str, other: &str| {
+            vec![
+                (
+                    "sdk/bittensor-core/src/keys/mod.rs".to_owned(),
+                    keys.to_owned(),
+                ),
+                (
+                    "sdk/bittensor-core/src/keys/encrypted_json.rs".to_owned(),
+                    encrypted.to_owned(),
+                ),
+                (
+                    "sdk/bittensor-core/src/other.rs".to_owned(),
+                    other.to_owned(),
+                ),
+            ]
+        };
+        verify_security_source_text(manifest, &sources(keys, ""))?;
+        for mutant in [
+            keys.replace("Ed25519(Zeroizing<SigningKey>)", "Ed25519(ed25519::Pair)"),
+            keys.replace(
+                "Ed25519(Zeroizing<SigningKey>)",
+                "Ed25519(sp_core::ed25519::Pair)",
+            ),
+            keys.replace(
+                "Ed25519(Zeroizing<SigningKey>)",
+                "Ed25519(Zeroizing<SigningKey>, ed25519::Pair)",
+            ),
+            keys.replace("secret: Zeroizing<SigningKey>,", "secret: SigningKey,"),
+            keys.replace("fn zeroize_clears_every_signing_key_secret", "fn renamed"),
+            keys.replace("#[test] fn hard_derivation", "fn hard_derivation"),
+            keys.replace("88dc3417", "00dc3417"),
+            format!("{keys}\ntype Alias = ed25519::Pair;"),
+            format!("{keys}\nuse sp_core::ed25519::Pair as Hidden;"),
+            format!("{keys}\nfn d() {{ (a, b).using_encoded(sp_core::hashing::blake2_256); }}"),
+        ] {
+            assert!(verify_security_source_text(manifest, &sources(&mutant, "")).is_err());
+        }
         assert!(
             verify_security_source_text(
                 manifest,
-                &keys.replace("Ed25519(Zeroizing<SigningKey>)", "Ed25519(ed25519::Pair)"),
-                encrypted,
+                &sources(keys, "struct Elsewhere { pair: sp_core::ed25519::Pair }")
             )
             .is_err()
         );
-        assert!(verify_security_source_text(manifest, keys, "").is_err());
+        let mut missing = sources(keys, "");
+        missing[1].1 = "fn f() {}".to_owned();
+        assert!(verify_security_source_text(manifest, &missing).is_err());
         Ok(())
     }
 

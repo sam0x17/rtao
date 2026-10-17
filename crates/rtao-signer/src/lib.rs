@@ -277,9 +277,12 @@ pub trait Signer: Send + Sync + 'static {
 
 /// An unlocked pinned-core keypair shared until the final `Arc` owner drops.
 ///
-/// The core zeroizes its separately retained mnemonic and seed buffers. Rtao
-/// cannot wipe the opaque signing pair; the pinned ed25519 pair has no guaranteed
-/// secret wipe on drop. Borrowed constructor inputs remain the caller's responsibility.
+/// The core zeroizes its separately retained mnemonic and seed buffers. The
+/// pinned core stores ed25519 signing state in a wiping `Zeroizing<SigningKey>`
+/// owner, so the final drop wipes the stored seed, expanded scalar and nonce
+/// prefix. Allocator or OS copies, stack copies left by moving the key and
+/// short-lived values inside cryptographic dependencies are not covered.
+/// Borrowed constructor inputs remain the caller's responsibility.
 /// Cryptography runs inline. Debug output and constructor error chains never
 /// include the seed, URI, mnemonic, password, or private key.
 #[derive(Clone)]
