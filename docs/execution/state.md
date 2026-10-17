@@ -47,6 +47,15 @@ actual adapter with an injected process runner, covering lazy source precedence,
 exact argv, explicit dialog fallback and redacted errors. No real native process
 runs. M4-S5 remains open pending execution of its three source repairs.
 
+Six missing M5 root-subnet inputs are now present in `samples_extra.json`.
+Three existing tests build and plan both original and scenario-rewritten public
+identities, check exact 1,000,000,001 rao denomination and compare independent
+V478 call bytes, including the move-swap one-rao dust. No Python expected output
+is authored. The existing xtask intent dependency enables its staking feature
+to consume these inputs; package identities and lock bytes do not change.
+Independent source review, installed formatting and whitespace checks pass;
+hosted execution remains pending. Named-test inventory stays 3,203/four skips.
+
 Lock-only hosted [38987915743](https://github.com/sam0x17/rtao/actions/runs/38987915743)
 succeeds at exact `9557fc0dcaa8b6752d448e8db32a718d5aefd367`. Independent
 inspection and root refetch authenticate the sole 11-byte addition of the
