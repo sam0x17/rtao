@@ -918,7 +918,9 @@ async fn admission_ack_timeout_drops_lease_before_reconciling_actual_inclusion()
                 wait,
                 reconcile: true,
                 submit_deadline: Some(Duration::from_millis(50)),
-                deadline: Some(Duration::from_secs(1)),
+                // Only the 50 ms admission deadline is under test. A loaded
+                // hosted runner can need more than a second to reconcile.
+                deadline: Some(Duration::from_secs(30)),
                 ..Default::default()
             };
             let report = match entry {
