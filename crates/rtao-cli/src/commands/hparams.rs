@@ -91,8 +91,7 @@ fn validator_command(op: &str, name: &str) -> Result<Command, CliError> {
 fn prompt_error(error: PromptError) -> CliError {
     CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 

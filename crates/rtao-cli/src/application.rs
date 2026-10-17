@@ -669,6 +669,7 @@ fn parse_required(
                 help: matches!(&error, PromptError::MissingRequired(_)).then(|| {
                     "pass the options explicitly, or run on a terminal to be prompted".into()
                 }),
+                ..crate::error::CliError::failure(error.to_string())
             }));
     }
     let matches = command
@@ -1025,8 +1026,7 @@ fn clap_error(error: clap::Error) -> crate::error::CliError {
         || !error.use_stderr();
     crate::error::CliError {
         code: if informational { 0 } else { 2 },
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 

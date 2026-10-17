@@ -18,8 +18,7 @@ fn failure(error: impl std::fmt::Display) -> CliError {
 fn prompt_error(error: PromptError) -> CliError {
     CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 fn argument<'a>(leaf: &'a ArgMatches, name: &str) -> Option<&'a str> {

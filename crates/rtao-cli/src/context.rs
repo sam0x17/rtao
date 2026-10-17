@@ -2212,7 +2212,10 @@ impl AppContext {
         F: FnOnce(Client) -> Fut,
         Fut: Future<Output = Result<T, CliError>>,
     {
-        let client = connector.connect(self.client_config()?).await?;
+        let client = connector
+            .connect(self.client_config()?)
+            .await
+            .map_err(|error| error.for_network(&self.globals.network))?;
         let result = async {
             self.output
                 .update_token_symbols(
@@ -2262,7 +2265,7 @@ impl AppContext {
         }
         .await;
         client.close().await;
-        result
+        result.map_err(|error| error.for_network(&self.globals.network))
     }
 }
 
@@ -2295,8 +2298,7 @@ impl AppContext {
         )
         .map_err(|e| CliError {
             code: e.exit_code(),
-            message: e.to_string(),
-            help: None,
+            ..crate::error::CliError::failure(e.to_string())
         })?;
         self.globals.wallet_name = selection.wallet_name;
         self.globals.hotkey_name = selection.hotkey_name;

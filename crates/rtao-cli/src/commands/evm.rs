@@ -241,8 +241,7 @@ async fn fund_request(
         )
         .map_err(|error| CliError {
             code: error.exit_code(),
-            message: error.to_string(),
-            help: None,
+            ..crate::error::CliError::failure(error.to_string())
         })?;
         history.record_answers(vec!["--amount-tao".into(), raw.clone()]);
         raw

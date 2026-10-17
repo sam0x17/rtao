@@ -1677,6 +1677,15 @@ impl rtao_cli::context::ConnectionFactory for Connected {
         Box::pin(async move { Ok(self.0.clone()) })
     }
 }
+struct RefusedConnection(rtao::client::ClientError);
+impl rtao_cli::context::ConnectionFactory for RefusedConnection {
+    fn connect<'a>(
+        &'a self,
+        _: ClientConfig,
+    ) -> BoxFuture<'a, Result<Client, rtao_cli::error::CliError>> {
+        Box::pin(async move { Err(self.0.clone().into()) })
+    }
+}
 fn wallet_prompt_public_accounts(
     root: &CacheRoot,
 ) -> Result<(AccountId, AccountId), Box<dyn std::error::Error>> {
@@ -1991,6 +2000,185 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
         77
     );
     assert!(client.is_closed());
+
+    let connection_help = "check the endpoint and network connection, then retry";
+    for (cause, detail) in [
+        (
+            rtao_rpc::RpcError::Transport(" \u{1c}offline \n".into()),
+            "offline",
+        ),
+        (
+            rtao_rpc::RpcError::Timeout {
+                detail: " \n".into(),
+            },
+            "the connection timed out without a response",
+        ),
+        (
+            rtao_rpc::RpcError::MaxRetriesExceeded {
+                detail: "retries exhausted".into(),
+            },
+            "retries exhausted",
+        ),
+        (
+            rtao_rpc::RpcError::Handshake {
+                status: 503,
+                detail: "offline".into(),
+            },
+            "RPC endpoint rejected the WebSocket handshake (HTTP 503): offline",
+        ),
+        (rtao_rpc::RpcError::Closed, "RPC session closed"),
+    ] {
+        let client_error = rtao::client::ClientError::from(cause.clone());
+        for converted in [
+            rtao_cli::error::CliError::from(client_error.clone()),
+            rtao_cli::error::CliError::from(rtao::tx::TxError::Rpc(cause.clone())),
+            rtao_cli::error::CliError::from(rtao::tx::TxError::Intent(IntentError::Client(
+                client_error.clone(),
+            ))),
+            rtao_cli::error::CliError::from(rtao::reads::ReadError::Client(client_error.clone())),
+            rtao_cli::error::CliError::from(rtao_intents::pow::PowError::Client(client_error)),
+            rtao_cli::error::CliError::from(rtao_intents::pow::PowError::Head(
+                rtao::client::HeadError::Rpc(cause.clone()),
+            )),
+        ] {
+            assert_eq!(converted.message, detail);
+            assert!(matches!(
+                converted.diagnostic,
+                Some(rtao_cli::error::CliDiagnostic::Connection),
+            ));
+        }
+        let (ctx, _, _) = context(&[])?;
+        let calls = AtomicUsize::new(0);
+        let error = ctx
+            .run_with(&RefusedConnection(cause.clone().into()), |_| async {
+                calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+            .await
+            .err()
+            .ok_or("connector refusal")?;
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            error.message,
+            format!("could not reach {}: {detail}", ctx.globals.network)
+        );
+        assert_eq!(error.help.as_deref(), Some(connection_help));
+        assert!(error.diagnostic.is_none());
+        assert_eq!(error.code, 1);
+
+        // The real client request path retains the same classification and
+        // cleanup. Cosmetic-name acquisition is aborted on a work failure.
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        chain.queue_transport_error(
+            "system_health",
+            rtao_testkit::rpc::Error::Client(Box::new(cause)),
+        );
+        let error = ctx
+            .run_with(&Connected(client.clone()), |client| async move {
+                client
+                    .request::<Value>("system_health", json!([]))
+                    .await
+                    .map_err(rtao_cli::error::CliError::from)
+            })
+            .await
+            .err()
+            .ok_or("work connection failure")?;
+        assert_eq!(
+            error.message,
+            format!("could not reach {}: {detail}", ctx.globals.network)
+        );
+        assert_eq!(error.help.as_deref(), Some(connection_help));
+        assert!(client.is_closed());
+        assert_eq!(
+            chain
+                .requests()
+                .iter()
+                .filter(|r| r.method == "system_health")
+                .count(),
+            1
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    }
+
+    // Work errors already contextualized by an inner run retain one prefix
+    // and their original recovery help through the outer cleanup boundary.
+    let (client, _, _) = fixture(1_000_000_000).await?;
+    let (ctx, _, _) = context(&[])?;
+    let nested = &ctx;
+    let error = ctx
+        .run_with(&Connected(client.clone()), |client| async move {
+            nested
+                .run_with(&Connected(client), |_| async {
+                    Err::<(), _>(
+                        rtao_cli::error::CliError::from(rtao::client::ClientError::from(
+                            rtao_rpc::RpcError::Transport("offline".into()),
+                        ))
+                        .with_help("retain the primary guidance"),
+                    )
+                })
+                .await
+        })
+        .await
+        .err()
+        .ok_or("nested contextual connection error")?;
+    assert_eq!(
+        error.message,
+        format!("could not reach {}: offline", ctx.globals.network)
+    );
+    assert_eq!(
+        error.help.as_deref(),
+        Some("retain the primary guidance; check the endpoint and network connection, then retry")
+    );
+    assert!(client.is_closed());
+
+    let (client, _, _) = fixture(1_000_000_000).await?;
+    let mut rendered = rtao_cli::error::CliError::from(rtao::client::ClientError::from(
+        rtao_rpc::RpcError::Transport("offline".into()),
+    ));
+    rendered.message.clear();
+    let rendered = ctx
+        .run_with(&Connected(client.clone()), |_| async move {
+            Err::<(), _>(rendered)
+        })
+        .await
+        .err()
+        .ok_or("already rendered connection error")?;
+    assert!(rendered.message.is_empty());
+    assert!(rendered.help.is_none());
+    assert!(client.is_closed());
+
+    // Node response/domain errors and ambiguous in-flight outcomes never
+    // acquire an ordinary connection retry instruction.
+    for cause in [
+        rtao_rpc::RpcError::Protocol("malformed fixture".into()),
+        rtao_rpc::RpcError::StateDiscarded {
+            block: "0xold".into(),
+        },
+        rtao_rpc::RpcError::JsonRpc {
+            code: -32000,
+            message: "node refusal".into(),
+            data: None,
+            payload: Box::new(json!({"code":-32000,"message":"node refusal"})),
+        },
+        rtao_rpc::RpcError::ConnectionLost { resent: false },
+        rtao_rpc::RpcError::SubscriptionLost,
+    ] {
+        let calls = AtomicUsize::new(0);
+        let message = rtao::client::ClientError::from(cause.clone()).to_string();
+        let error = ctx
+            .run_with(&RefusedConnection(cause.into()), |_| async {
+                calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+            .await
+            .err()
+            .ok_or("non-connection connector error")?;
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(error.message, message);
+        assert!(error.help.is_none());
+        assert!(error.diagnostic.is_none());
+    }
     Ok(())
 }
 
@@ -3568,6 +3756,7 @@ async fn direct_external_close_error_propagates_after_a_known_successful_submiss
 
 struct DirectExecutionFailure {
     preflights: AtomicUsize,
+    policy: bool,
 }
 impl IntentInterface for DirectExecutionFailure {
     const SPEC: &'static rtao_catalog::IntentSpec = <Preview as IntentInterface>::SPEC;
@@ -3592,6 +3781,12 @@ impl Intent for DirectExecutionFailure {
         cx: &PreflightCx<'_, V>,
     ) -> Result<IntentPreflight, IntentError> {
         if self.preflights.fetch_add(1, Ordering::SeqCst) > 0 {
+            if self.policy {
+                return Ok(IntentPreflight {
+                    blocks: vec!["direct primary execution sentinel".into()],
+                    ..Default::default()
+                });
+            }
             return Err(IntentError::Validation(
                 "direct primary execution sentinel".into(),
             ));
@@ -3602,52 +3797,81 @@ impl Intent for DirectExecutionFailure {
 
 #[tokio::test]
 async fn direct_external_primary_execution_error_wins_over_release_failure() -> TestResult {
-    let (client, chain, keys) = fixture(1_000_000_000).await?;
-    let factory = DirectExternalFactory::new(&keys, true);
-    let (mut ctx, sink, _) = context(&[
-        "--yes",
-        "--json",
-        "--no-mev-shield",
-        "--signer",
-        "extension",
-    ])?;
-    let intent = DirectExecutionFailure {
-        preflights: AtomicUsize::new(0),
-    };
-    let error = ctx
-        .submit(
-            &client,
-            &intent,
-            false,
-            None,
-            Some(&factory),
-            &mut rtao_cli::prompt::PromptHistory::default(),
-        )
-        .await
-        .err()
-        .ok_or("primary execution failure")?;
-    assert_eq!(error.code, 1);
-    assert!(error.message.contains("direct primary execution sentinel"));
-    assert!(!error.message.contains("direct close failure sentinel"));
-    assert!(intent.preflights.load(Ordering::SeqCst) >= 2);
-    assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
-    assert_eq!(
-        *factory.released.lock().map_err(|_| "release")?,
-        vec![false]
-    );
-    assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
-    assert!(
-        chain
-            .state()
-            .lock()
-            .map_err(|_| "chain")?
-            .submissions
-            .is_empty()
-    );
-    assert!(sink.text(Stream::Stdout)?.is_empty());
-    client.close().await;
+    for policy in [false, true] {
+        let (client, chain, keys) = fixture(1_000_000_000).await?;
+        let factory = DirectExternalFactory::new(&keys, true);
+        let (mut ctx, sink, _) = context(&[
+            "--yes",
+            "--json",
+            "--no-mev-shield",
+            "--signer",
+            "extension",
+        ])?;
+        let intent = DirectExecutionFailure {
+            preflights: AtomicUsize::new(0),
+            policy,
+        };
+        let error = ctx
+            .submit(
+                &client,
+                &intent,
+                false,
+                None,
+                Some(&factory),
+                &mut rtao_cli::prompt::PromptHistory::default(),
+            )
+            .await
+            .err()
+            .ok_or("primary execution failure")?;
+        assert_eq!(error.code, 1);
+        assert!(error.message.contains("direct primary execution sentinel"));
+        if policy {
+            assert!(matches!(
+                &error.diagnostic,
+                Some(rtao_cli::error::CliDiagnostic::Policy { .. })
+            ));
+            assert_eq!(
+                error.help.as_deref(),
+                Some("the action exceeds a configured safety policy")
+            );
+            let rendered_start = sink.bytes(Stream::Stderr)?.len();
+            ctx.output.cli_error(&error)?;
+            let bytes = sink.bytes(Stream::Stderr)?;
+            let rendered: Value = serde_json::from_slice(&bytes[rendered_start..])?;
+            assert_eq!(rendered["error"], error.message);
+            assert_eq!(
+                rendered["help"],
+                error.help.as_deref().ok_or("policy help")?
+            );
+            assert_eq!(
+                rendered["see"],
+                format!("{}/errors/policy-violation", rtao_catalog::py::DOCS_URL)
+            );
+        } else {
+            assert!(error.diagnostic.is_none());
+        }
+        assert!(!error.message.contains("direct close failure sentinel"));
+        assert!(intent.preflights.load(Ordering::SeqCst) >= 2);
+        assert_eq!(factory.acquired.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            *factory.released.lock().map_err(|_| "release")?,
+            vec![false]
+        );
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+        assert!(
+            chain
+                .state()
+                .lock()
+                .map_err(|_| "chain")?
+                .submissions
+                .is_empty()
+        );
+        assert!(sink.text(Stream::Stdout)?.is_empty());
+        client.close().await;
+    }
     Ok(())
 }
+
 type CallbackTrace = Arc<Mutex<Vec<&'static str>>>;
 
 fn callback_phase(

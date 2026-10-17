@@ -1530,6 +1530,35 @@ impl Output {
         Ok(())
     }
 
+    /// Render a raised CLI failure with its retained typed diagnostic.
+    pub fn cli_error(&self, error: &crate::error::CliError) -> Result<(), OutputError> {
+        use crate::error::CliDiagnostic;
+        if error.message.is_empty() {
+            return Ok(());
+        }
+        match &error.diagnostic {
+            Some(CliDiagnostic::Chain(chain)) => {
+                let mut chain = chain.as_ref().clone();
+                chain.message = error.message.clone();
+                if let Some(help) = &error.help {
+                    chain = chain.with_remediation(help);
+                }
+                self.chain_error(&chain, None)
+            }
+            diagnostic => self.error(
+                &error.message,
+                DiagnosticContext {
+                    help: error.help.as_deref(),
+                    see: match diagnostic {
+                        Some(CliDiagnostic::Policy { docs_url }) => Some(docs_url.as_str()),
+                        _ => None,
+                    },
+                    ..Default::default()
+                },
+            ),
+        }
+    }
+
     /// A classified chain diagnostic uses the domain's existing JSON contract.
     pub fn chain_error(
         &self,

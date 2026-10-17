@@ -3,6 +3,20 @@
 
 use std::fmt;
 
+/// Typed context retained until the final CLI diagnostic is rendered.
+#[derive(Debug)]
+pub enum CliDiagnostic {
+    /// Preserve the chain taxonomy, description and documentation.
+    Chain(Box<rtao::tx::ChainError>),
+    /// An ordinary connection failure awaiting the selected network's context.
+    Connection,
+    /// Active execution policy refused the operation.
+    Policy {
+        /// Documentation for the policy violation taxonomy.
+        docs_url: String,
+    },
+}
+
 /// A user-visible CLI failure and its process status.
 #[derive(Debug)]
 pub struct CliError {
@@ -12,6 +26,8 @@ pub struct CliError {
     pub message: String,
     /// Optional actionable next step.
     pub help: Option<String>,
+    /// Typed diagnostic metadata, independent of the displayed message.
+    pub diagnostic: Option<CliDiagnostic>,
 }
 impl CliError {
     /// A runtime failure or declined mutation.
@@ -20,53 +36,85 @@ impl CliError {
             code: 1,
             message: message.into(),
             help: None,
+            diagnostic: None,
         }
     }
     /// Preserve typed chain, signer, gateway and submission recovery help.
     pub(crate) fn transaction(error: rtao::tx::TxError) -> Self {
-        let help = match &error {
-            rtao::tx::TxError::Chain(error)
-            | rtao::tx::TxError::Intent(rtao::tx::IntentError::Chain(error)) => {
-                Some(error.remediation().to_owned())
+        use rtao::tx::{IntentError, TxError};
+        match error {
+            TxError::Chain(error) | TxError::Intent(IntentError::Chain(error)) => Self {
+                help: Some(error.remediation().to_owned()),
+                diagnostic: Some(CliDiagnostic::Chain(Box::new(error.clone()))),
+                ..Self::failure(error.to_string())
+            },
+            TxError::Policy(error) => Self {
+                help: rtao_catalog::py::REMEDIATION
+                    .iter()
+                    .find_map(|(code, help)| (*code == error.code()).then(|| (*help).to_owned())),
+                diagnostic: Some(CliDiagnostic::Policy {
+                    docs_url: format!(
+                        "{}/errors/{}",
+                        rtao_catalog::py::DOCS_URL,
+                        error.code().as_str().replace('_', "-"),
+                    ),
+                }),
+                ..Self::failure(error.to_string())
+            },
+            TxError::Rpc(error) => Self::from(rtao::client::ClientError::Rpc(error)),
+            TxError::Intent(IntentError::Client(error)) => Self::from(error),
+            TxError::ConnectionNotReady => Self {
+                diagnostic: Some(CliDiagnostic::Connection),
+                ..Self::failure("connection is not ready")
+            },
+            error => {
+                let help = match &error {
+                    TxError::RpcPolicy(policy) => Some(rpc_policy_help(policy)),
+                    TxError::Signer(error) | TxError::Intent(IntentError::Signer(error)) => {
+                        error.help().map(str::to_owned)
+                    }
+                    _ => None,
+                };
+                Self {
+                    help,
+                    ..Self::failure(error.to_string())
+                }
             }
-            rtao::tx::TxError::RpcPolicy(policy)
-            | rtao::tx::TxError::Rpc(rtao_rpc::RpcError::Policy(policy)) => {
-                Some(rpc_policy_help(policy))
-            }
-            rtao::tx::TxError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
-                Some(unknown_fate_help(&hash.0))
-            }
-            rtao::tx::TxError::Signer(error)
-            | rtao::tx::TxError::Intent(rtao::tx::IntentError::Signer(error)) => {
-                error.help().map(str::to_owned)
-            }
-            rtao::tx::TxError::Intent(rtao::tx::IntentError::Client(error)) => client_help(error),
-            _ => None,
-        };
-        Self {
-            help,
-            ..Self::failure(error.to_string())
         }
     }
     /// An invalid or missing argument.
     pub fn input(message: impl Into<String>) -> Self {
         Self {
             code: 2,
-            message: message.into(),
-            help: None,
+            ..Self::failure(message)
         }
     }
     /// User cancellation, terminal EOF or interrupt.
     pub fn aborted() -> Self {
         Self {
             code: 130,
-            message: "aborted.".into(),
-            help: None,
+            ..Self::failure("aborted.")
         }
     }
     /// Attach safe remediation.
     pub fn with_help(mut self, help: impl Into<String>) -> Self {
         self.help = Some(help.into());
+        self
+    }
+    /// Attach endpoint guidance once, only for a typed connection failure.
+    pub(crate) fn for_network(mut self, network: &str) -> Self {
+        if self.message.is_empty() {
+            return self;
+        }
+        if matches!(self.diagnostic, Some(CliDiagnostic::Connection)) {
+            self.diagnostic = None;
+            self.message = format!("could not reach {network}: {}", self.message);
+            let retry = "check the endpoint and network connection, then retry";
+            self.help = Some(match self.help.take() {
+                Some(help) if !help.is_empty() => format!("{help}; {retry}"),
+                _ => retry.into(),
+            });
+        }
         self
     }
 }
@@ -104,6 +152,25 @@ fn client_help(error: &rtao::client::ClientError) -> Option<String> {
     }
 }
 
+fn ordinary_connection(error: &rtao::client::ClientError) -> bool {
+    matches!(
+        error,
+        rtao::client::ClientError::Rpc(
+            rtao_rpc::RpcError::Transport(_)
+                | rtao_rpc::RpcError::Timeout { .. }
+                | rtao_rpc::RpcError::Handshake { .. }
+                | rtao_rpc::RpcError::MaxRetriesExceeded { .. }
+                | rtao_rpc::RpcError::Closed
+        )
+    )
+}
+
+impl From<rtao::tx::TxError> for CliError {
+    fn from(error: rtao::tx::TxError) -> Self {
+        Self::transaction(error)
+    }
+}
+
 impl From<rtao::signer::SignerError> for CliError {
     fn from(error: rtao::signer::SignerError) -> Self {
         let help = error.help().map(str::to_owned);
@@ -119,6 +186,7 @@ impl From<rtao::client::ClientError> for CliError {
         let help = client_help(&error);
         Self {
             help,
+            diagnostic: ordinary_connection(&error).then_some(CliDiagnostic::Connection),
             ..Self::failure(error.to_string())
         }
     }

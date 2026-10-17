@@ -30,8 +30,7 @@ fn failure(error: impl std::fmt::Display) -> CliError {
 fn prompt_error(error: PromptError) -> CliError {
     CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 fn message(ctx: &AppContext, text: &str) -> Result<(), CliError> {
@@ -727,8 +726,7 @@ pub async fn claim_root_source(
             .map_err(failure)?;
         return Err(CliError {
             code: 0,
-            message: String::new(),
-            help: None,
+            ..crate::error::CliError::failure(String::new())
         });
     }
     let mut names = local_names(ctx)?;
