@@ -1598,9 +1598,16 @@ passes at source head `95b9e8c` with 3,204 tests, four skips, passing doctests
 and all six required jobs. Hosted report refresh
 [38998872513](https://github.com/sam0x17/rtao/actions/runs/38998872513)
 authenticates the adopted compatibility reports; source parity is 357/357 with
-zero pending blobs. Completed client steps through M9 are checked below. The
-only active unchecked step is M2-26 because M2-S02 remains open and unaccepted;
-therefore M2 and dependent milestone exits are not formally accepted. Optional
+zero pending blobs. Completed client steps through M9 are checked below.
+
+**M2-26 closure, 2026-10-17.** The combined core patch at fork revision
+`626f2a4f1f67ab731c1fc3884828751496bc125d` stores Ed25519 signing state in a
+wiping owner, closing M2-S02. A fresh four-lens cold-reader pass with
+adversarial verification found four low-severity issues, all repaired before
+this closure ([M2 security](docs/security/m2.md#final-m2-26-security-pass-2026-10-17)).
+M2-26 is checked and the active M0-M9 register is 127/127. Hosted validation of
+the closing commit is recorded in
+[development state](docs/execution/state.md). Optional
 live/oracle/interop/device evidence remains explicitly unexecuted under Q30.
 
 **Security passes by cold readers** (Q19). M2, M3, M4 and M7 each end with a security pass, and M9 with the full review.
@@ -1866,7 +1873,7 @@ other; M2-16 needs only M1. Q29 waives M2-24's testnet soak.
 - **M2-24 waived by Q29.** No testnet soak, funding, subnet setup or host is required. Preserve prepared wallet
   and recovery material. Client tests run in hosted CI; costly infrastructure checks are optional under Q30.
 - [x] **M2-25** The validator guide in the book ([§11](#11-documentation-plan)).
-- [ ] **M2-26** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m2.md`; focus: keyfile
+- [x] **M2-26** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m2.md`; focus: keyfile
       loading and `keyfile_json` (ordinary malformed-input regressions passing in hosted CI), the password chain, `Zeroizing`/`secrecy` with a test that
       `Debug` output redacts secrets, and the signing path.
 
@@ -1874,9 +1881,10 @@ other; M2-16 needs only M1. Q29 waives M2-24's testnet soak.
 validator-guide steps are verified at
 `3772699612278d4592648d07232241430e96791b` by hosted
 [run 38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100).
-This records their individual source, fixture and guide completion. M2-26 and
-the M2 milestone exit remain open because M2-S02 is unaccepted; the retained
-owning-boundary proposal does not close that finding.
+This records their individual source, fixture and guide completion. At that
+checkpoint M2-26 and the M2 milestone exit remained open because M2-S02 was
+unaccepted; the 2026-10-17 core patch revision later closed it and M2-26 is
+now checked.
 
 M2-25 covers the validator guide and its compiled source example. Checking it
 does not certify all §11 documentation contracts. The newer crate-README,
@@ -3077,3 +3085,4 @@ with its link, a wait on a prerequisite or on the user.
 | 2026-10-16 | Green 3,196-test client checkpoint | Ordinary 38984859167 succeeds at exact 892aa9d: all six required jobs, 3,196 passed, four skipped, nine doctests across 19 suites, docs upload and final gate. A reviewed bounded collector authenticates all qualified PASS records and 167 fixed-commit inputs; the 753,263-byte main log has SHA256 998aa1af35b6fbbb46cb4e94a9023f364c0875b49346b7f5a5d8d8e88b21a87b and is not retained. All eight prior failures pass on normal stacks. Newer reviewed source through 333a8a5 is excluded, with two new functions expecting 3,198/four skips. Publish source preparation with skip-CI, then resolve the single reviewed Docify edge in bounded hosted CI, inspect candidate locks and refresh reports before ordinary validation. Source map remains 322/357 with 35 pending; registry/matrix divergence counts are 76/73 until refresh. No new source-row, milestone or security acceptance, local build/test, node or filing. |
 | 2026-10-16 | Invocation interruption coordination and deferred native inputs | Extend D-053 with one invocation latch and race-free async observers. Main registers Unix SIGINT before prompts; AppContext refuses new work/private acquisition, closes acquired clients and retains the exact boxed started future through receipt hooks and signer release. Original results and recovery identities remain; final status 130 and replay suppression are separate. Independent finite source review finds no defect in six afterimages and five new named tests; normal-stack hosted compilation/execution and real signal behavior remain unverified. Existing native-password fixture now composes public wallet resolution and the actual injected native adapter, retaining lazy precedence, exact argv, fallback and redaction assertions with no new test name or real Keychain/dialog invocation. Expected next ordinary inventory is 3,203/four skips. Local formatting/whitespace only; no source-row, milestone or security acceptance and no new filing. |
 | 2026-10-16 | Six root-subnet supplementary inputs | M5 audit found the six named root amount cases absent from samples_extra.json despite native rewritten coverage. Add exactly remove_stake, remove_stake_limit, move_stake, swap_stake, move_swap_stake and transfer_stake inputs with original pinned identities and exact decimal 1.000000001. Three existing tests retain source identities and root TAO denomination, independently encode V478 call bytes and pin move-swap full move followed by one-rao-less swap. Enable existing staking on xtask intent dependency, with no new package/version or local resolution. Independent source review and installed formatting/whitespace pass; no Python expected outputs or hosted execution claimed. Named-test inventory stays 3,203/four skips. Adopt source only, keep steps and mappings held; remove seven disposable builder/afterimage files after exact hash/process checks, retaining tracked source and bounded patch/proof. |
+| 2026-10-17 | M2-26 final security pass and M2-S02 closure | Move development to workstation and update AGENTS.md for local builds. A fresh four-lens cold-reader pass (Ed25519 erasure, signing compatibility, keyfile/password/redaction, patch provenance), each finding checked by three adversarial verifiers, confirms four low-severity issues: an unwiped SCALE derivation preimage and plain PKCS8 import arrays in the fork, an undocumented re-export of upstream's unrepaired plaintext keyfile codec, and a substring-only core-patch source guard with a tautological test. Repair them: fork commit 626f2a4f wipes both copies and adds zeroize and Substrate-vector tests; rtao_core::keyfiles documents the limitation; the guard now parses every core source with syn. Pin the new revision (combined diff SHA-256 8cf8ff28...c489) in manifests, locks, upstream.toml and doctor. Locally, 72 fork core tests, 250 core/signer/wallet tests and pin --check pass. Close M2-S02, check M2-26 and record 127/127; hosted CI for the closing commit is in docs/execution/state.md. No new upstream filing. |

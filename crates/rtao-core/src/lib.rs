@@ -93,6 +93,15 @@ pub mod timelock {
 }
 
 /// Core-compatible encrypted keyfiles, available only to host applications.
+///
+/// These are the upstream functions, re-exported whole. The encryption and
+/// format-detection functions are the ones rtao's wallet uses. The plaintext
+/// codec and environment password functions retain upstream behavior: their
+/// diagnostics can name malformed seed characters or unknown JSON keys, and
+/// their intermediate copies are not wiped. Prefer [`crate::keyfile_json`]
+/// for plaintext keyfiles and `rtao_wallet`'s password sources for
+/// environment passwords; those boundaries carry the M2-S01 and M2-S03
+/// repairs.
 #[cfg(feature = "host")]
 #[cfg_attr(docsrs, doc(cfg(feature = "host")))]
 pub mod keyfiles {

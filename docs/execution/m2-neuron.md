@@ -9,8 +9,8 @@ and Q29 waives the testnet soak. No deployment or local campaign is required.
 
 The subprocess restart fixture exercises production StateStore/EmaScores
 persistence. It does not establish a connected NeuronRuntime kill/restart
-campaign. M2-S02 remains open/unaccepted, so M2-26 and the M2 milestone exit
-remain open. Current CI claims require the exact checkpoint result.
+campaign. M2-S02 is fixed by the combined core patch at fork rev `626f2a4f`,
+and M2-26 is complete. Current CI claims require the exact checkpoint result.
 
 ## Historical preparation and validation
 

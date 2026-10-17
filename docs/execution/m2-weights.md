@@ -11,7 +11,8 @@ predictor cannot promise successful future epochs; that model limit remains.
 Native fixtures and source guards are required hosted client evidence under
 Q30. Independent Python conform outputs and actual accepted commits/reveals
 remain optional targeted hosted evidence, with no result inferred from source
-or native tests. M2-S02 remains open/unaccepted and the M2 exit remains open.
+or native tests. M2-S02 is fixed by the combined core patch at fork rev
+`626f2a4f`, and M2-26 is complete.
 
 ## Historical preparation and validation
 

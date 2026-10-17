@@ -35,7 +35,8 @@ Q25 native balances, Q26 built-BLS and the guarded dormant supply exceptions
 remain unchanged. Existing upstream filings retain their reviewed links and
 recorded unchanged heads; no new filing or notification action was needed.
 M1's separate TLS proof and later source/e2e reconciliation have their own
-records. M2-S02 remains open/unaccepted and does not become accepted by this exit.
+records. This M0 exit did not accept M2-S02; it was later fixed separately by
+the combined core patch at fork rev `626f2a4f` under M2-26.
 
 ## Earlier source and failure history
 
