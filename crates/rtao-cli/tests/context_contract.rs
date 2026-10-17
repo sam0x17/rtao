@@ -2101,6 +2101,57 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     }
 
+    // Custom network URLs can contain credentials and access tokens. Only
+    // their public endpoint identity belongs in human or machine diagnostics.
+    for (network, public) in [
+        (
+            "wss://endpoint-user:endpoint-password@rpc.example:443/private?api_key=endpoint-token#fragment-secret",
+            "wss://rpc.example:443",
+        ),
+        (
+            "ws://endpoint-user:endpoint-password@[2001:db8::1]:9944/private?api_key=endpoint-token#fragment-secret",
+            "ws://[2001:db8::1]:9944",
+        ),
+    ] {
+        for mode in [vec![], vec!["--json"], vec!["--quiet"]] {
+            let mut flags = vec!["--network", network];
+            flags.extend(mode);
+            let (ctx, sink, reads) = context(&flags)?;
+            assert_eq!(ctx.client_config()?.network.endpoint(), network);
+            let calls = AtomicUsize::new(0);
+            let error = ctx
+                .run_with(
+                    &RefusedConnection(rtao_rpc::RpcError::Transport("offline".into()).into()),
+                    |_| async {
+                        calls.fetch_add(1, Ordering::SeqCst);
+                        Ok(())
+                    },
+                )
+                .await
+                .err()
+                .ok_or("custom endpoint refusal")?;
+            assert_eq!(error.message, format!("could not reach {public}: offline"));
+            assert_eq!(error.help.as_deref(), Some(connection_help));
+            ctx.output.cli_error(&error)?;
+            let rendered = sink.text(Stream::Stderr)?;
+            assert!(rendered.contains(public));
+            assert!(rendered.contains(connection_help));
+            for secret in [
+                "endpoint-user",
+                "endpoint-password",
+                "/private",
+                "api_key",
+                "endpoint-token",
+                "fragment-secret",
+            ] {
+                assert!(!rendered.contains(secret));
+            }
+            assert!(sink.text(Stream::Stdout)?.is_empty());
+            assert_eq!(calls.load(Ordering::SeqCst), 0);
+            assert_eq!(reads.load(Ordering::SeqCst), 0);
+        }
+    }
+
     // Work errors already contextualized by an inner run retain one prefix
     // and their original recovery help through the outer cleanup boundary.
     let (client, _, _) = fixture(1_000_000_000).await?;

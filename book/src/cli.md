@@ -11,6 +11,10 @@ Unicode and keeps integer values exact. Finite floating-point values use
 Python's notation. Human output escapes terminal control characters in names
 and other supplied text.
 
+Connection errors name the selected network. For a custom RPC URL, the label
+omits credentials, path, query and fragment; the connection still uses the
+configured endpoint. This protects endpoint tokens in human and JSON errors.
+
 `--quiet` suppresses chatter while retaining primary output and errors.
 Transaction commands review their calls before signing. `--yes` approves the
 review; unattended JSON or piped sessions must supply it for a mutation.
