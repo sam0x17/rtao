@@ -78,6 +78,16 @@ pub struct Globals {
     pub archive_endpoints: Option<String>,
     /// Cycle the endpoint pool indefinitely on connection failures.
     pub retry_forever: bool,
+    /// Remote signer base URL (`--signer remote`).
+    pub remote_signer_url: Option<String>,
+    /// Keyfile holding the remote signer's btauth client key, never its contents.
+    pub remote_signer_client_key: Option<PathBuf>,
+    /// Remote signer btauth receiver (server key) reference.
+    pub remote_signer_receiver: Option<String>,
+    /// PEM CA certificates that replace the platform roots for the remote signer.
+    pub remote_signer_ca: Option<PathBuf>,
+    /// Remote signer request timeout in seconds.
+    pub remote_signer_timeout: Option<u64>,
 }
 
 fn option(id: &'static str, long: &'static str, help: &'static str) -> Arg {
@@ -195,7 +205,7 @@ fn tx() -> Vec<Arg> {
         option(
             "signer_backend",
             "signer",
-            "Signing backend: wallet, extension, ledger, or vault.",
+            "Signing backend: wallet, extension, ledger, vault, or remote.",
         ),
         flag("ledger", "ledger", "Shorthand for --signer ledger."),
         Arg::new("ledger_account")
@@ -213,6 +223,31 @@ fn tx() -> Vec<Arg> {
             "extension_source",
             "extension-source",
             "Extension account source filter.",
+        ),
+        option(
+            "remote_signer_url",
+            "remote-signer-url",
+            "Remote signer base URL (https, or http on loopback).",
+        ),
+        option(
+            "remote_signer_client_key",
+            "remote-signer-client-key",
+            "Keyfile with the remote signer's btauth client key.",
+        ),
+        option(
+            "remote_signer_receiver",
+            "remote-signer-receiver",
+            "Remote signer server key ss58; defaults to the signing account.",
+        ),
+        option(
+            "remote_signer_ca",
+            "remote-signer-ca",
+            "PEM CA certificates trusted for the remote signer, replacing the system roots.",
+        ),
+        option(
+            "remote_signer_timeout",
+            "remote-signer-timeout",
+            "Remote signer request timeout in seconds (1-600, default 30).",
         ),
     ]
 }
@@ -433,6 +468,23 @@ impl Globals {
                     Some(v) => env_bool(&v)?,
                     None => config.get("retry_forever").is_some_and(truthy),
                 },
+            remote_signer_url: resolve("remote_signer_url", Some("RTAO_REMOTE_SIGNER_URL"), None),
+            remote_signer_client_key: resolve(
+                "remote_signer_client_key",
+                Some("RTAO_REMOTE_SIGNER_CLIENT_KEY"),
+                None,
+            )
+            .map(PathBuf::from),
+            remote_signer_receiver: resolve(
+                "remote_signer_receiver",
+                Some("RTAO_REMOTE_SIGNER_RECEIVER"),
+                None,
+            ),
+            remote_signer_ca: resolve("remote_signer_ca", Some("RTAO_REMOTE_SIGNER_CA"), None)
+                .map(PathBuf::from),
+            remote_signer_timeout: resolve("remote_signer_timeout", None, None)
+                .map(|value| remote_signer_timeout(&value))
+                .transpose()?,
         })
     }
 
@@ -525,9 +577,10 @@ impl Globals {
                 && let Some((name, backend)) = self.signatories[0].clone().split_once('=')
             {
                 let backend = normalize_signer_backend(backend);
-                if !["wallet", "vault", "ledger", "extension"].contains(&backend.as_str()) {
+                if !["wallet", "vault", "ledger", "extension", "remote"].contains(&backend.as_str())
+                {
                     return Err(format!(
-                        "unknown backend {backend:?} in --signatory; use wallet, vault, ledger, or extension"
+                        "unknown backend {backend:?} in --signatory; use wallet, vault, ledger, extension, or remote"
                     ));
                 }
                 self.signatories[0] = name.into();
@@ -578,6 +631,21 @@ impl Globals {
         if let Some(v) = value("extension_bridge_url") {
             self.extension_bridge_url = Some(v);
         }
+        if let Some(v) = value("remote_signer_url") {
+            self.remote_signer_url = Some(v);
+        }
+        if let Some(v) = value("remote_signer_client_key") {
+            self.remote_signer_client_key = Some(v.into());
+        }
+        if let Some(v) = value("remote_signer_receiver") {
+            self.remote_signer_receiver = Some(v);
+        }
+        if let Some(v) = value("remote_signer_ca") {
+            self.remote_signer_ca = Some(v.into());
+        }
+        if let Some(v) = value("remote_signer_timeout") {
+            self.remote_signer_timeout = Some(remote_signer_timeout(&v)?);
+        }
         // A command owning --signer may choose an external backend after
         // globals are applied. Raw call's wallet/coldkey/hotkey spellings keep
         // the root backend; its external spellings override it. Validate that
@@ -586,17 +654,19 @@ impl Globals {
             .contains(&"signer_backend")
             .then(|| string(command, "signer_backend"))
             .flatten()
-            .filter(|backend| ["ledger", "vault", "extension"].contains(&backend.as_str()));
+            .filter(|backend| {
+                ["ledger", "vault", "extension", "remote"].contains(&backend.as_str())
+            });
         self.validate_signer(owned_backend.as_deref())
     }
 
     fn validate_signer(&self, override_backend: Option<&str>) -> Result<(), String> {
         if let Some(backend) = override_backend.or(self.signer_backend.as_deref())
-            && !["wallet", "ledger", "vault", "extension"]
+            && !["wallet", "ledger", "vault", "extension", "remote"]
                 .contains(&normalize_signer_backend(backend).as_str())
         {
             return Err(format!(
-                "unknown signing backend {backend:?}; use wallet, extension, ledger, or vault"
+                "unknown signing backend {backend:?}; use wallet, extension, ledger, vault, or remote"
             ));
         }
         Ok(())
@@ -605,9 +675,22 @@ impl Globals {
     /// Whether the private key lives outside local wallet files.
     pub fn uses_external_signer(&self) -> bool {
         self.signer_backend.as_deref().is_some_and(|v| {
-            ["ledger", "vault", "extension"].contains(&normalize_signer_backend(v).as_str())
+            ["ledger", "vault", "extension", "remote"]
+                .contains(&normalize_signer_backend(v).as_str())
         })
     }
+}
+
+/// Parse `--remote-signer-timeout` seconds within `1..=600`.
+fn remote_signer_timeout(value: &str) -> Result<u64, String> {
+    value
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .filter(|seconds| (1..=600).contains(seconds))
+        .ok_or_else(|| {
+            format!("invalid --remote-signer-timeout {value:?}; use whole seconds from 1 to 600")
+        })
 }
 
 #[cfg(test)]
@@ -953,6 +1036,98 @@ mod tests {
         globals.apply_with_env(leaf, &[], |_| None)?;
         assert_eq!(globals.signer_backend, None);
         assert!(!globals.uses_external_signer());
+        Ok(())
+    }
+
+    #[test]
+    fn remote_backend_parses_with_its_options_and_is_external()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let parsed = parse(&[
+            "rtao",
+            "submit",
+            "--signer",
+            "remote",
+            "--remote-signer-url",
+            "https://signer.example/",
+            "--remote-signer-client-key",
+            "/keys/client",
+            "--remote-signer-receiver",
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+            "--remote-signer-ca",
+            "/keys/ca.pem",
+            "--remote-signer-timeout",
+            "45",
+        ])?;
+        let mut globals = Globals::resolve(&parsed, &Map::new(), Path::new("/isolated"), |_| None)?;
+        globals.apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)?;
+        assert_eq!(globals.signer_backend.as_deref(), Some("remote"));
+        assert!(globals.uses_external_signer());
+        assert_eq!(
+            globals.remote_signer_url.as_deref(),
+            Some("https://signer.example/")
+        );
+        assert_eq!(
+            globals.remote_signer_client_key.as_deref(),
+            Some(Path::new("/keys/client"))
+        );
+        assert_eq!(
+            globals.remote_signer_ca.as_deref(),
+            Some(Path::new("/keys/ca.pem"))
+        );
+        assert_eq!(globals.remote_signer_timeout, Some(45));
+        // Environment and config fill the options when no flag is given.
+        let parsed = parse(&["rtao", "submit", "--signatory", "alice=remote"])?;
+        let config =
+            json!({"remote_signer_receiver": "config-receiver", "remote_signer_timeout": 9});
+        let mut globals = Globals::resolve(
+            &parsed,
+            config.as_object().ok_or("config")?,
+            Path::new("/isolated"),
+            |name| match name {
+                "RTAO_REMOTE_SIGNER_URL" => Some("http://127.0.0.1:8730/".into()),
+                "RTAO_REMOTE_SIGNER_CLIENT_KEY" => Some("/env/client".into()),
+                _ => None,
+            },
+        )?;
+        globals.apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)?;
+        assert_eq!(globals.signer_backend.as_deref(), Some("remote"));
+        assert_eq!(globals.signatories, vec!["alice".to_owned()]);
+        assert_eq!(
+            globals.remote_signer_url.as_deref(),
+            Some("http://127.0.0.1:8730/")
+        );
+        assert_eq!(
+            globals.remote_signer_client_key.as_deref(),
+            Some(Path::new("/env/client"))
+        );
+        assert_eq!(
+            globals.remote_signer_receiver.as_deref(),
+            Some("config-receiver")
+        );
+        assert_eq!(globals.remote_signer_timeout, Some(9));
+        for timeout in ["0", "601", "ten"] {
+            let parsed = parse(&["rtao", "submit", "--remote-signer-timeout", timeout])?;
+            let mut globals =
+                Globals::resolve(&parsed, &Map::new(), Path::new("/isolated"), |_| None)?;
+            assert!(
+                globals
+                    .apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)
+                    .is_err()
+            );
+        }
+        let parsed = parse(&["rtao", "submit", "--signer", "bogus"])?;
+        let mut globals = Globals::resolve(&parsed, &Map::new(), Path::new("/isolated"), |_| None)?;
+        assert_eq!(
+            globals
+                .apply_with_env(parsed.subcommand().ok_or("submit")?.1, &[], |_| None)
+                .err(),
+            Some(
+                "unknown signing backend \"bogus\"; use wallet, extension, ledger, vault, or remote"
+                    .to_owned()
+            )
+        );
+        // Read-only commands do not accept the remote signer options.
+        assert!(parse(&["rtao", "read", "--remote-signer-url", "https://x/"]).is_err());
         Ok(())
     }
 

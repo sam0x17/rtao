@@ -1,0 +1,2116 @@
+{
+ "generator": "ci/interop/epistula/epistula_interop.py gen-vectors",
+ "python": "3.12.15",
+ "versions": {
+  "bittensor": "10.5.0",
+  "bittensor-wallet": "4.1.1",
+  "fastapi": "0.143.3",
+  "pydantic": "2.14.1"
+ },
+ "upstream": {
+  "bitmind": "BitMind-AI/bitmind-subnet@5fd96727b8f41d8376348f6dd8a11cd5069bce45 gas/protocol/epistula.py",
+  "apex": "macrocosm-os/apex@bd71ceb070cd72b4bd80562e96884b66e86d908a shared/common/src/common/utils/epistula.py",
+  "spec": "epistula.sybil.com/implementation verify_signature_v2 (bittensor_wallet.Keypair)"
+ },
+ "me": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+ "vectors": [
+  {
+   "id": "bm-json-bound",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "bm-empty-bound",
+   "base": "bm-empty-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x8a2638e8ccd43e58972028a938f344650c4523da1c70d2b57e2a494d9044a8501633d4e924ac1fc874fbbabbc792d65a978ef535fc8c3f2189c9d0d33d97fd8c"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x061250fcd7a583f1d4831768418ed42994ebae38225d12c086497e0e9d4db7249804cf8448230cd8c7357c2227f470121fd0f612bb82d9bf39b586889b0bef8e"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xb0c6c6b84aa40395e092af0ea1c79b91358b5d02b3a74a2133ecbe90bea0ed6f7abf1d6af5f4ebc40bf6ea7c0ee3bc3721c5c031fee577240dcc24032721a98a"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0xb41e0139524efb61ba72ccbbb33a1f68b0d99de2e353f5405b16d37e458f6a0e1ea3e3f01b19cbfb4614551d5d5a80c30efac7a6fe15b5447f1cc5a54c96c68c"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "bm-hello-bound",
+   "base": "bm-hello-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "48656c6c6f20576f726c64",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x5afebe67718cc40917c3732abfff23dff030d1154811af56becbb45894ae4007b43157117ca63fbefeb5e7e643682bfb5fd88bd32344021aeb36cb5b2ac5e385"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x46206e07c9bf38c7d0d44333194868adde1b2d3c7e0810a8d230dc71714a0f0505d5f5a1e566a8943fa3d20646022b9470ec47a5b7943b6c71b9c584875a228c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0x5c21e70d3dfaab967b1d94ec30c0c956177df2cd80106fd976d34dc9943706124d0c5faa1ae17d68db0c3e737931100159a09c7b26074acfacbcb7c16e2fe389"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x64bc351136ffc21a0aa4efabda42307eb8d8edc7295d4fe24a8c42a0a4017c159acd5b71e138ec11a4eb78594f4b279a4e522f87ddc48082513882d7c2b90284"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "bm-compact-bound",
+   "base": "bm-compact-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b2268656c6c6f223a22776f726c64227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x20e03a77dba93c89fa4d7cdcdcab1070961f785d3b151c06a08587fb7dca495a9f9f1271f5ac3bef44dd7792b02f1165f1c93768237f8ee4d3656c5725207082"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0xbce182bc044c527e5b474a43df31281165c1990ce2ea2e009c5d36156425e453e21abf831a89a10327fb15c5821bb8498c460fe4f9136b7818cb3e2fd3e0b888"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xcce7a517a6b06b2f6702329f16234dd665d50a8da990d65e3b6453547654cd7f858d30e234fe685ee7dcb37a9c2889154e717b933591ea3ec06aab3ed4a4a28d"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0xca1ca6f7018ebc2944a103744d005f0210fc0edd7a051df6cf07869a2eef15775849ce9111e4de1a6db8b18919c5b45cae5c44483c25316860833425cc19d583"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "bm-json-unbound",
+   "base": "bm-json-unbound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x34d50105adf5b796c3c6f85230fc222f4c3ca18e37003790d56add26fbd8b71a209c90617c9e3b034e38c277b01f731045a88a4bdb5370a71d902609c5139b86"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Bad Request, message is not intended for self"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid receiver key"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "bm-json-wrapped",
+   "base": "bm-json-wrapped",
+   "generator": "btwallet sign(<Bytes>M1</Bytes>)",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xe2b25b3f32fc36bef20733c32bb3b9e6a90c4e699e280a04d37ee96b9f6ff13b7c18c01a508a296db218f793d4558e2055c1546634b0caf6e6c69ae88691bb84"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x98a95753159f6a17cd511e1b0746432ce038f79dfca7a02f23341d0eb33e1c65406261176fd168cd613479f7a224dea934ec718055689e445bbc9c4a1aee6f87"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0x8c8b6d6602add8c5070dc9a42c7e8abe1f1e275617ce6059f5d9525971b9aa19b69535db335162316e3d8ae969ffb70fa2de79c2543f2360aea84e2f2ea90e80"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x488f4c58e52e298eb0c9725bc87e7298c4bdf75518ba92c64aecd931d273eb491361672a5cd3b6bf80b61707696ec365a9f6c874f1721ec278a10da6bd9ff78c"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "apex-unbound",
+   "base": "apex-unbound",
+   "generator": "apex generate_header",
+   "body_hex": "7b2261223a202278222c202262223a20317d",
+   "headers": [
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x1064b7fa061c5adac4a7b8eec3f4c3be2c9e47284d3e0fa954cb580e298e9960d21a45766bfe61fde5db5d698201db987f9b64a62f08db72a590b7caf63fa08f"
+    ],
+    [
+     "X-Spec-Version",
+     "100000"
+    ],
+    [
+     "X-Request-Id",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Unknown Epistula version"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid receiver key"
+   },
+   "apex": {
+    "status": 200,
+    "detail": null
+   }
+  },
+  {
+   "id": "apex-bound",
+   "base": "apex-bound",
+   "generator": "apex generate_header",
+   "body_hex": "7b2261223a202278222c202262223a20317d",
+   "headers": [
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x9ce3c3e5d8fa6a5673ad7f0b6026193350b088df003f9b5463cc379290da99698aaa09198d0d3e3d25f90c7f9dcb24871c1e9529415683fa7bc3abdef8f7cb8b"
+    ],
+    [
+     "X-Spec-Version",
+     "100000"
+    ],
+    [
+     "X-Request-Id",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0xf4ec33867330f68c26abc4a02a8dfd3eae1eaca0ababae1e9a7d38e9a42f9e200f248fd21361e30055237612dfe2c8be7a41bf05d55bd49ab05fba443c143d81"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0x768557f935f4fb873a858f77f6da2acc04f47fa905da7bd0b206a24483e34d2b11a81e1955bbae3823fe18d32ef4abae757b610e1e26d7eaab4b71e4601c0886"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0xe8fd6305c2daff7f87ee96dc28a8a2e68db1bf07cc2bcb3b97f1d53e0105453d1c83ddd3550d67046772605a7bb6c7fa509f52e62811618f20ca229dc455c582"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Unknown Epistula version"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid uuid"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "apex-empty",
+   "base": "apex-empty",
+   "generator": "apex generate_header",
+   "body_hex": "7b7d",
+   "headers": [
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xaa55bd165a84546c38959a37a947d8d269796be9fcb2606bde347ea1e22cef012febc1b2d4598a4dbd2173f26938ae951d5f823f5046c9b82a25ab8f7e157683"
+    ],
+    [
+     "X-Spec-Version",
+     "100000"
+    ],
+    [
+     "X-Request-Id",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Unknown Epistula version"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid receiver key"
+   },
+   "apex": {
+    "status": 200,
+    "detail": null
+   }
+  },
+  {
+   "id": "m1-body-trailing-space",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d20",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-for-bob-prefix0",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Signed-For",
+     "14E5nqKAp3oAJcmzgZhUD2RcptBeUBScxKHgJKU4HPNcKVf3"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Bad Request, message is not intended for self"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-for-charlie",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Bad Request, message is not intended for self"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-for-absent",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Bad Request, message is not intended for self"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid receiver key"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-for-empty",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Signed-For",
+     ""
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Bad Request, message is not intended for self"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-version-1",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Version",
+     "1"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Unknown Epistula version"
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-version-absent",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Unknown Epistula version"
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-ts-plus",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Timestamp",
+     "+1700000000123"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-ts-leading-zero",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Timestamp",
+     "01700000000123"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-ts-underscore",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1_700_000_000_123"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-ts-float",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123.0"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Invalid Timestamp"
+   },
+   "spec": {
+    "status": 500,
+    "detail": "ValueError: invalid literal for int() with base 10: '1700000000123.0'"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-ts-absent",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Invalid Timestamp"
+   },
+   "spec": {
+    "status": 500,
+    "detail": "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Request is too stale"
+   }
+  },
+  {
+   "id": "m1-sig-no-prefix",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "c250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 500,
+    "detail": "ValueError: Invalid signature format. Expected hex string."
+   },
+   "spec": {
+    "status": 500,
+    "detail": "ValueError: Invalid signature format. Expected hex string."
+   },
+   "apex": {
+    "status": 500,
+    "detail": "ValueError: Invalid signature format. Expected hex string."
+   }
+  },
+  {
+   "id": "m1-sig-double-prefix",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0x0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-sig-upper",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xC250175800C005F20F6A15B86C92D7362B84C6DA764449FCA9A95996CE75483B60430B9781E380D87D4F3F26D97C86DEFD8EA2A50E17A8AA76F7CDEE94515986"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-sig-short",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee945159"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 500,
+    "detail": "ValueError: Invalid SR25519 signature."
+   },
+   "spec": {
+    "status": 500,
+    "detail": "ValueError: Invalid SR25519 signature."
+   },
+   "apex": {
+    "status": 500,
+    "detail": "ValueError: Invalid SR25519 signature."
+   }
+  },
+  {
+   "id": "m1-sig-absent",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Invalid Signature"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid Signature"
+   },
+   "apex": {
+    "status": 500,
+    "detail": "ValidationError: 1 validation error for EpistulaHeaders\nEpistula-Request-Signature\n  Field required [type=missing, input_value={'Epistula-Timestamp': '1...CtERHpNehXCPcNoHGKutQY'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.14/v/missing"
+   }
+  },
+  {
+   "id": "m1-by-bob",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-uuid-other",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ],
+    [
+     "Epistula-Uuid",
+     "00000000-0000-0000-0000-000000000001"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-uuid-absent",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000000123,
+   "bitmind": {
+    "status": 400,
+    "detail": "Invalid uuid"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Invalid uuid"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-now-age-equal",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000015123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Request is too stale"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-now-age-tie",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000015373,
+   "bitmind": {
+    "status": 400,
+    "detail": "Request is too stale: 15.2s old (limit: 15.0s)"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Request is too stale"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Request is too stale"
+   }
+  },
+  {
+   "id": "m1-now-stale",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000015124,
+   "bitmind": {
+    "status": 400,
+    "detail": "Request is too stale: 15.0s old (limit: 15.0s)"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Request is too stale"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Request is too stale"
+   }
+  },
+  {
+   "id": "m1-now-stale-20s",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000020124,
+   "bitmind": {
+    "status": 400,
+    "detail": "Request is too stale: 20.0s old (limit: 15.0s)"
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Request is too stale"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Request is too stale"
+   }
+  },
+  {
+   "id": "m1-now-spec-age-edge",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000008123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-now-spec-stale",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1700000008124,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 400,
+    "detail": "Request is too stale"
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-now-future-equal",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1699999985123,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-now-future",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1699999985122,
+   "bitmind": {
+    "status": 400,
+    "detail": "Request timestamp is in the future: 15.0s ahead (limit: 15.0s)"
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  },
+  {
+   "id": "m1-now-future-2001",
+   "base": "bm-json-bound",
+   "generator": "bitmind generate_header",
+   "body_hex": "7b226b6579223a202276616c7565227d",
+   "headers": [
+    [
+     "Epistula-Version",
+     "2"
+    ],
+    [
+     "Epistula-Timestamp",
+     "1700000000123"
+    ],
+    [
+     "Epistula-Uuid",
+     "8b0e5f5e-3f6c-4a7e-9c1d-2b9a4f6d7e10"
+    ],
+    [
+     "Epistula-Signed-By",
+     "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+    ],
+    [
+     "Epistula-Request-Signature",
+     "0xc250175800c005f20f6a15b86c92d7362b84c6da764449fca9a95996ce75483b60430b9781e380d87d4f3f26d97c86defd8ea2a50e17a8aa76f7cdee94515986"
+    ],
+    [
+     "Epistula-Signed-For",
+     "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+    ],
+    [
+     "Epistula-Secret-Signature-0",
+     "0x36329ee741b48eac6225c37e0998bf5d9392fdd5a777a72f4e067774bb11872c2fb99cbaf58ba2624357b2a71c2572b4f8994639aebd6fc8dde33291c0c5f38c"
+    ],
+    [
+     "Epistula-Secret-Signature-1",
+     "0xf422b954dbba8ac7ac74a4ba37378379030aec93f39ede6625bc3221bc7a563c433b8119429e8e3443a191ebedbed15f19a6f9327782aae8f1465b7203221386"
+    ],
+    [
+     "Epistula-Secret-Signature-2",
+     "0x4a3d6107d0577c8d7fba148de2f8a99823289fac55ee9e58f594ffbc0879a9425ae13e2e7c2b86caf42050809d3a29b12d23ba16984f03a456c7f71bcdf2f98a"
+    ]
+   ],
+   "now_ms": 1699999998122,
+   "bitmind": {
+    "status": 200,
+    "detail": null
+   },
+   "spec": {
+    "status": 200,
+    "detail": null
+   },
+   "apex": {
+    "status": 400,
+    "detail": "Signature Mismatch"
+   }
+  }
+ ]
+}

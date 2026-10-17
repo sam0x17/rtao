@@ -1,0 +1,27 @@
+{
+ "bittensor": "v10.5.0 (b9af04ad3452dde398460d464598837313226101)",
+ "python": "3.12.15",
+ "packages": {
+  "bittensor": "10.5.0",
+  "bittensor-wallet": "4.1.1",
+  "aiohttp": "3.14.5",
+  "fastapi": "0.143.3",
+  "starlette": "1.8.0",
+  "pydantic": "2.14.1",
+  "pydantic-core": "2.50.1",
+  "uvicorn": "0.54.0",
+  "msgpack-numpy-opentensor": "0.5.0",
+  "numpy": "2.5.4",
+  "async-substrate-interface": "2.2.1"
+ },
+ "pip_freeze_sha256": "1a1e49215fa7f671089d04fe0fcf33130d9aba7b326cfa93c24b062b31a91526",
+ "requirements_sha256": "246cb03fbae5779a73561ad3a87bb0b2ffbb98e83faa202340a6004cb9406bda",
+ "frozen_nonce": 1760000000123456789,
+ "frozen_uuid": "5ecbd69c-1cec-11ee-b0dc-e29ce36fec1a",
+ "external_ip": "203.0.113.7",
+ "s1": {
+  "message": "1700000000000000000.5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY.5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty.5ecbd69c-1cec-11ee-b0dc-e29ce36fec1a.a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+  "python_signature": "0xe2720eb57731b3970597a2d3aa81a00842fe96a4f9fb5d18686a753f16490941b7b12c023d432c4712834030b8d6d492252beb50301ead939a0a15d75b4f958a"
+ },
+ "torch_workaround": "bittensor.core.tensor.dtypes.torch = True (Tensor is unusable without torch otherwise)"
+}

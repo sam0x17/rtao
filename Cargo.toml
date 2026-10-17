@@ -122,6 +122,10 @@ tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
 mime = "0.3"
 redis = { version = "0.32", default-features = false, features = ["tokio-comp", "script"] }
+rtao-remote-signer = { path = "crates/rtao-remote-signer", default-features = false }
+rtao-compat-synapse = { path = "crates/rtao-compat-synapse", default-features = false }
+rtao-compat-epistula = { path = "crates/rtao-compat-epistula", default-features = false }
+rtao-transport-quic = { path = "crates/rtao-transport-quic", default-features = false }
 
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }

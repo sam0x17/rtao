@@ -13,6 +13,10 @@ laptop restrictions no longer apply on this host.
   (for example via `uv`), never in the system Python.
 - Keep temporary work under one recorded task root in `.local/`. Retain
   bounded results and unfinished source, then remove disposable output.
+- This host's host CPU has unstable cores: Linux CPUs 4, 5, 12 and 13
+  produce random segfaults under load (including in gcc). Run every local
+  build and test under
+  `taskset -c 0-3,6-11,14-31` until the hardware is repaired.
 - Run local tests with `umask 022` and `RTAO_TEMP_ROOT` set to a directory
   under `.local/`; this host's default umask is `002`, which the signer's
   state-permission checks correctly refuse.

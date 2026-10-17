@@ -16,6 +16,34 @@ const ORIGINAL_LICENSE: &str = "MIT OR Apache-2.0";
 const DERIVED_LICENSE: &str = "(MIT OR Apache-2.0) AND Apache-2.0";
 const ATTRIBUTION: &str = "// Derived from RaoFoundation/subtensor ";
 const ATTRIBUTION_END: &str = " (Apache-2.0); modified by rtao.";
+const THIRD_PARTY_ATTRIBUTION: &str = "// Derived from ";
+const THIRD_PARTY_END: &str = "; modified by rtao.";
+
+/// Licenses of non-subtensor upstreams named by `// Derived from` headers.
+///
+/// Every such header must end with `(<license>); modified by rtao.` and name
+/// either MIT or Apache-2.0, so a package's declared license can include it.
+fn third_party_licenses(source: &str) -> Result<BTreeSet<&'static str>> {
+    let mut licenses = BTreeSet::new();
+    for line in source.lines().take(12) {
+        if !line.starts_with(THIRD_PARTY_ATTRIBUTION) || line.starts_with(ATTRIBUTION) {
+            continue;
+        }
+        let body = line
+            .strip_suffix(THIRD_PARTY_END)
+            .with_context(|| format!("third-party attribution lacks its ending: {line}"))?;
+        let license = body
+            .rsplit_once('(')
+            .and_then(|(_, license)| license.strip_suffix(')'))
+            .with_context(|| format!("third-party attribution lacks a license: {line}"))?;
+        licenses.insert(match license {
+            "MIT" => "MIT",
+            "Apache-2.0" => "Apache-2.0",
+            other => bail!("unsupported third-party attribution license {other:?}: {line}"),
+        });
+    }
+    Ok(licenses)
+}
 const UNICODE_TABLE: &str = "crates/rtao-core-ext/src/ops/python_printable.rs";
 const UNICODE_LICENSE: &str = "Unicode-DFS-2016";
 const UNICODE_NOTICE_SHA256: &str =
@@ -1105,6 +1133,7 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         }
     }
     let mut attributed: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut third_party: BTreeMap<String, BTreeSet<&'static str>> = BTreeMap::new();
     let mut cli_psf = false;
     for (name, (directory, _)) in &manifests {
         let mut files = Vec::new();
@@ -1112,6 +1141,14 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         for path in files {
             let source = fs::read_to_string(&path)?;
             cli_psf |= cli_psf::source(root, name, directory, &path, &source)?;
+            let licenses = third_party_licenses(&source)
+                .with_context(|| format!("{}: invalid attribution", path.display()))?;
+            if !licenses.is_empty() {
+                third_party
+                    .entry(name.to_owned())
+                    .or_default()
+                    .extend(licenses);
+            }
             for (upstream_path, _) in attributions(&source)
                 .with_context(|| format!("{}: invalid attribution", path.display()))?
             {
@@ -1189,7 +1226,10 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
                 .as_str()
                 .with_context(|| format!("{name}: missing package license"))?
         };
-        let base = if derived.contains(name) {
+        let foreign = third_party.get(name.as_str());
+        let base = if derived.contains(name)
+            || foreign.is_some_and(|licenses| licenses.contains("Apache-2.0"))
+        {
             DERIVED_LICENSE
         } else {
             ORIGINAL_LICENSE
@@ -1209,6 +1249,12 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
         } else {
             base.to_owned()
         };
+        if foreign.is_some_and(|licenses| licenses.contains("MIT")) {
+            if expected == ORIGINAL_LICENSE {
+                expected = format!("({ORIGINAL_LICENSE})");
+            }
+            expected.push_str(" AND MIT");
+        }
         if cli_psf && name == "rtao-cli" {
             expected.push_str(" AND PSF-2.0");
         }
@@ -1227,6 +1273,20 @@ fn check_licenses(root: &Path, rows: &[Row]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn third_party_attributions_name_a_supported_license() -> Result<()> {
+        let source = "// Derived from opentensor/bittensor bittensor/core/axon.py @ v10.5.0 (MIT); modified by rtao.\n// Derived from RaoFoundation/polkadot-sdk substrate/primitives/core/src/crypto.rs @ cacb (Apache-2.0); modified by rtao.\n//! Code.\n";
+        assert_eq!(
+            third_party_licenses(source)?,
+            BTreeSet::from(["Apache-2.0", "MIT"])
+        );
+        let subtensor = format!("{ATTRIBUTION}sdk/python/bittensor/axon.py @ abc{ATTRIBUTION_END}\n");
+        assert!(third_party_licenses(&subtensor)?.is_empty());
+        assert!(third_party_licenses("// Derived from x/y z.py @ v1 (GPL-3.0); modified by rtao.\n").is_err());
+        assert!(third_party_licenses("// Derived from x/y z.py @ v1 (MIT)\n").is_err());
+        Ok(())
+    }
     use std::sync::atomic::{AtomicU64, Ordering};
 
     const SHA: &str = "1111111111111111111111111111111111111111";

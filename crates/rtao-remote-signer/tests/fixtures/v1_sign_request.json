@@ -1,0 +1,45 @@
+{
+  "version": "rtao-remote-signer/1",
+  "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+  "crypto": "sr25519",
+  "purpose": "extrinsic",
+  "chain": {
+    "genesis_hash": "0x1dc00e76a13fc48b9c932e076622c5920295afaad4fd805c284a5cf3222ce452",
+    "spec_version": 461,
+    "transaction_version": 1,
+    "metadata_blake2_256": "0x0f6fc22b62ce5ddce6155e37a332fcafcec5446baccc12fb0ff82dc2a4eb080f"
+  },
+  "call": "0x0503008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48e5c0",
+  "included_in_extrinsic": "0x25000c0000",
+  "included_in_signed_data": "0xcd010000010000001dc00e76a13fc48b9c932e076622c5920295afaad4fd805c284a5cf3222ce452d9f2d5c7e6b387e32b3f41d7808094cc966fbbbbd4709d96471c52d9b1a2b2aa00",
+  "payload": "0x0503008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48e5c025000c0000cd010000010000001dc00e76a13fc48b9c932e076622c5920295afaad4fd805c284a5cf3222ce452d9f2d5c7e6b387e32b3f41d7808094cc966fbbbbd4709d96471c52d9b1a2b2aa00",
+  "payload_json": {
+    "address": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    "blockHash": "0xd9f2d5c7e6b387e32b3f41d7808094cc966fbbbbd4709d96471c52d9b1a2b2aa",
+    "genesisHash": "0x1dc00e76a13fc48b9c932e076622c5920295afaad4fd805c284a5cf3222ce452",
+    "method": "0x0503008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48e5c0",
+    "nonce": "0x00000003",
+    "specVersion": "0x000001cd",
+    "tip": "0x00000000000000000000000000000000",
+    "transactionVersion": "0x00000001",
+    "era": "0x2500",
+    "version": 4,
+    "signedExtensions": [
+      "CheckNonZeroSender",
+      "CheckSpecVersion",
+      "CheckTxVersion",
+      "CheckGenesis",
+      "CheckMortality",
+      "CheckNonce",
+      "CheckWeight",
+      "ChargeTransactionPayment",
+      "SudoTransactionExtension",
+      "CheckShieldedTxValidity",
+      "SubtensorTransactionExtension",
+      "DrandPriority",
+      "CheckMetadataHash"
+    ],
+    "mode": 0,
+    "metadataHash": null
+  }
+}

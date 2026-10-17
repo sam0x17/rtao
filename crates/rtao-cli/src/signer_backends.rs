@@ -107,7 +107,10 @@ impl NativeSignerFactory {
         let backend = crate::globals::normalize_signer_backend(
             globals.signer_backend.as_deref().unwrap_or("wallet"),
         );
-        if !matches!(backend.as_str(), "ledger" | "vault" | "extension") {
+        if !matches!(
+            backend.as_str(),
+            "ledger" | "vault" | "extension" | "remote"
+        ) {
             return Err(CliError::input(format!(
                 "unknown external signing backend {backend:?}"
             )));
