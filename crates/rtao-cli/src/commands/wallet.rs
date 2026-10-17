@@ -348,8 +348,7 @@ fn crypto_name(value: CryptoType) -> &'static str {
 fn prompt_error(error: crate::prompt::PromptError) -> CliError {
     CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 fn secret_prompt(ctx: &AppContext, label: &str) -> Result<SecretString, CliError> {

@@ -165,8 +165,7 @@ fn enabled(matches: &ArgMatches, id: &str) -> bool {
 fn prompt_error(error: PromptError) -> CliError {
     CliError {
         code: error.exit_code(),
-        message: error.to_string(),
-        help: None,
+        ..crate::error::CliError::failure(error.to_string())
     }
 }
 fn expand_path(path: &Path) -> Result<PathBuf, CliError> {

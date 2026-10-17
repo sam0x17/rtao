@@ -328,8 +328,7 @@ fn choose_extension_account(
                             ))
                             .map_err(|error| CliError {
                                 code: error.exit_code(),
-                                message: error.to_string(),
-                                help: None,
+                                ..crate::error::CliError::failure(error.to_string())
                             })?;
                         let raw = crate::prompt::python_strip(&raw);
                         let index = if raw.is_empty() {
