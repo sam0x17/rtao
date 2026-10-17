@@ -43,6 +43,7 @@ function packages(text) {
 
 const additions = new Map([
   ['rtao-cli', 'nix'],
+  ['rtao-testkit', 'docify'],
   ['rtao-wallet', 'rustix'],
   ['rtao-rpc', 'tokio-rustls'],
 ]);
