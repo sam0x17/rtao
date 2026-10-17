@@ -1190,6 +1190,23 @@ fn command_line(argv: &[String], answers: &[String], drop_dry: bool) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+/// Keep named-network hints exact; require private endpoints from the operator.
+pub(crate) fn shareable_network(network: &str) -> (&'static str, Option<&str>) {
+    if network == "finney" {
+        ("", None)
+    } else if rtao_catalog::py::NETWORKS
+        .iter()
+        .any(|(name, _)| *name == network)
+    {
+        ("", Some(network))
+    } else {
+        (
+            r#"BT_NETWORK="${BT_NETWORK:?set BT_NETWORK to your configured RPC endpoint}" "#,
+            None,
+        )
+    }
+}
+
 /// Quote a public token for a POSIX replay command, without executing it.
 pub fn shell_quote(token: &str) -> String {
     if !token.is_empty()

@@ -22,16 +22,20 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 
 [[divergences]]
 id = "D-074"
-upstream_symbol = "bittensor.cli.context.AppContext.run connection diagnostics"
-python_behavior = "Formats the configured network string directly into the could-not-reach diagnostic, including a custom RPC URL."
-rtao_behavior = "Preserves named networks but renders custom RPC network URLs through the existing safe_endpoint formatter, excluding user information, path, query and fragment. Routing still uses the original configured endpoint. Human, quiet and JSON diagnostics share this sanitized label."
+upstream_symbol = "bittensor.cli connection diagnostics and shareable multisig/upgrade network hints"
+python_behavior = "Formats the configured network string directly into connection diagnostics and shareable commands, including a custom RPC URL."
+rtao_behavior = "Preserves named-network labels and commands. Custom RPC connection labels use safe_endpoint, excluding user information, path, query and fragment while routing keeps the original endpoint. Shareable multisig and upgrade commands require a nonempty operator-supplied BT_NETWORK through a quoted environment assignment; they never embed or truncate the private URL or silently fall back to finney."
 rationale = "A configured RPC URL can carry authentication credentials or tokens. Terminal escaping does not conceal ordinary secret bytes; diagnostic labels must not disclose them."
 decision = "PLAN.md execution rule 5 confidentiality correction; M4-S5 independent security review and actual network resolution source inspected on 2026-10-16"
 status = "active"
 class = "stricter"
 milestone = "M4"
-pinning_tests = ["rtao_cli::context_contract::cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed"]
-upstream_report = "Native source repair and authored credential-bearing DNS/IPv6 endpoint fixtures; hosted execution pending. Related shareable-command sinks remain open in M4-S5. No new upstream filing."
+pinning_tests = [
+  "rtao_cli::context_contract::cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed",
+  "rtao_cli::raw_call_contract::multisig_replay_uses_rtao_and_preserves_btcli_inside_user_arguments",
+  "rtao_cli::commands::upgrade::tests::mixed_signer_sources_refuse_and_threshold_one_review_is_executing",
+]
+upstream_report = "Independent source reviews cover all three repaired sinks; existing DNS/IPv6 diagnostic and actual shareable-command fixtures include private URL components, named aliases, output and hosted-only POSIX shell checks. Hosted execution remains pending; the operator must choose the intended endpoint. No new upstream filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/context.py#L2039-L2043"
 
 [[divergences]]

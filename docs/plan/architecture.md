@@ -4694,6 +4694,8 @@ fn tx_command() -> clap::Command {
 - **Connection labels (D-074).** Named networks retain their labels. Custom RPC URLs in connection diagnostics use
   the existing `safe_endpoint` formatter, excluding user information, path, query and fragment while retaining the
   configured endpoint for routing. This confidentiality correction applies to human, quiet and JSON errors.
+  Shareable multisig and upgrade commands require a nonempty private `BT_NETWORK` for custom endpoints rather than
+  embedding the configured URL. Named-network commands remain unchanged; the operator chooses the intended endpoint.
 - **Shield failure guidance (D-075).** Retain the actual transport after fallback, including the last saved approval
   round. Human carrier failures explain free-TAO fees without unconditional opt-out advice; known mandatory shields
   cannot be disabled. Missing inner metadata does not prove rejection, and unknown fate requires inspection before

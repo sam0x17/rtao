@@ -687,6 +687,103 @@ fn mixed_signer_sources_refuse_and_threshold_one_review_is_executing() -> TestRe
     let (position, question) = signing_position(None, 1, factory.signer(), &Map::new());
     assert_eq!(position, "final");
     assert!(question.contains("upgrade executes in this extrinsic"));
+
+    let release = "https://github.com/RaoFoundation/subtensor/releases/tag/v478";
+    let plain = format!("btcli upgrade sign --url {release} -w <your-wallet>");
+    let environment =
+        r#"BT_NETWORK="${BT_NETWORK:?set BT_NETWORK to your configured RPC endpoint}" "#;
+    let mut networks = rtao_catalog::py::NETWORKS
+        .iter()
+        .map(|(name, _)| ((*name).to_owned(), false))
+        .collect::<Vec<_>>();
+    networks.extend([
+        "wss://url-user:url-password@rpc.invalid:9944/",
+        "ws://rpc.invalid:9944/private-path-token",
+        "wss://rpc.invalid/?api_key=query-token",
+        "wss://rpc.invalid/#fragment-token",
+        "wss://url-user%40team:url-password%21@rpc.invalid/private-path-token?api_key=query-token#fragment-token",
+    ].into_iter().map(|endpoint| (endpoint.to_owned(), true)));
+    for (network, custom) in networks {
+        let parsed = parse(&["sign", "--hex-url", HEX_URL])?;
+        let (mut ctx, _, sink) = context(&parsed, factory.signer())?;
+        ctx.globals.network = network.clone();
+        let before = ctx.client_config()?.network.endpoint().to_owned();
+        let command = sign_command(&ctx, release);
+        let expected = if custom {
+            format!("{environment}{plain}")
+        } else if network == "finney" {
+            plain.clone()
+        } else {
+            plain.replacen("btcli ", &format!("btcli -n {network} "), 1)
+        };
+        assert_eq!(command, expected);
+        if custom {
+            for private in [
+                network.as_str(),
+                "rpc.invalid",
+                "url-user",
+                "url-password",
+                "private-path-token",
+                "query-token",
+                "fragment-token",
+            ] {
+                assert!(!command.contains(private));
+            }
+            #[cfg(unix)]
+            {
+                // Fill the existing wallet placeholder only for this intercepted
+                // shell fixture; the rendered hint still asks for the wallet.
+                let runnable = command.replace("<your-wallet>", "fixture-wallet");
+                let script = format!(r#"btcli() {{ printf '%s\n' "$BT_NETWORK"; }}; {runnable}"#);
+                for value in [None, Some("")] {
+                    let mut shell = std::process::Command::new("sh");
+                    shell.arg("-c").arg(&script).env_remove("BT_NETWORK");
+                    if let Some(value) = value {
+                        shell.env("BT_NETWORK", value);
+                    }
+                    let result = shell.output()?;
+                    assert!(!result.status.success());
+                    assert!(result.stdout.is_empty());
+                    assert!(
+                        String::from_utf8(result.stderr)?
+                            .contains("set BT_NETWORK to your configured RPC endpoint")
+                    );
+                }
+                let result = std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(&script)
+                    .env("BT_NETWORK", &network)
+                    .output()?;
+                assert!(result.status.success());
+                assert_eq!(String::from_utf8(result.stdout)?, format!("{network}\n"));
+            }
+        } else {
+            assert!(!command.contains("BT_NETWORK"));
+        }
+
+        ctx.globals.json = false;
+        ctx.output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+        share_hint(&ctx, Some(release), None, &[OTHER])?;
+        let human = sink.text(Stream::Stderr)?;
+        assert!(human.contains(&format!("they can run: {command}")));
+        if custom {
+            assert!(!human.contains(&network));
+        }
+        ctx.globals.json = true;
+        ctx.output = Output::new(
+            OutputOptions {
+                json_mode: true,
+                ..Default::default()
+            },
+            Arc::new(sink.clone()),
+        );
+        detail(&ctx, "sudo multisig status", json!({"they run":command}))?;
+        let rendered = docs(&sink)?;
+        assert_eq!(rendered.len(), 1);
+        assert_eq!(rendered[0]["they run"], expected);
+        assert_eq!(ctx.globals.network, network);
+        assert_eq!(ctx.client_config()?.network.endpoint(), before);
+    }
     Ok(())
 }
 
