@@ -43,7 +43,12 @@ evm = ["dep:rtao-evm"]
 blocking = ["intents-all","metagraph","wallet","rtao-client/blocking","dep:rtao-runtime","dep:rtao-catalog","dep:bytes","dep:futures","dep:serde_json","dep:tokio"]
 prometheus = ["rtao-neuron?/prometheus","rtao-rpc/metrics"]
 subxt = ["rtao-client/subxt"]
-full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus"]
+compat-synapse = ["dep:rtao-compat-synapse","rtao-compat-synapse/axon","rtao-compat-synapse/dendrite","rtao-compat-synapse/tensor"]
+compat-epistula = ["dep:rtao-compat-epistula","rtao-compat-epistula/server","rtao-compat-epistula/client"]
+transport-quic = ["dep:rtao-transport-quic","rtao-transport-quic/client","rtao-transport-quic/server"]
+remote-signer = ["tx","btauth-client","dep:rtao-remote-signer","rtao-remote-signer/client"]
+remote-signer-server = ["remote-signer","rtao-remote-signer/server-online"]
+full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus","compat-synapse","compat-epistula","transport-quic","remote-signer","remote-signer-server"]
 
 [dependencies]
 rtao-core.workspace = true
@@ -65,6 +70,10 @@ bytes = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
+rtao-compat-synapse = { workspace = true, optional = true }
+rtao-compat-epistula = { workspace = true, optional = true }
+rtao-transport-quic = { workspace = true, optional = true }
+rtao-remote-signer = { workspace = true, optional = true }
 
 [dev-dependencies]
 docify.workspace = true

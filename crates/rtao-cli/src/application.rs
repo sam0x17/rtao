@@ -1006,7 +1006,8 @@ fn effective_prompt_context(
             context.extension_signer = false;
         } else if let Some(backend) = backend {
             let backend = crate::globals::normalize_signer_backend(backend);
-            context.external_signer = ["ledger", "vault", "extension"].contains(&backend.as_str());
+            context.external_signer =
+                ["ledger", "vault", "extension", "remote"].contains(&backend.as_str());
             context.extension_signer = backend == "extension";
         }
         match current.subcommand() {
@@ -1336,7 +1337,7 @@ mod parsing_tests {
         ])?;
         let context = effective_prompt_context(&PromptContext::default(), &parsed);
         assert!(context.external_signer && context.extension_signer);
-        let parsed = command.try_get_matches_from([
+        let parsed = command.clone().try_get_matches_from([
             "rtao",
             "choose",
             "--netuid",
@@ -1345,6 +1346,11 @@ mod parsing_tests {
             "extension",
             "--ledger",
         ])?;
+        let context = effective_prompt_context(&PromptContext::default(), &parsed);
+        assert!(context.external_signer && !context.extension_signer);
+        // A remote signer holds the key: no local wallet is confirmed.
+        let parsed = command
+            .try_get_matches_from(["rtao", "choose", "--netuid", "12", "--signer", "remote"])?;
         let context = effective_prompt_context(&PromptContext::default(), &parsed);
         assert!(context.external_signer && !context.extension_signer);
         Ok(())

@@ -1,0 +1,405 @@
+[
+ {
+  "value": "",
+  "str": "",
+  "hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+ },
+ {
+  "value": "plain",
+  "str": "plain",
+  "hash": "1a54d8ebb4748b5f3f686fee47846102a7853c9a67e8fda7306da4e504c596a6"
+ },
+ {
+  "value": "it's",
+  "str": "it's",
+  "hash": "d9f205e52dbd449588907a8f7da27576dd5ecc10ccc7590da93694aff79a7ecf"
+ },
+ {
+  "value": "say \"hi\"",
+  "str": "say \"hi\"",
+  "hash": "e40414eab6e31681b85bf92a3f29216b1ce37adb85aa9418b6b7d9cce8b02fcd"
+ },
+ {
+  "value": "both ' and \"",
+  "str": "both ' and \"",
+  "hash": "af16660e08567e54ea4b91b7eef1d3e6a33ebf5b6e3c8067114bfb5a302a28ad"
+ },
+ {
+  "value": "line\nbreak",
+  "str": "line\nbreak",
+  "hash": "8c7ed733c24dbd1355ed4b7e48807db68aaa7d8244773afa3c43798a9fada29e"
+ },
+ {
+  "value": "tab\tand\\",
+  "str": "tab\tand\\",
+  "hash": "12c8b3c16b37b8d6d39c28936f90aecf11b32e881c6dd7cc0e18a4544fe31c64"
+ },
+ {
+  "value": "",
+  "str": "",
+  "hash": "aac68691d102829ac973f5b44c26165aa4e29cd498aff642a08944645d6ca5bd"
+ },
+ {
+  "value": " ",
+  "str": " ",
+  "hash": "a35d4e9a7f96ac9243e245909d4a2c68dde4f98f172a3e7548e3351076e04d2b"
+ },
+ {
+  "value": "​",
+  "str": "​",
+  "hash": "7f20c1f58999b3f183737618eed516dd204eb3dac628538abec41b53ee5ad18a"
+ },
+ {
+  "value": "😀",
+  "str": "😀",
+  "hash": "0f2a376a2af79037549328fa8f76fc6c41b97ff3c10107d7297d0339e3380e3c"
+ },
+ {
+  "value": "",
+  "str": "",
+  "hash": "df8158986502fb835267e2ebfc66dff0864a27f24e7e8aa22da7a9596fa448d0"
+ },
+ {
+  "value": "\u0000\u001f",
+  "str": "\u0000\u001f",
+  "hash": "cfe6110357ec0b3b67885eda232d336f170bf574768244e4b3e8df736a4784f3"
+ },
+ {
+  "value": "͸",
+  "str": "͸",
+  "hash": "18336635d07256739394512741baf3266056e048f2501a855da36b3bd3931a57"
+ },
+ {
+  "value": [
+   "it's",
+   "say \"hi\"",
+   "both ' and \"",
+   "line\nbreak",
+   "",
+   " ",
+   "​",
+   "😀",
+   "",
+   "\u0000",
+   "͸",
+   "󠀁",
+   "퟿"
+  ],
+  "str": "[\"it's\", 'say \"hi\"', 'both \\' and \"', 'line\\nbreak', '\\x7f', '\\xa0', '\\u200b', '😀', '\\ue000', '\\x00', '\\u0378', '\\U000e0001', '\\ud7ff']",
+  "hash": "8275364e1607d21e52a38b3905e6f8d8865986dd083db89f32a90a1e3ad73c5f"
+ },
+ {
+  "value": {
+   "float": "0.1"
+  },
+  "str": "0.1",
+  "hash": "75bd59c8426679f3ef7b3a37184ee08e2e5ecee840e330acf6782d77cf2a2d1b"
+ },
+ {
+  "value": {
+   "float": "1e-05"
+  },
+  "str": "1e-05",
+  "hash": "e276dbc73756a2417e9d716484999961a9ea24a1b6dc00509b91e891548b3408"
+ },
+ {
+  "value": {
+   "float": "1e+16"
+  },
+  "str": "1e+16",
+  "hash": "06fd81586da3d0ce789b50f959f4e57e5c3fd89d3f65e8187f73895040ce5909"
+ },
+ {
+  "value": {
+   "float": "-0.0"
+  },
+  "str": "-0.0",
+  "hash": "d7d5e4cdde4c33611f5a5f2cffeda3f8e158f82748db86660867238525c281a0"
+ },
+ {
+  "value": {
+   "float": "inf"
+  },
+  "str": "inf",
+  "hash": "5edf146c69cb45a06112c8f735363afce051ed494b84dd5c6fe8f435dcb0d41e"
+ },
+ {
+  "value": {
+   "float": "-inf"
+  },
+  "str": "-inf",
+  "hash": "e3420f107ff92a7d4156d9282a42b50bf328ac786ea28f48adb6bc475107438a"
+ },
+ {
+  "value": {
+   "float": "1.0"
+  },
+  "str": "1.0",
+  "hash": "07099e0ea0e7912f273216a9cd97b3bb1d5f21c453c7581799645fd6130bdaad"
+ },
+ {
+  "value": {
+   "float": "123456789.125"
+  },
+  "str": "123456789.125",
+  "hash": "11c3af56cb96fd20f3c70be1ab348b431c37c1a623e33a6aab083e8b3ac3b9ce"
+ },
+ {
+  "value": {
+   "float": "5e-324"
+  },
+  "str": "5e-324",
+  "hash": "544e78ced73f7c8fdd6f3f4ba6ecc9da23e6d5103c19a76b54a69d67acf26ad7"
+ },
+ {
+  "value": {
+   "float": "1.7976931348623157e+308"
+  },
+  "str": "1.7976931348623157e+308",
+  "hash": "528a74550f4e841734448936b222dc6529491cfe1b8c512bf117e9c46d25bd49"
+ },
+ {
+  "value": [
+   {
+    "float": "0.1"
+   },
+   {
+    "float": "1e-05"
+   },
+   {
+    "float": "1e+16"
+   },
+   {
+    "float": "-0.0"
+   },
+   {
+    "float": "inf"
+   }
+  ],
+  "str": "[0.1, 1e-05, 1e+16, -0.0, inf]",
+  "hash": "a2af7a997187bfddbd9a131336f913a7d5194dadc816c805df1eac3e8045e0ad"
+ },
+ {
+  "value": {
+   "dict": [
+    [
+     "a",
+     [
+      {
+       "float": "0.5"
+      },
+      {
+       "float": "2.0"
+      }
+     ]
+    ],
+    [
+     "z",
+     []
+    ],
+    [
+     "m",
+     [
+      {
+       "float": "1e-07"
+      }
+     ]
+    ]
+   ]
+  },
+  "str": "{'a': [0.5, 2.0], 'z': [], 'm': [1e-07]}",
+  "hash": "2e1adf0f9973431f1c46348ce6dd8476d468d4b83ee88fd9dc57c23ca30d9336"
+ },
+ {
+  "value": true,
+  "str": "True",
+  "hash": "62b5b5e01d892e831aa186068a8d83b662e8b2928b10aa5ce2aedb3edc8e7673"
+ },
+ {
+  "value": false,
+  "str": "False",
+  "hash": "e4afc5584b17b9bd3dddf0e6fee7e071616c60a25d24b8148aa8276cdb358995"
+ },
+ {
+  "value": null,
+  "str": "None",
+  "hash": "61ae1749811579a5799852da2541dd16a7ffb1744c6248718a123570fffd0a63"
+ },
+ {
+  "value": {
+   "int": "1180591620717411303424"
+  },
+  "str": "1180591620717411303424",
+  "hash": "e016410785e978aac39d87a408e9b80c3d266663625042090779e1fe9782340e"
+ },
+ {
+  "value": {
+   "int": "-1180591620717411303424"
+  },
+  "str": "-1180591620717411303424",
+  "hash": "2fbdd40637507a896e0df093e46b0d12f5d646ddb24d0a61c54fccb658f40927"
+ },
+ {
+  "value": {
+   "int": "0"
+  },
+  "str": "0",
+  "hash": "f9e2eaaa42d9fe9e558a9b8ef1bf366f190aacaa83bad2641ee106e9041096e4"
+ },
+ {
+  "value": {
+   "tuple": [
+    {
+     "int": "1"
+    }
+   ]
+  },
+  "str": "(1,)",
+  "hash": "0adc0c12290f012169427d91f0087aecf57a6c606c2c93a589f1de85732f0bd9"
+ },
+ {
+  "value": {
+   "tuple": [
+    {
+     "int": "1"
+    },
+    "a",
+    null
+   ]
+  },
+  "str": "(1, 'a', None)",
+  "hash": "1a162336e8c708c273136e62ebbedbe504e71ccba49e288d3f6bf8808be66baf"
+ },
+ {
+  "value": {
+   "tuple": []
+  },
+  "str": "()",
+  "hash": "b1ab39a6b1f7f265036ad5e4bf9c4eb0b1363227d28bed5890e39220bd8d62ca"
+ },
+ {
+  "value": {
+   "dict": [
+    [
+     "k",
+     {
+      "dict": [
+       [
+        "nested",
+        {
+         "tuple": [
+          {
+           "int": "1"
+          },
+          {
+           "int": "2"
+          }
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     "b",
+     [
+      true,
+      null
+     ]
+    ]
+   ]
+  },
+  "str": "{'k': {'nested': (1, 2)}, 'b': [True, None]}",
+  "hash": "695adac5aeaa69cbf462dadd225e75aaf68ef98878654244088d2ec8b531d9de"
+ },
+ {
+  "value": {
+   "dict": [
+    [
+     "x",
+     {
+      "int": "1"
+     }
+    ],
+    [
+     "y",
+     [
+      {
+       "float": "0.5"
+      }
+     ]
+    ]
+   ]
+  },
+  "str": "{'x': 1, 'y': [0.5]}",
+  "hash": "1eb382b72a95ddd7a20c9998564c862644581bd07be2c24622a65bc0189b0a47"
+ },
+ {
+  "value": {
+   "dict": [
+    [
+     "buffer",
+     "hcQCbmTDxAR0eXBlozxmNMQEa2luZMQAxAVzaGFwZZICAsQEZGF0YcQQAADAPwAAAEAAAEBAAACAQA=="
+    ],
+    [
+     "dtype",
+     "float32"
+    ],
+    [
+     "shape",
+     [
+      {
+       "int": "2"
+      },
+      {
+       "int": "2"
+      }
+     ]
+    ]
+   ]
+  },
+  "str": "{'buffer': 'hcQCbmTDxAR0eXBlozxmNMQEa2luZMQAxAVzaGFwZZICAsQEZGF0YcQQAADAPwAAAEAAAEBAAACAQA==', 'dtype': 'float32', 'shape': [2, 2]}",
+  "hash": "51d3391e8476659f82fa17e827178e469c8a62894cc8773bd297fbd81e24d814"
+ },
+ {
+  "value": [
+   [],
+   {
+    "dict": []
+   },
+   [
+    []
+   ]
+  ],
+  "str": "[[], {}, [[]]]",
+  "hash": "42413aed98ba3e0df038b4d470d178480c7abd276f6318fb0f3ee7068bb4bedd"
+ },
+ {
+  "synapse": "Synapse",
+  "body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+ },
+ {
+  "synapse": "Mixed",
+  "body_hash": "067e64c9d11ac9a06a228e4628a6b83f9e78f435c4f4582210562ee2f5ff7cd7"
+ },
+ {
+  "synapse": "Req",
+  "body_hash": "5253c679b9c5e3fefba74e63f50503959f9303b63e92dc33ae2c9337349f9fe8"
+ },
+ {
+  "synapse": "LegacyHashed",
+  "body_hash": "ae06397d08f30f75c91395c59f05c62ac3b62b88250eb78b109213258e6ced0c"
+ },
+ {
+  "synapse": "Tens",
+  "body_hash": "f8ec61485bd6730aa8a5f4212fbb21e9e4bd45cc6c020c2070bf67e3c308c582"
+ },
+ {
+  "synapse": "Tens",
+  "body_hash": "374b5d095204fc2ce2201a0f3c315571a7097e854d9babc9ed634954d4dd9e10"
+ },
+ {
+  "synapse": "Echo",
+  "body_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+ }
+]

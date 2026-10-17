@@ -1,0 +1,54 @@
+[package]
+name = "rtao-transport-quic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+# src/data.rs ports btlightning's NamedSerializer (MIT, Inference Labs Inc).
+license = "(MIT OR Apache-2.0) AND MIT"
+repository.workspace = true
+description = "btlightning-compatible QUIC transport for Bittensor neurons, built on quinn."
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
+
+[lints]
+workspace = true
+
+[features]
+default = ["client", "server"]
+client = []
+server = ["dep:rcgen", "dep:rtao-btauth", "dep:num-bigint"]
+
+[dependencies]
+rtao-signer = { workspace = true }
+rtao-core = { workspace = true }
+rtao-primitives = { workspace = true }
+rtao-btauth = { workspace = true, optional = true }
+num-bigint = { workspace = true, optional = true }
+rcgen = { workspace = true, optional = true }
+quinn = { version = "0.11.12", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+rmp-serde = "1.3.1"
+rmpv = { version = "1.3.1", features = ["with-serde"] }
+serde = { workspace = true }
+serde_bytes = "0.11.19"
+base64 = { workspace = true }
+blake2 = { workspace = true }
+getrandom = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "io-std"] }
+serde_json = { workspace = true }
+hex = { workspace = true }
+
+[[example]]
+name = "quic_peer"
+required-features = ["client", "server"]

@@ -30,12 +30,16 @@ on:
         description: Prepare the reviewed Ledger core patch pins for artifact review
         type: boolean
         default: false
+      m10_interop:
+        description: Run the M10 interop harnesses and the RemoteSigner localnet exit check
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.ref }}-${{ inputs.refresh_canonical_abis && 'canonical-abis' || inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
+  group: pr-${{ github.ref }}-${{ inputs.m10_interop && 'm10-interop' || inputs.refresh_canonical_abis && 'canonical-abis' || inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
   cancel-in-progress: true
 
 env:
@@ -50,7 +54,7 @@ env:
 # Python and live Docker/hardware targets are excluded by the ci test profile.
 jobs:
   check:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -92,7 +96,7 @@ jobs:
           retention-days: 7
 
   no-host:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -112,7 +116,7 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -136,7 +140,7 @@ jobs:
           timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -194,7 +198,7 @@ jobs:
         run: timeout 300s cargo test --locked -p rtao-wallet --no-default-features --test keyfile
 
   supply:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -229,7 +233,7 @@ jobs:
           retention-days: 14
 
   semver:
-    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis))
+    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -494,3 +498,46 @@ jobs:
             vendor/upstream/extracted/root_claim_fixtures.json
           if-no-files-found: error
           retention-days: 3
+
+  m10-interop:
+    if: github.event_name == 'workflow_dispatch' && inputs.m10_interop
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Run M10 interop against pinned upstream Python peers
+        run: bash ci/interop/m10-hosted.sh
+
+  remote-signer-localnet:
+    if: github.event_name == 'workflow_dispatch' && inputs.m10_interop
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RTAO_TEMP_ROOT: ${{ github.workspace }}/target/remote-signer-localnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - name: RemoteSigner signs a localnet transfer and refuses replay and tampering
+        run: bash ci/interop/remote-signer/localnet.sh
+      - name: Retain bounded localnet logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: remote-signer-localnet-${{ github.sha }}
+          path: target/remote-signer-localnet/*.log
+          if-no-files-found: ignore
+          retention-days: 7
