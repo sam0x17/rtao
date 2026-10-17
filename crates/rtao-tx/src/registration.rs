@@ -1007,6 +1007,7 @@ mod tests {
             .unwrap();
         let (client, fake) = fixture(state).await;
         let original = receipt(&client, 100, 0).await;
+        let expected_block_hash = original.block_hash;
         fake.mutate_state(|state| {
             let parent = state.block_hash(99).unwrap();
             let replacement = state.fork(&parent).unwrap();
@@ -1017,7 +1018,7 @@ mod tests {
             .unwrap_err();
         assert!(error.to_string().contains("inclusion was reorganized"));
         let retained = error.submitted_receipt().unwrap();
-        assert_eq!(retained.block_hash, Some(original_hash));
+        assert_eq!(retained.block_hash, expected_block_hash);
         assert_eq!(retained.extrinsic_hash, Some(H256([37; 32])));
         assert!(retained.data.get("netuid").is_none());
     }
