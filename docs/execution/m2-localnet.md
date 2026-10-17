@@ -13,8 +13,8 @@ The [e2e](../../.github/deferred-workflows/e2e.yml),
 [nightly](../../.github/deferred-workflows/nightly.yml) workflow drafts are
 inactive. Any specifically needed integration selects a small relevant case
 on a bounded free hosted runner. Multi-network schedules and a blocking
-`e2e-required` summary are outside the development exit. M2-S02 remains open
-and unaccepted; the M2 milestone exit remains open.
+`e2e-required` summary are outside the development exit. M2-S02 is fixed by
+the combined core patch at fork rev `626f2a4f`, and M2-26 is complete.
 
 ## Historical preparation and validation
 

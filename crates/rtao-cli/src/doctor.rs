@@ -558,7 +558,7 @@ mod tests {
     #[test]
     fn recorded_core_replacement_keeps_bls_at_its_upstream_base() -> Result<(), String> {
         const FORK: &str = "https://github.com/sam0x17/subtensor.git";
-        const REVISION: &str = "5a43348e8dc95311e9750781a28a33380c454409";
+        const REVISION: &str = "626f2a4f1f67ab731c1fc3884828751496bc125d";
         let expected = pin("tag", "v478");
         let required_patch = expected.patch_line();
         let manifest = parse(&format!(

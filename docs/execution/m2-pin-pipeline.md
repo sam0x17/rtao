@@ -13,8 +13,8 @@ The [pin-bump](../../.github/deferred-workflows/pin-bump.yml),
 [nightly](../../.github/deferred-workflows/nightly.yml) workflows are inactive
 drafts outside `.github/workflows`; only ordinary `pr.yml` is active. No poll,
 schedule, issue publication or PR creation is required. Preserve adoption
-recovery journals and durable state. M2-S02 remains open/unaccepted and M2 exit
-remains open.
+recovery journals and durable state. M2-S02 is fixed by the combined core patch
+at fork rev `626f2a4f`, and M2-26 is complete.
 
 ## Historical preparation and validation
 

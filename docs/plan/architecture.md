@@ -3283,9 +3283,11 @@ value (from Python's generated descriptors, so from the pinned metadata) decides
   - Polkadot-js JSON import uses `Keypair::from_encrypted_json` (`host`).
 - **Unlock** is lazy and cached once per shared role source, with keyfile/KDF work offloaded (Argon2i, 512 MiB,
   t = 8). Clones share an `Arc` signer; independent wallet sources have independent caches. The core separately
-  zeroizes retained mnemonic and seed buffers, but rtao cannot wipe the opaque signing pair. The pinned Ed25519
-  pair has no guaranteed final-drop erasure: **M2-S02 remains open and unaccepted** (§6.3, `docs/security/m2.md`,
-  `docs/security/m9.md`, upstream issue #3251). No dependency/KDF/allocator/OS erasure guarantee is implied.
+  zeroizes retained mnemonic and seed buffers. The pinned combined core patch (`626f2a4f`) stores Ed25519 private
+  state as `Zeroizing<ed25519_zebra::SigningKey>`, so final drop wipes the seed, expanded scalar and nonce prefix:
+  **M2-S02 is fixed** (§6.3, `docs/security/m2.md`, `docs/security/m9.md`, `docs/execution/core-patch.md`, upstream
+  issue #3251). No erasure guarantee is implied for allocator/OS copies, stack copies from moving the `Copy`
+  `SigningKey`, short-lived dependency/KDF values or caller-owned inputs.
   The coldkey address comes from `coldkeypub.txt` without unlocking (`PY/intents/base.py:288-298`).
 - **Native API placement.** `WalletRef` exposes layout/public identity; `Wallet` returns role-checked signers rather
   than mutable private Python `Keypair` attributes. Creation/regeneration take an explicit `CryptoType`, one
@@ -3338,7 +3340,8 @@ pub async fn resolve_wallet_password(w: &Wallet, s: &PasswordSources) -> Result<
   `rtao wallet save-password-env` prints `export BT_PW_…=<encoded>` using the staged pure encoder (G10). None of
   these operations calls `set_var` or changes the parent shell environment.
 - **SDK-owned passwords/recovery values** use `secrecy::SecretString` or `Zeroizing`, and their `Debug` output
-  redacts secrets. This does not extend the erasure claim to the opaque signing pair or dependency/OS copies.
+  redacts secrets. Stored Ed25519 signing-state erasure comes from the pinned core patch (§6.1); no erasure claim
+  extends to dependency, allocator or OS copies.
 - **`keyring`** (Linux Secret Service) is an rtao-only source between 4 and 5, behind a feature and off by default.
 
 ### 6.3 The `Signer` contract
@@ -3440,7 +3443,7 @@ default only when its requested role matches the intent's signing role. A bare s
 `KeySource<R>` and `DynKeySource`; signing a coldkey intent does not attach a default hotkey. Missing-key diagnostics
 match `intents/base.py`; public-file errors propagate without an identity fallback or unlock.
 
-`KeypairSigner` clones share one pinned-core `Keypair` through `Arc` until its final owner drops. The core separately zeroizes retained mnemonic and seed buffers. Rtao cannot wipe the opaque signing pair, and the pinned ed25519 pair has no guaranteed secret wipe on drop. Borrowed constructor inputs remain the caller's responsibility; secret-dependent constructor errors use fixed diagnostics after wiping the discarded owned message.
+`KeypairSigner` clones share one pinned-core `Keypair` through `Arc` until its final owner drops. The core separately zeroizes retained mnemonic and seed buffers, and the pinned core stores ed25519 signing state in a wiping `Zeroizing<SigningKey>` owner that the final drop wipes (M2-S02 fixed; allocator/OS copies, stack copies from moving the key and short-lived dependency values are not covered). Borrowed constructor inputs remain the caller's responsibility; secret-dependent constructor errors use fixed diagnostics after wiping the discarded owned message.
 `Arc<S>` forwards the complete `Signer` contract. Bare `Clone + Signer` values implement both typed key-source roles
 and dynamic selection, including a non-clone backend held as `Arc<dyn Signer>`. Wallet sources implement public views
 and their supported role markers separately. Unknown dynamic role tokens return `SignerError::InvalidRole` before
@@ -3491,7 +3494,7 @@ The native role/input API makes the following dispositions for `PY/signing.py`:
 `IntentKeyView` adds the intent role context from `intents/base.py`. Its cross-role missing-default refusal must
 not be attributed to `signing.py::public_view`, which passes a bare signer through for either role. These source
 dispositions describe the native API; fixture presence alone establishes neither current hosted execution nor
-independent Python or device parity. M2-S02 remains open and unaccepted.
+independent Python or device parity. M2-S02 is fixed by the pinned combined core patch (§6.1).
 
 ### 6.5 Signer implementations
 

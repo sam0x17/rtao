@@ -11,14 +11,14 @@ fingerprint = "b3:edc9f51ac0953af2b9b60665398e0146567ae4ca9988d7f018d3788f01a73b
 [core.patch]
 repo = "https://github.com/sam0x17/subtensor.git"
 branch = "rtao-core-patch/v478"
-rev = "5a43348e8dc95311e9750781a28a33380c454409"
+rev = "626f2a4f1f67ab731c1fc3884828751496bc125d"
 base = "850f2755bb05a3851f948489f0ab27b0645cebce"
 upstream_pr = "https://github.com/RaoFoundation/subtensor/pull/3242"
 upstream_pr_rev = "eafe84e8a97376e7902118ebb204b9c53e3df55e"
 security_issue = "https://github.com/RaoFoundation/subtensor/issues/3251"
 review_base = "850f2755bb05a3851f948489f0ab27b0645cebce"
-review_rev = "5a43348e8dc95311e9750781a28a33380c454409"
-review_diff_sha256 = "404c285c98003fb845eed23ec9e48640a25a8e5b570ac1b7312c2df6aa922f6e"
+review_rev = "626f2a4f1f67ab731c1fc3884828751496bc125d"
+review_diff_sha256 = "8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489"
 paths = ["sdk/bittensor-core/src/signers/mod.rs", "sdk/bittensor-core/src/signers/ledger.rs", "sdk/bittensor-core/src/signers/hid.rs", "sdk/bittensor-core/Cargo.toml", "sdk/bittensor-core/src/keys/mod.rs", "sdk/bittensor-core/src/keys/encrypted_json.rs"]
 probe = ["bittensor_core::signers::ApduTransport", "bittensor_core::signers::ledger::LedgerDevice::with_transport"]
 

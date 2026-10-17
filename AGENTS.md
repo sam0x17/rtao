@@ -1,24 +1,24 @@
 # Local resource limits
 
-This is a shared laptop with other active projects. Keep work to client
-development and use free GitHub `ubuntu-latest` CI for substantial validation.
-PLAN.md Q30 supersedes earlier requirements for costly local work.
+Development now runs on `workstation` (32 cores, 61 GB RAM, about 48 GB free
+disk). Local builds and focused tests are allowed here; free GitHub
+`ubuntu-latest` CI remains the authoritative full validation. PLAN.md Q30's
+laptop restrictions no longer apply on this host.
 
-- Do not run full nodes, local testnets, Docker services, Python oracles,
-  soaks, hardware rehearsals, full workspace gates, feature matrices, MSRV
-  builds, fuzz campaigns, benchmarks or release rehearsals locally or on the
-  Mac Studio. Use fixtures and fake transports for client tests.
-- Do not start cold builds or install validation tools locally. Prefer source
-  inspection and formatting. Put substantial tests and builds in GitHub CI.
-- Any small, focused local Rust check uses one target directory, at most two
-  build jobs, no incremental output and no debug information. Run one Cargo
-  command at a time. Never copy or APFS-clone build caches or create per-agent
-  target directories. Stop growing local output and move validation to CI.
-- Keep temporary work under one recorded task root. Retain bounded results
-  and unfinished source, then remove disposable output. Do not recreate the
-  retired `target/execute-plan.6Ro0PC` workspace or resume its queued commands.
-- Preserve wallets, recovery journals, datasets, models, miner/validator state,
-  unrelated projects and shared Cargo/toolchain caches.
+- Use the single workspace `target/` directory; never create per-agent target
+  directories or copy build caches. Run one Cargo build command at a time and
+  watch free disk space.
+- No sudo or Docker on this host: localnet, Docker-service and container
+  checks run in hosted CI. Python interop environments live under `.local/`
+  (for example via `uv`), never in the system Python.
+- Keep temporary work under one recorded task root in `.local/`. Retain
+  bounded results and unfinished source, then remove disposable output.
+- Run local tests with `umask 022` and `RTAO_TEMP_ROOT` set to a directory
+  under `.local/`; this host's default umask is `002`, which the signer's
+  state-permission checks correctly refuse.
+- Do not run long soaks, fuzz campaigns or benchmarks unless a plan step
+  requires them.
+- Preserve wallets, recovery journals, datasets and unrelated work.
 
 # Mac Studio workspace hygiene
 
