@@ -1130,14 +1130,23 @@ upstream_report = "Existing implementation and named regression bodies were sour
 id = "D-031"
 upstream_symbol = "--signer"
 python_behavior = "wallet, extension, ledger, vault (`PY/cli/globals.py:276-286`)"
-rtao_behavior = "adds `remote` (lands with `RemoteSigner` in M10)"
-rationale = "Intentionally deferred to M10: RemoteSigner and the remote CLI selection are outside the through-M9 acceptance scope. No implementation or fixture is claimed for this addition. Source review only; hosted validation remains pending."
-status = "pending"
+rtao_behavior = "adds `remote` (M10 `RemoteSigner`): with the CLI feature `remote-signer`, `--signer remote` and `--signatory NAME=remote` select a client for the `rtao-remote-signer/1` protocol configured by `--remote-signer-url`, `--remote-signer-client-key`, `--remote-signer-receiver`, `--remote-signer-ca` and `--remote-signer-timeout` (or the matching environment and config values); the reference server refuses replayed, tampered and out-of-policy requests"
+rationale = "Implemented in M10 as the separate crate rtao-remote-signer, exposed as rtao::remote_signer, rather than inside rtao-signer behind a remote feature, because rtao-btauth depends on rtao-signer and the btauth/1 client authentication would otherwise form a dependency cycle. The CLI refuses remote selection without a URL and client key, and without the CLI feature. The reference server decodes the call against its trusted runtime, re-derives the signing payload, applies rtao_tx::Policy and its allowlists, and refuses replayed or tampered requests; the client refuses signatures over other bytes or for other accounts. Python has no remote signer, so this is an rtao addition. The localnet exit check (sign and submit a localnet transfer, refuse replayed and tampered requests) runs in the hosted remote-signer-localnet job and its result is pending hosted execution."
+status = "active"
 class = "addition"
 milestone = "M10"
-pinning_tests = []
+pinning_tests = [
+  "rtao_cli::globals::tests::remote_backend_parses_with_its_options_and_is_external",
+  "rtao_cli::signer_backends::native::remote_tests::remote_requires_a_url_and_a_client_key",
+  "rtao_cli::signer_backends::native::remote_tests::remote_backend_discovers_acquires_and_signs_through_a_loopback_server",
+  "rtao_remote_signer::server::s2_a_verbatim_replay_is_refused_by_the_nonce_store",
+  "rtao_remote_signer::server::s3_tampering_in_transit_breaks_the_btauth_signature",
+  "rtao_remote_signer::server::s6_internally_inconsistent_authenticated_bodies_are_tampered",
+  "rtao_remote_signer::server::s10_policy_limits_calls_and_destinations",
+  "rtao_remote_signer::client::c2_signatures_over_other_bytes_or_for_other_accounts_are_refused",
+]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor"
-upstream_report = "Pending as documented in the rationale; no new filing and no passing execution claimed."
+upstream_report = "rtao addition with no Python counterpart; no defect alleged and no new upstream filing. Named regression bodies were source-reviewed and run locally; hosted execution of the remote-signer-localnet exit check remains pending."
 
 [[divergences]]
 id = "D-032"

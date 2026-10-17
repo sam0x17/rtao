@@ -1479,8 +1479,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn whole_divergence_register_accepts_unimplemented_m10_without_inventing_witnesses()
-    -> Result<()> {
+    fn whole_divergence_register_activates_m10_and_keeps_optional_deferral_strict() -> Result<()> {
         let register: DocumentMut = include_str!("../../parity/divergences.toml").parse()?;
         let mut index = Index::default();
         for row in register["divergences"]
@@ -1497,33 +1496,50 @@ mod tests {
                 }
             }
         }
+        // M10 implemented RemoteSigner, so the real register defers nothing.
         let report = divergences_document(&register, &index, true)?;
-        assert_eq!(report["pending"], 1);
-        assert_eq!(report["deferred_optional"], 1);
-        let rows = register["divergences"]
+        assert_eq!(report["pending"], 0);
+        assert_eq!(report["deferred_optional"], 0);
+        let row = register["divergences"]
             .as_array_of_tables()
-            .context("register rows")?;
-        let row = rows
+            .context("register rows")?
             .iter()
             .find(|row| row["id"].as_str() == Some("D-031"))
-            .context("optional M10 row")?;
+            .context("M10 row")?;
+        assert_eq!(row["status"].as_str(), Some("active"));
         assert!(
-            row["pinning_tests"]
+            !row["pinning_tests"]
                 .as_array()
                 .context("test list")?
                 .is_empty()
         );
-        for (field, changed) in [("status", "active"), ("milestone", "M9"), ("class", "kept")] {
-            let mut changed_register = register.clone();
-            let rows = changed_register["divergences"]
+        // The optional-M10 deferral still accepts only the exact pending
+        // addition without witnesses, checked on a synthetic copy.
+        let deferred = |status: &str, milestone: &str, class: &str| -> Result<DocumentMut> {
+            let mut changed = register.clone();
+            let row = changed["divergences"]
                 .as_array_of_tables_mut()
-                .context("rows")?;
-            let row = rows
+                .context("rows")?
                 .iter_mut()
                 .find(|row| row["id"].as_str() == Some("D-031"))
                 .context("M10 row")?;
-            row[field] = value(changed);
-            assert!(divergences_document(&changed_register, &index, true).is_err());
+            row["status"] = value(status);
+            row["milestone"] = value(milestone);
+            row["class"] = value(class);
+            row["pinning_tests"] = value(toml_edit::Array::new());
+            Ok(changed)
+        };
+        let report = divergences_document(&deferred("pending", "M10", "addition")?, &index, true)?;
+        assert_eq!(report["pending"], 1);
+        assert_eq!(report["deferred_optional"], 1);
+        for (status, milestone, class) in [
+            ("active", "M10", "addition"),
+            ("pending", "M9", "addition"),
+            ("pending", "M10", "kept"),
+        ] {
+            assert!(
+                divergences_document(&deferred(status, milestone, class)?, &index, true).is_err()
+            );
         }
         Ok(())
     }
