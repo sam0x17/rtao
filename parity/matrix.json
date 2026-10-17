@@ -1963,6 +1963,35 @@
     ],
     "divergences": [
       {
+        "id": "D-076",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_tx::owner_execution::registration_origin_failure_keeps_the_already_included_receipt",
+          "rtao_cli::context_contract::registration_read_failure_persists_direct_and_saved_receipts_before_release"
+        ]
+      },
+      {
+        "id": "D-075",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::context_contract::real_execution_unlocks_once_and_renders_one_canonical_receipt",
+          "rtao_cli::context_contract::saved_semantic_executed_first_round_stops_and_emits_one_receipt",
+          "rtao_cli::output_contract::receipts_emit_canonical_domain_shape_including_failures_on_stdout"
+        ]
+      },
+      {
+        "id": "D-074",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::context_contract::cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed",
+          "rtao_cli::raw_call_contract::multisig_replay_uses_rtao_and_preserves_btcli_inside_user_arguments",
+          "rtao_cli::commands::upgrade::tests::mixed_signer_sources_refuse_and_threshold_one_review_is_executing"
+        ]
+      },
+      {
         "id": "D-073",
         "oracle": "unverified",
         "rtao": "active",
@@ -2184,6 +2213,11 @@
         "oracle": "unverified",
         "rtao": "active",
         "tests": [
+          "rtao_cli::prompt::tests::cancellation_observers_cover_registered_late_and_multiple_waiters",
+          "rtao_cli::interrupt_tests::invocation_watcher_is_aborted_on_normal_completion",
+          "rtao_cli::context_contract::invocation_interrupt_refuses_preconnect_pending_and_ready_clients_without_work",
+          "rtao_cli::context_contract::interrupted_watched_submission_retains_exact_hash_hooks_and_signer_release",
+          "rtao_cli::context_contract::interrupted_success_keeps_value_and_drains_cosmetic_names_without_replay",
           "rtao_cli::prompt::masked_input::tests::unicode_entry_echoes_one_star_per_decoded_character_and_no_plaintext",
           "rtao_cli::prompt::masked_input::tests::cancellation_during_escape_parsing_restores_in_masked_and_hidden_modes",
           "rtao_cli::prompt::masked_input::tests::controlling_terminal_fallback_is_hidden_and_uses_owned_editing_and_restoration",
@@ -6908,11 +6942,12 @@
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/admin-utils/src/lib.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "crates/rtao-intents/src/hyperparameters/planner.rs (selective owner current-value and freeze/cooldown planning)",
+          "vendor/upstream/extracted/owner_map.json (34 owner names over 33 setters plus four operation policies and source provenance)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f438b23549c74e8d740c66a2e1897b5ff68b7aa7"
       },
       {
         "kind": "extracted",
@@ -7072,7 +7107,9 @@
         "python": "pallets/subtensor/src/subnets/subnet.rs",
         "rtao": "pending",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "rtao_neuron::OwnerOps::{create_subnet,start} (client orchestration; chain-source attribution pending)",
+          "rtao_tx registration completion follower (Python-derived; chain-source attribution pending)",
+          "rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"
         ],
         "synced_blob": "pending"
       },
@@ -7083,7 +7120,9 @@
         "python": "pallets/subtensor/src/subnets/weights.rs",
         "rtao": "pending",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "rtao_neuron::weights::{WeightScheduler,RevealWatcher} (selected preparation and actual-epoch observation; direct chain attribution pending)",
+          "rtao_intents::weights (Python-derived call/preparation contracts)",
+          "rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"
         ],
         "synced_blob": "pending"
       },
@@ -7092,11 +7131,13 @@
         "milestone": "M2-M4",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/utils/misc.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+          "crates/rtao-intents/src/hyperparameters/planner.rs (owner freeze and selected getter projection)",
+          "crates/rtao-neuron/src/weights.rs (LastUpdate fallback and activity-cutoff alarm)",
+          "vendor/upstream/extracted/owner_map.json (authenticated helper bodies and selected getter storage linkage)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a1db5d139dd79bc5afaa2642ecb25540448f5bca"
       },
       {
         "kind": "ported",
