@@ -858,6 +858,55 @@ mod tests {
             Some(RevealMissReason::Permit)
         );
         client.close().await;
+
+        let (chain, client, mut watcher, metrics) = slipped().await?;
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "ValidatorPermit",
+                (NetUid(1),),
+                vec![false, false, false],
+            )?;
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "SubnetOwnerHotkey",
+                (NetUid(1),),
+                AccountId([8; 32]),
+            )?;
+            seed_at(state, 120, "SubtensorModule", "StakeThreshold", (), 0u64)?;
+            state.seed_runtime(
+                "SubnetInfoRuntimeApi",
+                "get_selective_mechagraph",
+                rtao_core::codec::value::to_corpus_json(&Value::record(vec![
+                    ("netuid".into(), Value::Int(1)),
+                    (
+                        "hotkeys".into(),
+                        Value::List(vec![Value::Bytes(HOTKEY.0.to_vec())]),
+                    ),
+                    ("total_stake".into(), Value::List(vec![Value::Int(0)])),
+                ])),
+            )?;
+            Ok(())
+        })?;
+        watcher
+            .observe(&client, &header(&chain, 120)?, &metrics)
+            .await?;
+        watcher
+            .observe(&client, &header(&chain, 130)?, &metrics)
+            .await?;
+        assert_eq!(
+            watcher
+                .outcomes()
+                .front()
+                .expect("Yuma nonowner miss")
+                .missed,
+            Some(RevealMissReason::Permit)
+        );
+        client.close().await;
         Ok(())
     }
 
