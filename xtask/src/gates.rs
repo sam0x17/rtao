@@ -148,7 +148,7 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 cargo(&["fmt", "--all", "--check"]),
                 // Resolve source-map and witness errors before the longer
                 // compile/probe stages. All existing gates remain mandatory.
-                xtask(&["parity", "check"]),
+                xtask(&["parity", "check", "--strict"]),
                 cargo(&[
                     "clippy",
                     "--workspace",
@@ -1290,7 +1290,7 @@ only_target = { package = "actual-target-dev", path = "target-dev" }
         for command in [
             vec!["pin", "--check"],
             vec!["extract", "--check"],
-            vec!["parity", "check"],
+            vec!["parity", "check", "--strict"],
         ] {
             ensure!(
                 checks.iter().any(|step| step.args.ends_with(
@@ -1311,7 +1311,10 @@ only_target = { package = "actual-target-dev", path = "target-dev" }
         );
         let parity = checks
             .iter()
-            .position(|step| step.args.ends_with(&["parity".into(), "check".into()]))
+            .position(|step| {
+                step.args
+                    .ends_with(&["parity".into(), "check".into(), "--strict".into()])
+            })
             .context("mandatory parity command missing")?;
         let clippy = checks
             .iter()
@@ -1324,7 +1327,10 @@ only_target = { package = "actual-target-dev", path = "target-dev" }
         ensure!(
             checks
                 .iter()
-                .filter(|step| step.args.ends_with(&["parity".into(), "check".into()]))
+                .filter(|step| {
+                    step.args
+                        .ends_with(&["parity".into(), "check".into(), "--strict".into()])
+                })
                 .count()
                 == 1,
             "source evidence must not be checked twice"

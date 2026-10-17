@@ -221,19 +221,19 @@ rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_cha
 rtao = "rtao_intents::intent_plans::all_83_catalog_operations_plan_with_fake_chain"
 
 [tests."pyt:e2e/test_null_consensus.py::test_null_yuma_null_emissions_via_python_sdk"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."pyt:e2e/test_pow_registration.py::test_pow_register_unfunded_coldkey_and_owner_toggle"]
-pending = "M7"
+na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."
 
 [tests."pyt:e2e/test_timelock_commitment.py::test_timelocked_commitment_reveals_via_python_sdk"]
-pending = "M7"
+na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."
 
 [tests."test_account_object_m_of_n_executes"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_add_stake_increases_stake"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_auto_stake_destination"]
 rtao = "rtao_intents::client_transfer_lifecycles::client_auto_stake_submits_exact_call_then_reads_supplied_coldkey_destination"
@@ -258,16 +258,16 @@ rtao = "e2e::test_block_number"
 rtao = "e2e::test_block_subscription_streams_increasing_headers"
 
 [tests."test_coldkey_swap_announcement_flow"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_compose_nested_sudo_call"]
 rtao = "e2e::test_compose_nested_sudo_call"
 
 [tests."test_crowdloan_create_read_update"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_delegation_lifecycle"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_failed_batch_reverts_everything"]
 rtao = "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state"
@@ -279,7 +279,7 @@ runtime_limits = ["controlled-receipt-state", "runtime-batch-rollback-unverified
 rtao = "e2e::test_generic_accessors_over_generated_descriptors"
 
 [tests."test_identity_coldkey_and_subnet"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_key_association"]
 rtao = "rtao_intents::client_transfer_lifecycles::client_hotkey_association_submits_exact_call_then_reads_missing_uid_zero_evm_key"
@@ -304,16 +304,16 @@ runtime = "unverified"
 runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_nonexistent_subnet_maps_to_semantic_code"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_owned_subnet_is_registered"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_owner_sets_hyperparameter"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_pending_op_open_read_cancel"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_plan_simulates_real_fee"]
 rtao = "rtao_intents::client_policy_scenarios::client_transfer_plan_decodes_positive_fee_for_the_exact_call"
@@ -334,7 +334,7 @@ runtime = "unverified"
 runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_proxy_flow"]
-pending = "M5"
+na = "Q30 defers this live-runtime lifecycle; implemented client planning, encoding, receipt and read behavior is covered by ordinary hosted fixtures without claiming chain effects."
 
 [tests."test_quote_stake_slippage_and_fee"]
 rtao = "rtao_reads::m6_staking::quote_stake_slippage_and_fee_preserve_exact_fields_currencies_and_decimal_input_rounding"
@@ -343,7 +343,7 @@ rtao = "rtao_reads::m6_staking::quote_stake_slippage_and_fee_preserve_exact_fiel
 rtao = "e2e::test_reads_catalog_nonempty"
 
 [tests."test_regular_commitment_stays_readable"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_serving_endpoints"]
 rtao = "rtao_intents::client_serving_lifecycles::client_tls_axon_and_prometheus_submit_exact_upstream_calls"
@@ -361,13 +361,13 @@ runtime = "unverified"
 runtime_limits = ["live-runtime-fee-query"]
 
 [tests."test_submit_shielded_runs_full_pipeline"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_subnets_all_batched"]
 rtao = "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows"
 
 [tests."test_timelocked_commitment_reveals_plaintext"]
-pending = "M7"
+na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."
 
 [tests."test_transfer_moves_exactly_the_amount"]
 rtao = "rtao_intents::client_transfer_lifecycles::client_transfer_reads_exact_three_tao_delta_from_explicit_receipt_state"
@@ -376,7 +376,7 @@ runtime = "unverified"
 runtime_limits = ["controlled-receipt-state", "runtime-transfer-state-unverified"]
 
 [tests."test_typed_reads"]
-pending = "M4"
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_unsettable_hyperparameter_rejected_at_construction"]
 na = "The core test rejects tempo, but pinned Python intents/hyperparameters.py:33 permits it and the runtime's do_set_tempo accepts subnet owners. Follow Python behavior: retain tempo and reject actual unsettable names."
