@@ -1214,14 +1214,12 @@ notes = "Source reconciliation 2026-10-16: complete pinned 219-line module revie
 py = "sdk/python/bittensor/cli/commands/stake.py"
 rs = [
   "crates/rtao-cli/src/commands/stake.rs",
-  "crates/rtao-cli/src/commands/stake_exit.rs",
-  "crates/rtao-cli/src/commands/stake_picker.rs",
 ]
 kind = "ported"
 synced_blob = "712a6a038799d7384cc682ac6491fd4e1ba72840"
 synced_tag = "v478"
 milestone = "M5–M8"
-notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 446-line module, its 12 top-level commands and two nested fetch/label helpers against the installed stake group. Generated move aliases, direct/all-position exits, single and all-wallet stake views, lock and root-yield enrichment, dust handling, auto-stake, child delegation and the movement guide have concrete native homes. Source/destination pickers preserve live positions, natural wallet order, aliases, hidden dust, owner context and typed public replay. Current homes and their fake-backed command paths passed in hosted run 38994162434. Native checked balances, typed reads, Clap/layout and bounded input policies are explicit adaptations. No Python execution, live staking, price accuracy, hardware result or full interactive transcript is claimed."
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 446-line module, its 12 top-level commands and two nested fetch/label helpers against the installed stake group. Generated move aliases, single and all-wallet stake views, lock and root-yield enrichment, dust handling, auto-stake, child delegation and the movement guide have a direct native home. Direct/all-position exits and source/destination pickers are separately mapped to their own upstream modules and preserve live positions, natural wallet order, aliases, hidden dust, owner context and typed public replay. Current homes and their fake-backed command paths passed in hosted run 38994162434. Native checked balances, typed reads, Clap/layout and bounded input policies are explicit adaptations. No Python execution, live staking, price accuracy, hardware result or full interactive transcript is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/subnets.py"
