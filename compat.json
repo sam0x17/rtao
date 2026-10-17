@@ -10,8 +10,8 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "machine": "AMD EPYC 7763 64-Core Processor",
-        "measured_unix_seconds": 1792213293,
+        "machine": "13th Gen Intel(R) Core(TM) i9-13900KF",
+        "measured_unix_seconds": 1792219736,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -21,7 +21,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "1a1d7296daff5c2568595216cfa9a98bd55e4f6930cc0cfa6a001408bca13d7b",
+            "feature_graph_sha256": "0b327c3f306c75e1af0e985bb304eb2c849fc238a9420bb9acb90bf0812a6416",
             "features": [],
             "normal_build_packages": 225,
             "package": "rtao-core",
@@ -54,7 +54,7 @@
               "bitcoin_hashes v0.13.1",
               "bitcoin_hashes v0.14.101",
               "bitflags v1.3.2",
-              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=5a43348e8dc95311e9750781a28a33380c454409#5a43348e)",
+              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=626f2a4f1f67ab731c1fc3884828751496bc125d#626f2a4f)",
               "blake2 v0.10.6",
               "blake2b_simd v1.0.5",
               "blake3 v1.8.7",
@@ -257,7 +257,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "7a793546d93a0a23e728bfc75011d54bfb7b2c62b30a88b900987c3cb7681193",
+            "feature_graph_sha256": "dfede9542e37ac369d3a06c0613a7ef6fd9c2ad61b64e0b8cc39d60a6bb20469",
             "features": [
               "validator"
             ],
@@ -301,7 +301,7 @@
               "bitcoin_hashes v0.14.101",
               "bitflags v1.3.2",
               "bitflags v2.13.2",
-              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=5a43348e8dc95311e9750781a28a33380c454409#5a43348e)",
+              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=626f2a4f1f67ab731c1fc3884828751496bc125d#626f2a4f)",
               "blake2 v0.10.6",
               "blake2b_simd v1.0.5",
               "blake3 v1.8.7",
@@ -632,7 +632,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "01dbeedb5b7f300491490e644ef1027def368b0680e72de7f71936c9b5a66c7f",
+            "feature_graph_sha256": "2057721bfddf4533a9de1720d6148532d7b750027b1a89ceb2c88853cf996ff0",
             "features": [
               "miner"
             ],
@@ -678,7 +678,7 @@
               "bitcoin_hashes v0.14.101",
               "bitflags v1.3.2",
               "bitflags v2.13.2",
-              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=5a43348e8dc95311e9750781a28a33380c454409#5a43348e)",
+              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=626f2a4f1f67ab731c1fc3884828751496bc125d#626f2a4f)",
               "blake2 v0.10.6",
               "blake2b_simd v1.0.5",
               "blake3 v1.8.7",
@@ -1011,7 +1011,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "ff525e4dd59f0c6504e67a1728cbe25e6700cf82d23b0a9fe6929c5044c4e5cb",
+            "feature_graph_sha256": "a9ed0ec65522f17d9f19250cdd4e7b999ad53bed1703fe7296a10ea21c1bfbe7",
             "features": [
               "owner"
             ],
@@ -1060,7 +1060,7 @@
               "bitcoin_hashes v0.14.101",
               "bitflags v1.3.2",
               "bitflags v2.13.2",
-              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=5a43348e8dc95311e9750781a28a33380c454409#5a43348e)",
+              "bittensor-core v0.1.0 (https://github.com/sam0x17/subtensor.git?rev=626f2a4f1f67ab731c1fc3884828751496bc125d#626f2a4f)",
               "blake2 v0.10.6",
               "blake2b_simd v1.0.5",
               "blake3 v1.8.7",
@@ -1443,8 +1443,8 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "be7b6e01f554038cd94d8d8004614a9b8f6a43cd7aaaef5bb08976e23e2d3d15",
-            "Cargo.toml": "35055a48b052a0c472b8ca76bef2daf1e5d2eb96ef87c66b7a96139a460935cb",
+            "Cargo.lock": "064b5371bf603c3741bb901064198cff2d4d30acc0d8be11fde38390c5a9ce3d",
+            "Cargo.toml": "57668e95700c652db9dea1769b73d8238d98a373b67467dee8c1e83dd7c0d09f",
             "crates/rtao-btauth/Cargo.toml": "2ec334a952e0632616d130577e3874270f5dd45eced88b2e1108c2ec45d85ef5",
             "crates/rtao-catalog/Cargo.toml": "477b530677c985adcb6cb5a1ddfd022c6d509b82c4f7b24c67328324ab9db566",
             "crates/rtao-cli/Cargo.toml": "655f58da7ac5e7fd01868ec8e57c77ae0fc98074b11ed429756e6fca7b381e0d",
@@ -1464,16 +1464,16 @@
             "crates/rtao-tx/Cargo.toml": "e52989ec886ebe9c951c8ef6e90c9cab8e9881ecdfe41ca110bb681b4477e8bf",
             "crates/rtao-wallet/Cargo.toml": "83d6a456e2c159f029f1bc628373f5e5b36fc75d422ca388cbf0641a22841146",
             "crates/rtao/Cargo.toml": "aa67a88fc1148cca1f054992f1f54c1f54f3074b68c5374c16692d5e0001f2c6",
-            "upstream.toml": "f6862d3bb3112bc606b874cce48c0d7b07b58dfb8efb195c7e3221f2f364757a",
+            "upstream.toml": "de6fc368f98a46eb54587bc0b62c22dcc5b68aa6aca8cf2c446f92892bbb4d6a",
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
-          "dependency_inputs_sha256": "ae2f8123639f22ad0389fc35c11dd82d22d0ce02bb6fffbf7e363af46523aa88",
+          "dependency_inputs_sha256": "42c89e3970b26479299808f9c176cba20671daf043b20118d2281cebaf0214f7",
           "dirty": false,
-          "head_commit": "ce41d268459a71253cef25fd9d822f386c791eed"
+          "head_commit": "c0d5126b7dcf9c2cb048093a587514b1f57fc4fb"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "79311a51b3c1a47c891c193cda70047c1f5cd5d85d31a587e2b9421fe6a7d79b"
+      "sha256": "66a3d6ce3f6eb9272d4fe4252c94a7f8279b6b708f71af17a0e000b827992de2"
     }
   ],
   "core": {
