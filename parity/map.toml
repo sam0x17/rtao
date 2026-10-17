@@ -1167,12 +1167,12 @@ notes = "Source reconciliation 2026-10-15: Complete pinned source and native con
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/multisig.py"
-rs = ["`rtao-cli` `multisig` group"]
+rs = ["crates/rtao-cli/src/commands/multisig.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "1184cb186443aa8215e361dded46613e8d39478b"
 synced_tag = "v478"
 milestone = "M5"
-notes = "§10.5"
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 344-line command module, all seven top-level functions and three nested loaders/derivers against the installed native multisig group. Native parsing, public member resolution, threshold/account validation, saved add/list/show/remove, pending filters, authenticated call-data caching, upgrade enrichment and offline behavior have direct fixtures. Installed help retains the guide plus add and pending examples. Shared helper consumers now use stable natural wallet alias order and direct generated multisig receipts attach advisory pending/executed followups without replacing the original receipt. Typed u16/runtime caps, native output layouts and bounded files are explicit adaptations. Current native home passed in hosted run 38994162434. No Python execution, live multisig dispatch or hardware result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/proxy.py"
@@ -1212,30 +1212,34 @@ notes = "Source reconciliation 2026-10-16: complete pinned 219-line module revie
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/stake.py"
-rs = ["`rtao-cli` `stake` group"]
+rs = [
+  "crates/rtao-cli/src/commands/stake.rs",
+  "crates/rtao-cli/src/commands/stake_exit.rs",
+  "crates/rtao-cli/src/commands/stake_picker.rs",
+]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "712a6a038799d7384cc682ac6491fd4e1ba72840"
 synced_tag = "v478"
 milestone = "M5–M8"
-notes = "§10.5; aliases M5, the rest M8"
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 446-line module, its 12 top-level commands and two nested fetch/label helpers against the installed stake group. Generated move aliases, direct/all-position exits, single and all-wallet stake views, lock and root-yield enrichment, dust handling, auto-stake, child delegation and the movement guide have concrete native homes. Source/destination pickers preserve live positions, natural wallet order, aliases, hidden dust, owner context and typed public replay. Current homes and their fake-backed command paths passed in hosted run 38994162434. Native checked balances, typed reads, Clap/layout and bounded input policies are explicit adaptations. No Python execution, live staking, price accuracy, hardware result or full interactive transcript is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/subnets.py"
-rs = ["`rtao-cli` `subnets` group"]
+rs = ["crates/rtao-cli/src/commands/subnets.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "28b14c45f069b65484420e37fa7351f1112998bd"
 synced_tag = "v478"
 milestone = "M4–M6"
-notes = "§10.5; `register`, `create`, `metagraph` in M4"
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 634-line module, all 11 commands, three formatting helpers and the PoW backend enum against the installed subnet group. List/show/hyperparameter/cost/price/conviction views use pinned typed reads; burn, root and PoW registration, subnet creation and metagraph dispatch have real request paths. PoW refresh preserves backend/devices, remine boundaries, confirmed rejection classification and bounded retry behavior. Registration completion keeps correlated receipts and queued cleanup semantics in the shared SDK. Current homes and fake-backed command paths passed in hosted run 38994162434. Native typed output, checked identifiers, Clap/layout and Q30 fixtures are explicit adaptations. No Python execution, mining, live registration, emission/conviction accuracy or runtime result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/sudo.py"
-rs = ["`rtao-cli` `hparams` group"]
+rs = ["crates/rtao-cli/src/commands/hparams.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "f14dc639d85743a151a12b81c38638071c05e97e"
 synced_tag = "v478"
 milestone = "M4–M5"
-notes = "§10.5; `set-take`, `stake-burn` in M5"
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 528-line module, all 18 commands and five parsing/prompt helpers against the installed hparams group. Owner-settable hyperparameter parsing and current-value prompts, delegate take reads/writes, start scheduling, symbol and identity, bounded and resumable Null trimming, stake burn, and mechanism count/emission commands have concrete native request, read and fixture homes. The native pruning session preserves finalized receipt correlation, recovery state, uncertain-submission refusal, refreshed administration windows and explicit optional Yuma switching. Current homes passed in hosted run 38994162434. Native typed values, checked balances, Clap/output and bounded recovery files are explicit adaptations. No Python execution, live owner dispatch, pruning, consensus switch or runtime effect is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/timelock.py"
@@ -1248,21 +1252,29 @@ notes = "Source reconciliation 2026-10-15: complete authenticated three-command 
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/upgrade.py"
-rs = ["`rtao-cli` `upgrade` group"]
+rs = [
+  "crates/rtao-cli/src/commands/upgrade.rs",
+  "crates/rtao-cli/src/commands/multisig.rs",
+]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "f6878d8b9725b98213253ef5992203862ee65877"
 synced_tag = "v478"
 milestone = "M8"
-notes = "§10.5; under `misc`"
+notes = "Source reconciliation 2026-10-17: complete authenticated 651-line source and all 17 functions, including nested verification/submission closures, reviewed through actual misc/utils/historical dispatch. Pending discovery/enrichment, JSON and human fields, required artifact checks, saved/inline/manifest signer sets, public member selection, first/interior/final/already-signed review, dry-run, estimated weight and lazy submit/release have concrete native homes. D-048 distinguishes unknown from confirmed unopened layers; D-052 provides executing threshold-one dispatch and rechecks trust and both openings after confirmation. Follow-up status failure preserves successful submission. Native typed/reference/backend and Clap/error/layout adaptations are explicit; D-042 qualifies regular-file 64 MiB local assets. Current native homes passed in hosted run 38994162434. No Python/Typer equivalence, live deployment, independent WASM build or hardware/platform result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/wallet.py"
-rs = ["`rtao-cli` `wallet` group"]
+rs = [
+  "crates/rtao-cli/src/commands/wallet.rs",
+  "crates/rtao-cli/src/commands/wallet_m8/mod.rs",
+  "crates/rtao-cli/src/commands/wallet_m8/views.rs",
+  "crates/rtao-cli/src/commands/wallet_m8/history.rs",
+]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "e994f7d04bab68e7405788f122f06796eaa538cb"
 synced_tag = "v478"
 milestone = "M4–M8"
-notes = "§10.5; keychain M7"
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 1,784-line module, all 34 commands, 12 top-level helpers and six nested callbacks/fetchers against the installed wallet group. Key generation/regeneration/public recovery, message sign/verify/encrypt/decrypt, unlock and keychain controls, partial and multisig wallet views, natural-order listing, balance/overview/registration/inspection reads, bounded mainnet history, transfer picking, identity, hotkey association and hot/cold-key swaps have concrete native homes. Secret-source exclusivity, argv warnings, password errors, duplicate-coldkey totals, labels, locks, dust and root yield have direct fixtures. Current homes passed in hosted run 38994162434. Native typed key APIs, checked balances, bounded files/network responses, platform guards and Clap/layout are explicit adaptations. No Python execution, live transfer/swap, third-party indexer availability, clipboard, macOS Keychain or Ledger result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/weights.py"
@@ -1437,21 +1449,28 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 676-line modul
 
 [[file]]
 py = "sdk/python/bittensor/cli/tx.py"
-rs = ["`rtao-cli` generated `tx`"]
+rs = [
+  "crates/rtao-cli/src/commands/schema.rs",
+  "crates/rtao-cli/src/commands/generated.rs",
+]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "e2bdf719e50ddb32b17f7aa94b3265be4b7902b5"
 synced_tag = "v478"
 milestone = "M4–M5"
-notes = "clap builder from `rtao_catalog::INTENTS` (§10.1; `:1-11, 486-498`); list parsing `:62-82`; help panels `:470-484`"
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 498-line generated-command source against the installed schema and dispatcher. Scalar/optional/list/dict coercion, exact money and All handling, prompted parsing, units/list notes, privilege/docs help, required/default/own-key fields, aliases, paired booleans, shared netuid shortcuts, globals and category/leaf construction have native homes. CLI money normalization preserves Python Decimal-compatible underscore and Unicode-digit spellings while retaining 4096-byte/exponent budgets, exact precision and checked u64 chain bounds. Exact visible leaf sets, all 83 authenticated intent samples, installed help and real fake-backed planning/submission paths are covered by native fixtures. Current homes passed in hosted run 38994162434. Native Clap diagnostics/layout, typed values and feature availability replace Python Typer/introspection; no Python execution or live chain is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/cli/upgrade_helpers.py"
-rs = ["`rtao-cli` `upgrade`"]
+rs = [
+  "crates/rtao-cli/src/commands/upgrade/artifacts.rs",
+  "crates/rtao-cli/src/commands/upgrade/chain.rs",
+  "crates/rtao-cli/src/commands/multisig.rs",
+]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "6bfdca77bb4ccaf005f50073e32f7d752591c234"
 synced_tag = "v478"
 milestone = "M8"
-notes = ""
+notes = "Source reconciliation 2026-10-17: the complete authenticated 721-line module and all 28 helper/method definitions have native consumer dispositions. Artifact source selection, fixed optional assets, local WASM precedence, ASCII hex and raw-call hashes, pinned proposal structure/weights, live-metadata reconstruction, snapshot-bound deployment discovery, finalizing composition, padded sudo approval weight, sorting, status and complete ok/checks/data output have concrete homes. Native private modules and typed records replace the Python helper/dataclass/property ABI; unused ReleaseRef.url/check_command are not separately exported. AccountId/native bounds, private canonical compact decoding and URL/JSON admission restrictions are explicit adaptations. D-042 records the separate 64 MiB local upgrade-file cap with opened regular-file and growth-safe acquisition; regular-file symlinks remain allowed. Current native homes passed in hosted run 38994162434. No Python oracle, live upgrade, runtime build or hardware/platform result is claimed."
 
 [[file]]
 py = "sdk/python/bittensor/client.py"
@@ -2814,30 +2833,30 @@ notes = "Source reconciliation 2026-10-15: complete authenticated 208-line produ
 
 [[file]]
 py = "sdk/python/tests/e2e/test_null_consensus.py"
-rs = ["Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"]
+rs = ["parity/e2e_map.toml (optional scenario 4 input; runtime execution remains pending under Q30)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "7fd3fc96df9d6d044cbbf480d9e7b1a7d71acf72"
 synced_tag = "v478"
 milestone = "M2-M7"
-notes = "Source audit 2026-10-15: This upstream test requires chain writes and is not invoked by the oracle/record scripts. Q30 removes local chain execution; exact fixture substitutions and actual native counterparts still need source reconciliation in e2e-map before this whole test-file row can be resolved."
+notes = "Source reconciliation 2026-10-17: reviewed the complete 130-line, one-test module and authenticated its pinned blob. It creates a development subnet, switches Null/Yuma/Null, submits exact raw u16 weights, observes positive emission ratios, verifies preserved weights/bonds and performs bounded Null pruning. The e2e map retains this as optional scenario 4 input. Under PLAN.md §8.3 and Q30, this oracle-only row records reviewed upstream source without requiring a first live corpus or a local node. No runtime emission, mode-switch, pruning, oracle or differential result is claimed."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_pow_registration.py"
-rs = ["Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"]
+rs = ["parity/e2e_map.toml (optional scenario 14 input; runtime execution remains pending under Q30)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "8c4e62bcb00d7548b228b0738914254a5d9d5472"
 synced_tag = "v478"
 milestone = "M2-M7"
-notes = "Source audit 2026-10-15: This upstream test requires chain writes and is not invoked by the oracle/record scripts. Q30 removes local chain execution; exact fixture substitutions and actual native counterparts still need source reconciliation in e2e-map before this whole test-file row can be resolved."
+notes = "Source reconciliation 2026-10-17: reviewed the complete 176-line, one-test module and authenticated its pinned blob. It configures owner-controlled PoW admission, registers two unfunded coldkeys through SDK and CLI paths, checks ownership/population/burn/collateral/fee effects and verifies that only root can disable PoW registration. The e2e map retains this as optional scenario 14 input. Under PLAN.md §8.3 and Q30, this oracle-only row records reviewed upstream source without requiring a first live corpus or a local node. No mining, runtime admission, CLI subprocess, oracle or differential result is claimed."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_timelock_commitment.py"
-rs = ["Upstream chain-writing test; Q30 client-fixture substitution mapping pending, no oracle execution route"]
+rs = ["parity/e2e_map.toml (optional scenario 19 input; runtime execution remains pending under Q30)"]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "deffcefc170475adb87760304117a35f47e730aa"
 synced_tag = "v478"
 milestone = "M2-M7"
-notes = "Source audit 2026-10-15: This upstream test requires chain writes and is not invoked by the oracle/record scripts. Q30 removes local chain execution; exact fixture substitutions and actual native counterparts still need source reconciliation in e2e-map before this whole test-file row can be resolved."
+notes = "Source reconciliation 2026-10-17: reviewed the complete 86-line module, its byte-normalization helper and single async test, and authenticated its pinned blob. It waits for drand, encrypts a plaintext, submits only the inner ciphertext as a hotkey commitment, then checks revealed plaintext and removal of pending storage. The e2e map retains this as optional scenario 19 input. Under PLAN.md §8.3 and Q30, this oracle-only row records reviewed upstream source without requiring a first live corpus or a local node. No drand bridge, decryption, runtime reveal, oracle or differential result is claimed."
 
 [[file]]
 py = "sdk/python/tests/fixtures/golden.json"
@@ -2913,21 +2932,30 @@ notes = "Source reconciliation 2026-10-15: all ten authenticated upstream proper
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
+rs = [
+  "crates/rtao-cli/tests/generated_commands.rs",
+  "crates/rtao-cli/tests/query_contract.rs",
+  "crates/rtao-cli/tests/m8_stake_commands.rs",
+  "crates/rtao-cli/tests/subnets_commands.rs",
+  "crates/rtao-cli/tests/hparams_commands.rs",
+]
 kind = "oracle-only"
-synced_blob = "pending"
+synced_blob = "584295b9a001b4ecbf6694113a8ffaf099362008"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-17: reviewed the complete authenticated 1,299-line module and all 54 test definitions. Native fake-backed fixtures cover offline help/catalog/explain, query output and actionable failures, canonical saved multisig resolution, stake tables and bulk exits, transfer dry-run/submission/failure, immediate and queued subnet creation, local hotkey resolution and PoW refresh/retry boundaries. The separate Null-pruning entry test is covered by the authenticated pruning map and native session fixtures. Under PLAN.md §8.3 this oracle-only row records complete source review and concrete native homes without requiring Python execution. No pytest run, Python oracle coverage, exact Rich transcript, live chain, mining or differential result is claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_commands.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
-kind = "oracle-only"
-synced_blob = "pending"
+rs = [
+  "crates/rtao-cli/tests/generated_commands.rs",
+  "crates/rtao-cli/tests/m8_help_theme.rs",
+]
+kind = "ported"
+synced_blob = "110fe05a0c88595be6febdd3d71f19f8cf164b07"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-17: reviewed the complete 208-line module, its visible-command traversal, sample-to-argv conversion and all six table-driven tests. Directly attributed native fixtures compare every available intent and read with its real generated CLI leaf, execute all 83 authenticated intent samples through actual JSON dry-run without private-key access or submission, dispatch and render all 102 authenticated read samples against FakeChain, and invoke every visible installed help path. Boolean/list/dictionary and address flag shapes are exercised through those actual parsers. Native feature availability and Clap/TOML output intentionally replace Python Typer behavior. Current hosted execution is pending; no Python pytest or live node was run."
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_intent_prompts.py"
@@ -2940,12 +2968,17 @@ notes = "Source reconciliation 2026-10-15: both complete three-field fixtures re
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_null_pruning.py"
-rs = ["ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"]
+rs = [
+  "xtask/src/extract_null_pruning_test_fixtures.rs",
+  "vendor/upstream/extracted/named_tables.json (three authenticated parameter/input tables)",
+  "crates/rtao-neuron/src/owner_ops/trim/tests.rs",
+  "crates/rtao-cli/tests/hparams_commands.rs",
+]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "0705e3c90e593202712a08d9ec9ed21a82d622a3"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Documented group `sdk/python/tests/unit/*.py`: ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit)"
+notes = "Source reconciliation 2026-10-17: the bounded extractor authenticates the exact 23-test function inventory, module/class/helper shape, and three parameter/input tables used by native fixtures. The two directly attributed Rust test homes contain provenance references for every one of the 23 upstream tests. The native fake-chain fixtures cover pruning progress, restart and uncertainty journals, cancellation, bounded retries, pinned state, admin windows, legacy queue probes, cleanup-before-switch, idempotence, and CLI dry-run arguments without requiring a live node. This records reviewed native source coverage; the Python pytest module and a live runtime were not executed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_codec_golden.py"
@@ -3030,12 +3063,24 @@ notes = "Source reconciliation 2026-10-15: all 15 complete source functions and 
 
 [[file]]
 py = "sdk/python/tests/unit/test_intents_table.py"
-rs = ["Complete pytest assertion mapping pending; specific native analogues and committed fixture consumers are tracked separately"]
-kind = "oracle-only"
-synced_blob = "pending"
+rs = [
+  "crates/rtao-intents/tests/intent_plans.rs",
+  "crates/rtao-tx/tests/shield_raw.rs",
+  "crates/rtao-intents/tests/client_transfer_lifecycles.rs",
+  "crates/rtao-intents/src/root_claim.rs",
+  "crates/rtao-client/tests/shield.rs",
+  "crates/rtao-tx/tests/owner_execution.rs",
+  "crates/rtao-intents/src/weights/intents.rs",
+  "crates/rtao-tx/tests/executor.rs",
+  "crates/rtao-intents/tests/multisig_adapter.rs",
+  "crates/rtao-intents/src/staking_claims.rs",
+  "crates/rtao-intents/src/children.rs",
+]
+kind = "ported"
+synced_blob = "ee7896ea707810ab76eb5e2db68969c1cf9fa997"
 synced_tag = "v478"
 milestone = "the milestone of the code each tests"
-notes = "Source audit 2026-10-15: The Python oracle scripts do not run this pytest module. Existing Rust analogues, CLI catalog dumps and committed codec/key fixtures provide specific coverage only; full source assertion mapping is still required. No whole-file Python test execution or complete oracle coverage is claimed."
+notes = "Source reconciliation 2026-10-17: complete authenticated 1297-line module, 57 test definitions, fixtures and parameterizations reviewed against substantive native assertion counterparts. Complete 83-operation sample/schema/roundtrip/unknown-field/build/plan and policy loops, execution/shield/finality/registration/proxy flows, money/proportion vectors, embedded-root-claim admission/reserve/warnings and exported tools have native homes. Typed checked-u64 money/errors, exact call bytes and native receipt/period bounds replace Python dynamic carriers. Fake-RPC observations establish client behavior; wrapper-only shield fixtures retain pool-acceptance scope and client finality tests do not imply Executor execution for every case. The exact current native homes passed in hosted run 38994162434. Python pytest/oracle, runtime effects and hardware remain unverified."
 
 [[file]]
 py = "sdk/python/tests/unit/test_keyfiles_golden.py"

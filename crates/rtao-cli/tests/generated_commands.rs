@@ -305,6 +305,7 @@ fn leaf(parsed: &clap::ArgMatches) -> Result<&clap::ArgMatches, Box<dyn std::err
 }
 
 // pyt: unit/test_cli_commands.py::test_every_intent_has_a_tx_command
+// pyt: unit/test_cli_commands.py::test_every_read_has_a_query_command
 #[test]
 fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability() -> TestResult {
     let tx = generated::tx_command()?;
