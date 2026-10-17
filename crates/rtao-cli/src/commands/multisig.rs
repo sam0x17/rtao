@@ -1,6 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/multisig.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/multisig_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Additional sources at the same commit/license: cli/multisig_helpers.py, cli/commands/upgrade.py and cli/upgrade_helpers.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/upgrade.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/upgrade_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Saved multisig books and public pending-operation inspection.
 
 use crate::{
