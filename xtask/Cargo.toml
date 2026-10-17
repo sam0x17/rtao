@@ -34,7 +34,7 @@ rtao-client.workspace = true
 rtao-runtime.workspace = true
 rtao-primitives.workspace = true
 rtao-reads.workspace = true
-rtao-intents = { workspace = true, features = ["weights", "serving", "transfer"] }
+rtao-intents = { workspace = true, features = ["weights", "serving", "transfer", "staking"] }
 rtao-signer.workspace = true
 rtao-tx.workspace = true
 rtao-metagraph.workspace = true

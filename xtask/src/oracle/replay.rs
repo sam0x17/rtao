@@ -496,6 +496,9 @@ fn compare(label: &str, expected: &Value, actual: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rtao_testkit::fixtures::catalog_samples::{
+        ROOT_NATIVE_AMOUNT_ID, root_native_amount_call, root_native_amount_inputs,
+    };
 
     #[test]
     fn timelock_replay_uses_public_helpers_and_rejects_changed_results() -> Result<()> {
@@ -618,6 +621,7 @@ mod tests {
         let extras: Value = serde_json::from_slice(&std::fs::read(
             workspace()?.join("vendor/oracle/samples_extra.json"),
         )?)?;
+        root_native_amount_inputs(&extras)?;
         for (name, samples) in extras["intents"]
             .as_object()
             .context("reviewed intent inputs")?
@@ -625,6 +629,9 @@ mod tests {
             for sample in samples.as_array().context("reviewed samples")? {
                 let mut source = baseline()?;
                 apply(&mut source, sample)?;
+                let root_expected = (sample["id"] == ROOT_NATIVE_AMOUNT_ID)
+                    .then(|| root_native_amount_call(name, &sample["args"]))
+                    .transpose()?;
                 let (client, fake) = client(seeded_state(&source, &json!({"name":name}))?).await?;
                 let result = async {
                     let intent = AnyIntent::from_tool(name, sample["args"].clone())?;
@@ -638,10 +645,22 @@ mod tests {
                         clock: &SystemClock,
                         spec: intent.spec(),
                     };
-                    intent.as_dyn().build_dyn(&cx).await?;
-                    Executor::new(client.clone())
+                    let built = intent.as_dyn().build_dyn(&cx).await?;
+                    let plan = Executor::new(client.clone())
                         .plan_dyn(intent.as_dyn(), &keys, &PlanOptions::default())
                         .await?;
+                    if let Some(expected) = &root_expected {
+                        ensure!(
+                            plan.ok(),
+                            "root input has unrelated plan blocks: {:?}",
+                            plan.violations
+                        );
+                        ensure!(plan.op == *name, "root input operation changed");
+                        ensure!(
+                            built.call.as_bytes() == expected && plan.call().as_bytes() == expected,
+                            "original root input {name} changed independent native call arguments"
+                        );
+                    }
                     ensure!(
                         fake.requests()
                             .iter()
