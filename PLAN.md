@@ -1592,6 +1592,17 @@ conventions:
 - **C7.** Release tags, binary artifacts, provenance setup, device runs and automated-upkeep handover are deferred
   by Q30. Development completion does not assert a release or 1.0 readiness.
 
+**Final client-source checkpoint, 2026-10-17.** Hosted
+[run 38999377082](https://github.com/sam0x17/rtao/actions/runs/38999377082)
+passes at source head `95b9e8c` with 3,204 tests, four skips, passing doctests
+and all six required jobs. Hosted report refresh
+[38998872513](https://github.com/sam0x17/rtao/actions/runs/38998872513)
+authenticates the adopted compatibility reports; source parity is 357/357 with
+zero pending blobs. Completed client steps through M9 are checked below. The
+only active unchecked step is M2-26 because M2-S02 remains open and unaccepted;
+therefore M2 and dependent milestone exits are not formally accepted. Optional
+live/oracle/interop/device evidence remains explicitly unexecuted under Q30.
+
 **Security passes by cold readers** (Q19). M2, M3, M4 and M7 each end with a security pass, and M9 with the full review.
 A local cold reader does each one: a fresh-context reviewer (a new agent session, or a person, that took no part in the
 implementation) that receives only the repository at the milestone's final commit, the milestone diff
@@ -1920,7 +1931,7 @@ template profiles in hosted CI; cross-language and real-chain checks are optiona
       source in hosted CI. Test setup and generated files with fixtures. Image builds and compose integration
       are optional targeted hosted checks; the generated project does not require deployment to pass ordinary CI.
 - [x] **M3-10** The miner guide in the book ([§11](#11-documentation-plan)).
-- [ ] **M3-11** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m3.md`; focus: the
+- [x] **M3-11** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m3.md`; focus: the
       btauth/1 verifier (freshness window, nonce-store bounds, body limit enforced before buffering, header-parsing fuzz
       target) and `PerHotkeyLimiter`.
 
@@ -1943,7 +1954,7 @@ the raw-call path and the `Multisig` account object, `PowSolver`, `OwnerOps`, `O
 v0 (its machinery and 40 commands); the template's owner member; owner and MEV-shield guides; the M4 security pass.
 **Parallel work.** M4-01…M4-02, M4-03…M4-04 and M4-05 are independent of each other; M4-09 needs only M2 and M4-04.
 
-- [ ] **M4-01** Hyperparameter units, split by layer: `rtao_primitives::hyperparams::{Hyperparam, HyperparamTable}`
+- [x] **M4-01** Hyperparameter units, split by layer: `rtao_primitives::hyperparams::{Hyperparam, HyperparamTable}`
       carry the ported functions of `PY/hyperparams.py:474-769` (`metadata_kind`, `kind_of`, `doc_of`, `short_of`,
       `normalized`, `annotate`, `value_forms`, `codec_of`, `raw_bounds`, `to_raw`) as methods; the data is generated
       into `rtao_catalog::hyperparams::TABLE` from the extracted `HYPERPARAMS`, `STORAGE_ITEMS` (each item resolved to
@@ -1951,32 +1962,32 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
       `rtao_intents::hyperparameters::to_raw` delegates to `TABLE`, so there is one implementation. Python's
       metadata-primary precedence is kept: `kind_of` decides by the storage value's unit-bearing type ident first, and
       `codec_of` takes explicit `bits`/`signed`, then that ident, then the kind default. The `--units` gate.
-- [ ] **M4-02** `HyperparamPlanner` with the owner rules: the admin freeze window and the per-setter owner rate limits
+- [x] **M4-02** `HyperparamPlanner` with the owner rules: the admin freeze window and the per-setter owner rate limits
       (`LastRateLimitedBlock` for owner hyperparameters, `TransactionKeyLastBlock` for the version key, tempo,
       mechanisms and trims, with the `prod_or_fast!` limits from `rtao_catalog::rt::rate_limits`); one `FakeChain` test
       per setter row.
-- [ ] **M4-03** MEV shield pipeline: `ShieldPeriod` with the era check (refuse with `TxError::ShieldEraExpired` when
+- [x] **M4-03** MEV shield pipeline: `ShieldPeriod` with the era check (refuse with `TxError::ShieldEraExpired` when
       B + 2 ≥ F + p, D-025), `ShieldCiphertext`, `lease_pair` leaving the next nonce at n + 2 (D-026), inner-extrinsic
       scan, preflight, routing and downgrade rules; never retransmit the same signed shielded payload. An eligible
       known owner `TxRateLimitExceeded` dispatch failure may trigger one fresh plan and submission (D-070).
-- [ ] **M4-04** The raw path (`submit_call`, `submit_call_dyn`, `ExecuteOptions::shielded`) and the `Multisig` account
+- [x] **M4-04** The raw path (`submit_call`, `submit_call_dyn`, `ExecuteOptions::shielded`) and the `Multisig` account
       object with its funds preflight (`rtao_tx::multisig`); `Client::{decode_scale, estimate_weight,
       estimate_shielded_carrier_fee}`. CLI v0's `call --multisig` needs them; `call` has no `--allow-raw`, because the
       CLI builds its executor without a `Policy`, as btcli does.
-- [ ] **M4-05** `PowSolver` (CPU).
-- [ ] **M4-06** Intents (11): `burned_register` (through the shield path), `pow_register` (`host`), `root_register`,
+- [x] **M4-05** `PowSolver` (CPU).
+- [x] **M4-06** Intents (11): `burned_register` (through the shield path), `pow_register` (`host`), `root_register`,
       `register_subnet` with the queued-completion follower, `start_call`, `set_hyperparameter` with
       `HyperparamPlanner`, `set_subnet_identity`, `update_symbol`, `set_mechanism_count`, `trim_subnet`,
       `trim_null_subnet_batch`. Nine of them use generated pass-through bodies. The `Policy` equivalence test (M2-08)
       gains its five M4 pairs: `register_subnet`, `start_call`, `burned_register`, `root_register` and
       `set_hyperparameter`.
-- [ ] **M4-07** The 22 M4 reads: `balance`, `balances`, `mev_shield_next_key`, `delegate_take`, `delegated`,
+- [x] **M4-07** The 22 M4 reads: `balance`, `balances`, `mev_shield_next_key`, `delegate_take`, `delegated`,
       `blocks_until_next_epoch`, `next_epoch_start_block`, `difficulty`, `subnet_emission_enabled`,
       `hotkey_identities`, `identity`, `most_convicted_hotkey`, `root_basket_owed`, `stake_value_for_coldkey`,
       `stake_value_for_coldkeys`, `validator_basket_summary`, `burn`, `mechanism_emission_split`,
       `subnet_hyperparameters`, `subnet_identity`, `subnet_names`, `subnet_start_schedule`.
-- [ ] **M4-08** `OwnerOps`; `OwnerMonitor`.
-- [ ] **M4-09** The CLI machinery (the `cli` rows of python-module-map.md marked M4; CLI v0 covers 40 commands,
+- [x] **M4-08** `OwnerOps`; `OwnerMonitor`.
+- [x] **M4-09** The CLI machinery (the `cli` rows of python-module-map.md marked M4; CLI v0 covers 40 commands,
       [architecture §10.6](docs/plan/architecture.md#106-scope-per-milestone) as resolved by the
       [inventory](docs/plan/parity-inventory.md#7-cli-command-tree)): ports of `context.py`, `globals.py`, `main.py` (the
       command tree; the snake_case alias mechanism of `:449-477`, which then covers every later command including
@@ -1988,31 +1999,31 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
       `--keychain-password`/`--macos-password`: Keychain read and write through `/usr/bin/security` with Python's exact
       argv, and the `osascript` dialog. `wallet new-coldkey`/`regen-*` and every coldkey-signed command need them on a
       TTY (D-003).
-- [ ] **M4-10** CLI: globals, `config` (5), `doctor`, `explain`, `tools`, `call`; the node-managing `localnet` command
+- [x] **M4-10** CLI: globals, `config` (5), `doctor`, `explain`, `tools`, `call`; the node-managing `localnet` command
       is deferred under Q30. Generated `tx` (20 ops) and
       `query` (38 reads); the rtao-only `wallet save-password-env` (architecture §6.2, §10.4; over the M2 staged
       `keyfile_env`).
-- [ ] **M4-11** CLI: `wallet` create, new-coldkey, new-hotkey, regen-coldkey, regen-hotkey, regen-coldkeypub,
+- [x] **M4-11** CLI: `wallet` create, new-coldkey, new-hotkey, regen-coldkey, regen-hotkey, regen-coldkeypub,
       regen-hotkeypub, show, list, balance, inspect; `weights` set, commit, reveal; `axon` set, reset.
-- [ ] **M4-12** CLI: `hparams` set, get, get-take, check-start, start, set-symbol, get-identity, set-identity, trim,
+- [x] **M4-12** CLI: `hparams` set, get, get-take, check-start, start, set-symbol, get-identity, set-identity, trim,
       trim-null-batch, trim-null, mechanisms count, mechanisms emissions; `subnets` register, create, metagraph.
-- [ ] **M4-13** Ports of `PYT/unit/test_pow_registration.py` (the solver and the intent keep the runtime challenge),
+- [x] **M4-13** Ports of `PYT/unit/test_pow_registration.py` (the solver and the intent keep the runtime challenge),
       `test_cli_null_pruning.py` (owner pruning must advance on chain, not only return successful receipts) and
       `test_natural_name_key.py` (CLI listings order `coldkey2` before `coldkey10`).
-- [ ] **M4-14** Verify Keychain service names, argv, deferred password behavior and errors through injected process
+- [x] **M4-14** Verify Keychain service names, argv, deferred password behavior and errors through injected process
       tests in hosted CI. Real Keychain and temporary-default-keychain rehearsals are deferred by Q30; do not change
       host settings or invoke the user's Keychain during development.
 
 - **M4-15 optional hosted integration.** Select an owner/shield scenario (4, 10 or 11), a relevant implemented
   read/plan case (interop 5/8), or CLI JSON case (interop 9 through PinProxy) only when the changed client needs
   evidence beyond ordinary fixtures. Record what ran; no local nodes, compose stack or full command campaign.
-- [ ] **M4-16** Maintain the template owner-tool source and compile its public `OwnerOps` example in hosted
+- [x] **M4-16** Maintain the template owner-tool source and compile its public `OwnerOps` example in hosted
       CI. A targeted hosted image or owner-flow integration check is optional; no compose deployment is required.
-- [ ] **M4-17** `crates/rtao/examples/owner.rs` (the example of [§7.4](#74-an-owner-operation)) and its line in the
+- [x] **M4-17** `crates/rtao/examples/owner.rs` (the example of [§7.4](#74-an-owner-operation)) and its line in the
       `features` job; the four `test_*` keys of [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names)
       assigned to M4.
-- [ ] **M4-18** The owner and MEV-shield guides in the book ([§11](#11-documentation-plan)).
-- [ ] **M4-19** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m4.md`; focus: coldkey
+- [x] **M4-18** The owner and MEV-shield guides in the book ([§11](#11-documentation-plan)).
+- [x] **M4-19** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m4.md`; focus: coldkey
       unlock, CLI prompts and warnings about secrets passed in argv, the MEV-shield envelope, and the raw `call` path.
 
 **Exit checks (hosted CI):**
@@ -2032,11 +2043,11 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
 **Deliverables.** Reviewed client source, docs and applicable hosted checks ([§12.1](#121-overview)); the remaining 63 intents, the offline-signing path, reads
 `proxies` and `root_claim_threshold`, 20 CLI commands, generated `tx` reference pages complete.
 
-- [ ] **M5-01** `prepare_call`/`submit_signature` with Python-compatible `UnsignedExtrinsic` JSON (the raw path landed in
+- [x] **M5-01** `prepare_call`/`submit_signature` with Python-compatible `UnsignedExtrinsic` JSON (the raw path landed in
       M4-04), with ordinary payload fixture tests and optional targeted hosted interop lane 6; reads `proxies` and `root_claim_threshold`
       (`set_root_claim_threshold`'s verify read); the multisig book and call-cache writers; the `UnsignedExtrinsic` JSON
       import has fuzz target source for optional targeted hosted checks.
-- [ ] **M5-02** The 63 remaining intents, per Python group (each a feature): `staking` 14 (`add_stake`,
+- [x] **M5-02** The 63 remaining intents, per Python group (each a feature): `staking` 14 (`add_stake`,
       `add_stake_limit`, `remove_stake`, `remove_stake_limit`, `move_stake`, `move_swap_stake`, `swap_stake`,
       `transfer_stake`, `unstake_all`, `unstake_all_alpha`, `set_auto_stake`, `stake_into_basket`, `swap_basket`,
       `swap_basket_many`); `crowdloan` 10; `proxy` 6; `children` 5 (incl. `set_take`); `coldkey` 4; `lock` 4; `multisig`
@@ -2047,8 +2058,8 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
       field), so the root branches of `remove_stake`, `remove_stake_limit`, `move_stake`, `swap_stake`,
       `move_swap_stake` and `transfer_stake` on netuid 0 work; the oracle checks them with the root-subnet samples of
       `vendor/oracle/samples_extra.json`. With the last of them, the generated `tx` reference pages are complete.
-- [ ] **M5-03** `Policy` equivalence completes at 21 of the core's 22 constructors (M2-08).
-- [ ] **M5-04** The 83-op table-driven plan test over `AnyIntent`, which covers the 72 `intent_*` names: it iterates the
+- [x] **M5-03** `Policy` equivalence completes at 21 of the core's 22 constructors (M2-08).
+- [x] **M5-04** The 83-op table-driven plan test over `AnyIntent`, which covers the 72 `intent_*` names: it iterates the
       extracted `INTENT_SAMPLES` (`PYT/harness/samples.py:35`, already all 83 catalog operations), rewrites positive
       subnet identities to two fixture subnets while retaining root 0 and distinct destination relationships,
       and uses the slot hotkey except where a different destination hotkey is required. It asserts that `plan()` returns `Ok`, that `plan.op` equals the
@@ -2057,7 +2068,7 @@ v0 (its machinery and 40 commands); the template's owner member; owner and MEV-s
       exemption. PoW uses a fresh deterministic difficulty-one nonce-zero proof for the public FakeChain challenge,
       without a mining worker. Ordinary hosted fixture coverage maps the 72 catalog `intent_*` keys; retired calls
       remain n/a. Call-tree equality with Python stays in the offline oracle tests, which use the unrewritten samples.
-- [ ] **M5-05** CLI (20): `stake` aliases add, remove, move, move-swap, transfer, swap, burn; `hparams` set-take,
+- [x] **M5-05** CLI (20): `stake` aliases add, remove, move, move-swap, transfer, swap, burn; `hparams` set-take,
       stake-burn; `proxy` create, add, remove, kill, list, execute; `multisig` add, list, show, remove, pending; `tx`
       complete; hidden v9 aliases of the groups this milestone first ships (inventory §7.3).
 - **M5-06 optional hosted integration.** Scenarios 11-13/18 and interop 6-8 can supply targeted evidence for
@@ -2087,27 +2098,27 @@ methods, `rtao::blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, clo
 generated `query` reference pages complete.
 **Parallel work.** M6-04 is independent of the other steps.
 
-- [ ] **M6-01** The 62 remaining reads (40 land in M1-M5), the remaining namespace accessors and methods (accessor names
+- [x] **M6-01** The 62 remaining reads (40 land in M1-M5), the remaining namespace accessors and methods (accessor names
       from the catalog `category`,
       [inventory §8](docs/plan/parity-inventory.md#8-inconsistencies-found-and-how-this-inventory-resolves-them) #12),
       the remaining curated extras of `PY/namespaces.py` (the metagraph and commitments extras land in M1), the
       remaining models, and the locks half of the port of `PYT/unit/test_v446_accounting_and_commitments.py` (the
       commitments half landed in M1-19). With the last read, the generated `query` reference pages are complete.
-- [ ] **M6-02** The exact-hits test ([§9.3](#93-fakes-at-the-right-layers), from M2-09) over every read as it is ported,
+- [x] **M6-02** The exact-hits test ([§9.3](#93-fakes-at-the-right-layers), from M2-09) over every read as it is ported,
       with its `parity/read_hits_extra.toml` rows reviewed; existing read oracle fixtures at head and pinned; fresh interop samples are optional targeted hosted evidence.
-- [ ] **M6-03** `rtao::blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` over
+- [x] **M6-03** `rtao::blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` over
       `rtao_client::blocking::BlockingRuntime` (facade feature `blocking`; `SyncClient` has all 14 namespaces, where
       Python's has 13, D-027); the frozen legacy runtime-API table for archive reads; the port of
       `PYT/unit/test_facades.py` (namespace parity of the sync facade).
 - **M6-04 optional source experiment.** Investigate a `[u8; 32]` decode visitor only for an observed client
   issue. Any comparison is bounded hosted work; no benchmark campaign is required.
-- [ ] **M6-05** CLI (24): `root` list, claim, allocate, move, swap, register; `subnets` list, show, hyperparameters,
+- [x] **M6-05** CLI (24): `root` list, claim, allocate, move, swap, register; `subnets` list, show, hyperparameters,
       burn-cost, create-cost, price, conviction; `conviction` list, targeting, show, add, mode, accept, move;
       `collateral` show, list, add, set-min; `query` complete; hidden v9 aliases of the groups this milestone first
       ships. `basket_index.py` is ported into `rtao-cli` as `root_helpers::basket_index`, and `basket_index_data.py` is
       generated into `rtao-cli` from extracted literal tuples, not into `rtao-catalog`, which every neuron build
       compiles.
-- [ ] **M6-06** The four `test_*` keys of [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names) assigned
+- [x] **M6-06** The four `test_*` keys of [inventory §2.5](docs/plan/parity-inventory.md#25-upstream-e2e-names) assigned
       to M6 (`test_subnets_all_batched`, `test_quote_stake_slippage_and_fee`, `test_metagraph_fast_path_matches_runtime`,
       `test_leases_read`) mapped to rtao e2e tests.
 
@@ -2131,43 +2142,43 @@ hardware/platform rehearsals are deferred.
 **Parallel work.** M7-02, M7-05 and M7-06 are independent of each other and of M7-03…M7-04; M7-09…M7-10 need only
 M7-02 and may run beside M7-03…M7-08.
 
-- [ ] **M7-01** The `vault.uos` framing functions (`sign_tx_payload`, `sign_frame`, `multipart_frames`,
+- [x] **M7-01** The `vault.uos` framing functions (`sign_tx_payload`, `sign_frame`, `multipart_frames`,
       `transaction_frames`, `transaction_frames_with_proof`) join the oracle's pure-function dumps, and
       `ci/oracle/dump_ledger.py` dumps the `(payload, proof, account, index)` that Python's `LedgerSigner` sends to a
       recording fake device (the `FakeDevice` pattern of `PYT/unit/test_ledger_signer.py:34-54`) for the golden calls
       with an immortal and a mortal era and for a batch above 256 bytes (`vendor/oracle/ledger.json`).
-- [ ] **M7-02** `LedgerSigner` ([architecture §6.5](docs/plan/architecture.md#65-signer-implementations)) over the
+- [x] **M7-02** `LedgerSigner` ([architecture §6.5](docs/plan/architecture.md#65-signer-implementations)) over the
       `LedgerBackend` seam (`app_version`, `address`, `sign`): the core's `LedgerDevice` in production, `FakeLedger` for
       the ports of `PYT/unit/test_ledger_signer.py`, and `LedgerSigner::with_backend` behind `rtao-signer`'s feature
       `test-util`. It sends the unhashed payload parts with the core's RFC-0078 proof, signs on the ed25519 path, holds
       one device mutex across whole operations, runs device I/O in `spawn_blocking`, fills `ChainInfo` as architecture
       §3.9.2 specifies (the runtime's `spec_name`) and refuses raw signing; `ledger_request_parity` compares its device
       requests with M7-01's dump.
-- [ ] **M7-03** `VaultSigner` (UOS framing; the upstream static assets served by `VaultSessionServer`, a one-shot
+- [x] **M7-03** `VaultSigner` (UOS framing; the upstream static assets served by `VaultSessionServer`, a one-shot
       loopback HTTP and WebSocket server on an ephemeral port that speaks the page's JSON protocol,
       `PY/vault/server.py`, upgraded like the extension bridge of M7-04; UOS frames rendered as SVG QR codes with one
       automatically selected numeric/alphanumeric/byte segment, no segment splitting, error correction M and a
       4-module quiet zone (`optimize=0`, `PY/vault/qr.py:15-28`; binary UOS frames use byte mode), with a QR
       crate chosen here [I] and tests that decode the symbol back to the frame bytes; `scan_vault_address`).
-- [ ] **M7-04** `ExtensionSigner` with `BridgeServer`, `BridgeClient`, `connect_extension_signer`, `ensure_bridge`,
+- [x] **M7-04** `ExtensionSigner` with `BridgeServer`, `BridgeClient`, `connect_extension_signer`, `ensure_bridge`,
       `run_bridge` and `stop_bridge_daemon`, all in `rtao-signer` under feature `extension` because Python exports them
       as library API. The server serves `bridge.html` with axum and upgrades its WebSocket route through hyper and
       tokio-tungstenite 0.30 (axum's own `ws` feature would pull tokio-tungstenite 0.29, a second `tungstenite`); the
       client uses tokio-tungstenite; `ensure_bridge` spawns `rtao extension bridge --daemon`, writes Python's token and
       pid files, and reuses a running Python daemon. The `extension` commands `bridge`, `stop` and `accounts` land here,
       because `ensure_bridge` spawns the first.
-- [ ] **M7-05** `rtao-evm`: keystore-V3 keys, precompile ABIs from `vendor/upstream/evm/abi/`, eth JSON-RPC, association
+- [x] **M7-05** `rtao-evm`: keystore-V3 keys, precompile ABIs from `vendor/upstream/evm/abi/`, eth JSON-RPC, association
       proofs.
-- [ ] **M7-06** Timelock UX: `rtao_tx::timelock::{seal, open, Timelocked, Reveal, OpenOptions, DrandClient}` with
+- [x] **M7-06** Timelock UX: `rtao_tx::timelock::{seal, open, Timelocked, Reveal, OpenOptions, DrandClient}` with
       `Reveal::{In, At, Round, InBlocks}` (`InBlocks` is an addition, D-033), timelocked commitments (scenario 19);
       `pow-gpu`; the remaining §3.15 rows; the optional `subxt` feature (Q15).
-- [ ] **M7-07** CLI (34, counting the three `extension` commands of M7-04): `wallet keychain` save, show, delete, over the
+- [x] **M7-07** CLI (34, counting the three `extension` commands of M7-04): `wallet keychain` save, show, delete, over the
       M4 Keychain code, with optional Linux `keyring`; `timelock` encrypt, decrypt, show; `evm` (25 commands);
       `--signer ledger|vault|extension`; hidden v9 aliases of the groups this milestone first ships.
 - **M7-08 optional hosted integration.** Target scenario 14 (PoW registration) or 19 (timelocked commitment)
   only for a concrete client change, with a timeout. Local PoW mining, node deployment and long timing runs
   are outside development work.
-- [ ] **M7-09** Maintain the core-patch source rules and injected/replay Ledger transport tests. Keep
+- [x] **M7-09** Maintain the core-patch source rules and injected/replay Ledger transport tests. Keep
       `with_transport` and `ApduTransport` confined to testkit; verify shipped crates against the unpatched core
       in relevant hosted checks. Building Ledger apps, starting Speculos and recording new transcripts are
       optional targeted hosted work, with pinned inputs and explicit limits.
@@ -2177,14 +2188,14 @@ M7-02 and may run beside M7-03…M7-08.
 - **M7-11 deferred by Q30.** Device operation, firmware/app verification and hardware rehearsals are future
   hardware acceptance work. Document the untested HID/device coverage; no local transfer or device run is required.
 
-- [ ] **M7-12** The signer and Ledger guides in the book ([§11](#11-documentation-plan)), including a note that the app
+- [x] **M7-12** The signer and Ledger guides in the book ([§11](#11-documentation-plan)), including a note that the app
       shows stake amounts typed `TaoBalance` as raw integers
       ([research J §4.6](docs/plan/research/J-ledger-ci-shim.md#46-upstream)), kept until a released app version
       formats them (the fix was filed with Zondax on 2026-10-13, Q22; once it ships, the note says instead that
       `swap_stake_limit` and `move_stake_limit` show their `limit_price`, a price ratio scaled by 1e9, with the TAO
       unit, unless the app's maintainers handle those two calls), and CONTRIBUTING's section on running the Ledger
       emulator lane through an optional bounded hosted dispatch (Q30).
-- [ ] **M7-13** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m7.md`; focus: Ledger,
+- [x] **M7-13** Security pass by a local cold reader ([§12.1](#121-overview)), in `docs/security/m7.md`; focus: Ledger,
       Vault and the extension bridge's token handling.
 
 **Exit checks (hosted CI):**
@@ -2204,17 +2215,17 @@ M7-02 and may run beside M7-03…M7-08.
 **Deliverables.** Reviewed client source, docs and applicable hosted checks ([§12.1](#121-overview)); the remaining 45 commands, `PyJsonFormatter`, completions,
 the strict parity gate; the CLI book chapter.
 
-- [ ] **M8-01** The remaining 45 commands: `wallet` (16: sign, verify, encrypt, decrypt, unlock, overview, registrations,
+- [x] **M8-01** The remaining 45 commands: `wallet` (16: sign, verify, encrypt, decrypt, unlock, overview, registrations,
       history, transfer, set-identity, get-identity, associate-hotkey, swap-hotkey, swap-coldkey, swap-check,
       announce-coldkey-swap; `create` landed in M4); `stake` (11: unstake-all, unstake-all-alpha, show, list, auto,
       set-auto, child get/set/revoke/take, wizard); `addr` (5); `proxy book` (5); `misc` convert, latency; `crowd` list,
       info, contributors; `upgrade` pending, check, sign; the proxy and address book writers, which join interop lane 7.
-- [ ] **M8-02** Hidden v9 aliases of the M8 groups, then a check of every group's hidden v9 and snake_case aliases
+- [x] **M8-02** Hidden v9 aliases of the M8 groups, then a check of every group's hidden v9 and snake_case aliases
       against `cli_tree.json` (each alias lands with its group, inventory §7.3); `PyJsonFormatter` (2-space indent,
       Python float `repr`, non-ASCII preserved); shell completions; the interactive pickers and `stake wizard`
       (`stake_picker.py`).
-- [ ] **M8-03** The CLI chapter of the book ([§11](#11-documentation-plan)).
-- [ ] **M8-04** Switch the parity gate to strict mode.
+- [x] **M8-03** The CLI chapter of the book ([§11](#11-documentation-plan)).
+- [x] **M8-04** Switch the parity gate to strict mode.
 
 **Exit checks (hosted CI):**
 
@@ -2231,20 +2242,20 @@ the strict parity gate; the CLI book chapter.
 **Deliverables.** Reviewed source, current docs, an accurate filing inventory and a security review report.
 Q30 defers release, deployment and automatic upkeep; this milestone does not claim 1.0 release readiness.
 
-- [ ] **M9-01** Review existing fuzz targets and failure regressions as client source. Mainnet cloning, full-node
+- [x] **M9-01** Review existing fuzz targets and failure regressions as client source. Mainnet cloning, full-node
       operation and increased fuzz/benchmark campaigns are removed by Q30. Targeted robustness checks use bounded
       free hosted jobs.
 
-- [ ] **M9-02** Book and `llms.txt` complete; generated reference and migration tables.
+- [x] **M9-02** Book and `llms.txt` complete; generated reference and migration tables.
 - **M9-03 deferred by Q30.** Automatic updates and release-provenance deployment depend on a future distribution
   task. Keep the feature disabled; do not prepare local release or updater rehearsals.
 
-- [ ] **M9-04** Audit existing upstream PR/issue links, states and source evidence. Keep unfinished proposals local;
+- [x] **M9-04** Audit existing upstream PR/issue links, states and source evidence. Keep unfinished proposals local;
       opening every planned filing is no longer an exit requirement (Q30, C4).
-- [ ] **M9-05** Review source/pin update guards in hosted CI and record a real pin update if one is needed. Waiting
+- [x] **M9-05** Review source/pin update guards in hosted CI and record a real pin update if one is needed. Waiting
       for an upstream release or rehearsing the oracle/localnet/recording pipeline is no longer required (Q30).
 
-- [ ] **M9-06** The full security review: a cold-reader pass ([§12.1](#121-overview)) over the whole repository, covering
+- [x] **M9-06** The full security review: a cold-reader pass ([§12.1](#121-overview)) over the whole repository, covering
       signers, keyfiles, secrets handling, the nonce store, `auto-update` and every area of the per-milestone passes, in
       `docs/security/m9.md`; an external review in addition only if the user arranges one.
 - **M9-07 deferred by Q30.** Bot installation, automatic upkeep, release publishing, branch-protection and merge

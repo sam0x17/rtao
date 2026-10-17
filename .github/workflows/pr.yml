@@ -80,7 +80,7 @@ jobs:
         # staged probes, upstream lints, extraction, all parity layers, nextest,
         # doctests, strict rustdoc and the rendered book/LLM index. Docs use the
         # same hosted target directory and a separate 15-minute command limit.
-        # Pending behavior remains explicit until its port lands.
+        # Q30-deferred runtime evidence stays explicit in the parity register.
       - name: Retain development documentation
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -411,7 +411,7 @@ jobs:
         # bounded refresh before starting the ordinary hosted test jobs.
         # Manual parity compares the exact selected commit to its first parent;
         # the full checkout above preserves shrink-only and oracle history.
-        run: cargo run --locked -p xtask -- parity check
+        run: cargo run --locked -p xtask -- parity check --strict
       - name: Verify generated output paths
         if: ${{ !inputs.refresh_canonical_abis }}
         env:
