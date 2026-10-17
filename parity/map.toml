@@ -105,12 +105,12 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "pallets/admin-utils/src/lib.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+rs = ["crates/rtao-intents/src/hyperparameters/planner.rs (selective owner current-value and freeze/cooldown planning)","vendor/upstream/extracted/owner_map.json (34 owner names over 33 setters plus four operation policies and source provenance)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "f438b23549c74e8d740c66a2e1897b5ff68b7aa7"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Full 2867-line source disposition through 9af5324: selected owner_map extraction covers 34 names over 33 setters plus four operations; HyperparamPlanner mirrors owner-only current-value/call shape, freeze/cooldown and matching Null continuation. Remaining dispatch authority, bounds enforcement, state/event changes, root-only administration, pruning and economics stay runtime-owned. Generated metadata/Python consumers expose additional calls without claiming a whole-pallet port. Source reconciliation only; hosted test acceptance remains pending."
 
 [[file]]
 py = "pallets/subtensor/src/coinbase/reveal_commits.rs"
@@ -231,30 +231,30 @@ notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet
 
 [[file]]
 py = "pallets/subtensor/src/subnets/subnet.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+rs = ["rtao_neuron::OwnerOps::{create_subnet,start} (client orchestration; chain-source attribution pending)","rtao_tx registration completion follower (Python-derived; chain-source attribution pending)","rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Full 688-line source disposition through 9af5324: actual clients compose registration/activation calls, follow immediate or queued NetworkAdded with owner/hotkey/height correlation, and recheck mutable start delay. ID allocation, pruning, escrow/payment, initialization, pool economics, authority and storage/event writes stay runtime-owned. No required client behavior gap found. Keep pending: concrete consumers currently have Python/metadata attribution, not a canonical direct subnet.rs header; do not claim a chain-source port or refund implementation. Hosted acceptance remains pending."
 
 [[file]]
 py = "pallets/subtensor/src/subnets/weights.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+rs = ["rtao_neuron::weights::{WeightScheduler,RevealWatcher} (selected preparation and actual-epoch observation; direct chain attribution pending)","rtao_intents::weights (Python-derived call/preparation contracts)","rtao_runtime generated calls/storage/events (metadata-derived client surfaces)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Full 1551-line source disposition through 9af5324: clients prepare current mechanism calls and observe actual inclusion/reveal epochs. Reveal miss attribution now mirrors Null's unconditional permit requirement and Yuma's self-row and registered-owner exemptions. Runtime dispatch weights, admission, queue priority/eviction, storage/event updates and legacy batch processing remain chain-owned. Keep pending because actual direct chain attribution is incomplete; Python weight math, core scheduling and separate reveal-contract extraction do not establish a whole-file port. Hosted execution of the diagnostic repair also remains pending."
 
 [[file]]
 py = "pallets/subtensor/src/utils/misc.rs"
-rs = ["the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"]
+rs = ["crates/rtao-intents/src/hyperparameters/planner.rs (owner freeze and selected getter projection)","crates/rtao-neuron/src/weights.rs (LastUpdate fallback and activity-cutoff alarm)","vendor/upstream/extracted/owner_map.json (authenticated helper bodies and selected getter storage linkage)"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "a1db5d139dd79bc5afaa2642ecb25540448f5bca"
 synced_tag = "v478"
 milestone = "M2-M4"
-notes = "Documented group `pallets/subtensor/src/subnets/{serving,weights,subnet}.rs`, `pallets/subtensor/src/utils/{misc,rate_limiting}.rs`, `pallets/subtensor/src/coinbase/tempo_control.rs`, `pallets/admin-utils/src/lib.rs`: the chain rules the framework mirrors: `AxonPublisher`, `WeightScheduler`, `OwnerOps::create_subnet`, `HyperparamPlanner`, staged `epoch_schedule` (§4.9, §9.5, §9.7)"
+notes = "Full 1113-line source disposition through 9af5324: owner planning mirrors the tempo-zero exemption, strictly future pending epochs and remaining<freeze boundary; WeightScheduler mirrors LastUpdate fallback and floor(factor_milli*tempo/1000).max(1) for its activity alarm. owner_map authenticates selected owner helper bodies/getter linkage. Runtime authority, storage writes/events, registration/burn/Null transitions and Q32 economics remain chain-owned. Source reconciliation only; hosted test acceptance remains pending."
 
 [[file]]
 py = "pallets/subtensor/src/utils/rate_limiting.rs"
