@@ -132,16 +132,56 @@ pub struct LiveTerminal;
 ///
 /// Setting it needs no terminal lock. It installs no signal handler and never
 /// resets: a later invocation must create its own handle.
+#[derive(Debug, Default)]
+struct CancellationState {
+    cancelled: AtomicBool,
+    notify: tokio::sync::Notify,
+}
+
+/// One invocation's latched cancellation, shared by input and async coordination.
+/// Library use installs no signal handler.
 #[derive(Clone, Debug, Default)]
-pub struct TerminalCancel(Arc<AtomicBool>);
+pub struct TerminalCancel(Arc<CancellationState>);
 impl TerminalCancel {
     /// Abort reads using this handle; clones observe the same cancellation.
     pub fn cancel(&self) {
-        self.0.store(true, Ordering::Release);
+        self.0.cancelled.store(true, Ordering::Release);
+        self.0.notify.notify_waiters();
     }
     /// Whether this invocation's terminal reads have been cancelled.
     pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::Acquire)
+        self.0.cancelled.load(Ordering::Acquire)
+    }
+    /// Observe cancellation without losing a wake between registration and check.
+    /// Every current or later waiter observes the permanently latched state.
+    pub async fn cancelled(&self) {
+        loop {
+            let notified = self.0.notify.notified();
+            tokio::pin!(notified);
+            // notify_waiters alone does not retain a permit for a future waiter.
+            // Register before inspecting the flag, including for multiple waiters.
+            notified.as_mut().enable();
+            if self.is_cancelled() {
+                return;
+            }
+            notified.await;
+        }
+    }
+    /// Final process disposition, independent of a command's retained result.
+    pub fn exit_code(&self, ordinary: u8) -> u8 {
+        if self.is_cancelled() { 130 } else { ordinary }
+    }
+    #[cfg(any(unix, test))]
+    fn input_result<T>(&self, result: io::Result<T>) -> Result<T, PromptError> {
+        // The owned reader has already restored its terminal settings before
+        // returning. Publish physical Ctrl-C/EOF even through SDK error wrappers.
+        result.map_err(|error| {
+            let error = input_error(error);
+            if error == PromptError::Aborted {
+                self.cancel();
+            }
+            error
+        })
     }
     fn check(&self) -> Result<(), PromptError> {
         if self.is_cancelled() {
@@ -188,8 +228,11 @@ impl Terminal for CancellableTerminal {
         }
         #[cfg(unix)]
         {
-            masked_input::read_line_cancellable(&crate::output::terminal_text(label), &self.cancel)
-                .map_err(input_error)
+            self.cancel
+                .input_result(masked_input::read_line_cancellable(
+                    &crate::output::terminal_text(label),
+                    &self.cancel,
+                ))
         }
         #[cfg(not(unix))]
         {
@@ -204,8 +247,10 @@ impl Terminal for CancellableTerminal {
         }
         #[cfg(unix)]
         {
-            masked_input::read_cancellable(&crate::output::terminal_text(label), &self.cancel)
-                .map_err(input_error)
+            self.cancel.input_result(masked_input::read_cancellable(
+                &crate::output::terminal_text(label),
+                &self.cancel,
+            ))
         }
         #[cfg(not(unix))]
         {
@@ -1742,6 +1787,36 @@ mod tests {
             terminal.read_secret("hidden").err(),
             Some(PromptError::Aborted)
         );
+    }
+
+    #[tokio::test]
+    async fn cancellation_observers_cover_registered_late_and_multiple_waiters() {
+        let cancel = TerminalCancel::default();
+        let other = TerminalCancel::default();
+        let mut first = Box::pin(cancel.cancelled());
+        let mut second = Box::pin(cancel.cancelled());
+        assert!(futures::poll!(&mut first).is_pending());
+        assert!(futures::poll!(&mut second).is_pending());
+        cancel.cancel();
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            tokio::join!(first, second);
+            cancel.cancelled().await;
+        })
+        .await
+        .unwrap();
+        assert!(!other.is_cancelled());
+        assert_eq!(cancel.exit_code(0), 130);
+        assert_eq!(cancel.exit_code(1), 130);
+        assert_eq!(other.exit_code(2), 2);
+
+        let physical = TerminalCancel::default();
+        assert_eq!(
+            physical.input_result::<()>(Err(io::ErrorKind::Interrupted.into())),
+            Err(PromptError::Aborted)
+        );
+        // A wallet layer may wrap this in a runtime error; final disposition
+        // still reads the invocation latch rather than the wrapper's code.
+        assert_eq!(physical.exit_code(1), 130);
     }
 
     #[tokio::test]

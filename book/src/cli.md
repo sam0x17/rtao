@@ -36,6 +36,12 @@ is unknown, stderr also carries a JSON diagnostic with its hash and inspection
 guidance. Check that transaction on chain before resubmitting. Quiet mode
 retains this recovery information.
 
+Ctrl-C cancels input and closes the active connection. Started transaction work
+continues through receipt handling and signer release before exit status 130.
+Recovery diagnostics remain available; inspect any submitted transaction before
+trying again. Successful replay suggestions are suppressed after interruption.
+Native password dialogs and blocked operating-system operations can delay exit.
+
 `--signer extension` still uses terminal transaction review and confirmation
 before requesting a signature in the wallet popup. `--yes` skips that terminal
 prompt; it does not approve the wallet signature request. JSON or piped
