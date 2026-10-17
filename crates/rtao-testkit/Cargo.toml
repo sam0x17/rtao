@@ -51,6 +51,7 @@ tokio-rustls = { workspace = true }
 tokio-tungstenite = { workspace = true }
 
 [dev-dependencies]
+docify.workspace = true
 rtao-tx = { workspace = true }
 rtao-intents = { workspace = true, features = ["transfer", "weights"] }
 rtao-neuron = { workspace = true, features = ["validator"] }

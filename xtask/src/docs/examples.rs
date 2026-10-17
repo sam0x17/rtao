@@ -1,4 +1,4 @@
-//! Embed shared offline tests and compiled operator examples in the guides.
+//! Embed offline tests, operator examples and shared e2e items in the guides.
 
 use std::{collections::BTreeMap, fs, path::Path};
 
@@ -11,6 +11,8 @@ const _: &str = include_str!("../../../crates/rtao/examples/miner.rs");
 const _: &str = include_str!("../../../crates/rtao/examples/owner.rs");
 const _: &str = include_str!("../../../crates/rtao/tests/documentation_examples.rs");
 const _: &str = include_str!("../../../README.docify.md");
+const _: &str = include_str!("../../../crates/rtao-testkit/tests/e2e/node_examples.rs");
+const _: &str = include_str!("../../../crates/rtao-testkit/tests/e2e.rs");
 
 const README: &str = docify::compile_markdown!("../README.docify.md");
 const VALIDATOR: &str = docify::embed!(
@@ -40,6 +42,19 @@ const FAKECHAIN_READ: &str = docify::embed_run!(
 const INTENT_PLAN: &str = docify::embed_run!(
     "../crates/rtao/tests/documentation_examples.rs",
     transfer_plan_uses_public_keys_without_signing
+);
+
+const LIVE_NEURONS_DESCRIPTOR: &str = docify::embed!(
+    "../crates/rtao-testkit/tests/e2e/node_examples.rs",
+    live_neurons_descriptor
+);
+const LIVE_TYPED_READS: &str = docify::embed!(
+    "../crates/rtao-testkit/tests/e2e/node_examples.rs",
+    live_typed_reads
+);
+const LIVE_TYPED_TRANSFER: &str = docify::embed!(
+    "../crates/rtao-testkit/tests/e2e/node_examples.rs",
+    live_typed_transfer
 );
 
 pub(super) fn pages(root: &Path) -> Result<BTreeMap<String, String>> {
@@ -81,6 +96,14 @@ pub(super) fn pages(root: &Path) -> Result<BTreeMap<String, String>> {
         getting_started.push_str(excerpt);
         getting_started.push_str("\n\n");
     }
+    getting_started.push_str("\n## Node-dependent examples\n\nThese items come from `crates/rtao-testkit/tests/e2e/node_examples.rs`. The existing e2e tests call these same functions. The complete source file supplies their imports; callers supply a connected client or executor and a coldkey source. The caller owns connection cleanup.\n\nOrdinary hosted CI compiles the all-feature e2e target and embeds its source; the ordinary test profile excludes e2e execution. An optional targeted hosted check can run `test_generic_accessors_over_generated_descriptors` or `scenario_17_two_executors_fifty_transfers` against its separately bootstrapped endpoint and disposable development accounts. Until a matching run is recorded, node execution remains unverified. No local node or testnet setup is required under Q30.\n\n### Typed reads from one live snapshot\n\nThe generic runtime descriptor and read function are shared with the e2e accessor test. The caller selects an existing subnet; the test uses its bootstrapped subnet 1.\n\n");
+    for excerpt in [LIVE_NEURONS_DESCRIPTOR, LIVE_TYPED_READS] {
+        getting_started.push_str(excerpt);
+        getting_started.push_str("\n\n");
+    }
+    getting_started.push_str("### A typed transfer through a shared executor\n\nThe transfer returns its receipt for the caller to check. Its existing e2e scenario uses two executors sharing one client to submit fifty transfers, then checks finalized outcomes, distinct inclusions, every nonce and the exact receiver balance increase. The documentation function makes one transfer per call; it does not create accounts or a node.\n\n");
+    getting_started.push_str(LIVE_TYPED_TRANSFER);
+    getting_started.push_str("\n\n");
     pages.insert("getting-started.md".into(), getting_started);
     Ok(pages)
 }

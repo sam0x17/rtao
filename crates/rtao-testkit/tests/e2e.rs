@@ -23,6 +23,11 @@ use serde_json::{Value as Json, json};
 
 type TestResult = Result<(), Box<dyn Error>>;
 
+#[path = "e2e/node_examples.rs"]
+mod node_examples;
+
+use node_examples::neurons_api;
+
 #[path = "e2e/framework.rs"]
 mod framework;
 #[path = "e2e/lost_watch.rs"]
@@ -74,15 +79,6 @@ fn assert_dispatch(report: &ExtrinsicReport, name: &str) {
     );
 }
 
-fn neurons_api()
--> rtao_runtime::RuntimeApiDescriptor<(rtao_primitives::NetUid,), rtao_core::DynValue> {
-    // Match upstream's generic accessor, which returns the core Value carrier.
-    // Reuse the generated signature and projection rather than assuming a type ID.
-    rtao_runtime::RuntimeApiDescriptor::new(
-        rtao_runtime::runtime_apis::neuron_info_runtime_api::GET_NEURONS_LITE.surface(),
-    )
-}
-
 // upstream e2e.rs::test_block_number
 #[tokio::test]
 async fn test_block_number() -> TestResult {
@@ -111,20 +107,7 @@ async fn test_block_subscription_streams_increasing_headers() -> TestResult {
 #[tokio::test]
 async fn test_generic_accessors_over_generated_descriptors() -> TestResult {
     let ln = localnet().await?;
-    let snapshot = ln.client().at(BlockRef::Best).await?;
-    let tempo = snapshot
-        .storage(&storage::TEMPO, (rtao_primitives::NetUid(1),))
-        .await?;
-    assert!(tempo > 0);
-    let ed = snapshot
-        .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
-        .await?;
-    assert!(ed.0 > 0);
-    let neurons = snapshot
-        .call(&neurons_api(), (rtao_primitives::NetUid(1),))
-        .await?;
-    assert!(matches!(neurons.as_core(), Value::List(_)));
-    Ok(())
+    node_examples::typed_reads(ln.client(), rtao_primitives::NetUid(1)).await
 }
 
 // upstream e2e.rs::test_snapshot_pins_reads_to_one_block
@@ -534,18 +517,15 @@ async fn scenario_17_two_executors_fifty_transfers() -> TestResult {
         rtao_tx::Executor::new(ln.client().clone()),
         rtao_tx::Executor::new(ln.client().clone()),
     ];
-    let transfer = rtao_intents::transfer::Transfer {
-        dest_ss58: slot.hotkey.account().into(),
-        amount_tao: rtao_primitives::Balance::<rtao_primitives::Tao>::from_rao(1_000_000).into(),
-        keep_alive: true,
-    };
-    let options = rtao_tx::ExecuteOptions {
-        deadline: Some(Duration::from_secs(240)),
-        ..Default::default()
-    };
-    let results = try_join_all(
-        (0..50).map(|index| executors[index % 2].execute(&transfer, &slot.owner, &options)),
-    )
+    let amount = rtao_primitives::Balance::<rtao_primitives::Tao>::from_rao(1_000_000);
+    let results = try_join_all((0..50).map(|index| {
+        node_examples::execute_transfer(
+            &executors[index % 2],
+            &slot.owner,
+            slot.hotkey.account(),
+            amount,
+        )
+    }))
     .await?;
     assert_eq!(results.len(), 50);
     assert!(
