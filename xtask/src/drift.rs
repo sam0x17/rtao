@@ -984,6 +984,87 @@ fn run_checked(root: &Path, arguments: &[&str]) -> Result<()> {
     );
     Ok(())
 }
+/// The default finalized-state endpoint for a drift network.
+pub(super) fn public_endpoint(network: &str) -> &'static str {
+    match network {
+        "finney" => "https://entrypoint-finney.opentensor.ai:443",
+        "testnet" => "https://test.finney.opentensor.ai:443",
+        "devnet" => "https://dev.chain.opentensor.ai:443",
+        _ => "http://127.0.0.1:9944",
+    }
+}
+
+/// A live finalized runtime with both required metadata versions.
+pub(super) struct Finalized {
+    pub(super) genesis: String,
+    pub(super) head: String,
+    pub(super) spec: u32,
+    pub(super) code_hash: String,
+    pub(super) v15: Vec<u8>,
+    pub(super) v16: Vec<u8>,
+}
+
+/// Read the finalized runtime identity and its V15/V16 metadata at one block.
+pub(super) fn finalized(endpoint: &str) -> Result<Finalized> {
+    let genesis = rpc(endpoint, "chain_getBlockHash", json!([0]))?
+        .as_str()
+        .context("genesis absent")?
+        .to_owned();
+    let head = rpc(endpoint, "chain_getFinalizedHead", json!([]))?
+        .as_str()
+        .context("finalized head absent")?
+        .to_owned();
+    let version = rpc(endpoint, "state_getRuntimeVersion", json!([head]))?;
+    ensure!(
+        version["specName"] == "node-subtensor",
+        "finalized runtime spec_name differs from node-subtensor"
+    );
+    let spec = u32::try_from(
+        version["specVersion"]
+            .as_u64()
+            .context("runtime spec absent")?,
+    )?;
+    let code_hash = rpc(
+        endpoint,
+        "state_getStorageHash",
+        json!(["0x3a636f6465", head]),
+    )?
+    .as_str()
+    .context(":code hash absent")?
+    .to_owned();
+    ensure!(
+        hash_text(&genesis) && hash_text(&head) && hash_text(&code_hash),
+        "runtime identity invalid"
+    );
+    let required = |version| {
+        fetch_version(endpoint, &head, version)?
+            .with_context(|| format!("finalized runtime no longer offers metadata V{version}"))
+    };
+    let v15 = required(15)?;
+    let v16 = required(16)?;
+    Ok(Finalized {
+        genesis,
+        head,
+        spec,
+        code_hash,
+        v15,
+        v16,
+    })
+}
+
+/// Classify the surface change between two V15/V16 metadata pairs.
+pub(super) fn classify(
+    old15: &[u8],
+    old16: &[u8],
+    new15: &[u8],
+    new16: &[u8],
+) -> Result<&'static str> {
+    let root = root()?;
+    let old = build(&root, old15, Some(old16))?;
+    let new = build(&root, new15, Some(new16))?;
+    Ok(compare(&old, &new).class.name())
+}
+
 fn live(args: &[String]) -> Result<()> {
     let mut network = None;
     let mut endpoint = None;
@@ -1026,15 +1107,7 @@ fn live(args: &[String]) -> Result<()> {
     );
     let root = root()?;
     let pins: DocumentMut = fs::read_to_string(root.join("upstream.toml"))?.parse()?;
-    let endpoint = endpoint.unwrap_or_else(|| {
-        match network.as_str() {
-            "finney" => "https://entrypoint-finney.opentensor.ai:443",
-            "testnet" => "https://test.finney.opentensor.ai:443",
-            "devnet" => "https://dev.chain.opentensor.ai:443",
-            _ => "http://127.0.0.1:9944",
-        }
-        .to_owned()
-    });
+    let endpoint = endpoint.unwrap_or_else(|| public_endpoint(&network).to_owned());
     let out = out.unwrap_or_else(|| {
         std::env::var_os("RTAO_TEMP_ROOT")
             .map(PathBuf::from)

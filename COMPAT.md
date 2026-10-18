@@ -7,7 +7,7 @@
 
 No PyPI release has been verified from the pinned Python commit. The Python version above is the source project version.
 
-No runtime range has passed the required drift, e2e and interop validation. Clients warn for every connected runtime. Metadata pins describe fetched inputs; per-call surface checks still determine which operations are available.
+No runtime range has passed the required drift, e2e and interop validation. Clients warn for every runtime on a pinned public network. Metadata pins describe fetched inputs; per-call surface checks still determine which operations are available.
 
 ## Metadata inputs
 
@@ -45,4 +45,4 @@ Distinct package identities reached through normal and build edges, excluding de
 
 Measured on `x86_64-unknown-linux-gnu` with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `855f3c59863f68d876cc587896defd01d011e90a`; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
 
-Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).
+Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. Validation evidence comes from `pr-gates` with `validate_compat=true` and is adopted with `ci/compat/adopt.sh`. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).
