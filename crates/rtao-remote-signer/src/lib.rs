@@ -1,9 +1,9 @@
 //! Policy-checked remote transaction signing over btauth/1.
 //!
-//! This crate implements the rtao-authored `rtao-remote-signer/1` protocol
-//! (divergence D-031): a [`client::RemoteSigner`] that implements
-//! [`rtao_signer::Signer`] by sending the public views of a prepared
-//! transaction to a signing server, and a reference [`server`] that decodes
+//! This crate implements the rtao-authored `rtao-remote-signer/1` protocol:
+//! a [`client::RemoteSigner`] that implements [`rtao_signer::Signer`] by
+//! sending the public views of a prepared transaction to a signing server,
+//! and a reference [`server`] that decodes
 //! the call with its own trusted runtime, re-derives every signed byte,
 //! applies an operator policy and only then signs.
 //!

@@ -53,8 +53,8 @@ At that checkpoint, the strict all-target Clippy attempt found only
 followed its test module. The full library passed strict Clippy, including the
 config module. Any required integrated rerun belongs in hosted CI.
 
-All tests ran with `RTAO_TEMP_ROOT`, `CARGO_TARGET_DIR` and `TMPDIR` beneath
-`target/execute-plan.6Ro0PC`. Test-owned configuration directories were removed
+All tests ran with `RTAO_TEMP_ROOT`, `CARGO_TARGET_DIR` and `TMPDIR` beneath a
+recorded local task root. Test-owned configuration directories were removed
 after their blocking tasks completed. No process, launchd unit, symlink or
 virtual environment was created or given a dependency on those fixtures. A
 post-test directory check found no remaining `tmp/config-*` fixtures. That

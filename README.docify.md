@@ -3,52 +3,81 @@
 rtao is a Rust SDK, operator framework and CLI for Bittensor subnets. Chain
 encoding comes from the pinned `bittensor-core`; behavior follows the v11
 Python SDK. rtao owns asynchronous I/O and checks parity with upstream
-fixtures and CI oracles.
+fixtures and CI oracles. Balances use native `u64` rao with checked
+arithmetic; negative and arbitrary-size Python balance arithmetic is excluded.
 
-Development follows [PLAN.md](PLAN.md). Implementation and validation are
-in progress; [execution state](docs/execution/state.md) records coverage and
-unfinished work. Balances use native u64 rao with checked arithmetic;
-negative and arbitrary-size Python balance arithmetic is excluded. See the
-[architecture](docs/plan/architecture.md) for the API contracts.
+## Status
 
-## Development checks
+rtao is under active development and has not been published to crates.io.
+There are no release tags or binaries yet. Depend on it from Git, pinned to a
+reviewed commit, and check the hosted CI results for that commit.
+[COMPAT.md](COMPAT.md) records the core pin, metadata inputs and any validated
+runtime range.
 
-Rust 1.89 is the library minimum; `rust-toolchain.toml` pins the development
-toolchain. The root is a Cargo workspace, with the public facade in
-`crates/rtao`.
+## Getting started
 
-Substantial builds and tests run in the hosted `pr-gates` workflow on free
-`ubuntu-latest` runners. Local work uses source inspection, editing and
-formatting; full local gates, duplicate build caches, nodes, containers and
-release rehearsals are outside the current scope (PLAN.md Q30).
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the resource policy and CI checks.
-
-## Downstream BLS patch
-
-Cargo applies patches from the final workspace root. A consumer must include
-this line in its root `Cargo.toml`, using the same Git reference kind and
-value as its `bittensor-core` pin:
+Rust 1.89 is the minimum supported version. Start with the read features:
 
 ```toml
+[dependencies]
+rtao = { git = "https://github.com/sam0x17/rtao", rev = "<full commit>", default-features = false, features = ["client", "reads"] }
+
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
 ```
 
-The upstream core uses a vendored BLS implementation while `tle` requests
-its registry counterpart. The patch joins those sources so timelock code
-builds consistently. `rtao doctor --manifest-path Cargo.toml` checks the
-owning workspace and prints the exact patch line when it is missing or
-mismatched. [upstream.toml](upstream.toml) records the core and behavior pins;
-[the patch contract](PLAN.md#56-the-w3f-bls-patch-line) explains updates.
+Replace `<full commit>` with the reviewed commit you use. Cargo applies
+`[patch.crates-io]` only from the final workspace root, so the patch belongs in
+your application's root `Cargo.toml`. Its Git reference kind and value must
+match the core pin in that revision's [upstream.toml](upstream.toml); the
+example matches the current `v478` pin. The upstream core uses a vendored BLS
+implementation while `tle` requests its registry counterpart, and the patch
+joins those sources so timelock code builds consistently. The CLI checks the
+patch without connecting to a node and prints the exact line when it is
+missing or mismatched:
 
-Cargo also records an unused optional BLS package from upstream `sp-core`.
-The approved Q26 check requires one built implementation pinned to the core,
-with that exact dormant lock entry guarded against activation. The evidence
-is recorded in [bls-lock.md](docs/execution/bls-lock.md).
+```sh
+rtao doctor --manifest-path Cargo.toml
+```
 
-## Contributing and license
+## Features
+
+The `rtao` facade crate re-exports the workspace through Cargo features. The
+defaults are `client`, `reads` and `tx`.
+
+| Area | Features |
+|---|---|
+| Chain access | `client`, `reads`, `tx`, `metagraph`, `blocking`, `subxt` |
+| Intents and execution | `intents`, `intents-all`, `pow`, `pow-gpu` |
+| Wallets and signers | `wallet`, `wallet-encrypted`, `keychain`, `ledger`, `vault`, `extension`, `evm` |
+| Neurons | `neuron`, `validator`, `miner`, `owner`, `btauth`, `btauth-server`, `btauth-client`, `redis`, `prometheus` |
+| Compatibility | `compat-synapse`, `compat-epistula`, `transport-quic`, `remote-signer`, `remote-signer-server` |
+
+`full` enables everything. The `rtao-cli` crate provides the `rtao` command
+line tool, and `templates/subnet` is a `cargo generate` template for a
+validator, miner and owner tool.
+
+## Documentation
+
+The [book](book/src/introduction.md) covers getting started, the SDK, the CLI,
+validators, miners, owner operations, signers and migration from the Python
+SDK. Several of its reference pages are generated; see
+[book/README.md](book/README.md) to build the complete book with
+`cargo xtask docs`. Hosted CI also retains the rendered book and Rust API docs
+as a downloadable artifact. The [architecture](docs/plan/architecture.md)
+describes the API contracts.
+
+## Contributing and security
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for verification, reconciliation and
-attribution rules. Original code is licensed under
-[MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE). Derived upstream material
-retains its Apache-2.0 obligations and is listed in [NOTICE](NOTICE).
+attribution rules. Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md).
+
+## License
+
+Original rtao code is licensed under either of [MIT](LICENSE-MIT) or
+[Apache-2.0](LICENSE-APACHE), at your option. Material derived from
+RaoFoundation/subtensor retains its Apache-2.0 obligations, so packages that
+contain it declare `(MIT OR Apache-2.0) AND Apache-2.0`. Some crates also carry
+ported MIT, PSF-2.0 or Unicode-DFS-2016 material. [NOTICE](NOTICE) lists every
+upstream source and its attribution.

@@ -29,7 +29,7 @@ Rust and Rust 1.89; strict all-target intent Clippy passes.
 The staged schedule applies the pallet's tempo safety net and counter cap. Its
 post-coinbase inclusion calculation covers a further boundary: an age equal to
 tempo can fire after the increment in the inclusion block, before the commit
-extrinsic. Root's unit vectors pin that case and the ordinary schedule. Eight
+extrinsic. Unit vectors pin that case and the ordinary schedule. Eight
 integration tests include every private upstream vector directly from the
 immutable vendored Rust source, ordinary schedules over multiple tempos,
 scheduled and owner-triggered skips, lowered tempo, deferral and overflow.

@@ -1,6 +1,6 @@
 # Unicode 15 corrective publication
 
-Published 2026-10-14 to the two existing PRs after root reviewed the
+Published 2026-10-14 to the two existing PRs after review of the
 [Unicode audit](quality-unicode.md) and exact prototype patch. Ordinary
 follow-up commits preserve every published ancestor.
 
@@ -9,11 +9,12 @@ follow-up commits preserve every published ancestor.
 | [#3246](https://github.com/RaoFoundation/subtensor/pull/3246) | `sdk-portable-protocol` | `77480991b2b3b39ec828d2da9d7c6ecf31113a81` |
 | [#3247](https://github.com/RaoFoundation/subtensor/pull/3247) | `sdk-receipt-nested-failures` | `849c192e9702fa245a6f16941359290786554d85` |
 
-Author and committer are `Sam Johnson <sam@durosoft.com>`. GitHub API and SSH
-both authenticated `sam0x17`. No force push, rebase, hook bypass, new filing,
+The maintainer is author and committer. GitHub API and SSH both authenticated
+`sam0x17`. No force push, rebase, hook bypass, new filing,
 maintainer comment, label or review-request change occurred. Only the two
 authorized existing PR bodies were updated. Fetching each body again matched
-its retained text; title, fork, branch, base, open state, empty labels and empty
+its retained text ([#3246](quality-unicode-publication/pr-3246-body.md),
+[#3247](quality-unicode-publication/pr-3247-body.md)); title, fork, branch, base, open state, empty labels and empty
 review requests matched the before snapshot.
 
 ## Source and dependency boundary
@@ -34,13 +35,14 @@ U1 head; its equivalent correction follows the original receipt commit.
 
 ## Actual outgoing gates
 
-The actual retained [hook](quality-unicode-pre-push-hook.sh) checked origin,
+The actual task-local pre-push hook (not retained in the repository) checked origin,
 SSH destination, GitHub actor, SSH actor, exact original remote SHA, one
 authorized outgoing HEAD/ref, clean tree and expected committed SHA. It invoked
-the [full scoped gate](quality-unicode-outgoing-gate.sh), including the exact
+the full scoped outgoing gate, including the exact
 reviewed-source, license, lock and stacked-scope guards. The upstream AGENTS.md
 full-monorepo/`unarbos` rules were superseded for these SDK follow-ups by the
-explicit user authorization selecting `sam0x17` and Rust-only local checks.
+maintainer's explicit decision to use the `sam0x17` account and Rust-only local
+checks.
 The full monorepo preflight was not run.
 
 | Check at each corrected HEAD | Rust 1.89.0 | Rust 1.99.0 |
@@ -64,8 +66,8 @@ being discovered. Existing current-compiler base lints are not reported as passe
 An initial U1 push waited on the shared target until its idle SSH transport
 closed. After the portable suite passed, the next owned Cargo process was
 audited as idle, with no children and the exact checkout/command, then terminated
-under root's isolation authorization. Its failed push and partial gate logs are
-retained with `interrupted-` names and excluded from accepted results. No shared
+under the task's isolation authorization. Its failed push and partial gate logs
+were excluded from accepted results and are not retained in the repository. No shared
 job was stopped. Both final pushes used temporary per-command SSH keepalives.
 
 Final functional/wasm gates used unique no-op workspace compiler wrappers and
@@ -79,22 +81,10 @@ identities differ across checkout and compiler.
 
 ## Publication and hosted limits
 
-The accepted logs and records are under `quality-unicode-publication/`:
-
-- [U1 actual pre-push](quality-unicode-publication/pr-3246-pre-push.log),
-  [push](quality-unicode-publication/pr-3246-push.log),
-  [publication](quality-unicode-publication/pr-3246-publication.json),
-  [results](quality-unicode-publication/pr-3246-results.json) and
-  [artifacts](quality-unicode-publication/pr-3246-artifacts.json).
-- [U2 actual pre-push](quality-unicode-publication/pr-3247-pre-push.log),
-  [push](quality-unicode-publication/pr-3247-push.log),
-  [publication](quality-unicode-publication/pr-3247-publication.json),
-  [results](quality-unicode-publication/pr-3247-results.json) and
-  [artifacts](quality-unicode-publication/pr-3247-artifacts.json).
-
-Before/after PR snapshots, exact body text, fork remote SHA output, source/scope
-records and stage logs are retained beside them. Startup hook hash snapshots are
-preserved. The result recorder's log-hash selection was narrowed during the
+The exact posted body texts are retained under `quality-unicode-publication/`.
+The accepted per-PR pre-push, push, publication, results and artifact records,
+before/after PR snapshots, fork remote SHA output, source/scope records, stage
+logs and startup hook hash snapshots are not retained in the repository. The result recorder's log-hash selection was narrowed during the
 final builds to accepted stage logs; it excludes growing outer push logs and
 interrupted attempts. The final helper/hook hashes and completed outer-log hashes
 were captured separately after execution.
@@ -109,19 +99,19 @@ CI label or subscriber review request was used to retry them.
 ## Cleanup
 
 The archived independent probes were byte-compared with the existing bounded
-archive, audited and removed before committing. The [probe cleanup](quality-unicode-publication/cleanup-probes.json)
-records 84,172 bytes and the archive hash.
+archive, audited and removed before committing. The probe cleanup covered
+84,172 bytes and recorded the archive hash.
 
 After publication, exact worktrees `upstream-quality/pr-3246`,
 `upstream-quality/pr-3247` and scratch root `upstream-quality/unicode-publication`
-were audited and removed. The [finished cleanup](quality-unicode-publication/cleanup-finished.json)
-records 7,054,340,580 bytes, both final clean HEADs, 2,013 dependency entries,
-GUI/system launchd and configuration scans. There were zero live dependencies
+were audited and removed. The finished cleanup covered 7,054,340,580 bytes,
+both final clean HEADs, 2,013 dependency entries, service-manager and
+configuration scans. There were zero live dependencies
 and zero audit errors. Checks covered processes, open files, inbound symlinks,
 virtual-environment files and configuration references before removal.
 
 Shared task build/dependency caches, the bare repository, other review worktrees,
 original wrappers and authenticated Unicode sources/proof remain live and were
 preserved. No wallets, private data, model assets, miner/validator state, recovery
-journals or unrelated user work were removed. No parent-owned integration,
-manifest, lock, PLAN, state or global README file was edited by this lane.
+journals or unrelated work were removed. No rtao integration, manifest, lock,
+PLAN, state or global README file was edited by this work.

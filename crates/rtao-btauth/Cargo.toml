@@ -6,7 +6,9 @@ rust-version.workspace = true
 authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0 AND MIT"
 repository.workspace = true
-description = "Btauth/1 signed HTTP authentication."
+description = "Signed HTTP authentication for Bittensor hotkeys (btauth/1)."
+keywords = ["bittensor", "authentication", "http", "sr25519", "signature"]
+categories = ["authentication", "cryptography::cryptocurrencies", "web-programming::http-server"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

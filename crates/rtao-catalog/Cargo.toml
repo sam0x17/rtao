@@ -7,6 +7,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Generated Bittensor intent, read and error catalogs."
+keywords = ["bittensor", "catalog", "codegen", "blockchain"]
+categories = ["cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

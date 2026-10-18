@@ -26,5 +26,4 @@ submission, approval or local snapshot requires the operation-specific receipt
 and state checks before it establishes the intended effect.
 
 The facade's validator, miner and owner examples supply complete application
-setup. Hosted client validation uses fixtures and fake transports. Running an
-operator, node or service locally is outside the development prerequisites.
+setup.

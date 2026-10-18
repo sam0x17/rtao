@@ -38,8 +38,8 @@ instances also build exactly the bytes returned by the trusted core
 constructor's real `Runtime::compose_call`. The check uses only public account
 identities and asserts that the fake chain receives no submission.
 
-Validation on 2026-10-14, with all artifacts under
-`target/execute-plan.6Ro0PC/build` and temporary files under its `tmp` directory:
+Validation on 2026-10-14, with all artifacts and temporary files under a
+task-scoped temporary root:
 
 ```text
 cargo test --locked -p rtao-tx --test policy_equivalence

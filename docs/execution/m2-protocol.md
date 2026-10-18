@@ -72,11 +72,11 @@ Sources are pinned at commit
 the error-map SHA256 is
 `65efe42793da7201a0707f4648cd8801ea1206bebd47d75e4af74e6f90767db3`.
 
-Historical builds and logs used `target/execute-plan.6Ro0PC`. That root is
+Historical builds and logs used a task-scoped temporary root. That root is
 retired and absent; its scratch/log paths are historical provenance.
 The four new staged probe directories were removed after process, open-file,
 launchd, configuration, symlink and virtual-environment checks found no live
-dependency. Their bounded outcome remains in the staged-check log.
+dependency. Their bounded staged-check log is not retained in the repository.
 No Python interpreter, wallet writes, chain submission, commits, pushes,
 external filing or PLAN checkbox edits were performed by this work.
 The former task build/staged-probe/tool paths are retired and are not current

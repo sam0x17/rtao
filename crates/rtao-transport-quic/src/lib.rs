@@ -1,7 +1,7 @@
 //! btlightning-compatible QUIC transport for Bittensor neurons.
 //!
 //! This crate reimplements the wire protocol of
-//! [btlightning](https://github.com/inference-labs-inc/lightning) (pinned at
+//! [btlightning](https://github.com/inference-labs-inc/btlightning) (pinned at
 //! `53c090b`, v0.2.15) on quinn and rustls with the ring provider. It does not
 //! depend on btlightning, so it shares rtao's `sp-core`-free signing stack.
 //!
@@ -29,6 +29,7 @@
 //! - a streaming reply is never cut inside a frame;
 //! - [`data::from_data`] accepts every enum shape btlightning encoders emit.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 

@@ -221,6 +221,6 @@ the endpoint from the validator's network through the actual forwarding or
 TLS setup. Hosted Rust regression tests cover framework behavior with fake
 transports and committed fixtures; inspect the result for the exact source
 commit. Live networking and operational behavior require separate evidence.
-Localnet and Python interoperability checks are optional targeted hosted work
-under PLAN.md Q30. They do not require local nodes, containers or a local test
+Localnet and Python interoperability checks are optional targeted hosted work.
+They do not require local nodes, containers or a local test
 campaign, and their absence is a coverage limit rather than a passing result.

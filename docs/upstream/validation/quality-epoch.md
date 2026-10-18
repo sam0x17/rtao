@@ -1,8 +1,8 @@
 # Independent audit of subtensor PR #3248
 
-The initial dynamic runs below are provisional: another audit lane exposed
+The initial dynamic runs below are provisional: another audit exposed
 shared-target artifact reuse across equivalent local package identities.
-Root recreated this exact checkout and assigned a unique no-op workspace
+The audit recreated this exact checkout and assigned a unique no-op workspace
 compiler wrapper. The final isolated checks now pass on both compilers, with
 fresh compilation and exact source/artifact identities verified. The initial
 unisolated runs are retained as history, rather than final proof.
@@ -19,15 +19,15 @@ The audited PR is [RaoFoundation/subtensor#3248](https://github.com/RaoFoundatio
 at `9b4d8c51aa7d9fb11be6f0e4cef500e02e0fad36`, based on v478 commit
 `850f2755bb05a3851f948489f0ab27b0645cebce`. This is an audit of that exact
 submitted source, rather than a claim that current upstream main or hosted CI
-has passed. The disposable checkout is recorded under
-`target/execute-plan.6Ro0PC/upstream-quality/pr-3248`. Its original tracked
+has passed. The disposable checkout was created under
+`$RTAO_TEMP_ROOT/upstream-quality/pr-3248`. Its original tracked
 source and lockfile remained unchanged during verification; audit-only files
 were untracked.
 Those audit files and the checkout were removed after their source, fixtures
 and results were retained below; no branch or published PR was changed.
-Root then recreated the exact checkout for the isolated rerun. After root
-accepted its final identities and results, the recreated checkout and its
-unique wrapper were audited and removed. The shared bare repository, build
+The exact checkout was then recreated for the isolated rerun. After its final
+identities and results were accepted, the recreated checkout and its unique
+wrapper were audited and removed. The shared bare repository, build
 cache and other owners' sources/wrappers remain live.
 
 ## Source checks
@@ -143,7 +143,7 @@ the Quicknet chain hash
 `52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971`.
 
 ```sh
-export RTAO_TEMP_ROOT=~/workspace/rtao/target/execute-plan.6Ro0PC
+: "${RTAO_TEMP_ROOT:?set to the local task root}"
 export CARGO_TARGET_DIR="$RTAO_TEMP_ROOT/build"
 export TMPDIR="$RTAO_TEMP_ROOT/tmp"
 export PYO3_NO_PYTHON=1
@@ -170,34 +170,30 @@ Initial provisional results on 2026-10-14:
 | Lock and submitted source after all runs | Unchanged; same recorded lock SHA-256 |
 
 This audit does not rerun the earlier core/binding Clippy and wasm checks;
-the submitted-head pre-push evidence remains historical in `pr-u5-pre-push.log`.
+the submitted-head pre-push evidence remains historical and its log is not
+retained in the repository.
 Those checks are not included in the final isolated proof below.
 No full upstream monorepo preflight or hosted workflow result is inferred from
-the scoped Rust checks. The recorded command sessions are 74245 (initial
-MSRV), 31542 (current Rust) and 88928 (final MSRV and all-feature library).
-Bounded command outputs are retained in the recorded root's `tmp/` directory
-as `quality-epoch-msrv-final.log`, `quality-epoch-stable.log`,
-`quality-epoch-failing-before.log` and
-`quality-epoch-all-feature-lib-msrv.log`.
+the scoped Rust checks. The bounded command outputs of the initial MSRV,
+current-Rust, final MSRV and all-feature library runs are not retained in the
+repository.
 
 Cleanup used `git worktree remove --force` on the exact audited checkout after
 checking its expected HEAD, unchanged tracked files and lock, and the known
 audit-only untracked files. Final process and open-file counts were zero.
-Both GUI and system launchd checks found zero references. Nineteen symlinks
+Service-manager checks found zero references. Nineteen symlinks
 and 57 configuration/environment/Git dependency files were inspected, with
 no external dependency on the checkout and no scan error. Removal covered
 3,087 regular files (148,807,200 bytes), 528 directories and the internal
-`.claude/skills` symlink. The unrelated backup SMB mount warning from
-`lsof` remains recorded; the scoped local checkout query found no open file.
-`tmp/quality-epoch-cleanup-final.json` retains the audit. Shared build/source/
-tool caches, the common bare repository and other agents' worktrees remain
-live and were preserved. No wallet, miner/validator state, private dataset,
+skills symlink. The scoped local checkout `lsof` query found no open file.
+Shared build/source/tool caches, the common bare repository and unrelated
+worktrees remain live and were preserved. No wallet, miner/validator state, private dataset,
 model asset or recovery journal was present in the removed checkout.
 
 ## Final isolated verification
 
-Session 49576 reran the exact submitted HEAD with
-`RUSTC_WORKSPACE_WRAPPER=~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh`.
+The final isolated run reran the exact submitted HEAD with
+`RUSTC_WORKSPACE_WRAPPER=$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh`.
 That executable contains only `#!/bin/sh` and `exec "$@"`; its SHA-256 is
 `7f812349eb1017d2122230d2daf3592fc5952efee881ffc42585d876687a97ee`.
 Its unique path separates workspace artifacts from the other PR checkouts
@@ -241,9 +237,8 @@ Its `src/lib.rs` SHA-256 is
 Before/after maps confirm all recorded production and audit sources and
 `Cargo.lock` remain unchanged through the isolated runs.
 
-The final raw outputs are `tmp/quality-epoch-isolated-{stable,msrv,failing-before,lib-msrv,lib-stable}.{stdout,stderr}`
-under the recorded task root. `tmp/quality-epoch-isolated-artifacts.json` retains
-full compiler, wrapper, manifest, source, profile, package and binary identities,
+The final raw stdout/stderr outputs are not retained in the repository. The
+identities report, reproduced in the archive below, records full compiler, wrapper, manifest, source, profile, package and binary identities,
 including before/after hashes and raw-output hashes. The new first-artifact
 names differ from the provisional runs. This isolated result supersedes the
 initial dynamic evidence; it makes no claim of full monorepo preflight, a
@@ -519,12 +514,14 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
 <details>
 <summary>Accepted final archive: exact identities and bounded test logs</summary>
 
-`quality-epoch-isolated-artifacts.json`, retained verbatim:
+`quality-epoch-isolated-artifacts.json`, retained verbatim except that local
+absolute paths are shown relative to `$RTAO_TEMP_ROOT` and `$RUSTUP_HOME`
+(as in the test logs below):
 
 ```text
 {
   "head": "9b4d8c51aa7d9fb11be6f0e4cef500e02e0fad36",
-  "wrapper": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh",
+  "wrapper": "$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh",
   "wrapper_sha256": "7f812349eb1017d2122230d2daf3592fc5952efee881ffc42585d876687a97ee",
   "compiler_versions": {
     "stable": "rustc 1.99.0 (b940084d7 2026-09-28)",
@@ -560,11 +557,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
       "artifacts": [
         {
           "name": "epoch_safety",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/epoch_safety.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/epoch_safety.rs",
           "source_sha256": "d8bc0a3e8e40ceee0f48079ca62f6115d6e048595abe6b274fff132d3c2cbe3e",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/epoch_safety-340815eb7e0bfa52",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/epoch_safety-340815eb7e0bfa52",
           "executable_sha256": "49fce400ad7ef6b3afe0f0bd6463cfd4faa731f7c469c4ef42e9d9acb5b7a851",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -576,11 +573,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
         },
         {
           "name": "quality_epoch_audit",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/quality_epoch_audit.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/quality_epoch_audit.rs",
           "source_sha256": "76e1499b8a19994123eccc7a24b6cf8b686833133ffd667d27a8cf4a29388d50",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/quality_epoch_audit-f6aa9413316ebb6d",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/quality_epoch_audit-f6aa9413316ebb6d",
           "executable_sha256": "aa91d1141084746f436e638af81db2d29abc1091ff42e2c94830a4c5c1c9bf25",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -592,11 +589,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
         },
         {
           "name": "explicit_commit_clock",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/explicit_commit_clock.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/explicit_commit_clock.rs",
           "source_sha256": "f951f140f6d200550c69e857b439c664a7064ec0f81ab438fa18f419e932fab6",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/explicit_commit_clock-78bf1cd3b7ede866",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/explicit_commit_clock-78bf1cd3b7ede866",
           "executable_sha256": "2ee858fa2ac2f69a55b21c1d40a757f3a7a361dda59b66d974460695f6379e82",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -615,11 +612,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
       "artifacts": [
         {
           "name": "epoch_safety",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/epoch_safety.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/epoch_safety.rs",
           "source_sha256": "d8bc0a3e8e40ceee0f48079ca62f6115d6e048595abe6b274fff132d3c2cbe3e",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/epoch_safety-980a6f76cb22ff6f",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/epoch_safety-980a6f76cb22ff6f",
           "executable_sha256": "0b21ba84bb5f9a3194e87728ce33522c77c2d42d6c223ef9c75363860bf38043",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -631,11 +628,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
         },
         {
           "name": "quality_epoch_audit",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/quality_epoch_audit.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/quality_epoch_audit.rs",
           "source_sha256": "76e1499b8a19994123eccc7a24b6cf8b686833133ffd667d27a8cf4a29388d50",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/quality_epoch_audit-97dcced79f1308b1",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/quality_epoch_audit-97dcced79f1308b1",
           "executable_sha256": "1166174b932c5649f0787e1ae5a606bcd0bb9ee31f027ac13e8f893c77268889",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -647,11 +644,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
         },
         {
           "name": "explicit_commit_clock",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/explicit_commit_clock.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/explicit_commit_clock.rs",
           "source_sha256": "f951f140f6d200550c69e857b439c664a7064ec0f81ab438fa18f419e932fab6",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/explicit_commit_clock-0229bcf0f56780e9",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/explicit_commit_clock-0229bcf0f56780e9",
           "executable_sha256": "291e5aa54d2673b7bd73aaf1ea2f294ce172ae81be1f52b5e1812addfd0a59e6",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -670,11 +667,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
       "artifacts": [
         {
           "name": "quality_epoch_audit",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/tests/quality_epoch_audit.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/tests/quality_epoch_audit.rs",
           "source_sha256": "76e1499b8a19994123eccc7a24b6cf8b686833133ffd667d27a8cf4a29388d50",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/quality_epoch_audit-97dcced79f1308b1",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/quality_epoch_audit-97dcced79f1308b1",
           "executable_sha256": "1166174b932c5649f0787e1ae5a606bcd0bb9ee31f027ac13e8f893c77268889",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": true,
           "profile": {
             "opt_level": "3",
@@ -693,11 +690,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
       "artifacts": [
         {
           "name": "bittensor_core",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/src/lib.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/src/lib.rs",
           "source_sha256": "3d2cc1536bbcd632f850824895daea11c4a830c7e5354cbc35828ffa8bef28a1",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/bittensor_core-51d2bad3d78d8da3",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/bittensor_core-51d2bad3d78d8da3",
           "executable_sha256": "1b5c9019f4cb391ae187ffc1f1086b60cf82ee17cc6f0208594ecf463fc72edd",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -716,11 +713,11 @@ fn real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes() {
       "artifacts": [
         {
           "name": "bittensor_core",
-          "source": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core/src/lib.rs",
+          "source": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core/src/lib.rs",
           "source_sha256": "3d2cc1536bbcd632f850824895daea11c4a830c7e5354cbc35828ffa8bef28a1",
-          "executable": "~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps/bittensor_core-a89b1d3a2a08d81c",
+          "executable": "$RTAO_TEMP_ROOT/build/debug/deps/bittensor_core-a89b1d3a2a08d81c",
           "executable_sha256": "4399a4cb2fae150a90313c49e133f865cc067d0ed4fc29d2c3060a6acfc6eb3f",
-          "package_id": "path+file://~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
+          "package_id": "path+file://$RTAO_TEMP_ROOT/upstream-quality/pr-3248/sdk/bittensor-core#0.1.0",
           "fresh": false,
           "profile": {
             "opt_level": "3",
@@ -775,7 +772,7 @@ test independent_pallet_trace_small_state_space ... ok
 test real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes ... ok
 test result: ok. 11 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
 Compiler invocation prefix; dependency --extern arguments omitted:
-     Running `~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh ~/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type rlib --emit=dep-info,metadata,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=2042cbeb8709b90d -C extra-filename=-66796e2c20d8baa8 --out-dir ~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps -C incremental=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental -C strip=debuginfo -L dependency=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps ...
+     Running `$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh $RUSTUP_HOME/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type rlib --emit=dep-info,metadata,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=2042cbeb8709b90d -C extra-filename=-66796e2c20d8baa8 --out-dir $RTAO_TEMP_ROOT/build/debug/deps -C incremental=$RTAO_TEMP_ROOT/build/debug/incremental -C strip=debuginfo -L dependency=$RTAO_TEMP_ROOT/build/debug/deps ...
 ```
 
 Final isolated msrv selected test output:
@@ -814,7 +811,7 @@ test independent_pallet_trace_small_state_space ... ok
 test real_injected_clock_ciphertext_decrypts_exact_pallet_scale_bytes ... ok
 test result: ok. 11 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
 Compiler invocation prefix; dependency --extern arguments omitted:
-     Running `~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh ~/.rustup/toolchains/1.89.0-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type rlib --emit=dep-info,metadata,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=ebcdedb780eb0e86 -C extra-filename=-4169ab9ff336486d --out-dir ~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps -C incremental=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental -C strip=debuginfo -L dependency=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps ...
+     Running `$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh $RUSTUP_HOME/toolchains/1.89.0-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type rlib --emit=dep-info,metadata,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=ebcdedb780eb0e86 -C extra-filename=-4169ab9ff336486d --out-dir $RTAO_TEMP_ROOT/build/debug/deps -C incremental=$RTAO_TEMP_ROOT/build/debug/incremental -C strip=debuginfo -L dependency=$RTAO_TEMP_ROOT/build/debug/deps ...
 ```
 
 Final isolated failing-before selected test output:
@@ -906,7 +903,7 @@ test keyfiles::tests::nacl_roundtrip ... ok
 test keyfiles::tests::legacy_fernet_roundtrip ... ok
 test result: ok. 71 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.81s
 Compiler invocation prefix; dependency --extern arguments omitted:
-     Running `~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh ~/.rustup/toolchains/1.89.0-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --test --cfg 'feature="default"' --cfg 'feature="host"' --cfg 'feature="ledger"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=8519a3c165189096 -C extra-filename=-51d2bad3d78d8da3 --out-dir ~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps -C incremental=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental -C strip=debuginfo -L dependency=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps ...
+     Running `$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh $RUSTUP_HOME/toolchains/1.89.0-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --test --cfg 'feature="default"' --cfg 'feature="host"' --cfg 'feature="ledger"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=8519a3c165189096 -C extra-filename=-51d2bad3d78d8da3 --out-dir $RTAO_TEMP_ROOT/build/debug/deps -C incremental=$RTAO_TEMP_ROOT/build/debug/incremental -C strip=debuginfo -L dependency=$RTAO_TEMP_ROOT/build/debug/deps ...
 ```
 
 Final isolated lib-stable selected test output:
@@ -987,7 +984,7 @@ test timelock::tests::test_get_round_info_and_signature ... ok
 test keyfiles::tests::legacy_fernet_roundtrip ... ok
 test result: ok. 71 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.98s
 Compiler invocation prefix; dependency --extern arguments omitted:
-     Running `~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh ~/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --test --cfg 'feature="default"' --cfg 'feature="host"' --cfg 'feature="ledger"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=338a83eb203c6159 -C extra-filename=-a89b1d3a2a08d81c --out-dir ~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps -C incremental=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/incremental -C strip=debuginfo -L dependency=~/workspace/rtao/target/execute-plan.6Ro0PC/build/debug/deps ...
+     Running `$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh $RUSTUP_HOME/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name bittensor_core --edition=2021 sdk/bittensor-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C opt-level=3 -C embed-bitcode=no '--allow=clippy::useless_conversion' '--deny=clippy::unwrap-used' --allow=unexpected_cfgs '--allow=clippy::type_complexity' '--allow=clippy::result_large_err' '--allow=clippy::manual_inspect' '--deny=clippy::indexing-slicing' '--deny=clippy::expect-used' '--deny=clippy::arithmetic-side-effects' --check-cfg 'cfg(substrate_runtime)' -C debug-assertions=on --test --cfg 'feature="default"' --cfg 'feature="host"' --cfg 'feature="ledger"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "host", "ledger"))' -C metadata=338a83eb203c6159 -C extra-filename=-a89b1d3a2a08d81c --out-dir $RTAO_TEMP_ROOT/build/debug/deps -C incremental=$RTAO_TEMP_ROOT/build/debug/incremental -C strip=debuginfo -L dependency=$RTAO_TEMP_ROOT/build/debug/deps ...
 ```
 
 </details>
@@ -999,8 +996,8 @@ Final accepted-checkout cleanup on 2026-10-14 removed exactly the recreated work
 
 ```text
 {
-  "removed_checkout": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248",
-  "removed_wrapper": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers/pr-3248.sh",
+  "removed_checkout": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248",
+  "removed_wrapper": "$RTAO_TEMP_ROOT/upstream-quality/wrappers/pr-3248.sh",
   "head": "9b4d8c51aa7d9fb11be6f0e4cef500e02e0fad36",
   "lock_before_and_after": "c2008ec9d5e290a65ad4357e4ccdcf7caf2b0b74568a81efddfa9760ded2ca3a",
   "wrapper_sha256": "7f812349eb1017d2122230d2daf3592fc5952efee881ffc42585d876687a97ee",
@@ -1009,8 +1006,8 @@ Final accepted-checkout cleanup on 2026-10-14 removed exactly the recreated work
   "removed_directories": 527,
   "owned_symlinks": [
     {
-      "path": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/.claude/skills",
-      "target": "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/pr-3248/.agents/skills"
+      "path": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/.claude/skills",
+      "target": "$RTAO_TEMP_ROOT/upstream-quality/pr-3248/.agents/skills"
     }
   ],
   "symlinks_inspected": 34,
@@ -1024,15 +1021,15 @@ Final accepted-checkout cleanup on 2026-10-14 removed exactly the recreated work
   "dependency_references": [],
   "scan_errors": [],
   "lsof_limitations": [
-    "Unrelated backup SMB mount unavailable; exact local path has no open file."
+    "Unrelated network mount unavailable; exact local path has no open file."
   ],
   "retained_live_dependencies": [
-    "~/workspace/rtao/target/execute-plan.6Ro0PC/build",
-    "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/subtensor.git",
-    "~/workspace/rtao/target/execute-plan.6Ro0PC/upstream-quality/wrappers",
+    "$RTAO_TEMP_ROOT/build",
+    "$RTAO_TEMP_ROOT/upstream-quality/subtensor.git",
+    "$RTAO_TEMP_ROOT/upstream-quality/wrappers",
     "Other owners task directories, wrappers and shared source/tool caches"
   ],
-  "archived_evidence": "~/workspace/rtao/docs/upstream/validation/quality-epoch.md",
+  "archived_evidence": "docs/upstream/validation/quality-epoch.md",
   "note": "Git worktree registration removed by git worktree remove. Build dep-info and retained audit/log/replay text are provenance, not live runtime or virtual-environment dependencies.",
   "user_state_preserved": "No wallet, miner/validator state, private dataset, model asset or recovery journal was present in the exact owned checkout.",
   "removed": true

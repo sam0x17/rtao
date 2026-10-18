@@ -30,7 +30,7 @@ large changes while other builds competed for CPU. The archived nightly design
 compares reference/current revisions sequentially on one free Ubuntu runner;
 its workflow is deferred and no schedule runs in current development.
 
-The [instrumented fuzz result](m1-fuzz.json) records nightly 1.101.0,
+The instrumented fuzz result (raw JSON not retained) recorded nightly 1.101.0,
 cargo-fuzz 0.13.2 and address sanitizer. Each target ran for 15 requested seconds
 (16 reported by libFuzzer), with all four passing:
 

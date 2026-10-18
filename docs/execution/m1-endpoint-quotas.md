@@ -43,20 +43,20 @@ session creation does not allocate a new provider quota. Policy refusals
 remain terminal and retain provider retry information. Discovery, reconnect
 replays and queued requests already consume the transport bucket.
 
-The Rust [fixture](endpoint-quotas/probe.rs) ran on the Mac Studio with
-Rust/Cargo 1.99.0 and the production explicit ring TLS configuration. It used
+The Rust fixture ran on a local macOS workstation with Rust/Cargo 1.99.0 and the production explicit ring TLS configuration. It used
 one WebSocket at a time, sending twelve `chain_getFinalizedHead`, twelve
 `state_getStorage(System.Number)` and twelve `system_health` reads per URL:
 252 requests total. Its schedule measures from the actual previous send, so a
 delayed response cannot cause a catch-up burst. Each response has a 15-second
 deadline; any error or policy refusal ends that endpoint's sample immediately.
 There are no submissions, subscriptions, retries or quota-escalation phases.
-The full live-probe worker deferred public traffic until this run ended.
+The full live probe deferred public traffic until this run ended.
 
-The bounded [raw JSONL](endpoint-quotas/observations.jsonl) retains all
-upgrade headers selected for policy/operational interpretation, request
-results and individual send/response timings. Cookies and unrelated headers
-are excluded. The [summary](endpoint-quotas/summary.json) uses
+The bounded raw JSONL recorded all upgrade headers selected for
+policy/operational interpretation, request results and individual
+send/response timings. Cookies and unrelated headers were excluded. The
+fixture source, raw JSONL, summary, lock and cleanup record are not retained
+in the repository. The summary used
 `(request_count − 1) / (last_send − first_send)` for the operating rate and
 nearest-rank p95. Validation checked all seven HTTP 101 upgrades, exact IDs
 1–36, the twelve-per-method mix, every successful response and all 245 send
@@ -64,7 +64,7 @@ intervals of at least 1,000 ms. Its shortest interval was 1,000.616 ms.
 
 The raw JSONL SHA-256 is
 `b387bb451851efd27a22115a05703a13b1853e621fa723bc45e3922c37ce45de`.
-The isolated [fixture lock](endpoint-quotas/fixture.lock) SHA-256 is
+The isolated fixture lock SHA-256 is
 `960a09e59aaa3d9d8706b487c8be879e0df228c8918f83ac59493d176155d7dd`.
 The source received only an equivalent Clippy conditional-style cleanup after
 the live run.
@@ -73,8 +73,8 @@ The fixture used an independent temporary Cargo workspace with path dependency
 `rtao-rpc`, `futures = "0.3"`, `serde_json = "1"` with `arbitrary_precision`,
 `tokio = "1.53"` with `macros`, `rt-multi-thread`, `time`, `url = "2"`, and
 `tokio-tungstenite = "0.30"` with default features disabled and `connect`,
-`handshake`, `rustls-tls-native-roots`. These dependencies and the retained
-source/lock document that historical run. A future sample needs a reviewed
+`handshake`, `rustls-tls-native-roots`. These dependencies and the recorded
+digests document that historical run. A future sample needs a reviewed
 bounded hosted entry point; do not recreate its local workspace or retired
 build root. Endpoint labels can restrict a hosted sample, and the fixture
 never accepts a higher rate or request count.
@@ -92,7 +92,6 @@ no Python interpreter or container was run.
 The disposable fixture directory and its exact binary, dependency,
 incremental and fingerprint artifacts were removed after checks for running
 processes, open files, launchd/configuration references, symlinks and virtual
-environments. The [cleanup record](endpoint-quotas/cleanup.json) lists the
-removed directories. The former plan build/scratch root is retired and absent;
-no current dependency on those caches remains. Useful source, lock and bounded
-results remain here; shared global Cargo caches and unrelated work are preserved.
+environments. The former plan build/scratch root is retired and absent; no
+current dependency on those caches remains. Shared global Cargo caches and
+unrelated work are preserved.

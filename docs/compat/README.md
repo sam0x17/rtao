@@ -1,7 +1,7 @@
 # Recording compatibility validation
 
-Under Q30, use the manual `pr-gates` workflow with `refresh_compat=true` to
-regenerate these source reports on free Ubuntu CI. Verify its source commit,
+Use the manual `pr-gates` workflow with `refresh_compat=true` to regenerate
+these source reports on hosted Ubuntu CI. Verify its source commit,
 artifact digest and report inputs before adoption; see
 [the hosted procedure](../execution/ci-gates.md#regenerating-compatibility-inputs-in-ci).
 The command descriptions below explain that hosted job. They do not require a
@@ -18,11 +18,11 @@ preserve it. `--write` and `--json` select output files within the repository.
 counts for the core without host support and the validator, miner and owner
 profiles on the compiler's host target. `--build-target <triple>` selects another
 Rust target. Cargo evaluates that target's dependency graph; the recorded host
-and compiler describe the machine performing the measurement. This command does
+triple and compiler describe the toolchain performing the measurement. This command does
 not build a target artifact or claim artifact provenance.
 
 Each report under `docs/compat/build-weight/<target>.json` records the target,
-host, compiler, Cargo version, CPU, timestamp, source commit and dirty state,
+host, compiler, Cargo version, timestamp, source commit and dirty state,
 hashes of the workspace/package manifests, lockfile and upstream pins, selected
 profile features, complete deduplicated package inventories, and whether the
 core's host feature was enabled. The generated JSON embeds these reports and

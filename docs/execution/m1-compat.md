@@ -10,7 +10,7 @@ The generated schema is `1`. The current `validated_spec_range` is `null`,
 `validated_runtimes` is empty, and the release milestone is unset. The recorded
 Finney spec 478 inputs have no drift, e2e or interop run evidence establishing a
 validated range. A metadata fetch does not establish that evidence. The client
-agent consumes this document for its warning guard; the complete M1-13 connection
+warning guard consumes this document; the complete M1-13 connection
 and runtime-cache behavior is checked separately.
 
 | input | SHA-256 file checksum | BLAKE2b-256 raw metadata hash |
@@ -45,8 +45,7 @@ Verification on 2026-10-14:
 | `cargo clippy -p xtask --all-targets -- -D warnings` | Passed |
 | `rustfmt --edition 2024 --config skip_children=true --check xtask/src/compat.rs` | Passed |
 
-All Cargo invocations used the recorded task root
-`~/workspace/rtao/target/execute-plan.6Ro0PC`, its `build` directory as
+All Cargo invocations used a recorded local task root, its `build` directory as
 `CARGO_TARGET_DIR`, and its `tmp` directory as `TMPDIR`. Tests used in-memory
 reports and created no private disposable fixtures. That execution root is
 retired and absent; no build or temporary directory there is a current live

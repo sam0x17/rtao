@@ -134,7 +134,7 @@ Local validation on 2026-10-14:
   scoped strict Clippy passes on both. No live chain scenario has executed
   locally.
 
-Historical local scratch, builds and logs used `target/execute-plan.6Ro0PC`.
+Historical local scratch, builds and logs used a task-scoped temporary root.
 That root is retired and absent; no task build/source/tool cache there is a
 current live dependency. Preserve shared global Cargo/toolchain caches. Earlier
 isolated command rehearsals and lock files were removed after process,

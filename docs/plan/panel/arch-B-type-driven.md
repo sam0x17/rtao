@@ -1,7 +1,7 @@
 # rtao, architecture B: a type-driven veneer over bittensor-core
 
 Date: 2026-10-13. Lens: Rust-idiomatic and type-driven. Reader: an expert Rust/Substrate engineer who knows FRAME and
-subtensor internals. The user's decisions are taken as given: git dependencies are fine, crates.io does not matter, rtao is a
+subtensor internals. The maintainer's decisions are taken as given: git dependencies are fine, crates.io does not matter, rtao is a
 veneer over the monorepo crate `sdk/bittensor-core`, and the scope is full parity with the v11 Python package.
 
 ## Conventions
@@ -63,7 +63,7 @@ Three conclusions follow:
 3. A borrowed view is another 4.6x faster than owned typed structs.
 
 For the record, each one-shot HTTPS `state_call` of `get_metagraph` (a new TLS connection per call) took 0.71–0.88 s
-from this machine **[measured]**. On the validator hot path, CPU decode is not the bottleneck. The decode choice matters for miners that check every request
+from a local workstation **[measured]**. On the validator hot path, CPU decode is not the bottleneck. The decode choice matters for miners that check every request
 against the metagraph, for scans across all 128 subnets, and for allocation pressure. It is not about RPC latency.
 
 So the design is a **hybrid**:
@@ -519,7 +519,7 @@ configured **[inferred]**. rtao ships a `cargo generate` template (`templates/su
 ### 2.8 Build weight
 
 - bittensor-core without `host`, plus `scale-value`, `scale-decode` and `frame-metadata`: 14.1 s wall / 93 s CPU clean
-  release on Apple M5 Max (18 cores), rustc 1.99 **[measured]**.
+  release on a local macOS workstation, rustc 1.99 **[measured]**.
 - bittensor-core alone at `tag = "v477"`: 12.9 s / 84.6 s **[measured]**.
 - With `host`: 330 unique crates, `cargo check` 54 s wall / 212 s CPU (R/feasibility-bittensor-core-gitdep.md).
 - For comparison, bittensor-core plus subxt 0.51 is 392 crates (R/feasibility-veneer-coexistence.md). rtao avoids
@@ -626,7 +626,7 @@ Evidence:
 - Pruned nodes advertise `archive_v1_*` but refuse it (SN2 and buyback comments, E §2.6–2.8).
 
 At connect, rtao calls `rpc_methods` and builds a `Capabilities` set. If `author_submitAndWatchExtrinsic` or the head
-subscriptions are missing (some load balancers), it uses a fallback ladder in the style of the user's `mev-scanner`
+subscriptions are missing (some load balancers), it uses a fallback ladder in the style of the maintainer's `mev-scanner`
 (E §6):
 
 - submit with `author_submitExtrinsic`, then follow inclusion by polling `chain_getBlock` from the submission height
@@ -2174,7 +2174,7 @@ pub struct NeuronConfig {
 - **Genesis identity.** `Network` presets carry the genesis hashes (finney `0x2f0555cc…36c03`, testnet `0x8f9cf856…`,
   devnet `0x07789904…`; H §1.1). The client refuses to sign against an endpoint whose genesis does not match its claimed
   network.
-- **Logging.** `tracing` with a compact key=value formatter by default, in the style of the user's `mev-scanner` (E §6).
+- **Logging.** `tracing` with a compact key=value formatter by default, in the style of the maintainer's `mev-scanner` (E §6).
   Library crates never print.
 
 ### 9.8 EVM helpers (`rtao-evm`, optional)
@@ -2643,7 +2643,7 @@ spec-mismatch refusal (`PY/_transport/interface.py:617-623`).
   btauth, typed SCALE against `FakeChain`) or `docify::embed!` when they need a node.
 - `docify::compile_markdown!` regenerates `README.md` files from `README.docify.md` sources, so prose never drifts from
   the code (R/F §7).
-- The user maintains docify, so its 2025-02 release date is not a risk.
+- rtao's maintainer also maintains docify, so its 2025-02 release date is not a risk.
 - Generated `rtao-chain` items carry metadata docs, with `generate_docs` on, and deprecation notes from V16.
 
 ### 13.2 The book (`book/`, mdbook 0.5)
@@ -2728,7 +2728,7 @@ parity in roughly 4–5 calendar months **[inferred]**.
 | 11 | **Secrets handling**: offloaded KDF threads, the keychain, btauth nonce-store memory. | low / high | `Zeroizing`/`secrecy` throughout; no `Debug` on secret types; a bounded `InMemoryNonceStore`; the Redis store for multi-process deployments. |
 | 12 | **Hardware and browser signer parity** (Vault QR, extension bridge) costs a lot for little use in Rust deployments. | high / low | Scheduled last (M7); listed as `unsupported` in `divergences.toml` if they slip. |
 | 13 | **Python behaviours that are arguably bugs**: unpinned gather reads, `None` checks that never fire on zero-account defaults, float projections. | certain / low | rtao deviates deliberately and documents each case (`kind = improved`); interop tests normalize those reads. |
-| 14 | **Measured numbers come from one machine** (Apple M5 Max). | — | Re-baseline in Linux CI with criterion (§11.7). |
+| 14 | **Measured numbers come from one machine** (a local macOS workstation). | — | Re-baseline in Linux CI with criterion (§11.7). |
 
 ### 15.2 Open questions
 
@@ -2757,7 +2757,7 @@ parity in roughly 4–5 calendar months **[inferred]**.
 
 ## Appendix A: Measurements made for this document
 
-**Environment.** Apple M5 Max (18 cores), macOS (Darwin 25.6), rustc/cargo 1.99.0, `--release`, single-threaded
+**Environment.** A local macOS workstation, rustc/cargo 1.99.0, `--release`, single-threaded
 decode loops, median of 300 iterations (60 for payloads over 200 KB), warm-up excluded.
 
 **Data.** Fetched 2026-10-13 from `https://entrypoint-finney.opentensor.ai` at finalized head

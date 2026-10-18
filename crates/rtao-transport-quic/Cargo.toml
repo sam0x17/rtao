@@ -8,6 +8,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND MIT"
 repository.workspace = true
 description = "btlightning-compatible QUIC transport for Bittensor neurons, built on quinn."
+keywords = ["bittensor", "quic", "btlightning", "transport", "quinn"]
+categories = ["network-programming", "cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

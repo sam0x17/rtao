@@ -1,7 +1,7 @@
 # Release verification
 
 Release tags, binary distribution, publishing and release-provenance setup
-are deferred under PLAN.md Q30. Current development delivers reviewed source
+are not yet in place. Current development delivers reviewed source
 and applicable hosted client checks. It does not establish that CLI archives
 exist, that a release was verified or that the project is ready for a release.
 
@@ -16,14 +16,14 @@ claim.
 
 Native macOS, ARM, Keychain and hardware verification remain unverified unless
 separate executed evidence is recorded. Cross-platform release rehearsals,
-local Mac builds and device runs are deferred; they are not prerequisites for
+macOS builds and device runs are deferred; they are not prerequisites for
 client development. The former release workflows are retained outside
 GitHub's active workflow directory in `.github/deferred-workflows/`.
 
 `COMPAT.md` and `compat.json` record pins, metadata inputs and any validated
 runtime range. A metadata pin or successful Linux build is not proof of
-live-chain, interoperability or hardware coverage. Read the execution state
-and the exact commit's hosted results alongside those records.
+live-chain, interoperability or hardware coverage. Read the exact commit's
+hosted results alongside those records.
 
 ## Future release verification
 
@@ -35,4 +35,4 @@ effort must review that contract and record its own executed evidence.
 For any future download, checksums establish integrity only after the source
 and artifact provenance have been authenticated. Platform claims must be
 supported by builds and checks for those platforms. No local release rehearsal
-is required by this guide or by the current development plan.
+is required by this guide.

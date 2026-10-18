@@ -78,7 +78,7 @@ intent/read vectors. Independent Python differential parity remains unverified.
 Native tests of the input recipes or adapters do not produce Python expected
 outputs.
 
-Under PLAN.md Q30, a first oracle refresh is optional hosted work. The source
+A first oracle refresh is optional hosted work. The source
 gate can report `optional-unverified` while retaining that gap. If oracle
 outputs exist now or in repository history, the gate requires verification;
 the initial-absence policy cannot hide removed evidence. The oracle's source,

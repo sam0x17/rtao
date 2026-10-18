@@ -16,8 +16,8 @@ differential run a development prerequisite.
 `value_forms`, `codec_of`, `raw_bounds` and `to_raw`. The catalog's generated
 `TABLE` has 48 descriptions and 42 storage entries, authenticated through
 extraction and pinned runtime metadata. The intents namespace delegates to
-that table. Root subsequently adopted M4-06's `SetHyperparameter` intent and
-the M4-02 planner; their combined validation is recorded in
+that table. M4-06's `SetHyperparameter` intent and the M4-02 planner were
+subsequently adopted; their combined validation is recorded in
 `m4-integration.md`.
 
 Metadata selects unit kind first. Explicit width/signedness selects the codec,
@@ -41,7 +41,7 @@ and distinguish the exact representable boundary from the next scale.
 Invalid caller-constructed widths or zero scales still bypass the generator's
 invariants; this change does not provide general custom-table validation.
 
-Root adopted the exact 14-path author patch, SHA-256
+The exact 14-path author patch was adopted, SHA-256
 `f50251c0643228fb1c45a87eb9fcdd537b53eb3530b66761675811b1091a432f`,
 then the two-path scale repair, SHA-256
 `5f48121085549822a2d126823c4b3773be845cffc0c80d7ae8dc05add4507897`.
@@ -76,20 +76,18 @@ adoption were unverified at that checkpoint and remain optional targeted hosted
 coverage under Q30. The oracle's disposable builds were audited/removed; Q30
 cleanup retired the remaining review snapshot and raw logs.
 
-The historical canonical integration driver was
-`tmp/root-m4-01-integration-checks.sh` under `target/execute-plan.6Ro0PC`,
-with `PYO3_NO_PYTHON=1` and the then-current compiler wrapper. It ran
+The historical canonical integration driver used `PYO3_NO_PYTHON=1` and the then-current compiler wrapper. It ran
 affected-package tests on both toolchains, final btauth and staged
 receipt/Unicode regressions, extraction, regeneration, parity,
 dependency checks and the full `gates` command. Both canonical affected-package
 suites passed 151 tests, with zero failures and one hosted replay ignored.
 The boxed-response server regressions passed 14 on MSRV after the current
 14-test pass; receipt/Unicode suites passed eight on each toolchain.
-Extraction, regeneration, parity and dependency checks passed. Counts and log
-hashes are retained in `m4-hyperparams-validation.json`.
+Extraction, regeneration, parity and dependency checks passed. The raw counts
+and log hashes are not retained in the repository.
 
-The full gates correctly rejected the stale dependency-count report. Root
-remeasured actual normal/build graphs through `compat --measure-build-weight`
+The full gates correctly rejected the stale dependency-count report. The
+maintainer remeasured actual normal/build graphs through `compat --measure-build-weight`
 and regenerated compatibility outputs. Counts are 225 core-no-host, 361
 validator, 365 miner and 416 owner packages on aarch64-apple-darwin; only owner
 activates core/host. Subsequent native-root repairs allowed all 1,192 workspace
@@ -97,7 +95,5 @@ tests, doctests, no-host and MSRV checks to pass; the full run then failed in
 the no-dev feature harness. That run predates the latest owner/shield/read
 adoption. Its evidence is in `tls-roots-repair.md`; the combined M4 source
 requires fresh dependency measurement and validation (`m4-integration.md`).
-No complete gate success or milestone exit is inferred. The committed
-`m4-hyperparams-validation.json` retains bounded historical counts and log
-hashes; preserve it. Its former raw log paths do not authorize restoration.
-Current source/pin/dependency guards and combined validation run in hosted CI.
+No complete gate success or milestone exit is inferred. Former raw log paths
+do not authorize restoration. Current source/pin/dependency guards and combined validation run in hosted CI.

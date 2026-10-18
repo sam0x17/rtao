@@ -1,7 +1,7 @@
 # BLS lockfile requirement
 
 The original M0-09, M0-11 and M0-14 raw-lock requirement failed at v478.
-The user approved Q26's built-dependency correction on 2026-10-14.
+Q26's built-dependency correction was approved on 2026-10-14.
 
 Cargo.lock contains:
 
@@ -37,8 +37,8 @@ inspection rejects dormant activation; separate shipped profiles are checked
 by deps-check. Current Rust and Rust 1.89 pass the shared policy, pin, core lock
 and eleven doctor regressions, including a real downstream optional and
 cross-target build-dependency fixture. Strict Clippy passes both toolchains.
-The actual `pin --check` and doctor commands pass. Historical failing logs
-remain alongside `tmp/root-q26-isolated-*.log` under the recorded root.
+The actual `pin --check` and doctor commands pass. Raw logs are not retained
+in the repository.
 
 The subsequent staged-boundary repair passes thirteen dependency regressions
 and strict Clippy on both toolchains. Portable base64 and zeroize copies must

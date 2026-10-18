@@ -73,8 +73,7 @@ tests, seven core-policy tests and one compile-fail role check. The client
 accounts for 142 checks, including 28 submission tests and three structured
 pool-error tests. The signer accounts for 14 checks.
 
-Final logs are `target/execute-plan.6Ro0PC/tmp/m2-tx-final-{current,msrv,
-no-default,clippy,msrv-clippy}.log`. No separate scratch directories were
+The final logs are not retained in the repository. No separate scratch directories were
 created by the TX owner. That task root and its build/log paths are retired
 and absent; shared global Cargo/toolchain caches remain preserved.
 

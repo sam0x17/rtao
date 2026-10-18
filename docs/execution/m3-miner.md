@@ -38,7 +38,7 @@ Root-subnet stake pruning is explicitly excluded. Metrics are
 
 The facade miner example implements the signed JSON echo protocol used by the
 validator example and persists its request count. The feature gate already
-includes the real example in the `miner,redis` profile; root owns its manifest
+includes the real example in the `miner,redis` profile; integration owns its manifest
 entry and workspace dependency edges.
 
 At the historical checkpoint, current Rust and Rust 1.89 passed all 61 neuron
@@ -55,18 +55,13 @@ passes strict MSRV Clippy with `miner,redis`; the existing validator example
 passes with `validator,prometheus`. The miner example also passes the final
 current-Rust check with `miner,redis`.
 
-Historical log names were `tmp/neuron-m3-current.log`, `tmp/neuron-m3-msrv.log`,
-`tmp/neuron-miner-runtime-tests.log` and `tmp/neuron-prune-{tests,msrv}.log`
-under `target/execute-plan.6Ro0PC`. The development wallet and state fixture
-was created under that recorded root, then removed after the runtime, client,
+Historical logs are not retained in the repository. The development wallet
+and state fixture was created under a task-scoped temporary root, then removed after the runtime, client,
 metagraph and socket node had stopped. No user wallets or state were used.
-The empty `tmp/rtao-neuron-tests` fallback and its empty `tmp` child were also
+The empty neuron-test fallback directory and its empty child were also
 removed after checking processes, launchd units, configuration references,
 symlinks and virtual-environment dependencies. No neuron fixture directories
 remain from that validation. Q30 cleanup later removed shared task builds and
 raw logs. These historical checks do not establish current hosted success or
 M3 acceptance.
-Additional historical logs were `tmp/neuron-m3-clippy.log`,
-`tmp/neuron-m3-miner-only-clippy.log`, `tmp/neuron-miner-example-msrv.log` and
-`tmp/neuron-validator-example-m3-msrv.log`. The current-Rust example log was
-`tmp/neuron-miner-example.log`. The final neuron formatting check passed.
+The final neuron formatting check passed.

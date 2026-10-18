@@ -183,20 +183,6 @@ fn package_identities(tree: &str, root: &Path) -> Result<BTreeSet<String>> {
     Ok(packages)
 }
 
-fn build_machine(root: &Path) -> Result<String> {
-    if cfg!(target_os = "macos") {
-        return capture(root, "sysctl", &["-n", "machdep.cpu.brand_string"]);
-    }
-    let cpu = fs::read_to_string("/proc/cpuinfo")?;
-    cpu.lines()
-        .find_map(|line| {
-            line.strip_prefix("model name")
-                .and_then(|rest| rest.split_once(':'))
-                .map(|(_, value)| value.trim().to_owned())
-        })
-        .context("build-weight CPU identity unavailable")
-}
-
 fn measure_build_weight(root: &Path, target: Option<&str>) -> Result<()> {
     let compiler = capture(root, "rustc", &["-Vv"])?;
     let host = compiler
@@ -261,7 +247,7 @@ fn measure_build_weight(root: &Path, target: Option<&str>) -> Result<()> {
     let report = canonical(
         &json!({"schema": 1, "rtao_version": manifest["workspace"]["package"]["version"].as_str().context("version missing")?,
         "target": target, "host": host, "compiler": compiler, "cargo": capture(root,"cargo", &["-V"] )?,
-        "machine": build_machine(root)?, "measured_unix_seconds": SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+        "measured_unix_seconds": SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
         "source": {"head_commit": capture(root,"git", &["rev-parse", "HEAD"] )?, "dirty": !capture(root,"git", &["status", "--porcelain", "--untracked-files=normal"] )?.is_empty(),
             "dependency_inputs_sha256": sha256(&serde_json::to_vec(&canonical(&before))?), "dependency_inputs": before},
         "method": {"command": BUILD_COMMAND, "count": BUILD_METHOD, "host_feature_command": BUILD_FEATURE_COMMAND},
@@ -307,12 +293,18 @@ fn validate_build_weight(report: &Json, version: &str, input: &Json) -> Result<(
             .is_some_and(|v| v > 0),
         "missing build-weight measurement time"
     );
-    for field in ["compiler", "cargo", "machine"] {
+    for field in ["compiler", "cargo"] {
         ensure!(
             !json_text(report, field)?.is_empty(),
             "empty build-weight context"
         );
     }
+    // Package counts depend on the target and dependency inputs, not on the
+    // measuring host's hardware, so records carry no CPU identity.
+    ensure!(
+        report.get("machine").is_none(),
+        "build-weight records must not identify the measuring machine"
+    );
     let host = json_text(report, "host")?;
     ensure!(
         json_text(report, "compiler")?
@@ -1098,7 +1090,7 @@ fn markdown(document: &Json) -> Result<String> {
                     json_text(report, "path")?
                 ));
             }
-            output.push_str(&format!("\nMeasured on `{}` ({}) with `{}`, source `{}`{}; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.\n\n", json_text(record,"host")?,json_text(record,"machine")?,json_text(record,"compiler")?.lines().next().context("compiler missing")?,json_text(&record["source"],"head_commit")?, if record["source"]["dirty"]==true { " with dependency changes in the working tree" } else { "" }));
+            output.push_str(&format!("\nMeasured on `{}` with `{}`, source `{}`{}; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.\n\n", json_text(record,"host")?,json_text(record,"compiler")?.lines().next().context("compiler missing")?,json_text(&record["source"],"head_commit")?, if record["source"]["dirty"]==true { " with dependency changes in the working tree" } else { "" }));
         }
     }
     output.push_str("Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).\n");
@@ -1188,7 +1180,7 @@ mod tests {
     fn build_weight_rejects_stale_inputs_counts_features_and_host_activation() -> Result<()> {
         let input = json!({"Cargo.lock":"a".repeat(64)});
         let report = json!({"schema":1,"rtao_version":"0.1.0","target":"aarch64-apple-darwin","host":"aarch64-apple-darwin",
-            "compiler":"rustc fixture\nhost: aarch64-apple-darwin", "cargo":"cargo fixture","machine":"fixture CPU","measured_unix_seconds":1,
+            "compiler":"rustc fixture\nhost: aarch64-apple-darwin", "cargo":"cargo fixture","measured_unix_seconds":1,
             "method":{"command":BUILD_COMMAND,"count":BUILD_METHOD,"host_feature_command":BUILD_FEATURE_COMMAND},
             "source":{"head_commit":"a".repeat(40),"dirty":false,"dependency_inputs":input,
                 "dependency_inputs_sha256":sha256(&serde_json::to_vec(&canonical(&input))?)},
@@ -1213,6 +1205,9 @@ mod tests {
         }
         let mut altered = report.clone();
         altered["profiles"][0]["package_identities"] = json!(["fixture v1.0.0", "fixture v1.0.0"]);
+        assert!(validate_build_weight(&altered, "0.1.0", &input).is_err());
+        let mut altered = report.clone();
+        altered["machine"] = json!("fixture CPU");
         assert!(validate_build_weight(&altered, "0.1.0", &input).is_err());
         Ok(())
     }

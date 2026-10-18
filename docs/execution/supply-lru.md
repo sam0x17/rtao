@@ -1,11 +1,11 @@
 # Dormant light-client advisory
 
-The user approved Q27's guarded exception on 2026-10-14. It is implemented in
-`cargo xtask supply` and the supply gate. The user subsequently approved Q28's
-separate exact dormant ruzstd exception; see `supply-ruzstd.md`. Its reviewed
-patch is applied. The full supply job passes against the final canonical
-workspace and fuzz locks, with both raw audit failures retained; final evidence
-is `ci/supply-24734` under the recorded root.
+The maintainer approved Q27's guarded exception on 2026-10-14. It is implemented
+in `cargo xtask supply` and the supply gate. The maintainer subsequently approved
+Q28's separate exact dormant ruzstd exception; see `supply-ruzstd.md`. Its
+reviewed patch is applied. The full supply job passes against the final
+canonical workspace and fuzz locks, with both raw audit failures retained; the
+final raw evidence is not retained in the repository.
 
 Only [RUSTSEC-2026-0253](https://rustsec.org/advisories/RUSTSEC-2026-0253) may pass
 for this exact lock entry, while it remains absent from every checked graph:
@@ -63,25 +63,25 @@ unfiltered audit. Rust 1.89 resolves that version with locked/offline metadata
 and successfully checks all eight fuzz binaries. The package's declared MSRV
 is 1.71.
 
-All evidence paths below are relative to the recorded temporary root,
-`~/workspace/rtao/target/execute-plan.6Ro0PC`:
+The evidence below was recorded under a local task root and is not retained in
+the repository:
 
 | Evidence | Result |
 | --- | --- |
-| `ci/supply-99888` | Complete audits and 53 graphs before the fuzz update; workspace reports one ruzstd vulnerability, fuzz reports that vulnerability plus four rustls vulnerabilities |
-| `ci/supply-2165` | Integrated guard after the update: 53 graph inspections pass; both raw audits report only the ruzstd vulnerability and retain the lru unsound finding |
-| `ci/supply-32425` | Final workspace-isolated active guard still exits 1 on ruzstd; all 53 dependency inspections pass and both raw audits remain unfiltered |
-| `ci/supply-24734` | After explicit Q28 approval, the full active supply job exits 0; cargo-deny passes, both raw audits still exit 1, and all 53 graph checks pass on final canonical locks |
-| `tmp/supply-wrapper-current-tests.log`, `tmp/supply-wrapper-msrv-tests.log` | Nine supply regressions and the gate regression pass on current Rust and Rust 1.89; the filter also runs two existing parity regressions |
-| `tmp/supply-isolated-clippy.log`, `tmp/supply-fmt.log` | Strict xtask Clippy for all targets in a separate lint target, and owned-file formatting pass |
-| `tmp/supply-wrapper-fuzz-msrv.log` | Rust 1.89 checks all eight fuzz binaries after the update with workspace artifact isolation |
-| `tmp/supply-fuzz-rustls-after-audit.json` | Additional unfiltered fuzz audit confirms the four rustls findings are cleared; ruzstd remains blocking |
+| Pre-update supply run | Complete audits and 53 graphs before the fuzz update; workspace reports one ruzstd vulnerability, fuzz reports that vulnerability plus four rustls vulnerabilities |
+| Post-update supply run | Integrated guard after the update: 53 graph inspections pass; both raw audits report only the ruzstd vulnerability and retain the lru unsound finding |
+| Workspace-isolated supply run | Final workspace-isolated active guard still exits 1 on ruzstd; all 53 dependency inspections pass and both raw audits remain unfiltered |
+| Final supply run | After explicit Q28 approval, the full active supply job exits 0; cargo-deny passes, both raw audits still exit 1, and all 53 graph checks pass on final canonical locks |
+| Current and MSRV test logs | Nine supply regressions and the gate regression pass on current Rust and Rust 1.89; the filter also runs two existing parity regressions |
+| Clippy and formatting logs | Strict xtask Clippy for all targets in a separate lint target, and owned-file formatting pass |
+| Fuzz MSRV log | Rust 1.89 checks all eight fuzz binaries after the update with workspace artifact isolation |
+| Post-update fuzz audit | Additional unfiltered fuzz audit confirms the four rustls findings are cleared; ruzstd remains blocking |
 
 The regressions cover activation, unknown affected entries, advisory and
 identity changes, duplicate findings, filtering, malformed reports, changed
 patch ranges and tool/status failures. The supply gate regression preserves
 the cargo-deny command and pinned audit tool. Final tests and native runs use
-the parent's distinct `upstream-quality/wrappers/rtao.sh` wrapper. Clippy runs
+a distinct workspace compiler wrapper. Clippy runs
 in a separate disposable target because cargo-clippy overrides the workspace
 wrapper with clippy-driver; earlier shared-target Clippy logs are historical
 and do not establish the final lint result. Actionlint and YAML validation
@@ -89,8 +89,7 @@ pass for the PR workflow. Its six jobs use free `ubuntu-latest` runners, and
 the supply job retains raw audit and graph artifacts for 14 days even after a
 failure. That hosted upload and an image build have not been executed locally.
 
-The original supply failure remains unchanged in `tmp/root-m3-supply.log`,
-including its original terminal summary:
+The original supply failure ended with this terminal summary:
 
 ```text
 error: 1 vulnerability found!
@@ -107,12 +106,8 @@ are pre-approval evidence. Q28 final active supply results are recorded in
 
 The isolated harness and superseded parser rehearsal were checked for running
 processes, open files, launchd units, configuration references, symlinks and
-virtual-environment dependencies, then removed. Cleanup records are
-`tmp/supply-harness-cleanup.json` and `tmp/supply-rehearsal-cleanup.json`.
-The separate final lint target was also audited and removed; its record is
-`tmp/supply-q28-cleanup.json`.
-The final applied Q28 lint target is removed with its audit retained in
-`tmp/supply-q28-active-cleanup.json`.
-Complete raw before/after evidence and the shared build/source/tool caches
-remain available for the parent's active checks. The parent's workspace
-wrapper remains a live dependency for its ongoing validation.
+virtual-environment dependencies, then removed. The separate final lint target
+and the final applied Q28 lint target were also audited and removed. Cleanup
+records are not retained in the repository. The shared build/source/tool caches
+and workspace wrapper remained live dependencies of the ongoing validation at
+that time.

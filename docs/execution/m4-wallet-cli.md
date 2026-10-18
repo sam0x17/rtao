@@ -99,7 +99,7 @@ Source confirms the required API and Unicode 16 table. Independent comparison
 of Unicode 15/16 CaseFolding and Unicode 15 DerivedAge verifies all 1,530
 Unicode 15 common/full mappings are unchanged, while the 27 new Unicode 16
 mappings belong to characters unassigned in 15. The category filter therefore
-preserves Python 3.12 casefold behavior. Only bounded hashes/results are retained
-under the private recovery directory; no Unicode tables or archives were
+preserves Python 3.12 casefold behavior. Only bounded hashes/results were kept,
+outside the repository; no Unicode tables or archives were
 extracted into the workspace. The changed lock/manifest still need hosted
 compatibility generation and all applicable checks before acceptance.

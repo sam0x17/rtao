@@ -9,4 +9,4 @@ Validation on macOS ARM64 with Rust 1.89, repeated on the clean committed review
 - Strict core and binding Clippy, all features and targets; package formatting and committed-diff checks.
 - Portable `wasm32-unknown-unknown` check with default features disabled.
 
-Python binding regressions are included for hosted CI only. No Python interpreter ran locally; binding checks explicitly set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because the user's instruction confines Python execution to CI; scoped Rust checks used the authorized `sam0x17` identity. The change touches no generated Python, pallets or runtime code.
+Python binding regressions are included for hosted CI only. No Python interpreter ran locally; binding checks explicitly set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because project policy confines Python execution to CI; scoped Rust checks used the maintainer's account (`sam0x17`). The change touches no generated Python, pallets or runtime code.

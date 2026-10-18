@@ -112,6 +112,6 @@ runtime refusals and transport behavior with committed fixtures and fake
 transports. Use the exact commit's CI result when assessing those checks.
 Live-chain commit/reveal timing, real endpoint reachability and host shutdown
 behavior need separate operational evidence. Localnet and Python
-interoperability checks are optional targeted hosted work under PLAN.md Q30;
-they are not required local campaigns. The twenty-four-hour testnet soak is
-waived, and no passing soak or deployment result is claimed.
+interoperability checks are optional targeted hosted work; they are not
+required local campaigns. No twenty-four-hour testnet soak is required, and no
+passing soak or deployment result is claimed.

@@ -79,7 +79,8 @@ schema and behavioral keys named URL, tag, commit, blob or provenance survive.
 The report never silently marks pending behavior implemented.
 
 A bounded same-input report rehearsal produced the retained
-`m2-parity-report-smoke.json` and `.md`: no changed files, 74/87 pending,
+[Markdown report](m2-parity-report-smoke.md) (its JSON companion is not
+retained in the repository): no changed files, 74/87 pending,
 unchanged extracted behavior and unavailable oracle proof. No rows were
 reconciled. Its disposable baseline was audited for processes, open files,
 launchd, configuration references, symlinks and virtual environments, then
@@ -128,7 +129,7 @@ Markdown companion both preserve the same pending counts and catalog deltas.
 
 Strict mode was also exercised and failed on pending file, environment,
 operation, export, divergence and e2e state, as intended. Its bounded output is
-retained in `m2-parity-strict.txt`.
+not retained in the repository.
 
 During final integration, the sibling M3 immunity read landed. The refreshed
 pending gate confirms nine tested intents and 16 tested reads, with 74/86 pending.
@@ -142,8 +143,8 @@ all-target Clippy passed on this integrated state. This is local implementation
 evidence; hosted oracle and milestone exit evidence remain pending.
 
 The old `parity-files` disposable directory was also audited and removed; its
-753-byte verification result was already identical to retained
-`docs/execution/parity-files.txt`. No live dependency was removed.
+753-byte verification result was already identical to the earlier recorded
+result, which is not retained in the repository. No live dependency was removed.
 
 The initial oracle-readiness implementation had one bootstrap state. A missing first
 manifest is reported as `status: pending`, milestone `M2-05`, only in nonstrict

@@ -18,5 +18,5 @@ facade's executor; this crate's bare executor has no generated parser installed.
 
 This crate declares no feature switches. Signer backends and intent families
 are enabled on their owning crates. Chain balances use checked native `u64`
-rao. Fake transports and committed fixtures validate client behavior in hosted
-CI; an unsigned plan or approval receipt does not establish a runtime mutation.
+rao. An unsigned plan or approval receipt does not establish a runtime
+mutation.

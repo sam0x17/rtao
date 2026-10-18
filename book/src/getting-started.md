@@ -1,9 +1,9 @@
 # Getting started
 
-rtao is under development. Use a reviewed source revision and its matching
-core pin; release binaries and release tags are outside the current development
-scope. The repository's [execution state](https://github.com/sam0x17/rtao/blob/main/docs/execution/state.md)
-records implemented features, hosted results and remaining work.
+rtao is under development and has no crates.io release yet. Use a reviewed
+source revision and its matching core pin; release binaries and release tags
+are not yet published. Check the hosted CI results for the exact commit you
+use.
 
 For an application beside a checked-out `rtao` directory, start with the read
 features:
@@ -116,7 +116,7 @@ instead of Python's root string parsing/formatting helpers.
 Signer clones share the upstream keypair until the final `Arc` owner drops.
 The pinned core stores Ed25519 signing state in a wiping
 `Zeroizing<SigningKey>` owner, so the final drop wipes the stored seed,
-expanded scalar and nonce prefix (M2-S02 is fixed). This does not cover
+expanded scalar and nonce prefix. This does not cover
 allocator or OS copies, stack copies left by moving the key, short-lived values
 inside cryptographic dependencies and KDFs, or caller-owned inputs.
 
@@ -160,5 +160,5 @@ Ordinary client validation uses Rust tests, committed vectors and fake
 transports. It does not require a local node, Docker, Python, a testnet wallet
 or a validator soak. Optional live-chain and interoperability evidence is
 reported separately when it exists. Documentation and source availability do
-not establish that the latest hosted run passed; consult execution state and
-the checks for the exact commit you use.
+not establish that the latest hosted run passed; consult the checks for the
+exact commit you use.

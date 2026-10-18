@@ -53,7 +53,7 @@ This model assumes successful future epochs. It cannot predict future input
 inconsistency or per-block-cap deferrals. The current validator reveal watcher
 follows the actual included commit's assigned epoch as described above.
 
-Historical validation under the former `target/execute-plan.6Ro0PC` root:
+Historical validation under the former task-scoped temporary root:
 
 - Six weight math tests pass on current Rust and Rust 1.89. Strict all-target,
   all-feature intent Clippy passed before the separately owned committer joined.
@@ -65,20 +65,15 @@ Historical validation under the former `target/execute-plan.6Ro0PC` root:
   against v478. Both fail as expected, including `Ok(110)` versus `Ok(126)`.
   This establishes that the deletion probe detects the current core defects.
 
-Logs are `tmp/root-weights-{current,msrv}.log`,
-`tmp/root-weights-clippy.log`, `tmp/root-epochs-{current,msrv}.log`,
-`tmp/root-epochs-clippy.log` and `tmp/root-epoch-upstream-proof.log` under
-the recorded task root. No M2 checkbox or milestone exit is claimed.
+The logs are not retained in the repository. No M2 checkbox or milestone exit is claimed.
 
-The bounded upstream failure transcript is retained in
-`docs/execution/m2-epoch-upstream-proof.txt`. The isolated proof directory
+The bounded upstream failure transcript is not retained in the repository.
+The isolated proof directory
 and downloaded reference/body files were checked for running processes, open
 files, launchd/configuration references, symlinks and virtual environments,
 then removed by exact paths. The former execution root and its build/source/
 fuzz output are retired and absent. Shared global Cargo/toolchain caches remain
-preserved. The open-file audit warned about an unrelated backup
-SMB mount; the proof directory is on the local workspace filesystem and had
-no open files. No backup path was changed.
+preserved. The proof directory had no open files.
 
 The set, commit and legacy reveal intent bodies now use these helpers. Six
 FakeChain behavior tests pass on current Rust and Rust 1.89: mechanism-index
@@ -86,12 +81,11 @@ storage and coalesced pinned reads, Null-permit refusal before crypto,
 raw-u16/Yuma gating, registration/rate diagnostics, adaptive/forced commit
 rounds and extras, and legacy normalization without unrelated preflight reads.
 Two generated registry tests also pass. Strict all-target, all-feature intent
-Clippy passes. Logs are `tmp/root-m2-intents-{current,msrv,clippy}.log`.
+Clippy passes.
 
 The staged predictor also checks simulation budget and search-end arithmetic
 before iterating. Its overflow regression and six other unit tests pass on
-current Rust and Rust 1.89 (`tmp/root-epoch-budget-tests.log` and
-`tmp/root-epoch-budget-msrv.log`).
+current Rust and Rust 1.89.
 Upstream U5 is filed as [subtensor#3248](https://github.com/RaoFoundation/subtensor/pull/3248)
 with the same overflow guard. Hosted oracle equality and actual accepted
 commits/reveals remain unverified optional evidence under Q30.
@@ -103,5 +97,4 @@ set regression. Both current Rust and Rust 1.89 pass all sixteen weight tests
 strict all-target, all-feature Clippy passes. Standalone intents share the
 injected-clock encryption implementation and retain Python build-time reads;
 the validator scheduler uses `TimelockCommitter` for its explicit consensus
-ciphertext bounds. No oracle touch exemption was introduced. Final logs are
-`tmp/root-m2-weight-read-set-{current,msrv,clippy}.log`.
+ciphertext bounds. No oracle touch exemption was introduced.

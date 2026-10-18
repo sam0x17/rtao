@@ -23,6 +23,4 @@ approval continuations. `weights` includes normalization, quantization and
 commit-reveal construction; network scheduling belongs to `rtao-neuron`.
 
 Use checked native balances, inspect the resulting plan and bound spend, fees
-and subnet scope before execution. Fixtures and fake transports cover client
-contracts in hosted CI. They provide no automatic live-chain or Python-oracle
-execution claim.
+and subnet scope before execution.

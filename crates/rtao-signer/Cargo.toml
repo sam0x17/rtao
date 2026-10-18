@@ -7,6 +7,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor signing contracts and key sources."
+keywords = ["bittensor", "signer", "ledger", "sr25519", "ed25519"]
+categories = ["cryptography::cryptocurrencies", "cryptography"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

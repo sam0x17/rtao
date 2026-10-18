@@ -1,8 +1,7 @@
 [alias]
 xtask = "run -p xtask --"
 
-# Keep incidental development builds small on shared machines. Substantial
-# checks belong on disposable GitHub runners (PLAN.md Q30).
+# Keep incidental builds small; full validation runs in hosted CI.
 [build]
 jobs = 2
 incremental = false

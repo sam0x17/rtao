@@ -94,8 +94,7 @@ def load_references(upstream):
 
 # Transcribed from the epistula.sybil.com reference implementation
 # (https://epistula.sybil.com/implementation, Python verify_signature_v2,
-# fetched 2026-10-17; .local/m10/upstream/epistula-spec/implementation-code.txt
-# lines 127-153). The site states no licence; this CI-only test oracle is not
+# fetched 2026-10-17; lines 127-153 of the implementation page). The site states no licence; this CI-only test oracle is not
 # shipped. Changes: bittensor_wallet.Keypair replaces
 # substrateinterface.Keypair as the parity reference for signature parsing.
 # It is a transcription, not the published code.

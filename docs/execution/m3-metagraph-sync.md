@@ -51,6 +51,6 @@ The new native `u16` immunity-period read and its validation are recorded in
 the historical M2 execution record remains unchanged.
 
 This work created no temporary directories. Its original logs and shared build
-outputs used `target/execute-plan.6Ro0PC`; Q30 cleanup retired that tree and
+outputs used a task-scoped temporary root; Q30 cleanup retired that tree and
 its raw logs. Do not recreate it. No current hosted result or milestone exit
 is established by this historical record.

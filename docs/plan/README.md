@@ -4,9 +4,9 @@ The plan starts at [`PLAN.md`](../../PLAN.md) in the repository root. This direc
 parity appendices and the evidence the plan was built from. Everything here describes the state of upstream on
 2026-10-13: the RaoFoundation/subtensor monorepo at `850f2755` (tags `v477` for finney and testnet, spec 478 on `main`
 and devnet). Later that day `850f2755` was released as `v478` and finney and testnet moved to spec 478, so M0 pins
-`v478` ([`PLAN.md`](../../PLAN.md) M0-06). PLAN.md is at v2.1: it records the user's answers of 2026-10-13 to the
+`v478` ([`PLAN.md`](../../PLAN.md) M0-06). PLAN.md is at v2.1: it records the maintainer's answers of 2026-10-13 to the
 open questions, including three given after v2 (PR-U17 carried as a Cargo patch of the core until it ships; one goal
-loop in which the agent commits to `main` without PRs; the Ledger app fix filed with Zondax before the plan runs).
+loop that commits to `main` without PRs; the Ledger app fix filed with Zondax before the plan runs).
 
 The plan deliberately carries no time estimates (a user decision): it states order, dependencies and objective exit
 checks, and the effort figures in the archive documents ([`research/`](research/), [`panel/`](panel/),
@@ -14,11 +14,11 @@ checks, and the effort figures in the archive documents ([`research/`](research/
 
 | Path | Contents | Status |
 |---|---|---|
-| [`../../PLAN.md`](../../PLAN.md) | approach, decisions (with the user's answers of 2026-10-13), parity and test strategy, rules for executing the plan step by step, milestones M0-M10 as numbered steps with objective exit checks, risks, progress log | authoritative entry point |
+| [`../../PLAN.md`](../../PLAN.md) | approach, decisions (with the maintainer's answers of 2026-10-13), parity and test strategy, rules for executing the plan step by step, milestones M0-M10 as numbered steps with objective exit checks, risks, progress log | authoritative entry point |
 | [`architecture.md`](architecture.md) | the design: boundary with `bittensor-core`, crates, chain client, intents and reads, units, wallets and signers, btauth/1, metagraph, the neuron framework, CLI, testing, upstream tracking, docs, milestones, risks, decision log, divergence register, upstream PR plan, CI workflows | authoritative design |
 | [`parity-inventory.md`](parity-inventory.md) | the 83 intents, 102 reads, 18 error codes and the CLI command tree, each with its rtao home, body kind and milestone | authoritative; seeds `parity/pending.toml` and `parity/e2e_map.toml` |
 | [`python-module-map.md`](python-module-map.md) | every file of `sdk/python/bittensor` with its rtao home, kind and milestone | authoritative; seeds `parity/map.toml` |
-| [`research/`](research/) | eleven research reports (A1-I), three measured feasibility checks, [`CORRECTIONS.md`](research/CORRECTIONS.md), and [`J-ledger-ci-shim.md`](research/J-ledger-ci-shim.md), the Ledger-in-CI research done after the user's decisions, with the core-patch prototype | evidence; `CORRECTIONS.md` overrides the reports, and `architecture.md` wins wherever they disagree |
+| [`research/`](research/) | eleven research reports (A1-I), three measured feasibility checks, [`CORRECTIONS.md`](research/CORRECTIONS.md), and [`J-ledger-ci-shim.md`](research/J-ledger-ci-shim.md), the Ledger-in-CI research done after the maintainer's decisions, with the core-patch prototype | evidence; `CORRECTIONS.md` overrides the reports, and `architecture.md` wins wherever they disagree |
 | [`panel/`](panel/) | the four competing architectures (A mirror-Python, B type-driven, C operator-first, D minimal custom surface) and the three judge reports | historical; `architecture.md` §16 records what was adopted and what was rejected, and why |
 | [`review/`](review/) | the adversarial review: `review-<lens>.md` (findings), `verify-<lens>.md` (skeptic verdicts), `fix-log.md` (every applied change, by finding id), `critic.md` (final completeness pass), `draft-notes.md` (gaps found while drafting) | audit trail of every change made after the first draft |
 | [`bench/`](bench/) | the experiments behind measured claims (below) | reproducible |
@@ -42,15 +42,15 @@ checks, and the effort figures in the archive documents ([`research/`](research/
    and `PLAN.md`. A final completeness critic fixed seven more major gaps. Three findings were blockers in the original
    design (netuid-0 alpha amounts, conflicting rustls crypto providers in `host` builds, and wrapper-call shape hashes
    that recursed through `RuntimeCall`); all three are resolved in `architecture.md`.
-5. **Decisions (v2).** The user answered the open questions on 2026-10-13. PLAN.md v2 records each answer and its
+5. **Decisions (v2).** The maintainer answered the open questions on 2026-10-13. PLAN.md v2 records each answer and its
    consequences (PLAN.md §14.1, architecture.md §15.2), removes every time estimate, gives every milestone step a
-   stable ID and every milestone numbered exit checks, and adds the rules an AI coding agent follows to execute it.
+   stable ID and every milestone numbered exit checks, and adds the rules for executing it step by step.
    The Ledger answer (Q17) asked whether a shim could automate Ledger testing. Three more research runs (the protocol
    and the core's integration points, the emulator tooling, a hands-on run against Ledger's emulator) are consolidated
    in [`research/J-ledger-ci-shim.md`](research/J-ledger-ci-shim.md), which led to architecture.md §11.9 and PR-U17.
 6. **Decisions (v2.1).** Three later answers of the same day: rtao's own workspace carries PR-U17 as a Cargo patch of
    `bittensor-core` until a `core_tag` contains it ([`PLAN.md` §5.10](../../PLAN.md#510-the-pr-u17-core-patch),
-   [architecture.md §1.11](architecture.md#111-the-pr-u17-core-patch)); the agent develops M0 to M9 as one goal loop
+   [architecture.md §1.11](architecture.md#111-the-pr-u17-core-patch)); M0 to M9 are developed as one goal loop
    that commits to `main` without PRs, with the jobs that open PRs off until a handover
    ([`PLAN.md`, Executing this plan](../../PLAN.md#executing-this-plan)); and the Ledger app fix was filed with Zondax
    before the plan runs. A prototype of the core patch in Docker then ran the core's own Ledger code against the

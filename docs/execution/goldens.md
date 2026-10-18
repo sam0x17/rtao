@@ -30,13 +30,13 @@ the selected wrapper's fractional precision. Out-of-domain random wire samples
 retain their raw values in visitors.
 
 The original four feature-gated external lane targets are preserved. These
-fixtures run without Python, Docker, nodes, or network access. Builds used the
-parent task's shared `target/execute-plan.6Ro0PC/build`; this subtask created no
-disposable directory or independent build cache.
+fixtures run without Python, Docker, nodes, or network access. Builds used a
+shared build directory; no disposable directory or independent build cache was
+created.
 
 Validation passed with all 11 testkit tests and warnings denied:
 
 ```sh
-CARGO_TARGET_DIR=target/execute-plan.6Ro0PC/build cargo test -p rtao-testkit --tests --no-default-features --locked
-CARGO_TARGET_DIR=target/execute-plan.6Ro0PC/build cargo clippy -p rtao-testkit --tests --no-default-features --locked --no-deps -- -D warnings
+cargo test -p rtao-testkit --tests --no-default-features --locked
+cargo clippy -p rtao-testkit --tests --no-default-features --locked --no-deps -- -D warnings
 ```

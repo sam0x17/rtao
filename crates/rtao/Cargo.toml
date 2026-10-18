@@ -6,7 +6,9 @@ rust-version.workspace = true
 authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
-description = "Rust SDK and operator framework for Bittensor subnets"
+description = "Rust SDK and operator framework for Bittensor subnets."
+keywords = ["bittensor", "sdk", "blockchain", "substrate", "tao"]
+categories = ["cryptography::cryptocurrencies", "api-bindings"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

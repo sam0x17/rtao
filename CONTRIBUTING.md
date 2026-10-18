@@ -1,8 +1,8 @@
 # Contributing to rtao
 
-Follow [PLAN.md](PLAN.md) and the [architecture](docs/plan/architecture.md).
-Implementation follows the client development scope recorded in PLAN.md Q30.
-Substantial validation runs in GitHub CI on free `ubuntu-latest` runners.
+Read the [architecture](docs/plan/architecture.md) for the API contracts and
+crate layering. Substantial validation runs in GitHub CI on free
+`ubuntu-latest` runners.
 
 ## Verification
 
@@ -11,6 +11,14 @@ coverage, supply checks and semver. A local full `cargo xtask gates` run is
 not a pre-push requirement. Required hosted checks must pass before merging;
 pending or unavailable CI remains explicitly unverified.
 
+Before pushing, run `cargo fmt --all` and, for the crates you changed, a
+focused `cargo clippy` and `cargo test`. Rust 1.89 is the minimum supported
+version for the libraries; `rust-toolchain.toml` pins the development
+toolchain and CI checks the MSRV separately. Use recorded fixtures and fake
+transports for client behavior tests. Live nodes, testnets, Docker services,
+Python oracles, soaks, fuzz campaigns and release rehearsals are not part of
+ordinary contribution checks.
+
 After dependency or feature manifests change, use the workflow's manual
 `refresh_compat=true` mode to regenerate the existing compatibility graph
 reports in hosted CI. Download and review its small source artifact, commit
@@ -18,27 +26,20 @@ the generated changes, then let normal checks validate that commit. This mode
 runs no test matrix, writes no commit and builds no Mac target; the existing
 Apple-target report is a dependency graph with its actual Linux host recorded.
 
-Keep local work to source edits, formatting and small inspections. Do not
-start cold workspace builds, extra toolchain builds, full nodes, testnets,
-Docker services, Python oracles, soaks, fuzz campaigns or release rehearsals
-on the laptop or Mac Studio. Use recorded fixtures and fake transports for
-client behavior tests. Hardware and infrastructure acceptance are deferred.
-
 Ledger development uses injected backends and existing proof fixtures in the
 ordinary hosted checks. No emulator workflow is currently active. A future
 targeted emulator dispatch must use free `ubuntu-latest`, pinned app/Speculos
-inputs, an explicit timeout and disposable runner storage. It must not trigger
-a local app build, device rehearsal or node. Unrun emulator/HID coverage stays
-explicit in the signer guide and execution state.
+inputs, an explicit timeout and disposable runner storage. Unrun
+emulator/HID coverage stays explicit in the signer guide.
 
-If a focused local Rust check is useful, use one existing target directory
-and at most two build jobs, disable incremental output and debug information,
-and avoid concurrent Cargo commands. A cold or expanding build belongs in CI.
-Keep temporary work beneath one recorded task root, preserve useful source
-and bounded results, and remove disposable output when done. Never copy or
-clone build caches. See [ci-gates.md](docs/execution/ci-gates.md).
+Some tests require `RTAO_TEMP_ROOT` to name an absolute scratch directory. Run
+local tests with `umask 022`; the signer's state-permission checks refuse
+group-writable state directories.
 
-The foundation's maintenance commands are:
+Report security vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md), not in public issues or pull requests.
+
+The repository's maintenance commands are:
 
 | Command | Purpose |
 |---|---|
@@ -69,7 +70,7 @@ vendored sources or generated code; use their owning commands.
 
 `parity/map.toml` covers every watched Python file. `pending` means its port
 and behavioral evidence have not been reconciled. It permits staged
-milestone development and fails strict parity checking.
+development and fails strict parity checking.
 
 For each changed upstream file, read the old/new blob diff, update the Rust
 implementation and its ported tests, and retain `// pyt:` source references.
@@ -84,9 +85,9 @@ then regenerate `parity matrix`. The report's `--autobless` option applies only
 to already reconciled files with unchanged symbols, extracted behavior and
 verified oracle payloads; absent evidence leaves the row unresolved. Pending
 operations, exports and future divergence tests remain explicit and fail
-strict checking. Pin bumps follow
-[the playbook](PLAN.md#103-a-pin-bump-step-by-step), including the CI-only
-oracle and recorder work.
+strict checking. Pin bumps regenerate pins, imports, extracted tables and
+parity reports with the commands above; oracle and recorder work runs only in
+hosted CI.
 
 ## Documentation examples
 

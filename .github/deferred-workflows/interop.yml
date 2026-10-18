@@ -100,4 +100,4 @@ jobs:
             target/core-oracle-ci/e2e/*.log
             target/core-oracle-ci/nextest/**/junit.xml
           if-no-files-found: ignore
-      # Python interop lanes join with their implemented M3/M4 protocols.
+      # Python interop lanes join as their protocols are implemented.

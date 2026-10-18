@@ -41,8 +41,7 @@ cargo +1.89.0 check -p rtao-client --all-features --locked
 cargo +1.89.0 check -p rtao-client --no-default-features --locked
 ```
 
-Builds and tests used the recorded
-`target/execute-plan.6Ro0PC/{build,tmp}` root. Fixture directories were removed
+Builds and tests used a recorded local task root. Fixture directories were removed
 after their RPC and blocking workers completed; the final directory check
 found no `runtime-cache-test-*` directories. That execution root is retired
 and absent; no current build/cache dependency remains. Shared global Cargo and
@@ -71,8 +70,6 @@ preservation of malformed and missing entries, empty disk API provenance and
 head/cache isolation. Symlinks, FIFOs, directories and oversized files are
 rejected without mutation; the FIFO check returns within its one-second budget
 with no writer present. Strict all-target Clippy for primitives, client, intents
-and TX passed on both toolchains. Those follow-up logs were recorded under
-`target/execute-plan.6Ro0PC/tmp/m2-cache-persistence-bounds-{current,msrv,clippy,clippy-msrv}.log`;
-that path describes historical logs in the retired root.
+and TX passed on both toolchains. Those follow-up logs are not retained.
 All fixture workers completed before their RAII owners removed the fixtures;
 the final directory audit found no `runtime-cache-test-*` directories.

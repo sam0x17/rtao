@@ -51,9 +51,8 @@ Rust 1.89.0 and 1.99.0 on macOS ARM64 passed the corrected committed-HEAD gate:
 - Portable wasm checks on both compilers, formatting, clean-tree and exact
   source/license/lock/scope guards.
 
-The [corrected pre-push log](validation/quality-unicode-publication/pr-3246-pre-push.log)
-and [publication record](validation/quality-unicode-publication/pr-3246-publication.json)
-record the ordinary protected-hook push. Functional/wasm checks use a unique
+The corrected change went out by an ordinary protected-hook push; its raw
+pre-push log and publication record are not retained in the repository. Functional/wasm checks use a unique
 compiler wrapper and separate disposable target per checkout; Clippy uses its
 own separate target because it overrides the workspace wrapper. Strict current
 Clippy is not claimed because unchanged base-file lints remain. All correction
@@ -63,12 +62,12 @@ The PR and fork branch agree at the corrected SHA. The authorized body update
 was fetched and verified; labels and review requests remain empty. Ten workflows
 for this SHA ended in `startup_failure`, each with zero jobs. There are zero
 check-runs; Vercel requires authorization. Hosted Python tests and live integration
-remain pending. Snapshots are retained under `validation/quality-unicode-publication/`.
+remain pending. The PR body snapshot is retained as
+[`validation/quality-unicode-publication/pr-3246-body.md`](validation/quality-unicode-publication/pr-3246-body.md).
 
-Original [pre-push evidence](validation/pr-u1-pre-push.log), original eleven-workflow
-startup failures and diagnostics remain in `validation/pr-u1-*`. The
+The original pre-push evidence, eleven-workflow startup failures and
+diagnostics are not retained in the repository. The
 [original execution record](validation/protocol-epoch-execution.md) explains the
 earlier Python-discovery mistake and first cleanup. The Unicode publication's
-worktrees, hooks and disposable targets were audited and removed separately;
-[cleanup evidence](validation/quality-unicode-publication/cleanup-finished.json)
-records exact paths and retained shared dependencies.
+worktrees, hooks and disposable targets were audited and removed separately, retaining
+shared dependencies.

@@ -51,7 +51,7 @@ upstream issue or PR was filed.
 
 ## Exact maintenance policy
 
-The user's authorization permits best-effort remediation while accepting
+The maintainer's authorization permits best-effort remediation while accepting
 upstream limitations. [xtask/src/supply.rs](../../xtask/src/supply.rs) accepts
 this exact informational notice as retained maintenance evidence. The package
 identities must each occur once with the crates.io registry source:
@@ -83,8 +83,7 @@ advisory and dormant-activation checks.
 Every raw workspace/fuzz finding in hosted artifact `11975709033`,
 `supply-evidence`, was inspected, and the actual warning is retained in
 [unsafe-libyaml.json](../../xtask/tests/fixtures/supply/unsafe-libyaml.json).
-The bounded evidence record is
-`.local/recovery/2026-10-15/unsafe-libyaml-warning.json`. The artifact ZIP was
+The bounded evidence record is not retained in the repository. The artifact ZIP was
 validated and inspected in memory; no archive or extraction directory was
 retained. The follow-up graph inspection authenticated these exact entries:
 

@@ -29,8 +29,8 @@ and asset copies, same-length tampering, oversize input and symlinks. Archive
 regressions omit each notice and exercise altered, oversized and linked members.
 Native shell probes also cover dangling links and directory inputs, preserve
 rejected destination bytes and link targets, and confirm exact idempotent staging.
-Validation and cleanup results are retained in `release-unicode-validation.txt`;
-the earlier certificate-only results remain in `release-license-validation.txt`.
+Raw validation and cleanup results, including the earlier certificate-only
+results, are not retained in the repository.
 
 This validation exercised synthetic assets and signatures. It made no tagged
 release, hosted attestation, image or device claim, ran no Python or Docker, and

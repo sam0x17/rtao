@@ -46,8 +46,7 @@ original provenance retention. Strict xtask Clippy passed. Plain `pin --check` w
 at the unchanged literal BLS requirement:
 `Cargo.lock must contain exactly one w3f-bls; found 2`.
 
-The task used the recorded root
-`target/execute-plan.6Ro0PC/metadata-pin` for its copied executable and logs,
+The task used a recorded local task root for its copied executable and logs,
 and the shared `build/` and upstream Git cache for compilation and immutable
 release checks. The copied executable and logs were removed after this note
 retained their results and a process, launchd, configuration, symlink and

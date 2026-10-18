@@ -23,6 +23,4 @@ The crate has no default features.
 | `rpc-rate-limit` | Enables `rtao-rpc/rate-limit`. |
 | `rpc-metrics` | Enables `rtao-rpc/metrics`. |
 
-Current development uses fixtures and fake transports, with substantial
-validation in hosted CI. Node, container and device campaigns are deferred
-under PLAN.md Q30; enabling a feature does not run those campaigns.
+Enabling a feature does not start a node, container or device.

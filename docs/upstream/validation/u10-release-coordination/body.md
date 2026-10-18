@@ -11,7 +11,7 @@ Validation on macOS ARM64 against clean committed HEAD `64f152725dda64c040e8f3c6
 - Strict all-feature/all-target core and binding Clippy on upstream's pinned Rust 1.89 toolchain, with a separate target directory for this checkout.
 - Portable `wasm32-unknown-unknown` checks with default features disabled on both toolchains; formatting and committed-diff checks.
 
-An additional independent Rust audit checked the actual pinned signature algorithms, the original index-based XOR implementation, preservation of a pre-existing child-process environment value, and the dependency's partial-output/sizing behavior. Python binding regressions are included for hosted CI only. No Python interpreter ran during this work; binding checks set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because the user confines Python execution to CI; scoped Rust checks used the authorized `sam0x17` identity.
+An additional independent Rust audit checked the actual pinned signature algorithms, the original index-based XOR implementation, preservation of a pre-existing child-process environment value, and the dependency's partial-output/sizing behavior. Python binding regressions are included for hosted CI only. No Python interpreter ran during this work; binding checks set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because project policy confines Python execution to CI; scoped Rust checks used the maintainer's account (`sam0x17`).
 
 Separate Rust 1.99 strict Clippy diagnostics report two new `chunks_exact_to_as_chunks` lints in unchanged base58 and Ledger source files. Those findings are retained and no lint suppression is included. No dependency, lockfile, generated Python, pallet or runtime change is included.
 

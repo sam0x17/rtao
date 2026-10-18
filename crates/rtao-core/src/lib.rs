@@ -100,8 +100,7 @@ pub mod timelock {
 /// diagnostics can name malformed seed characters or unknown JSON keys, and
 /// their intermediate copies are not wiped. Prefer [`crate::keyfile_json`]
 /// for plaintext keyfiles and `rtao_wallet`'s password sources for
-/// environment passwords; those boundaries carry the M2-S01 and M2-S03
-/// repairs.
+/// environment passwords; those boundaries address these limitations.
 #[cfg(feature = "host")]
 #[cfg_attr(docsrs, doc(cfg(feature = "host")))]
 pub mod keyfiles {

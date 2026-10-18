@@ -82,5 +82,5 @@ Owner planner, routing, registration and pruning regressions use committed
 metadata and fake transports in hosted Rust checks. They cover refusal before
 private-key access, changing windows, bounded retries, finalized progress and
 unknown-fate recovery. These are client checks; localnet and Python interop
-are optional targeted hosted evidence under PLAN.md Q30. This guide does not
+are optional targeted hosted evidence. This guide does not
 claim that the latest CI passed or that a subnet deployment was exercised.

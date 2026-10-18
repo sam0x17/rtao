@@ -3,7 +3,7 @@
 v11 replaced Axon, Dendrite and Synapse with btauth/1 signed HTTP, and rtao's
 neuron runtime speaks btauth/1. Many subnets still run v10 peers, Epistula
 headers or btlightning QUIC, and some operators keep signing keys on a
-separate host. The post-parity M10 crates cover those cases. They are
+separate host. The compatibility crates cover those cases. They are
 optional, outside the v11 parity target and have no effect on builds that do
 not enable them.
 

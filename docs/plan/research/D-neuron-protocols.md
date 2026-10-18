@@ -315,7 +315,7 @@ Implement the spec dialect (`{sha256}.{uuid}.{ts_ms}.{signed_for}`, version `"2"
 
 ### 4.1 Status
 
-- crates.io `btlightning` max version **0.2.15**, published 2026-08-05, MIT, repo `inference-labs-inc/lightning` (crates.io API, fetched 2026-10-13); on-disk clone is at tag `v0.2.15` / commit `53c090b` (2026-08-05) but its `crates/btlightning/Cargo.toml:3` still says `version = "0.1.0"` — the published version is set at release time **[inferred]**. SN2 depends on `btlightning = "0.2.15"` with features `btwallet`, `subtensor` (`$UP/inference-labs-inc_subnet-2/Cargo.toml:47`).
+- crates.io `btlightning` max version **0.2.15**, published 2026-08-05, MIT, repo `inference-labs-inc/btlightning` (crates.io API, fetched 2026-10-13); on-disk clone is at tag `v0.2.15` / commit `53c090b` (2026-08-05) but its `crates/btlightning/Cargo.toml:3` still says `version = "0.1.0"` — the published version is set at release time **[inferred]**. SN2 depends on `btlightning = "0.2.15"` with features `btwallet`, `subtensor` (`$UP/inference-labs-inc_subnet-2/Cargo.toml:47`).
 - Dependencies: `quinn 0.11`, `rustls 0.23` (ring), `rcgen 0.13`, `tokio`, `rmp-serde`/`rmpv` (MessagePack), `sp-core 34`, optional `btwallet 4.1.0` and `subxt 0.50` (`crates/btlightning/Cargo.toml:15-33`, `:39-43`, `:49-54`). Python bindings via PyO3 (`crates/btlightning-py`), PyPI `btlightning`.
 
 ### 4.2 Transport

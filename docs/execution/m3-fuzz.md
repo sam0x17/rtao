@@ -1,14 +1,15 @@
 # M3 robustness targets
 
-This is a historical campaign report. Q30 retires local and Mac Studio fuzz
+This is a historical campaign report. Q30 retires local fuzz
 runs; instrumented execution is optional targeted hosted evidence. Ordinary
 client regressions and applicable hosted checks remain required.
 
 All eight committed targets passed coverage-instrumented nightly libFuzzer
-execution with AddressSanitizer on the Mac Studio after the Unicode/keyfile
+execution with AddressSanitizer on a local macOS build machine after the Unicode/keyfile
 fixes and authentication middleware retention changes. Each requested 15
-seconds and reported 16 seconds of fuzzing. `m3-fuzz.json` records compiler
-identity, source and binary hashes, timing, execution counts and exit status.
+seconds and reported 16 seconds of fuzzing. The machine-readable report of
+compiler identity, source and binary hashes, timing, execution counts and exit
+status is not retained in the repository; its bounded counts appear below.
 
 | Target | Executions | Covered edges | Exit |
 | --- | ---: | ---: | ---: |
@@ -37,11 +38,9 @@ They do not decrypt wallet envelopes. Public mnemonic-to-key derivation can
 run PBKDF2. Event splitting, JSON-RPC frames and metagraph parsing also ran. No
 local Python or Docker process was used.
 
-The original logs, toolchain and instrumentation records used
-`target/execute-plan.6Ro0PC/fuzz/integration-refresh`. That path is historical
-provenance. The task-owned corpus and artifact directories were checked for
+The original logs, toolchain and instrumentation records used a task-scoped
+fuzz directory. The task-owned corpus and artifact directories were checked for
 processes, open files, launchd/configuration references, symlinks and virtual
 environments, then removed. Q30 cleanup also retired the shared instrumented
-builds, tools and raw logs; do not restore them. The committed `m3-fuzz.json`
-retains bounded counts and identities. This local run establishes neither a
+builds, tools and raw logs; do not restore them. This local run establishes neither a
 current hosted workflow result nor a milestone exit.

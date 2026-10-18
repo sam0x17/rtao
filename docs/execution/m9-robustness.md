@@ -75,8 +75,7 @@ production reconstruction, signs and attaches it, decodes the remark, rejects
 tampering and leaves nonce/submission state untouched. The current fixture
 body is byte-identical to that executed source.
 
-The bounded `client-3772699-hosted-results.json` proof in the task recovery
-root has SHA256
+The bounded hosted-results proof, not retained in the repository, has SHA256
 `fadc0d5af652d64707c474093ac6cf8c0bf2b60b647f51aab1f00360000c1eb4`.
 No raw log is retained. This resolves the ordinary positive-seed witness gap;
 it does not execute the standalone target, its initialization guard or a

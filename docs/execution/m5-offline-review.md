@@ -4,7 +4,8 @@ The recovered `m5-source-candidate.patch` matches manifest SHA-256
 `0afc4b1f4010c7031c2d8683935fd3c28da38f9e14a96775b8802240aea63031`.
 Its embedded runtime change matches `runtime-call-import.patch`, SHA-256
 `a044e682ffff8b3de8a4e49f243c75d395fd737978ff685b0bebbe71432104f9`.
-Both were read from the recovery archive in memory. No archive extraction,
+Both were read from the private recovery archive in memory; neither is retained
+in the repository. No archive extraction,
 build or test campaign was run locally.
 
 The candidate first performs a strict complete core decode, then walks the

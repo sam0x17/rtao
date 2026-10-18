@@ -10,7 +10,7 @@ this runner does not build the supported macOS CLI targets.
    separate job generates compatibility, notes, rustdoc, mdBook and LLM docs.
    Pinned GitHub actions attest only artifacts those jobs built. All outputs
    remain downloadable Actions artifacts; this phase creates no release.
-2. From the same clean source tag on Mac Studio, download the successful tag
+2. From the same clean source tag on a macOS build machine, download the successful tag
    run's artifacts into `$RTAO_TEMP_ROOT/dist` with `gh run download <run-id>
    --repo sam0x17/rtao --pattern 'release-rtao-vX.Y.Z-*' --dir <scratch>`, then
    merge their files into that dist directory. Run `bash
@@ -45,7 +45,7 @@ this runner does not build the supported macOS CLI targets.
 The candidate local signature format is OpenSSH's Ed25519 detached signature
 with namespace `rtao-release` and identity `rtao-mac`. The trust anchor contains
 only approved lines of the form `rtao-mac ssh-ed25519 <public-key>`. A separate
-approved adapter may use the user's Keychain-backed release key to sign that
+approved adapter may use a maintainer-held Keychain-backed release key to sign that
 record. This is still a prerequisite, not an implemented Keychain claim.
 Never substitute a hosted Linux attestation for the local Mac build record.
 

@@ -169,7 +169,7 @@ jobs:
           cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
           Linux and docs builds completed with GitHub provenance. No release is created yet.
 
-          From the same clean tag on Mac Studio, download these run artifacts,
+          From the same clean tag on a macOS build machine, download these run artifacts,
           run `ci/release/macos-build.sh`, authenticate the local build record
           with the approved Ed25519 release key, and run `ci/release/complete-draft.sh`.
           That command verifies all four targets and their provenance before creating

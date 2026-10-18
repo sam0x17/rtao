@@ -1,6 +1,6 @@
 # rtao-btauth
 
-Btauth/1 signed HTTP authentication for Bittensor hotkeys.
+Signed HTTP authentication (btauth/1) for Bittensor hotkeys.
 
 `build_payload` constructs the signing bytes and `sign` produces request
 headers. They bind the HTTP method, percent-encoded request target including

@@ -62,8 +62,8 @@ package inventories are unchanged. Review checks all 62 implementation bodies,
 output metadata and namespace methods, four input overrides, 14 blocking
 namespace structs, 28 accessors and 101 typed blocking forwarders. The intent
 interfaces and existing 40 read bodies are unchanged. Matrix changes are only
-the 62 read rows and D-027. Private adoption evidence is
-`.local/recovery/2026-10-14/m6-reads-adoption.json`.
+the 62 read rows and D-027. Private adoption evidence is not retained in the
+repository.
 
 Ordinary CI must now compile and execute the combined fixtures,
 doctests, docs and feature/profile checks. Fresh oracle, interoperability,

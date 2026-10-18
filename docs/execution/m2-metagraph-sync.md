@@ -84,6 +84,6 @@ error. The current source above supersedes that limitation. This historical
 record claims no localnet or soak execution and no milestone exit.
 
 No temporary test directories were created. Build outputs and bounded logs
-were recorded under `target/execute-plan.6Ro0PC`; that root is retired and
+were recorded under a task-scoped temporary root; that root is retired and
 absent. No current build/log dependency remains there.
 No local Python, external filings, commits, pushes or PLAN checkboxes were used.

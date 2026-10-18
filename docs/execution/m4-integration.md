@@ -7,7 +7,7 @@ and documentation checks remain required in free `ubuntu-latest` CI; oracle,
 localnet, interop and image execution are optional targeted hosted evidence,
 and release work is deferred.
 
-Root adopted 66 paths from eight reviewed patches on 2026-10-14. The exact
+66 paths from eight reviewed patches were adopted on 2026-10-14. The exact
 composition was rehearsed against the current source before canonical writes.
 All before and after hashes matched, and `git diff --check` passed. The parity
 matrix was deferred to the real generator rather than copied from a snapshot.
@@ -21,32 +21,27 @@ inside containers. Decoder leaf registration retains both multisig types and
 adds the three owner-read types exactly once. D-039 and D-040 coexist in the
 divergence register. Existing Q29 and license/NOTICE changes were preserved.
 
-Exact patch identities, path inventories, rehearsal results, baseline hashes
-and adoption hashes were recorded under the former execution root:
-
-- `root-m4-integration/rehearsal.json`
-- `root-m4-integration/composed-source.json`
-- `root-m4-integration/canonical-adoption.json`
-- `root-m4-integration/canonical-before/` (reversible source backup)
+Exact patch identities, path inventories, rehearsal results, baseline hashes,
+adoption hashes and a reversible source backup were recorded under the former
+execution root; they are not retained in the repository.
 
 The isolated current/MSRV tests and independent reviews prove each patch's
 recorded scope. They do not prove the combined source or establish oracle,
 localnet, interoperability, image or release execution. Source-backed
 upstream findings remain local drafts until their exact claims are reviewed.
 
-Canonical regeneration completed successfully in
-`tmp/root-m4-combined-regen.log`. It cross-checks 311 calls, 402 storage entries,
+Canonical regeneration completed successfully. It cross-checks 311 calls, 402 storage entries,
 136 constants, 124 API methods and 405 errors against authenticated source,
 and reports 20 implemented intent behaviors and 38 implemented read behaviors.
 The remaining 63 intent and 64 read behaviors remain pending. These are source
 coverage counts, not an oracle acceptance result.
 
-The historical combined script was `tmp/root-m4-combined-checks.sh`. It ran the
+The historical combined script ran the
 parity matrix generator, extraction/regeneration checks, target/profile
 dependency remeasurement and compatibility output generation, dependency and
 parity checks, formatting, and affected-package tests on current Rust and Rust
-1.89. Each command recorded its log, timestamps and actual exit status under
-`tmp/root-m4-combined-*.log`. `PYO3_NO_PYTHON=1` was set, and the then-current
+1.89. Each command recorded its log, timestamps and actual exit status.
+`PYO3_NO_PYTHON=1` was set, and the then-current
 compiler wrapper distinguished workspace artifacts from isolated reviews.
 The matrix generator passed with 1,533 rows. Extraction, regeneration,
 target/profile dependency measurement, dependency and parity checks, and
@@ -58,11 +53,11 @@ successfully: 810 native tests and three doctests pass, with the existing one
 hosted oracle replay ignored. Rust 1.89 also exits successfully with the same
 810 native tests, three doctests and one hosted replay ignored. These are
 the seven affected packages, not a new complete-workspace gate result.
-`root-m4-integration/validation-start.json` records 393 source
-inputs and confirms regeneration changed none of the 66 adopted path hashes;
-`validation-progress.json` derives completed command results from real terminal
-exit records. `validation-complete.json` retains every terminal check, log hash,
-test total and the separately recorded post-validation harness adoption. No
+The validation records covered 393 source inputs and confirmed regeneration
+changed none of the 66 adopted path hashes; completed command results were
+derived from real terminal exit records. Those records, including every
+terminal check, log hash, test total and the separately recorded
+post-validation harness adoption, are not retained in the repository. No
 full gate success is inferred.
 
 The previous complete gate attempt passed 1,192 tests, doctests, no-host and
@@ -81,16 +76,14 @@ and its full real features job exits successfully. Patch SHA-256 is
 `7762d151298a6a922066a5db6225e914d6802df7e3147c8e21e220afe4fd735e`.
 The source lock, commands, profile scope and retained-lock guard stay intact.
 
-`tmp/root-after-m4-feature-gates.sh` verified successful terminal combined
+A post-validation driver verified successful terminal combined
 Rust 1.89 validation, all 393 source hashes and every required command exit,
 then adopted only the exact reviewed `xtask/src/gates.rs` repair. Before SHA-256
 is `1c0e16c7d33a6b1a74c08d0c96f814a5ae48a75ce7efafeff7b72cd3b5c57c8d`;
 after is `5c9430fb266a4062c259236d22907e17f15f8a1012ba3f9d1ff5c4dc3672d984`.
-The reversible backup, actual apply checks and adoption record were recorded in
-`root-feature-harness-adoption/`. Complete canonical gates were then launched
-on the combined source plus this repair, with
-`tmp/root-m4-feature-repaired-gates.log` as the historical log name. The driver
-was retired during Q30 cleanup; no full gate success is inferred from its launch.
+The reversible backup, actual apply checks and adoption record are not retained
+in the repository. Complete canonical gates were then launched on the combined
+source plus this repair. The driver was retired during Q30 cleanup; no full gate success is inferred from its launch.
 No main
 push, milestone exit or release follows from this adoption alone.
 
@@ -102,13 +95,13 @@ Q30 later retired the costly local work described here.
 
 The finished composition rehearsal was removed after checking running
 processes, open files, launchd, configuration, symlinks, virtual environments
-and Git dependencies. `root-m4-integration/trial-cleanup-audit.json` retains
-its exact inventory and the 3,868,601 removed bytes. Q30 cleanup later removed
+and Git dependencies. Its cleanup audit recorded the exact inventory and
+3,868,601 removed bytes. Q30 cleanup later removed
 the remaining disposable snapshots, shared builds and raw logs after dependency
 checks. Authored source and bounded repository/recovery evidence remain; no
 validation depends on the retired caches. The durable prepared
-wallet/recovery root is excluded from disposable cleanup. No remote Studio
-task directory, wallet copy or service was created.
+wallet/recovery root is excluded from disposable cleanup. No remote task
+directory, wallet copy or service was created.
 
 ## Client-only continuation, 2026-10-15
 

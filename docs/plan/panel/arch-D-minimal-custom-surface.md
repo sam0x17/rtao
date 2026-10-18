@@ -1530,7 +1530,7 @@ Each runner is a `JoinSet` of tasks: metagraph sync, epoch clock, the weight set
 and a health/metrics ticker. Shutdown comes from SIGTERM or ctrl-c through the `CancellationToken`; in-flight weight
 commits get up to one block to land, then state is persisted. State goes through `StateStore<T>` (versioned, netuid-tagged
 JSON or bincode, atomic temp+fsync+rename) under `~/.bittensor/<subnet>/<wallet>/<hotkey>/netuid<N>/`, the convention seen
-in SN2 and the template (RES/G §7.18). Health is a single key=value log line, matching the user's own `mev-scanner` style
+in SN2 and the template (RES/G §7.18). Health is a single key=value log line, matching the maintainer's own `mev-scanner` style
 (RES/E §6). With feature `metrics` the runners also export Prometheus metrics.
 
 ### 9.2 Weights: conformance, commit-reveal, cadence
@@ -1884,7 +1884,7 @@ only on gross regressions (>30%).
 files with `ast`, evaluates only literal nodes (and `Name(literal…)` calls for `Hyperparam`), resolves dev-key symbols in
 samples to ss58 through a fixed table, and writes `vendor/upstream/extracted/*.json` with the source file and line range of
 each table. Rust tables (`transaction_error.rs`, `fee_filters.rs`, `metagraph.rs` index enum, `freeze_struct` hashes) are
-extracted in `xtask` with `syn`. If the user wants no Python even in tooling, the Python half can move to a Rust Python
+extracted in `xtask` with `syn`. If the maintainer wants no Python even in tooling, the Python half can move to a Rust Python
 parser (`rustpython-parser`; crate status unverified) without changing the JSON contract. The oracle lanes are Python by
 definition.
 

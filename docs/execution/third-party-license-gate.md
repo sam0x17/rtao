@@ -30,13 +30,11 @@ cargo +1.89 clippy --locked --offline -p xtask --all-targets -- -D warnings
 ```
 
 All checks use the recorded build cache, wrapper and `PYO3_NO_PYTHON=1`.
-Fixtures use `target/execute-plan.6Ro0PC/license-gate/fixtures`; bounded validation
-logs remain in `target/execute-plan.6Ro0PC/license-gate`.
-Both suites removed their fixture directories. The empty fixture parent was
-audited and removed: no process, open file, launchd unit or checked configuration
-referenced it, and it contained no symlinks or virtual environments. The audit
-is retained as `license-gate/cleanup.json`. The shared build cache and wrapper
-remain live for the root execution.
+Fixtures and bounded validation logs used a local task root and are not
+retained in the repository. Both suites removed their fixture directories. The
+empty fixture parent was audited and removed: no process, open file, launchd unit or checked configuration
+referenced it, and it contained no symlinks or virtual environments. The shared
+build cache and wrapper remained live for the wider plan execution.
 
 PLAN.md M0 exit 9 currently allows only `MIT OR Apache-2.0` and
 `(MIT OR Apache-2.0) AND Apache-2.0` for every package. That wording excludes the

@@ -35,5 +35,5 @@ Mount only the hotkey file and any required public wallet files read-only,
 and mount a separate writable state directory. Pass `--wallet-path /wallet`
 and `--state-dir /state`. Keep the metrics listener private to the host or
 monitoring network. Run the image's `--help` for the binary's current flags.
-PLAN.md Q29 waives the 24-hour testnet soak. Automated image, TLS, localnet and
+No 24-hour testnet soak is required. Automated image, TLS, localnet and
 interoperability checks remain required.

@@ -45,7 +45,7 @@ checkbox, rtao commit, push or tag follows from this record.
 The probe journals its exact owned container name before starting Docker and
 checks its ownership label before removal. A failed cleanup retains the mount
 directory and reports the live dependency. The current local checks created
-no containers or certificates. The former `target/execute-plan.6Ro0PC` root
+no containers or certificates. The former task-scoped temporary root
 is retired and absent; its build/source caches are not current dependencies.
 Shared global Cargo/toolchain caches remain preserved.
 
@@ -54,6 +54,5 @@ metadata assertion: trusted startup must call `Metadata_metadata_at_version`
 with the V15 argument, in addition to genesis and runtime-version requests.
 The exact unused Debian manifest download was removed after process,
 open-file, launchd, source/configuration, symlink and virtual-environment
-audits. Bounded cleanup evidence is `tmp/root-image-input-cleanup.txt` under
-the former execution root. That scratch path is historical; no image,
+audits. The bounded cleanup record is not retained in the repository. No image,
 container or certificate was created.

@@ -61,8 +61,7 @@ crypto=0: pinned-core URI error contains both recovery phrase and password
 crypto=1: pinned-core URI error contains both recovery phrase and password
 ```
 
-The probe and cleanup evidence are retained in
-`target/execute-plan.6Ro0PC/tmp/m2-security-proof.txt` and described in
-[the independent M2 review](../../security/m2.md). The integration test above
+The probe and cleanup evidence are not retained in the repository; they are
+described in [the independent M2 review](../../security/m2.md). The integration test above
 was prepared from that verified source and probe; it has not been compiled or
 run as a new test during this documentation task.

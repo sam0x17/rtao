@@ -48,9 +48,9 @@ would not account for its faucet call and fast-runtime constants. Q30 defers
 that infrastructure work. Any future targeted acquisition belongs in a reviewed
 bounded hosted job and is not an M1 prerequisite.
 
-The retained JSON record is `m1-drift-fixtures-provenance.json`. Temporary
-downloads, scripts and checker sources lived only under
-`target/execute-plan.6Ro0PC/tmp/drift-pins`; that exact directory was audited
+The raw provenance JSON record is not retained in the repository. Temporary
+downloads, scripts and checker sources lived only under a disposable
+directory of the recorded local task root; that exact directory was audited
 for live dependencies before cleanup. That execution root is retired and
 absent; it is not a current cache or reproduction location. Shared global Cargo
 caches and unrelated work remain preserved.

@@ -72,7 +72,6 @@ The generated ZIP is 91,583 bytes, SHA-256
 `deaee3210045a96d6dcfd99eb050e5a54c7b3ad32a558343505f881064ed3021`.
 The report ZIP is 40,275 bytes, SHA-256
 `cafe537d97b2fc94e44b270edba2956e56d7c86f0e2d427597830d890b6e8271`.
-The private bounded proof is
-`.local/recovery/2026-10-14/m5-proxy-children-association-adoption.json`.
+The bounded adoption proof is not retained in the repository.
 No runtime, hardware, fresh oracle or ordinary test success is implied by
 this generation result.

@@ -2,7 +2,7 @@
 """rtao-transport-quic <-> btlightning (Python bindings) interop harness.
 
 Runs both directions against btlightning-py built from
-inference-labs-inc/lightning @ 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0:
+inference-labs-inc/btlightning @ 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0:
 
   A. rtao client (quic_peer suite) -> Python LightningServer
   B. Python Lightning client -> rtao server (quic_peer serve)

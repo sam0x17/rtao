@@ -5,8 +5,8 @@ probes are optional targeted hosted evidence. No local run, service, retired
 build root, scheduled upkeep or issue publishing is required for M1.
 
 Historically, `cargo xtask probe --networks finney,testnet` passed on 2026-10-14, from
-08:25:09 to 08:28:43 UTC. The complete observations are in
-[m1-probe.json](m1-probe.json); [m1-probe-run.md](m1-probe-run.md) is the generated
+08:25:09 to 08:28:43 UTC. The complete machine-readable observations are not
+retained in the repository; [m1-probe-run.md](m1-probe-run.md) is the generated
 failure-issue report format. This evidence covers the live probe in M1-22 and
 M1 exit 1; the other milestone exits remain separate checks.
 
@@ -79,6 +79,6 @@ endpoint observation.
 
 The [probe workflow draft](../../.github/deferred-workflows/probe.yml) is inactive
 outside `.github/workflows`. No six-hour schedule or automatic issue update is
-installed for current development. The former `target/execute-plan.6Ro0PC`
-root is retired and absent on the laptop; its historical build/tool references
+installed for current development. The former local execution root is
+retired and absent; its historical build/tool references
 do not authorize recreating or resuming it. No wallet was created for that run.

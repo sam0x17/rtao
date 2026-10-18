@@ -15,12 +15,16 @@ Catalog availability does not establish that every operation is implemented.
 | `intents`, `intents-all` | Transaction intent interfaces; `intents-all` enables the operation families. |
 | `metagraph` | Metagraph projections and synchronization. |
 | `wallet`, `wallet-encrypted` | Wallet files; the latter enables the upstream encrypted-keyfile implementation. |
-| `btauth-client`, `btauth-server` | Signed HTTP requests and authenticated axum handlers. |
+| `btauth`, `btauth-client`, `btauth-server` | btauth/1 protocol primitives, signed HTTP requests and authenticated axum handlers. |
+| `neuron` | The `neuron` runtime framework reexport without a role; the role features enable it. |
 | `validator`, `miner`, `owner` | Operator runtimes and their required intent families. |
 | `blocking` | Blocking client and namespace adapters backed by a private runtime thread. |
 | `evm` | EVM accounts, signing and precompile helpers. |
 | `ledger`, `vault`, `extension`, `keychain` | Optional signing and password backends. |
 | `pow`, `pow-gpu`, `prometheus`, `subxt`, `redis` | PoW helpers, telemetry, Subxt interoperability and shared replay storage. |
+| `compat-synapse`, `compat-epistula` | `compat::synapse` (Synapse, Axon and Dendrite wire compatibility) and `compat::epistula` (Epistula v2 signed headers). |
+| `transport-quic` | `quic`, a btlightning-compatible QUIC client and server transport. |
+| `remote-signer`, `remote-signer-server` | `remote_signer` client; the latter adds the policy-checked signing server with an online runtime source. |
 
 Choose the named operator feature when using its API. The `full` bundle enables
 the broad SDK and underlying role implementations; the named facade features
@@ -33,5 +37,3 @@ runtime effect.
 
 Cargo consumers must repeat the workspace's pinned `w3f-bls` patch in their own
 root manifest. The repository README and `rtao doctor` describe that requirement.
-Source development and substantial validation use hosted CI; these docs do not
-require a local node, operator service or device rehearsal.

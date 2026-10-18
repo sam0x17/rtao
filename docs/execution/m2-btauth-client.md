@@ -78,9 +78,8 @@ request. It cannot preempt a blocking application callback.
 tests, with no failures or ignored tests. The final 28 adapter tests also pass
 on Rust 1.89.0. Strict Clippy passes for
 `rtao-btauth --all-features --all-targets` including its dependencies, and
-formatting passes. The [raw results](btauth-client/verification.json) link to
-bounded logs in the same directory. The [normal client dependency
-tree](btauth-client/client-tree.txt) contains reqwest 0.13.5, with no chain
+formatting passes. Raw results and logs are not retained in the repository.
+The normal client dependency tree contains reqwest 0.13.5, with no chain
 adapter crates, `aws-lc-*` or `native-tls` reached by this feature.
 
 The raw loopback fixture observes actual HTTP request targets, headers and
@@ -98,11 +97,9 @@ provider remains absent before and after the test.
 A historical independent Cargo workspace compiled ring and aws-lc simultaneously.
 All 28 adapter tests pass there on current Rust and Rust 1.89.0, including
 the same positive/negative HTTPS test. This exercises third-party provider
-feature unification without adding aws-lc to the production lock. The
-retained [manifest](btauth-client/two-provider-fixture.toml) and
-[lock](btauth-client/two-provider.lock) preserve that historical fixture
-provenance, including its old checkout paths. They do not authorize recreating
-a local workspace. Its lock SHA-256 is
+feature unification without adding aws-lc to the production lock. Its
+manifest and lock are not retained in the repository and do not authorize
+recreating a local workspace. Its lock SHA-256 is
 `d601d6b1278e7d07c0f8d4bb59dcbb858603e08b40f93ee0144ee1ea28e0b160`.
 It uses rustls 0.23.45, ring 0.17.14 and aws-lc-rs 1.18.2.
 
@@ -111,8 +108,6 @@ recorded in `state.md`; no Python interpreter, container or chain write was
 used. The disposable provider fixture, its exact test/fingerprint/incremental
 artifacts and temporary logs were removed after checks for live processes,
 open files, launchd/configuration references, symlinks and virtual
-environments. The [cleanup record](btauth-client/cleanup.json) lists the
-removed directories. That former task root is retired and absent; its build
-and scratch caches are not current live dependencies. Useful source, lock,
-results and manifests remain here; shared global Cargo/toolchain caches remain
-preserved.
+environments. That former task root is retired and absent; its build and
+scratch caches are not current live dependencies. Shared global
+Cargo/toolchain caches remain preserved.

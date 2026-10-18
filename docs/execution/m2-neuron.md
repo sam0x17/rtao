@@ -103,9 +103,7 @@ guard compile-fail doctest (41 checks). Strict MSRV Clippy passed all features
 and all targets, the no-default-feature base crate, and the facade's real
 `validator,prometheus` example. The example performs bounded signed JSON echo
 fan-out and binds scores to the queried hotkey across UID replacement.
-Historical logs were recorded under the former task root as
-`tmp/neuron-integrated-{tests,msrv,clippy}.log`,
-`tmp/neuron-example-clippy.log` and `tmp/neuron-base-clippy.log`.
+Historical logs are not retained in the repository.
 No-host image/container TLS acceptance remains separate optional hosted
 evidence under Q30.
 
@@ -114,8 +112,5 @@ Current Rust compiled the all-feature library test executable for the focused
 regression; running that executable directly passed all 41 library tests.
 Rust 1.89 passed all 41 library tests, the validator binary harness and the
 guard compile-fail doctest. Strict Rust 1.89 Clippy passed all features and all
-targets. Logs are
-`tmp/neuron-registry-focused.log`, `tmp/neuron-registry-current-suite.log` and
-`tmp/neuron-registry-msrv.log`, plus `tmp/neuron-registry-clippy.log`, under the
-recorded task root. The regression
+targets. The logs are not retained in the repository. The regression
 uses an in-memory FakeChain and creates no wallet files or scratch directory.

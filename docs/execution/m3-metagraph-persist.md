@@ -55,16 +55,13 @@ Validation on 2026-10-14:
   including the seven persistence tests. Strict Clippy passed all metagraph
   targets and features after the final identity checks.
 
-The focused historical MSRV log was recorded at
-`target/execute-plan.6Ro0PC/tmp/m3-metagraph-persist-msrv.log`; consolidated
-current-toolchain logs were `m3-metagraph-all-features-current.log` and
-`m3-metagraph-all-features-clippy.log` in the same `tmp` directory. The first test
+The focused historical MSRV log and consolidated current-toolchain logs are
+not retained in the repository. The first test
 run found a selective fixture missing mandatory `netuid`; the file loader
 correctly rejected its encoded subnet 0. The fixture now names subnet 1, and
 save also rejects responses whose subnet differs from the fetched identity.
 
-Historical fixtures used
-`target/execute-plan.6Ro0PC/metagraph-persist-tests` and removed their precisely
+Historical fixtures used a task-scoped fixture directory and removed their precisely
 owned directories when each test ended. After validation, the empty fixture
 container was audited for live processes, launchd/configuration references and
 symlinks, then removed with its exact path. It contained no virtual environment

@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/http_auth.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Btauth/1 signed HTTP authentication.
+//! Signed HTTP authentication (btauth/1).
 //!
 //! The core uses no runtime or network I/O. Hash raw received body bytes and
 //! pass the percent-encoded request target, including its query string.
@@ -547,7 +547,7 @@ fn text_header<'a>(headers: &'a HeaderMap, name: &str) -> Result<Option<&'a str>
         .transpose()
 }
 
-/// Refuse authentication headers above the D-054 budgets before parsing.
+/// Refuse authentication headers above the size budgets before parsing.
 ///
 /// Each named header value, and `additional_bytes`, must fit 4,096 bytes; all
 /// of them together, counting duplicate values, must fit 8,192 bytes.

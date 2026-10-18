@@ -60,7 +60,7 @@ preserves an existing lockfile. Future release work may replace these selectors
 with the same released `rtao-v*` tag; Q30 defers that work. No generated core
 pins or catalogs were edited by this work.
 
-Verification performed on the Mac Studio:
+Verification performed on a local macOS build machine:
 
 | Check | Result |
 | --- | --- |
@@ -87,25 +87,23 @@ failure combinations. It preserves a work failure and reports failed cleanup
 after successful work. A separate source guard checks the actual license bytes,
 both-stage file/size/digest guards and runtime copies.
 
-The final native run is recorded in `template-evidence-28986/result.json`:
-`passed` and `cleanup_passed` are true; `native_only` is true and
-`milestone_acceptance` is false. Its `project-ci.log` contains the actual Rust
+The final native run's result (not retained in the repository) recorded
+`passed` and `cleanup_passed` as true, `native_only` as true and
+`milestone_acceptance` as false. Its project CI log covered the actual Rust
 1.89 Clippy/build/link checks and doctor result. The earlier native result did
 not include dependency prefetch or doctor and is superseded by this run.
-The final three-regression logs are `m3-template/logs/xtask-tests-licenses.log`
-and `m3-template/logs/xtask-tests-msrv.log`; both report three passed tests and
-no failures. The independent final source review reports no remaining findings.
+The final three-regression logs (not retained in the repository) both reported
+three passed tests and no failures. The independent final source review reports no remaining findings.
 
-Original logs and intermediate results used
-`target/execute-plan.6Ro0PC/m3-template/` and the command's bounded
-`template-evidence-*` directories. These are historical locations; Q30 cleanup
+Original logs and intermediate results used a task-scoped temporary root and
+the command's bounded evidence directories. Q30 cleanup
 retired the task tree and raw logs. No local Python or container Python ran.
 The historical xtask run waited for child commands and verified the compose
 ownership label, open-file dependencies, directory marker and absence of
 symlinks before removing its disposable generated project. It retained the
 bounded lock, result and public logs during that preparation. The shared Cargo target/cache is no longer live.
 The generator, licenses, release metadata and archive/binary checksums were
-recorded under `target/execute-plan.6Ro0PC/tools/template/`. Q30 cleanup retired
+recorded under a task-scoped tools directory. Q30 cleanup retired
 those local tools; do not restore the directory or install them locally.
 Its original extraction and 5.6 MiB archive were removed after open-file,
 launchd, shell-configuration, symlink and dynamic-library checks. Only system

@@ -26,8 +26,8 @@ again through the task-local pre-push hook:
 
 Binding compilation used `PYO3_NO_PYTHON=1`; no Python interpreter ran locally.
 The upstream instructions require the full monorepo preflight and the
-`unarbos` actor. The user's GitHub identity and CI-only Python instructions
-take precedence, as for PR-U17. The task-local hook verified a clean committed
+`unarbos` actor. The maintainer's account and the project's CI-only Python
+policy take precedence, as for PR-U17. The task-local hook verified a clean committed
 HEAD, the exact four-file scope, authenticated `sam0x17` identity and fork URL,
 then ran the Rust checks. No force push or hook bypass was used.
 
@@ -47,6 +47,5 @@ root's `pr-u15/` directory. The clone used Git alternates to the shared pin
 cache, which remains needed by ongoing rtao work. Before exact removal,
 process and open-file checks found no dependency; both launchd domains and
 configuration checks passed. Seventy-five symlinks and 58 configuration or
-environment files had no external reference. `lsof` reported an unavailable
-network backup mount on a different device; its scoped local-directory query
-found no open file. Bounded patch and validation evidence are retained here.
+environment files had no external reference. The scoped local-directory `lsof`
+query found no open file. Bounded patch and validation evidence are retained here.

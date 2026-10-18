@@ -7,15 +7,16 @@ test, mining operation or chain service was run for this follow-up.
 
 Current ordinary [38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
 passes all six jobs at exact `3f1aa67`: 3,040 tests passed, zero failed and four
-skipped, plus doctests and documentation. `3f1aa67-named-results.json` binds the
-four additions below to exact PASS records and source blobs. Its authenticated
+skipped, plus doctests and documentation. Bounded named-result evidence (not
+retained in the repository) binds the four additions below to exact PASS
+records and source blobs. Its authenticated
 715,611-byte log has SHA256
 `55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
 
 Hosted [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
 passed at `50b7239e6ec1160cc482a86be8d2a30fe737ffc1`: all 3,014 executed tests
-passed (four skipped), alongside docs, doctests and all six jobs. Bounded evidence
-`50b7239-named-results.json` authenticates all 33 SDK pruning fixture identities
+passed (four skipped), alongside docs, doctests and all six jobs. Bounded
+named-result evidence authenticates all 33 SDK pruning fixture identities
 and seven CLI pruning fixtures at that source. The main log is 710,339 bytes,
 SHA256 `15e295426302f686b8cef1918bf91bc2050f97588eca73028870037c2cd82357`.
 These are FakeChain/client results; live runtime execution is unverified.

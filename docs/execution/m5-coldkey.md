@@ -38,8 +38,7 @@ matrix families are unchanged. The generated ZIP is 54,283 bytes, SHA-256
 `82c105e55704648e21bb2a5f8b0728154ebbde822aca4dc114d60aaefbc27a6f`;
 the report ZIP is 40,189 bytes, SHA-256
 `b9ec45e7d1c8ab0b864fcabb28d6e5a6ebe0b9ff5a22f848fee86bf2c70042af`.
-The bounded private proof is
-`.local/recovery/2026-10-14/m5-coldkey-adoption.json`.
+The bounded adoption proof is not retained in the repository.
 
 Runtime validation remains empty. Combined compilation, fixture execution and
 milestone acceptance remain pending. Only source review, rustfmt and whitespace
@@ -52,6 +51,5 @@ binding `_intent`. Follow-up run
 at `7c9c8cac5394099f48a420effc454fbc0afe071f` succeeded. Its output was
 adopted unchanged after verifying exactly those two generated parameter-name
 changes, unchanged other interfaces/matrix, all thirteen archive members,
-23 dependency hashes and unchanged role inventories. The private proof is
-`.local/recovery/2026-10-14/m5-fieldless-adoption.json`. This generator result
+23 dependency hashes and unchanged role inventories. The bounded adoption proof is not retained in the repository. This generator result
 does not establish successful ordinary fixture execution.

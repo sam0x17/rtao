@@ -7,6 +7,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0 AND MIT"
 repository.workspace = true
 description = "Wire compatibility with bittensor 10.5.0 Synapse, Axon and Dendrite peers."
+keywords = ["bittensor", "synapse", "axon", "dendrite", "http"]
+categories = ["cryptography::cryptocurrencies", "network-programming", "web-programming::http-server"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

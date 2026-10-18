@@ -66,6 +66,7 @@
 //! `dict` fields; `HashMap`, `BTreeMap` and `serde_json::Value` objects do not
 //! round-trip Python's order.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "axon")]

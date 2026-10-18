@@ -135,11 +135,12 @@ dependency, version, GitHub, label, review-request or publication change.
 This bounded report is its only filesystem output; there are no temporary
 extraction or build directories to clean up.
 
-Root subsequently appended the release prerequisite to the existing #3250
-body and verified the returned text and unchanged published HEAD. The body
+The release prerequisite was subsequently appended to the existing #3250
+body; the returned text and unchanged published HEAD were verified. The body
 SHA-256 is `47a8e9a91400fde422b982c04f9f1404ffcf642a77df34e8ecb90087c3fd1b61`.
-Before/after snapshots and posted text are retained in
-`u10-release-coordination/`. Labels and review requests remain empty.
+The posted text is retained as
+[`u10-release-coordination/body.md`](u10-release-coordination/body.md);
+before/after snapshots are not retained in the repository. Labels and review requests remain empty.
 No version edit, wheel publication or installed-wheel test is claimed by
 this disclosure. The preparation directory was audited and removed after
 retaining the bounded public evidence.

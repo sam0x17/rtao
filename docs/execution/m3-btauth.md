@@ -82,7 +82,7 @@ freshness boundary. Verifier construction now requires retention strictly
 greater than that sum. D-038 records the correction; the conformance test
 rejects equality and one nanosecond below, and accepts one nanosecond above.
 Historical full runs on current Rust and Rust 1.89 each passed all 120 tests;
-their former log names were `tmp/root-resume-btauth-{current,msrv}.log`.
+their logs are not retained in the repository.
 The clock-error client test uses the explicit TLS fixture instead of depending on native certificate
 discovery. Strict Clippy, ordinary fixtures and security checks remain required
 on the final hosted checkpoint. M3 is not marked complete by this record; no

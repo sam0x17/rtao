@@ -40,8 +40,8 @@ with `localnet` enabled additionally builds both images and runs the optional
 compose integration. This check is useful only when a client change needs
 chain evidence beyond the ordinary Rust fixtures. It is not required for
 development acceptance. Both paths retain bounded results; cleanup is part of
-finishing the hosted task. Do not run this validation campaign on a shared
-laptop or the Mac Studio.
+finishing the hosted task. Run this validation campaign on a disposable hosted
+runner rather than a shared workstation.
 
 Compose uses Linux host networking for neuron requests to the published axon.
 Its private address is permitted only by the explicit `--network local` flag.
@@ -75,4 +75,6 @@ window within that deadline and reviews the current head before signing. If
 both settings are supplied, the hyperparameter completes first; the mechanism
 setting is a separate transaction and can fail after the first succeeds. The
 tool prints each receipt and stops on failure. Always check the preview and
-receipts. Ledger feature support follows in M7.
+receipts. The tool signs with the wallet's coldkey file and does not enable
+rtao's `ledger` feature; to sign owner operations with a Ledger device, enable
+that feature and adapt the signer setup as described in the rtao Ledger guide.

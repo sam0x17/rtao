@@ -2,9 +2,8 @@
 
 Corrected tx/query source and its entrypoint/context integration are present.
 The recovery patch SHA-256 is
-`24307c1782043905207b1e27cde2b01e00e1f89b5306ce04fa431ab89c8a11b3`
-(`m4-generated-commands.1M4CZP/proof/generated-commands.patch`). Only selected
-source was restored. No build cache or disposable checkout was recreated.
+`24307c1782043905207b1e27cde2b01e00e1f89b5306ce04fa431ab89c8a11b3`;
+the patch is not retained in the repository. Only selected source was restored. No build cache or disposable checkout was recreated.
 
 Source review led to these corrections:
 

@@ -1,10 +1,9 @@
 # Q28: approved dormant ruzstd exception
 
-The user approved Q28 on 2026-10-14 through the explicit asynchronous reply
-"Allow guarded dormant exception". The reviewed
-[supply-ruzstd.patch](supply-ruzstd.patch) is applied to the active guard.
-Q27 continues to cover lru; Q28 adds only the exact ruzstd identity below.
-The full active supply job passes against the parent's canonical locks,
+The maintainer approved Q28's guarded dormant exception on 2026-10-14. The
+reviewed patch (SHA-256 below; not retained in the repository) is applied to
+the active guard. Q27 continues to cover lru; Q28 adds only the exact ruzstd
+identity below. The full active supply job passes against the canonical locks,
 including the pinned Unicode 0.6.0 dependency. Both raw audit failures remain
 visible. No manifest or lockfile was changed to apply Q28.
 
@@ -43,7 +42,7 @@ the raw nonzero cargo-audit result. Cargo-deny and the exact existing 14
 informational maintenance advisory/package pairs are unchanged. Every other
 security advisory and every unknown maintenance finding remains blocking.
 
-The candidate was tested as a separate crate under the recorded task root.
+The candidate was tested as a separate crate under a local task root.
 Its compile-time workspace path points to the real rtao workspace, so native
 evaluation reads the real locks and runs the real 53 dependency inspections.
 It uses its own workspace wrapper and test target. Strict Clippy uses a
@@ -74,30 +73,24 @@ This evaluation establishes the proposed policy behavior; it does not patch
 the vulnerable decoder or run an OOM reproducer. Full gates and hosted results
 are not inferred from the isolated candidate.
 
-Evidence paths are relative to
-`~/workspace/rtao/target/execute-plan.6Ro0PC`:
+The following evidence was recorded under a local task root and is not
+retained in the repository:
 
-- `ci/supply-24734`: final approved active guard against canonical locks,
-  retaining both unfiltered nonzero audits and all 53 passing graph checks.
-- `tmp/supply-q28-active-gate.log`, `tmp/supply-q28-active-gate.status`:
-  the full supply job, including cargo-deny, exits 0.
-- `tmp/supply-q28-active-current-tests.log`,
-  `tmp/supply-q28-active-msrv-tests.log`: final active guard and gate regressions.
-- `tmp/supply-q28-active-clippy.log`, `tmp/supply-q28-active-validation.json`:
-  final separate-target Clippy and bounded source/lock/status proof.
-- `ci/supply-32425`: final active guard, with both raw audits, lock snapshots
-  and all 53 graph commands/statuses before Q28 approval.
-- `ci/supply-92594`: separate candidate against the same real locks, with
-  both raw audits, lock snapshots and all 53 graph commands/statuses.
-- `tmp/supply-q28-current-tests.log`, `tmp/supply-q28-msrv-tests.log`:
-  all 12 candidate regressions pass on both toolchains.
-- `tmp/supply-q28-clippy.log`: strict candidate Clippy in a separate target.
-- `tmp/supply-q28-live.log`, `tmp/supply-q28-live.status`: candidate native
-  result, with raw vulnerability output still visible.
-- `tmp/supply-isolated-clippy.log`: final strict active xtask Clippy in a
-  separate target.
-- `tmp/supply-q28-validation.json` and `tmp/supply-q28-candidate.lock`:
-  bounded source/wrapper hashes, evaluation context, statuses and candidate
+- Final approved active guard run against canonical locks, retaining both
+  unfiltered nonzero audits and all 53 passing graph checks.
+- The full supply job log and status, including cargo-deny, exiting 0.
+- Current and MSRV logs for the final active guard and gate regressions.
+- Final separate-target Clippy log and bounded source/lock/status proof.
+- Final active guard run before Q28 approval, with both raw audits, lock
+  snapshots and all 53 graph commands/statuses.
+- Separate candidate run against the same real locks, with both raw audits,
+  lock snapshots and all 53 graph commands/statuses.
+- Current and MSRV logs showing all 12 candidate regressions pass.
+- Strict candidate Clippy in a separate target.
+- Candidate native result log and status, with raw vulnerability output still
+  visible.
+- Final strict active xtask Clippy in a separate target.
+- Bounded source/wrapper hashes, evaluation context, statuses and candidate
   dependency versions.
 
 The patch SHA-256 is
@@ -108,10 +101,10 @@ The source matched that baseline throughout the pre-approval evaluation.
 After approval it matches the tested candidate SHA-256,
 `36a211ea1f8d79d1141b408c7b63e61c4fe33284d76d7dea0ef80662e7042876`.
 
-[PLAN.md execution rule 2](../../PLAN.md#executing-this-plan) says:
-"Never skip, weaken or reinterpret an exit check; if one cannot pass as written,
-record why in the progress log and ask the user." The user's best-effort
-instruction prompted the compatible-update investigation and the completed
+[PLAN.md execution rule 2](../../PLAN.md#executing-this-plan) forbids skipping,
+weakening or reinterpreting an exit check; one that cannot pass as written is
+recorded in the progress log and escalated to the maintainer. The maintainer's
+best-effort direction prompted the compatible-update investigation and the completed
 rustls fix. Extending the accepted raw-lock findings required the separate
 Q28 criterion decision. That decision is now recorded in PLAN.md and the
 architecture's dependency hygiene section. Full gates remain required before
@@ -120,9 +113,8 @@ any commit, push or milestone exit.
 The separate candidate crate, its test/lint targets and the active guard's
 isolated lint target were checked for running processes, open files, launchd
 units, configuration references, inbound symlinks and virtual-environment
-dependencies, then removed. `tmp/supply-q28-cleanup.json` records that audit.
-The final applied-guard lint target was also dependency-audited and removed;
-`tmp/supply-q28-active-cleanup.json` records its retained results and live caches.
-The patch, complete raw evidence and bounded result files remain. Shared
-build/source/tool caches and the parent's workspace wrapper remain live for
-its ongoing integration.
+dependencies, then removed. The final applied-guard lint target was also
+dependency-audited and removed. Cleanup records, the patch file and raw
+evidence are not retained in the repository. Shared build/source/tool caches
+and the workspace wrapper remained live for the ongoing integration at that
+time.
