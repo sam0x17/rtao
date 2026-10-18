@@ -28,7 +28,7 @@ commit = "6a972693ae9580541225bd37696ac2fee26b8ae9"
 spec_version = 481
 python_package_version = "11.3.1.dev0"
 release = "unreleased"
-source_branch = "main"
+source_branch = "testnet"
 network = "testnet"
 
 [localnet]
