@@ -191,11 +191,20 @@ impl Client {
         let head_runtime = cache.refresh_head().await?;
         let _ = runtime.surface_report();
         let _ = head_runtime.surface_report();
-        if !crate::compat::runtime_validated(config.network.label(), genesis, &runtime) {
-            tracing::warn!(
-                spec_version = runtime.spec_version(),
-                "connected runtime is outside the compiled validated compatibility evidence"
-            );
+        if !crate::compat::runtime_validated(genesis, &runtime) {
+            // Evidence can only cover pinned public networks; a local or
+            // custom development chain is expected to be outside it.
+            if crate::compat::pinned_public_genesis(genesis) {
+                tracing::warn!(
+                    spec_version = runtime.spec_version(),
+                    "connected runtime is outside the compiled validated compatibility evidence"
+                );
+            } else {
+                tracing::debug!(
+                    spec_version = runtime.spec_version(),
+                    "connected runtime is outside the compiled validated compatibility evidence"
+                );
+            }
         }
         let cancelled = CancellationToken::new();
         let heads = if config.track_heads {
