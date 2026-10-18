@@ -43,6 +43,40 @@ fn intent(args: Value) -> Result<SetSubnetEmissionWeights, Box<dyn Error>> {
 
 // pyt: e2e/test_emission_weights_cli.py::test_root_is_paid_its_baseline_off_the_top_via_python_sdk
 pub async fn run(ln: &Localnet) -> TestResult {
+    // Runtimes before the emission-weights release (such as the v478 mainnet
+    // lane) do not offer the read, the owner call or the account flag.
+    let runtime = ln.client().runtime().await?;
+    let missing: Vec<_> = [
+        (
+            "runtime API SubnetInfoRuntimeApi.get_subnet_emission_weights",
+            runtime
+                .runtime_api("SubnetInfoRuntimeApi", "get_subnet_emission_weights")
+                .is_some(),
+        ),
+        (
+            "call AdminUtils.sudo_set_subnet_emission_weights",
+            runtime
+                .call_index("AdminUtils", "sudo_set_subnet_emission_weights")
+                .is_some(),
+        ),
+        (
+            "call SubtensorModule.set_reject_staking_hotkey_growth",
+            runtime
+                .call_index("SubtensorModule", "set_reject_staking_hotkey_growth")
+                .is_some(),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(capability, present)| (!present).then_some(capability))
+    .collect();
+    if !missing.is_empty() {
+        eprintln!(
+            "SKIP scenario_18_emission_weights_pay_root_its_baseline: spec {} lacks {}",
+            runtime.spec_version(),
+            missing.join(", ")
+        );
+        return Ok(());
+    }
     let setup = Scenario::new(ln).owner().subnet().start().build().await?;
     let netuid = setup.netuid.ok_or("scenario did not register a subnet")?;
     let owner = &setup.slot.owner;
