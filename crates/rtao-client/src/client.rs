@@ -463,7 +463,9 @@ impl Client {
                 tokio::select! {
                     () = inner.cancelled.cancelled() => break,
                     _ = interval.tick() => {
-                        if let Err(error) = inner.cache.refresh_head().await {
+                        if let Err(error) = inner.cache.refresh_head().await
+                            && !inner.cancelled.is_cancelled()
+                        {
                             tracing::warn!(%error,"runtime version refresh failed");
                         }
                     }
@@ -476,7 +478,10 @@ impl Client {
                         if changed.is_none() { finalized = None; }
                         else if let Some(watch) = &finalized {
                             let hash = watch.borrow().hash;
-                            if let Err(error) = inner.cache.runtime_at_state(hash).await {
+                            // A refresh in flight at close fails with the session; stay quiet.
+                            if let Err(error) = inner.cache.runtime_at_state(hash).await
+                                && !inner.cancelled.is_cancelled()
+                            {
                                 tracing::warn!(%error,"finalized runtime version refresh failed");
                             }
                         }
@@ -505,7 +510,9 @@ impl Client {
                     match item {
                         Some(Ok(_)) => {
                             inner.cache.invalidate_head().await;
-                            if let Err(error) = inner.cache.refresh_head().await {
+                            if let Err(error) = inner.cache.refresh_head().await
+                                && !inner.cancelled.is_cancelled()
+                            {
                                 tracing::warn!(%error,"runtime upgrade refresh failed");
                             }
                         }
