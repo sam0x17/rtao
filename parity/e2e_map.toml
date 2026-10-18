@@ -224,7 +224,7 @@ rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_cha
 na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."
 
 [tests."pyt:e2e/test_emission_weights_cli.py::test_root_is_paid_its_baseline_off_the_top_via_python_sdk"]
-na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
+rtao = "e2e::scenario_18_emission_weights_pay_root_its_baseline"
 
 [tests."pyt:e2e/test_null_consensus.py::test_null_yuma_null_emissions_via_python_sdk"]
 na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."

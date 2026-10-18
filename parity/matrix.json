@@ -1,9 +1,9 @@
 {
   "e2e_evidence_classes": {
     "client-contract": 11,
-    "hosted-scenario-source": 6,
+    "hosted-scenario-source": 7,
     "intent-plan": 72,
-    "not-required": 22,
+    "not-required": 21,
     "read-fixture": 6
   },
   "families": {
@@ -2828,6 +2828,15 @@
           "rtao_cli::m8_books::corrupt_books_are_read_only_until_a_valid_bounded_replacement_preserves_recovery_bytes",
           "rtao_cli::m8_books::oversized_input_and_output_leave_original_book_unchanged"
         ]
+      },
+      {
+        "id": "D-077",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::call_contract::lagging_finality_downgrades_only_the_unforced_default_shield",
+          "rtao_client::shield::finality_lag_refuses_exact_expiry_boundary_before_signing"
+        ]
       }
     ],
     "e2e": [
@@ -3791,14 +3800,16 @@
       },
       {
         "evidence": {
-          "runtime": "not-applicable",
-          "runtime_limits": [],
-          "scope": "not-required"
+          "runtime": "unverified",
+          "runtime_limits": [
+            "hosted-runtime-execution-not-recorded"
+          ],
+          "scope": "hosted-scenario-source"
         },
         "name": "pyt:e2e/test_emission_weights_cli.py::test_root_is_paid_its_baseline_off_the_top_via_python_sdk",
         "oracle": "unverified",
-        "rtao": "not_required",
-        "test": null
+        "rtao": "mapped",
+        "test": "e2e::scenario_18_emission_weights_pay_root_its_baseline"
       },
       {
         "evidence": {
