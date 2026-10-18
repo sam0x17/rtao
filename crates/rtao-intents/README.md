@@ -11,9 +11,9 @@ signing and submission checks. A catalog entry may still return an explicit
 not-yet-ported error; generated presence alone does not certify behavior.
 
 Enable operation families individually: `association`, `batch`, `children`,
-`coldkey`, `collateral`, `crowdloan`, `evm`, `governance`, `hyperparameters`,
-`identity`, `leasing`, `lock`, `multisig`, `proxy`, `registration`, `root`,
-`serving`, `staking`, `transfer` and `weights`. The `all` feature enables these
+`coldkey`, `collateral`, `crowdloan`, `emission_weights`, `evm`, `governance`,
+`hyperparameters`, `identity`, `leasing`, `lock`, `multisig`, `proxy`,
+`registration`, `root`, `serving`, `staking`, `transfer` and `weights`. The `all` feature enables these
 families. `governance` also enables `hyperparameters`.
 
 `pow` enables the upstream host solver and asynchronous registration support;
