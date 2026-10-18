@@ -46,6 +46,7 @@ cleanup() {
       if [ "$label" = e2e ]; then
         docker logs --tail 1000 "$id" > "$RTAO_TEMP_ROOT/node-remote-signer.log" 2>&1 || true
         docker rm -f "$id" >/dev/null || status=1
+        docker network prune -f --filter label=io.rtao.localnet=e2e >/dev/null || true
       else
         echo "refusing to remove container $id without the e2e localnet label" >&2
         status=1

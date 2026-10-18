@@ -161,6 +161,7 @@ jobs:
               cleanup_status=1
             fi
           done
+          docker network prune -f --filter label=io.rtao.localnet=e2e >/dev/null || true
           exit "$cleanup_status"
       - name: Upload bounded localnet evidence
         if: always()

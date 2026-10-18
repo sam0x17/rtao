@@ -36,6 +36,8 @@ cleanup() {
       fi
     fi
   done
+  # Each localnet runs on its own labelled network; drop the unused ones.
+  docker network prune -f --filter label=io.rtao.localnet=e2e >/dev/null || true
   if test "$result" != 0; then
     jq '.status="held"' "$RTAO_PIN_STAGE_FILE" > "$RTAO_TEMP_ROOT/held.json"
     mv "$RTAO_TEMP_ROOT/held.json" "$RTAO_PIN_STAGE_FILE"
