@@ -769,7 +769,6 @@ class Executor:
             extras=extras,
             spend=intent.semantic_intent().spend(),
             args={k: v for k, v in intent.to_dict().items() if k != "op"},
-            preview=dict(preflight.preview),
         )
 
     async def execute(

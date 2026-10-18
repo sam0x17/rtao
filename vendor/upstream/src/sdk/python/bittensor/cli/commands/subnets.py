@@ -19,7 +19,6 @@ from ..helpers import chain_identity_names, list_coldkeys, local_address_names
 from ..hyperparams_view import fetch_hyperparameters, show_hyperparameters
 from ..metagraph_view import show_metagraph
 from ..prompt import record_sdk_hint
-from . import subnet_emission
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -28,9 +27,6 @@ app = typer.Typer(
 
 PANEL_INSPECT = "Inspect"
 PANEL_REGISTER = "Registration"
-PANEL_OWNER = "Owner"
-
-app.add_typer(subnet_emission.app, name="emission", rich_help_panel=PANEL_OWNER)
 
 _NETUID_HELP = "Numeric identifier of the subnet."
 
