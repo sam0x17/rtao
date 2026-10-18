@@ -190,7 +190,7 @@ async fn scenario_02_direct_weights_obey_rate_limit() -> TestResult {
         .subnet()
         .start()
         .validator()
-        .stake(TaoBalance(1_000_000_000_000))
+        .stake(rtao_testkit::VALIDATOR_STAKE)
         .commit_reveal(false)
         .build()
         .await?;
@@ -244,6 +244,10 @@ async fn scenario_02_direct_weights_obey_rate_limit() -> TestResult {
             .await?,
         rate_limit
     );
+    // The runtime checks the weights rate limit while validating the
+    // transaction (SubtensorTransactionExtension / CheckRateLimits), so an
+    // early set is refused by the pool with RateLimitExceeded and never
+    // reaches a block as a SettingWeightsTooFast dispatch failure.
     let refused = ln
         .client()
         .submit(
@@ -251,12 +255,22 @@ async fn scenario_02_direct_weights_obey_rate_limit() -> TestResult {
             validator,
             &options(),
         )
-        .await?;
-    assert_dispatch(&refused, "SettingWeightsTooFast");
+        .await;
+    let refused_at = ln.client().at(BlockRef::Best).await?.block().number;
+    match refused {
+        Err(rtao_client::SubmitFailure::Pool(rejection)) => {
+            assert_eq!(
+                rejection.name(),
+                Some("RateLimitExceeded"),
+                "unexpected pool refusal: {rejection:?}"
+            );
+        }
+        other => panic!("rate-limited set was not refused by the pool: {other:?}"),
+    }
     assert!(
-        refused
-            .block_number
-            .is_some_and(|height| height < updated_at + rate_limit)
+        refused_at < updated_at + rate_limit,
+        "refusal observed after the rate window closed at {}",
+        updated_at + rate_limit
     );
     assert_eq!(
         ln.client().storage(&storage::LAST_UPDATE, (key,)).await?,
@@ -327,7 +341,7 @@ async fn protocol_cr_version_gate_returns_chain_dispatch_error() -> TestResult {
         .subnet()
         .start()
         .validator()
-        .stake(TaoBalance(1_000_000_000_000))
+        .stake(rtao_testkit::VALIDATOR_STAKE)
         .commit_reveal(true)
         .build()
         .await?;
@@ -345,7 +359,15 @@ async fn protocol_cr_version_gate_returns_chain_dispatch_error() -> TestResult {
     assert!(configured.success);
     // Restore the global knob even if submission/receipt resolution fails.
     let outcome = async {
-        let call = subtensor_module::commit_timelocked_weights(netuid, vec![], 0, 4)
+        // Transaction validation refuses a reveal round older than the last
+        // stored drand round (InvalidRevealRound), so target a future round to
+        // reach the dispatch-time version check.
+        let latest = ln
+            .client()
+            .storage(&rtao_runtime::storage::drand::LAST_STORED_ROUND, ())
+            .await?;
+        let reveal_round = latest.checked_add(1_000).ok_or("drand round overflow")?;
+        let call = subtensor_module::commit_timelocked_weights(netuid, vec![], reveal_round, 4)
             .compose(&ln.client().runtime().await?)?;
         Ok::<_, Box<dyn Error>>(ln.client().submit(call, validator, &options()).await?)
     }
