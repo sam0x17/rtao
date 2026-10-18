@@ -200,3 +200,74 @@ async fn absent_raw_shield_key_allows_only_the_unforced_default_to_submit() -> T
     }
     Ok(())
 }
+
+// rtao: the shield era is anchored at the finalized head, so a lag that would
+// expire it before inclusion downgrades only an unforced default shield.
+#[tokio::test]
+async fn lagging_finality_downgrades_only_the_unforced_default_shield() -> TestResult {
+    let period = rtao_catalog::py::MEV_SHIELD_ERA_PERIOD;
+    for (target, forced, required) in [
+        ("SubtensorModule.add_stake", false, false),
+        ("SubtensorModule.add_stake", true, false),
+        ("SubtensorModule.burned_register", false, true),
+    ] {
+        // Public deterministic fixture seed, never a wallet or private file.
+        let keys = Keys {
+            signer: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519)?,
+            unlocks: AtomicUsize::new(0),
+        };
+        let mut params = json!({"netuid":1,"hotkey":keys.signer.account()});
+        if !required {
+            params["amount_staked"] = json!(1);
+        }
+        let (ctx, request, sink) = request(target, &params.to_string(), forced)?;
+        let mut state = FakeState::try_default()?;
+        state.seed_python(
+            "System",
+            "Account",
+            &[json!(keys.signer.account())],
+            json!({"data":{"free":10_000_000_000_u64}}),
+        )?;
+        state.seed_python("MevShield", "NextKey", &[], json!(vec![171u8; 1184]))?;
+        state.finalized = state.block.saturating_sub(period - 2);
+        let fake = FakeChain::from_state(state);
+        let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client = Client::from_rpc(RpcClient::new(fake.clone()), config).await?;
+        let checked: TestResult = async {
+            let result = call::execute_with(&ctx, &client, &keys, &request, "rtao call").await;
+            let submissions = fake
+                .state()
+                .lock()
+                .map_err(|_| "fixture state")?
+                .submissions
+                .clone();
+            if forced || required {
+                let error = result.err().ok_or("lagging finality must refuse a forced shield")?;
+                assert_eq!(
+                    error.message,
+                    format!(
+                        "finality lags {} blocks; the {period}-block MEV-shield era would expire before inclusion",
+                        period - 2
+                    )
+                );
+                assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+                assert!(submissions.is_empty());
+            } else {
+                assert!(result?.ok_or("raw receipt")?.success);
+                assert_eq!(submissions.len(), 1);
+                assert!(sink.text(Stream::Stderr)?.contains(&format!(
+                    "finality lags {} blocks, too far for the {period}-block MEV-shield era — submitting unshielded",
+                    period - 2
+                )));
+            }
+            Ok(())
+        }
+        .await;
+        client.close().await;
+        checked?;
+    }
+    Ok(())
+}

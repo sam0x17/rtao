@@ -22,6 +22,14 @@ use std::{
     time::Duration,
 };
 
+/// Blocks between the best and finalized heads, which a shield era must outlast.
+async fn shield_finality_lag(client: &Client) -> Result<u64, rtao::client::ClientError> {
+    use rtao::client::BlockRef;
+    let best = client.at(BlockRef::Best).await?.block().number;
+    let finalized = client.at(BlockRef::Finalized).await?.block().number;
+    Ok(best.saturating_sub(finalized))
+}
+
 mod direct_multisig;
 mod registration;
 
@@ -340,7 +348,52 @@ impl AppContext {
                 .map_err(|e| CliError::failure(e.to_string()))?;
             return Ok(choice);
         }
+        if !self
+            .honor_shield_finality(client, choice.forced, required, op)
+            .await?
+        {
+            choice.enabled = false;
+        }
         Ok(choice)
+    }
+    /// Keep an enabled shield only while finality can outlast its era.
+    ///
+    /// The shield era is anchored at the finalized head, so a finality lag
+    /// within two blocks of the era period expires the inner extrinsic before
+    /// inclusion. Fast development chains routinely lag that far: an unforced
+    /// default shield then submits unshielded, while a forced or required
+    /// shield refuses before key acquisition or submission.
+    pub(crate) async fn honor_shield_finality(
+        &self,
+        client: &Client,
+        forced: bool,
+        required: bool,
+        op: &str,
+    ) -> Result<bool, CliError> {
+        let lag = shield_finality_lag(client)
+            .await
+            .map_err(|e| CliError::failure(e.to_string()))?;
+        let period = rtao_catalog::py::MEV_SHIELD_ERA_PERIOD;
+        if lag < period.saturating_sub(2) {
+            return Ok(true);
+        }
+        if forced || required {
+            return Err(CliError::failure(format!(
+                "finality lags {lag} blocks; the {period}-block MEV-shield era would expire before inclusion"
+            ))
+            .with_help(if required {
+                format!("{op} cannot submit unshielded; retry once finality catches up")
+            } else {
+                "retry once finality catches up, or pass --no-mev-shield to submit unshielded"
+                    .into()
+            }));
+        }
+        self.output
+            .message(&format!(
+                "finality lags {lag} blocks, too far for the {period}-block MEV-shield era — submitting unshielded"
+            ))
+            .map_err(|e| CliError::failure(e.to_string()))?;
+        Ok(false)
     }
     /// Best-effort carrier warning, including Python's second balance probe
     /// after a balance or fee failure. A known zero balance is sufficient.
