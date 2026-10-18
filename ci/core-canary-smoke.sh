@@ -17,6 +17,7 @@ cleanup() {
       test "$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$id")" = e2e || exit 1
       docker logs --tail 2000 "$id" > "$RTAO_TEMP_ROOT/canary/node.log" 2>&1 || true
       docker rm -f "$id" || result=1
+      docker network prune -f --filter label=io.rtao.localnet=e2e >/dev/null || true
     fi
   fi
   exit "$result"

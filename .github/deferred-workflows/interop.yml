@@ -89,6 +89,7 @@ jobs:
           test "$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$id")" = e2e
           docker logs --tail 1000 "$id" > "$RTAO_TEMP_ROOT/node.log" 2>&1 || true
           docker rm -f "$id"
+          docker network prune -f --filter label=io.rtao.localnet=e2e >/dev/null || true
       - name: Upload bounded oracle evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
