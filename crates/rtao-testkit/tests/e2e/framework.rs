@@ -1,6 +1,6 @@
 //! Production validator and weight-scheduler contracts against a hosted localnet.
 
-use super::{TestResult, localnet, options};
+use super::{TestResult, localnet};
 use futures::StreamExt;
 use rtao_client::{BlockHeader, BlockRef, Client, ClientConfig, Finality, Snapshot, View, ViewExt};
 use rtao_core::{codec::Value, value_ext::ValueExt};
@@ -10,9 +10,7 @@ use rtao_neuron::{
     NeuronRuntime, StateCell, Validator, VersionKey, WeightCadence, WeightPolicy, WeightScheduler,
     WeightsInput, WeightsProposal, weights::WeightAttemptOutcome,
 };
-use rtao_primitives::{
-    AccountId, CryptoType, MechId, NetUid, NetUidStorageIndex, Ratio, TaoBalance, Uid,
-};
+use rtao_primitives::{AccountId, CryptoType, MechId, NetUid, NetUidStorageIndex, Ratio, Uid};
 use rtao_runtime::{calls::admin_utils, storage::subtensor_module as st};
 use rtao_signer::Signer;
 use rtao_testkit::{BuiltScenario, Localnet, LocalnetProfile, Scenario};
@@ -67,7 +65,7 @@ impl FrameworkFixture {
             .start()
             .validator()
             .miner()
-            .stake(TaoBalance(1_000_000_000_000))
+            .stake(rtao_testkit::VALIDATOR_STAKE)
             .commit_reveal(cr)
             .mechanisms(MechId(mechanisms))
             .build()
@@ -80,11 +78,9 @@ impl FrameworkFixture {
             admin_utils::sudo_set_commit_reveal_weights_interval(netuid, 1),
         ] {
             let report = ln
-                .client()
-                .submit(
+                .submit_admin(
                     call.compose(&ln.client().runtime().await?)?,
                     &setup.slot.owner,
-                    &options(),
                 )
                 .await?;
             rtao_neuron::anyhow::ensure!(
@@ -686,10 +682,7 @@ async fn version_upgrade(ln: &Localnet, fixture: &FrameworkFixture) -> Result<()
         .ok_or_else(|| rtao_neuron::anyhow::anyhow!("version overflow"))?;
     let setter = admin_utils::sudo_set_weights_version_key(fixture.netuid, upgraded)
         .compose(&ln.client().runtime().await?)?;
-    let changed = ln
-        .client()
-        .submit(setter, &fixture.setup.slot.owner, &options())
-        .await?;
+    let changed = ln.submit_admin(setter, &fixture.setup.slot.owner).await?;
     rtao_neuron::anyhow::ensure!(changed.success, "owner version bump failed: {changed:?}");
     let nonce = fixture
         .cx

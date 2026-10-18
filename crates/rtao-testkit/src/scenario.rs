@@ -3,11 +3,9 @@
 //! Each scenario uses one nextest slot and derives its subnet from its own
 //! registration receipt. Root calls go through the localnet's Alice lock.
 
-use std::{error::Error, fmt, time::Duration};
+use std::{error::Error, fmt};
 
-use rtao_client::{
-    ClientError, ExtrinsicReport, SubmitFailure, SubmitOptions, View, ViewExt, Wait,
-};
+use rtao_client::{ClientError, ExtrinsicReport, SubmitFailure, View, ViewExt};
 use rtao_core::{codec::Value, value_ext::ValueExt};
 use rtao_primitives::{AccountId, MechId, NetUid, TaoBalance};
 use rtao_runtime::{
@@ -81,6 +79,19 @@ impl From<SubmitFailure> for ScenarioError {
         Self::Submit(error)
     }
 }
+
+/// Validator stake for scenarios on a shared localnet: 0.1 TAO.
+///
+/// A new subnet's pool holds only its lock (the bootstrap sets a 1 TAO
+/// minimum), and the chain sizes the next subnet's alpha reserve as
+/// `lock / median subnet alpha price`. Staking far more than the pool holds
+/// multiplies that subnet's price, so a few earlier scenarios push the median
+/// high enough that later registrations get an alpha reserve below Swap's
+/// `MinimumReserve` and every stake into them fails with `ReservesTooLow`.
+/// This amount stays well above the chain's 0.002 TAO minimum stake, gives the
+/// validator the nonzero stake that a validator permit requires, and moves its
+/// own subnet's price by only about a fifth.
+pub const VALIDATOR_STAKE: TaoBalance = TaoBalance(100_000_000);
 
 /// One funded slot and the chain objects created for its test.
 #[derive(Debug)]
@@ -316,6 +327,26 @@ impl<'a> Scenario<'a> {
             );
         }
         if let Some(count) = self.mechanisms {
+            // The chain caps max UIDs times mechanism count at the epoch UID
+            // budget, which a new subnet's max UIDs already equals. Shrink the
+            // per-mechanism capacity first so the count fits.
+            if count.0 > 1 {
+                let max_uids = self
+                    .localnet
+                    .client()
+                    .storage(&storage::MAX_ALLOWED_UIDS, (netuid,))
+                    .await?;
+                result.reports.push(
+                    self.owner_call(
+                        admin_utils::sudo_set_max_allowed_uids(
+                            netuid,
+                            max_uids / u16::from(count.0),
+                        ),
+                        &result.slot.owner,
+                    )
+                    .await?,
+                );
+            }
             result.reports.push(
                 self.owner_call(
                     admin_utils::sudo_set_mechanism_count(netuid, count),
@@ -403,16 +434,7 @@ impl<'a> Scenario<'a> {
         let runtime = self.localnet.client().runtime().await?;
         successful(
             self.localnet
-                .client()
-                .submit(
-                    call.compose(&runtime)?,
-                    signer,
-                    &SubmitOptions {
-                        wait: Wait::Inclusion,
-                        deadline: Some(Duration::from_secs(180)),
-                        ..Default::default()
-                    },
-                )
+                .submit_admin(call.compose(&runtime)?, signer)
                 .await?,
         )
     }
@@ -601,7 +623,7 @@ mod tests {
             .start()
             .validator()
             .miner()
-            .stake(TaoBalance(1_000_000_000_000))
+            .stake(VALIDATOR_STAKE)
             .commit_reveal(false)
             .mechanisms(MechId(2))
             .weights_version(3)
@@ -616,7 +638,7 @@ mod tests {
             setup.miner.as_ref().map(Signer::account),
             Some(slot.miner.account())
         );
-        assert_eq!(setup.reports.len(), 11);
+        assert_eq!(setup.reports.len(), 12);
         let runtime = ln.client().runtime().await?;
         let alice = KeypairSigner::from_uri("//Alice", rtao_primitives::CryptoType::Sr25519)?;
         let submissions = fake
@@ -653,6 +675,7 @@ mod tests {
                 "sudo_set_serving_rate_limit",
                 "sudo_set_min_allowed_weights",
                 "sudo_set_commit_reveal_weights_enabled",
+                "sudo_set_max_allowed_uids",
                 "sudo_set_mechanism_count",
                 "sudo_set_weights_version_key",
                 "burned_register",

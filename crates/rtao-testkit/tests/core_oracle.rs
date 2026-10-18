@@ -415,7 +415,7 @@ async fn core_oracle_v0_pinned_storage_runtime_calls_and_identical_byte_fee() ->
         .subnet()
         .start()
         .validator()
-        .stake(TaoBalance(1_000_000_000_000))
+        .stake(rtao_testkit::VALIDATOR_STAKE)
         .build()
         .await?;
     let netuid = scenario.netuid.ok_or("oracle scenario omitted subnet")?;

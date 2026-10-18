@@ -33,7 +33,7 @@ mod scenario;
 pub use localnet::{Localnet, LocalnetError, LocalnetProfile, LocalnetSlot};
 #[cfg(feature = "docker")]
 #[cfg_attr(docsrs, doc(cfg(feature = "docker")))]
-pub use scenario::{BuiltScenario, Scenario, ScenarioError};
+pub use scenario::{BuiltScenario, Scenario, ScenarioError, VALIDATOR_STAKE};
 
 pub use fakes::{
     FakeChain, FakeNode, FakeState, Fault, FaultPlan, Notification, Reply, RpcFailure, RpcRequest,

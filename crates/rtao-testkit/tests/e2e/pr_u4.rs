@@ -10,7 +10,7 @@ use rtao_core::{
     timelock::{WeightsTlockPayload, epoch_schedule::EpochScheduleState},
     value_ext::ValueExt,
 };
-use rtao_primitives::{AccountId, MechId, NetUidStorageIndex, TaoBalance};
+use rtao_primitives::{AccountId, MechId, NetUidStorageIndex};
 use rtao_runtime::{
     calls::{admin_utils, subtensor_module},
     storage::subtensor_module as st,
@@ -263,7 +263,7 @@ pub async fn scenario_16_pr_u4_localnet_reveal() -> ProofResult {
         .subnet()
         .start()
         .validator()
-        .stake(TaoBalance(1_000_000_000_000))
+        .stake(rtao_testkit::VALIDATOR_STAKE)
         .commit_reveal(true)
         .build()
         .await?;
@@ -273,16 +273,10 @@ pub async fn scenario_16_pr_u4_localnet_reveal() -> ProofResult {
         .as_ref()
         .ok_or("PR-U4 setup omitted validator")?;
     let configured = localnet
-        .client()
-        .submit(
+        .submit_admin(
             admin_utils::sudo_set_commit_reveal_weights_interval(netuid, 1)
                 .compose(&localnet.client().runtime().await?)?,
             &scenario.slot.owner,
-            &SubmitOptions {
-                wait: Wait::Inclusion,
-                deadline: Some(Duration::from_secs(240)),
-                ..Default::default()
-            },
         )
         .await?;
     assert!(

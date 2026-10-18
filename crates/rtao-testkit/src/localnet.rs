@@ -385,16 +385,74 @@ impl Localnet {
     /// The lock spans fresh account_nextIndex, preparation and inclusion. Clearing
     /// Alice's connection-local cache prevents stale allocations after another
     /// test process submitted under this same lock.
+    ///
+    /// A subnet hyperparameter call that lands while that subnet's epoch is
+    /// deferred is retried in a later block; see [`Localnet::submit_admin`].
     pub async fn sudo(
         &self,
         call: rtao_runtime::CallBytes,
     ) -> Result<ExtrinsicReport, LocalnetError> {
-        let _lock = alice_lock(self.lock_path.clone()).await?;
-        let signer = alice()?;
-        self.client.nonces().clear_account(&signer.account());
-        let runtime = self.client.runtime().await.map_err(chain)?;
-        let outer = rtao_client::compose::sudo(&runtime, call).map_err(chain)?;
-        checked_submit(&self.client, outer, &signer).await
+        let mut attempt = 0;
+        loop {
+            let report = {
+                let _lock = alice_lock(self.lock_path.clone()).await?;
+                let signer = alice()?;
+                self.client.nonces().clear_account(&signer.account());
+                let runtime = self.client.runtime().await.map_err(chain)?;
+                let outer = rtao_client::compose::sudo(&runtime, call.clone()).map_err(chain)?;
+                submit_included(&self.client, outer, &signer).await?
+            };
+            if !admin_frozen(&report) || attempt == ADMIN_FREEZE_RETRIES {
+                return require_success(report);
+            }
+            attempt += 1;
+            self.wait_past(report.block_number).await?;
+        }
+    }
+    /// Submit a signed call, typically a subnet-owner hyperparameter change,
+    /// and wait for inclusion.
+    ///
+    /// The chain refuses admin calls with `AdminActionProhibitedDuringWeightsWindow`
+    /// while a subnet has a pending epoch. Besides the configured freeze window,
+    /// that includes the block after an epoch was deferred by the per-block
+    /// epoch cap, which happens whenever several subnets fall due together.
+    /// Only that transient refusal is retried, in a later block, at most
+    /// eight times; every other outcome, including other dispatch failures,
+    /// is returned unchanged.
+    pub async fn submit_admin(
+        &self,
+        call: rtao_runtime::CallBytes,
+        signer: &dyn Signer,
+    ) -> Result<ExtrinsicReport, LocalnetError> {
+        let mut attempt = 0;
+        loop {
+            let report = submit_included(&self.client, call.clone(), signer).await?;
+            if !admin_frozen(&report) || attempt == ADMIN_FREEZE_RETRIES {
+                return Ok(report);
+            }
+            attempt += 1;
+            self.wait_past(report.block_number).await?;
+        }
+    }
+    async fn wait_past(&self, height: Option<u64>) -> Result<(), LocalnetError> {
+        let Some(height) = height else {
+            return Ok(());
+        };
+        tokio::time::timeout(Duration::from_secs(120), async {
+            loop {
+                let best = self
+                    .client
+                    .at(rtao_client::BlockRef::Best)
+                    .await
+                    .map_err(chain)?;
+                if best.block().number > height {
+                    return Ok(());
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .map_err(|_| LocalnetError::Chain(format!("no block after {height} within 120 seconds")))?
     }
     /// Apply eight global knobs and atomically fund all 64 owner/hotkey pairs.
     ///
@@ -462,6 +520,15 @@ impl Localnet {
     }
 }
 
+/// Retries of a setup call refused during a subnet's pending epoch.
+const ADMIN_FREEZE_RETRIES: u32 = 8;
+fn admin_frozen(report: &ExtrinsicReport) -> bool {
+    !report.success
+        && report
+            .error
+            .as_ref()
+            .is_some_and(|error| error.name == "AdminActionProhibitedDuringWeightsWindow")
+}
 fn chain(error: impl fmt::Display) -> LocalnetError {
     LocalnetError::Chain(error.to_string())
 }
@@ -535,12 +602,21 @@ pub(crate) async fn checked_submit(
     call: rtao_runtime::CallBytes,
     signer: &dyn Signer,
 ) -> Result<ExtrinsicReport, LocalnetError> {
+    require_success(submit_included(client, call, signer).await?)
+}
+async fn submit_included(
+    client: &Client,
+    call: rtao_runtime::CallBytes,
+    signer: &dyn Signer,
+) -> Result<ExtrinsicReport, LocalnetError> {
     let opts = SubmitOptions {
         wait: Wait::Inclusion,
         deadline: Some(Duration::from_secs(180)),
         ..SubmitOptions::default()
     };
-    let report = client.submit(call, signer, &opts).await.map_err(chain)?;
+    client.submit(call, signer, &opts).await.map_err(chain)
+}
+fn require_success(report: ExtrinsicReport) -> Result<ExtrinsicReport, LocalnetError> {
     if !report.success {
         return Err(LocalnetError::Chain(format!(
             "localnet setup dispatch failed: {}",
