@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-test "${GITHUB_ACTIONS:-}" = true
-test "${RUNNER_OS:-}" = Linux
-test "${RUNNER_ENVIRONMENT:-}" = github-hosted
 case "${1:-}" in
   ''|native|--native-only) template_localnet=false ;;
   --localnet) template_localnet=true ;;

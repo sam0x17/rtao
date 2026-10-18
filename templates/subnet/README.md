@@ -22,7 +22,7 @@ The generated workflow validates client source on free GitHub `ubuntu-latest`.
 It formats and lints the workspace, builds the validator, miner and owner tool,
 tests those three members, compiles the optional integration harness without
 running it, checks the two neuron dependency profiles and runs the SDK doctor.
-Substantial validation stays on that disposable hosted runner:
+The same check runs locally:
 
 ```sh
 export RTAO_TEMP_ROOT="$PWD/target/subnet-ci"
@@ -35,13 +35,14 @@ cargo fetch --locked
 bash ci/check.sh
 ```
 
-The default check starts no live service. A manual hosted workflow dispatch
-with `localnet` enabled additionally builds both images and runs the optional
-compose integration. This check is useful only when a client change needs
-chain evidence beyond the ordinary Rust fixtures. It is not required for
-development acceptance. Both paths retain bounded results; cleanup is part of
-finishing the hosted task. Run this validation campaign on a disposable hosted
-runner rather than a shared workstation.
+The default check starts no live service. `bash ci/check.sh --localnet` (or a
+manual workflow dispatch with `localnet` enabled) additionally builds both
+images and runs the compose integration against a local chain; it needs
+Docker. Both paths retain bounded results under `RTAO_TEMP_ROOT` and remove
+their compose project when they finish.
+
+To run the validator and miner by hand against a local chain, follow the rtao
+book's "Build a subnet on a local chain" guide.
 
 Compose uses Linux host networking for neuron requests to the published axon.
 Its private address is permitted only by the explicit `--network local` flag.
