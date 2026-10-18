@@ -101,11 +101,12 @@ pub struct ShieldOptions {
     pub wait: Wait,
     /// Optional maximum inner-call fee, enforced before either signature.
     pub max_fee: Option<Balance<Tao>>,
-    /// How long to wait for finality to come within the era before refusing.
+    /// How long to wait for finality to leave room in the era before anchoring.
     ///
     /// The era is anchored at the finalized head. Fast development chains
-    /// finalize in bursts, so a lag that would expire the era usually clears
-    /// within a few seconds; a stalled or distant finality still refuses.
+    /// finalize in bursts, so a lag that would leave too little of the era for
+    /// inclusion usually clears within a few seconds; a stalled or distant
+    /// finality still refuses.
     pub finality_wait: Duration,
     /// Shared deadlines, reconciliation and metadata-signing display settings.
     ///
@@ -128,7 +129,7 @@ impl Default for ShieldOptions {
 /// Default wait for finality to come within a shield era before refusing.
 pub const SHIELD_FINALITY_WAIT: Duration = Duration::from_secs(60);
 /// Interval between finality-lag checks while waiting for an era anchor.
-const SHIELD_FINALITY_POLL: Duration = Duration::from_millis(500);
+const SHIELD_FINALITY_POLL: Duration = Duration::from_millis(100);
 
 struct ShieldReceiptWindow {
     finalized_anchor: u64,
@@ -196,7 +197,8 @@ impl Client {
                     .into());
                 }
             }
-            let (next_key, _) = limits.admission.run(self, self.shield_next_key()).await?;
+            // Fail before signer preparation when the shield is inactive.
+            limits.admission.run(self, self.shield_next_key()).await?;
             limits
                 .admission
                 .run(self, async {
@@ -216,8 +218,9 @@ impl Client {
             }
             // Interactive preparation may span many blocks. Both heights used
             // by the era guard must be observed after the signer is ready.
-            // Wait, within the admission deadline, for finality to come within
-            // the era before anchoring it; refuse once the wait is exhausted.
+            // Wait, within the admission deadline, until finality leaves at
+            // least half the era for inclusion before anchoring it. After the
+            // wait, proceed if the era can still cover inclusion, else refuse.
             let waiting = tokio::time::Instant::now();
             let finalized = loop {
                 let best = limits
@@ -232,12 +235,13 @@ impl Client {
                     .await?
                     .block()
                     .number;
+                let roomy = best.saturating_sub(finalized) <= era_headroom_lag(opts.period);
                 match check_era(opts.period, best, finalized) {
-                    Ok(()) => break finalized,
+                    Ok(()) if roomy || waiting.elapsed() >= opts.finality_wait => break finalized,
                     Err(refusal) if waiting.elapsed() >= opts.finality_wait => {
                         return Err(refusal);
                     }
-                    Err(_) => {
+                    _ => {
                         limits
                             .admission
                             .run(self, async {
@@ -285,6 +289,10 @@ impl Client {
                 .admission
                 .run(self, self.attach_signature(&inner, signature))
                 .await?;
+            // Seal with the key current now: signer preparation and the
+            // finality wait can outlast a key rotation on fast chains, and a
+            // stale key leaves the inner undecryptable and silently dropped.
+            let (next_key, _) = limits.admission.run(self, self.shield_next_key()).await?;
             let ciphertext = limits
                 .admission
                 .run(self, ShieldCiphertext::seal(&next_key, &inner_bytes))
@@ -637,6 +645,13 @@ impl Client {
         }
         Err(ClientError::Protocol(format!("could not verify shielded inner extrinsic finalization after {} canonical block-hash RPC attempts", rtao_catalog::py::SHIELDED_FINALITY_RPC_RETRIES)).into())
     }
+}
+
+/// The finality lag that still leaves the carrier and its decrypted inner
+/// extrinsic half the era to be included; waits aim for this, refusals use
+/// `check_era`. Fast chains reach it right after each finality burst.
+fn era_headroom_lag(period: ShieldPeriod) -> u64 {
+    period.get() / 2
 }
 
 fn check_era(period: ShieldPeriod, best: u64, finalized: u64) -> Result<(), SubmitFailure> {
