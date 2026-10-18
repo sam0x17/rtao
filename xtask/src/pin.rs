@@ -22,6 +22,26 @@ const UPSTREAM: &str = "https://github.com/RaoFoundation/subtensor.git";
 const REPOSITORY: &str = "RaoFoundation/subtensor";
 const IMAGE: &str = "ghcr.io/raofoundation/subtensor-localnet";
 const FINNEY: &str = "https://entrypoint-finney.opentensor.ai:443";
+/// Public networks that can prove an unreleased runtime: (name, endpoint, genesis).
+const PROOF_NETWORKS: [(&str, &str, &str); 3] = [
+    (
+        "finney",
+        FINNEY,
+        "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+    ),
+    (
+        "testnet",
+        "https://test.finney.opentensor.ai:443",
+        "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
+    ),
+    (
+        "devnet",
+        "https://dev.chain.opentensor.ai:443",
+        "0x077899043eb684c5277b6814a39161f4ce072b45e782e12c81a521c63fb4f3e5",
+    ),
+];
+/// Upstream branches an unreleased parity pin may follow.
+const UNRELEASED_BRANCHES: [&str; 3] = ["main", "testnet", "devnet"];
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Options {
@@ -51,7 +71,10 @@ fn options(args: Vec<String>) -> Result<Options> {
             }
             "--parity" => {
                 ensure!(result.parity.is_none(), "duplicate --parity");
-                result.parity = Some(args.next().context("--parity needs a tag or auto")?);
+                result.parity = Some(
+                    args.next()
+                        .context("--parity needs a tag, auto or branch:<name>")?,
+                );
             }
             "--github-output" => {
                 result.github_output =
@@ -80,7 +103,7 @@ fn options(args: Vec<String>) -> Result<Options> {
             || result.networks
             || result.core_branch.is_some()
             || result.force,
-        "pin needs --check, --networks, --parity <vN|auto>, or --core-branch main --no-commit"
+        "pin needs --check, --networks, --parity <vN|auto|branch:NAME>, or --core-branch main --no-commit"
     );
     ensure!(
         !result.networks || (result.parity.is_none() && result.github_output.is_none()),
@@ -117,7 +140,7 @@ fn options(args: Vec<String>) -> Result<Options> {
     );
     ensure!(
         !result.resolve_only || (result.check && result.parity.is_some()),
-        "--resolve-only requires --parity <vN|auto> --check"
+        "--resolve-only requires --parity <vN|auto|branch:NAME> --check"
     );
     ensure!(
         !result.prepare_cache
@@ -225,7 +248,10 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
     }
     let repo = cached_repo(root)?;
     if let Some(parity) = &opts.parity {
-        let proof = release_proof(&repo, parity)?;
+        let proof = match parity.strip_prefix("branch:") {
+            Some(branch) => unreleased_proof(&repo, branch)?,
+            None => release_proof(&repo, parity)?,
+        };
         let mut next = current.clone().unwrap_or_default();
         if current.is_none() {
             for section in ["monorepo", "core", "parity", "localnet", "networks"] {
@@ -285,11 +311,38 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             next["parity"]["commit"] = value(&proof.commit);
             next["parity"]["spec_version"] = value(i64::from(proof.spec));
             next["parity"]["python_package_version"] = value(python_version(&repo, &proof.commit)?);
+            match &proof.branch {
+                Some(branch) => {
+                    next["parity"]["release"] = value("unreleased");
+                    next["parity"]["source_branch"] = value(branch);
+                    next["parity"]["network"] = value(&proof.network);
+                }
+                None => {
+                    if let Some(parity) = next["parity"].as_table_mut() {
+                        for key in ["release", "source_branch", "network"] {
+                            parity.remove(key);
+                        }
+                    }
+                }
+            }
             next["localnet"]["image"] = value(IMAGE);
-            next["networks"]["finney"]["genesis"] = value(&proof.genesis);
-            next["networks"]["finney"]["metadata"]["spec"] = value(i64::from(proof.spec));
-            next["networks"]["finney"]["metadata"]["code_hash"] = value(&proof.code_hash);
-            next["networks"]["finney"]["metadata"]["finalized_head"] = value(&proof.finalized_head);
+            // Only the proving network carries the code-generation metadata pin.
+            for (name, _, _) in PROOF_NETWORKS {
+                if name != proof.network
+                    && let Some(network) =
+                        next["networks"].get_mut(name).and_then(Item::as_table_mut)
+                {
+                    network.remove("metadata");
+                }
+            }
+            let network = &mut next["networks"][proof.network.as_str()];
+            network["genesis"] = value(&proof.genesis);
+            if network.get("metadata").is_none() {
+                network["metadata"] = Item::Table(Table::new());
+            }
+            network["metadata"]["spec"] = value(i64::from(proof.spec));
+            network["metadata"]["code_hash"] = value(&proof.code_hash);
+            network["metadata"]["finalized_head"] = value(&proof.finalized_head);
             if current
                 .as_ref()
                 .is_none_or(|old| old["parity"]["tag"].as_str() != Some(proof.tag.as_str()))
@@ -298,7 +351,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             }
         }
         for (lane, tag) in [
-            ("pinned", proof.tag.as_str()),
+            ("pinned", proof.image_tag.as_str()),
             ("mainnet", "mainnet"),
             ("testnet", "testnet"),
             ("devnet", "devnet"),
@@ -335,8 +388,11 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             }
         }
         let metadata = if current.is_none() || !opts.check {
-            let endpoint = std::env::var("RTAO_FINNEY_HTTP").unwrap_or_else(|_| FINNEY.to_owned());
-            let prepared = crate::metadata_pin::prepare(root, &next, &endpoint, rpc)?;
+            let endpoint = network_endpoint(&proof.network)?;
+            let prepared =
+                crate::metadata_pin::prepare(root, &next, &endpoint, |method, params| {
+                    rpc_at(&endpoint, method, params)
+                })?;
             prepared.update_pins(&mut next);
             Some(prepared)
         } else {
@@ -384,8 +440,20 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             )?;
         }
         println!(
-            "Verified {} ({}) on finalized finney {} with code {}; pinned image {}@{}",
-            proof.tag, proof.commit, proof.finalized_head, proof.code_hash, IMAGE, proof.digest
+            "Verified {} ({}{}) on finalized {} {} with code {}; pinned image {}:{}@{}",
+            proof.tag,
+            proof.commit,
+            proof
+                .branch
+                .as_deref()
+                .map(|branch| format!(", unreleased on {branch}"))
+                .unwrap_or_default(),
+            proof.network,
+            proof.finalized_head,
+            proof.code_hash,
+            IMAGE,
+            proof.image_tag,
+            proof.digest
         );
     } else {
         let current = current
@@ -602,6 +670,12 @@ struct ReleaseProof {
     genesis: String,
     finalized_head: String,
     code_hash: String,
+    /// The network whose finalized runtime proves `spec`.
+    network: String,
+    /// The localnet image tag built from `commit`.
+    image_tag: String,
+    /// The upstream branch of an unreleased pin; `None` for a published release.
+    branch: Option<String>,
 }
 
 fn validate_release(
@@ -744,6 +818,7 @@ fn release_proof(repo: &Path, requested: &str) -> Result<ReleaseProof> {
     );
     let digest = image_digest(&tag)?;
     Ok(ReleaseProof {
+        image_tag: tag.clone(),
         tag,
         commit,
         spec,
@@ -751,7 +826,189 @@ fn release_proof(repo: &Path, requested: &str) -> Result<ReleaseProof> {
         genesis,
         finalized_head,
         code_hash,
+        network: "finney".to_owned(),
+        branch: None,
     })
+}
+
+/// The endpoint for a proving network, overridable as `RTAO_<NETWORK>_HTTP`.
+fn network_endpoint(network: &str) -> Result<String> {
+    let (_, endpoint, _) = PROOF_NETWORKS
+        .iter()
+        .find(|(name, _, _)| *name == network)
+        .with_context(|| format!("unsupported proving network {network}"))?;
+    Ok(
+        std::env::var(format!("RTAO_{}_HTTP", network.to_ascii_uppercase()))
+            .unwrap_or_else(|_| (*endpoint).to_owned()),
+    )
+}
+
+/// Fetch an upstream branch head into the cached clone and return its commit.
+fn branch_head(repo: &Path, branch: &str) -> Result<String> {
+    ensure!(
+        UNRELEASED_BRANCHES.contains(&branch),
+        "unreleased parity pins follow main, testnet or devnet"
+    );
+    let refspec = format!("+refs/heads/{branch}:refs/remotes/origin/{branch}");
+    git(repo, &["fetch", "--filter=blob:none", "origin", &refspec])?;
+    let commit = git_string(
+        repo,
+        &[
+            "rev-parse",
+            "--verify",
+            &format!("refs/remotes/origin/{branch}^{{commit}}"),
+        ],
+    )?;
+    ensure!(hex_string(&commit, 40), "invalid Git commit for {branch}");
+    Ok(commit)
+}
+
+/// The `spec_version` the runtime source at `commit` declares.
+fn runtime_spec(repo: &Path, commit: &str) -> Result<u32> {
+    declared_spec(&String::from_utf8(git(
+        repo,
+        &["show", &format!("{commit}:runtime/src/lib.rs")],
+    )?)?)
+}
+
+fn declared_spec(source: &str) -> Result<u32> {
+    let declared = source
+        .split("spec_version:")
+        .nth(1)
+        .context("runtime source declares no spec_version")?;
+    let digits: String = declared
+        .trim_start()
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect();
+    release_spec(&format!("v{digits}")).context("runtime spec_version is not canonical")
+}
+
+/// Whether upstream has a published GitHub release for `tag`.
+fn release_published(tag: &str) -> Result<bool> {
+    let output = Command::new("gh")
+        .args(["api", "--method", "GET"])
+        .arg(format!("repos/{REPOSITORY}/releases/tags/{tag}"))
+        .output()
+        .context("GitHub reads require gh (or install the GitHub CLI)")?;
+    if output.status.success() {
+        return Ok(true);
+    }
+    let error = String::from_utf8_lossy(&output.stderr);
+    ensure!(
+        error.contains("HTTP 404"),
+        "GitHub release lookup for {tag} failed: {error}"
+    );
+    Ok(false)
+}
+
+/// Prove an unreleased runtime: the branch head declares the spec, no release
+/// publishes it yet, and a public network finalizes exactly that spec. Unlike a
+/// release, no published wasm binds the code hash to the commit, so the pin is
+/// marked `release = "unreleased"` until upstream publishes the tag.
+fn unreleased_proof(repo: &Path, branch: &str) -> Result<ReleaseProof> {
+    let commit = branch_head(repo, branch)?;
+    let spec = runtime_spec(repo, &commit)?;
+    let tag = format!("v{spec}");
+    ensure!(
+        !release_published(&tag)?,
+        "{tag} has a published release; pin it with --parity {tag}"
+    );
+    for (network, _, expected_genesis) in PROOF_NETWORKS {
+        let endpoint = network_endpoint(network)?;
+        let finalized_head = rpc_at(&endpoint, "chain_getFinalizedHead", json!([]))?
+            .as_str()
+            .context("invalid finalized head")?
+            .to_owned();
+        ensure!(
+            prefixed_hash(&finalized_head, "0x"),
+            "invalid finalized block hash"
+        );
+        let runtime = rpc_at(
+            &endpoint,
+            "state_getRuntimeVersion",
+            json!([finalized_head]),
+        )?;
+        if runtime["specVersion"].as_u64() != Some(u64::from(spec)) {
+            continue;
+        }
+        let genesis = rpc_at(&endpoint, "chain_getBlockHash", json!([0]))?
+            .as_str()
+            .context("invalid genesis")?
+            .to_owned();
+        ensure!(genesis == expected_genesis, "endpoint is not {network}");
+        let code_hash = rpc_at(
+            &endpoint,
+            "state_getStorageHash",
+            json!(["0x3a636f6465", finalized_head]),
+        )?
+        .as_str()
+        .context("invalid runtime code hash")?
+        .to_owned();
+        ensure!(prefixed_hash(&code_hash, "0x"), "invalid runtime code hash");
+        let image_tag = format!("sha-{commit}");
+        let digest = image_digest(&image_tag)?;
+        return Ok(ReleaseProof {
+            tag,
+            commit,
+            spec,
+            digest,
+            genesis,
+            finalized_head,
+            code_hash,
+            network: network.to_owned(),
+            image_tag,
+            branch: Some(branch.to_owned()),
+        });
+    }
+    bail!("no public network finalizes {branch} spec {spec} yet")
+}
+
+/// Verify an unreleased parity pin without a release: the commit is still on
+/// its upstream branch and declares the pinned spec, the proving network is
+/// known, and no release has since published the tag at a different commit.
+fn verify_unreleased(repo: &Path, pins: &DocumentMut) -> Result<()> {
+    let branch = pin_string(pins, "parity", "source_branch")?;
+    let network = pin_string(pins, "parity", "network")?;
+    let tag = pin_string(pins, "parity", "tag")?;
+    let commit = pin_string(pins, "parity", "commit")?;
+    ensure!(
+        PROOF_NETWORKS.iter().any(|(name, _, _)| *name == network),
+        "unsupported unreleased proving network {network}"
+    );
+    let spec = release_spec(tag)?;
+    ensure!(
+        runtime_spec(repo, commit)? == spec,
+        "unreleased parity commit does not declare {tag}"
+    );
+    let head = branch_head(repo, branch)?;
+    ensure!(
+        Command::new("git")
+            .arg("-C")
+            .arg(repo)
+            .args(["merge-base", "--is-ancestor", commit, &head])
+            .status()?
+            .success(),
+        "unreleased parity commit is no longer on upstream {branch}"
+    );
+    let published = String::from_utf8(git(
+        repo,
+        &["ls-remote", "origin", &format!("refs/tags/{tag}")],
+    )?)?;
+    if let Some(tagged) = published.split_whitespace().next() {
+        ensure!(
+            tagged == commit,
+            "upstream tagged {tag} at {tagged}; re-pin the release with --parity {tag}"
+        );
+    }
+    Ok(())
+}
+
+fn unreleased(pins: &DocumentMut) -> bool {
+    pins.get("parity")
+        .and_then(|parity| parity.get("release"))
+        .and_then(Item::as_str)
+        == Some("unreleased")
 }
 
 fn image_digest(tag: &str) -> Result<String> {
@@ -1040,6 +1297,10 @@ fn verify_pin_identity(repo: &Path, pins: &DocumentMut) -> Result<()> {
         "unsupported monorepo source"
     );
     for section in ["core", "parity"] {
+        if section == "parity" && unreleased(pins) {
+            verify_unreleased(repo, pins)?;
+            continue;
+        }
         let tag = pin_string(pins, section, "tag")?;
         ensure!(
             resolve_tag(repo, tag)? == pin_string(pins, section, "commit")?,
@@ -1074,13 +1335,15 @@ fn verify_pin_identity(repo: &Path, pins: &DocumentMut) -> Result<()> {
         "unexpected localnet source"
     );
     for lane in ["pinned", "mainnet", "testnet", "devnet", "main"] {
-        let expected_tag = if lane == "pinned" {
-            pin_string(pins, "parity", "tag")?
-        } else {
-            lane
+        let expected_tag = match lane {
+            "pinned" if unreleased(pins) => {
+                format!("sha-{}", pin_string(pins, "parity", "commit")?)
+            }
+            "pinned" => pin_string(pins, "parity", "tag")?.to_owned(),
+            _ => lane.to_owned(),
         };
         ensure!(
-            pins["localnet"][lane]["tag"].as_str() == Some(expected_tag),
+            pins["localnet"][lane]["tag"].as_str() == Some(expected_tag.as_str()),
             "localnet {lane} tag differs from pin"
         );
         ensure!(
@@ -1368,6 +1631,41 @@ mod tests {
         ] {
             assert!(options(arguments.into_iter().map(str::to_owned).collect()).is_err());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_source_spec_is_canonical() -> Result<()> {
+        let source = "pub const VERSION: RuntimeVersion = RuntimeVersion {\n    spec_version: 481,\n    impl_version: 1,\n};\n";
+        ensure!(declared_spec(source)? == 481);
+        for bad in ["spec_version: 0481,", "spec_version: ,", "impl_version: 1,"] {
+            ensure!(declared_spec(bad).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn unreleased_pins_name_their_branch_network_and_image() -> Result<()> {
+        let pins: DocumentMut =
+            "[parity]\ntag = 'v481'\nrelease = 'unreleased'\nnetwork = 'testnet'\n".parse()?;
+        ensure!(unreleased(&pins));
+        ensure!(crate::metadata_pin::pinned_network(&pins)? == "testnet");
+        let released: DocumentMut = "[parity]\ntag = 'v478'\n".parse()?;
+        ensure!(!unreleased(&released));
+        ensure!(crate::metadata_pin::pinned_network(&released)? == "finney");
+        let unknown: DocumentMut = "[parity]\nnetwork = 'localnet'\n".parse()?;
+        ensure!(crate::metadata_pin::pinned_network(&unknown).is_err());
+        ensure!(branch_head(Path::new("."), "feature").is_err());
+        ensure!(network_endpoint("localnet").is_err());
+        ensure!(
+            options(vec![
+                "--parity".into(),
+                "branch:main".into(),
+                "--check".into()
+            ])?
+            .parity
+                == Some("branch:main".to_owned())
+        );
         Ok(())
     }
 

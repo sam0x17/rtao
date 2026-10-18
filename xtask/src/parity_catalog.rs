@@ -1058,7 +1058,7 @@ fn read_pinning(
 
 pub(super) fn runtime(root: &Path) -> Result<Runtime> {
     let pins = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
-    let pin = &pins["networks"]["finney"]["metadata"];
+    let pin = crate::metadata_pin::pinned_metadata(&pins)?;
     let path = pin["v15"].as_str().context("pinned metadata path absent")?;
     ensure!(super::valid_path(path), "unsafe metadata path");
     let bytes = fs::read(root.join(path))?;

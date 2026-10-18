@@ -724,7 +724,7 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
     crate::metadata_pin::verify(root, pins)?;
     let bytes = fs::read(
         root.join(
-            pins["networks"]["finney"]["metadata"]["v15"]
+            crate::metadata_pin::pinned_metadata(pins)?["v15"]
                 .as_str()
                 .context("metadata pin missing")?,
         ),
@@ -732,7 +732,7 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
     let runtime = Runtime::parse(
         &bytes,
         u32::try_from(
-            pins["networks"]["finney"]["metadata"]["spec"]
+            crate::metadata_pin::pinned_metadata(pins)?["spec"]
                 .as_integer()
                 .context("metadata spec missing")?,
         )?,
@@ -926,7 +926,7 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
         operations.push(json!({"setter":setter,"params":params,"cooldown":complete_policy(policy,&codes,&rates)?,"continuation_storage":continuation,"setter_signature":tokens(&method.sig),"setter_body":tokens(&method.block)}));
     }
     let provenance = [PYTHON,UNITS,ADMIN,TEMPO,RATE,MISC,COINBASE].into_iter().map(|path|json!({"path":path,"blob":resolver.tree.get(path),"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str()})).collect::<Vec<_>>();
-    let metadata = &pins["networks"]["finney"]["metadata"];
+    let metadata = crate::metadata_pin::pinned_metadata(pins)?;
     Ok(
         json!({"format":1,"provenance":tables[PYTHON]["provenance"],"sources":provenance,
         "metadata_provenance":{"path":metadata["v15"].as_str(),"sha256":metadata["v15_sha256"].as_str(),"spec":metadata["spec"].as_integer(),"finalized_head":metadata["finalized_head"].as_str()},
@@ -1270,7 +1270,7 @@ mod tests {
         assert_eq!(document["values"]["production_slot_duration_ms"], 12000);
         assert_eq!(
             document["metadata_provenance"]["sha256"],
-            pins["networks"]["finney"]["metadata"]["v15_sha256"]
+            crate::metadata_pin::pinned_metadata(&pins)?["v15_sha256"]
                 .as_str()
                 .context("metadata hash missing")?
         );
