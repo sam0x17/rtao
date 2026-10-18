@@ -82,7 +82,7 @@ fn pinned_source_inventory_has_current_hashes_and_no_unresolved_parameters() -> 
             .provenance
             .contains("Python/Click was not executed")
     );
-    assert_eq!(inventory.commands.len(), 170);
+    assert_eq!(inventory.commands.len(), 165);
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     for source in inventory.sources {
         assert!(

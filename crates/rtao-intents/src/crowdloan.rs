@@ -384,7 +384,6 @@ fn leaf_safety(
             | "sudo_set_owner_cut_auto_lock_enabled"
             | "sudo_set_mechanism_count"
             | "sudo_set_subnet_emission_enabled"
-            | "sudo_set_subnet_emission_weights"
             | "sudo_trim_null_uids_batch"
             | "sudo_trim_to_max_allowed_uids",
         ) => None,

@@ -182,9 +182,6 @@ pub struct IntentPreflight {
     pub facts: Vec<(String, String)>,
     /// Heading for structural facts.
     pub facts_title: FactsTitle,
-    /// Structured, JSON-native counterpart of `effects` for intents whose
-    /// preview has a fixed shape; empty otherwise.
-    pub preview: Map<String, Value>,
 }
 
 /// Effective origin, payer, state and wrapped call used by preflight hooks.

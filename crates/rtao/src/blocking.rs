@@ -1696,8 +1696,8 @@ mod tests {
     fn sync_client_has_all_namespaces() {
         let (client, chain, starts) = setup();
         inspect_all_namespaces(&client);
-        assert_eq!(client.reads().len(), 103);
-        assert_eq!(client.tools().unwrap().len(), 85);
+        assert_eq!(client.reads().len(), 102);
+        assert_eq!(client.tools().unwrap().len(), 84);
         assert!(format!("{client:?}").contains("started: false"));
         assert_eq!(starts.load(Ordering::SeqCst), 0);
         assert!(chain.requests().is_empty());

@@ -250,7 +250,7 @@ mod tests {
                 .as_object()
                 .context("description map missing")?
                 .len(),
-            404
+            392
         );
         let source = resolver.source(AGGREGATOR)?;
         for changed in [

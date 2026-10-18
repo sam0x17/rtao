@@ -158,6 +158,7 @@ fn m4_hyperparameters() -> Vec<(&'static str, Value, rtao_core::codec::Value)> {
         "yuma3_enabled",
         "bonds_reset_enabled",
         "transfers_enabled",
+        "owner_cut_enabled",
         "owner_cut_auto_lock_enabled",
     ] {
         for enabled in [false, true] {
@@ -386,7 +387,7 @@ fn trusted_m2_constructors_have_identical_policy_violation_sets() {
 #[test]
 fn trusted_m4_constructors_have_identical_policy_violation_sets() {
     let pairs = m4_pairs();
-    assert_eq!(pairs.len(), 112);
+    assert_eq!(pairs.len(), 120);
     assert_eq!(
         pairs
             .iter()
@@ -454,7 +455,7 @@ fn trusted_m4_constructors_have_identical_policy_violation_sets() {
             }
         }
     }
-    assert_eq!(checks, 573_440);
+    assert_eq!(checks, 614_400);
 }
 
 #[test]
