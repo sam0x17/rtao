@@ -334,7 +334,7 @@ async fn wrong_signing_account_signature_and_algorithm_refuse_before_explicit_le
 #[tokio::test]
 async fn each_live_runtime_stamp_change_refuses_prepared_signatures_without_replanning()
 -> TestResult {
-    for (spec, transaction) in [(479, 1), (478, 2)] {
+    for (spec, transaction) in [(480, 1), (479, 2)] {
         let (executor, fake, signer) = fixture().await?;
         let unsigned = prepared(&executor, &signer).await?;
         let signature = signer

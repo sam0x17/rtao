@@ -8,8 +8,8 @@ use scale_decode::DecodeAsType;
 #[test]
 fn zero_account_default_decodes_to_zero_bytes() {
     let runtime = Runtime::parse(
-        include_bytes!("../../../vendor/metadata/testnet/481.v15.scale"),
-        481,
+        include_bytes!("../../../vendor/metadata/finney/479.v15.scale"),
+        479,
         1,
         42,
     )
@@ -88,8 +88,8 @@ fn path_only_leaf_aliases_preserve_structural_surface_and_composed_bytes() {
     use rtao_runtime::{RuntimeHandle, calls};
     let parse = || {
         Runtime::parse(
-            include_bytes!("../../../vendor/metadata/testnet/481.v15.scale"),
-            481,
+            include_bytes!("../../../vendor/metadata/finney/479.v15.scale"),
+            479,
             1,
             42,
         )
@@ -141,8 +141,8 @@ fn api_by_name_output_projection_tolerates_only_undeclared_fields() {
     };
     let parse = || {
         Runtime::parse(
-            include_bytes!("../../../vendor/metadata/testnet/481.v15.scale"),
-            481,
+            include_bytes!("../../../vendor/metadata/finney/479.v15.scale"),
+            479,
             1,
             42,
         )

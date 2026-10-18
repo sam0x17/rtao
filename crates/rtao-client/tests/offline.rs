@@ -106,7 +106,7 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
             );
             assert_eq!(value["era"], "00");
             assert_eq!(value["payload_json"]["nonce"], "0x00000003");
-            assert_eq!(value["payload_json"]["specVersion"], "0x000001e1");
+            assert_eq!(value["payload_json"]["specVersion"], "0x000001df");
             assert_eq!(value["payload_json"]["transactionVersion"], "0x00000001");
             assert_eq!(
                 value["payload_json"]["tip"],
@@ -603,7 +603,7 @@ async fn altered_call_identity_era_payload_views_parts_and_hashes_refuse() {
         ("tip", json!(18)),
         ("tip_asset_id", json!(66)),
         ("crypto_type", json!(2)),
-        ("spec_version", json!(479)),
+        ("spec_version", json!(480)),
         ("transaction_version", json!(2)),
         ("era", json!({"period":128,"current":0})),
         ("address", json!(AccountId([9; 32]).to_ss58(42))),
@@ -714,7 +714,7 @@ async fn bad_external_signature_refuses_before_nonce_mutation_and_author_rpc() {
 
 #[tokio::test]
 async fn live_spec_and_transaction_upgrade_refuse_import_and_external_submit() {
-    for (spec, tx) in [(482, 1), (481, 2)] {
+    for (spec, tx) in [(480, 1), (479, 2)] {
         let (client, fake, signer) = fixture(CryptoType::Ed25519).await;
         let unsigned = prepared(&client, &signer, false).await;
         let signature = signer
