@@ -614,6 +614,8 @@ jobs:
             target/pr-gates/tools
       - name: Check outbound drand
         run: curl -fsS --proto '=https' --tlsv1.2 https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/latest -o "$RTAO_TEMP_ROOT/drand-preflight.json"
+      - name: Install ripgrep for the probe and lane scripts
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep
       - name: Install pinned nextest
         run: |
           cargo install cargo-nextest --version 0.9.143 --locked --root "$RTAO_TEMP_ROOT/tools"
