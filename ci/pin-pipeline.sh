@@ -22,14 +22,14 @@ stage() {
 xtask() { cargo run --locked -p xtask -- "$@"; }
 cleanup() {
   result=$?
-  for profile in fast slow; do
-    node_report="$RTAO_TEMP_ROOT/node-$profile.json"
+  for node in fast slow upgrade-source; do
+    node_report="$RTAO_TEMP_ROOT/node-$node.json"
     test -f "$node_report" || continue
     node_id=$(jq -er .container_id "$node_report") || { result=1; continue; }
     [[ "$node_id" =~ ^[0-9a-f]{64}$ ]] || { result=1; continue; }
     if docker inspect "$node_id" >/dev/null 2>&1; then
       if test "$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$node_id")" = e2e; then
-        docker logs --tail 2000 "$node_id" > "$RTAO_TEMP_ROOT/node-$profile.log" 2>&1 || true
+        docker logs --tail 2000 "$node_id" > "$RTAO_TEMP_ROOT/node-$node.log" 2>&1 || true
         docker rm -f "$node_id" || result=1
       else
         result=1
@@ -129,10 +129,20 @@ stage pr-gates
 xtask gates
 stage e2e-required
 xtask localnet contracts --check
+# Scenario 16 needs the isolated registry-BLS probe; scenario 8 needs the
+# digest-pinned main fast runtime and a node serving it, as in the e2e workflow.
+xtask pr-u4-proof prepare
+xtask localnet up --lane main --profile fast --out "$RTAO_TEMP_ROOT/node-upgrade-source.json"
+upgrade_id=$(jq -er .container_id "$RTAO_TEMP_ROOT/node-upgrade-source.json")
+[[ "$upgrade_id" =~ ^[0-9a-f]{64}$ ]]
+test "$(docker inspect --format '{{index .Config.Labels "io.rtao.localnet"}}' "$upgrade_id")" = e2e
+docker cp "$upgrade_id:/target/fast-runtime/release/node_subtensor_runtime.compact.compressed.wasm" "$RTAO_TEMP_ROOT/main-fast-runtime.wasm"
+upgrade_endpoint=$(jq -er .endpoint "$RTAO_TEMP_ROOT/node-upgrade-source.json")
 for profile in fast slow; do
   xtask localnet up --lane pinned --profile "$profile" --out "$RTAO_TEMP_ROOT/node-$profile.json"
   endpoint=$(jq -er .endpoint "$RTAO_TEMP_ROOT/node-$profile.json")
   E2E_ENDPOINT="$endpoint" E2E_LANE=pinned E2E_BLOCKS="$profile" \
+    E2E_UPGRADE_ENDPOINT="$upgrade_endpoint" E2E_UPGRADE_WASM="$RTAO_TEMP_ROOT/main-fast-runtime.wasm" \
     cargo nextest run --locked -p rtao-testkit --features docker --test e2e --profile "e2e-$profile" --test-threads 1 --no-tests fail
 done
 stage core-oracle
