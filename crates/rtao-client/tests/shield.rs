@@ -296,12 +296,33 @@ async fn conservative_carrier_probe_is_public_bounded_and_does_not_mutate_nonce(
 }
 
 #[tokio::test]
+async fn finality_lag_waits_for_finality_to_come_within_the_era() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|s| s.finalized = s.block - 6);
+    let catching_up = fake.clone();
+    let finality = tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+        catching_up.mutate_state(|s| s.finalized = s.block - 1);
+    });
+    let result = client
+        .submit_shielded(call(&client, 1).await, &signer, &pool())
+        .await;
+    finality.await.unwrap();
+    assert!(result.is_ok(), "{result:?}");
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
 async fn finality_lag_refuses_exact_expiry_boundary_before_signing() {
     for (period, allowed, refused) in [(ShieldPeriod::P4, 1, 2), (ShieldPeriod::P8, 5, 6)] {
         for lag in [allowed, refused, refused + 1] {
             let (client, fake, signer) = fixture().await;
             fake.mutate_state(|s| s.finalized = s.block - lag);
-            let opts = ShieldOptions { period, ..pool() };
+            let opts = ShieldOptions {
+                period,
+                finality_wait: std::time::Duration::ZERO,
+                ..pool()
+            };
             let result = client
                 .submit_shielded(call(&client, 1).await, &signer, &opts)
                 .await;

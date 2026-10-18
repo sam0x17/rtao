@@ -64,7 +64,9 @@ pub(crate) use rpc::{hash_hex, parse_hash, rpc_request};
 /// Run blocking chain-code work on Tokio's blocking pool.
 pub use rtao_core::offload;
 pub use rtao_runtime::{CallBytes, MetadataLevel, RuntimeHandle, StorageQuery};
-pub use shield::{ShieldCiphertext, ShieldOptions, ShieldPeriod, ShieldReport};
+pub use shield::{
+    SHIELD_FINALITY_WAIT, ShieldCiphertext, ShieldOptions, ShieldPeriod, ShieldReport,
+};
 pub use submit::{
     ExtrinsicReport, Inclusion, Mortality, NoncePolicy, Period, PoolRejection, SubmitFailure,
     SubmitOptions, UnsignedExtrinsic, Wait,

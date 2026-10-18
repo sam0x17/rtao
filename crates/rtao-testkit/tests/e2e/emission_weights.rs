@@ -47,20 +47,22 @@ pub async fn run(ln: &Localnet) -> TestResult {
     let netuid = setup.netuid.ok_or("scenario did not register a subnet")?;
     let owner = &setup.slot.owner;
     let client = ln.client();
-    if !client
-        .at(BlockRef::Best)
-        .await?
-        .storage(&st::SUBTOKEN_ENABLED, (NetUid::ROOT,))
-        .await?
-    {
-        let report = ln
-            .sudo(
-                admin_utils::sudo_set_subtoken_enabled(NetUid::ROOT, true)
-                    .compose(&client.runtime().await?)?,
-            )
-            .await?;
-        assert!(report.success, "enable root subtoken: {report:?}");
-    }
+    // Root staking needs its subtoken; enabling it is idempotent.
+    let report = ln
+        .sudo(
+            admin_utils::sudo_set_subtoken_enabled(NetUid::ROOT, true)
+                .compose(&client.runtime().await?)?,
+        )
+        .await?;
+    assert!(report.success, "enable root subtoken: {report:?}");
+    assert!(
+        client
+            .at(BlockRef::Best)
+            .await?
+            .storage(&st::SUBTOKEN_ENABLED, (NetUid::ROOT,))
+            .await?,
+        "root subtoken stays disabled after sudo"
+    );
     let root_tao = client
         .at(BlockRef::Best)
         .await?

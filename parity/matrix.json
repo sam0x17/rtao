@@ -2828,15 +2828,6 @@
           "rtao_cli::m8_books::corrupt_books_are_read_only_until_a_valid_bounded_replacement_preserves_recovery_bytes",
           "rtao_cli::m8_books::oversized_input_and_output_leave_original_book_unchanged"
         ]
-      },
-      {
-        "id": "D-077",
-        "oracle": "unverified",
-        "rtao": "active",
-        "tests": [
-          "rtao_cli::call_contract::lagging_finality_downgrades_only_the_unforced_default_shield",
-          "rtao_client::shield::finality_lag_refuses_exact_expiry_boundary_before_signing"
-        ]
       }
     ],
     "e2e": [
