@@ -3,7 +3,7 @@
 ## Current Q30 development exit
 
 The applicable M1 development exit is satisfied at
-`d01830cdf6a7e1301ca4a2629b35663617f97dab`. M1-01 through M1-21 are complete;
+`965669d709bd8b8435f76ec7db5def9d471fe0d9`. M1-01 through M1-21 are complete;
 M1-22 and M1-24 remain optional targeted hosted evidence, and M1-23 is deferred.
 
 [Hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)

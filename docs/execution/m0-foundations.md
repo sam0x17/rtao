@@ -1,6 +1,6 @@
 # M0 foundation verification
 
-M0 is accepted for client development at `d01830c` by ordinary hosted
+M0 is accepted for client development at `965669d` by ordinary hosted
 run 38873429391: all six jobs pass, with 3,051 tests passed, zero failed and
 four skipped, plus all 19 workspace doctest suites. Independent source review
 and 123 exact M0 PASS records cover the requirements below. The 60-input audit
@@ -38,7 +38,7 @@ infrastructure remain deferred.
 | M0-26 doctor | Real-binary success and exact missing-patch diagnostics fixtures are committed |
 | M0-27 CI | Six bounded free Ubuntu jobs cover check, no-host, MSRV, features, supply and semver |
 | M0-28 docs | README, CONTRIBUTING and execution records describe the current source and Q30 limits |
-| M0-29 completion record | Exact d01830c evidence, active step completion and the Q30 development exit are recorded |
+| M0-29 completion record | Exact 965669d evidence, active step completion and the Q30 development exit are recorded |
 
 The detailed source audit and accepted checkpoint are in
 [m0-acceptance-audit.md](m0-acceptance-audit.md). Earlier focused local test

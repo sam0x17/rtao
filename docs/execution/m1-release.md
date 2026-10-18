@@ -71,7 +71,7 @@ binary SHA-256 was
 `ac8b4ed0350154b97af3d3028c8ab28e08f145f943e1405cb7d81d5dc23a88bf`;
 Intel binary SHA-256 was
 `f84c83a20d28f131864b62a48b676049cb251b020aea6775efcd2f2f66434caf`.
-Source HEAD was `7efef6f68eedc7cfb85e6e9d0a5ae3da7c8d442a` with a dirty shared
+Source HEAD was `0af74c33e55917ee90e4a44cc324550304e55e6e` with a dirty shared
 implementation worktree. These hashes describe rehearsals, not assets built
 from a release tag. A future separately requested distribution task would need
 new tagged artifacts and verification; current development requires neither.

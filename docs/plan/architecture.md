@@ -3935,12 +3935,12 @@ body signature, and inconsistent requests by the re-derivation (`422 tampered_re
 loopback HTTP, and bounds every connection. Interop: a Python client using bittensor-wallet keys against the Rust daemon
 10/10, and the Rust client against a Python peer 2/2. The localnet exit check (sign and submit a localnet transfer, and
 refuse replayed and tampered requests) runs in the hosted job `remote-signer-localnet` and passed in
-[run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) at `3479cdf`.
+[run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) at `6939f1c`.
 
 **Hosted interop.** `.github/workflows/pr.yml` takes a `workflow_dispatch` input `m10_interop` that runs `m10-interop`
 (`ci/interop/m10-hosted.sh`, with hash-pinned Python environments and pinned upstream files) and
 `remote-signer-localnet` (`ci/interop/remote-signer/localnet.sh`). Both passed in [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084) at
-`3479cdf`: Synapse against `bittensor==10.5.0` (39, 37, 37 and 39 checks), all Epistula stages against the BitMind and
+`6939f1c`: Synapse against `bittensor==10.5.0` (39, 37, 37 and 39 checks), all Epistula stages against the BitMind and
 Apex references, btlightning's Python bindings 56/56 including streaming, and the localnet exit check. The other interop
 counts above come from local runs. `NOTICE` carries the MIT attributions (bittensor v10.5.0, btwallet v4.1.0, BitMind, Apex,
 gobt, btlightning) and the Apache-2.0 polkadot-sdk SS58 decoder.

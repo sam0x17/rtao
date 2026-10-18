@@ -106,7 +106,7 @@ directory, wallet copy or service was created.
 ## Client-only continuation, 2026-10-15
 
 Q30 retires the local validation campaign described above. Source checkpoint
-`450c914335daa6a5da76a6c30908186e84f05e6e` is pushed; its first hosted run is
+`3fec0bb553d62d39ef245c1fcd7bbe56dd31ab27` is pushed; its first hosted run is
 https://github.com/sam0x17/rtao/actions/runs/38680556857. No current hosted
 success or milestone exit is inferred from starting it.
 

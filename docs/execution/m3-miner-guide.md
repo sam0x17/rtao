@@ -53,7 +53,7 @@ The later client documentation batch exports the actual miner example and
 embeds those items through Docify in the book. The original compiled example
 remains the implementation. Hosted checkpoint
 [38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100)
-at `3772699612278d4592648d07232241430e96791b` passed the applicable
+at `a6aa2bc5ebde12f4183ec7826e7c1c9fdc90cab3` passed the applicable
 example, template and documentation checks. This closes the source embedding
 gap; it establishes no live miner or endpoint-routing result.
 

@@ -12,7 +12,7 @@ if (process.env.GITHUB_ACTIONS !== 'true'
 const git = args => execFileSync('git', args, {encoding: 'utf8', maxBuffer: 1048576});
 const committedText = git(['show', 'HEAD:Cargo.lock']);
 // Compare to the unchanged pre-Docify graph; the failed 0.4.1 tool closure may be removed.
-const beforeText = git(['show', '80ad78b479b957236003272069ae6b4410797e67:Cargo.lock']);
+const beforeText = git(['show', '4f02d5acf2aa1727fc4f23e933e19c144e876224:Cargo.lock']);
 if (createHash('sha256').update(beforeText).digest('hex')
     !== '6cd0d7a767173f6c558ab10092e81902ba6a3a977c1e5b36dc427685b906bde1') {
   throw new Error('Pre-Docify baseline identity changed.');

@@ -52,7 +52,7 @@ transaction. No local build, test, Python process or temporary root was used.
 
 Hosted generation
 [38694967521](https://github.com/sam0x17/rtao/actions/runs/38694967521)
-at source commit `70fca297b390a169c238b4ddb8a13eb2a5ca15ca` succeeded.
+at source commit `89035b05c05ebd32c85927a5ad297a9601f7e445` succeeded.
 The generated archive is 54,260 bytes, SHA-256
 `e57ce2393a61f1296f2008c1a5b215dc0a7b3bd1f8c5a2ad0972bcabec2133ed`.
 The report archive is 40,190 bytes, SHA-256

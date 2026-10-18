@@ -17,7 +17,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 ## M10 implementation, 2026-10-17
 
 Optional M10 is
-implemented at `d59efdd` through `3479cdf`, all pushed to `main`; see
+implemented at `77f025a` through `6939f1c`, all pushed to `main`; see
 [M10 execution record](m10.md). Four new crates: `rtao-compat-synapse`
 (M10-01), `rtao-compat-epistula` (M10-02), `rtao-transport-quic` (M10-03)
 and `rtao-remote-signer` (M10-04). The facade adds `compat-synapse`,
@@ -38,7 +38,7 @@ Epistula all four stages against the BitMind and Apex Python references
 58/58; remote signer Python client to Rust daemon 10/10 and Rust client to
 Python peer 2/2.
 
-Hosted evidence at `3479cdfd41c14cc5c87dd9034d25bdd097ce395f`:
+Hosted evidence at `6939f1ceed5536f8495d6cf090169d0d8afd2ee2`:
 
 - Ordinary [run 39027391242](https://github.com/sam0x17/rtao/actions/runs/39027391242):
   all six required jobs (check, features, supply, msrv, no-host, semver)
@@ -73,7 +73,7 @@ Local evidence: 72 fork `bittensor-core` library tests, 250
 `rtao-core`/`rtao-core-ext`/`rtao-signer`/`rtao-wallet` tests and
 `cargo xtask pin --check` against the real fork revision pass. Compatibility
 reports were regenerated for the new core revision. Hosted CI for the closing
-commit: [run 39016798208](https://github.com/sam0x17/rtao/actions/runs/39016798208) at `1bc4598` passes all six required jobs with **3,205 tests passed, zero failed and four skipped**, plus doctests and documentation. (The first attempt at `d523a16` hit the then 45-minute job limit; a re-run exposed one timing-sensitive admission test, whose overall deadline `1bc4598` widened.)
+commit: [run 39016798208](https://github.com/sam0x17/rtao/actions/runs/39016798208) at `2d257b5` passes all six required jobs with **3,205 tests passed, zero failed and four skipped**, plus doctests and documentation. (The first attempt at `a855600` hit the then 45-minute job limit; a re-run exposed one timing-sensitive admission test, whose overall deadline `2d257b5` widened.)
 
 The active M0-M9 register is **127/127 complete**. Earlier sections describe
 their own snapshots, including the 126/127 state below.
@@ -82,7 +82,7 @@ their own snapshots, including the 126/127 state below.
 
 Hosted [38999377082](https://github.com/sam0x17/rtao/actions/runs/38999377082)
 passes at exact source head
-`95b9e8c692ff8bd3d15e7ce9769ef2b785bb4a7f`: **3,204 tests passed,
+`6aae5a526ab4adf909f1a0f1ab8b3c789a229404`: **3,204 tests passed,
 zero failed and four skipped**, doctests passed, documentation uploaded, and
 all six required `check`, `features`, `supply`, `msrv`, `no-host` and `semver`
 jobs succeeded. This is the final implemented client source under Q30; no
@@ -90,7 +90,7 @@ local build, node, container, testnet, device or release campaign was used.
 
 Hosted report refresh
 [38998872513](https://github.com/sam0x17/rtao/actions/runs/38998872513)
-authenticated the four generated compatibility reports at `dd5b076`, and the
+authenticated the four generated compatibility reports at `2cd5629`, and the
 adopted report commit is an ancestor of the final source head. The source map
 is **357/357 reconciled with zero pending blobs**. All 83 intents and 102 reads
 are implemented. The 18 `e2e_map.toml` Q30-deferred rows describe optional live/localnet
@@ -113,10 +113,10 @@ local build root was not recreated.
 ## Earlier client checkpoint, 2026-10-16
 
 Hosted [38984859167](https://github.com/sam0x17/rtao/actions/runs/38984859167)
-passes at exact `892aa9d007a7ee43b99f31fcaaca37ed75eb75da`: **3,196 tests
+passes at exact `b0aad3ba5c0c88180a1708a60628cdd731c38623`: **3,196 tests
 passed, zero failed, four skipped**, nine doctests across 19 suites, successful
 documentation upload and all six required jobs. All eight failures from
-`28f00a5` have exact qualified PASS records, including all seven stack-overflow
+`4dc5c7b` have exact qualified PASS records, including all seven stack-overflow
 cases on normal stacks and the saved registration cost disclosure. This
 checkpoint also executes the typed password-help and unknown-fate output fixes.
 
@@ -153,7 +153,7 @@ Independent source review, installed formatting and whitespace checks pass;
 hosted execution remains pending. Named-test inventory stays 3,203/four skips.
 
 Lock-only hosted [38987915743](https://github.com/sam0x17/rtao/actions/runs/38987915743)
-succeeds at exact `9557fc0dcaa8b6752d448e8db32a718d5aefd367`. Independent
+succeeds at exact `938cc707c5ecb95aa9b2c017f89b94c3f4988b68`. Independent
 inspection and a separate refetch authenticate the sole 11-byte addition of the
 already pinned Docify 0.2.9 to testkit's dependency list. No package identity or
 other lock bytes change; the fuzz lock stays identical. Only that reviewed root
@@ -183,11 +183,11 @@ The following records describe prior states; live/uncommitted wording belongs
 to those checkpoints and is superseded by the current result above.
 
 The latest full run, [38979569522](https://github.com/sam0x17/rtao/actions/runs/38979569522),
-at `4b9d0f4ae2c14cdfb87dc5d2881a9c8955f063cd` finishes with **3,195 passed,
+at `3985fdc926ce3800dd70c27ad79a62ae480d89c6` finishes with **3,195 passed,
 one failed and four skipped**. All five supporting jobs pass, including
 supply and features. Main compilation and Clippy pass; doctests and the final
 documentation stage are not reached. The last fully green checkpoint remains
-`7997ec0` below.
+`6b7ba38` below.
 
 The remaining failure is the saved Ledger signing-notice fixture. It gives a
 single member an inline backend override while selecting Vault globally.
@@ -199,7 +199,7 @@ acquisition/release, zero-unlock and zero-submission assertions remain. No
 production selection rule changes. This correction awaits hosted execution.
 
 The preceding [38976362971](https://github.com/sam0x17/rtao/actions/runs/38976362971)
-at `550ad25` had three failures. The review JSON DEL encoding and unknown-fate
+at `b38db6c` had three failures. The review JSON DEL encoding and unknown-fate
 inspection-help tests now pass; the saved member funding correction remains.
 The inventory still expects **3,196 tests and four skips**, with no new test
 functions in these fixes.
@@ -219,7 +219,7 @@ prose boundaries. JSON, replay commands and transaction inputs retain their
 values. Independent review found the remaining display gaps described below;
 the full context source row remains unaccepted.
 
-The completed run above excludes local commit `e262174`, which adds
+The completed run above excludes local commit `dc6a276`, which adds
 pre-sign root/owner notices, successful direct verification hints and bounded
 registration progress forwarding. A failed progress sink is retained until the
 submission finishes, the raw receipt hook runs and the signer is released.
@@ -238,7 +238,7 @@ no hosted execution result yet. The full context row still requires final
 disposition of the remaining password/error presentation contracts and
 carrier-failure narration.
 
-The subsequent display review found three gaps in `4b9d0f4`: transaction
+The subsequent display review found three gaps in `3985fdc`: transaction
 arguments passed through name substitution twice; receipt prose bypassed it;
 and saved approval members were named only after confirmation. The next
 candidate formats review values before one rendering pass, gives receipt
@@ -252,7 +252,7 @@ remain pending. This candidate is also outside the completed run above.
 
 Ordinary [38982324536](https://github.com/sam0x17/rtao/actions/runs/38982324536)
 is validating the pushed narration/display corrections at
-`28f00a53c9d6776fe3dce4dc7601f3a7d4ed7878`. It remains live; no full pass is
+`4dc5c7b370469f101f3dce2258e0694db6fece7c`. It remains live; no full pass is
 established. The separate uncommitted password candidate retains actual
 password-source remediation through an owned signer diagnostic, SDK signing
 errors and CLI conversion. Only prompted coldkeys retry twice. Quiet/JSON
@@ -276,7 +276,7 @@ source rows or milestones are accepted. Connection context, raised classified
 diagnostics, safe carrier-failure narration and signal disposition remain open.
 
 Hosted report run [38975470963](https://github.com/sam0x17/rtao/actions/runs/38975470963)
-passes at `3e07d56576f684e8322fa6150b7a1257cee5db3f`, including source parity.
+passes at `55339cce05d0763950144b8e838c364ca6c0628c`, including source parity.
 Artifact 12078644250 is 59,739 bytes, SHA256
 `44ed0f18bccda7a3066da14e2854e9199aadbb257646ce336f08e99a37e525b4`.
 Inspection and a separate authenticated refetch adopt exactly four reports.
@@ -299,7 +299,7 @@ request. The local target directory is absent, and validation remains hosted.
 
 The latest successful ordinary checkpoint is
 [38949537519](https://github.com/sam0x17/rtao/actions/runs/38949537519)
-at `7997ec0c5c3352746c887ea974f92d8471b32054`. All six required jobs
+at `6b7ba38787f288c3f080bf33aa46606f100123e8`. All six required jobs
 passed: 3,145 tests, four skips and nine doctests across 19 workspace suites,
 plus strict Clippy, documentation, source/generated guards, feature profiles,
 MSRV, no-host, semver and supply checks. Feature validation also passed the
@@ -340,13 +340,13 @@ The pruning inputs and source reports have now been regenerated and adopted
 from the successful hosted refresh below. The newer 27 tests still have no
 execution credit from the green checkpoint.
 
-The first refresh, run 38954992909 at `e497f18`, generated the candidate
+The first refresh, run 38954992909 at `11bce1c`, generated the candidate
 outputs but failed source parity because the newly mapped CLI entry file
 lacked its separate `main.py` attribution header. No artifacts were adopted.
 A header-only correction preserves all executable bytes and the existing
 `prompt.py` attribution. The corrected refresh,
 [38956406939](https://github.com/sam0x17/rtao/actions/runs/38956406939),
-passes at exact `9dd98921f76f052ae890ead825bdf1047b5cef9b`. Artifact inspection
+passes at exact `1d51d08f979c2a9f6b3acc7f137e4cb601c60397`. Artifact inspection
 and a separate refetch adopt exactly six files: the pruning input extraction,
 catalog `py.rs` and four reports. The other 17 generated outputs, all 23
 dependency inputs and the package/feature graphs remain unchanged. The new
@@ -358,13 +358,13 @@ adoption SHA256 is
 `645c5d25a167529e95a4efee38a70bc3df08aeb524723cb0970a4a91319b598c`.
 This report-only success does not execute the 27 newer test functions.
 
-Ordinary run 38958405135 at `f13dd4c` stops in strict Clippy before Nextest:
+Ordinary run 38958405135 at `b5124b5` stops in strict Clippy before Nextest:
 the new direct-multisig fixture holds a mutex guard through asynchronous client
 cleanup. MSRV, no-host and semver pass. The correction limits the guard to its
 two existing assertions without changing those assertions, production code
 or test counts. Full ordinary validation of the newer batch remains pending.
 
-The correction is pushed at `394e21b17f27902edea45b19de2da103ba4a3554`.
+The correction is pushed at `2a7f004149ba89ca5cc03c522a90189b99f6b086`.
 [38959809427](https://github.com/sam0x17/rtao/actions/runs/38959809427)
 passes Clippy, features, supply, no-host, MSRV and semver, but Nextest reports
 3,169 passed, three failed and four skipped. The failures are the new stake-list
@@ -383,7 +383,7 @@ production hotkey SetWeights submission, proxied AddStake(All), snapshot-bound
 typed reads, and a regular commitment's raw-policy refusal, signed submission
 and typed reads. They use finite fake transports and supplied observations.
 The existing EX14 batch/root-claim hard-stop fixture was already committed in
-`e497f18`; it is not a further test addition. The five new functions await
+`11bce1c`; it is not a further test addition. The five new functions await
 their own hosted run.
 Two additional regressions cover actual production Transfer proxy success and
 inner failure, and every visible installed command/group's `--help`. The latter
@@ -399,7 +399,7 @@ whitespace checks pass; all changes still require a full hosted checkpoint.
 No new source mapping, runtime effect or milestone acceptance is claimed.
 
 Ordinary run [38963964395](https://github.com/sam0x17/rtao/actions/runs/38963964395)
-at `f9140e990bd4c83a441b809a6ed9dfc5648532b7` stops during Clippy compilation
+at `9ae3ab985f215223cd4d32d4c63c58c8b50e9da6` stops during Clippy compilation
 of the new regular-commitment fixture. `CommitmentRegistration` already derives
 the metadata decoder, but the client's `ReadValue` list omitted it; the fixture
 also compared `PolicyError` with its violation array. Add the missing typed
@@ -430,7 +430,7 @@ The next inventory expects 3,183 tests and four skips. Independent source review
 direct rustfmt and whitespace checks pass; hosted execution remains pending.
 
 Ordinary run [38965848977](https://github.com/sam0x17/rtao/actions/runs/38965848977)
-at `f84be4cb15b4d80903c1fa8c00c1911f44dcefee` passes supply, MSRV,
+at `0e5c437a4fa6831720dd7f5710fe6961dd080602` passes supply, MSRV,
 no-host and semver, but stops before Nextest on two test-only compiler/lint
 errors. The extracted subnet helper returns CoreError, so its iterator must
 collect that error type before converting at the anyhow boundary. A local
@@ -443,7 +443,7 @@ still awaits successful hosted execution. Neither the bounded failure
 record nor the raw log is retained.
 
 The small compiler/leaf correction is pushed at
-`8b0ffbd21f26da8b77baebd40ac43b0461e7fa70`; ordinary run
+`6861dc837aac8dc8fbf76ea942ce3047869bdc76`; ordinary run
 [38966898387](https://github.com/sam0x17/rtao/actions/runs/38966898387)
 passes all five supporting jobs and strict Clippy, then reports 3,180 passed,
 three failed and four skipped. Doctests and documentation upload were not
@@ -479,14 +479,14 @@ bring the future inventory to 3,185/four skips. All source changes remain
 unexecuted; formatting and whitespace checks pass. No source row or milestone
 is promoted by these changes.
 
-Those changes and the three fixture corrections are pushed at `edefe85`.
+Those changes and the three fixture corrections are pushed at `5a12850`.
 Ordinary run [38970331580](https://github.com/sam0x17/rtao/actions/runs/38970331580)
 finishes with 3,182 passed, three failed and four skipped. Its supply job failed
 after `inout 0.2.3` was yanked on 2026-10-16 at 21:27 UTC. The upstream
 `0.2.4` release restores a missing output-buffer length check, keeps the same
 dependencies and requires Rust 1.85, below this workspace's MSRV.
 Hosted lock run [38971146218](https://github.com/sam0x17/rtao/actions/runs/38971146218)
-passes at `9624b92`. Artifact 12077076702 is 81,871 bytes, SHA256
+passes at `a42492e`. Artifact 12077076702 is 81,871 bytes, SHA256
 `1daf8ece5ca0faf292c5cf2e7438ffdcfd09b9de31dccb9ba7a84ab57bdcf901`.
 Inspection and a separate refetch adopt only that package's version/checksum
 and sole versioned dependency reference. Reversing those three lines reproduces
@@ -509,7 +509,7 @@ Two new fixture functions bring the next expected inventory to 3,187/four
 skips; the existing money fixture is strengthened without a new function.
 Formatting and whitespace checks pass. Hosted report run
 [38971449966](https://github.com/sam0x17/rtao/actions/runs/38971449966) passes
-at `2a98f8b`, including source parity. Artifact 12077522768 is 59,608 bytes,
+at `af4cc3a`, including source parity. Artifact 12077522768 is 59,608 bytes,
 SHA256 `00da75b6d0b6696bf3d551a89c422f55137137cfff8eab370fa4aeddabee2503`.
 Inspection and a separate authenticated refetch adopt exactly four reports.
 Only the lock dependency fingerprint and measurement context change in the
@@ -566,7 +566,7 @@ oldest-result wording and obsolete next-test counts below.
 
 The latest successful ordinary checkpoint is
 [38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100)
-at `3772699612278d4592648d07232241430e96791b`. All six jobs passed. Main
+at `a6aa2bc5ebde12f4183ec7826e7c1c9fdc90cab3`. All six jobs passed. Main
 passed 3,080 tests, zero failed, four skipped and nine doctests across all 19
 workspace suites. Strict Clippy, documentation, source/pin/generated guards,
 feature profiles, MSRV, no-host, semver and supply checks passed. The bounded
@@ -606,7 +606,7 @@ exit or strict M8 acceptance follows.
 
 The source/report refresh
 [38901469526](https://github.com/sam0x17/rtao/actions/runs/38901469526)
-at `1ba30ab04fc1fefb29b18e499e1690e08f6f1e88` passed. Inspection and a
+at `4df042116a16b731c2d4e8114f71775fd96bbea1` passed. Inspection and a
 separate refetch adopted exactly three generated intent files and four reports.
 All 16 other generated members are identical. All 23 dependency inputs match;
 only the root lint and 19 crate documentation metadata blocks changed their
@@ -619,7 +619,7 @@ This source-only result does not execute the seven newer tests.
 
 The subsequent ordinary run
 [38902988661](https://github.com/sam0x17/rtao/actions/runs/38902988661)
-at `b3d6e8bdf37efa5cc67062bb01bb17eb4e5c2c96` failed in
+at `e3acd2fdc10f4891b2bc9bfd4b2cb1b2f6c0bb14` failed in
 `core-surface --check` before Nextest. Its blanket refusal of conditional
 module/export attributes also rejected the new documentation feature labels.
 The bounded failure record (not retained) records the 83,215-byte job-log
@@ -640,7 +640,7 @@ the next ordinary run; they are not executed evidence yet. Query, Null, PoW,
 EVM and prepare/attach source-row proposals remain unapplied.
 
 Run [38904971807](https://github.com/sam0x17/rtao/actions/runs/38904971807)
-at `29178a070a3108a49d2a4e4e97af1370a6743aee` completed with five
+at `447c41eddc6d0f502ba4a1bc550aaab936665c38` completed with five
 ordinary jobs passing and the main check failing: 3,103 tests passed, one failed
 and four skipped. All 17 new functions and all 61 selected witnesses passed.
 The failure is in
@@ -686,7 +686,7 @@ validation follows adoption. No EVM row or milestone acceptance follows now.
 
 Canonical candidate run
 [38930971428](https://github.com/sam0x17/rtao/actions/runs/38930971428)
-passed at `0dc258bba254b9a39e1a7d49005b2313adf0954a`. The normal
+passed at `9e881cd473ae3c19bc24621e3dbe9f85a05f8a02`. The normal
 import/extraction checks and all 21 focused tests passed. The 63,793-byte
 artifact `12059321729` has SHA256
 `7db7d069d9165c6c4e7b4c5871836e121dd2a1711b4920bcc24e581811b0ca88`.
@@ -704,7 +704,7 @@ mapping and milestone acceptance remain pending.
 
 The accepted M0/M1 foundation checkpoint remains
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
-at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six hosted jobs passed.
+at `965669d709bd8b8435f76ec7db5def9d471fe0d9`. All six hosted jobs passed.
 The main gate passed all 3,051 executed tests, zero failed, four skipped,
 all 19 workspace doctest suites (nine doctests), strict Clippy, documentation
 and every blocking check. Its 717,929-byte log has SHA256
@@ -728,7 +728,7 @@ review evidence. Later client work is recorded separately below.
 
 Ordinary hosted
 [38832708259](https://github.com/sam0x17/rtao/actions/runs/38832708259)
-passed at `7bb8c0b888b5e634c8ca1236f05ceb9b6f81a48a`. All six jobs
+passed at `1edf4d7e859cadb362644196cde5bf278c527c73`. All six jobs
 passed: check, no-host, features, MSRV, semver and supply. The main gate passed
 strict Clippy, source/pin/extraction checks, documentation generation, all
 3,013 executed tests (four skipped) and workspace doctests. The documentation
@@ -745,8 +745,8 @@ extraction confirms all 70 selected
 S9 regressions and all 12 new M2-S03 parser/public-view/differential regressions
 passed on this commit. Independent source review and exact executed results
 close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
-the limits in [M9](../security/m9.md#current-dispositions-at-7bb8c0b) and
-[M2](../security/m2.md#current-hosted-dispositions-at-7bb8c0b).
+the limits in [M9](../security/m9.md#current-dispositions-at-1edf4d7) and
+[M2](../security/m2.md#current-hosted-dispositions-at-1edf4d7).
 
 The source map and adopted generated matrix agree at 312/357 reconciled inputs
 and 45 pending after the reviewed multisig-safety disposition. The e2e source map and generated matrix agree at
@@ -796,11 +796,11 @@ instructions and mandatory infrastructure requirements are retired. This
 resource audit grants no source-step or milestone acceptance.
 
 Direct rustfmt, whitespace, exact patch/source reviews and all 26 documentation
-after-image identities pass. All seven new functions pass at `60a20ee`, with
+after-image identities pass. All seven new functions pass at `2cec5c6`, with
 the corrected picker fixture, in the successful 3,077-test checkpoint above.
 
 Hosted run [38883630624](https://github.com/sam0x17/rtao/actions/runs/38883630624)
-at exact `0b0bb79` completed with five supporting jobs passed and main failed:
+at exact `80a22f8` completed with five supporting jobs passed and main failed:
 3,069 tests passed, one failed and four were skipped. Strict Clippy reached
 Nextest, but later doctests and documentation gates did not run. The sole
 failure was `canonical_picker_answers_use_real_clap_parser_retries_and_final_relationships`:
@@ -808,7 +808,7 @@ its supplied conflicting option waived Clap's required address, so the fixture
 never entered the expected public prompt context. The corrected fixture first
 asserts that behavior, then omits both conflicting fields and checks collection
 followed by final conflict rejection. The corrected fixture now passes at
-`60a20ee`; the earlier failed run retains its own source identity and result.
+`2cec5c6`; the earlier failed run retains its own source identity and result.
 
 The bounded partial hosted-results record (not retained) authenticates 22 selected
 PASS records, including both keyfile fixtures, and the sole failure. Its source
@@ -819,7 +819,7 @@ the next report-refresh steps are not retained in the repository.
 ### Report adoption and next combined hosted checkpoint
 
 Report-only [38888110550](https://github.com/sam0x17/rtao/actions/runs/38888110550)
-passed at exact `3143d72`. The finalized binding authenticates all 36 source
+passed at exact `1af32bd`. The finalized binding authenticates all 36 source
 inputs and artifact `12040193494` (58,602 bytes, SHA256
 `33a643d7137ee0ae94a183764483926ec702056e69088bcc2aad788363bd1203`).
 Inspection and an independent refetch adopted exactly four reports. They change
@@ -829,7 +829,7 @@ metadata. All 23 dependency inputs, role inventories/host flags and other
 compatibility claims are unchanged. No archive or extraction directory remains.
 
 Ordinary combined [38889135192](https://github.com/sam0x17/rtao/actions/runs/38889135192)
-passes at exact `60a20ee`, with 3,077 tests and the doctest/docs results above.
+passes at exact `2cec5c6`, with 3,077 tests and the doctest/docs results above.
 Report generation alone supplies no regression execution or milestone acceptance.
 The M3 readiness audit finds represented miner/authentication/template source.
 Compiled-example wiring is now implemented below, awaiting hosted execution;
@@ -844,7 +844,7 @@ registration fixture with ordinary and shielded vectors. It uses distinct
 member/group/hotkey identities, preserves the inclusion receipt and requires
 later-block registration completion for the shielded path. Existing fake
 transport support is reused; no production harness or dependency changes.
-Formatting and applicability pass. This function is outside the `60a20ee`
+Formatting and applicability pass. This function is outside the `2cec5c6`
 checkpoint and remains unexecuted; the next combined total becomes 3,078.
 The multisig-safety source row stays pending.
 
@@ -863,24 +863,24 @@ qualification of unchanged references does not invent an edge change.
 
 All 13 adopted source after-images, direct formatting and script syntax checks
 pass. First lock run [38891932293](https://github.com/sam0x17/rtao/actions/runs/38891932293)
-at `0f68970` resolved ten additions but failed because the guard omitted the
+at `e3bd736` resolved ten additions but failed because the guard omitted the
 `jobserver` build helper (and `termcolor`). No candidate lock was adopted.
 The corrected guard pins all ten observed versions/checksums and permits only
 the existing `cc` build tool's optional `libc`/`jobserver` edges within Docify's
 closure. Old identities, metadata and resolved edges remain protected. Candidate
 locks are retained even after guard failure for review. Second lock run
 [38893353758](https://github.com/sam0x17/rtao/actions/runs/38893353758)
-at exact `80ad78b` passed. The authenticated candidate adds exactly those ten
+at exact `4f02d5a` passed. The authenticated candidate adds exactly those ten
 packages and only the two Docify edges plus `cc` to `jobserver`/existing `libc`.
 All old identities, metadata and edges are preserved; the fuzz lock is identical.
 Independent source review and a separate artifact refetch passed before adoption.
 Regenerated reports and hosted compilation/supply/tests remain pending. Current compatibility reports predate
 these manifest changes. No generated lock or report is hand-edited. The successful
-`60a20ee` ordinary run validates the preceding sources only. Offline doc examples
+`2cec5c6` ordinary run validates the preceding sources only. Offline doc examples
 and broader M9 documentation completion remain separate.
 
 Hosted report run [38893835867](https://github.com/sam0x17/rtao/actions/runs/38893835867)
-at exact `7ac3c94` failed compiling Docify 0.4.1 before generating reports. Its
+at exact `d498d6d` failed compiling Docify 0.4.1 before generating reports. Its
 open Git/SHA requirements select API-incompatible git2 0.21 and sha2 0.11.
 The correction selects published Docify 0.2.9, whose local export, embed,
 embed_run and in-memory Markdown APIs match our uses and need neither Git/SHA
@@ -888,7 +888,7 @@ libraries nor their native build helpers. Its published macro source and
 package checksums were inspected. A new hosted candidate will preserve the
 entire pre-Docify dependency graph; no lock is hand-edited. Hosted lock run
 [38895014224](https://github.com/sam0x17/rtao/actions/runs/38895014224)
-passes at exact `6a2e191`. The reviewed and separately refetched candidate adds
+passes at exact `e4b027f`. The reviewed and separately refetched candidate adds
 nine pure Rust documentation packages against that original graph and only
 the facade-dev/xtask Docify edges. It removes the failed Git/native-tool closure
 and restores the old `cc` edges. Fuzz lock bytes stay identical. This is lock
@@ -909,14 +909,14 @@ no native archive sampler and no claim of producer or historical reconstruction
 execution. Existing consumer source matches the preceding green checkpoint.
 
 Report run [38895327494](https://github.com/sam0x17/rtao/actions/runs/38895327494)
-at `2f6d585` compiled the corrected tool and generated reports, then failed the
+at `67f0777` compiled the corrected tool and generated reports, then failed the
 source-attribution guard. Root move/swap were listed in an additional-sources
 comment rather than explicit derived-source headers. Both now have full headers
 at the authenticated commit/license; production bodies are unchanged. No reports
 from the failed run were adopted. The corrected hosted report check follows.
 
 Hosted report run [38896301076](https://github.com/sam0x17/rtao/actions/runs/38896301076)
-at exact `4c1e5af` passes, including source attribution. Authenticate artifact
+at exact `dece106` passes, including source attribution. Authenticate artifact
 12044595804 (58,707 bytes, SHA256
 `9eefd53289a02dc5b948266ee11a7229aafde024dc03c2b2fa98325be58baca2`),
 inspect all four changed source rows and all 23 actual dependency inputs, then
@@ -929,7 +929,7 @@ This passes report/source checks; ordinary combined hosted execution is next
 for 3,080 expected tests. No new milestone is accepted.
 
 A fresh reader also completed two cold reads of all five current authentication
-sources at `6fba8dc`, finding no surviving concrete implementation defect within
+sources at `c920891`, finding no surviving concrete implementation defect within
 their stated contracts. All five hashes match the preceding hosted checkpoint's
 source. [M3](../security/m3.md#current-authentication-source-review-2026-10-16)
 records the exact identities and API/deployment limits. This review runs no
@@ -962,7 +962,7 @@ not retained in the repository.
 
 Report-only hosted run
 [38880542426](https://github.com/sam0x17/rtao/actions/runs/38880542426)
-passed source parity at exact `af2565d4cf60302d7670d7efcc07227e1fe99b0e`.
+passed source parity at exact `6d3918641039ea10e88b049d1014ef742a90980a`.
 Authenticated artifact 12037044413 is 58,405 bytes, SHA256
 `2c8bba283bf36bf31a169098ff7e210799811a49489643d1c90030f846e6e5b1`.
 Independent refetch adopted exactly four reports. The matrix changes only
@@ -978,7 +978,7 @@ coverage now checks the NaCl prefix and post-decryption signing, with no extra
 KDF calls. The patch was independently reviewed; execution remains pending.
 Valid legacy Fernet, the exact combined encrypted-create transcript and isolated
 umask-000 execution remain unverified. Its oracle-only source row stays pending.
-The combined checkpoint must execute all 19 newly added functions since d01830c,
+The combined checkpoint must execute all 19 newly added functions since 965669d,
 plus the extended fixtures; the expected main total is 3,070. Five supporting
 jobs passed on earlier source in run 38877875846; its main check was cancelled
 when superseded, before a complete test summary. No earlier subset validates
@@ -986,7 +986,7 @@ these newer sources.
 
 Combined hosted run
 [38882046195](https://github.com/sam0x17/rtao/actions/runs/38882046195)
-at `a042d983623cc697e26af3014d28c489b9906c49` stops in Clippy before tests:
+at `81e791eef2ba8a7000a22834a115b663391d2335` stops in Clippy before tests:
 the association fixture imports `associated_evm_key` from the reads root,
 but the public implementation is in `reads::m6_accounts`. Correct that fixture
 import without changing the production API or lint policy. The bounded main
@@ -1006,7 +1006,7 @@ sessions; JSON remains a single document. Five new test functions and extended
 actual-command fixtures await hosted compilation and execution. Direct rustfmt,
 whitespace checks and independent source reviews pass.
 
-Complete source reviews and exact d01830c results reconcile the metagraph,
+Complete source reviews and exact 965669d results reconcile the metagraph,
 FakeNode harness and test_rpc.py rows. The source map and generated matrix now
 agree at 306/357 reconciled, 51 pending. Its subsequent command-summary and
 required-address source repairs are recorded above; whole source rows stay pending.
@@ -1015,7 +1015,7 @@ new upstream filings were used for this batch.
 
 Report-only hosted run
 [38876950939](https://github.com/sam0x17/rtao/actions/runs/38876950939)
-passed at exact `82d82d792b2c01eb7df3d81538f0ede0ca592f24`, including the full
+passed at exact `b06a325b3985cc6dbc21aaa1ff7b9d39cec39bfd`, including the full
 source-parity check. Authenticated artifact 12035678693 contains only four
 reports (58,349 bytes, SHA256
 `2770c94c6e5507a9f829272eb3f7ababa080746637c1db55e4add34ad5340a08`).
@@ -1046,12 +1046,12 @@ not retained in the repository; no build output or extra temporary directory was
 Complete independent review reconciles `codegen/check.py`: all six functions,
 declarations, native producers/consumers and gate callers have explicit homes.
 The metadata-name/Unknown-classification and Python-strip-nonblank repairs both
-have exact PASS records on `7bb8c0b`. Native pinned regeneration and Result/CLI
+have exact PASS records on `1edf4d7`. Native pinned regeneration and Result/CLI
 errors replace Python live generation and stdout conventions; fresh Python,
 oracle and live drift remain unverified.
 
 Hosted [38859189354](https://github.com/sam0x17/rtao/actions/runs/38859189354)
-passed full source parity at clean `6c4f82c0618c81b12784eefb97875b2ad379f724`.
+passed full source parity at clean `ec263ec243659b3a9925f41862795db66bdcdb56`.
 Artifact 12029210729 is 58,018 bytes, SHA256
 `da3e79b71704bf997cc96d26aa544949de9330f4a1f47dc0d8d5e736c8802159`.
 Authenticated inspection and independent refetch supply exactly four adopted
@@ -1061,12 +1061,12 @@ reconciled and 59 pending. All 23 dependency inputs, role counts, host flags,
 unchanged. Bounded inspection/adoption proofs, archives and extraction trees are
 not retained.
 Ordinary [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
-at `50b7239` remains the weight-fix validation checkpoint. Other pending rows,
+at `2235efb` remains the weight-fix validation checkpoint. Other pending rows,
 strict M8 and milestone status are unchanged.
 
 ### Earlier source and CLI batch
 
-The current `3f1aa67` result supersedes this batch's earlier unexecuted-fixture
+The current `ab5d792` result supersedes this batch's earlier unexecuted-fixture
 and pending-report statements. Their source scope and coverage limits remain.
 
 Complete authenticated source reviews reconcile staking (all 14 intents),
@@ -1090,7 +1090,7 @@ stay pending their remaining caller/content reviews. No local builds or tests ra
 ### CLI follow-up and failed report refresh
 
 Report-only hosted [38862240133](https://github.com/sam0x17/rtao/actions/runs/38862240133)
-failed at exact `b59fd13140ddfac01281e5a3b816b85219231e44`: the license guard
+failed at exact `1ed7445c16b00c8110ebfe76143cba64404e9ee0`: the license guard
 could not attribute the newly reconciled pruning home in `rtao-neuron`. Its
 combined two-source comment did not supply the exact canonical upstream path.
 Split that comment into one canonical header per source without changing the
@@ -1114,7 +1114,7 @@ pending; source/matrix counts, strict M8 and milestone status are unchanged.
 ### Corrected reports and the next hosted test batch
 
 Hosted [38862997033](https://github.com/sam0x17/rtao/actions/runs/38862997033)
-passed full source parity at clean `f48535dbfd3b75dcdc9511c259b322c2b9a8ab38`.
+passed full source parity at clean `9d7c6f8ff42b4ec86bca8553c20ec2fb67eac11a`.
 Authenticate and independently refetch artifact 12029777947 (58,166 bytes,
 SHA256 `ebff9b28aa3c2329462ba83031580e438135c7e97e69e598a434fefe83d8a95d`)
 before adopting exactly four reports. Only the three reviewed staking, weights
@@ -1152,7 +1152,7 @@ not retained in the repository; this refresh did not repeat the authored-search
 census or source/test audit. No GitHub filing write occurred.
 
 Ordinary [38863766724](https://github.com/sam0x17/rtao/actions/runs/38863766724)
-at `9bd2d02788ebf22c546f8c59099386f9ab976524` exposes E0382 in the MSRV
+at `4cf93bd99b121583517c03684c844f10aaf309ba` exposes E0382 in the MSRV
 CLI binary check: an async move handler consumed original replay argv before
 the newly wired finish boundary borrowed it. Retain the owned vector outside
 dispatch and give the seven handler closures a shared slice. No replay value
@@ -1162,7 +1162,7 @@ fixture results. Bounded MSRV evidence is not retained; the 58,981-byte
 log has SHA256 `c776d6f6862cc8b4af9ba8737660b973258c7269eed3f15c3e51ab6088b5d935`.
 
 Corrected ordinary [38864132855](https://github.com/sam0x17/rtao/actions/runs/38864132855)
-at `821142045101e74137f673c6c31890f514527a0a` passes MSRV, no-host and
+at `65fa07f90b43a31d6a680c986c70e6303c761143` passes MSRV, no-host and
 semver. Its main job stops before tests on two `needless_borrows_for_generic_args`
 findings in the new wallet fixture's environment closure. Pass the Copy closure
 directly at both calls. Formatting passes; the 26 new fixtures still require
@@ -1172,7 +1172,7 @@ not retained; the 68,704-byte log has SHA256
 
 ### Verified source dispositions and the next root-picker repair
 
-All 26 additions in the preceding batches pass at `3f1aa67`. The exact named
+All 26 additions in the preceding batches pass at `ab5d792`. The exact named
 proof is 24,010 bytes, SHA256
 `87b0f69da8e44828bca1d1d0d48788fcd74f60b48950e57bd0d7143ef7dc587d`.
 Independent whole-source review plus the five actual-resolver, four all83/all102
@@ -1194,7 +1194,7 @@ listed validator's full address. Restore numeric/address/label precedence and
 add one actual allocation-preparation fixture with collision and control cases.
 It checks typed intent args, exact replay and absence of author RPCs. Independent
 source/API/fixture review and direct formatting pass; this new fixture is not
-included in the `3f1aa67` execution result and awaits hosted validation. The
+included in the `ab5d792` execution result and awaits hosted validation. The
 whole root-helper row remains pending. [M9](../security/m9.md) records the finding;
 M2-S02 remains open/unaccepted and no new upstream filing was made.
 
@@ -1228,7 +1228,7 @@ No local Cargo/build/test, service, macOS-host work, new temporary root or filin
 
 ### Authenticated M1 preparation and combined follow-up
 
-Both preparation runs passed at exact `d5132a0`: codegen/report run
+Both preparation runs passed at exact `2143d2e`: codegen/report run
 [38871417189](https://github.com/sam0x17/rtao/actions/runs/38871417189) and isolated
 TLS-lock run
 [38871434589](https://github.com/sam0x17/rtao/actions/runs/38871434589).
@@ -1318,7 +1318,7 @@ no build output, archive or extraction tree was created.
 
 Hosted report refresh
 [38826175917](https://github.com/sam0x17/rtao/actions/runs/38826175917) passed
-at clean `d2d5add9eb68806f37d1b90eac372b0db97ac0c9`, including full source
+at clean `a24e4dac5cb993b983bc0c0667f14262ff939c75`, including full source
 parity. Authenticated and independently refetched artifact 12015413800
 (57,978 bytes, SHA256
 `f3af367e6632bef6c2200ca8fee15bb86387e81f5598e348337ca4db52ffa8da`)
@@ -1331,7 +1331,7 @@ The timer patch has independent source approval; its three fixtures and the inte
 compiler, transport and extractor fixtures await ordinary hosted execution.
 
 Ordinary [38827263561](https://github.com/sam0x17/rtao/actions/runs/38827263561)
-at `dc5c09a8a0e451eaee256cfc517b5a68c8782b56` passed all five supporting
+at `0c4cc196edbf79489b2d9f0568177d36f11e31d2` passed all five supporting
 jobs: supply, MSRV, feature graphs, semver and no-host. Its main job passed
 Clippy for all targets and all source/pin/extraction checks, then failed strict
 rustdoc on two unqualified module links to timelock `seal` and `open`.
@@ -1345,7 +1345,7 @@ completion remain unverified. The separate weights, staking and source-map
 proposals remain ignored and unapplied while this documentation gate is fixed.
 
 Ordinary [38824416747](https://github.com/sam0x17/rtao/actions/runs/38824416747)
-at `d9ae66842d0cdb261b353ea0284b1f5936c324b4` passed supply, MSRV and
+at `9e02f8e6e9c23204340fdd7482928b6ac1bd24c1` passed supply, MSRV and
 semver; no-host failed strict Clippy on session.rs's Url import,
 which the handshake refactor left needed only by tests and frame fuzzing.
 Gate that import with the existing test/fuzzing condition; do not suppress
@@ -1364,7 +1364,7 @@ report refresh above are ready for the next combined ordinary checkpoint.
 
 Hosted report refresh
 [38823630645](https://github.com/sam0x17/rtao/actions/runs/38823630645) passed
-at clean `7cc750178a17d89424b0c95616d493adab16b52c`. Its 57,584-byte artifact was
+at clean `996698371d9bb2ea03e32932e41905b4b42ebd44`. Its 57,584-byte artifact was
 authenticated and independently refetched; exactly four reports are adopted. The matrix
 changes only the two reviewed precompile/RPC source rows, reaching 284/357
 reconciled and 73 pending. All 23 dependency inputs match that source; exactly
@@ -1378,7 +1378,7 @@ M2-S02 open/unaccepted and no milestone is accepted.
 
 Hosted report refresh
 [38819346876](https://github.com/sam0x17/rtao/actions/runs/38819346876) passed
-full source parity at clean `d8db07d43f5c7e32623e8614b2e09f07629abeb9`. Adopted
+full source parity at clean `29d62761ac9496b7a54df72571fa79cbed8ddd7e`. Adopted
 exactly four report files after authenticating and independently refetching
 the archive. Matrix changes are limited to the two reviewed substrate/interface
 rows. All 23 dependency inputs, role counts, host flags and other compatibility
@@ -1387,7 +1387,7 @@ extraction trees are not retained.
 
 Hosted generation
 [38816297566](https://github.com/sam0x17/rtao/actions/runs/38816297566) passed
-source parity at clean `2ad5d1b41673dc4804640edc11e4703ed834ec19`. Both artifact
+source parity at clean `6c9e9ffdde5d04b3b61b0c64e884e115ca8c540c`. Both artifact
 archives were authenticated and independently fetched twice. Adopted outputs
 replace the explicit precompile bootstrap with the actual generated consumer,
 add five authenticated Python tables and refresh four reports. Exactly seven
@@ -1402,7 +1402,7 @@ Strict M8 completeness remains off; no milestone is accepted. M2-S02 remains
 open and unaccepted, and upstream issue #3251 is still open.
 
 Normal [38809901640](https://github.com/sam0x17/rtao/actions/runs/38809901640)
-at `55f7ec0ebbbc5f08b685af9c47b8e18c71a2aef3` completed with all five supporting
+at `7b69f8eed7324cd0f4a7c2c1f77314a37d1928e5` completed with all five supporting
 jobs successful. Its main gate passed 2,963 tests with zero failures and four
 skips, then passed the workspace doctests. Both serving-fixture repairs are
 therefore confirmed for that source. The gate subsequently failed strict
@@ -1414,7 +1414,7 @@ The exact 781,765-byte terminal log has SHA256
 the bounded proof is not retained. Book generation was not completed.
 Follow-up ordinary
 [38814558931](https://github.com/sam0x17/rtao/actions/runs/38814558931) at
-`4e9447b195abe1d11123b3b153bd1955f81af747` completed with all five supporting
+`a7b6a4a665c0bcea146f54389c20706c7e0157a5` completed with all five supporting
 jobs passing. Its main gate passed all 2,968 tests with four skips and workspace
 doctests, then failed strict rustdoc on one unresolved PythonBalance link.
 Qualify that existing public type's link without changing behavior or lint
@@ -1422,7 +1422,7 @@ policy. The 782,118-byte log has SHA256
 `8343a0f3afc901d20745f0f6b5d1c12f053e0f33d7fa7feac4c18141ca115394`;
 the bounded proof is not retained. Book generation was not reached.
 Ordinary [38818850318](https://github.com/sam0x17/rtao/actions/runs/38818850318)
-completed at `f21c0919fcf42a73c09e9903d8a8bffa3180d562`. All five supporting
+completed at `82aed8719997c9bb71302ba839054ecf3c82f060`. All five supporting
 jobs passed. The main gate ran 2,977 tests: 2,976 passed, one failed, four skipped.
 The failure is the extractor's constructor-semantic refusal fixture; doctests
 and documentation were not reached. The exact 773,213-byte log has SHA256
@@ -1443,7 +1443,7 @@ case and adding nested/index variants plus exact mutation diagnostics. Direct
 formatting and source inspection pass; hosted execution of the correction is
 still required.
 
-Source checkpoint `d8db07d` repairs terminal policy refusals during paced
+Source checkpoint `29d6276` repairs terminal policy refusals during paced
 reconnect setup, with four real-session regression fixtures. It also normalizes
 public RPC diagnostic text while retaining typed causes and policy metadata,
 with eleven fake-startup vectors. Both patches passed independent source review
@@ -1470,7 +1470,7 @@ and the inherited pre-ack subscription-cancellation limitation.
 
 Hosted lock refresh
 [38822187126](https://github.com/sam0x17/rtao/actions/runs/38822187126) succeeded
-at clean `cc32b5d011514ddf399c8ebe3f21e83643d819cd`. Its artifact was authenticated
+at clean `9a9d05344be0535dddb20f097bdd5ec14432329c`. Its artifact was authenticated
 and independently fetched twice; both generated locks are adopted. Each adds only
 the existing rtao-rpc -> tokio-rustls edge; all package identities and other
 bytes are unchanged. The handwritten candidate was excluded. The bounded proof, archives and
@@ -1490,15 +1490,15 @@ unrelated work.
 These records retain their own source and execution scope. The current
 checkpoint above supersedes their instructions to dispatch or retry checks.
 
-### Earlier header and source checkpoint, superseded by 2f9a30d
+### Earlier header and source checkpoint, superseded by 0a92c0e
 
 Normal [38790070632](https://github.com/sam0x17/rtao/actions/runs/38790070632)
-at `da99c3deb6886bca32a1d3c04eb098977068d8d3` stops before tests on
+at `bf2bf9409260be023933bed33af61b3ed85e2388` stops before tests on
 `_subtensor.py`'s extra helper-crate mapping. All five supporting jobs pass.
 Raw main log is 61,923 bytes, SHA256
 `dc01e374fe32111e15206f169f139132dd17361e8e2dc8ca775f790359584fb8`;
 the bounded proof is not retained. Tests/doctests/docs were not reached.
-The preceding 97090f2 run caught the combined header's incomplete source path;
+The preceding 9748aae run caught the combined header's incomplete source path;
 splitting that header exposed the remaining helper mappings.
 
 A complete source-header preflight now distinguishes direct derived homes
@@ -1515,7 +1515,7 @@ It also retains failed receipt events for native multisig/recovery consumers
 under D-023, while preserving Python result JSON field presence.
 
 Report refresh [38789498154](https://github.com/sam0x17/rtao/actions/runs/38789498154)
-succeeds at clean `56469a09a2013c959035cd7303f7d2a4e19ac71a`.
+succeeds at clean `72a0d289265948a6444a396bff84acfcc3194662`.
 Authenticate the 55,264-byte archive, four regular report members and 23
 unchanged dependency inputs. The matrix changes exactly the eight reviewed
 file rows: 228/357 reconciled, 129 pending, with 20 pending e2e mappings.
@@ -1552,14 +1552,14 @@ slot timing from the retained runtime. Timelock parser/deadline, precompile
 table/diagnostic, Vault browser/QR and picker source gaps remain pending.
 
 All 70 selected S9 regressions passed in prior ordinary run 38780323094 at
-`262be704a322e82efcbcaf0ee5764f1adb5519aa`; all 29 selected boundary/test
-files are byte-identical at `97090f2`. The bounded record of immutable run/job/head
+`9291b383e76de053ff07ed73c18383dc30dd0536`; all 29 selected boundary/test
+files are byte-identical at `9748aae`. The bounded record of immutable run/job/head
 identities, raw-log digest and exact PASS lines is not retained in the repository. That run failed three other tests;
 these targeted results do not establish C1 or close the findings. M2-S02
 Ed25519 final-drop erasure remains open and unaccepted.
 
 Hosted generation [38777439872](https://github.com/sam0x17/rtao/actions/runs/38777439872)
-succeeds at clean `5464ccf`. Authenticate two exact archives, all 20 regular
+succeeds at clean `daf7ab1`. Authenticate two exact archives, all 20 regular
 allowlisted members and all 23 unchanged dependency inputs. Only the new
 22,297-byte root-claim fixture differs among generated interfaces; both source
 blobs/SHA256s and case inventories are checked. The matrix changes exactly
@@ -1590,7 +1590,7 @@ A follow-up aligns decimal ABI integer strings with Python's default
 Public coercion fixture source covers both sides, signs, Unicode digits and
 separators while retaining native u64 and ABI-width checks. Formatting and
 whitespace pass; execution remains pending. Hosted generation38776671979
-runs at d7b4a27; this later source-only fix changes none of its dependency,
+runs at 353c6b7; this later source-only fix changes none of its dependency,
 extraction or report inputs.
 
 Generation run38776446102 at8112797 fails before producing reports: the new
@@ -1602,7 +1602,7 @@ proof not retained. No generated artifact or new test result.
 Retry hosted generation on the corrected clean source before ordinary CI.
 
 Normal [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
-at `237d189` is terminal: all five supporting jobs, main compilation,
+at `e7fa64b` is terminal: all five supporting jobs, main compilation,
 strict Clippy and ordinary parity pass. Nextest runs 2,831 tests: 2,784 pass,
 47 fail and 4 are skipped. Doctests/docs are not reached. Raw main log is
 1,258,642 bytes, SHA256
@@ -1652,7 +1652,7 @@ null placeholders for individual decode failures. No local builds/tests or
 new temporary directories.
 
 Refresh [38771543517](https://github.com/sam0x17/rtao/actions/runs/38771543517)
-succeeds at clean `ddd73e5`. Authenticate and adopt exactly four regular report
+succeeds at clean `39f019e`. Authenticate and adopt exactly four regular report
 members, archive digest/size and all 23 committed/current dependency inputs.
 Only the explicit rtao-tx serving test-feature manifest hash changes. Role
 inventories and host selection remain unchanged. Matrix differences are exactly
@@ -1669,7 +1669,7 @@ run on the adoption head after the existing main job concludes. Its results
 cannot validate the later batch. No fresh test/docs or milestone acceptance.
 
 Normal run [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
-validates the isolated compiler correction at `237d189`. At inspection supply,
+validates the isolated compiler correction at `e7fa64b`. At inspection supply,
 MSRV and semver pass; main, features and no-host remain active. It does not
 include the following source batch. The previous run `38769405520` is superseded;
 its main failure and passing supporting jobs retain their own exact-source scope.
@@ -1704,7 +1704,7 @@ proofs and the individual source reports are not retained in the repository. No 
 build/test, service, temporary directory, upstream filing or milestone acceptance.
 
 Normal run [38769405520](https://github.com/sam0x17/rtao/actions/runs/38769405520)
-at `6480626` passes every ordinary parity layer, including all 63 divergence
+at `4890351` passes every ordinary parity layer, including all 63 divergence
 declarations with the exact optional D031 deferral. Main Clippy then fails
 compiling the new unit fixture: `tempfile` is not an xtask dependency. Extract
 the existing document validator and call that same function from the fixture,
@@ -1716,7 +1716,7 @@ This small compiler correction is pushed separately from the later source
 batch so ordinary hosted validation can proceed while that batch is reviewed.
 
 Normal run [38767926902](https://github.com/sam0x17/rtao/actions/runs/38767926902)
-at `bbfa09a` has failed its main check. Supply, MSRV, no-host and semver pass;
+at `5edf4a6` has failed its main check. Supply, MSRV, no-host and semver pass;
 features remains active at 16:28 UTC. The earlier parity check now passes the
 corrected attribution/discovery layers and all 115 e2e keys, then exposes an
 ordering bug: optional pending M10 D031 is required to have pinning tests before
@@ -1755,7 +1755,7 @@ economics, atomicity or rollback is claimed. No local build/test, service,
 temporary directory or upstream filing.
 
 Refresh [38766936693](https://github.com/sam0x17/rtao/actions/runs/38766936693)
-succeeds at clean `41f3838`. Verify and adopt its four exact regular report
+succeeds at clean `02fad70`. Verify and adopt its four exact regular report
 members, immutable archive digest/size and all 23 committed/current dependency
 inputs. The matrix changes only the two reviewed balance/property dispositions
 and five corrected derived-code homes. Source counts are 204 reconciled and
@@ -1767,7 +1767,7 @@ Independent rereviews of the balance mapping and final mapping/discovery gates
 are active. No local build/test, service, new filing or milestone acceptance.
 
 Normal run [38762528504](https://github.com/sam0x17/rtao/actions/runs/38762528504)
-at `60ff9a4` is terminal. All five supporting jobs, main compilation and strict
+at `463c551` is terminal. All five supporting jobs, main compilation and strict
 Clippy pass. Parity checks the new five client-contract bindings and all 115
 e2e keys, but stops before tests on a false CLI-derived package home and missing
 xtask test discovery. The D022 witness exists and Cargo tests it; the source
@@ -1794,7 +1794,7 @@ combined normal CI and independent gate-integration rereview remain required.
 No local build/test, service or temporary directory was created.
 
 Refresh [38761784282](https://github.com/sam0x17/rtao/actions/runs/38761784282)
-succeeds at clean `8cd8de5`. Verify/adopt four exact regular report members,
+succeeds at clean `8194cff`. Verify/adopt four exact regular report members,
 the immutable archive digest/size and all 23 unchanged dependency inputs.
 Role inventories/host selection and compatibility claims stay unchanged.
 Matrix changes are exactly ten reviewed file rows, two new unverified decisions,
@@ -1815,12 +1815,12 @@ The unchanged fixture is declared in `client::attempt_budget_tests`; correct
 only its registered witness path. Its body preserves completed oversized-body
 refusals across both timing boundaries, without sleeps or retries. The evidence record,
 with the full raw-log digest, is not retained. Do not infer nextest,
-doctest or docs success. Compatibility refresh `38761443333` at `a9a7ea5`
+doctest or docs success. Compatibility refresh `38761443333` at `08fdc0d`
 predates this register correction; its matrix cannot be adopted as current.
 The corrected source requires a fresh hosted report followed by normal CI.
 
 Normal run [38759055202](https://github.com/sam0x17/rtao/actions/runs/38759055202)
-at `4000bd0` passes all five supporting jobs; main check remains in progress at
+at `5aa29cf` passes all five supporting jobs; main check remains in progress at
 inspection. The final corrected reveal-parser rereview finds no remaining
 concrete defect within its declared projection scope. Full chain rows remain
 pending; no runtime or milestone acceptance follows.
@@ -1849,7 +1849,7 @@ temporary directory, new filing or milestone acceptance is claimed.
 
 Compatibility refresh
 [38757888373](https://github.com/sam0x17/rtao/actions/runs/38757888373)
-succeeds at clean `303e631`. Verify/adopt exactly four regular report files,
+succeeds at clean `486a71e`. Verify/adopt exactly four regular report files,
 the archive identity/digest and all 23 unchanged dependency inputs. Role counts
 and host selection stay fixed. The matrix changes only the twelve reviewed
 core-py source rows, retaining oracle-only/unverified classifications; source
@@ -1878,7 +1878,7 @@ The review proof is not retained; no Python, container or local build ran.
 Fresh hosted matrix generation is required before ordinary validation.
 
 Normal run [38756773737](https://github.com/sam0x17/rtao/actions/runs/38756773737)
-at `d179b14` passes semver and MSRV at inspection; supply, no-host and features
+at `4a0887f` passes semver and MSRV at inspection; supply, no-host and features
 remain live. Main Clippy stops before tests on two cloned values used only to
 create borrowed one-element slices in the new Children ordering fixture. Use
 `std::slice::from_ref` at those call sites, preserving both assertions and the
@@ -1887,7 +1887,7 @@ assertion is disabled; the corrected source needs another normal hosted run.
 
 Compatibility refresh
 [38756143897](https://github.com/sam0x17/rtao/actions/runs/38756143897)
-succeeds at clean `877a39c`. Verify/adopt its four exact regular report members,
+succeeds at clean `774baa1`. Verify/adopt its four exact regular report members,
 archive identity/digest and all 23 dependency inputs. Only xtask's reviewed
 license input hash changes; role packages and host selection are unchanged.
 The matrix changes only D-057's two portable pinning references, with all other
@@ -1897,7 +1897,7 @@ reports now need the next normal hosted check; no test or milestone acceptance
 is inferred from generation.
 
 Generation [38754665115](https://github.com/sam0x17/rtao/actions/runs/38754665115)
-succeeds at clean `d65e5a8`. Both exact archive identities/digests, nineteen
+succeeds at clean `7d3441c`. Both exact archive identities/digests, nineteen
 regular allowlisted members and all 23 committed/current dependency inputs
 are verified before adoption. Role counts remain 225/362/366/417 and host
 selection remains false/false/false/true. The sole generated Rust change is
@@ -1924,7 +1924,7 @@ refresh before the next normal combined run. No local build/test or milestone
 acceptance is claimed.
 
 Normal run [38753200118](https://github.com/sam0x17/rtao/actions/runs/38753200118)
-at `164247c` passes semver, MSRV, no-host and supply at inspection; main check
+at `1462b5d` passes semver, MSRV, no-host and supply at inspection; main check
 and features remain live. It includes the named signing-recorder type. No
 current full workspace test success is established.
 
@@ -1948,7 +1948,7 @@ chain-rules file for review. Generation/adoption, compilation and execution of
 this batch remain pending; no milestone is accepted and no local build ran.
 
 Normal run [38751673871](https://github.com/sam0x17/rtao/actions/runs/38751673871)
-at `4f28dbf` passes semver, MSRV, no-host and supply at inspection; features is
+at `d534c3e` passes semver, MSRV, no-host and supply at inspection; features is
 still running. The three fixture type errors are gone. Main check stops before
 tests on one Clippy type-complexity finding in the nested-policy signing
 recorder. Name that fixture type without suppressing the lint. Bounded evidence
@@ -1959,7 +1959,7 @@ The run is now terminal; features was cancelled when the lint-correction push
 superseded it.
 
 Normal run [38750380241](https://github.com/sam0x17/rtao/actions/runs/38750380241)
-at `eefbfa2` passes semver, MSRV and supply at inspection; features and no-host
+at `ac39773` passes semver, MSRV and supply at inspection; features and no-host
 are still running. Main check stops before tests on three fixture compiler
 errors: Crowdloan state needs typed seeding in two fixtures, and V15 pallet
 metadata exposes `error`, not `errors`. Correct those fixtures and remove the
@@ -1969,7 +1969,7 @@ record is not retained. No local build or test ran.
 That run is now terminal: no-host also passed, and its features job was
 cancelled when the fixture-correction push superseded the run.
 
-The source batch is committed in `4c9473c`. Generation run
+The source batch is committed in `7bc0092`. Generation run
 [38749149983](https://github.com/sam0x17/rtao/actions/runs/38749149983) succeeds;
 its eighteen exact regular members and both archive digests are verified, along
 with all 23 dependency-input hashes. Role inventories and host selections are
@@ -1981,7 +1981,7 @@ combined compilation, regression execution and final security disposition remain
 pending. No local build or extraction directory was created.
 
 Run [38746145922](https://github.com/sam0x17/rtao/actions/runs/38746145922)
-at `5125fb9` finishes with all five supporting jobs passing, including supply.
+at `8ffdafa` finishes with all five supporting jobs passing, including supply.
 Main compilation and strict Clippy also pass. Parity then stops before tests
 on the missing basket producer's canonical attribution and a renamed D-044
 fixture reference; both are now corrected in source. The bounded log record
@@ -1999,7 +1999,7 @@ remain incomplete. Fresh generated reports and combined hosted tests are next.
 
 The preceding completed normal run
 [38742652282](https://github.com/sam0x17/rtao/actions/runs/38742652282) at
-`d7143f7` passes features (including unpatched shipped-crate and generic-keyfile
+`2e2535b` passes features (including unpatched shipped-crate and generic-keyfile
 checks), MSRV, no-host and semver. Main check stops before tests on CLI fixture
 qualification and Clippy errors; those sources are now corrected. Supply stops
 on unsafe-libyaml's informational maintenance notice. The exact reviewed policy
@@ -2009,7 +2009,7 @@ fresh normal hosted run. No current full test pass or milestone acceptance is
 claimed. M9 security/read-map changes remain a separate uncommitted batch.
 
 Normal run [38723619536](https://github.com/sam0x17/rtao/actions/runs/38723619536)
-at `e82937c` passes all five supporting jobs, main compilation and strict
+at `43bedb6` passes all five supporting jobs, main compilation and strict
 Clippy. Parity now passes the corrected catalog, pending-read and e2e checks,
 but detects the facade's inherited license missing the Apache obligation from
 its derived blocking adapters. Its manifest now uses the required combined
@@ -2017,14 +2017,14 @@ expression. Nextest/doctests were not reached. The changed manifest requires
 a fresh hosted dependency report before ordinary validation.
 
 Normal run [38722567841](https://github.com/sam0x17/rtao/actions/runs/38722567841)
-at `f129eb1` passes features, MSRV, no-host, supply and semver. Main compilation
+at `fbdcd91` passes features, MSRV, no-host, supply and semver. Main compilation
 then strict Clippy finds `expect_err` in the new duplicate-read regression.
 The fixture now requires the error through fallible test context, preserving
 the assertion and the lint. Parity, nextest and doctests were not reached on
 this run; another normal hosted run must verify the correction.
 
 Normal run [38720004914](https://github.com/sam0x17/rtao/actions/runs/38720004914)
-at `4058413` passes features, MSRV, no-host, supply and semver. Main check passes
+at `fee341a` passes features, MSRV, no-host, supply and semver. Main check passes
 compilation and strict Clippy, then fails parity before tests on canonical
 attribution, the generator's two escaped rustdoc placeholders, private read
 helpers counted as duplicate entry points, and four M6 ordinary read-test
@@ -2036,7 +2036,7 @@ header order also needs hosted regeneration/adoption. Another ordinary hosted
 run must execute this source. No local build or test ran.
 
 Generation [38721766957](https://github.com/sam0x17/rtao/actions/runs/38721766957)
-at `65d4811` succeeds. Both archive digests, seventeen exact regular members
+at `147d953` succeeds. Both archive digests, seventeen exact regular members
 and all 23 committed dependency inputs are verified before adoption. Its only
 generated-code change swaps the two basket header lines; all other generated
 interfaces and the entire parity inventory are unchanged. Role inventories
@@ -2046,7 +2046,7 @@ The next normal run also includes the separately reviewed shield repair below.
 Source adds the remaining 62 reads and the blocking facade. All five read
 groups have fixture source and independent source reviews. Generation run
 [38715060741](https://github.com/sam0x17/rtao/actions/runs/38715060741) at
-`7953bea` succeeds and its outputs are verified and adopted: fifteen exact
+`e7aa703` succeeds and its outputs are verified and adopted: fifteen exact
 archive members, all 23 dependency hashes, unchanged role package inventories,
 62 read availability/output/body changes, four input overrides and D-027's
 exact fixture mapping. All 83 intents and 102 reads now have generated
@@ -2057,17 +2057,17 @@ combined compilation and execution remain pending. See [m6-read-source.md](m6-re
 M6's 24 CLI commands and complete 102-query tree now have authored source,
 parser/entrypoint/FakeChain fixtures and independent source reviews. The root
 basket generator puts its 45 frozen samples and 171 fund baselines in the CLI
-only. Run `38716924750` at `c281803` succeeds; its reviewed artifacts supply that
+only. Run `38716924750` at `99775f4` succeeds; its reviewed artifacts supply that
 exact table and six rustdoc corrections, with other interfaces unchanged.
 Reports from this run are not adopted because parity source advanced after
-its commit. Generation run `38718933791` at `e2e19b4` then succeeds and is
+its commit. Generation run `38718933791` at `e4f5bde` then succeeds and is
 verified/adopted: seventeen exact regular members, all 23 dependency hashes,
 unchanged role inventories, only the six frozen basket records removed from
 the shared catalog, four M6 test mappings and the exact divergence registrations.
 All other generated interfaces remain unchanged. Its bounded evidence is
 not retained; ordinary combined validation is next.
 
-The keyfile parser repair is committed in `f16e97c` after independent source
+The keyfile parser repair is committed in `846a4b3` after independent source
 review. A fresh M4 review records four findings and source repairs in
 [m4.md](../security/m4.md): preserve unresolved submission hashes/causes,
 escape terminal data, bound public file acquisition and avoid owned secret
@@ -2103,7 +2103,7 @@ acceptance still remain. Device/HID, emulator, browser/camera, native Keychain,
 fresh Python oracle and live-chain interoperability execution are unverified.
 
 Normal run [38714093697](https://github.com/sam0x17/rtao/actions/runs/38714093697)
-at `745f3f3` passes features, semver, no-host, MSRV and supply. Main check passes
+at `f2dd8a4` passes features, semver, no-host, MSRV and supply. Main check passes
 compilation, strict Clippy, source/parity guards, all 2,022 executed nextest
 tests and nine doctests; four nextest tests are skipped. It then fails strict
 rustdoc because six generated parameter descriptions contain unescaped HTML
@@ -2111,12 +2111,12 @@ placeholders. The generator and adopted hosted output now render them literally;
 the docs check must be rerun. These results exclude the newer M6 source and parser
 repair. Bounded evidence is not retained.
 Generation run [38714402721](https://github.com/sam0x17/rtao/actions/runs/38714402721)
-at `afd989a` fails before regeneration because the new blocking-accessor format
+at `ac7e297` fails before regeneration because the new blocking-accessor format
 string has an unmatched closing brace. The generator source now escapes each
 generated scope explicitly. No output from the failed run is adopted.
 
 Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
-at `06a3598` passes all five other jobs, compilation, strict Clippy and parity.
+at `ab77cb4` passes all five other jobs, compilation, strict Clippy and parity.
 Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. Source fixes
 retain the original behavior and strengthen fixtures for fixed-width multisig
 timepoints, exact business-probe counting, typed storage batching, runtime UTF-8
@@ -2127,7 +2127,7 @@ gate is disabled. The all-83 planning test passes; doctests and docs are not
 reached. Bounded evidence is not retained. The new read/facade source
 was not included in that run and has no compiled/tested claim.
 
-Source through `a929bcd` implements all 83 intents and 40 of 102 reads,
+Source through `ca1e9d5` implements all 83 intents and 40 of 102 reads,
 with the corresponding hosted generated output verified and adopted.
 The newer crowdloan/root and coldkey intent ports have verified hosted generated
 dispatch and availability metadata, with combined validation still pending;
@@ -2168,7 +2168,7 @@ source and M5 CLI integration still require combined hosted acceptance.
 
 Latest inspected normal hosted run
 [38710157011](https://github.com/sam0x17/rtao/actions/runs/38710157011)
-at `c6bd593` passes MSRV, no-host, supply and semver. The check job compiles
+at `070587f` passes MSRV, no-host, supply and semver. The check job compiles
 the three corrected sites, then strict Clippy rejects a test MutexGuard whose
 borrowed request remains in scope across client.close().await. A lexical
 block now ends the guard and request borrows before that await, retaining the
@@ -2178,7 +2178,7 @@ no local build was run.
 
 Earlier normal hosted run
 [38709461377](https://github.com/sam0x17/rtao/actions/runs/38709461377)
-at `5cba852` fails check/MSRV compilation. Multisig reference collection needs
+at `d63190b` fails check/MSRV compilation. Multisig reference collection needs
 one named borrow lifetime; the new policy fixture compares NetUid to u16,
 and the plan fixture assumes an unavailable H256 FromStr implementation.
 Source corrections share the actual ArgMatches borrow, project subnet IDs
@@ -2191,7 +2191,7 @@ Bounded evidence is not retained. Local output remains
 
 Earlier normal hosted run
 [38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
-at `bad95c0` passes compilation, strict Clippy and all five other normal jobs.
+at `e0849d8` passes compilation, strict Clippy and all five other normal jobs.
 Parity now qualifies the lock fixture, then rejects AddStake's helper-based
 fixture for missing its explicit class token. Meaningful existing trade and
 claim-aware fixture bindings now name their concrete intent types. A bounded
@@ -2202,7 +2202,7 @@ and docs builds were not reached. Bounded evidence is not retained.
 The final ten ports, 20 M5 CLI routes, 21-constructor policy fixture, all-83
 plan fixture and transaction reference have verified generated integration.
 Run [38709002368](https://github.com/sam0x17/rtao/actions/runs/38709002368)
-at `a929bcd` was verified and adopted unchanged: fourteen exact regular archive
+at `ca1e9d5` was verified and adopted unchanged: fourteen exact regular archive
 members/digests, 23 dependency hashes, unchanged role inventories, ten pending/
 availability changes, four guarded constructors, four bounded JSON bodies,
 72 ordinary plan mappings, D-046's new fixture and D-047/D-048. Other generated
@@ -2212,7 +2212,7 @@ See [m5-final-intents.md](m5-final-intents.md). No new filing or local build.
 
 Earlier normal hosted run
 [38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
-at `93f562c` passes compilation, strict Clippy and the five other normal jobs.
+at `ab61f13` passes compilation, strict Clippy and the five other normal jobs.
 Parity rejects the lock-settings fixture because its dynamic dispatch does
 not explicitly reference the three Rust classes required by the pending gate.
 The fixture now matches MoveLock, SetPerpetualLock and SetRejectLockedAlpha
@@ -2222,7 +2222,7 @@ evidence is not retained.
 
 Earlier normal hosted run
 [38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
-at `1c807e1` fails compilation in check and features because `SimSwapResult`
+at `ba0a9d8` fails compilation in check and features because `SimSwapResult`
 needs client `ReadValue` registration. The existing model already derives
 typed decoding; the source registration is corrected. Supply, no-host and
 semver pass; MSRV remains in progress. Tests, doctests and documentation builds
@@ -2231,7 +2231,7 @@ retained.
 
 Earlier normal hosted run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
-at `6470a11` passes supply, MSRV, features, no-host and semver. The check job
+at `8c9b4f3` passes supply, MSRV, features, no-host and semver. The check job
 stops at strict Clippy: the leasing pass-through generator clones its Copy
 `Percent` and `Option<u32>` arguments. The source generator now recognizes
 these Copy types, including optional Copy values. Verified generated output
@@ -2244,7 +2244,7 @@ signing role, bounded child dictionaries and full semantic preflight aggregation
 The SDK typed entry points refuse a role mismatch before key access; dynamic
 and CLI paths use the selected instance role. Hosted execution remains pending.
 Generation run [38704675475](https://github.com/sam0x17/rtao/actions/runs/38704675475)
-at `429f727` was verified and adopted unchanged: fourteen exact archive members,
+at `358164e` was verified and adopted unchanged: fourteen exact archive members,
 23 dependency hashes, unchanged role inventories, seven availability/pending
 changes, one identity helper, two leasing Copy corrections, one guarded Batch
 constructor and one normalized JSON body. The matrix changes only those seven
@@ -2254,16 +2254,16 @@ See [m5-batch-trades-identity.md](m5-batch-trades-identity.md).
 
 Earlier normal hosted run
 [38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)
-at `359b09e` passed supply, no-host and semver but failed check, MSRV and
+at `58f9605` passed supply, no-host and semver but failed check, MSRV and
 features during compilation. The collateral read requires registering the
 existing `MinerCollateralState` decoder as a client `ReadValue`. Root-claim
 fixtures also used the wrong public helper path and an unused import. These
-three source corrections are committed in `6470a11`; tests and doctests were
+three source corrections are committed in `8c9b4f3`; tests and doctests were
 not reached.
 
 Earlier normal hosted run
 [38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
-on `b0e0aa1` passed compilation, strict Clippy, parity and five other jobs.
+on `62940f1` passed compilation, strict Clippy, parity and five other jobs.
 Nextest ran 1,872 tests: 1,871 passed, one failed and four were skipped.
 All eighteen earlier failures are resolved. The remaining new child-take
 fixture expected the metadata default while the Python fake supplied a blanket
@@ -2275,7 +2275,7 @@ not retained.
 
 Earlier normal hosted run
 [38697413448](https://github.com/sam0x17/rtao/actions/runs/38697413448)
-on `60ccce5` passed compilation, strict Clippy, the parity gates and the five
+on `ed861a6` passed compilation, strict Clippy, the parity gates and the five
 other normal jobs. Nextest ran 1,850 tests: 1,832 passed, 18 failed and four
 were skipped. Doctests were not reached. The failures cover CLI schema/output
 fixtures, wallet accounting fixtures, stale pending-operation assertions and
@@ -2286,7 +2286,7 @@ retained.
 
 Earlier normal hosted run
 [38695489489](https://github.com/sam0x17/rtao/actions/runs/38695489489)
-on `fa77262` passed MSRV, features, supply, no-host and semver. Compilation and
+on `62e6b04` passed MSRV, features, supply, no-host and semver. Compilation and
 strict Clippy passed, and D-045's corrected fixture qualified. Parity then
 rejected D-046 because it used the default-feature test index, while the normal
 nextest and doctest commands enable all features. The source correction aligns
@@ -2300,23 +2300,23 @@ Hosted regeneration
 [38690259736](https://github.com/sam0x17/rtao/actions/runs/38690259736)
 and report refresh
 [38691760795](https://github.com/sam0x17/rtao/actions/runs/38691760795)
-were verified and adopted unchanged in `5f4b8fa` and `3afa90b`.
+were verified and adopted unchanged in `fd22af7` and `f723bcd`.
 Review checked artifact digests, exact regular-file members, all 23 dependency
 hashes, unchanged role package inventories, the two read-status changes and
 D-044/D-045 regression references. Bounded adoption records are
 not retained. Report refresh
 [38692634551](https://github.com/sam0x17/rtao/actions/runs/38692634551)
-was verified and adopted in `a9c720c`, covering the CLI owner feature and sha2
+was verified and adopted in `813c914`, covering the CLI owner feature and sha2
 dependency; its proof is not retained.
 Hosted generation
 [38694967521](https://github.com/sam0x17/rtao/actions/runs/38694967521)
-at `70fca29` was verified and adopted unchanged. Exact archive paths/digests,
+at `89035b0` was verified and adopted unchanged. Exact archive paths/digests,
 all 23 dependency inputs, unchanged role inventories, twelve pending-body
 removals, nine pass-through additions, the pre-serde guard and matching matrix
 changes were checked; its proof is not retained.
 Hosted generation
 [38696143491](https://github.com/sam0x17/rtao/actions/runs/38696143491)
-at `18679e3` was also verified and adopted unchanged. Its thirteen exact
+at `b458d29` was also verified and adopted unchanged. Its thirteen exact
 members include only four availability/pending changes and three call-map
 additions; all other generated interfaces and matrix families are unchanged.
 All 23 dependency hashes include the updated CLI feature declaration, with
@@ -2324,7 +2324,7 @@ unchanged role package sets/counts and no runtime claims. Its bounded proof is
 not retained.
 Follow-up generation
 [38696690648](https://github.com/sam0x17/rtao/actions/runs/38696690648)
-at `7c9c8ca` corrects two unused zero-argument pass-through bindings. Review
+at `6d43f69` corrects two unused zero-argument pass-through bindings. Review
 verified the same thirteen paths and 23 hashes, exactly two parameter-name
 changes, unchanged other interfaces/matrix and unchanged role inventories.
 Its proof is not retained.

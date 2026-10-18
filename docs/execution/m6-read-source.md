@@ -3,7 +3,7 @@
 The remaining 62 catalog reads are authored in five modules: accounts/chain/
 identity/neurons (14), delegation/leasing (12), locks/collateral (9), root/
 subnets/weights (14) and staking/prices (13). All 102 reads now have source
-implementations and reviewed output mappings. Hosted generation at `7953bea`
+implementations and reviewed output mappings. Hosted generation at `e7aa703`
 is verified and adopted: all 102 reads now have generated availability and
 dispatch. No M6 step or milestone is accepted by generation alone.
 
@@ -43,7 +43,7 @@ local teardown can still be pending at that point. The facade now detaches the
 coordinator after its bounded acknowledgement wait. Source review covers
 concurrent and reentrant close; hosted execution remains required.
 
-Hosted generation at `afd989a` failed on an unmatched brace in the new
+Hosted generation at `ac7e297` failed on an unmatched brace in the new
 blocking-accessor format string before producing outputs. The generator source
 is corrected, with no generated artifact adopted from the failed run.
 
@@ -86,8 +86,8 @@ success. The 24 M6 CLI commands now have independently reviewed source and
 authored parser, entrypoint and FakeChain fixtures. All four M6 upstream e2e
 keys map to ordinary read fixtures; the neuron test compares typed records with
 raw runtime output. Hosted execution and acceptance remain pending. The root
-basket table is adopted from `c281803` generation: 45 samples and 171 baselines
-match the authenticated extraction. Run `38718933791` at `e2e19b4` verifies and
+basket table is adopted from `99775f4` generation: 45 samples and 171 baselines
+match the authenticated extraction. Run `38718933791` at `e4f5bde` verifies and
 adopts the shared catalog exclusion and latest matrix: seventeen exact members,
 all 23 dependency hashes, unchanged role inventories, four M6 fixture mappings
 and exact divergence registrations. Other generated interfaces are unchanged.

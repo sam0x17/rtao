@@ -8,9 +8,9 @@ admission budgets to `Client::submit` without an outer timeout around that
 submission future. Prebroadcast planning/unlock budgets remain checked.
 
 The retained hosted [run 38832708259](https://github.com/sam0x17/rtao/actions/runs/38832708259)
-at `7bb8c0b888b5e634c8ca1236f05ceb9b6f81a48a` includes exact passes for the
+at `1edf4d7e859cadb362644196cde5bf278c527c73` includes exact passes for the
 five selected S04 client/executor regressions. The
-[M2 security disposition](../security/m2.md#current-hosted-dispositions-at-7bb8c0b)
+[M2 security disposition](../security/m2.md#current-hosted-dispositions-at-1edf4d7)
 closes S04 within its FakeChain limits; the earlier executor-pending note below
 is historical. It does not establish live inclusion/finality behavior.
 

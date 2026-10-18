@@ -7,7 +7,7 @@ not establish successful execution against that runtime.
 
 ## 2026-10-15: initial v478 checkpoint
 
-Repository commit `450c914` first records the pins in `upstream.toml`:
+Repository commit `3fec0bb` first records the pins in `upstream.toml`:
 
 | Input | Recorded identity |
 |---|---|
@@ -31,7 +31,7 @@ separately in the [parity records](parity.md) and hosted CI.
 
 ## 2026-10-15: reviewed Ledger core patch
 
-Repository commit `a035907` adds `[core.patch]` while leaving the core and parity
+Repository commit `e39632d` adds `[core.patch]` while leaving the core and parity
 pins at v478. It selects patch revision
 `eafe84e8a97376e7902118ebb204b9c53e3df55e` from
 `sam0x17/subtensor`, based on

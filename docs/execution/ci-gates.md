@@ -133,7 +133,7 @@ removed the retired task root in full.
 
 ## First hosted runner findings, 2026-10-15
 
-Checkpoint `450c914335daa6a5da76a6c30908186e84f05e6e` starts the real six-job
+Checkpoint `3fec0bb553d62d39ef245c1fcd7bbe56dd31ab27` starts the real six-job
 workflow at https://github.com/sam0x17/rtao/actions/runs/38680556857.
 The check and no-host jobs compiled the native client but exposed missing
 source caches before their offline graph checks:
@@ -173,12 +173,12 @@ and the existing package-identity regression includes the colored duplicate.
 Regenerate the reports from the corrected producer before adopting them.
 
 Corrected run [38682108313](https://github.com/sam0x17/rtao/actions/runs/38682108313)
-produced the three compatibility files at `b57e851`. Artifact `11949090125`
+produced the three compatibility files at `becc4d8`. Artifact `11949090125`
 matched its API SHA-256 digest
 `d447a56f86dd40357e0d2c78991b9568e781fa73f04f349633f2eb3566eced1a`.
 Review verified all 23 input hashes, the clean source identity, unchanged
 package sets/counts and empty runtime-validation claims before byte-for-byte
-adoption in `71f28d2`. Later CLI dependency changes need another hosted refresh.
+adoption in `53f6b05`. Later CLI dependency changes need another hosted refresh.
 The parity inventory was added to the refresh after this run; it declares
 source status and does not certify test or oracle success.
 
@@ -230,7 +230,7 @@ feature availability and pending behavior, and pass `regen --check` against
 the adopted output.
 
 The CLI refresh [38683267312](https://github.com/sam0x17/rtao/actions/runs/38683267312)
-succeeded on `642623b`. Four-file artifact `11949225713` (39,662 bytes)
+succeeded on `96f2301`. Four-file artifact `11949225713` (39,662 bytes)
 matched SHA-256 `6ceb152f7febcc4ce40bf56eec777a4e2fc8a8351d5dc849fbe03cc0b37d7e22`.
 All 23 current input hashes and the unchanged package inventories were checked.
 The parity matrix changes only by adding D-041/D-042 with unverified oracle
@@ -240,7 +240,7 @@ adopted byte for byte. Normal check acceptance remains separate.
 ## First complete hosted test enumeration
 
 Run [38684286794](https://github.com/sam0x17/rtao/actions/runs/38684286794)
-at `0fbf9bc` passed MSRV, features, no-host, supply and semver. The main job
+at `f7c61f9` passed MSRV, features, no-host, supply and semver. The main job
 passed its source, generation, Clippy and dependency gates, then ran 1,678 tests:
 1,659 passed and 19 failed, with four other tests skipped. Doctests did not run
 because nextest failed. This is not M0 acceptance.
@@ -255,7 +255,7 @@ one copy before mutation. The production attribution gate is unchanged.
 Both repairs need the next hosted test run; no local build or test was run.
 
 Hosted generation [38686769925](https://github.com/sam0x17/rtao/actions/runs/38686769925)
-succeeded at `f841f63`. Generated artifact `11950657025` matched SHA-256
+succeeded at `9ae8942`. Generated artifact `11950657025` matched SHA-256
 `910f698e1dfc27bb65e39cb4f4ed5f7471b9aae09fba1a4a1c0710c91f88b906`;
 report artifact `11950581955` matched
 `2b14fcf0ddba8b35e66310d08a56d4a4650bbb22ea3e12bdbd476e060e70b664`.
@@ -267,7 +267,7 @@ no-host job correctly rejected the old generated read names before adoption;
 the combined source still requires a normal hosted run.
 
 Follow-up [38687383056](https://github.com/sam0x17/rtao/actions/runs/38687383056)
-succeeded at `48cf4ee`. Artifact `11950428392` (39,852 bytes) matched SHA-256
+succeeded at `4ba2931`. Artifact `11950428392` (39,852 bytes) matched SHA-256
 `28bc70d1aeac58049c6b7628a95159256e34fba0198c500cc2284232aa6050f4`.
 Exact-path, input-hash and package-set review passed before adopting the four
 reports in memory. The 1,537-row matrix adds only D-043/D-044; their oracle

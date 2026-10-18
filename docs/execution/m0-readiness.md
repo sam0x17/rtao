@@ -1,6 +1,6 @@
 # M0 source readiness, 2026-10-16
 
-The current source audit and authenticated hosted run 38873429391 at `d01830c`
+The current source audit and authenticated hosted run 38873429391 at `965669d`
 accept the foundation implementations and named fixtures for client development.
 All six jobs pass; 123 exact M0 PASS records bind the final audited inputs,
 with 55 unchanged blobs and five reviewed workflow/plan/document deltas.
@@ -27,7 +27,7 @@ plain output for its built-dependency inspection. It retains the same locked,
 offline, full-workspace/all-feature/all-target graph and exact BLS policy.
 CONTRIBUTING now includes the CLI PSF and core-extension Unicode obligations.
 
-Both binary doctor fixtures now have exact PASS records at `d01830c`, including
+Both binary doctor fixtures now have exact PASS records at `965669d`, including
 the caller-color and missing-patch cases. The current completion record is in
 [m0-acceptance-audit.md](m0-acceptance-audit.md). No local Rust test, build, Cargo,
 Python, scratch workspace or native system operation ran for these audits.

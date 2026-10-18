@@ -76,7 +76,7 @@ sets at pinned block hashes. Source and formatting review pass. Hosted
 regeneration must update the read interfaces and declared parity inventory
 before compilation and tests can establish acceptance.
 
-Against committed `0812681`, the read pending list changes from 64 entries to
+Against committed `9991b11`, the read pending list changes from 64 entries to
 62 by removing exactly `proxies` and `root_claim_threshold`. This declares
 40 of 102 read implementations in source; current generated dispatch and
 successful hosted validation are separate requirements.

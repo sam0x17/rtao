@@ -3,12 +3,12 @@
 ## Current source and hosted validation
 
 [Hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
-passed all six blocking jobs at `d01830cdf6a7e1301ca4a2629b35663617f97dab`.
+passed all six blocking jobs at `965669d709bd8b8435f76ec7db5def9d471fe0d9`.
 The main job passed the policy/socket and public-client fixtures, including the
 refused-initialization socket observer and all three actual-resolver fixtures
 for literal updates, authenticated spans and unsupported producer refusal.
 The two source-extracted pytest parameter tables and seven exact `pyt:` origins
-are integrated; hosted generation in run 38871417189 at `d5132a0` supplied the
+are integrated; hosted generation in run 38871417189 at `2143d2e` supplied the
 authenticated outputs, and the final extraction check passed. These are Rust
 fixture results. Complete source review now reconciles test_rpc.py and the
 FakeNode harness, while Python execution remains unverified.
