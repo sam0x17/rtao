@@ -73,7 +73,7 @@ fn options(args: Vec<String>) -> Result<Options> {
                 ensure!(result.parity.is_none(), "duplicate --parity");
                 result.parity = Some(
                     args.next()
-                        .context("--parity needs a tag, auto or branch:<name>")?,
+                        .context("--parity needs a tag, auto or branch:<name>[@<commit>]")?,
                 );
             }
             "--github-output" => {
@@ -103,7 +103,7 @@ fn options(args: Vec<String>) -> Result<Options> {
             || result.networks
             || result.core_branch.is_some()
             || result.force,
-        "pin needs --check, --networks, --parity <vN|auto|branch:NAME>, or --core-branch main --no-commit"
+        "pin needs --check, --networks, --parity <vN|auto|branch:NAME[@COMMIT]>, or --core-branch main --no-commit"
     );
     ensure!(
         !result.networks || (result.parity.is_none() && result.github_output.is_none()),
@@ -249,7 +249,10 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
     let repo = cached_repo(root)?;
     if let Some(parity) = &opts.parity {
         let proof = match parity.strip_prefix("branch:") {
-            Some(branch) => unreleased_proof(&repo, branch)?,
+            Some(source) => match source.split_once('@') {
+                Some((branch, commit)) => unreleased_proof(&repo, branch, Some(commit))?,
+                None => unreleased_proof(&repo, source, None)?,
+            },
             None => release_proof(&repo, parity)?,
         };
         let mut next = current.clone().unwrap_or_default();
@@ -906,8 +909,29 @@ fn release_published(tag: &str) -> Result<bool> {
 /// publishes it yet, and a public network finalizes exactly that spec. Unlike a
 /// release, no published wasm binds the code hash to the commit, so the pin is
 /// marked `release = "unreleased"` until upstream publishes the tag.
-fn unreleased_proof(repo: &Path, branch: &str) -> Result<ReleaseProof> {
-    let commit = branch_head(repo, branch)?;
+fn unreleased_proof(repo: &Path, branch: &str, at: Option<&str>) -> Result<ReleaseProof> {
+    let head = branch_head(repo, branch)?;
+    // An explicit commit selects the runtime a network actually runs, which
+    // may be behind its branch head (main runs ahead of mainnet before deploys).
+    let commit = match at {
+        Some(commit) => {
+            ensure!(
+                hex_string(commit, 40),
+                "branch:{branch}@<commit> needs a full commit SHA"
+            );
+            ensure!(
+                Command::new("git")
+                    .arg("-C")
+                    .arg(repo)
+                    .args(["merge-base", "--is-ancestor", commit, &head])
+                    .status()?
+                    .success(),
+                "{commit} is not on upstream {branch}"
+            );
+            commit.to_owned()
+        }
+        None => head,
+    };
     let spec = runtime_spec(repo, &commit)?;
     let tag = format!("v{spec}");
     ensure!(
