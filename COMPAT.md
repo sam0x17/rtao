@@ -3,11 +3,11 @@
 
 | rtao | core tag (commit) | parity tag (Python source version) | validated spec range | btauth | interop target |
 |---|---|---|---|---|---|
-| 0.1.0 | v478 (`850f2755bb05a3851f948489f0ab27b0645cebce`) | v479 (11.3.1.dev0) | None recorded | btauth/1 | `bittensor` @ v479 (`f4786f9087cac84cfab37cbdf1e01c399042653a`) |
+| 0.1.0 | v478 (`850f2755bb05a3851f948489f0ab27b0645cebce`) | v479 (11.3.1.dev0) | 479-479 | btauth/1 | `bittensor` @ v479 (`f4786f9087cac84cfab37cbdf1e01c399042653a`) |
 
 No PyPI release has been verified from the pinned Python commit. The Python version above is the source project version.
 
-No runtime range has passed the required drift, e2e and interop validation. Clients warn for every runtime on a pinned public network. Metadata pins describe fetched inputs; per-call surface checks still determine which operations are available.
+The validated identities and immutable report checksums are listed in [compat.json](compat.json). Validation requires passing drift, e2e and interop reports for each runtime and every listed localnet digest. Clients match by genesis, spec and metadata hash and warn on a pinned public network outside those identities; per-call surface checks determine which operations are available.
 
 ## Metadata inputs
 
