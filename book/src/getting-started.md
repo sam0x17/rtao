@@ -29,7 +29,11 @@ rtao doctor --manifest-path Cargo.toml
 ## Connect and read one block
 
 Pass an existing endpoint or a named network such as `finney` or `test` to
-`ClientConfig::for_network`. You do not need to operate a node. A snapshot pins
+`ClientConfig::for_network`. You do not need to operate a node. `test`
+connects to `wss://test.chain.opentensor.ai:443` and fails over to Python's
+`wss://test.finney.opentensor.ai:443` (see D-078 in the
+[divergence register](divergences.md)); `devnet` connects to
+`wss://dev.chain.opentensor.ai:443`. A snapshot pins
 all its reads to one block hash; separate reads through a live client can see
 different heads.
 

@@ -1347,3 +1347,20 @@ pinning_tests = [
 ]
 upstream_report = "Client reliability policy with no upstream defect allegation and no new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/6a972693ae9580541225bd37696ac2fee26b8ae9/sdk/python/bittensor/executor.py"
+
+[[divergences]]
+id = "D-078"
+upstream_symbol = "bittensor.settings.NETWORKS['test']"
+python_behavior = "The `test` preset connects to wss://test.finney.opentensor.ai:443 with no failover pool."
+rtao_behavior = "The `test` preset connects to wss://test.chain.opentensor.ai:443 and fails over to Python's wss://test.finney.opentensor.ai:443. Both URLs resolve to the `test` label, genesis pin, rate limit and EVM network; an explicit URL keeps its own primary and gains the other as fallback. The catalog keeps Python's extracted table unchanged."
+rationale = "The test.finney endpoint is heavily throttled and timed out on websocket connects during real testnet operation on 2026-10-18, while test.chain.opentensor.ai served the same testnet genesis reliably. The operator-run endpoint is the better default; Python's preset stays reachable as the fallback."
+decision = "Operator direction during live testnet validation of the subnet template (2026-10-18)"
+status = "active"
+class = "improved"
+milestone = "M10"
+pinning_tests = [
+  "rtao_client::network::tests::testnet_prefers_the_chain_endpoint_and_keeps_python_preset_as_fallback",
+  "rtao_client::network::tests::every_extracted_label_and_exact_url_resolves_to_the_same_network",
+]
+upstream_report = "Endpoint preference with no upstream defect allegation and no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/settings.py"

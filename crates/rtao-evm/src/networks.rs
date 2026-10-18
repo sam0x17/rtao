@@ -57,7 +57,7 @@ pub fn evm_network_with_env(
         "wss://entrypoint-finney.opentensor.ai:443" | "wss://lite.chain.opentensor.ai:443" => {
             "finney"
         }
-        "wss://test.finney.opentensor.ai:443" => "test",
+        "wss://test.chain.opentensor.ai:443" | "wss://test.finney.opentensor.ai:443" => "test",
         "ws://127.0.0.1:9944" => "local",
         other => other,
     };
@@ -293,6 +293,12 @@ mod tests {
             ),
             (
                 "wss://test.finney.opentensor.ai:443",
+                "test",
+                Some(945),
+                "https://test.chain.opentensor.ai",
+            ),
+            (
+                "wss://test.chain.opentensor.ai:443",
                 "test",
                 Some(945),
                 "https://test.chain.opentensor.ai",

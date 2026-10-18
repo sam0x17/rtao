@@ -329,7 +329,7 @@ async fn probes_concurrently_and_sorts_success_before_failures_by_rounded_latenc
         fixture.payload()?,
         json!([
             {"network":"archive","endpoint":"wss://archive.chain.opentensor.ai:443","latency_ms":5.2,"ok":true},
-            {"network":"test","endpoint":"wss://test.finney.opentensor.ai:443","latency_ms":12.2,"ok":true},
+            {"network":"test","endpoint":"wss://test.chain.opentensor.ai:443","latency_ms":12.2,"ok":true},
             {"network":"finney","endpoint":"wss://entrypoint-finney.opentensor.ai:443","latency_ms":1.2,"ok":false,"error":"offline"},
         ])
     );

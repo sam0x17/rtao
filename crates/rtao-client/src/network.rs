@@ -10,6 +10,12 @@ use url::Url;
 
 use crate::generated::network_pins;
 
+/// Primary endpoints that deliberately differ from Python's presets (D-078).
+///
+/// Python's preset URL keeps resolving to the same label and stays in the
+/// failover pool behind the rtao primary.
+const PRIMARY_OVERRIDES: &[(&str, &str)] = &[("test", "wss://test.chain.opentensor.ai:443")];
+
 /// A named network or explicit WebSocket endpoint.
 ///
 /// Known endpoint strings retain Python's corresponding network label. An
@@ -31,24 +37,28 @@ impl Network {
         input: &str,
         mut read: impl FnMut(&str) -> Option<String>,
     ) -> Result<Self, NetworkError> {
-        let endpoints = py::NETWORKS
+        let presets = py::NETWORKS
             .iter()
             .map(|(name, endpoint)| (*name, endpoint.resolve(&mut read)))
             .collect::<Vec<_>>();
         let (label, endpoint) = if input.starts_with("ws://") || input.starts_with("wss://") {
             (
-                endpoints
+                presets
                     .iter()
-                    .find(|(_, endpoint)| endpoint == input)
-                    .map(|(name, _)| (*name).to_owned())
+                    .map(|(name, endpoint)| (*name, endpoint.as_str()))
+                    .chain(PRIMARY_OVERRIDES.iter().copied())
+                    .find(|(_, endpoint)| *endpoint == input)
+                    .map(|(name, _)| name.to_owned())
                     .unwrap_or_else(|| input.to_owned()),
                 input.to_owned(),
             )
         } else {
-            let endpoint = endpoints
+            let endpoint = presets
                 .iter()
                 .find(|(name, _)| *name == input)
-                .map(|(_, endpoint)| endpoint.clone())
+                .map(|(name, endpoint)| {
+                    primary_override(name).map_or_else(|| endpoint.clone(), str::to_owned)
+                })
                 .ok_or_else(|| NetworkError::Unknown(input.to_owned()))?;
             (input.to_owned(), endpoint)
         };
@@ -77,14 +87,26 @@ impl Network {
     /// belong in ClientConfig and replace these defaults.
     pub fn endpoint_pool(&self) -> Result<EndpointPool, NetworkError> {
         let mut urls = vec![endpoint_url(&self.endpoint)?];
-        if let Some((_, fallbacks)) = py::FALLBACK_ENDPOINTS
+        let mut fallbacks = Vec::new();
+        if let Some(primary) = primary_override(&self.label) {
+            fallbacks.push(primary);
+            fallbacks.extend(
+                py::NETWORKS
+                    .iter()
+                    .filter(|(name, _)| *name == self.label)
+                    .filter_map(|(_, endpoint)| endpoint.env.is_none().then_some(endpoint.default)),
+            );
+        }
+        if let Some((_, pool)) = py::FALLBACK_ENDPOINTS
             .iter()
             .find(|(name, _)| *name == self.label)
         {
-            for fallback in *fallbacks {
-                if *fallback != self.endpoint {
-                    urls.push(endpoint_url(fallback)?);
-                }
+            fallbacks.extend(pool.iter().copied());
+        }
+        for fallback in fallbacks {
+            let url = endpoint_url(fallback)?;
+            if !urls.contains(&url) {
+                urls.push(url);
             }
         }
         let archive = py::ARCHIVE_ENDPOINTS
@@ -184,6 +206,13 @@ impl fmt::Display for NetworkError {
 
 impl Error for NetworkError {}
 
+fn primary_override(label: &str) -> Option<&'static str> {
+    PRIMARY_OVERRIDES
+        .iter()
+        .find(|(name, _)| *name == label)
+        .map(|(_, endpoint)| *endpoint)
+}
+
 fn endpoint_url(input: &str) -> Result<Url, NetworkError> {
     let url = Url::parse(input).map_err(|_| NetworkError::InvalidEndpoint)?;
     if !matches!(url.scheme(), "ws" | "wss") || url.host_str().is_none() {
@@ -205,11 +234,40 @@ mod tests {
             let expected = endpoint.resolve(|_| None);
             let named = Network::resolve_with(name, |_| None)?;
             let direct = Network::resolve_with(&expected, |_| None)?;
-            assert_eq!(named, direct);
-            assert_eq!(named.endpoint(), expected);
+            assert_eq!(named.label(), direct.label());
+            assert_eq!(direct.endpoint(), expected);
+            assert_eq!(
+                named.endpoint(),
+                primary_override(name).unwrap_or(&expected)
+            );
             assert_eq!(named.label(), *name);
             assert_eq!(named.genesis()?.is_some(), *name != "local");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn testnet_prefers_the_chain_endpoint_and_keeps_python_preset_as_fallback()
+    -> Result<(), NetworkError> {
+        let test = Network::resolve_with("test", |_| None)?;
+        assert_eq!(test.endpoint(), "wss://test.chain.opentensor.ai:443");
+        let urls = test.endpoint_pool()?.urls;
+        assert_eq!(
+            urls,
+            [
+                endpoint_url("wss://test.chain.opentensor.ai:443")?,
+                endpoint_url("wss://test.finney.opentensor.ai:443")?,
+            ]
+        );
+        let legacy = Network::resolve_with("wss://test.finney.opentensor.ai:443", |_| None)?;
+        assert_eq!(legacy.label(), "test");
+        assert_eq!(
+            legacy.endpoint_pool()?.urls,
+            [urls[1].clone(), urls[0].clone()]
+        );
+        assert_eq!(legacy.genesis()?, test.genesis()?);
+        let direct = Network::resolve_with("wss://test.chain.opentensor.ai:443", |_| None)?;
+        assert_eq!(direct, test);
         Ok(())
     }
 
