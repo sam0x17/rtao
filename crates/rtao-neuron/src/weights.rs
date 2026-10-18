@@ -362,6 +362,24 @@ struct Slot {
     uncertain: bool,
 }
 
+/// Advisory conditions currently reported for one mechanism. Each warning is
+/// logged when its condition starts and again only after it clears, so a
+/// persistent condition does not repeat on every block; metrics still count
+/// every occurrence.
+#[derive(Default)]
+struct Advisories {
+    permit_absent: bool,
+    stake_below_threshold: bool,
+    activity_alarm: bool,
+}
+
+/// Record whether an advisory holds and report whether it just started.
+fn advisory_started(reported: &mut bool, holds: bool) -> bool {
+    let started = holds && !*reported;
+    *reported = holds;
+    started
+}
+
 /// One scheduler owns cadence slots and outstanding commits for a validator.
 pub struct WeightScheduler {
     policy: WeightPolicy,
@@ -369,6 +387,7 @@ pub struct WeightScheduler {
     clock_guard: ClockGuard,
     slots: BTreeMap<MechId, Slot>,
     attempts: BTreeMap<MechId, WeightAttempt>,
+    advisories: BTreeMap<MechId, Advisories>,
     reveals: RevealWatcher,
 }
 impl WeightScheduler {
@@ -384,6 +403,7 @@ impl WeightScheduler {
             clock_guard,
             slots: BTreeMap::new(),
             attempts: BTreeMap::new(),
+            advisories: BTreeMap::new(),
             reveals: RevealWatcher::default(),
         })
     }
@@ -548,32 +568,38 @@ impl WeightScheduler {
                 return Err(error);
             }
         };
-        if !preflight.null_consensus
+        let advisories = self.advisories.entry(mech).or_default();
+        let permit_absent = !preflight.null_consensus
             && !preflight
                 .permits
                 .get(usize::from(uid.0))
                 .copied()
-                .unwrap_or(false)
-        {
+                .unwrap_or(false);
+        if advisory_started(&mut advisories.permit_absent, permit_absent) {
             tracing::warn!(
                 mechanism = mech.0,
                 "Yuma validator permit is absent; chain checks remain authoritative"
             );
         }
         let graph = cx.metagraph.load();
-        if hotkey != owner
+        let stake_below_threshold = hotkey != owner
             && graph
                 .by_hotkey(&hotkey)
                 .and_then(|neuron| neuron.total_stake().ok())
-                .is_some_and(|stake| stake.0 < stake_threshold)
-        {
+                .is_some_and(|stake| stake.0 < stake_threshold);
+        if advisory_started(&mut advisories.stake_below_threshold, stake_below_threshold) {
             tracing::warn!(
                 stake_threshold,
                 "last-good stake is below the chain threshold; chain checks remain authoritative"
             );
         }
-        if let Some(cutoff) = preflight.activity_alarm_cutoff(uid, activity_factor) {
+        let activity_cutoff = preflight.activity_alarm_cutoff(uid, activity_factor);
+        if activity_cutoff.is_some() {
             cx.metrics.increment("rtao_weights_activity_alarm_total");
+        }
+        if advisory_started(&mut advisories.activity_alarm, activity_cutoff.is_some())
+            && let Some(cutoff) = activity_cutoff
+        {
             tracing::warn!(
                 mechanism = mech.0,
                 cutoff_blocks = cutoff,

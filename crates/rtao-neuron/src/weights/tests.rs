@@ -638,3 +638,15 @@ fn policy_update_preserves_pending_uncertainty_and_its_diagnostic() -> anyhow::R
     );
     Ok(())
 }
+
+#[test]
+fn advisories_log_when_a_condition_starts_and_again_after_it_clears() {
+    let mut reported = false;
+    assert!(advisory_started(&mut reported, true));
+    // A persistent condition does not repeat on later blocks.
+    assert!(!advisory_started(&mut reported, true));
+    assert!(!advisory_started(&mut reported, true));
+    assert!(!advisory_started(&mut reported, false));
+    assert!(!advisory_started(&mut reported, false));
+    assert!(advisory_started(&mut reported, true));
+}
