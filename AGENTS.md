@@ -7,7 +7,8 @@ builds and tests are for development feedback.
   with more capacity, override it with `CARGO_BUILD_JOBS`.
 - Use the single workspace `target/` directory; never create per-agent target
   directories or copy build caches. Run one Cargo build command at a time.
-- Localnet, Docker-service and container checks run in hosted CI. Python
+- Localnet, Docker-service and container checks need Docker. Run them
+  locally when Docker is available; hosted CI remains authoritative. Python
   interop environments live under `.local/` (for example via `uv`), never in
   the system Python.
 - Run local tests with `umask 022`, `RTAO_TEMP_ROOT` set to a directory under
