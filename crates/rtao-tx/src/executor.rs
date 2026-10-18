@@ -189,6 +189,8 @@ pub struct ShieldOptions {
     pub execute: ExecuteOptions,
     /// Additional inner-call fee cap; the carrier pays its own TAO fee.
     pub max_fee: Option<Balance<Tao>>,
+    /// Re-seals after a carrier whose decrypted inner was proven never included.
+    pub dropped_inner_retries: u32,
 }
 impl Default for ShieldOptions {
     fn default() -> Self {
@@ -199,6 +201,7 @@ impl Default for ShieldOptions {
                 ..Default::default()
             },
             max_fee: None,
+            dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
         }
     }
 }
@@ -777,6 +780,7 @@ impl Executor {
                             wait: submit.wait,
                             max_fee: None,
                             finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
+                            dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
                             submit,
                         },
                     )
@@ -863,6 +867,7 @@ impl Executor {
                 // The client-level guard is for callers without that review.
                 max_fee: None,
                 finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
+                dropped_inner_retries: opts.dropped_inner_retries,
                 submit,
             };
             let result = self

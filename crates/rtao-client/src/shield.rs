@@ -108,6 +108,11 @@ pub struct ShieldOptions {
     /// inclusion usually clears within a few seconds; a stalled or distant
     /// finality still refuses.
     pub finality_wait: Duration,
+    /// Re-seals after a carrier whose decrypted inner was proven never included.
+    ///
+    /// The inner is proven absent through its finalized era expiry, so it never
+    /// executed; each retry costs one more carrier fee.
+    pub dropped_inner_retries: u32,
     /// Shared deadlines, reconciliation and metadata-signing display settings.
     ///
     /// Its mortality, nonce and wait are replaced by the shield's paired nonces,
@@ -121,9 +126,28 @@ impl Default for ShieldOptions {
             wait: Wait::Inclusion,
             max_fee: None,
             finality_wait: SHIELD_FINALITY_WAIT,
+            dropped_inner_retries: SHIELD_DROPPED_INNER_RETRIES,
             submit: SubmitOptions::default(),
         }
     }
+}
+
+/// Default re-seals after a carrier whose decrypted inner was proven never included.
+pub const SHIELD_DROPPED_INNER_RETRIES: u32 = 3;
+
+const DROPPED_INNER: &str =
+    "the MEV shield accepted the encrypted submission, but the decrypted extrinsic (";
+
+/// Whether a shielded report is an included carrier whose inner is proven
+/// absent through finalized era expiry, so the call never executed.
+fn inner_proven_dropped(report: &ExtrinsicReport) -> bool {
+    !report.success
+        && report.error.is_none()
+        && report
+            .shield
+            .as_ref()
+            .is_some_and(|shield| shield.carrier_hash == report.hash)
+        && report.message.starts_with(DROPPED_INNER)
 }
 
 /// Default wait for finality to come within a shield era before refusing.
@@ -158,8 +182,35 @@ impl Client {
     /// Sign and seal an inner call, then transmit only its signed carrier.
     ///
     /// The carrier uses nonce n and the inner n+1. Both share one finalized era
-    /// anchor. Shielded carriers are never retried after rejection or unknown fate.
+    /// anchor. Shielded carriers are never retried after rejection or unknown
+    /// fate. When the carrier was included but the decrypted inner is proven
+    /// absent through its finalized era expiry, the call never executed, so it
+    /// is re-sealed with a fresh key and nonce pair, up to
+    /// [`ShieldOptions::dropped_inner_retries`] more times. On fast development chains
+    /// the per-block key rotation leaves a carrier well under a second to land.
     pub async fn submit_shielded(
+        &self,
+        call: CallBytes,
+        signer: &dyn Signer,
+        opts: &ShieldOptions,
+    ) -> Result<ExtrinsicReport, SubmitFailure> {
+        let mut retries = opts.dropped_inner_retries;
+        loop {
+            let report = self
+                .submit_shielded_once(call.clone(), signer, opts)
+                .await?;
+            if retries == 0 || !inner_proven_dropped(&report) {
+                return Ok(report);
+            }
+            retries -= 1;
+            tracing::warn!(
+                carrier = %crate::hash_hex(report.hash),
+                "shielded inner extrinsic was dropped before its era expired; re-sealing"
+            );
+        }
+    }
+
+    async fn submit_shielded_once(
         &self,
         call: CallBytes,
         signer: &dyn Signer,
@@ -582,7 +633,7 @@ impl Client {
         }
         outer.success = false;
         outer.message = format!(
-            "the MEV shield accepted the encrypted submission, but the decrypted extrinsic ({}) was not included before its era expired",
+            "{DROPPED_INNER}{}) was not included before its era expired",
             crate::hash_hex(inner_hash)
         );
         Ok(outer)

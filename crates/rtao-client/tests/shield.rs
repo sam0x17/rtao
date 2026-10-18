@@ -587,6 +587,10 @@ async fn inner_block_lookup_failures_keep_the_carrier_hash_and_original_cause() 
 
 #[tokio::test]
 async fn ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan() {
+    let once = ShieldOptions {
+        dropped_inner_retries: 0,
+        ..Default::default()
+    };
     for finalized in [false, true] {
         let (client, fake, signer) = fixture().await;
         fake.mutate_state(|state| {
@@ -605,7 +609,7 @@ async fn ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_cano
             });
         });
         let result = client
-            .submit_shielded(call(&client, 1).await, &signer, &ShieldOptions::default())
+            .submit_shielded(call(&client, 1).await, &signer, &once)
             .await;
         if finalized {
             let report = result.unwrap();
@@ -641,6 +645,41 @@ async fn ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_cano
             None
         );
     }
+}
+
+#[tokio::test]
+async fn proven_dropped_inner_is_resealed_with_a_fresh_carrier() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlockHash", move |state, request| {
+            if !state.submissions.is_empty()
+                && let Some(height) = request.params[0].as_u64()
+                && height > state.block
+            {
+                state.advance(height - state.block);
+            }
+            state.dispatch(request)
+        });
+    });
+    let opts = ShieldOptions {
+        dropped_inner_retries: 1,
+        ..Default::default()
+    };
+    let report = client
+        .submit_shielded(call(&client, 1).await, &signer, &opts)
+        .await
+        .unwrap();
+    // Both carriers were included and both inners proven absent; the call
+    // never executed, so exactly one retry re-sealed it.
+    assert!(!report.success);
+    assert!(
+        report
+            .message
+            .contains("not included before its era expired")
+    );
+    let submissions = fake.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 2);
+    assert_ne!(submissions[0], submissions[1]);
 }
 
 #[tokio::test]

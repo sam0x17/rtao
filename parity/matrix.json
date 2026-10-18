@@ -2828,6 +2828,16 @@
           "rtao_cli::m8_books::corrupt_books_are_read_only_until_a_valid_bounded_replacement_preserves_recovery_bytes",
           "rtao_cli::m8_books::oversized_input_and_output_leave_original_book_unchanged"
         ]
+      },
+      {
+        "id": "D-077",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::shield::proven_dropped_inner_is_resealed_with_a_fresh_carrier",
+          "rtao_client::shield::finality_lag_waits_for_finality_to_come_within_the_era",
+          "rtao_client::shield::ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan"
+        ]
       }
     ],
     "e2e": [
