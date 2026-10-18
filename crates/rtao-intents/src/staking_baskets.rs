@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
 //! Basket deposits and rebalances, reward routing and alpha consolidation.
 
 use rtao_client::{View, ViewExt};
@@ -10,7 +10,10 @@ use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
 use serde_json::{Value, json};
 use smallvec::{SmallVec, smallvec};
 
-pub use crate::{SetAutoStake, StakeIntoBasket, SwapBasket, SwapBasketMany, UnstakeAllAlpha};
+pub use crate::{
+    SetAutoStake, SetRejectStakingHotkeyGrowth, StakeIntoBasket, SwapBasket, SwapBasketMany,
+    UnstakeAllAlpha,
+};
 
 fn amount_summary(amount: &Amount, netuid: NetUid, all: &str) -> String {
     match amount.resolve(netuid, true) {
@@ -42,6 +45,18 @@ impl Intent for SetAutoStake {
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         crate::generated::passthrough::set_auto_stake(self, cx).await
+    }
+}
+
+// py: sdk/python/bittensor/intents/staking.py:25-57
+impl Intent for SetRejectStakingHotkeyGrowth {
+    fn summary(&self) -> String {
+        let action = if self.enabled { "reject" } else { "allow" };
+        format!("{action} staking-hotkey list growth caused by other accounts")
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::generated::passthrough::set_reject_staking_hotkey_growth(self, cx).await
     }
 }
 

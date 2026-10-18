@@ -161,7 +161,7 @@ fn weight_tool_construction_canonicalizes_the_python_mapping_shape() {
 
 #[cfg(feature = "all")]
 #[test]
-fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
+fn all_85_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
     use crate::AnyIntent;
     use serde_json::{Value, json};
     let address = rtao_primitives::AccountId([1; 32]).to_ss58(110);
@@ -204,6 +204,11 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
         }
         if spec.name == "set_subnet_emission_enabled" {
             args.insert("netuids".into(), json!([1]));
+        }
+        if spec.name == "set_subnet_emission_weights" {
+            // Python canonicalizes named slots and human shares to u64 parts.
+            args.insert("slots".into(), json!([2]));
+            args.insert("values".into(), json!([1]));
         }
         if spec.name == "execute_proxy_announced" {
             args.insert("inner_op".into(), json!("finalize_crowdloan"));
@@ -360,8 +365,8 @@ fn all_83_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             );
         }
     }
-    assert_eq!(rtao_catalog::INTENTS.len(), 83);
-    assert_eq!(tested.len(), 83);
+    assert_eq!(rtao_catalog::INTENTS.len(), 85);
+    assert_eq!(tested.len(), 85);
 }
 
 #[cfg(feature = "serving")]

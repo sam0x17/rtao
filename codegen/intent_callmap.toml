@@ -125,6 +125,10 @@ call = "set_perpetual_lock"
 pallet = "SubtensorModule"
 call = "set_reject_locked_alpha"
 
+[passthrough.set_reject_staking_hotkey_growth]
+pallet = "SubtensorModule"
+call = "set_reject_staking_hotkey_growth"
+
 [passthrough.set_subnet_identity]
 pallet = "SubtensorModule"
 call = "set_subnet_identity"

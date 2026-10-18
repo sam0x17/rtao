@@ -68,13 +68,13 @@ fn code(value: &Value) -> Result<ErrorCode, Box<dyn Error>> {
 }
 
 #[test]
-fn all_390_named_errors_have_exact_classification_description_remediation_and_json() -> TestResult {
+fn all_404_named_errors_have_exact_classification_description_remediation_and_json() -> TestResult {
     let fixture = Fixtures::read()?;
     let remediation = fixture.string_dict(RESULT, "REMEDIATION")?;
     let overrides = fixture.string_dict(RESULT, "_NAME_HELP_OVERRIDES")?;
     let explanations = fixture.string_dict(RESULT, "EXPLANATIONS")?;
     let names = fixture.dict(ERROR_MAP, "NAME_TO_CODE")?;
-    assert_eq!(names.len(), 390);
+    assert_eq!(names.len(), 404);
     for row in names {
         let name = text(&row[0])?;
         let token = text(&row[1])?;

@@ -74,6 +74,9 @@ pub mod collateral;
 #[cfg(feature = "crowdloan")]
 #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
 pub mod crowdloan;
+#[cfg(feature = "emission_weights")]
+#[cfg_attr(docsrs, doc(cfg(feature = "emission_weights")))]
+pub mod emission_weights;
 #[cfg(feature = "evm")]
 #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
 pub mod evm;
@@ -136,6 +139,7 @@ pub mod staking_trades;
     feature = "coldkey",
     feature = "collateral",
     feature = "crowdloan",
+    feature = "emission_weights",
     feature = "evm",
     feature = "governance",
     feature = "hyperparameters",

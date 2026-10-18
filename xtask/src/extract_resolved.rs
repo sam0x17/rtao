@@ -3795,7 +3795,7 @@ mod tests {
             bail!("derived wraps missing");
         };
         let wraps = wraps.json()?;
-        assert_eq!(wraps["tuple"].as_array().context("wraps tuple")?.len(), 33);
+        assert_eq!(wraps["tuple"].as_array().context("wraps tuple")?.len(), 32);
         assert_eq!(
             wraps["tuple"][0],
             json!({"tuple":["AdminUtils","sudo_set_epoch_consensus"]})

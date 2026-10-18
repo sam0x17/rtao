@@ -189,8 +189,8 @@ fn parse_share_rejects_out_of_range() {
 fn format_share_rounds_like_python() {
     assert_eq!(ew::format_share(ONE, 2), "100.00%");
     assert_eq!(ew::format_share(ONE / 2, 2), "50.00%");
-    assert_eq!(ew::format_share(0, 2), "0.00%");
-    assert_eq!(ew::format_share(0, 0), "0%");
+    assert_eq!(ew::format_share(0u64, 2), "0.00%");
+    assert_eq!(ew::format_share(0u64, 0), "0%");
     // 0.125 is an exact binary tie; Python's format rounds it to even.
     assert_eq!(format!("{:.2}", 0.125), "0.12");
     assert_eq!(format!("{:.0}", 2.5), "2");

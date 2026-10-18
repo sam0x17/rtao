@@ -593,8 +593,8 @@ mod tests {
     #[test]
     fn complete_recipe_parses_and_plans_without_python() -> Result<()> {
         let recipe = Recipe::read(super::super::root()?)?;
-        assert_eq!(names(&TABLE).len(), 48);
-        assert_eq!(TABLE.storage.len(), 42);
+        assert_eq!(names(&TABLE).len(), 51);
+        assert_eq!(TABLE.storage.len(), 45);
         assert_eq!(precedence_names().len(), 7);
         let table = precedence_table();
         let mut catalog = names(&TABLE);

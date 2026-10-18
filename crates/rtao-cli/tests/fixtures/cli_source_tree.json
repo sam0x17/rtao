@@ -40,7 +40,11 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
-      "sha256": "9067bb209ab2c02138a7b5c08ec8396c6fdf99490d13ffd8490272c4e9795962"
+      "sha256": "cc86d09fc9c4a4186798ef6737aa6626cf2652162ce92d162d0bfc925fef4835"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
+      "sha256": "a55614beba4e97b5817b240148bf44c27011bb1920c745addbdd0050ec365868"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
@@ -1644,6 +1648,65 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
       "function": "create_cost",
       "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets emission decrease",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
+      "function": "decrease",
+      "options": [
+        "--by",
+        "--netuid",
+        "--slot"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets emission increase",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
+      "function": "increase",
+      "options": [
+        "--by",
+        "--netuid",
+        "--slot"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets emission set",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
+      "function": "set_weights",
+      "options": [
+        "--miner",
+        "--netuid",
+        "--owner",
+        "--validator"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets emission set-value",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
+      "function": "set_value",
+      "options": [
+        "--netuid",
+        "--slot",
+        "--value"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "subnets emission show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
+      "function": "show",
+      "options": [
+        "--netuid"
+      ],
       "positionals": [],
       "unresolved": []
     },
