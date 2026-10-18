@@ -6,7 +6,7 @@ mapping remain separate. No local build,
 test, mining operation or chain service was run for this follow-up.
 
 Current ordinary [38865058430](https://github.com/sam0x17/rtao/actions/runs/38865058430)
-passes all six jobs at exact `3f1aa67`: 3,040 tests passed, zero failed and four
+passes all six jobs at exact `ab5d792`: 3,040 tests passed, zero failed and four
 skipped, plus doctests and documentation. Bounded named-result evidence (not
 retained in the repository) binds the four additions below to exact PASS
 records and source blobs. Its authenticated
@@ -14,7 +14,7 @@ records and source blobs. Its authenticated
 `55de87df70e9afc863da7175a9dc7ed809ce239c310f8b2e2eef0b84ef46e975`.
 
 Hosted [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
-passed at `50b7239e6ec1160cc482a86be8d2a30fe737ffc1`: all 3,014 executed tests
+passed at `2235efb53197a6717c0e34236323f092e569e77a`: all 3,014 executed tests
 passed (four skipped), alongside docs, doctests and all six jobs. Bounded
 named-result evidence authenticates all 33 SDK pruning fixture identities
 and seven CLI pruning fixtures at that source. The main log is 710,339 bytes,
@@ -92,7 +92,7 @@ runtime state.
 Final source review replaced a fixed 32-attempt journal limit with the validated
 multisig group's signatory count, preserving the pinned runtime's support for
 100 members. Journal reads reuse the bounded nonblocking wallet reader and
-refuse content over two MiB before decoding. The `50b7239` source and fixture
+refuse content over two MiB before decoding. The `2235efb` source and fixture
 suite passed hosted compilation and execution. No dedicated exact 100-member
 approval or oversized-journal boundary fixture is claimed.
 
@@ -109,5 +109,5 @@ index. The default/resume cases execute one real reviewed signed FakeChain
 batch. Probe cases stop before signing and assert no commitment value reads.
 The pending128 and final-index vectors are explicit native adaptations; the
 cooldown half of the shared T19 provenance remains pending. All four additions
-now pass compilation, strict Clippy and execution at exact `3f1aa67`. The exact
+now pass compilation, strict Clippy and execution at exact `ab5d792`. The exact
 admin table, integrated cooldown/recovery and full pytest mapping remain open.

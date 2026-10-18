@@ -4,9 +4,9 @@
 
 The guarded secret JSON parser and wallet public projection are implemented.
 The retained hosted [run 38832708259](https://github.com/sam0x17/rtao/actions/runs/38832708259)
-at `7bb8c0b888b5e634c8ca1236f05ceb9b6f81a48a` records exact passes for all
+at `1edf4d7e859cadb362644196cde5bf278c527c73` records exact passes for all
 twelve parser/public-view/core-differential regressions. See the
-[M2 security dispositions](../security/m2.md#current-hosted-dispositions-at-7bb8c0b)
+[M2 security dispositions](../security/m2.md#current-hosted-dispositions-at-1edf4d7)
 for S01/S03/S04/S05 repairs and their execution limits. This is evidence for
 that exact source, not a new current-checkpoint or platform run.
 

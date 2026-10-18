@@ -1,12 +1,12 @@
 # M9 robustness source review
 
-Reviewed source at `e4322e6ca2ecdae25ec68a294c56b38550b4c063` on
+Reviewed source at `4bf34ccdeeffe5304e9f84a2a36fe4a107c9efca` on
 2026-10-15. M9-01 now requires source review and ordinary hosted regression
 coverage under Q30. No new fuzz campaign, local build, node or corpus replay
 was run for this review. Earlier campaign reports describe their own source
 snapshots and do not validate the current code.
 
-A follow-up source review at `2f9a30d` read all nine target files, the complete
+A follow-up source review at `0a92c0e` read all nine target files, the complete
 driver, committed seeds, actual production entry points and selected failure
 regressions. The manifest, driver and target inventories agree. It identified
 the unsigned seed gap and the historical mnemonic-KDF wording corrected below.
@@ -67,7 +67,7 @@ workspace source selection, with the standalone fuzz-workspace limit retained.
 ## Hosted seed regression, 2026-10-16
 
 [Run 38897437100](https://github.com/sam0x17/rtao/actions/runs/38897437100)
-at `3772699612278d4592648d07232241430e96791b` passes all six jobs and 3,080
+at `a6aa2bc5ebde12f4183ec7826e7c1c9fdc90cab3` passes all six jobs and 3,080
 tests, with four skipped and nine doctests. Its main log explicitly records
 `fuzz_unsigned_seed_reconstructs_signs_and_attaches_under_authenticated_context`
 as PASS. That test imports the committed positive seed through authenticated

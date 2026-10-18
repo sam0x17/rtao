@@ -3,7 +3,7 @@
 ## Accepted client checkpoint, 2026-10-16
 
 M0 is accepted for client development at
-`d01830cdf6a7e1301ca4a2629b35663617f97dab`. Ordinary hosted
+`965669d709bd8b8435f76ec7db5def9d471fe0d9`. Ordinary hosted
 [38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
 passed all six jobs: check, no-host, MSRV, features, supply and semver.
 The main gate passed 3,051 tests, zero failed and four skipped, followed by
@@ -43,7 +43,7 @@ the combined core patch at fork rev `626f2a4f` under M2-26.
 The remaining sections retain earlier snapshots. Their execution-pending and
 unchecked-step statements are superseded by the current checkpoint above.
 
-Source inspection at `2331a32166520d6b7de49eea3316e79abaae056e` found the
+Source inspection at `162a225e3110a88fffdf27682d10bc6e669127ad` found the
 applicable M0 fixtures and hosted checks represented. That snapshot failed
 hosted compilation; its source repair still needs hosted acceptance. Q30 limits
 acceptance to client development and bounded free `ubuntu-latest` CI. Local
@@ -83,7 +83,7 @@ identity. These source relationships do not prove runtime conformance.
 ### Historical remaining acceptance work
 
 Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
-at `06a3598` passes compilation, strict Clippy, parity and the five other jobs.
+at `ab77cb4` passes compilation, strict Clippy, parity and the five other jobs.
 Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. Source-backed
 fixture corrections are authored without disabling assertions or gates. The
 all-83 plan fixture passes; doctests and docs are not reached. Subsequent M6
@@ -91,7 +91,7 @@ source still needs generated integration and full hosted validation.
 
 Latest inspected normal run
 [38710157011](https://github.com/sam0x17/rtao/actions/runs/38710157011)
-at `c6bd593` passes MSRV/no-host/supply/semver. Check compilation reaches
+at `070587f` passes MSRV/no-host/supply/semver. Check compilation reaches
 strict Clippy, which rejects a synchronous test lock held in the same scope
 as client.close().await. The correction ends the lock and borrowed request
 in a lexical block before the await; original assertions and gates remain.
@@ -100,7 +100,7 @@ No acceptance is established by these passing subsets.
 
 Earlier normal run
 [38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
-at `bad95c0` passes compilation, strict Clippy and the five other jobs. The
+at `e0849d8` passes compilation, strict Clippy and the five other jobs. The
 lock fixture now qualifies; parity next requires an explicit AddStake class
 reference in its helper-based assertion fixture. Concrete intent annotations
 are added to existing trade/claim fixtures without changing the gate. Tests,
@@ -108,7 +108,7 @@ doctests and documentation builds remain unexecuted.
 
 Earlier normal run
 [38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
-at `93f562c` passes compilation, strict Clippy and all five other normal jobs.
+at `ab61f13` passes compilation, strict Clippy and all five other normal jobs.
 Parity's existing evidence gate requires explicit Rust class references for
 the three lock settings/move operations, whose shared fixture uses dynamic
 dispatch. Typed variant/field assertions now supplement its existing bytes,
@@ -117,7 +117,7 @@ and docs builds were not reached.
 
 Earlier normal run
 [38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
-at `1c807e1` fails check/features compilation on the missing `ReadValue`
+at `ba0a9d8` fails check/features compilation on the missing `ReadValue`
 registration for the existing DecodeAsType `SimSwapResult` model. The client
 registration is corrected in source; ordinary execution still needs to pass.
 Supply, no-host and semver pass, while MSRV is still running. Tests, doctests
@@ -125,23 +125,23 @@ and documentation builds were not reached.
 
 Earlier normal run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
-at `6470a11` passes supply, MSRV, features, no-host and semver. Strict Clippy
+at `8c9b4f3` passes supply, MSRV, features, no-host and semver. Strict Clippy
 rejects two generated leasing argument clones on Copy types. The generator
 source correction and verified generation from run 38704675475 are adopted;
 another normal check is required. Nextest and doctests were not reached.
 
 Earlier normal run
 [38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)
-at `359b09e` passes supply, no-host and semver. Check, feature and MSRV jobs
+at `58f9605` passes supply, no-host and semver. Check, feature and MSRV jobs
 fail compilation because `MinerCollateralState` lacks its client `ReadValue`
 registration; the check job also identifies a test helper import path and an
 unused root-claim test import. All three source corrections are committed in
-`6470a11` and compile in the later run.
+`8c9b4f3` and compile in the later run.
 Nextest and doctests were not reached on this seventeen-port checkpoint.
 
 Earlier normal run
 [38701008514](https://github.com/sam0x17/rtao/actions/runs/38701008514)
-at `b0e0aa1` passes compilation, strict Clippy, parity and the five other jobs.
+at `62940f1` passes compilation, strict Clippy, parity and the five other jobs.
 Nextest ran 1,872 tests: 1,871 passed, one failed and four were skipped; all
 eighteen earlier failures are corrected. The remaining child-take fixture
 needs an explicit map miss to test the metadata default rather than the
@@ -150,7 +150,7 @@ later seventeen ports need combined hosted acceptance. Doctests were not reached
 
 Earlier normal run
 [38697413448](https://github.com/sam0x17/rtao/actions/runs/38697413448)
-at `60ccce5` passes compilation, strict Clippy, parity and the five other jobs.
+at `ed861a6` passes compilation, strict Clippy, parity and the five other jobs.
 Nextest ran 1,850 tests: 1,832 passed, 18 failed and four were skipped. Doctests
 were not reached. CLI schema/output, wallet fixture, pending-operation and
 unknown-prefix failures require correction and another normal hosted run.
@@ -158,7 +158,7 @@ No acceptance checkbox is established by the passing subset.
 
 Earlier normal run
 [38695489489](https://github.com/sam0x17/rtao/actions/runs/38695489489)
-at `fa77262` passes MSRV, features, supply, no-host and semver. Compilation
+at `62e6b04` passes MSRV, features, supply, no-host and semver. Compilation
 and strict Clippy pass. D-045's portable fixture now qualifies, but parity
 uses the default-feature index to reject D-046's crowdloan tests even though
 normal CI runs nextest and doctests with all features. The source correction
@@ -169,15 +169,15 @@ the earlier result cannot validate them.
 
 1. C1 and exit 10 require a successful normal hosted run on the final pushed
    commit. Run [38690012949](https://github.com/sam0x17/rtao/actions/runs/38690012949)
-   targets `2331a32`; all six normal jobs failed. The inspected MSRV log reports
+   targets `162a225`; all six normal jobs failed. The inspected MSRV log reports
    E0599 at `crates/rtao-reads/src/reads/owner.rs:98`: the wire `TaoBalance`
-   has no `rao()` method. Commit `e79b6ac` repairs the source to use its native
+   has no `rao()` method. Commit `afdf879` repairs the source to use its native
    wire field. Normal run
    [38690242483](https://github.com/sam0x17/rtao/actions/runs/38690242483) at
-   `3aaabc7` passed semver, MSRV and supply but failed strict CLI Clippy and
+   `23a1d88` passed semver, MSRV and supply but failed strict CLI Clippy and
    the generated-read drift check. Both require correction before acceptance.
-   A run cannot validate later source changes. The preceding `2e79b66` run
-   failed during Clippy on an invalid PoW test constructor, fixed in `b322577`.
+   A run cannot validate later source changes. The preceding `9d3d41e` run
+   failed during Clippy on an invalid PoW test constructor, fixed in `3826f88`.
    Its nextest and doctest steps were not reached. Earlier run `38684286794` had 19 test
    failures and did not run doctests. No all-green result is carried forward.
 2. C3 and M0-29 require the final hosted evidence and milestone record, then

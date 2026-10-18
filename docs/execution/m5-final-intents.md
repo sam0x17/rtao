@@ -64,7 +64,7 @@ No local build, test campaign, node, container, service or temporary root ran.
 
 Hosted generation
 [38709002368](https://github.com/sam0x17/rtao/actions/runs/38709002368)
-at `a929bcda8fb3b9b9fb7720a6c88b3bf920806613` succeeded. Review verified
+at `ca1e9d55092e93318007f016148e9a13d5b044bb` succeeded. Review verified
 fourteen exact regular-file archive members, all 23 dependency hashes and
 unchanged role package sets/counts 225/361/365/416. Generated changes are ten
 availability/pending removals, four guarded constructors and four bounded JSON
@@ -80,7 +80,7 @@ The bounded adoption proof is not retained in the repository.
 No runtime, oracle, native-platform or hardware coverage is added by generation.
 
 Normal run [38709461377](https://github.com/sam0x17/rtao/actions/runs/38709461377)
-at `5cba852` stops check and MSRV at compilation. Source corrections give
+at `d63190b` stops check and MSRV at compilation. Source corrections give
 the multisig argument iterators their shared ArgMatches lifetime, compare
 policy subnet IDs at the same native type while retaining order/duplicates,
 and decode the public PoW hash with the existing strict fixed-width helper.
@@ -91,7 +91,7 @@ compilation or fixture success. Bounded failure evidence is not retained in the
 repository.
 
 Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
-at `06a3598` passes compilation, strict Clippy, parity and the other five jobs.
+at `ab77cb4` passes compilation, strict Clippy, parity and the other five jobs.
 Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. The all-83
 plan fixture passes. Fixes correct fixture expectations using pinned sources:
 ordinary u32 multisig timepoints, setup versus business RPCs, typed storage

@@ -9,7 +9,7 @@ adapter fixture covers both text fields, all six accepted separators and exact
 split-nibble/non-ASCII error positions.
 `dynamic_text_hex_preserves_python_pair_separators_and_error_positions` passed in
 [hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
-at `d01830cdf6a7e1301ca4a2629b35663617f97dab`. All six blocking jobs passed;
+at `965669d709bd8b8435f76ec7db5def9d471fe0d9`. All six blocking jobs passed;
 the main job passed 3,051 tests with zero failures and four skipped tests, plus
 nine doctests across 19 crate suites. This supplies current adapter execution
 for the applicable [M1 Q30 development exit](m1-client.md#current-q30-development-exit).
@@ -17,7 +17,7 @@ Canonical chain text uses byte lists; this case demonstrates no wire-path
 failure. Typed row access, `Option` and Rust `Debug` are explicit native API
 choices. Complete source review and exact hosted evidence now reconcile the
 whole source row; hosted report run 38876950939 refreshed its generated matrix
-entry at `82d82d7`. These Rust results
+entry at `b06a325`. These Rust results
 establish no fresh Python/oracle, live-network, benchmark, fuzz, platform or
 release coverage.
 

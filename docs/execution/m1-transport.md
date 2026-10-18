@@ -5,7 +5,7 @@ explicit assertions to native witnesses or documented API/input adaptations.
 The actual refused-Client-initialization socket observer and the ten-result
 batch cardinality assertion passed in
 [hosted run 38873429391](https://github.com/sam0x17/rtao/actions/runs/38873429391)
-at `d01830cdf6a7e1301ca4a2629b35663617f97dab`, together with all three guarded
+at `965669d709bd8b8435f76ec7db5def9d471fe0d9`, together with all three guarded
 parameter-producer fixtures and the existing socket/public-client witnesses.
 All six blocking jobs passed; the main result was 3,051 passed, zero failed and
 four skipped tests, plus nine doctests across 19 crate suites. The separate
@@ -17,7 +17,7 @@ This supplies current transport execution for the applicable
 Generated parameter inputs are authenticated and adopted. Complete source review
 and exact hosted results now reconcile test_rpc.py and the FakeNode harness;
 hosted report run 38876950939 refreshed their generated matrix entries at
-`82d82d7`. These Rust results add no
+`b06a325`. These Rust results add no
 Python/oracle, HTTPS two-provider, live-network, platform or release claim.
 
 `rtao-rpc` now owns a single WebSocket supervisor and implements the real

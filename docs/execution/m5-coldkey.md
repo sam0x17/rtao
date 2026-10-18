@@ -30,7 +30,7 @@ Pending operations remain absent from the command tree.
 
 Hosted generation
 [38696143491](https://github.com/sam0x17/rtao/actions/runs/38696143491)
-at `18679e34800d237cd20c43566b63d17f473032fd` succeeded and was adopted
+at `b458d291f2b4c6bf14600c4747ce3d69d2736718` succeeded and was adopted
 unchanged. Review checked thirteen exact regular-file members, source identity,
 all 23 dependency inputs, unchanged role package sets and counts, four pending
 removals and three pass-through additions. Other generated interfaces and
@@ -48,7 +48,7 @@ Source review found unused intent parameters in the generated zero-argument
 builds, which would fail strict Clippy. The generator now names an unused
 binding `_intent`. Follow-up run
 [38696690648](https://github.com/sam0x17/rtao/actions/runs/38696690648)
-at `7c9c8cac5394099f48a420effc454fbc0afe071f` succeeded. Its output was
+at `6d43f697a460f2d3cd3670c3795b7532c2678d5b` succeeded. Its output was
 adopted unchanged after verifying exactly those two generated parameter-name
 changes, unchanged other interfaces/matrix, all thirteen archive members,
 23 dependency hashes and unchanged role inventories. The bounded adoption proof is not retained in the repository. This generator result

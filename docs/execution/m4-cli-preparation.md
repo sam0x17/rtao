@@ -33,8 +33,8 @@ row is adopted from hosted generation. The prepared
 human review includes preflight facts from the same snapshot and call as its plan.
 External backend factories and rich staking pickers remain incomplete; see
 [m4-generated-review.md](m4-generated-review.md). Wallet and subnet commands
-are committed in `a56d518`, with strict M5 call import in `0812681` and the
-two M5 reads in `2331a32`/`e79b6ac`. Read dispatch needs hosted regeneration;
+are committed in `b760000`, with strict M5 call import in `9991b11` and the
+two M5 reads in `162a225`/`afdf879`. Read dispatch needs hosted regeneration;
 the broader offline API and sequential trim-null session remain in progress.
 Prepared source and historical isolated results do not establish acceptance
 of the combined code.

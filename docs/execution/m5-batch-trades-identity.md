@@ -56,7 +56,7 @@ upstream filing, local build, service or temporary root is created.
 
 Hosted generation
 [38704675475](https://github.com/sam0x17/rtao/actions/runs/38704675475)
-at `429f72787bd46d5304c3209f834c983cc65475aa` succeeded. Review verified
+at `358164ec24a9d33ccf4b2e8dcfb2fc13da1cc5c5` succeeded. Review verified
 fourteen exact regular-file archive members, all 23 dependency hashes and
 unchanged role package sets/counts 225/361/365/416. Output changes only seven
 availability/pending entries, the identity helper, two leasing Copy arguments,
