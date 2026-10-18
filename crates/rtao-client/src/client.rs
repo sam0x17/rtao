@@ -131,22 +131,27 @@ impl Client {
                 }
             }
         };
-        tokio::time::timeout(timeout, startup).await.map_err(|_| {
+        let client = tokio::time::timeout(timeout, startup).await.map_err(|_| {
             ClientError::from(rtao_rpc::RpcError::Timeout {
                 detail: String::new(),
             })
-        })?
+        })??;
+        client.load_token_symbols_within(timeout).await;
+        Ok(client)
     }
 
     /// Initialize over a supplied RPC implementation, including fake chains.
     pub async fn from_rpc(rpc: RpcClient, config: ClientConfig) -> Result<Self, ClientError> {
-        tokio::time::timeout(config.startup_timeout, Self::initialize(rpc, config, None))
+        let timeout = config.startup_timeout;
+        let client = tokio::time::timeout(timeout, Self::initialize(rpc, config, None))
             .await
             .map_err(|_| {
                 ClientError::from(rtao_rpc::RpcError::Timeout {
                     detail: String::new(),
                 })
-            })?
+            })??;
+        client.load_token_symbols_within(timeout).await;
+        Ok(client)
     }
 
     async fn initialize(
@@ -258,7 +263,6 @@ impl Client {
             }
         });
         client.start_runtime_watcher();
-        client.load_token_symbols().await;
         Ok(client)
     }
 
@@ -315,6 +319,17 @@ impl Client {
         match self.inner.token_symbols.read().await.get(&netuid) {
             Some(symbol) => balance.with_symbol(symbol.clone()),
             None => balance,
+        }
+    }
+
+    /// Display symbols are optional, so a slow scan (hundreds of subnets on a
+    /// paced public endpoint) has its own bound outside the startup budget.
+    async fn load_token_symbols_within(&self, bound: Duration) {
+        if tokio::time::timeout(bound, self.load_token_symbols())
+            .await
+            .is_err()
+        {
+            tracing::debug!("display token symbol scan timed out");
         }
     }
 
