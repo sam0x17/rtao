@@ -136,6 +136,14 @@ matches the inputs, so its ledger and reports are removed and no validated
 range is recorded. `mainnet-watch` now compares Finney's finalized runtime
 with this pin every hour and opens an issue when they differ.
 
+Local validation for this pin: extract, regen, probe-pin, compat and strict
+parity checks pass; formatting, all-feature Clippy and the workspace tests
+(3399 passed) pass; and the compat lane script passes against the pinned
+sha-f4786f9 localnet on fast blocks (19/19 e2e scenarios, scenario 8's live
+runtime upgrade and both core-oracle tests). Hosted pr-gates and attested
+validation lanes have not yet run for this pin, and no independent Python
+oracle output diff was produced.
+
 ## Recording the next change
 
 Append an entry when a pin changes. Include the old and new tag/commit, affected
