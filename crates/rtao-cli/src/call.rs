@@ -1258,9 +1258,7 @@ async fn honor_raw_shield(
         .await
         .map_err(CliError::from)?;
     if key.is_some() {
-        return ctx
-            .honor_shield_finality(client, shield.forced, required, target)
-            .await;
+        return Ok(true);
     }
     if shield.forced || required {
         return Err(CliError::input(
