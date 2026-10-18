@@ -51,6 +51,48 @@ independent Python oracle output diff, and it supplies no physical Ledger
 execution evidence. See the [Ledger guide](ledger.md) for the distinction
 between replay, injected transport and device coverage.
 
+## 2026-10-18: parity moves to unreleased spec 481
+
+The parity pin moves from `v478` (`850f2755bb05a3851f948489f0ab27b0645cebce`)
+to spec 481 at upstream `main`, commit
+`6a972693ae9580541225bd37696ac2fee26b8ae9`. Testnet finalizes spec 481 and
+Finney spec 479; upstream has published no release after v478, so the pin is
+recorded with `release = "unreleased"`, `source_branch = "main"` and
+`network = "testnet"`. `pin --check` verifies that the commit is still on
+`main`, declares spec 481 in its runtime source and that no release has since
+tagged `v481` elsewhere; re-pin with `--parity v481` once upstream publishes
+it. Code-generation metadata is the testnet 481 runtime
+(`vendor/metadata/testnet/481.*`), and the pinned localnet image is
+`sha-6a972693…`, built from that commit.
+
+| Input | Recorded identity |
+|---|---|
+| Parity tag and commit | `v481` (unreleased), `6a972693ae9580541225bd37696ac2fee26b8ae9` |
+| Parity runtime and Python package | Spec `481`, `11.3.1.dev0` |
+| Core tag, commit and patch | unchanged: `v478`, `850f2755…`, patch `626f2a4f…` |
+
+`bittensor-core` is unchanged between the two commits, so the core pin and
+its reviewed patch stay at v478. The Python SDK adds the per-subnet emission
+weight vector (`set_subnet_emission_weights`, the `subnet_emission_weights`
+read and `subnets emission` commands), the `set_reject_staking_hotkey_growth`
+account flag and the derived `owner_emission`, `validator_emission` and
+`miner_emission` hyperparameters, and makes `owner_cut_enabled` read-only.
+rtao ports them in `rtao-primitives::emission_weights`, `rtao-reads`,
+`rtao-intents` and `rtao-cli`; the catalogs grow to 85 intents, 103 reads and
+404 chain errors.
+
+Validation for this pin: hosted pr-gates pass; the full pin-pipeline e2e
+stage passes locally against the pinned localnet on fast and slow blocks
+(21/21 each, including the new emission-weights scenario 18) and its
+core-oracle tests; scenario 8 upgrades a live v478 chain to the 481 runtime
+mid-session; and the subnet template passes its compose-localnet check. Live
+CLI use on fast localnets found and fixed three client problems recorded in
+[deliberate differences](divergences.md) D-077 (shield key freshness,
+finality headroom and re-sealing a proven-dropped inner) and a testkit bug
+where concurrent localnets peered across the shared Docker bridge. No
+independent Python oracle output diff was produced for this change, and no
+validated compatibility range is recorded yet.
+
 ## Recording the next change
 
 Append an entry when a pin changes. Include the old and new tag/commit, affected
