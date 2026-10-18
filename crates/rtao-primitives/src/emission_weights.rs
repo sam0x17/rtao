@@ -21,7 +21,7 @@
 //! * the five slots sum to exactly one.
 //!
 //! Everything here is pure, so callers can preview and explain a change
-//! before submitting it; [`validate`] mirrors the on-chain checks and names
+//! before submitting it; [`validate`](crate::emission_weights::validate) mirrors the on-chain checks and names
 //! the same error codes.
 
 use std::{borrow::Cow, fmt};
