@@ -1035,7 +1035,8 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
         differences.join(", ")
     );
     println!(
-        "83 intent interfaces and {} pending behaviors {}",
+        "{} intent interfaces and {} pending behaviors {}",
+        crate::extract::INTENT_COUNT,
         pending.len(),
         if check { "match" } else { "regenerated" }
     );

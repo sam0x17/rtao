@@ -593,7 +593,7 @@ mod tests {
             .lines()
             .filter_map(|line| line.strip_prefix("## "))
             .collect();
-        assert_eq!(headings.len(), 83);
+        assert_eq!(headings.len(), crate::extract::INTENT_COUNT);
         assert_eq!(
             headings.into_iter().collect::<BTreeSet<_>>(),
             INTENTS.iter().map(|spec| spec.name).collect()

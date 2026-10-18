@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
     "path": "website/apps/bittensor-website/public/catalog/intents.json",
-    "sha256": "56a3ebb6393491696e5b89ee4045baac3bbe3bb5f4a158974c1d4f3e950f036e",
-    "tag": "v478"
+    "sha256": "b648e7040b2dff5a73922cbfc9147b67e097d4272686959d03c0d7d7f5376113",
+    "tag": "v481"
   },
   "format": 1,
   "intents": [
@@ -172,12 +172,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 22205,
-            "end_line": 572,
-            "line": 570,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 23442,
+            "end_line": 608,
+            "line": 606,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 22083
+            "start_byte": 23320
           },
           "required": true
         },
@@ -190,12 +190,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 22261,
-            "end_line": 573,
-            "line": 573,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 23498,
+            "end_line": 609,
+            "line": 609,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 22210
+            "start_byte": 23447
           },
           "required": true
         },
@@ -208,12 +208,12 @@
           },
           "name": "amount_tao",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 22483,
-            "end_line": 579,
-            "line": 574,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 23720,
+            "end_line": 615,
+            "line": 610,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 22266
+            "start_byte": 23503
           },
           "required": true
         },
@@ -226,12 +226,12 @@
           },
           "name": "slippage_protection",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 22580,
-            "end_line": 580,
-            "line": 580,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 23817,
+            "end_line": 616,
+            "line": 616,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 22488
+            "start_byte": 23725
           },
           "required": false
         },
@@ -244,24 +244,24 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 22700,
-            "end_line": 583,
-            "line": 581,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 23937,
+            "end_line": 619,
+            "line": 617,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 22585
+            "start_byte": 23822
           },
           "required": false
         }
       ],
       "name": "add_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 25375,
-        "end_line": 649,
-        "line": 544,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 26612,
+        "end_line": 685,
+        "line": 580,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 20598
+        "start_byte": 21835
       },
       "python_class": "AddStake"
     },
@@ -276,12 +276,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 38242,
-            "end_line": 952,
-            "line": 950,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 39479,
+            "end_line": 988,
+            "line": 986,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 38120
+            "start_byte": 39357
           },
           "required": true
         },
@@ -294,12 +294,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 38298,
-            "end_line": 953,
-            "line": 953,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 39535,
+            "end_line": 989,
+            "line": 989,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 38247
+            "start_byte": 39484
           },
           "required": true
         },
@@ -312,12 +312,12 @@
           },
           "name": "amount_tao",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 38520,
-            "end_line": 959,
-            "line": 954,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 39757,
+            "end_line": 995,
+            "line": 990,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 38303
+            "start_byte": 39540
           },
           "required": true
         },
@@ -330,12 +330,12 @@
           },
           "name": "limit_price_rao",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 38590,
-            "end_line": 960,
-            "line": 960,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 39827,
+            "end_line": 996,
+            "line": 996,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 38525
+            "start_byte": 39762
           },
           "required": true
         },
@@ -348,24 +348,24 @@
           },
           "name": "allow_partial",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 38676,
-            "end_line": 961,
-            "line": 961,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 39913,
+            "end_line": 997,
+            "line": 997,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 38595
+            "start_byte": 39832
           },
           "required": false
         }
       ],
       "name": "add_stake_limit",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 40038,
-        "end_line": 1000,
-        "line": 930,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 41275,
+        "end_line": 1036,
+        "line": 966,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 37165
+        "start_byte": 38402
       },
       "python_class": "AddStakeLimit"
     },
@@ -1656,12 +1656,12 @@
           },
           "name": "origin_hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33053,
-            "end_line": 823,
-            "line": 823,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34290,
+            "end_line": 859,
+            "line": 859,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 32966
+            "start_byte": 34203
           },
           "required": true
         },
@@ -1674,12 +1674,12 @@
           },
           "name": "origin_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33123,
-            "end_line": 824,
-            "line": 824,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34360,
+            "end_line": 860,
+            "line": 860,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33058
+            "start_byte": 34295
           },
           "required": true
         },
@@ -1692,12 +1692,12 @@
           },
           "name": "dest_hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33206,
-            "end_line": 825,
-            "line": 825,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34443,
+            "end_line": 861,
+            "line": 861,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33128
+            "start_byte": 34365
           },
           "required": true
         },
@@ -1710,12 +1710,12 @@
           },
           "name": "dest_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33272,
-            "end_line": 826,
-            "line": 826,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34509,
+            "end_line": 862,
+            "line": 862,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33211
+            "start_byte": 34448
           },
           "required": true
         },
@@ -1728,12 +1728,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33393,
-            "end_line": 829,
-            "line": 827,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34630,
+            "end_line": 865,
+            "line": 863,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33277
+            "start_byte": 34514
           },
           "required": true
         },
@@ -1746,12 +1746,12 @@
           },
           "name": "slippage_protection",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33490,
-            "end_line": 830,
-            "line": 830,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34727,
+            "end_line": 866,
+            "line": 866,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33398
+            "start_byte": 34635
           },
           "required": false
         },
@@ -1764,12 +1764,12 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33610,
-            "end_line": 833,
-            "line": 831,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34847,
+            "end_line": 869,
+            "line": 867,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33495
+            "start_byte": 34732
           },
           "required": false
         },
@@ -1782,24 +1782,24 @@
           },
           "name": "claim",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 33685,
-            "end_line": 834,
-            "line": 834,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 34922,
+            "end_line": 870,
+            "line": 870,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 33615
+            "start_byte": 34852
           },
           "required": false
         }
       ],
       "name": "move_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 37141,
-        "end_line": 925,
-        "line": 783,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 38378,
+        "end_line": 961,
+        "line": 819,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 31022
+        "start_byte": 32259
       },
       "python_class": "MoveStake"
     },
@@ -1814,12 +1814,12 @@
           },
           "name": "origin_hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 53769,
-            "end_line": 1341,
-            "line": 1341,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55006,
+            "end_line": 1377,
+            "line": 1377,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 53682
+            "start_byte": 54919
           },
           "required": true
         },
@@ -1832,12 +1832,12 @@
           },
           "name": "origin_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 53839,
-            "end_line": 1342,
-            "line": 1342,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55076,
+            "end_line": 1378,
+            "line": 1378,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 53774
+            "start_byte": 55011
           },
           "required": true
         },
@@ -1850,12 +1850,12 @@
           },
           "name": "dest_hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 53922,
-            "end_line": 1343,
-            "line": 1343,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55159,
+            "end_line": 1379,
+            "line": 1379,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 53844
+            "start_byte": 55081
           },
           "required": true
         },
@@ -1868,12 +1868,12 @@
           },
           "name": "dest_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 53988,
-            "end_line": 1344,
-            "line": 1344,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55225,
+            "end_line": 1380,
+            "line": 1380,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 53927
+            "start_byte": 55164
           },
           "required": true
         },
@@ -1886,12 +1886,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 54118,
-            "end_line": 1347,
-            "line": 1345,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55355,
+            "end_line": 1383,
+            "line": 1381,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 53993
+            "start_byte": 55230
           },
           "required": true
         },
@@ -1904,12 +1904,12 @@
           },
           "name": "slippage_protection",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 54215,
-            "end_line": 1348,
-            "line": 1348,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55452,
+            "end_line": 1384,
+            "line": 1384,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 54123
+            "start_byte": 55360
           },
           "required": false
         },
@@ -1922,24 +1922,24 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 54335,
-            "end_line": 1351,
-            "line": 1349,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 55572,
+            "end_line": 1387,
+            "line": 1385,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 54220
+            "start_byte": 55457
           },
           "required": false
         }
       ],
       "name": "move_swap_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 56618,
-        "end_line": 1411,
-        "line": 1311,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 57855,
+        "end_line": 1447,
+        "line": 1347,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 52362
+        "start_byte": 53599
       },
       "python_class": "MoveSwapStake"
     },
@@ -2633,12 +2633,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 27311,
-            "end_line": 690,
-            "line": 690,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 28548,
+            "end_line": 726,
+            "line": 726,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 27249
+            "start_byte": 28486
           },
           "required": true
         },
@@ -2651,12 +2651,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 27367,
-            "end_line": 691,
-            "line": 691,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 28604,
+            "end_line": 727,
+            "line": 727,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 27316
+            "start_byte": 28553
           },
           "required": true
         },
@@ -2669,12 +2669,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 27487,
-            "end_line": 694,
-            "line": 692,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 28724,
+            "end_line": 730,
+            "line": 728,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 27372
+            "start_byte": 28609
           },
           "required": true
         },
@@ -2687,12 +2687,12 @@
           },
           "name": "slippage_protection",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 27584,
-            "end_line": 695,
-            "line": 695,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 28821,
+            "end_line": 731,
+            "line": 731,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 27492
+            "start_byte": 28729
           },
           "required": false
         },
@@ -2705,12 +2705,12 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 27704,
-            "end_line": 698,
-            "line": 696,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 28941,
+            "end_line": 734,
+            "line": 732,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 27589
+            "start_byte": 28826
           },
           "required": false
         },
@@ -2723,24 +2723,24 @@
           },
           "name": "claim",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 27774,
-            "end_line": 699,
-            "line": 699,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 29011,
+            "end_line": 735,
+            "line": 735,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 27709
+            "start_byte": 28946
           },
           "required": false
         }
       ],
       "name": "remove_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 30998,
-        "end_line": 778,
-        "line": 654,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 32235,
+        "end_line": 814,
+        "line": 690,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 25399
+        "start_byte": 26636
       },
       "python_class": "RemoveStake"
     },
@@ -2755,12 +2755,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 41404,
-            "end_line": 1033,
-            "line": 1033,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 42641,
+            "end_line": 1069,
+            "line": 1069,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 41342
+            "start_byte": 42579
           },
           "required": true
         },
@@ -2773,12 +2773,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 41460,
-            "end_line": 1034,
-            "line": 1034,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 42697,
+            "end_line": 1070,
+            "line": 1070,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 41409
+            "start_byte": 42646
           },
           "required": true
         },
@@ -2791,12 +2791,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 41580,
-            "end_line": 1037,
-            "line": 1035,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 42817,
+            "end_line": 1073,
+            "line": 1071,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 41465
+            "start_byte": 42702
           },
           "required": true
         },
@@ -2809,12 +2809,12 @@
           },
           "name": "limit_price_rao",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 41650,
-            "end_line": 1038,
-            "line": 1038,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 42887,
+            "end_line": 1074,
+            "line": 1074,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 41585
+            "start_byte": 42822
           },
           "required": true
         },
@@ -2827,12 +2827,12 @@
           },
           "name": "allow_partial",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 41736,
-            "end_line": 1039,
-            "line": 1039,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 42973,
+            "end_line": 1075,
+            "line": 1075,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 41655
+            "start_byte": 42892
           },
           "required": false
         },
@@ -2845,24 +2845,24 @@
           },
           "name": "claim",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 41806,
-            "end_line": 1040,
-            "line": 1040,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 43043,
+            "end_line": 1076,
+            "line": 1076,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 41741
+            "start_byte": 42978
           },
           "required": false
         }
       ],
       "name": "remove_stake_limit",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 44495,
-        "end_line": 1108,
-        "line": 1005,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 45732,
+        "end_line": 1144,
+        "line": 1041,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 40062
+        "start_byte": 41299
       },
       "python_class": "RemoveStakeLimit"
     },
@@ -3357,12 +3357,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 66369,
-            "end_line": 1625,
-            "line": 1625,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 67606,
+            "end_line": 1661,
+            "line": 1661,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 66283
+            "start_byte": 67520
           },
           "required": true
         },
@@ -3375,24 +3375,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 66538,
-            "end_line": 1629,
-            "line": 1626,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 67775,
+            "end_line": 1665,
+            "line": 1662,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 66374
+            "start_byte": 67611
           },
           "required": false
         }
       ],
       "name": "set_auto_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 66963,
-        "end_line": 1639,
-        "line": 1607,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 68200,
+        "end_line": 1675,
+        "line": 1643,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 65425
+        "start_byte": 66662
       },
       "python_class": "SetAutoStake"
     },
@@ -3593,12 +3593,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-            "end_byte": 5791,
-            "end_line": 116,
-            "line": 116,
+            "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+            "end_byte": 5728,
+            "end_line": 115,
+            "line": 115,
             "path": "sdk/python/bittensor/intents/hyperparameters.py",
-            "start_byte": 5699
+            "start_byte": 5636
           },
           "required": true
         },
@@ -3611,12 +3611,12 @@
           },
           "name": "name",
           "provenance": {
-            "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-            "end_byte": 5858,
-            "end_line": 117,
-            "line": 117,
+            "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+            "end_byte": 5795,
+            "end_line": 116,
+            "line": 116,
             "path": "sdk/python/bittensor/intents/hyperparameters.py",
-            "start_byte": 5796
+            "start_byte": 5733
           },
           "required": true
         },
@@ -3629,24 +3629,24 @@
           },
           "name": "value",
           "provenance": {
-            "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-            "end_byte": 5941,
-            "end_line": 118,
-            "line": 118,
+            "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+            "end_byte": 5878,
+            "end_line": 117,
+            "line": 117,
             "path": "sdk/python/bittensor/intents/hyperparameters.py",
-            "start_byte": 5863
+            "start_byte": 5800
           },
           "required": true
         }
       ],
       "name": "set_hyperparameter",
       "provenance": {
-        "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-        "end_byte": 7811,
-        "end_line": 155,
-        "line": 93,
+        "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+        "end_byte": 7748,
+        "end_line": 154,
+        "line": 92,
         "path": "sdk/python/bittensor/intents/hyperparameters.py",
-        "start_byte": 4582
+        "start_byte": 4519
       },
       "python_class": "SetHyperparameter"
     },
@@ -3993,6 +3993,38 @@
     {
       "fields": [
         {
+          "annotation": "bool",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "enabled",
+          "provenance": {
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 1735,
+            "end_line": 48,
+            "line": 41,
+            "path": "sdk/python/bittensor/intents/staking.py",
+            "start_byte": 1512
+          },
+          "required": true
+        }
+      ],
+      "name": "set_reject_staking_hotkey_growth",
+      "provenance": {
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 2091,
+        "end_line": 57,
+        "line": 27,
+        "path": "sdk/python/bittensor/intents/staking.py",
+        "start_byte": 879
+      },
+      "python_class": "SetRejectStakingHotkeyGrowth"
+    },
+    {
+      "fields": [
+        {
           "annotation": "Money",
           "default": {
             "factory": false,
@@ -4071,6 +4103,92 @@
         "start_byte": 761
       },
       "python_class": "SetSubnetEmissionEnabled"
+    },
+    {
+      "fields": [
+        {
+          "annotation": "int",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "netuid",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 4925,
+            "end_line": 115,
+            "line": 115,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 4833
+          },
+          "required": true
+        },
+        {
+          "annotation": "list[int | str]",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "slots",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 4991,
+            "end_line": 116,
+            "line": 116,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 4930
+          },
+          "required": true
+        },
+        {
+          "annotation": "list[int | float | str]",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "values",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 5067,
+            "end_line": 117,
+            "line": 117,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 4996
+          },
+          "required": true
+        },
+        {
+          "annotation": "bool",
+          "default": {
+            "factory": false,
+            "present": true,
+            "value": false
+          },
+          "name": "renormalize",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 5149,
+            "end_line": 118,
+            "line": 118,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 5072
+          },
+          "required": false
+        }
+      ],
+      "name": "set_subnet_emission_weights",
+      "provenance": {
+        "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+        "end_byte": 12287,
+        "end_line": 281,
+        "line": 93,
+        "path": "sdk/python/bittensor/intents/emission_weights.py",
+        "start_byte": 3664
+      },
+      "python_class": "SetSubnetEmissionWeights"
     },
     {
       "fields": [
@@ -4535,12 +4653,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 68403,
-            "end_line": 1671,
-            "line": 1669,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 69640,
+            "end_line": 1707,
+            "line": 1705,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 68282
+            "start_byte": 69519
           },
           "required": true
         },
@@ -4553,24 +4671,24 @@
           },
           "name": "amount_tao",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 68642,
-            "end_line": 1677,
-            "line": 1672,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 69879,
+            "end_line": 1713,
+            "line": 1708,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 68408
+            "start_byte": 69645
           },
           "required": true
         }
       ],
       "name": "stake_into_basket",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 69770,
-        "end_line": 1710,
-        "line": 1644,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 71007,
+        "end_line": 1746,
+        "line": 1680,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 66987
+        "start_byte": 68224
       },
       "python_class": "StakeIntoBasket"
     },
@@ -4617,12 +4735,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 72464,
-            "end_line": 1763,
-            "line": 1761,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 73701,
+            "end_line": 1799,
+            "line": 1797,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 72351
+            "start_byte": 73588
           },
           "required": true
         },
@@ -4635,12 +4753,12 @@
           },
           "name": "origin_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 72585,
-            "end_line": 1766,
-            "line": 1764,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 73822,
+            "end_line": 1802,
+            "line": 1800,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 72469
+            "start_byte": 73706
           },
           "required": true
         },
@@ -4653,12 +4771,12 @@
           },
           "name": "dest_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 72701,
-            "end_line": 1769,
-            "line": 1767,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 73938,
+            "end_line": 1805,
+            "line": 1803,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 72590
+            "start_byte": 73827
           },
           "required": true
         },
@@ -4671,12 +4789,12 @@
           },
           "name": "amount",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 72936,
-            "end_line": 1775,
-            "line": 1770,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 74173,
+            "end_line": 1811,
+            "line": 1806,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 72706
+            "start_byte": 73943
           },
           "required": true
         },
@@ -4689,24 +4807,24 @@
           },
           "name": "min_amount_out",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 73342,
-            "end_line": 1784,
-            "line": 1776,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 74579,
+            "end_line": 1820,
+            "line": 1812,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 72941
+            "start_byte": 74178
           },
           "required": false
         }
       ],
       "name": "swap_basket",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 75435,
-        "end_line": 1835,
-        "line": 1715,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 76672,
+        "end_line": 1871,
+        "line": 1751,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 69794
+        "start_byte": 71031
       },
       "python_class": "SwapBasket"
     },
@@ -4721,12 +4839,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 76285,
-            "end_line": 1858,
-            "line": 1856,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 77522,
+            "end_line": 1894,
+            "line": 1892,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 76172
+            "start_byte": 77409
           },
           "required": true
         },
@@ -4739,24 +4857,24 @@
           },
           "name": "legs",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 76523,
-            "end_line": 1864,
-            "line": 1859,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 77760,
+            "end_line": 1900,
+            "line": 1895,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 76290
+            "start_byte": 77527
           },
           "required": true
         }
       ],
       "name": "swap_basket_many",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 78972,
-        "end_line": 1925,
-        "line": 1840,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 80209,
+        "end_line": 1961,
+        "line": 1876,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 75459
+        "start_byte": 76696
       },
       "python_class": "SwapBasketMany"
     },
@@ -4871,12 +4989,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 50216,
-            "end_line": 1250,
-            "line": 1250,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 51453,
+            "end_line": 1286,
+            "line": 1286,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 50154
+            "start_byte": 51391
           },
           "required": true
         },
@@ -4889,12 +5007,12 @@
           },
           "name": "origin_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 50286,
-            "end_line": 1251,
-            "line": 1251,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 51523,
+            "end_line": 1287,
+            "line": 1287,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 50221
+            "start_byte": 51458
           },
           "required": true
         },
@@ -4907,12 +5025,12 @@
           },
           "name": "dest_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 50352,
-            "end_line": 1252,
-            "line": 1252,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 51589,
+            "end_line": 1288,
+            "line": 1288,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 50291
+            "start_byte": 51528
           },
           "required": true
         },
@@ -4925,12 +5043,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 50480,
-            "end_line": 1255,
-            "line": 1253,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 51717,
+            "end_line": 1291,
+            "line": 1289,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 50357
+            "start_byte": 51594
           },
           "required": true
         },
@@ -4943,12 +5061,12 @@
           },
           "name": "slippage_protection",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 50577,
-            "end_line": 1256,
-            "line": 1256,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 51814,
+            "end_line": 1292,
+            "line": 1292,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 50485
+            "start_byte": 51722
           },
           "required": false
         },
@@ -4961,24 +5079,24 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 50697,
-            "end_line": 1259,
-            "line": 1257,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 51934,
+            "end_line": 1295,
+            "line": 1293,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 50582
+            "start_byte": 51819
           },
           "required": false
         }
       ],
       "name": "swap_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 52338,
-        "end_line": 1306,
-        "line": 1225,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 53575,
+        "end_line": 1342,
+        "line": 1261,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 48801
+        "start_byte": 50038
       },
       "python_class": "SwapStake"
     },
@@ -5161,12 +5279,12 @@
           },
           "name": "dest_coldkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 59046,
-            "end_line": 1461,
-            "line": 1459,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 60283,
+            "end_line": 1497,
+            "line": 1495,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 58931
+            "start_byte": 60168
           },
           "required": true
         },
@@ -5179,12 +5297,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 59113,
-            "end_line": 1462,
-            "line": 1462,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 60350,
+            "end_line": 1498,
+            "line": 1498,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 59051
+            "start_byte": 60288
           },
           "required": true
         },
@@ -5197,12 +5315,12 @@
           },
           "name": "origin_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 59183,
-            "end_line": 1463,
-            "line": 1463,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 60420,
+            "end_line": 1499,
+            "line": 1499,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 59118
+            "start_byte": 60355
           },
           "required": true
         },
@@ -5215,12 +5333,12 @@
           },
           "name": "dest_netuid",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 59249,
-            "end_line": 1464,
-            "line": 1464,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 60486,
+            "end_line": 1500,
+            "line": 1500,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 59188
+            "start_byte": 60425
           },
           "required": true
         },
@@ -5233,12 +5351,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 59368,
-            "end_line": 1467,
-            "line": 1465,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 60605,
+            "end_line": 1503,
+            "line": 1501,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 59254
+            "start_byte": 60491
           },
           "required": true
         },
@@ -5251,24 +5369,24 @@
           },
           "name": "dest_hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 59774,
-            "end_line": 1476,
-            "line": 1468,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 61011,
+            "end_line": 1512,
+            "line": 1504,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 59373
+            "start_byte": 60610
           },
           "required": false
         }
       ],
       "name": "transfer_stake",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 65401,
-        "end_line": 1602,
-        "line": 1416,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 66638,
+        "end_line": 1638,
+        "line": 1452,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 56642
+        "start_byte": 57879
       },
       "python_class": "TransferStake"
     },
@@ -5383,12 +5501,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 45737,
-            "end_line": 1140,
-            "line": 1140,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 46974,
+            "end_line": 1176,
+            "line": 1176,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 45653
+            "start_byte": 46890
           },
           "required": true
         },
@@ -5401,24 +5519,24 @@
           },
           "name": "claim",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 46367,
-            "end_line": 1154,
-            "line": 1141,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 47604,
+            "end_line": 1190,
+            "line": 1177,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 45742
+            "start_byte": 46979
           },
           "required": false
         }
       ],
       "name": "unstake_all",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 47378,
-        "end_line": 1183,
-        "line": 1113,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 48615,
+        "end_line": 1219,
+        "line": 1149,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 44519
+        "start_byte": 45756
       },
       "python_class": "UnstakeAll"
     },
@@ -5433,24 +5551,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-            "end_byte": 48287,
-            "end_line": 1206,
-            "line": 1206,
+            "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+            "end_byte": 49524,
+            "end_line": 1242,
+            "line": 1242,
             "path": "sdk/python/bittensor/intents/staking.py",
-            "start_byte": 48198
+            "start_byte": 49435
           },
           "required": true
         }
       ],
       "name": "unstake_all_alpha",
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "end_byte": 48777,
-        "end_line": 1220,
-        "line": 1188,
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "end_byte": 50014,
+        "end_line": 1256,
+        "line": 1224,
         "path": "sdk/python/bittensor/intents/staking.py",
-        "start_byte": 47402
+        "start_byte": 48639
       },
       "python_class": "UnstakeAllAlpha"
     },
@@ -5688,7 +5806,7 @@
     }
   ],
   "parity": {
-    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
-    "tag": "v478"
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "tag": "v481"
   }
 }

@@ -17,6 +17,8 @@ use toml_edit::DocumentMut;
 
 use super::{Binding, Resolver, call_path, header, line, pretty, rust_string, rustfmt};
 
+use crate::extract::{INTENT_COUNT, READ_COUNT};
+
 const INTENTS: &str = "vendor/upstream/catalog/intents.json";
 const READS: &str = "vendor/upstream/catalog/reads.json";
 const VARS: &[&str] = &[
@@ -155,7 +157,7 @@ fn intent_documents(
         .as_array()
         .context("intent catalog must be an array")?;
     ensure!(
-        rows.len() == 83,
+        rows.len() == INTENT_COUNT,
         "intent catalog count changed; review the complete generated surface"
     );
     let mut fields = Vec::new();
@@ -376,7 +378,7 @@ fn render_specs(
             Ok(format!("ParamSpec {{ name:{}, annotation:{}, json_type:{}, required:{}, own_key:{}, default_json:{}, default_factory:{}, provenance_json:{} }}",str_at(item,"name")?,opt(&item["annotation"])?,if read {opt(&item["json_type"])?} else {"None".into()},item["required"].as_bool().context("requiredness missing")?,item["own_key"].as_bool().unwrap_or(false),if present {format!("Some({})",rust_string(&compact(&default["value"])?))} else {"None".into()},default["factory"].as_bool().unwrap_or(false),rust_string(&compact(&item["provenance"])?)))
         }).collect::<Result<Vec<_>>>()?.join(", ")))
     };
-    out.push_str("/// The complete pinned catalog of 83 intents.\npub static INTENTS: [IntentSpec; 83] = [\n");
+    out.push_str(&format!("/// The complete pinned catalog of {INTENT_COUNT} intents.\npub static INTENTS: [IntentSpec; {INTENT_COUNT}] = [\n"));
     for row in intents.as_array().context("intent rows missing")? {
         let name = row["name"].as_str().context("intent name missing")?;
         let field = fields["intents"]
@@ -406,12 +408,12 @@ fn render_specs(
             .join(", ");
         out.push_str(&format!("    IntentSpec {{ name:{}, summary:{}, description:{}, python_class:{}, signer:{}, origin:{}, verify:{}, wraps:&[{wraps}], fields:{}, all_amount_fields:{}, mev_shield_default:{}, mev_shield_required:{}, catalog_json:{}, class_vars_json:{} }},\n",str_at(row,"name")?,str_at(row,"summary")?,str_at(row,"description")?,str_at(row,"python_class")?,str_at(row,"signer")?,str_at(row,"origin")?,opt(&row["verify"])?,params(field["fields"].as_array().context("field list missing")?,false)?,string_slice(&vars["all_amount_fields"]["value"]["tuple"] )?,vars["mev_shield_default"]["value"].as_bool().context("shield default missing")?,vars["mev_shield_required"]["value"].as_bool().context("shield required missing")?,rust_string(&compact(row)?),rust_string(&compact(vars)?)));
     }
-    out.push_str("];\n\n/// The complete pinned catalog of 102 reads.\npub static READS: [ReadSpec; 102] = [\n");
+    out.push_str(&format!("];\n\n/// The complete pinned catalog of {READ_COUNT} reads.\npub static READS: [ReadSpec; {READ_COUNT}] = [\n"));
     let read_params = read_params["reads"]
         .as_array()
         .context("read parameter records missing")?;
     ensure!(
-        reads.as_array().context("read rows missing")?.len() == 102,
+        reads.as_array().context("read rows missing")?.len() == READ_COUNT,
         "read catalog count changed"
     );
     // The upstream metagraph row deliberately omits its public expression.
@@ -502,7 +504,7 @@ mod tests {
                 .as_array()
                 .context("intents missing")?
                 .len(),
-            83
+            INTENT_COUNT
         );
         let lookup = |name: &str, field: &str| -> Result<&Value> {
             fields["intents"]

@@ -145,8 +145,8 @@ fn specifications(root: &Path) -> Result<String> {
         })
         .collect::<Result<_>>()?;
     ensure!(
-        extracted.len() == 102,
-        "read hit coverage must include102reads"
+        extracted.len() == crate::extract::READ_COUNT,
+        "read hit coverage must include every read"
     );
     let extras: DocumentMut =
         fs::read_to_string(root.join("parity/read_hits_extra.toml"))?.parse()?;
@@ -173,8 +173,8 @@ impl Hit {\n/// Match an access observed by the client at any block.\npub fn mat
     for (namespace, category) in &categories {
         out.push_str(&format!("Self::{}=>{category:?},\n", pascal(namespace)));
     }
-    out.push_str("}}}\n\
-/// Complete catalog, signature, rendering and coverage contract for one read.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub struct ReadSpec{\n/// Stable read name.\npub name:&'static str,\n/// Catalog summary.\npub summary:&'static str,\n/// Full catalog description.\npub description:&'static str,\n/// Arguments in authenticated Python signature order.\npub params:&'static [ParamSpec],\n/// Public category.\npub category:Category,\n/// Namespace accessor.\npub namespace:&'static str,\n/// Upstream query documentation.\npub docs_url:&'static str,\n/// Source hits plus reviewed accesses and exact divergence-backed replacements.\npub hits:&'static [Hit],\n/// Optional presentation shape.\npub render:Option<RenderHint>,\n/// Required state identity policy.\npub pinning:Pinning,}\n/// Every read's complete authenticated metadata, in catalog order.\npub static READ_SPECS:[ReadSpec;102]=[\n");
+    out.push_str(&format!("}}}}}}\n\
+/// Complete catalog, signature, rendering and coverage contract for one read.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub struct ReadSpec{{\n/// Stable read name.\npub name:&'static str,\n/// Catalog summary.\npub summary:&'static str,\n/// Full catalog description.\npub description:&'static str,\n/// Arguments in authenticated Python signature order.\npub params:&'static [ParamSpec],\n/// Public category.\npub category:Category,\n/// Namespace accessor.\npub namespace:&'static str,\n/// Upstream query documentation.\npub docs_url:&'static str,\n/// Source hits plus reviewed accesses and exact divergence-backed replacements.\npub hits:&'static [Hit],\n/// Optional presentation shape.\npub render:Option<RenderHint>,\n/// Required state identity policy.\npub pinning:Pinning,}}\n/// Every read's complete authenticated metadata, in catalog order.\npub static READ_SPECS:[ReadSpec;{}]=[\n", crate::extract::READ_COUNT));
     let mut replacement_source = Vec::new();
     for spec in rtao_catalog::READS {
         let schema: Value = serde_json::from_str(spec.catalog_json)?;
@@ -517,7 +517,7 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
             ));
         }
     }
-    names.push_str("}\nimpl ReadName {\n/// Every catalog read in stable name order.\npub const ALL:[Self;102]=[\n");
+    names.push_str(&format!("}}\nimpl ReadName {{\n/// Every catalog read in stable name order.\npub const ALL:[Self;{}]=[\n", crate::extract::READ_COUNT));
     for spec in rtao_catalog::READS {
         names.push_str(&format!("Self::{},\n", pascal(spec.name)));
     }
@@ -600,7 +600,8 @@ pub(super) fn run(root: &Path, check: bool) -> Result<()> {
         crate::pin::atomic_write(&blocking_path, blocking_output.as_bytes())?;
     }
     println!(
-        "102 read interfaces and {} pending behaviors {}",
+        "{} read interfaces and {} pending behaviors {}",
+        crate::extract::READ_COUNT,
         pending.len(),
         if check { "match" } else { "regenerated" }
     );

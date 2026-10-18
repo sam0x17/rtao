@@ -4,14 +4,14 @@
     "sdk/python/bittensor/_generated/errors.py": {
       "format": 1,
       "provenance": {
-        "blob": "62d8b91bdbf01f7e2e088ac54d83171f09cdced1",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "58ee69d04168cf2e8402440434e783a59691c4a3",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/_generated/errors.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "ERRORS": {
-          "end_line": 420,
+          "end_line": 434,
           "line": 14,
           "value": {
             "dict": [
@@ -3266,6 +3266,214 @@
               [
                 {
                   "tuple": [
+                    7,
+                    175
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "The recipient refuses a new staking hotkey introduced by another account.",
+                    "name": "AccountRejectsStakingHotkeyGrowth",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    176
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: `uids` and `values` must have the same length; each uid names the slot the matching value sets.",
+                    "name": "EmissionWeightsLengthMismatch",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    177
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: valid slots are 0 burn, 1 recycle, 2 owner, 3 validator, 4 miner. Higher (gamma) slots are reserved and not yet settable.",
+                    "name": "EmissionWeightIndexOutOfRange",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    178
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: each slot may appear at most once per call.",
+                    "name": "EmissionWeightIndexDuplicated",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    179
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: after merging with the current vector the five slots must sum to exactly one (`u64::MAX` parts). Renormalize before resubmitting; `btcli subnets emission set-value` does this automatically.",
+                    "name": "EmissionWeightsDoNotSumToOne",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    180
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: burn (slot 0) is not yet enabled and must be 0.",
+                    "name": "BurnEmissionMustBeZero",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    181
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: recycle (slot 1) is not yet enabled and must be 0.",
+                    "name": "RecycleEmissionMustBeZero",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    182
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: the owner cut (slot 2) may be at most 33% of emission.",
+                    "name": "OwnerEmissionAboveMaximum",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    183
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: this subnet was created through a lease, so its owner cut (slot 2) may not drop below the launch default (18%) and squeeze lease dividends. Root is bound by this rule too.",
+                    "name": "LeasedSubnetOwnerCutBelowMinimum",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    184
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: the validator share (slot 3) may be at most 50% of emission.",
+                    "name": "ValidatorEmissionAboveMaximum",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    185
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: root is paid its baseline share of this subnet's emission (what root earns here with the default validator share and the global `TaoWeight`) off the top of the validator slot every block, and alpha validators get the rest. The requested validator share (slot 3) is at or below root's baseline share right now, so validators would receive nothing. Raise the validator share above the baseline and resubmit.",
+                    "name": "ValidatorEmissionTooLowToPreserveRoot",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    186
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: the miner share (slot 4) must be at least 33% of emission.",
+                    "name": "MinerEmissionBelowMinimum",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    187
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights`: the root subnet has no emission vector.",
+                    "name": "EmissionWeightsNotSettableOnRoot",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
                     11,
                     0
                   ]
@@ -4635,6 +4843,22 @@
                   "fields": {
                     "docs": "Address not allowed to deploy contracts either via CREATE or CALL(CREATE).",
                     "name": "CreateOriginNotAllowed",
+                    "pallet": "EVM"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    22,
+                    15
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "The authorization list exceeds the limit enforced before signature recovery.",
+                    "name": "AuthorizationListTooLarge",
                     "pallet": "EVM"
                   }
                 }
@@ -6504,9 +6728,9 @@
       "format": 1,
       "provenance": {
         "blob": "76101e5247da8356118e4bb179aadf77b2f14c34",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/_transport/runtime.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "_DISK_CACHE_MAX_FILES": {
@@ -6542,9 +6766,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c33d256550a45a951e9c75c6e3b74b7dd0fa0d3",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/_transport/utils/receipt.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "_NESTED_RESULT_EVENTS": {
@@ -6615,9 +6839,9 @@
       "format": 1,
       "provenance": {
         "blob": "cf591495eef97141ca0ffc53155898b8e8f2cb4b",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/basket_index_data.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "BASELINES": {
@@ -8915,9 +9139,9 @@
       "format": 1,
       "provenance": {
         "blob": "2958b5d1b8036388354204f0a718f809756cf23a",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/config.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "DEFAULT_ADDRESSES_PATH": {
@@ -9091,15 +9315,15 @@
     "sdk/python/bittensor/error_map.py": {
       "format": 1,
       "provenance": {
-        "blob": "d326d758a6c2921208d96a96ac31a0a1a939bf16",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "53ddb99f8237c5fc1647f2879c2bc23443d69598",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/error_map.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "CUSTOM_TRANSACTION_ERRORS": {
-          "end_line": 518,
-          "line": 488,
+          "end_line": 534,
+          "line": 504,
           "value": {
             "dict": [
               [
@@ -9222,8 +9446,8 @@
           }
         },
         "DISPATCH_ERRORS": {
-          "end_line": 795,
-          "line": 555,
+          "end_line": 811,
+          "line": 571,
           "value": {
             "dict": [
               [
@@ -9698,8 +9922,8 @@
           }
         },
         "INVALID_TRANSACTION_ERRORS": {
-          "end_line": 541,
-          "line": 524,
+          "end_line": 557,
+          "line": 540,
           "value": {
             "tuple": [
               {
@@ -9802,7 +10026,7 @@
           }
         },
         "NAME_TO_CODE": {
-          "end_line": 476,
+          "end_line": 492,
           "line": 46,
           "value": {
             "dict": [
@@ -10591,6 +10815,54 @@
                 "not_authorized"
               ],
               [
+                "EmissionWeightsLengthMismatch",
+                "invalid_argument"
+              ],
+              [
+                "EmissionWeightIndexOutOfRange",
+                "invalid_argument"
+              ],
+              [
+                "EmissionWeightIndexDuplicated",
+                "invalid_argument"
+              ],
+              [
+                "EmissionWeightsDoNotSumToOne",
+                "invalid_argument"
+              ],
+              [
+                "BurnEmissionMustBeZero",
+                "policy_violation"
+              ],
+              [
+                "RecycleEmissionMustBeZero",
+                "policy_violation"
+              ],
+              [
+                "OwnerEmissionAboveMaximum",
+                "policy_violation"
+              ],
+              [
+                "LeasedSubnetOwnerCutBelowMinimum",
+                "policy_violation"
+              ],
+              [
+                "ValidatorEmissionAboveMaximum",
+                "policy_violation"
+              ],
+              [
+                "ValidatorEmissionTooLowToPreserveRoot",
+                "policy_violation"
+              ],
+              [
+                "MinerEmissionBelowMinimum",
+                "policy_violation"
+              ],
+              [
+                "EmissionWeightsNotSettableOnRoot",
+                "invalid_argument"
+              ],
+              [
                 "UnlockAmountTooHigh",
                 "insufficient_balance"
               ],
@@ -10616,6 +10888,10 @@
               ],
               [
                 "AccountRejectsLockedAlpha",
+                "policy_violation"
+              ],
+              [
+                "AccountRejectsStakingHotkeyGrowth",
                 "policy_violation"
               ],
               [
@@ -10909,6 +11185,10 @@
               [
                 "GasLimitTooLow",
                 "invalid_argument"
+              ],
+              [
+                "AuthorizationListTooLarge",
+                "limit_exceeded"
               ],
               [
                 "GasLimitTooHigh",
@@ -11375,9 +11655,9 @@
       "format": 1,
       "provenance": {
         "blob": "e9ee94d16ddb1b89bf94dd94ec63f1484b5d06d7",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/evm/networks.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "EVM_NETWORKS": {
@@ -11461,9 +11741,9 @@
       "format": 1,
       "provenance": {
         "blob": "ce5b43be2cb6c1477b970858bb9992bff348855e",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/evm/precompiles.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "CALLER_ROLES": {
@@ -11995,10 +12275,10 @@
     "sdk/python/bittensor/executor.py": {
       "format": 1,
       "provenance": {
-        "blob": "93e41ea0474e702ccdce39eb57f5b6f64dcac074",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "b113eb41267aa2b5f349ec210384c66e1b53056f",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/executor.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "_MAX_SHIELDED_CIPHERTEXT_BYTES": {
@@ -12033,9 +12313,9 @@
       "format": 1,
       "provenance": {
         "blob": "e00c10d2a7e23f4e54d3336d5f3012b8ca121dfb",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/fee_filters.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "COLDKEY_FEE_WARNING": {
@@ -12158,10 +12438,10 @@
     "sdk/python/bittensor/hyperparams.py": {
       "format": 1,
       "provenance": {
-        "blob": "acd67c9910489c0d94a6b09a60dd763fb12e5ade",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "43bc87b856befdadcd4bf9b492c6609726cfe2e6",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/hyperparams.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "FIXED128_ONE": {
@@ -12170,7 +12450,7 @@
           "value": 18446744073709551616
         },
         "HYPERPARAMS": {
-          "end_line": 408,
+          "end_line": 434,
           "line": 110,
           "value": {
             "dict": [
@@ -12870,11 +13150,56 @@
                   "constructor": "Hyperparam",
                   "fields": {
                     "bits": null,
-                    "doc": "Whether the subnet owner takes their emission cut.",
+                    "doc": "Whether the subnet owner takes any emission cut: true iff the owner slot of the emission weight vector is non-zero. Derived, read-only; change the owner share with `btcli subnets emission set-value --slot owner`.",
                     "kind": "bool",
                     "maximum": null,
                     "minimum": null,
-                    "short": "owner emission cut toggle",
+                    "short": "owner cut on? (derived, read-only)",
+                    "signed": null
+                  }
+                }
+              ],
+              [
+                "owner_emission",
+                {
+                  "constructor": "Hyperparam",
+                  "fields": {
+                    "bits": null,
+                    "doc": "Owner slot of the emission weight vector: the share of block alpha emission paid to the subnet owner (0 disables the cut; at most 0.33; lease-created subnets keep at least the 0.18 launch default). Set via `btcli subnets emission`.",
+                    "kind": "u64",
+                    "maximum": null,
+                    "minimum": null,
+                    "short": "owner share of emission (slot 2)",
+                    "signed": null
+                  }
+                }
+              ],
+              [
+                "validator_emission",
+                {
+                  "constructor": "Hyperparam",
+                  "fields": {
+                    "bits": null,
+                    "doc": "Validator slot of the emission weight vector: the share of block alpha emission that becomes validator dividends. At most 0.50. Root is paid its baseline share of emission (what it earns with the default validator share and the global TaoWeight, recomputed every block) off the top of this slot, capped at the slot; alpha validators get the rest, so a change at or below the baseline is rejected. Set via `btcli subnets emission`.",
+                    "kind": "u64",
+                    "maximum": null,
+                    "minimum": null,
+                    "short": "validator share of emission (slot 3)",
+                    "signed": null
+                  }
+                }
+              ],
+              [
+                "miner_emission",
+                {
+                  "constructor": "Hyperparam",
+                  "fields": {
+                    "bits": null,
+                    "doc": "Miner slot of the emission weight vector: the share of block alpha emission paid as miner incentive (split across mechanisms). At least 0.33. Set via `btcli subnets emission`.",
+                    "kind": "u64",
+                    "maximum": null,
+                    "minimum": null,
+                    "short": "miner share of emission (slot 4)",
                     "signed": null
                   }
                 }
@@ -12945,8 +13270,8 @@
           "value": 38
         },
         "STORAGE_ITEMS": {
-          "end_line": 461,
-          "line": 416,
+          "end_line": 492,
+          "line": 442,
           "value": {
             "dict": [
               [
@@ -13310,21 +13635,48 @@
                 }
               ],
               [
-                "owner_cut_enabled",
-                {
-                  "item": "OwnerCutEnabled",
-                  "pallet": "SubtensorModule",
-                  "source_value_type_ident": "bool",
-                  "value_type_ident": "bool"
-                }
-              ],
-              [
                 "owner_cut_auto_lock_enabled",
                 {
                   "item": "OwnerCutAutoLockEnabled",
                   "pallet": "SubtensorModule",
                   "source_value_type_ident": "bool",
                   "value_type_ident": "bool"
+                }
+              ],
+              [
+                "owner_cut_enabled",
+                {
+                  "item": "SubnetEmissionWeights",
+                  "pallet": "SubtensorModule",
+                  "source_value_type_ident": "BoundedVec",
+                  "value_type_ident": "BoundedVec"
+                }
+              ],
+              [
+                "owner_emission",
+                {
+                  "item": "SubnetEmissionWeights",
+                  "pallet": "SubtensorModule",
+                  "source_value_type_ident": "BoundedVec",
+                  "value_type_ident": "BoundedVec"
+                }
+              ],
+              [
+                "validator_emission",
+                {
+                  "item": "SubnetEmissionWeights",
+                  "pallet": "SubtensorModule",
+                  "source_value_type_ident": "BoundedVec",
+                  "value_type_ident": "BoundedVec"
+                }
+              ],
+              [
+                "miner_emission",
+                {
+                  "item": "SubnetEmissionWeights",
+                  "pallet": "SubtensorModule",
+                  "source_value_type_ident": "BoundedVec",
+                  "value_type_ident": "BoundedVec"
                 }
               ]
             ]
@@ -13351,8 +13703,8 @@
           }
         },
         "_IDENT_CODEC": {
-          "end_line": 643,
-          "line": 626,
+          "end_line": 674,
+          "line": 657,
           "value": {
             "dict": [
               [
@@ -13503,8 +13855,8 @@
           }
         },
         "_IDENT_KINDS": {
-          "end_line": 471,
-          "line": 467,
+          "end_line": 502,
+          "line": 498,
           "value": {
             "dict": [
               [
@@ -13523,8 +13875,8 @@
           }
         },
         "_KIND_CODEC": {
-          "end_line": 657,
-          "line": 646,
+          "end_line": 688,
+          "line": 677,
           "value": {
             "dict": [
               [
@@ -13626,9 +13978,9 @@
       "format": 1,
       "provenance": {
         "blob": "488ac94eb53fd272ae4618dd8ff22d4fedd49842",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/_money.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "_FALLBACK_AMOUNT_UNITS": {
@@ -13831,9 +14183,9 @@
       "format": 1,
       "provenance": {
         "blob": "289fc369c7f702231460852af4b3a7f7ae348041",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/association.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "AssociateEvmKey.block_number": {
@@ -13922,47 +14274,47 @@
     "sdk/python/bittensor/intents/base.py": {
       "format": 1,
       "provenance": {
-        "blob": "89e2008189d424d4a9fcb31cc201815acabf10bc",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "fc60c057bf0fdf03298c71d26177c79ac9832b09",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/base.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "Intent.all_amount_fields": {
-          "end_line": 164,
-          "line": 164,
+          "end_line": 167,
+          "line": 167,
           "value": {
             "tuple": []
           }
         },
         "Intent.mev_shield_default": {
-          "end_line": 170,
-          "line": 170,
+          "end_line": 173,
+          "line": 173,
           "value": false
         },
         "Intent.mev_shield_required": {
-          "end_line": 174,
-          "line": 174,
+          "end_line": 177,
+          "line": 177,
           "value": false
         },
         "Intent.origin": {
-          "end_line": 153,
-          "line": 153,
+          "end_line": 156,
+          "line": 156,
           "value": "signed"
         },
         "Intent.signer": {
-          "end_line": 147,
-          "line": 147,
+          "end_line": 150,
+          "line": 150,
           "value": "coldkey"
         },
         "Intent.verify": {
-          "end_line": 157,
-          "line": 157,
+          "end_line": 160,
+          "line": 160,
           "value": null
         },
         "Intent.wraps": {
-          "end_line": 160,
-          "line": 160,
+          "end_line": 163,
+          "line": 163,
           "value": {
             "tuple": []
           }
@@ -13973,9 +14325,9 @@
       "format": 1,
       "provenance": {
         "blob": "efbab058438eba1017daecfd906a623d715f441c",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/batch.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "Batch.intents": {
@@ -14010,9 +14362,9 @@
       "format": 1,
       "provenance": {
         "blob": "0dd6874119b12211ee566b5a53bab05e9128c8e9",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/children.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "DecreaseTake.hotkey_ss58": {
@@ -14221,9 +14573,9 @@
       "format": 1,
       "provenance": {
         "blob": "2afbd304453223a3f3c4719cdcd13c85d41f98d3",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/coldkey.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "AnnounceColdkeySwap.new_coldkey_ss58": {
@@ -14342,9 +14694,9 @@
       "format": 1,
       "provenance": {
         "blob": "93f4a53ec22db5cebd2723626b6096646f170ba3",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/collateral.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "AddCollateral.all_amount_fields": {
@@ -14463,9 +14815,9 @@
       "format": 1,
       "provenance": {
         "blob": "a0e8fc6981a0aa63ad5d46aa60a37d6b657567a7",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/crowdloan.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "ContributeCrowdloan.all_amount_fields": {
@@ -14832,13 +15184,84 @@
         }
       }
     },
+    "sdk/python/bittensor/intents/emission_weights.py": {
+      "format": 1,
+      "provenance": {
+        "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+        "path": "sdk/python/bittensor/intents/emission_weights.py",
+        "tag": "v481"
+      },
+      "values": {
+        "SetSubnetEmissionWeights.netuid": {
+          "end_line": 115,
+          "line": 115,
+          "value": {
+            "required": true
+          }
+        },
+        "SetSubnetEmissionWeights.op": {
+          "end_line": 109,
+          "line": 109,
+          "value": "set_subnet_emission_weights"
+        },
+        "SetSubnetEmissionWeights.origin": {
+          "end_line": 111,
+          "line": 111,
+          "value": "subnet_owner"
+        },
+        "SetSubnetEmissionWeights.renormalize": {
+          "end_line": 118,
+          "line": 118,
+          "value": false
+        },
+        "SetSubnetEmissionWeights.signer": {
+          "end_line": 110,
+          "line": 110,
+          "value": "coldkey"
+        },
+        "SetSubnetEmissionWeights.slots": {
+          "end_line": 116,
+          "line": 116,
+          "value": {
+            "required": true
+          }
+        },
+        "SetSubnetEmissionWeights.values": {
+          "end_line": 117,
+          "line": 117,
+          "value": {
+            "required": true
+          }
+        },
+        "SetSubnetEmissionWeights.verify": {
+          "end_line": 112,
+          "line": 112,
+          "value": "subnet_emission_weights"
+        },
+        "SetSubnetEmissionWeights.wraps": {
+          "end_line": 113,
+          "line": 113,
+          "value": {
+            "tuple": [
+              {
+                "tuple": [
+                  "AdminUtils",
+                  "sudo_set_subnet_emission_weights"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
     "sdk/python/bittensor/intents/evm.py": {
       "format": 1,
       "provenance": {
         "blob": "62274b85ee0d003ae650099b83bb1e73dba37533",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/evm.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "EvmWithdraw.all_amount_fields": {
@@ -14934,9 +15357,9 @@
       "format": 1,
       "provenance": {
         "blob": "9a8423befd567aeba394dbcbd694b5aa73210e7e",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/governance.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "SetMechanismCount.mechanism_count": {
@@ -15174,14 +15597,14 @@
     "sdk/python/bittensor/intents/hyperparameters.py": {
       "format": 1,
       "provenance": {
-        "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/hyperparameters.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "OWNER_HYPERPARAMETERS": {
-          "end_line": 66,
+          "end_line": 65,
           "line": 31,
           "value": {
             "dict": [
@@ -15474,15 +15897,6 @@
                 }
               ],
               [
-                "owner_cut_enabled",
-                {
-                  "tuple": [
-                    "sudo_set_owner_cut_enabled",
-                    true
-                  ]
-                }
-              ],
-              [
                 "owner_cut_auto_lock_enabled",
                 {
                   "tuple": [
@@ -15495,37 +15909,37 @@
           }
         },
         "SetHyperparameter.name": {
-          "end_line": 117,
-          "line": 117,
-          "value": {
-            "required": true
-          }
-        },
-        "SetHyperparameter.netuid": {
           "end_line": 116,
           "line": 116,
           "value": {
             "required": true
           }
         },
+        "SetHyperparameter.netuid": {
+          "end_line": 115,
+          "line": 115,
+          "value": {
+            "required": true
+          }
+        },
         "SetHyperparameter.op": {
-          "end_line": 109,
-          "line": 109,
+          "end_line": 108,
+          "line": 108,
           "value": "set_hyperparameter"
         },
         "SetHyperparameter.origin": {
-          "end_line": 111,
-          "line": 111,
+          "end_line": 110,
+          "line": 110,
           "value": "subnet_owner"
         },
         "SetHyperparameter.signer": {
-          "end_line": 110,
-          "line": 110,
+          "end_line": 109,
+          "line": 109,
           "value": "coldkey"
         },
         "SetHyperparameter.value": {
-          "end_line": 118,
-          "line": 118,
+          "end_line": 117,
+          "line": 117,
           "value": {
             "required": true
           }
@@ -15533,16 +15947,16 @@
         "SetHyperparameter.wraps": {
           "derived": {
             "input": {
-              "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-              "end_line": 66,
+              "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+              "end_line": 65,
               "line": 31,
               "path": "sdk/python/bittensor/intents/hyperparameters.py",
               "table": "OWNER_HYPERPARAMETERS"
             },
             "kind": "unique_owner_setters"
           },
-          "end_line": 114,
-          "line": 112,
+          "end_line": 113,
+          "line": 111,
           "value": {
             "tuple": [
               {
@@ -15734,12 +16148,6 @@
               {
                 "tuple": [
                   "AdminUtils",
-                  "sudo_set_owner_cut_enabled"
-                ]
-              },
-              {
-                "tuple": [
-                  "AdminUtils",
                   "sudo_set_owner_cut_auto_lock_enabled"
                 ]
               }
@@ -15747,8 +16155,8 @@
           }
         },
         "_ALPHA_PAIR": {
-          "end_line": 69,
-          "line": 69,
+          "end_line": 68,
+          "line": 68,
           "value": {
             "dict": [
               [
@@ -15768,9 +16176,9 @@
       "format": 1,
       "provenance": {
         "blob": "a4a2167fcbb2db93d649935c32705e5d6612b1e9",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/identity.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "SetIdentity.additional": {
@@ -15918,9 +16326,9 @@
       "format": 1,
       "provenance": {
         "blob": "c1bf79b7bb6a5ebcec925010679de8b87f700115",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/leasing.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "RegisterLeasedNetwork.emissions_share": {
@@ -16001,9 +16409,9 @@
       "format": 1,
       "provenance": {
         "blob": "f3ff3300f9029885fc1a82f1944f9c70cafbc82a",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/lock.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "LockStake.all_amount_fields": {
@@ -16171,9 +16579,9 @@
       "format": 1,
       "provenance": {
         "blob": "01acc9c3ea4664c82cdad7aabe2e0c52a439e736",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/multisig.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "MultisigApprove.call": {
@@ -16412,9 +16820,9 @@
       "format": 1,
       "provenance": {
         "blob": "e19113d503ef0b2f488af38bec57cadb934e1f56",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "AddProxy.delay": {
@@ -16703,9 +17111,9 @@
       "format": 1,
       "provenance": {
         "blob": "96645c419f9b5e95f9b0407164bdb0578c5efd85",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/registration.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "BurnedRegister.hotkey_ss58": {
@@ -17044,9 +17452,9 @@
       "format": 1,
       "provenance": {
         "blob": "dc097fe4177bb426a24552cc0e7109c43e62b438",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/root.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "SetRootClaimThreshold.op": {
@@ -17156,9 +17564,9 @@
       "format": 1,
       "provenance": {
         "blob": "b2fdd4e42a329b495011878b1ae23771f37b02e3",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/serving.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "ResetAxon.netuid": {
@@ -17364,15 +17772,15 @@
     "sdk/python/bittensor/intents/staking.py": {
       "format": 1,
       "provenance": {
-        "blob": "82e885a8820b62d6d43dcf0ce278c6eea9886121",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/staking.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "AddStake.all_amount_fields": {
-          "end_line": 568,
-          "line": 568,
+          "end_line": 604,
+          "line": 604,
           "value": {
             "tuple": [
               "amount_tao"
@@ -17380,54 +17788,54 @@
           }
         },
         "AddStake.amount_tao": {
-          "end_line": 579,
-          "line": 574,
+          "end_line": 615,
+          "line": 610,
           "value": {
             "required": true
           }
         },
         "AddStake.hotkey_ss58": {
-          "end_line": 572,
-          "line": 570,
+          "end_line": 608,
+          "line": 606,
           "value": {
             "required": true
           }
         },
         "AddStake.mev_shield_default": {
-          "end_line": 567,
-          "line": 567,
+          "end_line": 603,
+          "line": 603,
           "value": true
         },
         "AddStake.netuid": {
-          "end_line": 573,
-          "line": 573,
+          "end_line": 609,
+          "line": 609,
           "value": {
             "required": true
           }
         },
         "AddStake.op": {
-          "end_line": 564,
-          "line": 564,
+          "end_line": 600,
+          "line": 600,
           "value": "add_stake"
         },
         "AddStake.rate_tolerance": {
-          "end_line": 583,
-          "line": 581,
+          "end_line": 619,
+          "line": 617,
           "value": 0.05
         },
         "AddStake.signer": {
-          "end_line": 565,
-          "line": 565,
+          "end_line": 601,
+          "line": 601,
           "value": "coldkey"
         },
         "AddStake.slippage_protection": {
-          "end_line": 580,
-          "line": 580,
+          "end_line": 616,
+          "line": 616,
           "value": true
         },
         "AddStake.wraps": {
-          "end_line": 566,
-          "line": 566,
+          "end_line": 602,
+          "line": 602,
           "value": {
             "tuple": [
               {
@@ -17446,8 +17854,8 @@
           }
         },
         "AddStakeLimit.all_amount_fields": {
-          "end_line": 948,
-          "line": 948,
+          "end_line": 984,
+          "line": 984,
           "value": {
             "tuple": [
               "amount_tao"
@@ -17455,56 +17863,56 @@
           }
         },
         "AddStakeLimit.allow_partial": {
-          "end_line": 961,
-          "line": 961,
+          "end_line": 997,
+          "line": 997,
           "value": false
         },
         "AddStakeLimit.amount_tao": {
-          "end_line": 959,
-          "line": 954,
+          "end_line": 995,
+          "line": 990,
           "value": {
             "required": true
           }
         },
         "AddStakeLimit.hotkey_ss58": {
-          "end_line": 952,
-          "line": 950,
+          "end_line": 988,
+          "line": 986,
           "value": {
             "required": true
           }
         },
         "AddStakeLimit.limit_price_rao": {
-          "end_line": 960,
-          "line": 960,
+          "end_line": 996,
+          "line": 996,
           "value": {
             "required": true
           }
         },
         "AddStakeLimit.mev_shield_default": {
-          "end_line": 947,
-          "line": 947,
+          "end_line": 983,
+          "line": 983,
           "value": true
         },
         "AddStakeLimit.netuid": {
-          "end_line": 953,
-          "line": 953,
+          "end_line": 989,
+          "line": 989,
           "value": {
             "required": true
           }
         },
         "AddStakeLimit.op": {
-          "end_line": 944,
-          "line": 944,
+          "end_line": 980,
+          "line": 980,
           "value": "add_stake_limit"
         },
         "AddStakeLimit.signer": {
-          "end_line": 945,
-          "line": 945,
+          "end_line": 981,
+          "line": 981,
           "value": "coldkey"
         },
         "AddStakeLimit.wraps": {
-          "end_line": 946,
-          "line": 946,
+          "end_line": 982,
+          "line": 982,
           "value": {
             "tuple": [
               {
@@ -17517,8 +17925,8 @@
           }
         },
         "MoveStake.all_amount_fields": {
-          "end_line": 821,
-          "line": 821,
+          "end_line": 857,
+          "line": 857,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -17526,73 +17934,73 @@
           }
         },
         "MoveStake.amount_alpha": {
-          "end_line": 829,
-          "line": 827,
+          "end_line": 865,
+          "line": 863,
           "value": {
             "required": true
           }
         },
         "MoveStake.claim": {
-          "end_line": 834,
-          "line": 834,
+          "end_line": 870,
+          "line": 870,
           "value": false
         },
         "MoveStake.dest_hotkey_ss58": {
-          "end_line": 825,
-          "line": 825,
+          "end_line": 861,
+          "line": 861,
           "value": {
             "required": true
           }
         },
         "MoveStake.dest_netuid": {
-          "end_line": 826,
-          "line": 826,
+          "end_line": 862,
+          "line": 862,
           "value": {
             "required": true
           }
         },
         "MoveStake.mev_shield_default": {
-          "end_line": 820,
-          "line": 820,
+          "end_line": 856,
+          "line": 856,
           "value": true
         },
         "MoveStake.op": {
-          "end_line": 812,
-          "line": 812,
+          "end_line": 848,
+          "line": 848,
           "value": "move_stake"
         },
         "MoveStake.origin_hotkey_ss58": {
-          "end_line": 823,
-          "line": 823,
+          "end_line": 859,
+          "line": 859,
           "value": {
             "required": true
           }
         },
         "MoveStake.origin_netuid": {
-          "end_line": 824,
-          "line": 824,
+          "end_line": 860,
+          "line": 860,
           "value": {
             "required": true
           }
         },
         "MoveStake.rate_tolerance": {
-          "end_line": 833,
-          "line": 831,
+          "end_line": 869,
+          "line": 867,
           "value": 0.05
         },
         "MoveStake.signer": {
-          "end_line": 813,
-          "line": 813,
+          "end_line": 849,
+          "line": 849,
           "value": "coldkey"
         },
         "MoveStake.slippage_protection": {
-          "end_line": 830,
-          "line": 830,
+          "end_line": 866,
+          "line": 866,
           "value": true
         },
         "MoveStake.wraps": {
-          "end_line": 819,
-          "line": 814,
+          "end_line": 855,
+          "line": 850,
           "value": {
             "tuple": [
               {
@@ -17623,8 +18031,8 @@
           }
         },
         "MoveSwapStake.all_amount_fields": {
-          "end_line": 1339,
-          "line": 1339,
+          "end_line": 1375,
+          "line": 1375,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -17632,68 +18040,68 @@
           }
         },
         "MoveSwapStake.amount_alpha": {
-          "end_line": 1347,
-          "line": 1345,
+          "end_line": 1383,
+          "line": 1381,
           "value": {
             "required": true
           }
         },
         "MoveSwapStake.dest_hotkey_ss58": {
-          "end_line": 1343,
-          "line": 1343,
+          "end_line": 1379,
+          "line": 1379,
           "value": {
             "required": true
           }
         },
         "MoveSwapStake.dest_netuid": {
-          "end_line": 1344,
-          "line": 1344,
+          "end_line": 1380,
+          "line": 1380,
           "value": {
             "required": true
           }
         },
         "MoveSwapStake.mev_shield_default": {
-          "end_line": 1338,
-          "line": 1338,
+          "end_line": 1374,
+          "line": 1374,
           "value": true
         },
         "MoveSwapStake.op": {
-          "end_line": 1330,
-          "line": 1330,
+          "end_line": 1366,
+          "line": 1366,
           "value": "move_swap_stake"
         },
         "MoveSwapStake.origin_hotkey_ss58": {
-          "end_line": 1341,
-          "line": 1341,
+          "end_line": 1377,
+          "line": 1377,
           "value": {
             "required": true
           }
         },
         "MoveSwapStake.origin_netuid": {
-          "end_line": 1342,
-          "line": 1342,
+          "end_line": 1378,
+          "line": 1378,
           "value": {
             "required": true
           }
         },
         "MoveSwapStake.rate_tolerance": {
-          "end_line": 1351,
-          "line": 1349,
+          "end_line": 1387,
+          "line": 1385,
           "value": 0.05
         },
         "MoveSwapStake.signer": {
-          "end_line": 1331,
-          "line": 1331,
+          "end_line": 1367,
+          "line": 1367,
           "value": "coldkey"
         },
         "MoveSwapStake.slippage_protection": {
-          "end_line": 1348,
-          "line": 1348,
+          "end_line": 1384,
+          "line": 1384,
           "value": true
         },
         "MoveSwapStake.wraps": {
-          "end_line": 1337,
-          "line": 1332,
+          "end_line": 1373,
+          "line": 1368,
           "value": {
             "tuple": [
               {
@@ -17724,8 +18132,8 @@
           }
         },
         "RemoveStake.all_amount_fields": {
-          "end_line": 688,
-          "line": 688,
+          "end_line": 724,
+          "line": 724,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -17733,59 +18141,59 @@
           }
         },
         "RemoveStake.amount_alpha": {
-          "end_line": 694,
-          "line": 692,
+          "end_line": 730,
+          "line": 728,
           "value": {
             "required": true
           }
         },
         "RemoveStake.claim": {
-          "end_line": 699,
-          "line": 699,
+          "end_line": 735,
+          "line": 735,
           "value": false
         },
         "RemoveStake.hotkey_ss58": {
-          "end_line": 690,
-          "line": 690,
+          "end_line": 726,
+          "line": 726,
           "value": {
             "required": true
           }
         },
         "RemoveStake.mev_shield_default": {
-          "end_line": 687,
-          "line": 687,
+          "end_line": 723,
+          "line": 723,
           "value": true
         },
         "RemoveStake.netuid": {
-          "end_line": 691,
-          "line": 691,
+          "end_line": 727,
+          "line": 727,
           "value": {
             "required": true
           }
         },
         "RemoveStake.op": {
-          "end_line": 679,
-          "line": 679,
+          "end_line": 715,
+          "line": 715,
           "value": "remove_stake"
         },
         "RemoveStake.rate_tolerance": {
-          "end_line": 698,
-          "line": 696,
+          "end_line": 734,
+          "line": 732,
           "value": 0.05
         },
         "RemoveStake.signer": {
-          "end_line": 680,
-          "line": 680,
+          "end_line": 716,
+          "line": 716,
           "value": "coldkey"
         },
         "RemoveStake.slippage_protection": {
-          "end_line": 695,
-          "line": 695,
+          "end_line": 731,
+          "line": 731,
           "value": true
         },
         "RemoveStake.wraps": {
-          "end_line": 686,
-          "line": 681,
+          "end_line": 722,
+          "line": 717,
           "value": {
             "tuple": [
               {
@@ -17816,8 +18224,8 @@
           }
         },
         "RemoveStakeLimit.all_amount_fields": {
-          "end_line": 1031,
-          "line": 1031,
+          "end_line": 1067,
+          "line": 1067,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -17825,61 +18233,61 @@
           }
         },
         "RemoveStakeLimit.allow_partial": {
-          "end_line": 1039,
-          "line": 1039,
+          "end_line": 1075,
+          "line": 1075,
           "value": false
         },
         "RemoveStakeLimit.amount_alpha": {
-          "end_line": 1037,
-          "line": 1035,
+          "end_line": 1073,
+          "line": 1071,
           "value": {
             "required": true
           }
         },
         "RemoveStakeLimit.claim": {
-          "end_line": 1040,
-          "line": 1040,
+          "end_line": 1076,
+          "line": 1076,
           "value": false
         },
         "RemoveStakeLimit.hotkey_ss58": {
-          "end_line": 1033,
-          "line": 1033,
+          "end_line": 1069,
+          "line": 1069,
           "value": {
             "required": true
           }
         },
         "RemoveStakeLimit.limit_price_rao": {
-          "end_line": 1038,
-          "line": 1038,
+          "end_line": 1074,
+          "line": 1074,
           "value": {
             "required": true
           }
         },
         "RemoveStakeLimit.mev_shield_default": {
-          "end_line": 1030,
-          "line": 1030,
+          "end_line": 1066,
+          "line": 1066,
           "value": true
         },
         "RemoveStakeLimit.netuid": {
-          "end_line": 1034,
-          "line": 1034,
+          "end_line": 1070,
+          "line": 1070,
           "value": {
             "required": true
           }
         },
         "RemoveStakeLimit.op": {
-          "end_line": 1022,
-          "line": 1022,
+          "end_line": 1058,
+          "line": 1058,
           "value": "remove_stake_limit"
         },
         "RemoveStakeLimit.signer": {
-          "end_line": 1023,
-          "line": 1023,
+          "end_line": 1059,
+          "line": 1059,
           "value": "coldkey"
         },
         "RemoveStakeLimit.wraps": {
-          "end_line": 1029,
-          "line": 1024,
+          "end_line": 1065,
+          "line": 1060,
           "value": {
             "tuple": [
               {
@@ -17910,30 +18318,30 @@
           }
         },
         "SetAutoStake.hotkey_ss58": {
-          "end_line": 1629,
-          "line": 1626,
+          "end_line": 1665,
+          "line": 1662,
           "value": null
         },
         "SetAutoStake.netuid": {
-          "end_line": 1625,
-          "line": 1625,
+          "end_line": 1661,
+          "line": 1661,
           "value": {
             "required": true
           }
         },
         "SetAutoStake.op": {
-          "end_line": 1621,
-          "line": 1621,
+          "end_line": 1657,
+          "line": 1657,
           "value": "set_auto_stake"
         },
         "SetAutoStake.signer": {
-          "end_line": 1622,
-          "line": 1622,
+          "end_line": 1658,
+          "line": 1658,
           "value": "coldkey"
         },
         "SetAutoStake.wraps": {
-          "end_line": 1623,
-          "line": 1623,
+          "end_line": 1659,
+          "line": 1659,
           "value": {
             "tuple": [
               {
@@ -17945,9 +18353,40 @@
             ]
           }
         },
+        "SetRejectStakingHotkeyGrowth.enabled": {
+          "end_line": 48,
+          "line": 41,
+          "value": {
+            "required": true
+          }
+        },
+        "SetRejectStakingHotkeyGrowth.op": {
+          "end_line": 37,
+          "line": 37,
+          "value": "set_reject_staking_hotkey_growth"
+        },
+        "SetRejectStakingHotkeyGrowth.signer": {
+          "end_line": 38,
+          "line": 38,
+          "value": "coldkey"
+        },
+        "SetRejectStakingHotkeyGrowth.wraps": {
+          "end_line": 39,
+          "line": 39,
+          "value": {
+            "tuple": [
+              {
+                "tuple": [
+                  "SubtensorModule",
+                  "set_reject_staking_hotkey_growth"
+                ]
+              }
+            ]
+          }
+        },
         "StakeIntoBasket.all_amount_fields": {
-          "end_line": 1667,
-          "line": 1667,
+          "end_line": 1703,
+          "line": 1703,
           "value": {
             "tuple": [
               "amount_tao"
@@ -17955,37 +18394,37 @@
           }
         },
         "StakeIntoBasket.amount_tao": {
-          "end_line": 1677,
-          "line": 1672,
+          "end_line": 1713,
+          "line": 1708,
           "value": {
             "required": true
           }
         },
         "StakeIntoBasket.hotkey_ss58": {
-          "end_line": 1671,
-          "line": 1669,
+          "end_line": 1707,
+          "line": 1705,
           "value": {
             "required": true
           }
         },
         "StakeIntoBasket.mev_shield_default": {
-          "end_line": 1666,
-          "line": 1666,
+          "end_line": 1702,
+          "line": 1702,
           "value": true
         },
         "StakeIntoBasket.op": {
-          "end_line": 1663,
-          "line": 1663,
+          "end_line": 1699,
+          "line": 1699,
           "value": "stake_into_basket"
         },
         "StakeIntoBasket.signer": {
-          "end_line": 1664,
-          "line": 1664,
+          "end_line": 1700,
+          "line": 1700,
           "value": "coldkey"
         },
         "StakeIntoBasket.wraps": {
-          "end_line": 1665,
-          "line": 1665,
+          "end_line": 1701,
+          "line": 1701,
           "value": {
             "tuple": [
               {
@@ -17998,8 +18437,8 @@
           }
         },
         "SwapBasket.all_amount_fields": {
-          "end_line": 1759,
-          "line": 1759,
+          "end_line": 1795,
+          "line": 1795,
           "value": {
             "tuple": [
               "amount"
@@ -18007,56 +18446,56 @@
           }
         },
         "SwapBasket.amount": {
-          "end_line": 1775,
-          "line": 1770,
+          "end_line": 1811,
+          "line": 1806,
           "value": {
             "required": true
           }
         },
         "SwapBasket.dest_netuid": {
-          "end_line": 1769,
-          "line": 1767,
+          "end_line": 1805,
+          "line": 1803,
           "value": {
             "required": true
           }
         },
         "SwapBasket.hotkey_ss58": {
-          "end_line": 1763,
-          "line": 1761,
+          "end_line": 1799,
+          "line": 1797,
           "value": {
             "required": true
           }
         },
         "SwapBasket.mev_shield_default": {
-          "end_line": 1758,
-          "line": 1758,
+          "end_line": 1794,
+          "line": 1794,
           "value": true
         },
         "SwapBasket.min_amount_out": {
-          "end_line": 1784,
-          "line": 1776,
+          "end_line": 1820,
+          "line": 1812,
           "value": 0
         },
         "SwapBasket.op": {
-          "end_line": 1755,
-          "line": 1755,
+          "end_line": 1791,
+          "line": 1791,
           "value": "swap_basket"
         },
         "SwapBasket.origin_netuid": {
-          "end_line": 1766,
-          "line": 1764,
+          "end_line": 1802,
+          "line": 1800,
           "value": {
             "required": true
           }
         },
         "SwapBasket.signer": {
-          "end_line": 1756,
-          "line": 1756,
+          "end_line": 1792,
+          "line": 1792,
           "value": "coldkey"
         },
         "SwapBasket.wraps": {
-          "end_line": 1757,
-          "line": 1757,
+          "end_line": 1793,
+          "line": 1793,
           "value": {
             "tuple": [
               {
@@ -18069,37 +18508,37 @@
           }
         },
         "SwapBasketMany.hotkey_ss58": {
-          "end_line": 1858,
-          "line": 1856,
+          "end_line": 1894,
+          "line": 1892,
           "value": {
             "required": true
           }
         },
         "SwapBasketMany.legs": {
-          "end_line": 1864,
-          "line": 1859,
+          "end_line": 1900,
+          "line": 1895,
           "value": {
             "required": true
           }
         },
         "SwapBasketMany.mev_shield_default": {
-          "end_line": 1854,
-          "line": 1854,
+          "end_line": 1890,
+          "line": 1890,
           "value": true
         },
         "SwapBasketMany.op": {
-          "end_line": 1851,
-          "line": 1851,
+          "end_line": 1887,
+          "line": 1887,
           "value": "swap_basket_many"
         },
         "SwapBasketMany.signer": {
-          "end_line": 1852,
-          "line": 1852,
+          "end_line": 1888,
+          "line": 1888,
           "value": "coldkey"
         },
         "SwapBasketMany.wraps": {
-          "end_line": 1853,
-          "line": 1853,
+          "end_line": 1889,
+          "line": 1889,
           "value": {
             "tuple": [
               {
@@ -18112,8 +18551,8 @@
           }
         },
         "SwapStake.all_amount_fields": {
-          "end_line": 1248,
-          "line": 1248,
+          "end_line": 1284,
+          "line": 1284,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -18121,61 +18560,61 @@
           }
         },
         "SwapStake.amount_alpha": {
-          "end_line": 1255,
-          "line": 1253,
+          "end_line": 1291,
+          "line": 1289,
           "value": {
             "required": true
           }
         },
         "SwapStake.dest_netuid": {
-          "end_line": 1252,
-          "line": 1252,
+          "end_line": 1288,
+          "line": 1288,
           "value": {
             "required": true
           }
         },
         "SwapStake.hotkey_ss58": {
-          "end_line": 1250,
-          "line": 1250,
+          "end_line": 1286,
+          "line": 1286,
           "value": {
             "required": true
           }
         },
         "SwapStake.mev_shield_default": {
-          "end_line": 1247,
-          "line": 1247,
+          "end_line": 1283,
+          "line": 1283,
           "value": true
         },
         "SwapStake.op": {
-          "end_line": 1244,
-          "line": 1244,
+          "end_line": 1280,
+          "line": 1280,
           "value": "swap_stake"
         },
         "SwapStake.origin_netuid": {
-          "end_line": 1251,
-          "line": 1251,
+          "end_line": 1287,
+          "line": 1287,
           "value": {
             "required": true
           }
         },
         "SwapStake.rate_tolerance": {
-          "end_line": 1259,
-          "line": 1257,
+          "end_line": 1295,
+          "line": 1293,
           "value": 0.05
         },
         "SwapStake.signer": {
-          "end_line": 1245,
-          "line": 1245,
+          "end_line": 1281,
+          "line": 1281,
           "value": "coldkey"
         },
         "SwapStake.slippage_protection": {
-          "end_line": 1256,
-          "line": 1256,
+          "end_line": 1292,
+          "line": 1292,
           "value": true
         },
         "SwapStake.wraps": {
-          "end_line": 1246,
-          "line": 1246,
+          "end_line": 1282,
+          "line": 1282,
           "value": {
             "tuple": [
               {
@@ -18194,8 +18633,8 @@
           }
         },
         "TransferStake.all_amount_fields": {
-          "end_line": 1457,
-          "line": 1457,
+          "end_line": 1493,
+          "line": 1493,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -18203,63 +18642,63 @@
           }
         },
         "TransferStake.amount_alpha": {
-          "end_line": 1467,
-          "line": 1465,
+          "end_line": 1503,
+          "line": 1501,
           "value": {
             "required": true
           }
         },
         "TransferStake.dest_coldkey_ss58": {
-          "end_line": 1461,
-          "line": 1459,
+          "end_line": 1497,
+          "line": 1495,
           "value": {
             "required": true
           }
         },
         "TransferStake.dest_hotkey_ss58": {
-          "end_line": 1476,
-          "line": 1468,
+          "end_line": 1512,
+          "line": 1504,
           "value": null
         },
         "TransferStake.dest_netuid": {
-          "end_line": 1464,
-          "line": 1464,
+          "end_line": 1500,
+          "line": 1500,
           "value": {
             "required": true
           }
         },
         "TransferStake.hotkey_ss58": {
-          "end_line": 1462,
-          "line": 1462,
+          "end_line": 1498,
+          "line": 1498,
           "value": {
             "required": true
           }
         },
         "TransferStake.mev_shield_default": {
-          "end_line": 1456,
-          "line": 1456,
+          "end_line": 1492,
+          "line": 1492,
           "value": true
         },
         "TransferStake.op": {
-          "end_line": 1450,
-          "line": 1450,
+          "end_line": 1486,
+          "line": 1486,
           "value": "transfer_stake"
         },
         "TransferStake.origin_netuid": {
-          "end_line": 1463,
-          "line": 1463,
+          "end_line": 1499,
+          "line": 1499,
           "value": {
             "required": true
           }
         },
         "TransferStake.signer": {
-          "end_line": 1451,
-          "line": 1451,
+          "end_line": 1487,
+          "line": 1487,
           "value": "coldkey"
         },
         "TransferStake.wraps": {
-          "end_line": 1455,
-          "line": 1452,
+          "end_line": 1491,
+          "line": 1488,
           "value": {
             "tuple": [
               {
@@ -18278,35 +18717,35 @@
           }
         },
         "UnstakeAll.claim": {
-          "end_line": 1154,
-          "line": 1141,
+          "end_line": 1190,
+          "line": 1177,
           "value": false
         },
         "UnstakeAll.hotkey_ss58": {
-          "end_line": 1140,
-          "line": 1140,
+          "end_line": 1176,
+          "line": 1176,
           "value": {
             "required": true
           }
         },
         "UnstakeAll.mev_shield_default": {
-          "end_line": 1138,
-          "line": 1138,
+          "end_line": 1174,
+          "line": 1174,
           "value": true
         },
         "UnstakeAll.op": {
-          "end_line": 1131,
-          "line": 1131,
+          "end_line": 1167,
+          "line": 1167,
           "value": "unstake_all"
         },
         "UnstakeAll.signer": {
-          "end_line": 1132,
-          "line": 1132,
+          "end_line": 1168,
+          "line": 1168,
           "value": "coldkey"
         },
         "UnstakeAll.wraps": {
-          "end_line": 1137,
-          "line": 1133,
+          "end_line": 1173,
+          "line": 1169,
           "value": {
             "tuple": [
               {
@@ -18331,30 +18770,30 @@
           }
         },
         "UnstakeAllAlpha.hotkey_ss58": {
-          "end_line": 1206,
-          "line": 1206,
+          "end_line": 1242,
+          "line": 1242,
           "value": {
             "required": true
           }
         },
         "UnstakeAllAlpha.mev_shield_default": {
-          "end_line": 1204,
-          "line": 1204,
+          "end_line": 1240,
+          "line": 1240,
           "value": true
         },
         "UnstakeAllAlpha.op": {
-          "end_line": 1201,
-          "line": 1201,
+          "end_line": 1237,
+          "line": 1237,
           "value": "unstake_all_alpha"
         },
         "UnstakeAllAlpha.signer": {
-          "end_line": 1202,
-          "line": 1202,
+          "end_line": 1238,
+          "line": 1238,
           "value": "coldkey"
         },
         "UnstakeAllAlpha.wraps": {
-          "end_line": 1203,
-          "line": 1203,
+          "end_line": 1239,
+          "line": 1239,
           "value": {
             "tuple": [
               {
@@ -18372,9 +18811,9 @@
       "format": 1,
       "provenance": {
         "blob": "4ef01f892de6f97d4e5a1b0528fca2a5a4b9655d",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/transfer.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "Transfer.all_amount_fields": {
@@ -18483,9 +18922,9 @@
       "format": 1,
       "provenance": {
         "blob": "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/intents/weights.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "CommitWeights.commit_reveal_version": {
@@ -18674,9 +19113,9 @@
       "format": 1,
       "provenance": {
         "blob": "25b5105b4300daa25b2fae8626064ee0f2697f15",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/multisig.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "_FEE_ALLOWANCE_RAO": {
@@ -18690,9 +19129,9 @@
       "format": 1,
       "provenance": {
         "blob": "2f62ffa3c47304ffd8e450fe23fcefa39806d24d",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/bittensor/result.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "EXPLANATIONS": {
@@ -19166,10 +19605,10 @@
     "sdk/python/codegen/check.py": {
       "format": 1,
       "provenance": {
-        "blob": "a859b70612e8b92d0ae14e51c657e996ab9052e2",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "9dd65bd98971333d635ea2bd1954c6ec51b211e8",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/codegen/check.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "COVERED_PALLETS": {
@@ -19194,7 +19633,7 @@
           }
         },
         "RAW_ONLY": {
-          "end_line": 300,
+          "end_line": 303,
           "line": 74,
           "value": {
             "dict": [
@@ -19389,6 +19828,7 @@
                     "sudo_set_network_min_lock_cost",
                     "sudo_set_network_rate_limit",
                     "sudo_set_nominator_min_required_stake",
+                    "sudo_set_owner_cut_enabled",
                     "sudo_set_owner_hparam_rate_limit",
                     "sudo_set_rao_recycled",
                     "sudo_set_recycle_or_burn",
@@ -19437,10 +19877,10 @@
     "sdk/python/tests/harness/fake_substrate.py": {
       "format": 1,
       "provenance": {
-        "blob": "33390704ec44e76236dede067ea1e3a52a418200",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "49d5f33b1ce951924c5c06d6814f48bbd26f67ed",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/tests/harness/fake_substrate.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "DEFAULT_CONSTANTS": {
@@ -19751,10 +20191,10 @@
     "sdk/python/tests/harness/samples.py": {
       "format": 1,
       "provenance": {
-        "blob": "f04e4a3681a9798f20bebcb44ba508561509e391",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "blob": "91ff2aff459b6ea8e51f4ad3b17e59005451191b",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/tests/harness/samples.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "ALICE": {
@@ -19778,8 +20218,8 @@
           "value": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM"
         },
         "INTENT_SAMPLES": {
-          "end_line": 200,
-          "line": 35,
+          "end_line": 237,
+          "line": 65,
           "value": {
             "dict": [
               [
@@ -20535,6 +20975,33 @@
                 }
               ],
               [
+                "set_subnet_emission_weights",
+                {
+                  "dict": [
+                    [
+                      "netuid",
+                      1
+                    ],
+                    [
+                      "slots",
+                      [
+                        "owner"
+                      ]
+                    ],
+                    [
+                      "values",
+                      [
+                        "10%"
+                      ]
+                    ],
+                    [
+                      "renormalize",
+                      true
+                    ]
+                  ]
+                }
+              ],
+              [
                 "set_identity",
                 {
                   "dict": [
@@ -20736,6 +21203,17 @@
               ],
               [
                 "set_reject_locked_alpha",
+                {
+                  "dict": [
+                    [
+                      "enabled",
+                      true
+                    ]
+                  ]
+                }
+              ],
+              [
+                "set_reject_staking_hotkey_growth",
                 {
                   "dict": [
                     [
@@ -21230,8 +21708,8 @@
           }
         },
         "READ_SAMPLES": {
-          "end_line": 307,
-          "line": 204,
+          "end_line": 345,
+          "line": 241,
           "value": {
             "dict": [
               [
@@ -22186,6 +22664,17 @@
                 }
               ],
               [
+                "subnet_emission_weights",
+                {
+                  "dict": [
+                    [
+                      "netuid",
+                      1
+                    ]
+                  ]
+                }
+              ],
+              [
                 "subnet_hyperparameters",
                 {
                   "dict": [
@@ -22372,9 +22861,9 @@
       "format": 1,
       "provenance": {
         "blob": "0705e3c90e593202712a08d9ec9ed21a82d622a3",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/tests/unit/test_cli_null_pruning.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "test_invalid_requests_never_submit.parametrize": {
@@ -22649,9 +23138,9 @@
       "format": 1,
       "provenance": {
         "blob": "655aa3ba498aeae6e061e73f8db6fb4f12e7e743",
-        "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
         "path": "sdk/python/tests/unit/test_rpc.py",
-        "tag": "v478"
+        "tag": "v481"
       },
       "values": {
         "test_provider_defined_code_without_policy_contract_is_not_terminal.parametrize": {

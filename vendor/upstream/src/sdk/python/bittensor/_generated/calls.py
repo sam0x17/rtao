@@ -496,6 +496,11 @@ class SubtensorModule:
         return Call('SubtensorModule', 'set_reject_locked_alpha', {'enabled': enabled})
 
     @staticmethod
+    def set_reject_staking_hotkey_growth(enabled: 'bool') -> Call:
+        'Opt out of staking-hotkey list growth caused by other accounts. Existing destinations and hotkeys owned by the recipient can still receive transfers.'
+        return Call('SubtensorModule', 'set_reject_staking_hotkey_growth', {'enabled': enabled})
+
+    @staticmethod
     def set_subnet_identity(netuid: 'NetUid', subnet_name: 'Any', github_repo: 'Any', subnet_contact: 'Any', subnet_url: 'Any', discord: 'Any', description: 'Any', logo_url: 'Any', additional: 'Any') -> Call:
         'Set the identity information for a subnet. # Arguments * `origin`: The signature of the calling coldkey, which must be the owner of the subnet.  * `netuid`: The unique network identifier of the subnet.  * `subnet_name`: The name of the subnet.  * `github_repo`: The GitHub repository associated with the subnet identity.  * `subnet_contact`: The contact information for the subnet.'
         return Call('SubtensorModule', 'set_subnet_identity', {'netuid': netuid, 'subnet_name': subnet_name, 'github_repo': github_repo, 'subnet_contact': subnet_contact, 'subnet_url': subnet_url, 'discord': discord, 'description': description, 'logo_url': logo_url, 'additional': additional})
@@ -1224,7 +1229,7 @@ class AdminUtils:
 
     @staticmethod
     def sudo_set_owner_cut_enabled(netuid: 'NetUid', enabled: 'bool') -> Call:
-        'Set whether the subnet owner cut is enabled for a subnet. It is only callable by root and subnet owner.'
+        'Deprecated. Owner cut on/off is now expressed by slot 2 (owner) of the per-subnet emission weight vector: set it to zero to disable the owner cut through [`Call::sudo_set_subnet_emission_weights`]. Always returns `Error::Deprecated`.'
         return Call('AdminUtils', 'sudo_set_owner_cut_enabled', {'netuid': netuid, 'enabled': enabled})
 
     @staticmethod
@@ -1278,6 +1283,11 @@ class AdminUtils:
         return Call('AdminUtils', 'sudo_set_subnet_emission_enabled', {'netuid': netuid, 'enabled': enabled})
 
     @staticmethod
+    def sudo_set_subnet_emission_weights(netuid: 'NetUid', uids: 'Any', values: 'Any') -> Call:
+        "Sets entries of a subnet's emission weight vector `[burn, recycle, owner, validator, miner]`, each a `u64` share of `u64::MAX`.  `uids` names the slots to write and `values` their new shares; slots that are not named keep their current value (burn and recycle are always zero in v1). The merged vector must satisfy every rule, each of which has its own error: burn = 0, recycle = 0, `0 ≤ owner ≤ 33%` (lease-created subnets `≥ 18%`), `validator ≤ 50%`, `miner ≥ 33%`, and the five slots must sum to exactly `u64::MAX`.  Root is paid its baseline share of the subnet's emission (what root earns with the default validator share and the global `TaoWeight`) off the top of the validator slot every block, capped at the slot; alpha validators get the rest. The call fails if the new validator share is at or below that baseline right now. Callable by the subnet owner (once per week per subnet; the first call is never rate-limited) or root (no rate limit). Both respect the admin freeze window."
+        return Call('AdminUtils', 'sudo_set_subnet_emission_weights', {'netuid': netuid, 'uids': uids, 'values': values})
+
+    @staticmethod
     def sudo_set_subnet_limit(max_subnets: 'u16') -> Call:
         'The extrinsic sets the subnet limit for the network. It is only callable by the root account. The extrinsic will call the Subtensor pallet to set the subnet limit.'
         return Call('AdminUtils', 'sudo_set_subnet_limit', {'max_subnets': max_subnets})
@@ -1289,7 +1299,7 @@ class AdminUtils:
 
     @staticmethod
     def sudo_set_subnet_owner_cut(subnet_owner_cut: 'u16') -> Call:
-        'The extrinsic sets the subnet owner cut for a subnet. It is only callable by the root account. The extrinsic will call the Subtensor pallet to set the subnet owner cut.'
+        'Deprecated. The global owner cut was replaced by the per-subnet emission weight vector; set slot 2 (owner) through [`Call::sudo_set_subnet_emission_weights`]. Always returns `Error::Deprecated`.'
         return Call('AdminUtils', 'sudo_set_subnet_owner_cut', {'subnet_owner_cut': subnet_owner_cut})
 
     @staticmethod

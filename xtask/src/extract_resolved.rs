@@ -350,6 +350,11 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                 sequence(&value.values, depth + 1)
             }
             ast::Expr::BinOp(_) | ast::Expr::UnaryOp(_) => literal_arithmetic(value, depth + 1),
+            ast::Expr::Call(call)
+                if matches!(call_path(&call.func).as_deref(), Some("min" | "max")) =>
+            {
+                literal_arithmetic(value, depth + 1)
+            }
             _ => bail!("sample producer executes an unsupported expression"),
         }
     }
@@ -365,12 +370,25 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
             "sample producer arithmetic nesting exceeds bound"
         );
         match value {
-            ast::Expr::Constant(_) => Ok(()),
+            // A name reads an earlier inert declaration; it executes nothing.
+            ast::Expr::Constant(_) | ast::Expr::Name(_) => Ok(()),
             ast::Expr::BinOp(value) => {
                 literal_arithmetic(&value.left, depth + 1)?;
                 literal_arithmetic(&value.right, depth + 1)
             }
             ast::Expr::UnaryOp(value) => literal_arithmetic(&value.operand, depth + 1),
+            // The builtins min/max over arithmetic operands are pure; the
+            // module may not rebind either name (see `callback_dependency`).
+            ast::Expr::Call(call)
+                if matches!(call_path(&call.func).as_deref(), Some("min" | "max"))
+                    && call.args.len() >= 2
+                    && call.keywords.is_empty() =>
+            {
+                for argument in &call.args {
+                    literal_arithmetic(argument, depth + 1)?;
+                }
+                Ok(())
+            }
             _ => bail!("sample producer arithmetic must use literal operands"),
         }
     }
@@ -398,6 +416,10 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
             .join(",")
     }
     fn callback_dependency(path: &str, class_body: bool, name: &str) -> Result<()> {
+        ensure!(
+            class_body || !matches!(name, "min" | "max"),
+            "sample producer arithmetic builtin shadowed"
+        );
         ensure!(
             path != "sdk/python/bittensor/keyfiles.py"
                 || class_body
@@ -2170,6 +2192,26 @@ impl<'a> Resolver<'a> {
             return Ok(Literal::Resolved(
                 json!({"regex":pattern.json()?,"flags":flags.map(|flags| flags.json()).transpose()?}),
             ));
+        }
+        if matches!(symbol.as_str(), "min" | "max") {
+            // Pure integer selection; the static surface forbids rebinding either.
+            ensure!(
+                call.args.len() >= 2 && call.keywords.is_empty(),
+                "{symbol} requires two or more positional integers"
+            );
+            let mut values = Vec::with_capacity(call.args.len());
+            for argument in &call.args {
+                let Literal::Int(value) = self.eval(argument, bindings, path, depth)? else {
+                    bail!("{symbol} accepts only integer arguments");
+                };
+                values.push(value);
+            }
+            let selected = if symbol == "min" {
+                values.into_iter().min()
+            } else {
+                values.into_iter().max()
+            };
+            return Ok(Literal::Int(selected.context("min/max has no arguments")?));
         }
         ensure!(
             matches!(

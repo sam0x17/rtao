@@ -1380,11 +1380,11 @@
     "status": "matches"
   },
   "provenance": {
-    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
-    "tag": "v478"
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "tag": "v481"
   },
   "scope": {
-    "authenticated_modules": 194,
+    "authenticated_modules": 197,
     "root": "sdk/python/bittensor/"
   }
 }

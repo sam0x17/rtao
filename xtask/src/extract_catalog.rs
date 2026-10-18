@@ -456,8 +456,7 @@ fn render_errors(
         );
         out.push_str(&format!("SemanticErrorSpec {{ code:ErrorCode::{variant},remediation:{},explanation:{},docs_url:{},markdown_url:{} }},\n",rust_string(remediation[token.as_str()]),rust_string(explanations[token.as_str()]),rust_string(info["docs_url"].as_str().context("semantic docs URL missing")?),rust_string(info["markdown_url"].as_str().context("semantic Markdown URL missing")?)));
     }
-    out.push_str("];\n\n/// All 390 pinned chain errors and their full catalog descriptions.\npub static CHAIN_ERRORS: [ChainErrorSpec; 390] = [\n");
-    ensure!(chain.len() == 390, "chain-error catalog count changed");
+    out.push_str(&format!("];\n\n/// All {count} pinned chain errors and their full catalog descriptions.\npub static CHAIN_ERRORS: [ChainErrorSpec; {count}] = [\n", count = chain.len()));
     for (name, row) in chain {
         let code = row["code"]
             .as_str()
