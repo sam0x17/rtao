@@ -49,7 +49,13 @@ printf '%s\n' "$COMPOSE_PROJECT_NAME" > "$RTAO_TEMP_ROOT/compose-project.txt"
 export NEURON_UID="$(id -u)" NEURON_GID="$(id -g)"
 cleanup() {
   local template_exit_status="$?"
-  docker compose logs --no-color --tail 1000 2>&1 | tail -c 1048576 > "$RTAO_TEMP_ROOT/compose.log" || true
+  # The neurons live in a compose profile; name each service so its logs are
+  # kept even though the profile is inactive in this shell.
+  local service
+  for service in localnet validator miner; do
+    docker compose --profile neurons logs --no-color --timestamps --tail 1000 "$service" 2>&1 \
+      | tail -c 1048576 > "$RTAO_TEMP_ROOT/compose-$service.log" || true
+  done
   if ! docker compose --profile neurons down --volumes --remove-orphans; then
     if test "$template_exit_status" -eq 0; then
       template_exit_status=1

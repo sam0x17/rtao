@@ -3,7 +3,7 @@
 use anyhow::{Context, Result, ensure};
 use futures::StreamExt;
 use rtao::{
-    client::{BlockRef, Finality, SubmitOptions, View, ViewExt},
+    client::{BlockRef, Finality, View, ViewExt},
     core::{codec::Value, value_ext::ValueExt},
     primitives::{AccountId, CryptoType, MechId, NetUidStorageIndex, TaoBalance},
     signer::Signer,
@@ -56,11 +56,9 @@ async fn exercise(ln: &Localnet, root: PathBuf) -> Result<()> {
         admin_utils::sudo_set_commit_reveal_weights_interval(netuid, 1),
     ] {
         let report = ln
-            .client()
-            .submit(
+            .submit_admin(
                 call.compose(&ln.client().runtime().await?)?,
                 &setup.slot.owner,
-                &SubmitOptions::default(),
             )
             .await?;
         ensure!(report.success, "subnet configuration failed: {report:?}");

@@ -20,6 +20,9 @@ services:
       - "${TEMPLATE_WALLET_ROOT:-./wallets}:/wallet:ro"
       - "${TEMPLATE_STATE_ROOT:-./state}/validator:/state"
     command: ["--network", "local", "--chain-endpoint", "ws://127.0.0.1:9944", "--fallback-endpoints", "none", "--archive-endpoints", "none", "--netuid", "${NETUID:-1}", "--wallet", "development", "--wallet-hotkey", "validator", "--wallet-path", "/wallet", "--state-dir", "/state", "--log", "info"]
+  # The chain refuses exactly 127.0.0.1 (and ::1) as an axon address with
+  # InvalidIpAddress. Advertise another 127/8 loopback address, which still
+  # reaches this host-network listener on 0.0.0.0.
   miner:
     image: ${MINER_IMAGE:-subnet-miner:local}
     profiles: [neurons]
@@ -32,4 +35,4 @@ services:
     volumes:
       - "${TEMPLATE_WALLET_ROOT:-./wallets}:/wallet:ro"
       - "${TEMPLATE_STATE_ROOT:-./state}/miner:/state"
-    command: ["--network", "local", "--chain-endpoint", "ws://127.0.0.1:9944", "--fallback-endpoints", "none", "--archive-endpoints", "none", "--netuid", "${NETUID:-1}", "--wallet", "development", "--wallet-hotkey", "miner", "--wallet-path", "/wallet", "--state-dir", "/state", "--axon.external-ip", "127.0.0.1", "--axon.port", "8091", "--log", "info"]
+    command: ["--network", "local", "--chain-endpoint", "ws://127.0.0.1:9944", "--fallback-endpoints", "none", "--archive-endpoints", "none", "--netuid", "${NETUID:-1}", "--wallet", "development", "--wallet-hotkey", "miner", "--wallet-path", "/wallet", "--state-dir", "/state", "--axon.external-ip", "127.0.0.2", "--axon.port", "8091", "--log", "info"]

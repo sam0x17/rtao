@@ -699,13 +699,15 @@ mod tests {
                 .status();
             // The exited Bash wrote only this bounded log. No real docker,
             // launchd unit, config, symlink, wallet or virtualenv was created.
-            let log = fixture.join("compose.log");
-            if log.try_exists()? {
-                ensure!(
-                    !fs::symlink_metadata(&log)?.file_type().is_symlink(),
-                    "cleanup proof log became a symlink"
-                );
-                fs::remove_file(log)?;
+            for service in ["localnet", "validator", "miner"] {
+                let log = fixture.join(format!("compose-{service}.log"));
+                if log.try_exists()? {
+                    ensure!(
+                        !fs::symlink_metadata(&log)?.file_type().is_symlink(),
+                        "cleanup proof log became a symlink"
+                    );
+                    fs::remove_file(log)?;
+                }
             }
             fs::remove_dir(fixture)?;
             ensure!(
