@@ -2,6 +2,7 @@
 
 - [Introduction](introduction.md)
 - [Getting started](getting-started.md)
+- [Build a subnet on a local chain](local-subnet.md)
 - [SDK overview](sdk.md)
 - [Using rtao from an agent](agents.md)
 - [Command line use](cli.md)
