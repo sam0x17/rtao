@@ -94,6 +94,48 @@ where concurrent localnets peered across the shared Docker bridge. No
 independent Python oracle output diff was produced for this change, and no
 validated compatibility range is recorded yet.
 
+## 2026-10-18: parity returns to spec 479, the runtime Finney runs
+
+Policy: rtao's parity pin tracks the runtime mainnet (Finney) currently
+finalizes, not upstream's newest testnet runtime. Finney finalizes spec 479
+while testnet runs 481, so the parity pin moves back from spec 481
+(`6a972693ae9580541225bd37696ac2fee26b8ae9`) to spec 479 at
+`f4786f9087cac84cfab37cbdf1e01c399042653a`, upstream `main`'s merge of
+`release-479`. Upstream has published no v479 release; the pin source is
+`branch:main@f4786f9`, recorded with `release = "unreleased"`,
+`source_branch = "main"` and `network = "finney"`. Code-generation metadata
+is Finney's 479 runtime (`vendor/metadata/finney/479.*`) and the pinned
+localnet image is `sha-f4786f9…`
+(`sha256:930484f0fadefc1912929a32786dded9420b85ca47949e748dcd002821217717`).
+
+| Input | Recorded identity |
+|---|---|
+| Parity tag and commit | `v479` (unreleased), `f4786f9087cac84cfab37cbdf1e01c399042653a` |
+| Parity runtime and Python package | Spec `479`, `11.3.1.dev0` |
+| Core tag, commit and patch | unchanged: `v478`, `850f2755…`, patch `626f2a4f…` |
+
+Spec 479 adds the `set_reject_staking_hotkey_growth` account flag (kept as
+the `SetRejectStakingHotkeyGrowth` intent), the
+`AccountRejectsStakingHotkeyGrowth` and `EVM.AuthorizationListTooLarge`
+errors, the `HotkeySwapBasketCredits` and `EVM.AccountNonces` storage, its
+events and the stakingV2 setter, and makes `set_auto_stake` add the
+destination hotkey to the coldkey's staking list. The catalogs are 84
+intents, 102 reads and 392 chain errors. The spec 480/481 emission weight
+vector is not on Finney, so its port (the `rtao-primitives` rules, the
+`subnet_emission_weights` read, `SetSubnetEmissionWeights`, `subnets
+emission`, the derived emission hyperparameters, read-only
+`owner_cut_enabled`, plan previews and e2e scenario 18) is parked in commit
+`b6efa92` ("Park the spec 480/481 emission weights port until mainnet runs
+it"). When Finney upgrades to a runtime that carries it, re-pin and
+`git revert` that commit to restore the port. The shield fixes (D-077),
+per-localnet Docker networks, e2e harness fixes, compatibility validation
+lanes and pin tooling from the 481 work are runtime-independent and stay.
+
+The attested spec 481 compatibility validation (run 39141096815) no longer
+matches the inputs, so its ledger and reports are removed and no validated
+range is recorded. `mainnet-watch` now compares Finney's finalized runtime
+with this pin every hour and opens an issue when they differ.
+
 ## Recording the next change
 
 Append an entry when a pin changes. Include the old and new tag/commit, affected
