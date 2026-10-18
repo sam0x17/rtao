@@ -2778,6 +2778,15 @@
           "rtao_client::shield::finality_lag_waits_for_finality_to_come_within_the_era",
           "rtao_client::shield::ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan"
         ]
+      },
+      {
+        "id": "D-078",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::network::tests::testnet_prefers_the_chain_endpoint_and_keeps_python_preset_as_fallback",
+          "rtao_client::network::tests::every_extracted_label_and_exact_url_resolves_to_the_same_network"
+        ]
       }
     ],
     "e2e": [
