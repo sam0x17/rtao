@@ -59,14 +59,14 @@ Validation on 2026-10-14:
 - Workflow actionlint 1.7.7, shell syntax and YAML parsing passed. Downloaded
   actionlint archive matched the published SHA256 checksum.
 
-[Fixture acquisition evidence](m1-drift-fixtures.md) and its retained JSON
-record document finalized blocks, checksums and source provenance.
-[Comparison results](m1-drift-results.json) retain the historical semantic report,
-independent comparison and three live identity checks. They establish no current
+[Fixture acquisition evidence](m1-drift-fixtures.md) documents finalized
+blocks, checksums and source provenance. The historical comparison results
+(semantic report, independent comparison and three live identity checks) are
+not retained in the repository. They establish no current
 localnet-main or live check. Q30 removes those infrastructure runs as M1
 prerequisites; current source/fixture and hosted acceptance remain separate.
 
-The former `target/execute-plan.6Ro0PC` root is retired and absent on the laptop.
+The former local execution root is retired and absent.
 Do not recreate it or resume its tools/queued work. Historical helper/preview
 cleanup retained bounded results and removed disposable output after dependency
 checks. That history creates no current live-cache requirement. Preserve shared

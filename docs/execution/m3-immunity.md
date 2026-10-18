@@ -34,8 +34,8 @@ type. That binary generated the read outputs from the reviewed inputs and
 passed `regen --reads-only --check`; canonical regeneration then rebuilt from
 the current sources. No generated file was edited by hand.
 
-Those historical Cargo invocations used `target/execute-plan.6Ro0PC`, with
-its `build` target and `tmp` directory. This read work created no temporary
+Those historical Cargo invocations used a task-scoped temporary root, with
+its own build target and temporary directory. This read work created no temporary
 directories, wallets or validator state. Q30 cleanup retired that build tree
 and its raw logs; it is no longer a live dependency and must not be recreated.
 No Python ran locally. Fresh differential execution remains optional targeted

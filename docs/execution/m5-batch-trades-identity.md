@@ -68,6 +68,5 @@ The generated archive is 91,607 bytes, SHA-256
 `7af5fb55b0d97a9db0063eceebbe645ddd652714434b03dd10cc36213bde73f3`.
 The reports archive is 40,321 bytes, SHA-256
 `5d05bc7d921266a569ec3c05e02a23656ce20f1acf693794fe34c8e58b0766ec`.
-The bounded private proof is
-`.local/recovery/2026-10-14/m5-batch-trades-identity-adoption.json`.
+The bounded adoption proof is not retained in the repository.
 This establishes generated integration without runtime or oracle claims.

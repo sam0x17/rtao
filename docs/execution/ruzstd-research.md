@@ -60,13 +60,8 @@ Individual shipped feature selections remain the supply guard's responsibility;
 these observations establish absence from the inspected broad and default
 profiles. They do not permit future activation.
 
-Evidence is bounded text under the recorded task root:
-
-```text
-target/execute-plan.6Ro0PC/tmp/ruzstd-research-*-tree.txt
-target/execute-plan.6Ro0PC/tmp/ruzstd-research-audit-summary.json
-target/execute-plan.6Ro0PC/tmp/supply-raw-schema.json
-```
+The bounded tree, audit-summary and raw-schema evidence was recorded under a
+local task root and is not retained in the repository.
 
 The raw schema snapshot reports one vulnerability, fourteen unmaintained
 warnings, and the separately approved `lru` unsound warning. It does not contain

@@ -266,7 +266,7 @@ Defects:
    shape check also covers hashers, and B does not say that it does.
 2. **Positional decode guarded by a home-grown shape hash, plus a hand-written borrowed metagraph parser.** The
    mitigations are good (property tests per pinned spec, fuzzing, a dynamic fallback), but this is exactly the kind of
-   chain-shape knowledge the user wanted to leave to the core.
+   chain-shape knowledge the maintainer wanted to leave to the core.
 3. **Echoes `CommitRevealWeightsVersion`** (§4.3, §9.2).
 4. **Codegen overrides bake divergences:** `ZeroAccountIsNone` and `StakeWeightRao`. They are defensible, but they are
    decided without the "verify first" step.

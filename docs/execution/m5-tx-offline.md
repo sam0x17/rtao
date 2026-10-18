@@ -20,12 +20,12 @@ algorithm, checks both runtime versions and chain/era identity, and owns the
 explicit nonce lease during submission. Its existing deadline handling retains
 the attempted transaction hash after an unacknowledged author RPC. The executor
 uses its existing receipt conversion without adding an enclosing timeout that
-could lose that hash. Source-level API compatibility was checked with the agent
-maintaining the client implementation; hosted compilation remains required.
+could lose that hash. Source-level API compatibility was checked against the
+concurrent client implementation; hosted compilation remains required.
 
-The recovery source was read in memory from
-`m5-offline/proof/m5-source-candidate.patch` inside
-`.local/recovery/2026-10-14/unfinished-source.tar.gz`. Its SHA-256 was verified as
+The recovery source was read in memory from the recovered
+`m5-source-candidate.patch` in the private recovery archive, which is not
+retained in the repository. Its SHA-256 was verified as
 `0afc4b1f4010c7031c2d8683935fd3c28da38f9e14a96775b8802240aea63031`.
 Only the executor, tx exports and tx offline files were adapted from that
 candidate. The existing owner-retry, intent review and receipt behavior was

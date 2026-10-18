@@ -42,9 +42,9 @@ suppressing semantic cases. Current pin/BLS checks follow the approved Q26
 built-dependency policy in [bls-lock.md](bls-lock.md); this record does not
 restore the former literal-lock criterion.
 
-Historical validation used `target/execute-plan.6Ro0PC`, with `build` as the
+Historical validation used a recorded local task root, with `build` as the
 Cargo target and `tmp` for disposable files. The rehearsal copied sources to
-`tmp/core-canary-rehearsal`; the original manifest, lockfile, and pin file were
+a disposable directory there; the original manifest, lockfile, and pin file were
 not rewritten by that run. The actual resolved main commit was
 `850f2755bb05a3851f948489f0ab27b0645cebce`. The command completed its source and
 graph audits successfully.

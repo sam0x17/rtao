@@ -16,6 +16,4 @@ hotkeys rather than limiting results to the current neuron rows.
 
 This crate declares no feature switches. Optional transport and client adapters
 are configured on their owning crates. Balance projections retain checked
-native `u64` rao and distinct TAO and alpha units. Generated catalog coverage
-does not establish oracle replay or live runtime equivalence; hosted fixtures
-record those client checks separately.
+native `u64` rao and distinct TAO and alpha units.

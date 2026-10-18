@@ -20,22 +20,22 @@ raw-u16 row of 2,500 UIDs.
 
 `cargo xtask oracle inputs` parses every script with Rust and emits a context
 hash and image tag. `oracle image --plan` prints the Docker invocation; actual
-image builds/pushes are rejected on Mac Studio. `oracle dump` requires a GHCR
+image builds/pushes are rejected outside hosted CI. `oracle dump` requires a GHCR
 digest or the immutable image ID from that hosted build, checks source/context
 labels, disables the container network, and writes to fresh task scratch. Image
 tags include both parity tag and context hash. A failed image/dump leaves the
 previous committed vectors authoritative.
 
-The M2 scope dumps all nine intents and fifteen ported reads (the thirteen M2
-reads plus `metagraph` and `token_symbols`). The `all` scope requires
+The default `M2` scope dumps all nine intents and fifteen ported reads (the
+thirteen scoped reads plus `metagraph` and `token_symbols`). The `all` scope requires
 registry/sample equality and dumps the full registry. Intent dumps contain call
 trees, schemas, preflights, plans, fee/spend/extras and the complete seeded state.
 Timelock ciphertext/reveal-round fields carry explicit exclusions. Read dumps
 use upstream's `_jsonable` at head and block 90 and record every storage,
 runtime-API and constant touch. Each sample has a seed file. Reviewed branch
 samples extend `samples_extra.json`. The reviewed inputs include eighteen intent
-branches and fifteen read branches. M2 selects twelve intent extras for 21 intent
-cases and 60 head/pinned read cases. The six root-origin amount extras require
+branches and fifteen read branches. The `M2` scope selects twelve intent
+extras for 21 intent cases and 60 head/pinned read cases. The six root-origin amount extras require
 `all` scope, bringing that scope to 101 intent cases. Ordinary Rust input checks
 build and plan them without recording Python results; expected Python outputs
 are produced only by optional hosted upstream execution.

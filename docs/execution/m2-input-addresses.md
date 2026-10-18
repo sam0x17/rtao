@@ -46,8 +46,8 @@ Validation on 2026-10-14 used `--locked` throughout:
 | TX executor and core-policy integration tests | 16 + 7 passed | 16 + 7 passed |
 | Strict all-target Clippy, primitives/client/intents/TX | passed | passed |
 
-Owned Rust formatting passed with edition 2024. Historical logs used
-`target/execute-plan.6Ro0PC/tmp/m2-address-*`. No separate disposable directories
+Owned Rust formatting passed with edition 2024. Historical logs are not
+retained in the repository. No separate disposable directories
 were created. That task build/tmp root is retired and absent; shared global
 Cargo/toolchain caches remain preserved. Oracle and localnet validation are
 optional targeted hosted evidence under Q30, not development milestone gates.

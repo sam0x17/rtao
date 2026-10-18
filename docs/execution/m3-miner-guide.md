@@ -21,23 +21,21 @@ native checked `u64` balances and distinct TAO/alpha units, and uses
 `StakeWeight` only for admission and optional scheduling.
 
 The guide references the existing compiled example instead of adding a second
-Rust implementation in the book. Historical logs under the former task root
-`target/execute-plan.6Ro0PC` recorded the miner example's current-Rust check
-and strict MSRV Clippy (`tmp/neuron-miner-example.log` and
-`tmp/neuron-miner-example-msrv.log`), and the signed three-MiB runtime/state
-regression (`tmp/neuron-miner-runtime-tests.log`). These earlier runs are
+Rust implementation in the book. Historical logs (not retained in the repository) recorded the miner example's
+current-Rust check and strict MSRV Clippy, and the signed three-MiB
+runtime/state regression. These earlier runs are
 implementation evidence, not a new deployment run for this documentation edit.
 Applicable hosted client/template checks and security review remain required.
 Localnet, real endpoint routing and interop execution are optional targeted
 hosted coverage under Q30 and remain unverified by this record. No screenshot
 or testnet success is asserted.
 
-Root integration subsequently rendered the complete book, including the miner
+Integration subsequently rendered the complete book, including the miner
 and validator chapters, with checksum-pinned mdbook 0.5.4 for Apple ARM.
 The archive SHA-256 is
 `03e8a6d8b13a2971e0b3280affd03b388373c1485e26f73407c3a76b0b1838df`.
-Rendering passed without warnings. Logs and source/tool hashes were recorded in
-`tmp/root-book-render-evidence` under the former task root. The disposable
+Rendering passed without warnings. Logs and source/tool hashes are not
+retained in the repository. The disposable
 archive/extraction/HTML root was audited and removed. Q30 cleanup later retired
 the pinned local mdbook binary and raw logs. Subsequent documentation checks
 belong in hosted CI; this render establishes no release or deployment result.

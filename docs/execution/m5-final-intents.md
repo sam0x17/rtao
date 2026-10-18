@@ -76,8 +76,7 @@ The generated ZIP is 91,201 bytes, SHA-256
 `92e96fdee4eb8de5e85a00ca8fb45a37f6365533b8a7f78713d804ba26ac0c60`.
 The reports ZIP is 40,502 bytes, SHA-256
 `a1ca868a1720f559afb774c07fb862ac9780369fb559f502fd4cfd2d707077c1`.
-The bounded private proof is
-`.local/recovery/2026-10-14/m5-final-intents-adoption.json`.
+The bounded adoption proof is not retained in the repository.
 No runtime, oracle, native-platform or hardware coverage is added by generation.
 
 Normal run [38709461377](https://github.com/sam0x17/rtao/actions/runs/38709461377)
@@ -88,8 +87,8 @@ and decode the public PoW hash with the existing strict fixed-width helper.
 No-host, supply and semver pass; features remains running at inspection.
 Tests, doctests and documentation builds were not reached. The next hosted
 run must verify these fixes; source review and rustfmt alone do not establish
-compilation or fixture success. Bounded failure evidence is retained privately
-as `check-38709461377.json`.
+compilation or fixture success. Bounded failure evidence is not retained in the
+repository.
 
 Normal run [38710720744](https://github.com/sam0x17/rtao/actions/runs/38710720744)
 at `06a3598` passes compilation, strict Clippy, parity and the other five jobs.
@@ -101,4 +100,4 @@ addresses, last-allocated nonce state and valid subnet4095. New policy cases
 explicitly refuse4096/65535, retaining the separate u16 wire checks. No production
 behavior, assertions or gates are relaxed. Doctests and documentation builds
 are not reached; another ordinary hosted run must verify the corrections.
-Bounded private evidence is `check-38710720744.json`.
+Bounded evidence is not retained in the repository.

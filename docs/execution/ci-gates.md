@@ -23,7 +23,7 @@ machine, so inspect the source when only the command list is needed. A
 blocking hosted failure stops its job. The approved Q26 built-dependency BLS
 criterion and Q27/Q28 guarded dormant advisory exceptions remain in force.
 
-The previous execution root `target/execute-plan.6Ro0PC` is being retired by
+The previous local execution root is being retired by
 the disk cleanup recorded in `state.md`. Do not recreate its caches or
 restart its queued commands. Local work follows `AGENTS.md` and
 `CONTRIBUTING.md`; no local node, container, oracle, soak, device rehearsal or

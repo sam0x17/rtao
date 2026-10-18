@@ -16,8 +16,8 @@ The source test `test_failed_timelock_commitment_is_terminal_and_not_revealed`
 is ported with its original name and provenance. The locks test in the same
 Python source belongs to M6 and is outside this change.
 
-Validation on the Mac Studio used the recorded execution temporary root and
-did not execute Python:
+Local validation used the recorded execution temporary root and did not
+execute Python:
 
 ```text
 cargo test -p rtao-reads --all-features

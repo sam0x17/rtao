@@ -30,16 +30,3 @@ builds and tests are for development feedback.
   not disposable merely because its name contains `test` or `rehearsal`.
 - Use exact validated paths, never broad home-directory deletion globs.
   Report any retained live dependencies.
-
-# GitHub restrictions
-
-- Never add or re-add the `CI` label, including toggling it or using automation
-  to trigger or retry CI. Investigate or report stuck CI without that label.
-- Never request or re-request review from
-  `anza-xyz/community-pr-subscribers`, including toggling the review request.
-
-# Progress communication
-
-- Use ordinary commentary for progress updates. Never use user-input tools
-  for filler, status notices or messages saying no response is needed.
-- Ask a question only when its answer would materially affect the work.

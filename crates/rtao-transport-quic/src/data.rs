@@ -1,4 +1,4 @@
-// Derived from inference-labs-inc/lightning crates/btlightning/src/types.rs @ 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0 (MIT); modified by rtao.
+// Derived from inference-labs-inc/btlightning crates/btlightning/src/types.rs @ 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0 (MIT); modified by rtao.
 //! Typed conversion between Rust values and request `data` maps.
 //!
 //! [`to_data`] is a port of btlightning's `NamedSerializer`: structs and maps

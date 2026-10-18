@@ -9,4 +9,4 @@ Validation on macOS ARM64 with Rust 1.89, repeated against the clean committed r
 - Strict core and binding Clippy with all features and targets; package formatting and committed-diff checks.
 - Portable `wasm32-unknown-unknown` check with `--no-default-features`.
 
-A Python dictionary/materialization regression is included for hosted CI. No Python interpreter ran locally; all binding checks set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because the user's instruction confines Python execution to CI; scoped Rust validation used the authorized `sam0x17` identity. There are no dependency, lockfile, generated Python, pallet or runtime changes.
+A Python dictionary/materialization regression is included for hosted CI. No Python interpreter ran locally; all binding checks set `PYO3_NO_PYTHON=1`. The full monorepo preflight was not run because project policy confines Python execution to CI; scoped Rust validation used the maintainer's account (`sam0x17`). There are no dependency, lockfile, generated Python, pallet or runtime changes.

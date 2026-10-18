@@ -7,6 +7,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Asynchronous Bittensor chain access."
+keywords = ["bittensor", "rpc", "client", "blockchain", "substrate"]
+categories = ["cryptography::cryptocurrencies", "api-bindings", "asynchronous"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

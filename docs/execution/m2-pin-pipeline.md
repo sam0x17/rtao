@@ -85,7 +85,7 @@ The archived core-canary lane design refreshes its disposable main image digest,
 the published image's revision and source labels to match resolved upstream
 main, and runs the Rust core-oracle smoke. The localnet owner wired it into
 `nightly.yml`; the helper removes its exact owned container and retains bounded
-logs under the task root.
+logs under its temporary root.
 
 Validation and remaining evidence:
 

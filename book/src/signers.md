@@ -79,5 +79,5 @@ so its emitted hexadecimal envelope fits the 16 MiB input limit. Plaintext
 is omitted from replay history. Applications own plaintext returned by `open`.
 
 Source review and fixture presence do not establish physical device, browser,
-camera, native Keychain or cross-language execution. Consult the execution
-state and CI results for the checked revision's actual coverage.
+camera, native Keychain or cross-language execution. Consult the CI results
+for the checked revision's actual coverage.

@@ -74,6 +74,5 @@ The generated ZIP is 91,676 bytes, SHA-256
 `775e73b20106c40121719163af4c84061fbf8817b5798c42ac316acd9b2da2ac`.
 The report ZIP is 40,301 bytes, SHA-256
 `79dc6aa200f6645dbccdb02293363ed2789a124a6e777a905be38a008af1daaf`.
-The bounded private proof is
-`.local/recovery/2026-10-14/m5-lock-basket-claim-adoption.json`.
+The bounded adoption proof is not retained in the repository.
 No runtime or oracle validation claim is added by these generated artifacts.

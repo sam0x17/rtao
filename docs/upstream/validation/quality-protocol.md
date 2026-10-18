@@ -25,7 +25,7 @@ GitHub's live API and fetched PR refs agree. Their base is exactly
 posted U1/U2 dependency descriptions are accurate. All three currently have
 `mergeable: true` and `mergeable_state: blocked`; this does not establish a
 passing CI result. The visible Vercel status requires authorization, and the
-retained Rust workflow evidence records startup failures without Rust jobs.
+recorded Rust workflow evidence showed startup failures without Rust jobs.
 
 ## Source review and selected independent proofs
 
@@ -68,8 +68,8 @@ adapter are unchanged by these PRs.
 ## Accuracy limits requiring explicit wording
 
 The U2 body's phrase about rejecting malformed required attributes applied
-to required event fields and fee/weight/outer failure attributes. Root corrected
-the GitHub body and verified its exact resulting text in
+to required event fields and fee/weight/outer failure attributes. The GitHub
+body was corrected and its exact resulting text verified in
 [receipt-pr-body.md](receipt-pr-body.md), SHA-256
 `a029b41f32f84e5eeaab131179a3cbeac40acbaf85699e54cd68664696f16a72`.
 Nested
@@ -109,17 +109,17 @@ are those bytes followed by `6d000000`, the little-endian u32 length.
 
 An independent SCALE decoder obtained `Weight { ref_time: 61586000,
 proof_size: 4198 }`, `Normal`, and `partial_fee: 42489` rao. The raw request,
-response, immutable block and runtime version are retained in
-`quality-fee-live.json` under the task root's `tmp/`. The Rust audit includes
+response, immutable block and runtime version were captured locally; that
+capture is not retained in the repository. The Rust audit includes
 this captured response directly; it does not encode an output value and then
 decode its own bytes.
 
 ## Execution status
 
-Source and posted-body review complete. Final Cargo test runs use root's
+Source and posted-body review complete. Final Cargo test runs use the task's
 unique no-op `RUSTC_WORKSPACE_WRAPPER` scripts under
 `upstream-quality/wrappers/`, one for each PR. This prevents the earlier
-shared-target artifact reuse observed by another audit lane. The initial
+shared-target artifact reuse observed by another audit. The initial
 non-isolated results are excluded from the following certification.
 
 | Check | Rust 1.89.0 | Rust 1.99.0 |
@@ -137,10 +137,7 @@ installed `+1.89` toolchain, compiler `29483883e`. The separate `+1.89.0`
 installation has the same compiler but lacks that target; no installation was
 performed. Current compiler identity is `b940084d7` (1.99.0).
 
-Final test logs are `quality-protocol-isolated-{msrv,current}.log`,
-`quality-navigation-isolated-final.log`, `quality-receipt-isolated-final.log`
-and `quality-protocol-isolated-wasm-final.log` under the recorded task root's
-`tmp/`. U2's MSRV full script initially exited 101 because the added audit
+The final test logs are not retained in the repository. U2's MSRV full script initially exited 101 because the added audit
 probe incorrectly assumed current Treasury metadata and its mock startup
 deadline was too short under concurrent native certificate discovery. The
 final independent receipt log passes both toolchains after using actual
@@ -149,8 +146,8 @@ submitted code did not change.
 
 The six library-test artifact identities are distinct. Their dependency
 files contain `protocol/receipt.rs` exactly for U2, agreeing with each logged
-checkout; 36 artifact/log records and dependency-file hashes are retained in
-`quality-protocol-artifacts.json`.
+checkout; 36 artifact/log records and dependency-file hashes were recorded but
+are not retained in the repository.
 
 | Filing | MSRV library artifact suffix | Current library artifact suffix |
 |---|---|---|
@@ -158,36 +155,33 @@ checkout; 36 artifact/log records and dependency-file hashes are retained in
 | U1 | `412f448c10c98343` | `05e5e6547b1477c9` |
 | U2 | `7bd6583483d5a39b` | `2c26463f0911b4ac` |
 
-The complete disposable probes are retained as a 24 KiB archive,
-`quality-protocol-probes.tar.gz` (SHA256
+The complete disposable probes were archived as a 24 KiB archive,
+`quality-protocol-probes.tar.gz`, not retained in the repository (SHA256
 `7b7c6b446a7496b9243924d66f783ac48865baa53f14959d2348d0b031ebe3f6`).
 
 Strict Clippy recertification passed at all three exact heads. Cargo Clippy overrides
 `RUSTC_WORKSPACE_WRAPPER` with its driver, so its shared-target metadata still
 collides: the PR U2 integration tests temporarily saw a foreign core lacking
 `protocol::receipt` despite the actual U2 source exporting it. The error log
-is `quality-protocol-isolated-clippy-corrected.log`. No submitted-source patch
-was created to hide this build artifact problem. Root approved real
-disposable lint targets at `upstream-quality/lint/pr-{3243,3246,3247}`,
+is not retained in the repository. No submitted-source patch
+was created to hide this build artifact problem. Real disposable lint targets
+were approved at `upstream-quality/lint/pr-{3243,3246,3247}`,
 superseding the earlier shared target requirement for these final lint
 checks. The pinned 1.89.0 core and binding checks ran in those three targets
 with all features/targets and warnings denied, exiting zero for all three
-(71 s, 52 s, 52 s). Their log is `quality-protocol-real-isolated-clippy.log`,
-which records the exact source paths, submitted heads and compiler.
+(71 s, 52 s, 52 s). Their log, which recorded the exact source paths,
+submitted heads and compiler, is not retained in the repository.
 `PYO3_NO_PYTHON=1` was set throughout. An empty task-local `clippy.toml`
 stopped discovery of rtao's consumer-only method bans; upstream's workspace
 lint policy and `-D warnings` stayed active.
 
 The dependency-aware cleanup audit passed for the three worktrees and three
 lint caches: no open files, processes, launchd/configuration references or
-virtual environment dependencies. Symlinks are recorded in
-`quality-protocol-cleanup-audit.json` and remain within their owned trees.
-Root subsequently requested retaining the three source worktrees until
-publication/acceptance; they remain live dependencies for that work. The
-common repository, wrappers and main build cache also remain root-owned
-dependencies. The three dedicated lint caches (about 1.7 GiB) and the
-temporary lint-configuration directory were audited and removed. Removal
-paths are recorded in `quality-protocol-cleanup-removed.json`; retained source
-worktrees are explicitly listed there. The later Unicode publication completed
+virtual environment dependencies. Symlinks remained within their owned trees.
+The three source worktrees were then retained until publication/acceptance;
+they remained live dependencies for that work. The common repository, wrappers
+and main build cache also remain shared dependencies. The three dedicated lint
+caches (about 1.7 GiB) and the temporary lint-configuration directory were
+audited and removed. The later Unicode publication completed
 acceptance for U1/U2 and removed those exact finished worktrees in its separate
 dependency-aware cleanup. U15, shared caches and original wrappers remain live.

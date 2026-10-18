@@ -11,16 +11,15 @@ write was performed. The body, source and test evidence below retains its
 
 A state-only refresh on 2026-10-16 at 06:50 UTC again confirms all thirteen
 recorded filings are open, with all eight PRs unmerged at the reviewed heads
-and empty label/review-request lists. Bounded evidence is
-`.local/recovery/2026-10-15/upstream-state-2026-10-16.json`. This refresh records
+and empty label/review-request lists. Bounded evidence is not retained in the
+repository. This refresh records
 current body hashes but does not repeat the body/source/test audit or the
 authored-search census. No GitHub write was performed.
 
 A further state-only refresh on 2026-10-16 at 20:46 UTC confirms all thirteen
 filings remain open, every PR HEAD and base matches this report, and all body
 hashes match the 06:50 refresh. PR label and requested-review lists remain
-empty. Evidence is
-`.local/recovery/2026-10-15/upstream-state-f9140e9-2026-10-16.json`.
+empty. Evidence is not retained in the repository.
 This refresh uses read-only GraphQL fields; it does not repeat source/tests
 or make a new authored-filing census claim. No GitHub write was performed.
 
@@ -56,7 +55,7 @@ Fresh source reads found no new material defect in these reviewed changes. Sourc
 
 The current #3250 body correctly says that a broken, currently installable stable SDK/core pair was **not established**. Its eager imports create a dependency-version coordination requirement before release. The retained audit selected no version floor and did not execute the proposed minimum-wheel or upgrade tests. The earlier unqualified statement that the existing dependency already permits a broken stable pair would overstate that evidence.
 
-The current bodies of twelve filings match their retained body/snapshot text byte for byte. For #3243, which has a report rather than a separate body snapshot, its live body was read against the exact source and report. #3250's release-qualified body SHA256 remains `47a8e9a91400fde422b982c04f9f1404ffcf642a77df34e8ecb90087c3fd1b61`. Corrected #3246/#3247 production hashes match their retained publication evidence; all twenty retained accepted-stage log hashes also match their result manifests. Original `pr-u1.patch`, `pr-u2.patch` and the opening historical sections of the quality reports refer to earlier commits; the correction patches and final committed-HEAD records supply the evidence for today's heads.
+The current bodies of twelve filings match their retained body/snapshot text byte for byte. For #3243, which has a report rather than a separate body snapshot, its live body was read against the exact source and report. #3250's release-qualified body SHA256 remains `47a8e9a91400fde422b982c04f9f1404ffcf642a77df34e8ecb90087c3fd1b61`. Corrected #3246/#3247 production hashes match their retained publication evidence; all twenty accepted-stage log hashes also matched their result manifests at audit time (the raw logs are no longer retained in the repository). Original `pr-u1.patch`, `pr-u2.patch` and the opening historical sections of the quality reports refer to earlier commits; the correction patches and final committed-HEAD records supply the evidence for today's heads.
 
 Fresh hosted-status reads show ten `startup_failure` workflows for each of the seven Subtensor heads, zero check-runs, and a Vercel authorization failure. Their Check Rust runs are [38511706224](https://github.com/RaoFoundation/subtensor/actions/runs/38511706224), [38526348269](https://github.com/RaoFoundation/subtensor/actions/runs/38526348269), [38607457513](https://github.com/RaoFoundation/subtensor/actions/runs/38607457513), [38607457003](https://github.com/RaoFoundation/subtensor/actions/runs/38607457003), [38556993032](https://github.com/RaoFoundation/subtensor/actions/runs/38556993032), [38561149347](https://github.com/RaoFoundation/subtensor/actions/runs/38561149347), and [38600789621](https://github.com/RaoFoundation/subtensor/actions/runs/38600789621), in the PR-table order. Zondax has seven `action_required` workflows and zero check-runs, including [Verify PRs to main 38592915868](https://github.com/Zondax/ledger-polkadot/actions/runs/38592915868). None of these current upstream checks provides a passing hosted test result. No forbidden label or review-request action was used to retry them.
 

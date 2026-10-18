@@ -10,7 +10,7 @@ test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
 test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
 test -z "$(git status --porcelain --untracked-files=normal)"
-# Prerequisites are inspected, never installed or changed on the user's host.
+# Prerequisites are inspected, never installed or changed on the build host.
 rustup target list --installed | rg -qx aarch64-apple-darwin
 if test -n "${RTAO_MAC_INTEL_SYSROOT:-}"; then
   RTAO_MAC_INTEL_SYSROOT=$(cd "$RTAO_MAC_INTEL_SYSROOT" && pwd -P)
@@ -29,7 +29,7 @@ mkdir -p "$dist" "$CARGO_TARGET_DIR" "$TMPDIR"
 rtao_copy_release_licenses "$dist"
 test ! -e "$dist/macos-build.json"
 # Use the repository gate's already-provisioned runner. Never install a tool
-# or alter PATH outside this process on the user's Mac Studio.
+# or alter PATH outside this process on the macOS build machine.
 export PATH="$RTAO_TEMP_ROOT/ci/tools/bin:$PATH"
 nextest_version=$(sed -n 's/^cargo-nextest = "\([^"]*\)"/\1/p' ci/tool-versions.toml)
 test -n "$nextest_version"

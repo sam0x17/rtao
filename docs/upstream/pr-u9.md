@@ -36,12 +36,12 @@ Rust 1.89 on macOS ARM64 passed the clean committed-HEAD pre-push gate:
 - Portable `wasm32-unknown-unknown` check with default features disabled.
 - Core/binding formatting and committed-diff checks.
 
-The [pre-push log](validation/pr-u9-pre-push.log) records the review SHA's
+A pre-push log (not retained in the repository) recorded the review SHA's
 checks. A Python materialization regression is included for hosted CI only.
 No Python interpreter ran for this filing; binding checks explicitly used
 `PYO3_NO_PYTHON=1`. Upstream's guide requests the `unarbos` actor and full
-monorepo preflight. The user's authorized `sam0x17` identity and instruction
-to keep Python execution in CI take precedence. The task-local hook checked
+monorepo preflight. The maintainer's account (`sam0x17`) and the project
+decision to keep Python execution in CI take precedence. The task-local hook checked
 that identity, exact fork and branch, clean HEAD, exact seven-file scope and
 the scoped Rust gate. No force push or hook bypass was used.
 
@@ -54,17 +54,13 @@ Remote checks have not validated this code. Ten workflows ended in
 had zero jobs and zero check-runs. GitHub CLI suggests a workflow-file issue
 without a specific diagnostic. The PR is open at the review SHA with no
 labels or review requests. No retry, `CI` label, subscriber review request or
-deployment authorization was made. Bounded state, workflow and diagnostic
-snapshots are retained under `validation/pr-u9-*`.
+deployment authorization was made. The PR body snapshot is retained as
+[`validation/pr-u9-body.md`](validation/pr-u9-body.md); bounded state, workflow
+and diagnostic snapshots are not retained in the repository.
 
-The isolated checkout and scratch under the recorded temporary root's
-`tmp/upstream-metadata-u9/` directory were removed after the dependency audit.
+The isolated checkout and task scratch directory were removed after the dependency audit.
 The audit found no running process, open file, launchd unit, configuration,
 symlink or virtualenv dependency on this directory; it inspected 41 symlinks
-and 96 configuration/environment/Git files. An unrelated SMB backup mount
-was unavailable to `lsof`; the scoped local-tree query found no open file.
-Cleanup removed 3,155 files, 563 directories and one symlink, about 207 MB.
-Its final result is recorded in [pr-u9-cleanup.json](validation/pr-u9-cleanup.json).
-Shared pin/build/tool caches and other agents' directories remain live.
-Retained hook/gate scripts document completed checks and reference the
-removed task scratch; they are not installed hooks.
+and 96 configuration/environment/Git files; the scoped local-tree query found
+no open file. Cleanup removed 3,155 files, 563 directories and one symlink,
+about 207 MB. Shared pin/build/tool caches and unrelated work remain live.

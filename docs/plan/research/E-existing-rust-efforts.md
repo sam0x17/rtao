@@ -30,7 +30,7 @@ There are eleven distinct Rust codebases that touch subtensor, plus the official
 
 **The gap none of them fills** (section 5): a published, semver'd, tokio-native Rust SDK that (a) is metadata-driven but *verifies* the runtime it is talking to, (b) implements the v11 `btauth/1` signed-HTTP scheme (zero Rust implementations exist today — `rg -il "btauth|X-Bittensor-Hotkey"` across all repos matches only agcli prose), (c) does CRv3 timelocked commits with the chain's *stateful* epoch model, (d) supports mechanism weights, and (e) ships a miner/validator framework plus a localnet test harness.
 
-**The user's own `mev-scanner`** (section 6) is already written in the style that fits best: raw `jsonrpsee` + `frame-decode` + `scale-value`, metadata-version-agnostic, zero codegen, `anyhow` contexts, defensive fallbacks. The plan should keep that posture and add structure (crates, typed errors, `tracing`, tests), not replace it with static codegen.
+**The maintainer's own `mev-scanner`** (section 6) is already written in the style that fits best: raw `jsonrpsee` + `frame-decode` + `scale-value`, metadata-version-agnostic, zero codegen, `anyhow` contexts, defensive fallbacks. The plan should keep that posture and add structure (crates, typed errors, `tracing`, tests), not replace it with static codegen.
 
 ---
 
@@ -206,7 +206,7 @@ Everything in V16 metadata uses newtypes (`NetUid(u16)`, `AlphaBalance(u64)`, `M
 
 **Reusable ideas.** Startup metadata verification with arg-name equality; explicit nonce + mortality + journal; event-asserting broadcast; u64-aware fee decoding; legacy-only backend rationale; bearer/redaction hygiene; localnet CI job shape.
 
-### 2.9 sam0x17/mev-scanner (the user's own code)
+### 2.9 sam0x17/mev-scanner (the maintainer's own code)
 
 **Identity.** `https://github.com/sam0x17/mev-scanner`, 0 stars, last push 2026-03-02, no license file, edition 2024, single `src/main.rs` of 2,259 lines, no tests. Deps (`Cargo.toml:6-18`): `anyhow`, `dashmap`, `frame-decode 0.9`, `frame-metadata 23`, `futures`, `hex`, `jsonrpsee 0.24` (ws-client, macros), `parity-scale-codec`, `scale-value 0.18`, `sp-crypto-hashing`, `serde`, `subxt 0.44` (lock 0.44.2), `tokio`.
 
@@ -214,7 +214,7 @@ Everything in V16 metadata uses newtypes (`NetUid(u16)`, `AlphaBalance(u64)`, `M
 
 **Style.** `anyhow::Result` with `.context("chain_getBlockHash failed")` on every RPC; `anyhow!` for ad-hoc errors; no `tracing`/`log` — `println!` key=value event lines (`"[{ts}] tx={hash} top={call} priority=… baseline=… tip=…"`, `:735-760`) and a `\r` status line (`print_status_line_once` `:771-820`), `eprintln!` for errors; lock-free `Stats` via `AtomicU64` (`:217-262`), `DashMap` for replacement tracking, `Arc<RwLock<HeadState>>` refreshed by a 6 s ticker task (`:330-345`); `futures::stream::buffer_unordered(fee_concurrency)` for parallel block scans (`:1065-1085`); hand-rolled `Config::from_args` (`:50-130`); `#[derive(Decode)]` structs instead of generated types; zero codegen, zero `build.rs`. Small nits: `Stats::note_tip` is needlessly `async` (`:238`); `eprintln!`/`println!` interleave with the `\r` status line.
 
-**What this tells the plan (section 6):** the user already prefers runtime-metadata-driven decoding, explicit RPC-level control with graceful fallbacks, `anyhow` at the binary layer, and simple structured text logs over frameworks.
+**What this tells the plan (section 6):** the maintainer already prefers runtime-metadata-driven decoding, explicit RPC-level control with graceful fallbacks, `anyhow` at the binary layer, and simple structured text logs over frameworks.
 
 ### 2.10 btwallet 4.1.0 (archived) — `bittensor_wallet`
 
@@ -343,14 +343,14 @@ Name check: crates.io has no `rtao` (API 404; search empty); GitHub `sam0x17/rta
 
 ---
 
-## 6. Notes on the user's mev-scanner style (what the plan should respect)
+## 6. Notes on the maintainer's mev-scanner style (what the plan should respect)
 
 Observed in `$UP/sam0x17_mev-scanner/src/main.rs` (cited in §2.9):
 
 - **Dynamic over static**: raw `state_getMetadata` + `frame-decode` + `scale-value`, version-agnostic across V14/V15/V16, no codegen, no `build.rs`. rtao's chain layer should keep this (dynamic subxt 0.51 or raw jsonrpsee + frame-decode where subxt gets in the way), and reserve any generated types for *optional* convenience crates.
 - **Fallback ladders at the RPC edge**: subscription → polling on "Method not found"; validate_transaction v3 → v2; metadata 16 → 15 → 14 → legacy; Compact length-prefix retry. Design rtao's transport with explicit capability probing (`rpc_methods`) and fallbacks rather than assuming a node profile.
-- **`anyhow` with `.context()` at the binary layer**; for library crates rtao should expose `thiserror` enums (chain/decode/transport/auth/keyfile) that still carry context strings, and convert to `anyhow` only in bins/examples. The user's code never swallows errors silently — keep that (contrast CortexLM's `unwrap_or_default`).
-- **Logging**: key=value single-line events and a status line, no `tracing` subscriber. The plan should use `tracing` in libraries (structured fields) but default to a compact key=value formatter so output looks like what the user already writes; keep stdout for data, stderr for diagnostics.
+- **`anyhow` with `.context()` at the binary layer**; for library crates rtao should expose `thiserror` enums (chain/decode/transport/auth/keyfile) that still carry context strings, and convert to `anyhow` only in bins/examples. The maintainer's code never swallows errors silently — keep that (contrast CortexLM's `unwrap_or_default`).
+- **Logging**: key=value single-line events and a status line, no `tracing` subscriber. The plan should use `tracing` in libraries (structured fields) but default to a compact key=value formatter so output looks like what the maintainer already writes; keep stdout for data, stderr for diagnostics.
 - **Concurrency**: `buffer_unordered` with a `--concurrency` knob, atomics/`DashMap` for shared counters, one background ticker task for head state. Fits a tokio-native SDK with bounded fan-out for metagraph sync and block scans.
 - **Minimal dependencies, hand-rolled CLI args** — the plan can use `clap` in tools but should keep core crates lean (`btt`'s discipline resonates with this).
 - **No tests in the scanner** — the plan must add the test culture (golden vectors, localnet e2e) rather than assume it.

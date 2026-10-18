@@ -1,7 +1,8 @@
 # M5-01 client unsigned transaction JSON
 
-The client subset was recovered in memory from
-`m5-offline/proof/m5-source-candidate.patch`. Its SHA-256 matches both the
+The client subset was recovered in memory from the recovered
+`m5-source-candidate.patch`, which is not retained in the repository. Its
+SHA-256 matches both the
 recovery manifest and the expected value
 `0afc4b1f4010c7031c2d8683935fd3c28da38f9e14a96775b8802240aea63031`.
 Only `crates/rtao-client/src/{lib,offline,submit}.rs` and

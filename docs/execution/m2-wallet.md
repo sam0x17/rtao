@@ -63,8 +63,7 @@ validation, so a FIFO without a writer is rejected promptly. Regular symlink
 targets remain supported. Reads use wiping byte buffers before UTF-8 validation
 and preserve password precedence and whole-file trimming. The nine library
 tests pass on current Rust and Rust 1.89, including oversized sparse files,
-directories, FIFOs, regular symlinks and invalid UTF-8. Logs are
-`tmp/root-m2-wallet-security-{current,msrv}.log` under the recorded root.
+directories, FIFOs, regular symlinks and invalid UTF-8. The logs are not retained in the repository.
 
 Historical verification:
 

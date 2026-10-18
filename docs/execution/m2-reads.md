@@ -31,7 +31,7 @@ denominator, replace repeated targets with their last value, and sort validators
 LastUpdate differences remain signed; the dispatcher preserves arbitrary signed
 Python list indices, including null results for enormous positive indices.
 Typed namespace calls still take a native `Uid`. These local indices and block
-differences are independent of the user's native checked-u64 balance decision.
+differences are independent of the native checked-u64 balance decision.
 Block duration follows Python's float `1000.0` divisor, while timestamp keeps
 its separate integer-division and microsecond conversion behavior.
 
@@ -64,8 +64,8 @@ and their Rust replay are optional targeted hosted evidence under Q30;
 M2-14 source machinery does not assert independent Python behavior. These Rust
 checks do not claim oracle or milestone acceptance.
 
-Historical Cargo invocations used the recorded task root
-`target/execute-plan.6Ro0PC`, its `build` target and `tmp` directory. A bounded
+Historical Cargo invocations used a recorded task-scoped temporary root with
+its own build target and temporary directory. A bounded
 read-generator bootstrap under that root used the owned generator and extractor
 sources while the normal xtask dependency graph was being integrated. After the
 canonical checks passed, its process, launchd, configuration, symlink and virtual

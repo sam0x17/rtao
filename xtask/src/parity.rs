@@ -1515,7 +1515,7 @@ mod tests {
     impl Fixture {
         fn new() -> Result<Self> {
             static NEXT: AtomicU64 = AtomicU64::new(0);
-            // Explicit task roots win on the Mac Studio; ordinary CI and local
+            // An explicit task root wins when set; ordinary CI and local
             // Cargo runs keep their disposable fixtures inside the repo target.
             let base = if let Some(base) = std::env::var_os("RTAO_TEMP_ROOT") {
                 PathBuf::from(base).join("license-gate/fixtures")

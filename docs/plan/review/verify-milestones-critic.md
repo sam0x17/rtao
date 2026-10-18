@@ -251,9 +251,9 @@ the queued path dissolves the lowest-priced subnet and lowers a global limit, so
 
 ## MC-24: refuted
 
-Q18 is a decision about public upstream engagement on the user's behalf. PLAN already recommends "file each PR when
-its evidence exists" and states the interim default (M9), as the instructions require for items needing user input.
-The fix makes filing the default while also calling it "the user's call", which contradicts itself. The R3 and R16
+Q18 is a decision about public upstream engagement on the maintainer's behalf. PLAN already recommends "file each PR when
+its evidence exists" and states the interim default (M9), as the instructions require for items needing maintainer input.
+The fix makes filing the default while also calling it "the maintainer's call", which contradicts itself. The R3 and R16
 mitigations (template, `rtao doctor`, isolation) do not depend on early filing. Branch readiness is already shown
 by §15 "Ready in".
 
@@ -263,7 +263,7 @@ by §15 "Ready in".
 NOTICE) omits the Apache-2.0 text (§4(a)) and in-file change notices (§4(b)). The fix labels only three crates
 `MIT AND Apache-2.0`, although file-for-file ports land in most crates (`rtao-tx`, `rtao-intents`, `rtao-reads`,
 `rtao-client`, `rtao-rpc`, `rtao-wallet`, `rtao-cli`, …). Forcing `rtao-core-ext` to Apache-2.0-only overrides the
-user's Q1 for code the user authors.
+maintainer's Q1 for code the maintainer authors.
 
 ## MC-26: confirmed
 

@@ -30,4 +30,4 @@ Interpretation:
 ## Dependency weight (measured)
 
 - `cargo tree -e normal` for the feasibility crate (subxt 0.51 + subxt-signer + tokio, static codegen of the full finney metadata): **228 unique crates**.
-- Clean `cargo build --release` on this machine (Apple Silicon, Rust 1.99): **108 s wall / 171 s user** (dependencies + the ~60k-line generated module). Incremental rebuilds after editing main.rs took a few seconds.
+- Clean `cargo build --release` on a local workstation (Apple Silicon, Rust 1.99): **108 s wall / 171 s user** (dependencies + the ~60k-line generated module). Incremental rebuilds after editing main.rs took a few seconds.

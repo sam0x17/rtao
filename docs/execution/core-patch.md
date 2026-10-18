@@ -110,7 +110,7 @@ lock changed only the core revision and its `ed25519-zebra` dependency edge;
 unrelated resolver updates were excluded. The move to `626f2a4f` changes only
 the core revision in the root and TLS locks.
 
-Local evidence for `626f2a4f` on workstation: the fork `bittensor-core` library
+Local evidence for `626f2a4f`: the fork `bittensor-core` library
 tests pass (72), the rtao core, core-ext, signer and wallet tests pass (250),
 and `cargo xtask pin --check` passes against the fork revision. Hosted CI for
 the final head is recorded in `docs/execution/state.md`.

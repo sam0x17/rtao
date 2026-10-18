@@ -21,11 +21,11 @@ BLS/provenance and both real-binary doctor regressions. The combined checkpoint
 now satisfies the outstanding M0 exit check; active steps M0-01 through M0-29
 and C1-C7 are complete within Q30.
 
-The bounded evidence under `.local/recovery/2026-10-15/` is
-`m0-m1-d01830c-hosted-results.json` (131,708 bytes, SHA256
-`bef2ded037673d97f8016981ab402868776824558289fd895f96aeb53c3a33a0`),
-`m0-d01830c-source-audit-delta.json` and the original independent source audit.
-The combined proof authenticates six job identities, 175 unique named results,
+The bounded hosted-results record (131,708 bytes, SHA256
+`bef2ded037673d97f8016981ab402868776824558289fd895f96aeb53c3a33a0`), the
+source-audit delta and the original independent source audit were kept
+privately and are not retained in the repository. The combined proof
+authenticates six job identities, 175 unique named results,
 129 final source inputs, doctests and the documentation upload. It preserves
 M0/M1/new-fixture group memberships. No raw log or archive is retained.
 
@@ -87,8 +87,7 @@ at `06a3598` passes compilation, strict Clippy, parity and the five other jobs.
 Nextest runs 2,021 tests: 2,005 pass, 16 fail and four are skipped. Source-backed
 fixture corrections are authored without disabling assertions or gates. The
 all-83 plan fixture passes; doctests and docs are not reached. Subsequent M6
-source still needs generated integration and full hosted validation. Bounded
-failure evidence is `check-38710720744.json` in private recovery.
+source still needs generated integration and full hosted validation.
 
 Latest inspected normal run
 [38710157011](https://github.com/sam0x17/rtao/actions/runs/38710157011)
@@ -105,8 +104,7 @@ at `bad95c0` passes compilation, strict Clippy and the five other jobs. The
 lock fixture now qualifies; parity next requires an explicit AddStake class
 reference in its helper-based assertion fixture. Concrete intent annotations
 are added to existing trade/claim fixtures without changing the gate. Tests,
-doctests and documentation builds remain unexecuted. Private bounded evidence
-is `check-38707066144.json`.
+doctests and documentation builds remain unexecuted.
 
 Earlier normal run
 [38705671132](https://github.com/sam0x17/rtao/actions/runs/38705671132)
@@ -115,8 +113,7 @@ Parity's existing evidence gate requires explicit Rust class references for
 the three lock settings/move operations, whose shared fixture uses dynamic
 dispatch. Typed variant/field assertions now supplement its existing bytes,
 policy and preview assertions. The checker is unchanged. Nextest, doctests
-and docs builds were not reached; bounded evidence is retained privately as
-`check-38705671132.json`.
+and docs builds were not reached.
 
 Earlier normal run
 [38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
@@ -124,16 +121,14 @@ at `1c807e1` fails check/features compilation on the missing `ReadValue`
 registration for the existing DecodeAsType `SimSwapResult` model. The client
 registration is corrected in source; ordinary execution still needs to pass.
 Supply, no-host and semver pass, while MSRV is still running. Tests, doctests
-and documentation builds were not reached. Bounded evidence is retained
-privately as `check-38705303263.json`.
+and documentation builds were not reached.
 
 Earlier normal run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
 at `6470a11` passes supply, MSRV, features, no-host and semver. Strict Clippy
 rejects two generated leasing argument clones on Copy types. The generator
 source correction and verified generation from run 38704675475 are adopted;
-another normal check is required. Nextest and doctests were not reached. The private bounded failure
-inventory and log digest are `check-38703332560.json`.
+another normal check is required. Nextest and doctests were not reached.
 
 Earlier normal run
 [38702708753](https://github.com/sam0x17/rtao/actions/runs/38702708753)

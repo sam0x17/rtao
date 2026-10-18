@@ -63,7 +63,7 @@ source or fixture was changed for this run. No container, emulator or SDK/test
 Python was executed. However, a later log audit found that Hunter's dependency
 installer automatically discovered local Python and ran its `link-all.py`
 helper; GTest configuration also discovered the interpreter. This violated the
-session's prohibition on local Python. The audit did not inspect this downloaded
+project's prohibition on local Python. The audit did not inspect this downloaded
 helper before configuration. Before cleanup, its task-local discovery script
 was changed to fail before any interpreter probe and select Hunter's shell
 fallback. The subsequent direct native builds execute no Hunter helper. This is
@@ -134,15 +134,15 @@ show `limit_price : 950000000`; amount fields still format as TAO and
 exact field/type match, nested call unwinding and unchanged Option behavior.
 No runtime metadata or transaction semantics were changed.
 
-After restoring the checkout for root review, a second corrected build also
+After restoring the checkout for review, a second corrected build also
 passes **5604 of 5604 tests** without invoking CMake, Hunter or Python. A direct
 native build script reads the CMake app-source inventory and compiles the same
 20 existing C sources and 10 C++ app/test/dependency sources with Clang. The
 absent `zbuffer.c` entry is skipped exactly as CMake's `GLOB` skips it. It uses
 the existing debug/BLAKE3/version definitions and the same fmt 7.1.2, GTest
 1.14.0 and nlohmann_json 3.12.0 archives, verified against the original pinned
-archive digests. Compiler/link argv and archive hashes are retained in
-`quality-ledger/native-command-provenance.json`; the explicit compiler process
+archive digests. Compiler/link argv and archive hashes were recorded, but that
+provenance file is not retained in the repository; the explicit compiler process
 list avoids the interpreter discovery/helper behavior of the earlier build.
 
 The corrective follow-up is **published** as
@@ -192,27 +192,28 @@ types.
 
 ## Evidence and workspace hygiene
 
-Bounded logs, posted-body snapshots, hashes, fixture provenance, test sources
-and the corrective patch are retained under the recorded task root at
-`upstream-quality/ledger-audit/` and in [the bounded artifact directory](quality-ledger/).
+The posted-body snapshots are retained in
+[the bounded artifact directory](quality-ledger/). Bounded logs, hashes,
+fixture provenance, test sources and the corrective patch are not retained in
+the repository; the corrective change is published upstream as `8645ebd`.
 Initial disposable C++ checkout, build and Hunter directories were cleaned after
-process/dependency checks. Root then requested the corrected source for review;
+process/dependency checks. The corrected source was then requested for review;
 the exact Zondax head was fetched again and the preserved corrective patch
-applied. Those restored directories were retained for root review,
+applied. Those restored directories were retained for review,
 committed-head checks and authorized follow-up publication. After publication
 and body/head verification, checks found no process/open-file, launchd,
 configuration, external symlink, virtual-environment or external Git-worktree
 dependency on the checkout, native build, dependency sources or formatter.
 The native test binary links only system libc++ and libSystem. The exact owned
 `zondax/`, `cpp-pr/`, `native-deps/` and `native-tools/` directories were then
-removed. Both sets of isolated C++ proofs and the outgoing commit are retained
-in the bounded artifact directory. The shared Rust/Git caches and root-owned
-Subtensor checkout remain live and were not removed. No CMake reconfiguration
+removed. The isolated C++ proofs and outgoing commit are not retained in the
+repository beyond the published commit. The shared Rust/Git caches and the
+shared Subtensor checkout remain live and were not removed. No CMake reconfiguration
 ran after restoration.
 
-A reconfigure initially omitted `HUNTER_ROOT` and created a 32 MiB
-`~/.hunter` cache. Its birth time established that this task created it.
-After restoring the recorded root and rebuilding stale dependency files, checks
+A reconfigure initially omitted `HUNTER_ROOT` and created a 32 MiB Hunter
+cache in the home directory. Its birth time established that this task created it.
+After restoring the task directory and rebuilding stale dependency files, checks
 found no running/open-file, launchd, configuration, external symlink, virtual
 environment or live build dependency on that cache. The exact directory was
 removed; no unrelated home-directory files were removed. The Python-helper

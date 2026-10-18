@@ -30,7 +30,7 @@ The full raw evidence is retained in hosted artifact `11973500903`,
 
 ## Exact maintenance policy
 
-The user authorized best-effort crate remediation while accepting upstream
+The maintainer authorized best-effort crate remediation while accepting upstream
 limitations. No compatible released update removes this dependency: the latest
 parent still requires smallstr, and the suggested replacements require changing
 and validating that parent. Maintaining a private fork for an informational

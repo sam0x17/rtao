@@ -63,8 +63,7 @@ all 23 dependency hashes, unchanged role package sets and counts
 additions and the single pre-serde constructor guard. The matrix changes only
 the twelve intent statuses, renamed D-045 fixture reference and D-046 addition.
 Unchanged read interfaces and other matrix families were checked byte for byte.
-The private bounded proof is
-`.local/recovery/2026-10-14/m5-crowdloan-root-adoption.json`.
+The bounded adoption proof is not retained in the repository.
 Runtime validation remains empty, and the Apple-target dependency graph was
 measured on Linux. These artifacts do not establish native Mac, oracle, hardware
 or chain interoperability coverage.

@@ -144,12 +144,12 @@ unchanged lock.
 The direct core proof command, run from the detached v478 checkout, is:
 
 ```sh
-export RTAO_TEMP_ROOT=~/workspace/rtao/target/execute-plan.6Ro0PC
+: "${RTAO_TEMP_ROOT:?set to the local task root}"
 export CARGO_TARGET_DIR="$RTAO_TEMP_ROOT/build"
 export TMPDIR="$RTAO_TEMP_ROOT/tmp"
 export PYO3_NO_PYTHON=1
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
-export RTAO_QUALITY_METADATA_ROOT=~/workspace/rtao/vendor/metadata/finney
+export RTAO_QUALITY_METADATA_ROOT=/path/to/rtao/vendor/metadata/finney
 export RUSTC_WORKSPACE_WRAPPER="$RTAO_TEMP_ROOT/upstream-quality/wrappers/base-v478.sh"
 cargo +1.89.0 test --locked --offline -p bittensor-core \
   --no-default-features --test secret_uri_diagnostics_repro -- --nocapture
@@ -187,23 +187,23 @@ separate.
 
 Public API JSON, exact source snapshots, source hashes, the Rust integration
 test, historical RPC captures and their strict verification script, and
-both locally prepared issue corrections are retained under
-`target/execute-plan.6Ro0PC/upstream-quality/issues-audit`. The source and API
-evidence is bounded to approximately 3 MB. Cargo uses the shared task build
+both locally prepared issue corrections were kept in a local task evidence
+directory and are not retained in the repository. The source and API
+evidence was bounded to approximately 3 MB. Cargo uses the shared task build
 root, `TMPDIR` remains beneath the recorded temporary root, and
 `PYO3_NO_PYTHON=1` is mandatory. No local Python, containers, commits,
 pushes, new filings, labels, or review requests are part of this audit.
 
 The exact detached `base-v478` checkout was removed with Git's worktree
 command after the isolated reruns. Its only untracked change was the
-executed proof source, retained byte for byte in the evidence directory.
+executed proof source, kept byte for byte in that evidence directory.
 Cleanup found no matching processes, local open handles, active runtime
 configuration references, launchd references, incoming workspace symlinks,
 or virtual environments. The one checkout symlink targeted its own tracked
-`.agents/skills` directory. `lsof` warned about an unrelated unavailable SMB
-mount; the audited checkout is on the local filesystem. Other audit owners
+`.agents/skills` directory. The audited checkout is on the local filesystem.
+Other audit owners
 reported no filesystem dependency on this base checkout.
 
 The common bare Git repository, sibling worktrees, recorded build cache and
-shared wrappers remain live dependencies of the parent task. No unrelated
+shared wrappers remain live dependencies of the wider audit. No unrelated
 user work, wallet, private dataset, model asset, or daemon state was removed.

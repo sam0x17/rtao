@@ -9,7 +9,7 @@ rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-# Use the first released rtao-v tag here when M3 is released. Before release,
+# Use the first released rtao-v tag here at the first rtao release. Before release,
 # the generated project's lockfile records the exact main commit it resolved.
 rtao = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false }
 rtao-testkit = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false, features = ["docker"] }

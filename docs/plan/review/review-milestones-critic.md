@@ -602,9 +602,9 @@ architecture §11.4 scenario 10 and §15.2 Q10.
 fire before 1.0, and Q7 (will upstream accept U1-U15) is unanswered until all ~2k staged lines exist; PR-U5 and PR-U7 fix
 confirmed bugs for the core's users (§5.8 #1, #2).
 
-**Fix.** Q18 default until the user answers: "prepare each PR branch with its evidence when ready (§15 'Ready in'), and
+**Fix.** Q18 default until the maintainer answers: "prepare each PR branch with its evidence when ready (§15 'Ready in'), and
 file PR-U4, PR-U5 and PR-U7 as soon as their evidence exists (M2, M2, M4); the rest are filed in M9. Filing is the
-user's call; the branches are ready either way." §12.11 → "PR-U1…U15 filed (those not filed earlier)".
+maintainer's call; the branches are ready either way." §12.11 → "PR-U1…U15 filed (those not filed earlier)".
 
 ## MC-25 (minor, PLAN.md) The licensing default omits what Apache-2.0 requires and labels copied code MIT
 

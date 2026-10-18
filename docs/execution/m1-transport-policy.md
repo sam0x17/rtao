@@ -36,8 +36,8 @@ create a local fixture workspace, install tools or resume a retired build cache.
 
 ## Historical evidence, 2026-10-14
 
-`cargo test --locked -p rtao-rpc policy:: --lib` passed all 16 policy tests on
-the Mac Studio with Rust/Cargo 1.99.0. The tests consume the extracted v478
+`cargo test --locked -p rtao-rpc policy:: --lib` passed all 16 policy tests
+locally with Rust/Cargo 1.99.0. The tests consume the extracted v478
 constants, including the diagnostic limits, and cover the pinned Python
 classifier, metadata truthiness, response body shapes, Unicode sanitization,
 duplicate headers, reset fallback, close 1008, endpoint redaction, and raw retry

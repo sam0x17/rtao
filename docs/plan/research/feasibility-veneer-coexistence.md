@@ -1,6 +1,6 @@
 # Feasibility check: bittensor-core + subxt 0.51 in one crate (the "veneer" stack)
 
-Run on 2026-10-13 from `scratchpad/feasibility/core-plus-subxt` (source in that directory), with the user's
+Run on 2026-10-13 from `scratchpad/feasibility/core-plus-subxt` (source in that directory), with the maintainer's
 direction in force: git dependencies are fine, crates.io publishability is not a goal, build rtao as a veneer
 over `bittensor-core`.
 

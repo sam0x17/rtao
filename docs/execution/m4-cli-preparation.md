@@ -10,10 +10,9 @@ status belongs in [state.md](state.md).
 
 The CLI adoption composes five hash-verified recovery members: the M4-09 CLI
 patch, client continuation supplement, `--json-password` replay fix, PSF
-attribution gate and root NOTICE addition. The original archive and manifest
-remain under `.local/recovery/2026-10-14/`; the bounded adoption record is
-`.local/recovery/2026-10-14/cli-adoption.json`. No disposable source checkout or
-build cache was restored.
+attribution gate and root NOTICE addition. The recovery archive, manifest and
+adoption record are not retained in the repository. No disposable source
+checkout or build cache was restored.
 
 D-041 preserves the original multisig opening across automatic later rounds.
 The client composer refuses absent, replaced and already-approved pending state
@@ -41,9 +40,8 @@ Prepared source and historical isolated results do not establish acceptance
 of the combined code.
 
 Q30 supersedes the old local validation campaign. Applicable client tests and
-builds run on free hosted `ubuntu-latest` CI. Do not restore the retired
-`target/execute-plan.6Ro0PC` workspace, its build caches, queued gates or native
-Keychain harness. Keychain/process behavior is checked through injected runners;
+builds run on free hosted `ubuntu-latest` CI. Do not restore the retired local
+validation workspace, its build caches, queued gates or native Keychain harness. Keychain/process behavior is checked through injected runners;
 real Keychain, device and browser acceptance remain deferred and unverified.
 Python oracle, cross-language interoperability and node scenarios are optional
 targeted hosted checks. No local build or test ran during CLI adoption.

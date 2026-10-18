@@ -46,8 +46,8 @@ Validation on 2026-10-14 at parity tag `v478`, commit
   goldens at blob `0a2fdf4710f4c6a3868aad7f300414775e218d71`.
 - `cargo clippy -p xtask --all-targets --locked -- -D warnings`: passes.
 
-Temporary builds and test fixtures used only the recorded task root
-`target/execute-plan.6Ro0PC/extract`. Tests start no processes or configuration
+Temporary builds and test fixtures used only a recorded local task root.
+Tests start no processes or configuration
 dependencies and remove their fixture directories on return. Disposable build
 outputs are removed after validation; the source, generated goldens and this
 bounded evidence remain in the repository.

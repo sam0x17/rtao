@@ -26,9 +26,9 @@ the repository, release workflow, source ref and source/signer commit, and
 rejects self-hosted attestations. It separately authenticates the local Mac
 record with an approved Ed25519 OpenSSH signature in namespace `rtao-release`.
 The trust-anchor file is absent. Its future setup is outside this goal and is
-not a pending user prerequisite. Missing keys, targets, logs, hashes or provenance fail verification.
+not a pending maintainer prerequisite. Missing keys, targets, logs, hashes or provenance fail verification.
 Archive verification rejects links and paths outside the extraction directory.
-No script or xtask mutates the user's Keychain.
+No script or xtask mutates a local Keychain.
 
 The archived `release-plz.yml` exits unless upkeep is enabled or a read-only dry-run is
 dispatched. Its isolated rehearsal runs the pinned updater and SemVer checker,
@@ -38,7 +38,7 @@ the actual release PR before pushing generated files. Git-only mode disables
 crates.io; release-plz's GitHub release creation is disabled. This path has not
 been dispatched or used to create a PR.
 
-Historical validation on the Mac Studio worktree:
+Historical validation on a macOS build machine worktree:
 
 - All eight release verification tests pass on Rust 1.99 and 1.89, including
   authentic ephemeral Ed25519 signature verification, record tampering, wrong
@@ -63,8 +63,8 @@ Historical validation on the Mac Studio worktree:
   lock criterion, two are skipped. Native Apple ARM runs 633 tests: 631 pass,
   two fail (the BLS criterion and a concurrently-added canary compatibility test
   with `missing evidence string tag`), two are skipped. These are incomplete
-  platform gates, not passing release provenance. Root/owning agents received
-  the failures.
+  platform gates, not passing release provenance. The failures were reported
+  to the owning workstreams.
 
 The builds used Rust/Cargo 1.99.0 on macOS 26.6.2 with Apple SDK 27.0. Native
 binary SHA-256 was
@@ -77,16 +77,15 @@ from a release tag. A future separately requested distribution task would need
 new tagged artifacts and verification; current development requires neither.
 
 An isolated checksum-verified Intel standard library was provisioned under the
-recorded task root for the cross build; the user's installed Rust targets and
+recorded task root for the cross build; the installed Rust targets and
 defaults were not changed. Disposable release tools/docs/target fixtures are
-audited and removed. Bounded logs are retained alongside this report as
-`m1-release-local-build.txt`, `m1-release-{intel,native}-failure*.txt` and
-`m1-release-rustdoc.txt`.
+audited and removed. Raw build, failure and rustdoc logs are not retained in
+the repository.
 One mdBook rehearsal initially interpreted a relative output path against the
 workspace parent; that newly-created output was audited, removed immediately,
 and the build repeated with the absolute task-root path used by the shipped
 script. The old shared-cache references describe that historical run. They do
-not authorize using or recreating the retired `target/execute-plan.6Ro0PC` root.
+not authorize using or recreating the retired local execution root.
 Current development preserves shared global caches and unrelated work, and
 requires no local release/gate work or publication prerequisite. Both workflow
 drafts remain in `.github/deferred-workflows` with inactive triggers.

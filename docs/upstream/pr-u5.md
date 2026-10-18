@@ -39,7 +39,7 @@ Rust 1.89 on macOS ARM64 passed the committed-HEAD pre-push gate:
 - 71 all-feature library tests; one existing physical-OpenCL-GPU test ignored.
 - Strict core/binding Clippy, portable wasm check and package formatting.
 
-The [pre-push log](validation/pr-u5-pre-push.log) records these checks. Binding
+A pre-push log (not retained in the repository) recorded these checks. Binding
 compilation set `PYO3_NO_PYTHON=1`. Python oracle and live-runtime integration
 evidence remain pending. The five-file change uses the existing Apache SDK
 definitions; no GPL pallet source was copied. The task-local gate and cleanup
@@ -51,8 +51,8 @@ workflows ended in `startup_failure`.
 had zero jobs and zero check-runs. GitHub CLI suggests a workflow-file issue,
 with no specific API diagnostic. Vercel requires authorization. No retry,
 forbidden label, review request or deployment authorization was made.
-Snapshots remain in `validation/pr-u5-*.json` and
-`validation/pr-u5-rust-view.txt`; remote checks have not validated this PR.
+The PR body snapshot is [`validation/pr-u5-body.md`](validation/pr-u5-body.md);
+remote checks have not validated this PR.
 
 The rtao-owned staged predictor must carry the same checked simulation-budget
-guard. This upstream worker did not modify rtao product code or PLAN.md.
+guard. This upstream work did not modify rtao product code or PLAN.md.

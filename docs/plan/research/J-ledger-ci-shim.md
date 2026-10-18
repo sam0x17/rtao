@@ -1,10 +1,10 @@
 # J: Ledger signing in CI, an emulator shim (2026-10-13)
 
-**Question.** The user accepted a manual Ledger device run per release and asked whether "some shim" could automate
+**Question.** The maintainer accepted a manual Ledger device run per release and asked whether "some shim" could automate
 Ledger testing (PLAN.md Q17). This report consolidates three research runs of 2026-10-13: the protocol and the core's
 integration points, the tooling landscape with a local emulator run, and a hands-on run with a Rust probe on
 `bittensor-core`. The decision it supports is recorded in [architecture §11.9](../architecture.md#119-ledger-emulator-lane-speculos)
-and [PLAN.md §14.1](../../../PLAN.md#141-decisions-answered-2026-10-13) (Q17). After this research the user decided to
+and [PLAN.md §14.1](../../../PLAN.md#141-decisions-answered-2026-10-13) (Q17). After this research the maintainer decided to
 carry PR-U17 as a Cargo patch of the core in rtao's own workspace until it ships (Q20,
 [architecture §1.11](../architecture.md#111-the-pr-u17-core-patch)); §0, §3 and §4 below are revised for that decision,
 the evidence in §1 and §2 is unchanged, and §8 records a prototype of the core patch, run in Docker after the decision.
@@ -167,7 +167,7 @@ signer backend lands" (`UP/sdk/bittensor-core-wasm/src/errors.rs:15-18`).
 | C. A staged copy of `ledger.rs` and `hid.rs` in `rtao-core-ext`, used in production until PR-U17 | rtao's copy, which is what ships | — | rejected: production would leave the core's COMPAT code for test convenience, and `rtao-core-ext` would gain `hidapi` and `ledger-apdu` |
 | D. A **test-only APDU client** in `rtao-testkit`: the core's constants, path, chunking and error text transcribed | everything above the APDU layer: rtao's request, the core's proof, the app, the chain | [E]: run B's probe did exactly this | first proposed as the interim; after Q20, only the fallback if upstream declines PR-U17 |
 | E. The backend seam alone (`FakeLedger`) | nothing below `LedgerSigner` | — | kept for unit tests; not enough |
-| F. **A core patch**: rtao's root manifest builds `bittensor-core` from a fork branch, `core_tag` plus the PR-U17 commits, until a `core_tag` contains PR-U17 | the core's `ledger.rs` (not `hid.rs`) from the lane's first run, on any OS with Docker | decided by the user after this research (Q20) and prototyped (§8); subnet builds never see it, because Cargo ignores `[patch]` in dependencies | **adopted** until PR-U17 ships ([architecture §1.11](../architecture.md#111-the-pr-u17-core-patch)) |
+| F. **A core patch**: rtao's root manifest builds `bittensor-core` from a fork branch, `core_tag` plus the PR-U17 commits, until a `core_tag` contains PR-U17 | the core's `ledger.rs` (not `hid.rs`) from the lane's first run, on any OS with Docker | decided by the maintainer after this research (Q20) and prototyped (§8); subnet builds never see it, because Cargo ignores `[patch]` in dependencies | **adopted** until PR-U17 ships ([architecture §1.11](../architecture.md#111-the-pr-u17-core-patch)) |
 
 ## 4. Recommended design
 
@@ -197,7 +197,7 @@ signer backend lands" (`UP/sdk/bittensor-core-wasm/src/errors.rs:15-18`).
   format rtao ships, and replay runs the core's own `ledger.rs`. Until PR-U17 ships in `core_tag`, `with_transport`
   comes from the core patch (option F; architecture §1.11), and only `rtao-testkit::ledger_emu` may name it, so no
   shipped crate depends on the patch. §8.7 ran both transports against the app.
-- **Fallback.** If upstream declines PR-U17, the user chooses between carrying the patch, option D (a test-only
+- **Fallback.** If upstream declines PR-U17, the maintainer chooses between carrying the patch, option D (a test-only
   `LedgerBackend` over Speculos's APDU port that transcribes `CORE/signers/ledger.rs`: constants, `bip44_path`,
   chunking, `device_error`, with the attribution header) and option B.
 
@@ -257,10 +257,10 @@ The manual device run per release stays, because the emulator cannot cover:
   std-only Speculos TCP transport and a binding constructor, so upstream's own tests can run on the emulator. Precedent:
   stellar-cli is generic over Zondax's `Exchange` trait with HID and emulator implementations
   ([signer/ledger.rs:84-112](https://github.com/stellar/stellar-cli/blob/7c07fd2d0f89ea0f7eef500df44b147428d70fd0/cmd/soroban-cli/src/signer/ledger.rs#L84-L112)).
-  Evidence: §3, §1 and §8. The emulator lane's transcripts strengthen the open PR. It is filed from the user's fork of
+  Evidence: §3, §1 and §8. The emulator lane's transcripts strengthen the open PR. It is filed from the maintainer's fork of
   the monorepo, whose `rtao-core-patch/<core_tag>` branches carry the same commits into rtao's workspace until a
   `core_tag` contains them (architecture §1.11).
-- **App fix** (outside the monorepo; filed with `Zondax/ledger-polkadot` on 2026-10-13 at the user's request, Q22:
+- **App fix** (outside the monorepo; filed with `Zondax/ledger-polkadot` on 2026-10-13 by maintainer decision, Q22:
   issue [Zondax/ledger-polkadot#295](https://github.com/Zondax/ledger-polkadot/issues/295),
   PR [#296](https://github.com/Zondax/ledger-polkadot/pull/296)): the app formats an amount only when the field's type
   name is `Balance`, `BalanceOf<T>`, `BalanceOf<T, I>`, `DepositBalance`, `ExtendedBalance`, `PalletBalanceOf<T>` or
@@ -343,7 +343,7 @@ rtao's lane would be the first.
 
 After Q20, the core patch's mechanics (architecture §1.11) were executed in Docker, so that M0-01 can start PR-U17 from
 a tested change [E]. A local bare clone of the monorepo at `v477` (`5c6e83e2f4936f257234f246957f75684c35227c`) stood in
-for the user's fork and was served to Cargo as a `file://` URL. Its branch `rtao-core-patch/v477` is one commit,
+for the maintainer's fork and was served to Cargo as a `file://` URL. Its branch `rtao-core-patch/v477` is one commit,
 `b2919454293cd7e084c6f8274c8bd94484aa493f`, made with a fixed identity and date so that it is reproducible. Builds ran
 in `rust:1.89-bookworm` (rustc, cargo and clippy 1.89.0), and the emulator run used Speculos `v0.27.1` with
 `--model nanosp` and the run-B Nano S+ ELF of §1.1. Nothing was pushed to GitHub.

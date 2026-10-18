@@ -11,13 +11,11 @@ context. Public account discovery and planning precede private signer
 acquisition. Confirmation and recovery journals remain relevant to submitted
 operations, including unresolved outcomes.
 
-The `ledger`, `vault`, `extension`, `evm` and `pow-gpu` features enable their
-respective optional backends and command behavior. Core client, wallet, owner
+The `ledger`, `vault`, `extension`, `remote-signer`, `evm` and `pow-gpu`
+features enable their respective optional backends and command behavior. Core client, wallet, owner
 and intent support comes from this crate's existing dependencies. These flags
 do not start a node, device session or service merely by enabling a build.
 
 The binary has rustdoc disabled to avoid sharing the facade library's output
 directory. This library documents the injectable prompt, process, output,
 book and account-resolution interfaces used by the actual handlers.
-Substantial checks run in hosted CI with fixtures and fake transports; local
-nodes, containers and hardware rehearsals are unnecessary for client development.

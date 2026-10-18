@@ -30,7 +30,7 @@ ratio computation for offline CLI name suggestions. The byte-identical full
 PSF license already retained for the datetime port covers both distributed
 ports in the release notice bundle.
 
-M10 compatibility crates
+Compatibility crates
 
 rtao-compat-synapse, rtao-compat-epistula, rtao-transport-quic and the
 rtao-btauth legacy v10 verifier include logic derived from the MIT-licensed
@@ -51,7 +51,7 @@ its attribution header; packages containing them also declare MIT.
 - subtrahend-labs/gobt at 9c5fa0cc4b1fdd53807233c89f9dc0ac66ca33cb
   (boilerplate/epistula.go). Copyright (c) 2025 Subtrahend Labs.
 - inference-labs-inc/btlightning at 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0
-  (crates/btlightning/src/types.rs). Copyright (c) 2026 Inference Labs Inc.
+  (crates/btlightning/src/types.rs). Copyright (c) 2026 Inference Labs Inc
 
 The SS58 decoder in rtao-compat-synapse is derived from
 RaoFoundation/polkadot-sdk substrate/primitives/core/src/crypto.rs at

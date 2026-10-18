@@ -47,9 +47,9 @@ cargo +1.89.0 test --locked -p rtao-client -p rtao-signer --all-features
 cargo clippy --locked -p rtao-client -p rtao-signer --all-features --all-targets -- -D warnings
 ```
 
-Historical logs were recorded beneath `target/execute-plan.6Ro0PC/tmp/m2-client-{tests,nodefault,msrv,clippy}.log`; the focused submission log was `m2-submission-tests.log`. The historical fuzz machine report is retained separately as `m2-fuzz.json`; the retired-root paths are not current logs or build dependencies. Raw preparation and signer JSON views are implemented here; Python prepared-extrinsic import/export and interop lane 6 remain the M5 work.
+Historical logs, the focused submission log and the historical fuzz machine report are not retained in the repository. Raw preparation and signer JSON views are implemented here; Python prepared-extrinsic import/export and interop lane 6 remain the M5 work.
 
-No local Python, user wallets or Keychain state were accessed. Test-created cache/config directories are removed by their owners. The former task build/fuzz root is retired and absent; shared global Cargo/toolchain caches remain preserved. No commits, pushes, PLAN checkboxes or milestone exit claims were made by this child.
+No local Python, user wallets or Keychain state were accessed. Test-created cache/config directories are removed by their owners. The former task build/fuzz root is retired and absent; shared global Cargo/toolchain caches remain preserved. No commits, pushes, PLAN checkboxes or milestone exit claims were made by this step.
 
 ## Full-deadline hash retention
 
@@ -85,11 +85,9 @@ storage bytes.
 Validation on 2026-10-14 used `--locked`: all 33 submission tests and the
 certificate regression passed on Rust 1.99 and Rust 1.89. Strict client Clippy
 with all features and all targets passed on both toolchains. Owned Rust
-formatting passed with edition 2024. Final logs are
-`target/execute-plan.6Ro0PC/tmp/m2-submission-full-deadline-{current,msrv,clippy,clippy-msrv,format}.log`
-and `m3-client-certificate-{current,msrv}.log`. No disposable directories were
-created. That former execution root is retired and absent; the build/log
-paths describe historical provenance only.
+formatting passed with edition 2024. The final logs are not retained in the
+repository. No disposable directories were
+created. That former execution root is retired and absent.
 
 That initial follow-up validated the client's three submission APIs while
 executor wrappers still needed repair. The later executor change and exact

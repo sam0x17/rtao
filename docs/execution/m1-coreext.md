@@ -61,11 +61,11 @@ with a 256-wrapper bound matching the core codec's nesting bound.
 
 All seven staged modules carry portable symbol deletion probes for PR-U1,
 PR-U9, PR-U15, and the existing PR-U10. No upstream filing is claimed by this
-implementation record; the root executor owns external filings.
+implementation record; external filings are tracked separately.
 
 ## Validation
 
-Historical validation used `target/execute-plan.6Ro0PC`, its shared `build`
+Historical validation used a recorded local task root, its shared `build`
 directory, and its `tmp` directory. That root is retired and absent. Current
 substantial checks run in free `ubuntu-latest` CI under Q30, with no local
 build, toolchain installation or Python execution required.
@@ -96,23 +96,23 @@ All 32 crate tests passed under `--locked`; strict Clippy and the exact upstream
 source lint passed after final changes. The normal/build dependency graph has
 577 printed rows and no Tokio, axum, hyper, reqwest, or `*-sys` package. It builds
 the pinned git `w3f-bls` only; the separate workspace-wide literal lockfile
-requirement remains owned by the root executor.
+requirement is tracked separately.
 
 `cargo xtask staged --check` passed against the final source, identifying all
 seven portable staged symbols as absent upstream. `cargo fmt -p rtao-core-ext
 --check`, doc-test discovery, and the final `cargo +1.89 check --lib --locked`
 also passed.
 
-The guard reviewer independently verified portable and host comparisons for
+An independent guard review verified portable and host comparisons for
 all seven probes, the current curated core surface, and the pinned source
 lints. `cargo check -p rtao-core --no-default-features --locked` passed after
-the root executor re-exported `ir`, `ops`, and `value_ext` through the core.
+`ir`, `ops`, and `value_ext` were re-exported through the core.
 
 The protocol fixture's outer enum types were corrected to avoid registering
-the unit output type as an outer event enum. The protocol worker's offline
+the unit output type as an outer event enum. The protocol work's offline
 invocation also refreshed the shared lock for a concurrent btauth dependency;
-the root executor was notified and retains lockfile ownership.
-The historical staged gate updated the executor's shared `staged-probe`
+that change was reported to the lockfile owner.
+The historical staged gate updated the shared `staged-probe`
 directory. Those probe/build paths are under the retired execution root and
 are not current live dependencies. No separate temporary root or private build
 cache was created by this implementation. Current staged and workspace checks

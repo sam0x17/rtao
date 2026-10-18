@@ -7,6 +7,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND MIT"
 repository.workspace = true
 description = "Epistula v2 signed HTTP headers with upstream dialect presets."
+keywords = ["bittensor", "epistula", "authentication", "http", "signature"]
+categories = ["authentication", "cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

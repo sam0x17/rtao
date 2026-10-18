@@ -2,7 +2,7 @@
 # Interop between rtao-transport-quic and btlightning's Python bindings.
 #
 # Requires a Python environment with btlightning-py installed from
-# inference-labs-inc/lightning @ 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0:
+# inference-labs-inc/btlightning @ 53c090b436238f78a4a0dd30cbbfcba1cbebe2e0:
 #
 #   cd <lightning>/crates/btlightning-py && maturin develop --release
 #

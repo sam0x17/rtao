@@ -4,10 +4,10 @@ A btlightning-compatible QUIC transport for Bittensor neurons, built on quinn
 and rustls with the ring provider.
 
 The crate reimplements the wire protocol of
-[btlightning](https://github.com/inference-labs-inc/lightning) at
+[btlightning](https://github.com/inference-labs-inc/btlightning) at
 `53c090b436238f78a4a0dd30cbbfcba1cbebe2e0` (v0.2.15). It does not depend on
-btlightning, which requires `sp-core 34`, so the workspace keeps a single
-`sp-core`.
+btlightning, which requires `sp-core 34`, so it shares rtao's `sp-core`-free
+signing stack.
 
 ## Wire summary
 

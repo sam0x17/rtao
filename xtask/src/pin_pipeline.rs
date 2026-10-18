@@ -25,7 +25,7 @@ fn safe_relative(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Git's tracked and untracked inventory includes the user's current source edits.
+/// Git's tracked and untracked inventory includes uncommitted local source edits.
 pub(crate) fn source_files(root: &Path) -> Result<BTreeSet<PathBuf>> {
     let output = Command::new("git")
         .arg("-C")
@@ -512,7 +512,7 @@ mod tests {
     }
     #[test]
     fn unsafe_source_paths_are_rejected() {
-        for path in ["../wallet", "~/wallet", "", "source/../wallet"] {
+        for path in ["../wallet", "/absolute/wallet", "", "source/../wallet"] {
             assert!(safe_relative(Path::new(path)).is_err());
         }
     }

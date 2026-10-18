@@ -7,6 +7,8 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor transaction intents."
+keywords = ["bittensor", "transactions", "staking", "blockchain"]
+categories = ["cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

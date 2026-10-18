@@ -23,7 +23,7 @@ it. Public keys and signatures are byte-identical: the RFC 8032 vector and the
 Substrate `//Alice` and `//Bob` Ed25519 vectors pass.
 
 The M2-26 final cold-reader security pass on 2026-10-17 used four independent
-fresh-context reviewers (Ed25519 erasure, signing compatibility,
+reviewers, none of them the author (Ed25519 erasure, signing compatibility,
 keyfile/password/redaction and patch provenance). Three skeptics verified each
 finding, and only findings with at least two confirmations were kept. Four
 low-severity findings were confirmed and repaired:
@@ -50,7 +50,7 @@ seed copies, unnamed Copy move copies (covered by the stack-copy limit
 below), a missing Debug test for `GeneratedKey`/`RegenerateFrom` and the fuzz
 workspace's use of the unpatched core.
 
-Local evidence on workstation: the fork's bittensor-core library tests (72)
+Local evidence on a development workstation: the fork's bittensor-core library tests (72)
 pass, the rtao-core, core-ext, signer and wallet tests (250) pass, and
 `cargo xtask pin --check` passes against the real fork rev. Hosted CI for the
 final head is recorded in [state.md](state.md). M2-26 is complete.
@@ -100,6 +100,6 @@ Historical test results below predate the parser repair.
 
 The serving boundary also enforces approved D-017: decoded certificates over 65 bytes fail after IP validation and complete hex parsing. Ten serving tests pass on current Rust and Rust 1.89. The length error has lower priority than Python's IP and fromhex errors.
 
-Current Rust and Rust 1.89 pass six codec unit tests and six codec integration tests, eight signer tests, two wallet error-chain tests and one wallet derivation/codec test. Strict all-feature/all-target Clippy passes for core-ext/signer. Root moved the wallet reader test module after the production items; the combined wallet MSRV all-feature/all-target Clippy now passes in `tmp/root-m2-wallet-security-clippy-msrv.log`. The pinned codec differential expectation update passes its four parent tests on Rust 1.89 in `tmp/root-m2-codec-differential-security-msrv.log` and current Rust in `tmp/root-resume-codec-current.log`. The ignored environment child runs through its parent regression. D-036 is registered; the complete workspace gates remain required.
+Current Rust and Rust 1.89 pass six codec unit tests and six codec integration tests, eight signer tests, two wallet error-chain tests and one wallet derivation/codec test. Strict all-feature/all-target Clippy passes for core-ext/signer. The wallet reader test module was moved after the production items; the combined wallet MSRV all-feature/all-target Clippy now passes. The pinned codec differential expectation update passes its four parent tests on Rust 1.89 and current Rust. The ignored environment child runs through its parent regression. D-036 is registered; the complete workspace gates remain required.
 
-Source-ready functions and regression names are recorded in the task root's `tmp/m2-security-source-ready.txt`. Bounded validation logs use `tmp/m2-security-*`, and the separate certificate proof uses `tmp/m2-serving-d017-*`. No Python, local oracle containers, generators, manifests, commits, pushes or tags were used. Per-test wallet directories used the recorded task root and their existing cleanup guards. That root and its raw build/tmp paths are retired and absent; no current dependency remains there. Shared global Cargo/toolchain caches and durable wallet/recovery state remain preserved.
+The source-ready function and regression list, the bounded validation logs and the separate certificate proof logs are not retained in the repository. No Python, local oracle containers, generators, manifests, commits, pushes or tags were used. Per-test wallet directories used the recorded task root and their existing cleanup guards. That root and its raw build/tmp paths are retired and absent; no current dependency remains there. Shared global Cargo/toolchain caches and durable wallet/recovery state remain preserved.

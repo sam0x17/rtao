@@ -50,18 +50,18 @@ requests always carry an `EpistulaCaller` extension.
 
 ## Deviations from the spec
 
-* D-E9: `with_claimed_sender_prefilter` is off by default, although spec
+* `with_claimed_sender_prefilter` is off by default, although spec
   section 10.5 turns it on with the BitMind status map. The prefilter runs
   the caller policy on an unauthenticated claimed sender, which is unsafe
   for policies with per-caller side effects. When on, the policy runs once
   per request: its admission is reused for the identical verified caller.
-* D-E10: the secret-signature filter verifies `Secret-Signature-1` for the
+* The secret-signature filter verifies `Secret-Signature-1` for the
   interval of the claimed `Epistula-Timestamp`, after checking that
   timestamp's freshness, instead of the receiver's current and previous
   intervals. Every upstream sender derives its secret signatures from that
   timestamp, so this is one verification and never rejects a fresh request.
   Its cache holds exact `(sender, signature, interval)` triples.
-* D-E11: freshness is measured at the request head, and the body read,
+* Freshness is measured at the request head, and the body read,
   policy and commit are bounded by a body deadline, as described above.
 * Apex clients sign `{}` for an empty body and the query parameters for a
   `GET`. `client::sign_reqwest` hashes the wire body; use

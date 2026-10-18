@@ -98,7 +98,7 @@ shares these adapters with the checker. Pure Balance/error/conform comparisons
 remain exact. RPC vectors now call the production response decoder and compare
 the exception variant, message, policy metadata, discarded block and chain-error
 JSON. Quicknet round/time arithmetic uses native constants and native UTC
-timestamp conversion. The root task corrected the discarded-state diagnostic
+timestamp conversion. Integration corrected the discarded-state diagnostic
 to match the pinned Python archive-node guidance.
 
 The archived `oracle.yml` design targets free Ubuntu. Dry-run builds and checks without GHCR or
@@ -131,10 +131,10 @@ and both release workflows, including ShellCheck 0.11.0 over embedded shell and
 the recorder shell script. Those results describe the historical tool snapshot;
 no local validation-tool installation or retained task-tool dependency is required.
 
-Root integrated `oracle` and `record` command arms/help. The native replay
+Integration added the `oracle` and `record` command arms/help. The native replay
 follow-up added the xtask TX/signer dependencies and enabled the weights,
 serving and transfer intent features, leaving main and the workspace manifest
-to the root task. Seven focused integrated oracle tests pass on Rust 1.99 and 1.89,
+to integration. Seven focused integrated oracle tests pass on Rust 1.99 and 1.89,
 including the source-derived runtime seeds and reviewed input branches. The
 shared direct adapter test also passed two local input checks; its actual
 hosted replay remains explicitly ignored until verified artifacts exist.
@@ -152,13 +152,13 @@ the App-token push.
 
 The rehearsal and downloaded ShellCheck directories were audited for processes,
 launchd, configuration, symlink and virtualenv dependencies and removed.
-`m2-oracle-inputs.json` retains the bounded historical context identity. The
-retired task root and its build/source/tool paths are not current dependencies.
+The bounded historical context-identity record is not retained in the
+repository. The retired task root and its build/source/tool paths are not current dependencies.
 Shared global Cargo/toolchain caches remain preserved; no wallets or private
 state were created or removed.
 
 The native replay follow-up created no separate disposable directories. Its
-historical shared `target/execute-plan.6Ro0PC` build and temporary directories
+historical shared task-scoped build and temporary directories
 were deleted during Q30 cleanup and must not be recreated. No Python interpreter
 or local container ran, and no expected vectors were fabricated.
 

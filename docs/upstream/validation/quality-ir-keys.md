@@ -13,7 +13,7 @@ the submitted files and posted claims, followed by additional Rust regressions.
 
 The posted bodies describe scoped Rust checks and explicitly reserve Python
 runtime regressions for hosted CI. Recorded PR-state snapshots identify the
-reviewed SHAs; the retained hooks require the clean checkout HEAD to equal the
+reviewed SHAs; the task-local hooks required the clean checkout HEAD to equal the
 outgoing commit. Their logs record Rust 1.89 portable tests, 71 passing library tests with
 one pre-existing physical-GPU ignore, strict core and binding Clippy and portable
 wasm checks. The full monorepo preflight was not run. Python materialization and
@@ -122,7 +122,7 @@ An earlier Clippy attempt found the ancestor rtao policy because the temporary
 override directory contained no Clippy file. Upstream checks now use an explicit
 empty `clippy.toml` in the task directory; the staged rtao checks restore the
 repository's actual policy. No global configuration changed. The failed and
-interrupted runs are retained as diagnostic evidence, not passing validation.
+interrupted runs were diagnostic evidence only, not passing validation.
 
 The isolated U9 and corrected U10 MSRV strict Clippy checks pass. Stable Rust 1.99 strict Clippy
 fails with its new `chunks_exact_to_as_chunks` lint at
@@ -149,11 +149,11 @@ both successful and failed decoding. This proves the dependency behavior behind
 the identified ownership flaw; it does not inspect freed allocator memory.
 The direct pinned-algorithm, full-fixture legacy projection and child-environment
 checks all pass. Original production sources and lockfiles were unchanged during
-this phase. Sources and complete output are retained in
-`quality-ir-independent.rs`, `quality-keys-independent.rs`,
-`quality-ir-keys-submitted.sh` and `quality-ir-keys-submitted.log`.
+this phase. The independent audit sources, gate script and complete output are
+not retained in the repository.
 
-The U10 correction is retained in `quality-u10-error-path.patch`. The same
+The U10 correction patch is not retained in the repository; it is published as
+the upstream commit below. The same
 decoder correction and two compatibility/late-error tests are applied to
 `crates/rtao-core-ext/src/keyfile_env.rs` and
 `crates/rtao-core-ext/tests/password_environment.rs`.
@@ -166,15 +166,14 @@ decoder correction and two compatibility/late-error tests are applied to
 | U9 and corrected U10: strict all-feature/all-target core and binding Clippy in separate checkout targets | passed | two unchanged-base style lints |
 | Staged rtao password correction | two passed; strict Clippy passed | two passed; strict Clippy passed |
 
-`quality-ir-keys-isolated-first.log`, `quality-ir-keys-isolated-final.log`,
-`quality-ir-clippy-msrv.log` and `quality-keys-clippy-msrv.log` retain the execution
-output. The separate-target Clippy runs replace the earlier shared-target Clippy
+The raw execution output of these runs is not retained in the repository. The
+separate-target Clippy runs replace the earlier shared-target Clippy
 result. Formatting, diff and unchanged-lock checks passed.
 
 The corrected upstream source is published as
 `64f152725dda64c040e8f3c6435c08f450093a59` on `sdk-pure-key-helpers`. Its ordinary
-push to `sam0x17/subtensor` passed `quality-u10-pre-push-hook.sh` and
-`quality-u10-outgoing-gate.sh` with exit zero. Remote branch and PR HEAD were confirmed
+push to `sam0x17/subtensor` passed a task-local pre-push hook and outgoing gate
+with exit zero. Remote branch and PR HEAD were confirmed
 at that exact SHA. The independent injected audit source was archived and removed
 before committing. The outgoing gate required clean HEAD, submitted-base ancestry,
 exactly the three correction paths and an unchanged lockfile. Committed-HEAD proof
@@ -183,13 +182,13 @@ GPU ignore on each toolchain, pinned-MSRV strict isolated Clippy, and both porta
 wasm checks. Formatting and final clean-tree checks passed. Functional checks used
 a commit-specific compiler wrapper and Clippy used its separate checkout target.
 
-The existing PR body was updated from `quality-u10-correction-body.md`; fetching
+The existing PR body was updated from
+[`quality-u10-correction-body.md`](quality-u10-correction-body.md); fetching
 it again confirmed byte-for-byte equality. The title, branch, owner, open state,
 empty labels and empty review-request list matched the before snapshot. No force,
-hook bypass, persistent Git configuration or additional PR was used. Bounded
-publication evidence is retained in `quality-u10-correction-pre-push.log`,
-`quality-u10-correction-push.log`, `quality-u10-correction-state.json`,
-`quality-u10-correction-remote.txt` and `quality-u10-correction-runs.json`.
+hook bypass, persistent Git configuration or additional PR was used. The
+bounded pre-push, push, PR state, remote and workflow-run publication evidence
+is not retained in the repository.
 
 All ten hosted workflows for the corrected SHA report `startup_failure`; each
 jobs endpoint reports zero jobs. The Vercel status reports an authorization
@@ -200,20 +199,18 @@ No Python interpreter, label or review-request action has been used for this
 independent audit.
 
 The exact U9/U10 review worktrees and their two Clippy target directories were
-audited and removed after publication. No process, open file, GUI/system launchd,
+audited and removed after publication. No process, open file, service-manager,
 configuration, inbound symlink or virtual-environment dependency was found;
 30 symlinks and 51 configuration/environment/Git files were inspected without a
-scan error. An unrelated backup SMB mount was unavailable to `lsof`; the
-exact local-path queries returned no open file. Removal covered 16,163 regular
-files and 1,437,066,258 bytes. `quality-ir-keys-cleanup.json` retains the exact
-paths, SHAs, checks and counts. The shared bare repository/build/source caches
-and the unique compiler wrappers remain live by root request; other owners'
-directories and user state were preserved.
+scan error. The exact local-path `lsof` queries returned no open file. Removal
+covered 16,163 regular files and 1,437,066,258 bytes. The shared bare
+repository/build/source caches and the unique compiler wrappers were retained
+for later review; other owners' directories and local state were preserved.
 
 The remaining disposable proof files, task-local hook and cleanup rehearsal were
 also removed after archiving their bounded output. That follow-up inspected 12
 symlinks and 49 configuration/environment files, with no process, open-file,
-launchd or inbound dependency. `quality-ir-keys-scratch-cleanup.json` records
-the exact 606,461-byte removal and the retained wrapper/empty-Clippy paths.
-The archived `quality-ir-keys-diagnostic-*` runs are preliminary or interrupted
-execution evidence and are excluded from accepted validation.
+service-manager or inbound dependency. The removal covered 606,461 bytes and
+retained the wrapper/empty-Clippy paths. Earlier diagnostic runs were
+preliminary or interrupted execution evidence and are excluded from accepted
+validation.

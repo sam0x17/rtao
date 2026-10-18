@@ -16,8 +16,7 @@ order. Its output uses the existing single diagnostic renderer.
 
 The recovered patch is authenticated by SHA-256
 `01c448cf25b332f6506e0d4b34587c65d51849e98ff03e426e9ee8eb1697cece`
-in `.local/recovery/2026-10-14/source-manifest.json`. Its recovery archive member
-is `m4-config-catalog.20261015-010143-38375/proof/M4-10-config-catalog.patch`.
+in the recovery source manifest; the archive is not retained in the repository.
 Adoption adds binary routing fixtures, honors `RTAO_TEMP_ROOT` in config
 fixtures and replaces test-only `expect_err` calls with returned failures.
 Existing Apache source attribution and authenticated generated catalogs cover

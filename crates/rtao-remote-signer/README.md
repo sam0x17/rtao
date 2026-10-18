@@ -1,7 +1,7 @@
 # rtao-remote-signer
 
 Policy-checked remote transaction signing for rtao, over the rtao-authored
-`rtao-remote-signer/1` protocol (divergence D-031; Python has no counterpart).
+`rtao-remote-signer/1` protocol. The Python SDK has no counterpart.
 
 - `wire` (always): request, response and error bodies with strict `0x` hex and
   SS58 encodings.
@@ -22,12 +22,12 @@ Policy-checked remote transaction signing for rtao, over the rtao-authored
 - `server-bin` feature: the `rtao-remote-signerd` daemon with a TOML
   configuration (see the `daemon` module documentation), TLS, and per-connection
   limits (connection cap, handshake, header, request and lifetime timeouts).
+- `redis` feature: a Redis replay store for multi-process servers.
 
 Policy limits are enforced only where the server can measure them: spend and
 fee caps apply to modeled transfers, so `allow_raw_calls` cannot be combined
 with `max_spend` or `max_fee`, and `allowed_netuids` is refused because no
 decoded call is modeled with a subnet.
-- `redis` feature: a Redis replay store for multi-process servers.
 
 Replayed requests are refused by the btauth/1 nonce store, tampering in transit
 by the btauth/1 body signature, and internally inconsistent requests by the

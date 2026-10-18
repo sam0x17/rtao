@@ -1,12 +1,12 @@
 # Local disk cleanup, 2026-10-14
 
-The repeated isolated Rust builds consumed excessive space on the shared
-laptop. The user stopped that execution and directed client development to
-use free GitHub CI for substantial tests. PLAN.md Q30 records that decision.
+The repeated isolated Rust builds consumed excessive local disk space. That
+execution was stopped and client development moved to free GitHub CI for
+substantial tests. PLAN.md Q30 records that decision.
 
 ## Removed
 
-The entire `target/execute-plan.6Ro0PC` directory was removed. A single size
+The entire previous local execution root was removed. A single size
 scan measured 335,709,460 KiB (320.16 GiB) before removal. Its shared Cargo
 cache accounted for 275,206,152 KiB (262.46 GiB); separate CLI, Keychain,
 lint/MSRV, proxy, offline, fuzz and staged-probe targets accounted for most
@@ -24,26 +24,18 @@ deleted task root.
 ## Preserved
 
 Canonical source, including uncommitted and untracked implementation, stays
-in place. Unfinished candidates and 172 patches are retained in the private,
-locally ignored `.local/recovery/2026-10-14/unfinished-source.tar.gz` archive.
-It is 152,583,783 bytes (145.5 MiB) and contains 18,888 verified members.
-The adjacent README, source manifest and SHA256SUMS support selective source
-recovery. Source candidates remain subject to review and CI before adoption.
+in place. Unfinished candidates and 172 patches are retained in a private
+archive that is not part of the repository. It is 152,583,783 bytes
+(145.5 MiB) and contains 18,888 verified members. Source candidates remain
+subject to review and CI before adoption.
 
 Archive SHA-256:
 `770d9d50a9c855e61a4e7476c91caef52b6d0161c297c996a9fdf46c0852969b`.
 
 The pre-existing `target/debug`, global caches/toolchains, other projects,
 wallets and recovery data were preserved. The complete remaining target
-directory is 547,192 KiB (534 MiB). The durable wallet/recovery root remains
-`~/.local/share/rtao/testnet-soak`; it was not inspected for secrets
-or removed. Remote Studio use had been read-only, with no task scratch to
-remove there.
-
-Filesystem free space rose from about 668 GiB to 706 GiB during cleanup.
-macOS has purgeable backup snapshots that can retain deleted blocks;
-the directory's measured allocation therefore differs from immediately freed
-physical space. Those backups were left intact.
+directory is 547,192 KiB (534 MiB). The durable wallet/recovery directory was
+not inspected for secrets or removed.
 
 ## Prevention and verification
 

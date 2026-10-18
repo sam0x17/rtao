@@ -89,9 +89,8 @@ constant arithmetic, Rust variants, and projection. Cargo must have fetched its
 locked dependencies before extraction; the Git database is a retained shared
 source dependency, not a disposable task directory.
 
-Historical validation used the shared recorded task root
-`target/execute-plan.6Ro0PC`, its `build` target directory, and its `tmp`
-directory. New generator fixtures are in memory. The existing btauth fixture
+Historical validation used a shared task-scoped temporary root with its own
+build target and temporary directories. New generator fixtures are in memory. The existing btauth fixture
 test removed its exact `extract/check-<pid>` directory after it finished; its
 empty `extract` parent was also removed after process, open-file, launchd,
 configuration, symlink, and virtual-environment checks found no dependency.

@@ -1,5 +1,5 @@
 {
-  "upstream": "inference-labs-inc/lightning@53c090b436238f78a4a0dd30cbbfcba1cbebe2e0 btlightning-py (pyo3 0.29, Python 3.12.15)",
+  "upstream": "inference-labs-inc/btlightning@53c090b436238f78a4a0dd30cbbfcba1cbebe2e0 btlightning-py (pyo3 0.29, Python 3.12.15)",
   "note": "Captured locally by ci/interop/quic. sr25519 signatures are randomized, so these are verify-only vectors.",
   "python_client_request": {
     "server_fingerprint_b64": "xAHPzEJCjRCZc0dWnxpEg2zqWo+3kDJX1UQWLfSIwtM=",

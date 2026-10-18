@@ -430,7 +430,7 @@ A crate may depend only on crates in lower layers (the table in §2.2 lists the 
 - Workspace lints: `missing_docs = "deny"` on library crates, `unsafe_code = "forbid"` outside `rtao-btcore`
   (which needs none either), clippy `-D warnings`, the `disallowed-methods` list of §1.7.
 - Errors: `thiserror` enums per crate with context strings; `anyhow` only in binaries, examples and tests
-  (matches the user's existing style, `RES:E` §6).
+  (matches the maintainer's existing style, `RES:E` §6).
 
 ### 2.6 What a subnet owner's `Cargo.toml` looks like
 
@@ -1767,7 +1767,7 @@ plain/sealed/revealed/failed status machine (`RES:A2` §2; `RES:G` §3.4 item 9)
 
 ### 9.10 Observability
 
-- `tracing` everywhere; `telemetry::init(LogFormat::Compact | Json | Pretty)` logs to stderr (`Compact` is single-line `key=value`, the style of the user's own tools, `RES:E` §6); data goes to stdout (CLI).
+- `tracing` everywhere; `telemetry::init(LogFormat::Compact | Json | Pretty)` logs to stderr (`Compact` is single-line `key=value`, the style of the maintainer's own tools, `RES:E` §6); data goes to stdout (CLI).
 - Prometheus exporter on `--metrics-addr` (off by default). Core metrics: `rtao_chain_head{kind}`,
   `rtao_finality_lag_blocks`, `rtao_spec_version`, `rtao_surface_breaking_items`, `rtao_rpc_*` (§3.2.5),
   `rtao_metagraph_sync_seconds`, `rtao_metagraph_age_blocks`, `rtao_weights_submissions_total{mech,path,outcome}`,

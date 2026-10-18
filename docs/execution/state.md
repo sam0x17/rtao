@@ -16,7 +16,7 @@ the cleanup itself. Subsequent client checkpoints use hosted CI as recorded belo
 
 ## M10 implementation, 2026-10-17
 
-At the user's request to work through the entire plan, optional M10 is
+Optional M10 is
 implemented at `d59efdd` through `3479cdf`, all pushed to `main`; see
 [M10 execution record](m10.md). Four new crates: `rtao-compat-synapse`
 (M10-01), `rtao-compat-epistula` (M10-02), `rtao-transport-quic` (M10-03)
@@ -27,7 +27,7 @@ and `rtao-remote-signer` (M10-04). The facade adds `compat-synapse`,
 `RemoteSigner` is a separate crate rather than an `rtao-signer` feature
 because `rtao-btauth` depends on `rtao-signer` (recorded plan deviation).
 
-Local evidence on `workstation`, pinned to stable CPUs: workspace Clippy clean;
+Local evidence on a development workstation: workspace Clippy clean;
 3,384 of 3,385 tests pass (the remaining one is hosted-only by design);
 doctests, strict parity and the local supply and features gates pass.
 Local interop: Synapse against `bittensor` 10.5.0 39/39 (Rust Dendrite to
@@ -59,12 +59,9 @@ All four M10 exit checks pass and M10-01 to M10-04 are checked in PLAN.md.
 The whole plan, including optional M10, is complete: 127/127 active M0-M9
 steps plus M10's four.
 
-`workstation`'s host CPU faults under load on CPUs 4, 5, 12 and 13;
-AGENTS.md pins local work to other cores. CI hardware is authoritative.
-
 ## M2-26 closure, 2026-10-17
 
-Development moved to `workstation`. The combined core patch is now pinned at fork
+The combined core patch is now pinned at fork
 revision `626f2a4f1f67ab731c1fc3884828751496bc125d` (combined six-path diff
 SHA-256 `8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489`).
 It stores Ed25519 signing state as `Zeroizing<ed25519_zebra::SigningKey>` and
@@ -72,7 +69,7 @@ also wipes the hard-derivation preimage and decrypted PKCS8 import copies.
 M2-S02 is fixed and the fresh M2-26 cold-reader pass is complete; see
 [M2 security](../security/m2.md#final-m2-26-security-pass-2026-10-17).
 
-Local evidence on `workstation`: 72 fork `bittensor-core` library tests, 250
+Local evidence: 72 fork `bittensor-core` library tests, 250
 `rtao-core`/`rtao-core-ext`/`rtao-signer`/`rtao-wallet` tests and
 `cargo xtask pin --check` against the real fork revision pass. Compatibility
 reports were regenerated for the new core revision. Hosted CI for the closing
@@ -111,7 +108,7 @@ interoperability or live-chain acceptance is claimed.
 The filing inventory was refreshed read-only on 2026-10-17: the existing eight
 PRs and five issues remain open at the reviewed heads, with no labels or review
 requests and no new filing. The worktree remains bounded; the retired
-`target/execute-plan.6Ro0PC` build root was not recreated.
+local build root was not recreated.
 
 ## Earlier client checkpoint, 2026-10-16
 
@@ -123,7 +120,7 @@ documentation upload and all six required jobs. All eight failures from
 cases on normal stacks and the saved registration cost disclosure. This
 checkpoint also executes the typed password-help and unknown-fate output fixes.
 
-The bounded `client-3196-892aa9d-checkpoint.json` is 469,793 bytes, SHA256
+The bounded checkpoint record (not retained in the repository) is 469,793 bytes, SHA256
 `80b4f5f3db680a9b298bff207638107e07e6acfeb6c7bb768cd14a4326b47372`.
 It authenticates all 3,196 unique qualified PASS records and 167 committed
 source identities. The 753,263-byte main log has SHA256
@@ -157,12 +154,11 @@ hosted execution remains pending. Named-test inventory stays 3,203/four skips.
 
 Lock-only hosted [38987915743](https://github.com/sam0x17/rtao/actions/runs/38987915743)
 succeeds at exact `9557fc0dcaa8b6752d448e8db32a718d5aefd367`. Independent
-inspection and root refetch authenticate the sole 11-byte addition of the
+inspection and a separate refetch authenticate the sole 11-byte addition of the
 already pinned Docify 0.2.9 to testkit's dependency list. No package identity or
 other lock bytes change; the fuzz lock stays identical. Only that reviewed root
-lock edge is adopted. The retained inspection/adoption records are
-`testkit-docify-9557fc0-lock-inspection.json` and
-`testkit-docify-9557fc0-lock-adoption.json`. This preparation runs no full tests.
+lock edge is adopted. The inspection/adoption records are
+not retained in the repository. This preparation runs no full tests.
 
 Dependency and divergence reports still need hosted refresh: source map stays
 322/357 reconciled with 35 pending; the divergence register is 76 while the
@@ -310,7 +306,7 @@ MSRV, no-host, semver and supply checks. Feature validation also passed the
 native template gate, both TLS crypto providers, unpatched-core compilation
 and generic keyfiles without encryption support. No local build ran.
 
-The bounded primary proof is `client-7997ec0-hosted-results.json`, SHA256
+The bounded primary proof (not retained in the repository) has SHA256
 `a3ba7b4bfa03cc74c3fea2aebc328471ada0e77ab29498beb3798612d25b6728`.
 It retains 113 qualified PASS records and 101 source identities. Same-log
 supplements retain nine payment and four metagraph witnesses.
@@ -322,8 +318,8 @@ Source and the generated matrix record 322 of 357 files reconciled, with
 35 pending.
 The three new source dispositions cover CLI startup, metagraph output and
 the payment wrapper's client-visible contract. They do not establish runtime
-admission, debit or refund behavior. The exact adoption record is
-`client-7997ec0-three-source-row-adoption.json`, SHA256
+admission, debit or refund behavior. The exact adoption record (not retained in the repository) has
+SHA256
 `a3ca105e82aca429dfbdd3e0c602057af007b3dded5ef32e4bb96cd36fa669bf`.
 M0/M1 and twenty individual M2 implementation/guide steps remain accepted.
 Eight individual M3 implementation/example/guide steps are now checked:
@@ -377,7 +373,7 @@ the replacement renderer omitted normal connection-time token-symbol setup,
 and expected dust floats used Rust exponent spellings rather than Python's.
 Their local corrections preserve the complete record and visible-row checks.
 Doctests and documentation upload were not reached; this is not an accepted
-checkpoint. The bounded failure record is `client-394e21b-check-failure.json`.
+checkpoint. The bounded failure record is not retained in the repository.
 The successful feature artifact separately proves the generated owner-tool
 built and its three tests passed; it does not establish ordinary C1 success.
 
@@ -411,7 +407,7 @@ leaf and inspect `error.violations`, preserving all refusal and storage assertio
 Independent source/API review and formatting checks pass. All five supporting
 jobs passed, including the full feature job. Nextest, doctests and documentation
 were not reached. The bounded failure record is
-`client-f9140e9-check-failure.json`; its 83,940-byte log has SHA256
+not retained; its 83,940-byte log has SHA256
 `a62787764f740ecd2a291d9761de2a1fb136500e0dbfe15e85d7c945847dcca4`.
 
 Two additional reviewed tests are applied for the next hosted batch: actual
@@ -443,8 +439,8 @@ Clippy. These corrections preserve every assertion and test count. The existing
 CLI advertisement fixture also now requires exact visible transaction-leaf
 set equality, closing the remaining no-extra-command assertion gap. Formatting
 and source checks pass; the expected inventory remains 3,183/four skips and
-still awaits successful hosted execution. The bounded failure record is
-`client-f84be4c-check-failure.json`; no raw log is retained.
+still awaits successful hosted execution. Neither the bounded failure
+record nor the raw log is retained.
 
 The small compiler/leaf correction is pushed at
 `8b0ffbd21f26da8b77baebd40ac43b0461e7fa70`; ordinary run
@@ -460,7 +456,7 @@ now supplies public-only wallet records for required hotkey name resolution;
 its injected private-acquisition, hook and author-RPC sentinels stay intact.
 The proxy success event uses an empty array for the metadata's unit tuple
 instead of JSON null. All existing traversal and receipt assertions remain.
-The bounded failure details are `client-8b0ffbd-three-failure-details.json`;
+The bounded failure details are not retained;
 the 783,437-byte main log has SHA256
 `840ff1c724401ab1f9133b6412a73ae1aa2f67ebae14cf730d50e431418d6a1c`.
 No raw log is retained. These corrections require another full hosted run.
@@ -477,8 +473,8 @@ quiet suppression and explicit dust display.
 
 The same batch adds the reviewed four-family embedded root-claim public
 plan/shield refusal fixture and strengthens actual proxy fee-payer planning
-and exact per-family warnings. Its independent source review is retained in
-`intents-embedded-claims-f84be4c-handoff.txt`. These two additional functions
+and exact per-family warnings. Its independent source review record is
+not retained in the repository. These two additional functions
 bring the future inventory to 3,185/four skips. All source changes remain
 unexecuted; formatting and whitespace checks pass. No source row or milestone
 is promoted by these changes.
@@ -495,11 +491,9 @@ passes at `9624b92`. Artifact 12077076702 is 81,871 bytes, SHA256
 Inspection and a separate refetch adopt only that package's version/checksum
 and sole versioned dependency reference. Reversing those three lines reproduces
 the earlier lock byte for byte; the fuzz lock is unchanged. No new advisory
-exception or manual lockfile edit was used. The inspection proof is
-`inout-9624b92-lock-inspection.json`, SHA256
+exception or manual lockfile edit was used. The inspection proof (not retained in the repository) has SHA256
 `3ea612f0d6e15438a87d30a3e9a291df35395a701944cb23db290c5571afe071`.
-The raw failure identity and registry/source comparison remain under the
-recovery root. The lock-only job establishes no ordinary test success.
+The raw failure identity and registry/source comparison are not retained in the repository. The lock-only job establishes no ordinary test success.
 
 The following client repairs are separate from that active run. Weight
 activity alarms now use the chain's minimum one-block cutoff, including
@@ -532,7 +526,7 @@ paths, and the acknowledgment-timeout fixture observes no fake submission
 before its 50 ms admission deadline. The last failure does not prove a false
 unknown-fate result: the submission-count assertion runs first. MSRV, no-host,
 semver and features pass; doctests are not reached. Bounded evidence is
-`client-edefe85-check-failure.json`; the 838,125-byte log has SHA256
+not retained; the 838,125-byte log has SHA256
 `98b20e6f81bddb75395c5fcdc70298e17f952f3b149edb31b8d788eb4e20af69`.
 No raw log is retained. Fix these failures before the next ordinary run,
 superseding the planned standalone 3,187-test checkpoint. Report generation
@@ -561,9 +555,8 @@ pass; compilation, fixture execution and updated divergence reports remain
 pending. The full context row, source acceptance and milestones stay open.
 
 Additional source reconciliation, security dispositions
-and exact milestone evidence remain required through M9. The laptop target
-folder remains absent; temporary source/review work stays in the recorded
-bounded recovery root. No node, testnet, soak or hardware work is scheduled.
+and exact milestone evidence remain required through M9. The local target
+folder remains absent; temporary source/review work is not retained in the repository. No node, testnet, soak or hardware work is scheduled.
 
 ## Earlier 2026-10-16 client checkpoints
 
@@ -577,7 +570,7 @@ at `3772699612278d4592648d07232241430e96791b`. All six jobs passed. Main
 passed 3,080 tests, zero failed, four skipped and nine doctests across all 19
 workspace suites. Strict Clippy, documentation, source/pin/generated guards,
 feature profiles, MSRV, no-host, semver and supply checks passed. The bounded
-`client-3772699-hosted-results.json` authenticates 34 selected PASS records;
+hosted-results record (not retained) authenticates 34 selected PASS records;
 its SHA256 is `fadc0d5af652d64707c474093ac6cf8c0bf2b60b647f51aab1f00360000c1eb4`.
 The 735,349-byte main log has SHA256
 `754a2eb8c31416d59ea15deac55fe9011ed9b9f1407e3f0c00615b5c4eb60b8b`.
@@ -629,7 +622,7 @@ The subsequent ordinary run
 at `b3d6e8bdf37efa5cc67062bb01bb17eb4e5c2c96` failed in
 `core-surface --check` before Nextest. Its blanket refusal of conditional
 module/export attributes also rejected the new documentation feature labels.
-The bounded `client-b3d6e8b-check-failure.json` records the 83,215-byte job-log
+The bounded failure record (not retained) records the 83,215-byte job-log
 identity, SHA256
 `dd527d8b08962fd9bbdeb611345ed5848f80be5950aae277d34e336285f05a4e`,
 and actual failure excerpt; the raw log is not retained. This run supplies no
@@ -658,13 +651,13 @@ nothing, leaving a valid Q30 declaration where the test expects refusal.
 The production readiness guard remains unchanged while this fixture is repaired.
 Doctests and the later documentation check were not reached.
 
-The bounded `client-29178a0-partial-hosted-results.json` records the exact
+The bounded partial hosted-results record (not retained) records the exact
 failed-run identity and 61 unique PASS records (SHA256
 `db2fa8d8ad99c633eaf927d1e8fe93a39b79aed1d170c471a9d9241a2c026a51`).
 The 723,148-byte main log has SHA256
 `1cddfb4bc7773909f11d89dbb9d6f811063cee805204ed98c70fade2a7474d96`;
-`client-29178a0-check-failure.json` retains its failure excerpt. No raw log is
-retained. Passing witnesses in this failed run do not advance the successful
+a separate failure record held its failure excerpt. Neither that record nor
+the raw log is retained. Passing witnesses in this failed run do not advance the successful
 checkpoint, source rows or milestone acceptance.
 
 The correction normalizes that fixture's M2-14 checkbox and checks both valid
@@ -716,7 +709,7 @@ The main gate passed all 3,051 executed tests, zero failed, four skipped,
 all 19 workspace doctest suites (nine doctests), strict Clippy, documentation
 and every blocking check. Its 717,929-byte log has SHA256
 `9c5a4c537e36e27fdac9e215360db2d591d546313116ad195dc0943cadea34bc`.
-The bounded `m0-m1-d01830c-hosted-results.json` proof authenticates 175 unique
+The bounded hosted-results proof (not retained) authenticates 175 unique
 named PASS records and 129 final source inputs. Overlapping groups retain
 123 M0, 45 M1 and 11 new-fixture memberships. Its SHA256 is
 `bef2ded037673d97f8016981ab402868776824558289fd895f96aeb53c3a33a0`.
@@ -746,10 +739,9 @@ or native-platform result.
 
 The authenticated main log is 927,796 bytes with SHA256
 `88bc33d05df3a5c14789d615940791ce65c1e6486726926f1b25de2dc15933d3`.
-Bounded evidence is `check-38832708259.json` and
-`7bb8c0b-hosted-results.json` under `.local/recovery/2026-10-15/`;
+Bounded evidence is not retained in the repository;
 no raw log, archive or extraction directory is retained. A separate exact-name
-extraction, `m9-security-current-ci-38832708259.json`, confirms all 70 selected
+extraction confirms all 70 selected
 S9 regressions and all 12 new M2-S03 parser/public-view/differential regressions
 passed on this commit. Independent source review and exact executed results
 close the original S9-01 through S9-10 defects and M2-S01/S03/S04/S05, retaining
@@ -764,8 +756,8 @@ not reconcile source rows or accept later milestones. Strict M8 remains
 off and M2-S02 remains open/unaccepted. Current work continues through M9,
 with source review and substantial validation on free hosted CI.
 
-Local `target` is absent, including the retired `execute-plan.6Ro0PC` root.
-No local build/test, service, Mac Studio work, new temporary root or upstream
+Local `target` is absent, including the retired local build root.
+No local build/test, service, macOS-host work, new temporary root or upstream
 filing was needed. Preserve wallets, recovery material and unrelated work.
 
 ### Reviewed root and policy client batch
@@ -818,12 +810,11 @@ asserts that behavior, then omits both conflicting fields and checks collection
 followed by final conflict rejection. The corrected fixture now passes at
 `60a20ee`; the earlier failed run retains its own source identity and result.
 
-The bounded `client-0b0bb79-partial-hosted-results.json` authenticates 22 selected
+The bounded partial hosted-results record (not retained) authenticates 22 selected
 PASS records, including both keyfile fixtures, and the sole failure. Its source
 identities and full-run failure remain explicit; it validates none of the seven
 newer functions. No raw log is retained. Exact proposal/review identities and
-the next report-refresh steps are in `next-client-source-work-0b0bb79.json`
-under the existing recovery root.
+the next report-refresh steps are not retained in the repository.
 
 ### Report adoption and next combined hosted checkpoint
 
@@ -867,7 +858,7 @@ no normal dependency to shipped client profiles. The existing free lock-refresh
 lane has a bounded first-Docify resolver preserving old package identities,
 metadata and resolved dependency edges while allowing only the two Docify edges
 and their reviewed candidate closure. Independent review found a raw-reference
-comparison issue; the root correction compares resolved identities so Cargo's
+comparison issue; the correction compares resolved identities so Cargo's
 qualification of unchanged references does not invent an edge change.
 
 All 13 adopted source after-images, direct formatting and script syntax checks
@@ -966,8 +957,8 @@ has client-contract scope and five explicit runtime limits; registration,
 ownership, association effects and real EVM state remain unverified. Source
 e2e pending count becomes 19; source-file reconciliation stays 306/357 with
 51 pending. Whole root/context/prompt rows, broader signer policy and EVM picker
-integration remain separate. Bounded patch/review identities are in
-`next-client-batch-1286faf-ready.json` under the existing recovery root.
+integration remain separate. Bounded patch/review identities are
+not retained in the repository.
 
 Report-only hosted run
 [38880542426](https://github.com/sam0x17/rtao/actions/runs/38880542426)
@@ -977,15 +968,14 @@ Authenticated artifact 12037044413 is 58,405 bytes, SHA256
 Independent refetch adopted exactly four reports. The matrix changes only
 the association row and derived counts: 19 pending and ten client contracts.
 All other families, 23 dependency identities, role inventories/host flags,
-68 divergences and compatibility claims remain unchanged. Bounded adoption
-proof is `association-client-report-af2565d-adoption.json`; no archive or
-extraction tree is retained.
+68 divergences and compatibility claims remain unchanged. The bounded adoption
+proof, archive and extraction tree are not retained.
 
 A separate complete keyfiles-golden source review found no product defect.
 One additional Unix fixture checks replacement of a 0644 keyfile with 0600
 permissions, its new parent mode and preserved identity. Existing encrypted
 coverage now checks the NaCl prefix and post-decryption signing, with no extra
-KDF calls. Root independently reviewed the patch; execution remains pending.
+KDF calls. The patch was independently reviewed; execution remains pending.
 Valid legacy Fernet, the exact combined encrypted-create transcript and isolated
 umask-000 execution remain unverified. Its oracle-only source row stays pending.
 The combined checkpoint must execute all 19 newly added functions since d01830c,
@@ -1000,7 +990,7 @@ at `a042d983623cc697e26af3014d28c489b9906c49` stops in Clippy before tests:
 the association fixture imports `associated_evm_key` from the reads root,
 but the public implementation is in `reads::m6_accounts`. Correct that fixture
 import without changing the production API or lint policy. The bounded main
-diagnostic is `check-38882046195.json`; its 67,265-byte source log has SHA256
+diagnostic is not retained; its 67,265-byte source log has SHA256
 `6c522c799df32b98f6e0626057441d7110669acd0f6c1026c1af322a9955b05b`.
 All 19 new fixture executions remain pending the corrected hosted checkpoint.
 
@@ -1031,9 +1021,8 @@ reports (58,349 bytes, SHA256
 `2770c94c6e5507a9f829272eb3f7ababa080746637c1db55e4add34ad5340a08`).
 Independent refetch confirms exactly those three source-row replacements;
 all 23 shipped dependency inputs, role counts/host flags, 20 e2e gaps,
-68 divergences and other compatibility claims remain unchanged. Bounded proof
-`m1-three-source-report-82d82d7-adoption.json` retains the reviewed identities;
-no archive or extraction tree is retained. This report-only run did not execute
+68 divergences and other compatibility claims remain unchanged. The bounded proof
+of the reviewed identities, archive and extraction tree are not retained. This report-only run did not execute
 the five new fixtures; the ordinary combined checkpoint remains pending.
 
 ### Verified weight-clipping repair
@@ -1049,8 +1038,8 @@ subnormal normalization, unclipped output and uniform fallback branches.
 Independent source review, direct rustfmt and whitespace checks pass. Hosted
 run 38858957306 now verifies compilation and this regression. The later complete
 source review reconciles weights in the batch below; native checked u64 balances
-and raw-weight semantics are unchanged. Bounded proposal/review evidence remains
-under the existing recovery root, with no build output or extra temporary directory.
+and raw-weight semantics are unchanged. Bounded proposal/review evidence is
+not retained in the repository; no build output or extra temporary directory was created.
 
 ### Subsequent source disposition and verified report refresh
 
@@ -1069,8 +1058,8 @@ Authenticated inspection and independent refetch supply exactly four adopted
 reports. The only matrix change is the reviewed check.py row, reaching 298/357
 reconciled and 59 pending. All 23 dependency inputs, role counts, host flags,
 20 pending e2e mappings, 68 divergences and other compatibility claims remain
-unchanged. Bounded proofs are `6c4f82c-report-inspection.json` and
-`6c4f82c-report-adoption.json`; no archive or extraction tree is retained.
+unchanged. Bounded inspection/adoption proofs, archives and extraction trees are
+not retained.
 Ordinary [38858957306](https://github.com/sam0x17/rtao/actions/runs/38858957306)
 at `50b7239` remains the weight-fix validation checkpoint. Other pending rows,
 strict M8 and milestone status are unchanged.
@@ -1107,7 +1096,7 @@ combined two-source comment did not supply the exact canonical upstream path.
 Split that comment into one canonical header per source without changing the
 guard. No report artifact was adopted. The 59,499-byte job log has SHA256
 `0971f8c9149cd5390fb2b53e9df618110d4ae8278cf6538bd9ab7d73ad60a681`;
-`check-38862240133.json` retains bounded failure evidence.
+bounded failure evidence is not retained in the repository.
 
 Independently reviewed CLI follow-ups restore transfer-history dates, signed
 balances, names, failed markers and checked successful root-TAO totals at the
@@ -1132,10 +1121,11 @@ before adopting exactly four reports. Only the three reviewed staking, weights
 and CLI-pruning rows change in the matrix: source map/matrix now agree at 301/357
 reconciled and 56 pending. All 23 dependency inputs, role counts, host flags,
 20 pending e2e mappings, 68 divergences and other compatibility claims remain
-unchanged. Bounded proofs are `f48535d-report-inspection.json` (SHA256
+unchanged. The bounded inspection proof (SHA256
 `ab3137fe89e8d2e3ca3cc865126ea1a6d278d6ca9d50d339244f6a0269ff6ed9`)
-and `f48535d-report-adoption.json` (SHA256
-`469ff440fe3b23ceae2991634b412ff20980935d86042da9b8f825a19d06c7e1`).
+and adoption proof (SHA256
+`469ff440fe3b23ceae2991634b412ff20980935d86042da9b8f825a19d06c7e1`)
+are not retained in the repository.
 
 The subsequent independently reviewed extractor repair verifies the sample
 constructor's imported native identity. Its samples-only closed producer policy
@@ -1157,8 +1147,8 @@ archive/extraction tree was needed.
 
 A read-only 2026-10-16 06:50 UTC refresh confirms that all thirteen recorded
 upstream filings remain open, all eight PRs are unmerged at their reviewed heads,
-and their label/review-request lists are empty. Evidence is
-`upstream-state-2026-10-16.json`; this refresh did not repeat the authored-search
+and their label/review-request lists are empty. The evidence record is
+not retained in the repository; this refresh did not repeat the authored-search
 census or source/test audit. No GitHub filing write occurred.
 
 Ordinary [38863766724](https://github.com/sam0x17/rtao/actions/runs/38863766724)
@@ -1168,8 +1158,8 @@ the newly wired finish boundary borrowed it. Retain the owned vector outside
 dispatch and give the seven handler closures a shared slice. No replay value
 or prompt behavior changes. Direct formatting and whitespace checks pass;
 the corrected ordinary checkpoint must establish compilation and the 26 new
-fixture results. Bounded MSRV evidence is `check-38863766724.json`, 58,981-byte
-log SHA256 `c776d6f6862cc8b4af9ba8737660b973258c7269eed3f15c3e51ab6088b5d935`.
+fixture results. Bounded MSRV evidence is not retained; the 58,981-byte
+log has SHA256 `c776d6f6862cc8b4af9ba8737660b973258c7269eed3f15c3e51ab6088b5d935`.
 
 Corrected ordinary [38864132855](https://github.com/sam0x17/rtao/actions/runs/38864132855)
 at `821142045101e74137f673c6c31890f514527a0a` passes MSRV, no-host and
@@ -1177,7 +1167,7 @@ semver. Its main job stops before tests on two `needless_borrows_for_generic_arg
 findings in the new wallet fixture's environment closure. Pass the Copy closure
 directly at both calls. Formatting passes; the 26 new fixtures still require
 execution on the corrected checkpoint. Main failure evidence is
-`check-38864132855.json`, 68,704-byte log SHA256
+not retained; the 68,704-byte log has SHA256
 `0876f601d04385eb3305af03cfd868c69bd710d0869e004849f0f032617cdb95`.
 
 ### Verified source dispositions and the next root-picker repair
@@ -1234,7 +1224,7 @@ The next source checkpoint skips ordinary CI until its generated corpus,
 four reports and isolated lock are authenticated and adopted. The subsequent
 combined checkpoint must pass before milestone acceptance. Source map stays
 303/357 reconciled, 54 pending; adopted matrix stays 301/56 pending generation.
-No local Cargo/build/test, service, Studio work, new temporary root or filing.
+No local Cargo/build/test, service, macOS-host work, new temporary root or filing.
 
 ### Authenticated M1 preparation and combined follow-up
 
@@ -1285,7 +1275,7 @@ whitespace checks pass. The combined hosted run must execute the authored
 fixtures; the expected Nextest total is 3,051 plus one separate TLS test.
 Preparation alone accepts no milestone or full source/pytest row. Strict M8
 remains off, M2-S02 stays open/unaccepted, and no local build/test, service,
-Studio work, new temporary root or filing occurred.
+macOS-host work, new temporary root or filing occurred.
 
 ## Prior integrated client checkpoint, 2026-10-15
 
@@ -1323,8 +1313,8 @@ fixtures; the whole-file row remains pending follow-up review and hosted tests.
 Source sample declarations have a separate bounded proposal, also still pending.
 No Python/oracle, device, live runtime or sanitizer execution is inferred.
 All new fixtures and strict M8/milestone acceptance remain unverified; M2-S02
-is open/unaccepted. Bounded source/adoption reviews live under the existing
-recovery root; no build output, archive or extraction tree was created.
+is open/unaccepted. Bounded source/adoption reviews are not retained in the repository;
+no build output, archive or extraction tree was created.
 
 Hosted report refresh
 [38826175917](https://github.com/sam0x17/rtao/actions/runs/38826175917) passed
@@ -1336,9 +1326,8 @@ supplies exactly four adopted reports. Matrix changes are limited to the thirtee
 reviewed source promotions and two appended D-041 tests. All 23 dependency
 inputs, role inventories, host flags, 20 pending e2e mappings, 68 divergence
 identities and other compatibility claims are unchanged. Inspection and adoption
-proofs are `d2d5add-report-inspection.json` and `d2d5add-report-adoption.json`.
-The timer patch has independent source approval in
-`null-pruning-wait-independent-review.txt`; its three fixtures and the integrated
+proofs are not retained in the repository.
+The timer patch has independent source approval; its three fixtures and the integrated
 compiler, transport and extractor fixtures await ordinary hosted execution.
 
 Ordinary [38827263561](https://github.com/sam0x17/rtao/actions/runs/38827263561)
@@ -1349,7 +1338,7 @@ rustdoc on two unqualified module links to timelock `seal` and `open`.
 Qualify both public targets without changing behavior or lint policy.
 The 106,372-byte terminal log has SHA256
 `e30baf51a75ef2456d0d676950754e4be50e48c07bd0e9350cbc8dcc331bdafd`;
-bounded proof is `check-38827263561.json`. Docs precede nextest in the current
+the bounded proof is not retained. Docs precede nextest in the current
 gate, so behavior tests and workspace doctests were not reached. The compiler
 corrections are verified, but current fixture execution and documentation
 completion remain unverified. The separate weights, staking and source-map
@@ -1362,13 +1351,13 @@ which the handshake refactor left needed only by tests and frame fuzzing.
 Gate that import with the existing test/fuzzing condition; do not suppress
 linting. The terminal no-host log is 184,651 bytes, SHA256
 `9254c2e86e6d7a6fc83d9ad914780d14822329ec028150f3987a91e8f68a2355`.
-Bounded proofs are `check-no-host-38824416747.json` and its authenticated detail
-follow-up. Main also failed during strict Clippy compilation: the new public RPC
+Bounded proofs (the check record and its authenticated detail
+follow-up) are not retained. Main also failed during strict Clippy compilation: the new public RPC
 fixture used primitive H256 where RpcError::FateUnknown requires RPC H256.
 Qualify that one constructor while retaining native hashes in client APIs.
 Its 77,984-byte terminal log has SHA256
 `351ce4a11a4b49f367c5bbe81e8f28722e76af135fb38b564df3a1214fd1cb3d`;
-bounded proof is `check-main-38824416747.json`. No tests or documentation ran
+the bounded proof is not retained. No tests or documentation ran
 there. The feature job subsequently passed and the run is terminally failed.
 Execution of both corrections remains pending. The reviewed source batch and
 report refresh above are ready for the next combined ordinary checkpoint.
@@ -1381,8 +1370,8 @@ changes only the two reviewed precompile/RPC source rows, reaching 284/357
 reconciled and 73 pending. All 23 dependency inputs match that source; exactly
 the reviewed workspace lock and RPC manifest hashes change. Role inventories,
 host flags, 20 pending e2e mappings, 68 divergences and other compatibility
-claims remain unchanged. Bounded proofs are `7cc7501-report-inspection.json`
-and `7cc7501-report-adoption.json`; no archive or extraction tree is retained.
+claims remain unchanged. Bounded inspection/adoption proofs, archives and
+extraction trees are not retained.
 The combined hosted gate must still execute the newer transport fixtures,
 constructor-refusal correction and documentation fix. Strict M8 remains off,
 M2-S02 open/unaccepted and no milestone is accepted.
@@ -1393,8 +1382,8 @@ full source parity at clean `d8db07d43f5c7e32623e8614b2e09f07629abeb9`. Adopted
 exactly four report files after authenticating and independently refetching
 the archive. Matrix changes are limited to the two reviewed substrate/interface
 rows. All 23 dependency inputs, role counts, host flags and other compatibility
-claims are unchanged. Bounded proofs are `d8db07d-report-inspection.json` and
-`d8db07d-report-adoption.json`; no archive or extraction tree is retained.
+claims are unchanged. Bounded inspection/adoption proofs, archives and
+extraction trees are not retained.
 
 Hosted generation
 [38816297566](https://github.com/sam0x17/rtao/actions/runs/38816297566) passed
@@ -1403,9 +1392,8 @@ archives were authenticated and independently fetched twice. Adopted outputs
 replace the explicit precompile bootstrap with the actual generated consumer,
 add five authenticated Python tables and refresh four reports. Exactly seven
 files change; the other 16 generated files and all 23 dependency inputs are
-unchanged. Existing legacy runtime-API output is unchanged. Bounded proofs
-`2ad5d1b-artifact-inspection.json` and `2ad5d1b-artifact-adoption.json` remain
-under `.local/recovery/2026-10-15/`, without archives or extraction directories.
+unchanged. Existing legacy runtime-API output is unchanged. Bounded inspection/adoption proofs, archives and extraction
+directories are not retained.
 
 The published matrix has 297/357 source rows reconciled, 60 pending, 20 pending
 e2e mappings and 68 divergences. Source mappings retain explicit native API,
@@ -1423,7 +1411,7 @@ private module to MAX_CHECKPOINT_BYTES. The published correction states the
 actual 64 MiB limit without changing visibility, behavior or lint policy.
 The exact 781,765-byte terminal log has SHA256
 `ba00375b057c261cbb8ec7efb71fb77897bfe305e384b6b2231a6aebeb35c502`;
-bounded proof is `check-38809901640.json`. Book generation was not completed.
+the bounded proof is not retained. Book generation was not completed.
 Follow-up ordinary
 [38814558931](https://github.com/sam0x17/rtao/actions/runs/38814558931) at
 `4e9447b195abe1d11123b3b153bd1955f81af747` completed with all five supporting
@@ -1432,19 +1420,19 @@ doctests, then failed strict rustdoc on one unresolved PythonBalance link.
 Qualify that existing public type's link without changing behavior or lint
 policy. The 782,118-byte log has SHA256
 `8343a0f3afc901d20745f0f6b5d1c12f053e0f33d7fa7feac4c18141ca115394`;
-bounded proof is `check-38814558931.json`. Book generation was not reached.
+the bounded proof is not retained. Book generation was not reached.
 Ordinary [38818850318](https://github.com/sam0x17/rtao/actions/runs/38818850318)
 completed at `f21c0919fcf42a73c09e9903d8a8bffa3180d562`. All five supporting
 jobs passed. The main gate ran 2,977 tests: 2,976 passed, one failed, four skipped.
 The failure is the extractor's constructor-semantic refusal fixture; doctests
 and documentation were not reached. The exact 773,213-byte log has SHA256
 `572428c4f9513974a72b200c53e5fc947ab20fe882f258bccf469a74b5818754`;
-bounded proof is `check-38818850318.json`.
+the bounded proof is not retained.
 
 An authenticated second read of that immutable log confirms seven exact named
 passes: positive unsigned-seed reconstruction/signing/attachment, Utility.batch
 roundtrip, all three canonical CLI notice fixtures, source-table mutations and
-comprehension refusals. Proof is `f21c091-named-test-results.json`. The positive
+comprehension refusals. The proof record is not retained. The positive
 seed is validated through its ordinary fixture; fuzz-driver/sanitizer execution,
 fresh Python/oracle results and newer-source test success remain unclaimed.
 
@@ -1485,15 +1473,15 @@ Hosted lock refresh
 at clean `cc32b5d011514ddf399c8ebe3f21e83643d819cd`. Its artifact was authenticated
 and independently fetched twice; both generated locks are adopted. Each adds only
 the existing rtao-rpc -> tokio-rustls edge; all package identities and other
-bytes are unchanged. The handwritten candidate was excluded. Bounded proof is
-`cc32b5d-lock-adoption.json`, without archives or extraction trees. The existing
+bytes are unchanged. The handwritten candidate was excluded. The bounded proof, archives and
+extraction trees are not retained. The existing
 resolver checks both locks under one 170-second deadline. Source reports are
 refreshed for ordinary validation. The main gate now checks documentation
 before nextest/doctests, preserving every command and catching link failures earlier.
 
 At this earlier checkpoint, local target output was 547,192 KiB; only
 source inspection, direct formatting and bounded bookkeeping ran locally.
-No local builds/tests, new temporary root, node, Mac Studio work, device run
+No local builds/tests, new temporary root, node, macOS-host work, device run
 or new upstream filing was needed. Preserve wallets, recovery material and
 unrelated work.
 
@@ -1509,7 +1497,7 @@ at `da99c3deb6886bca32a1d3c04eb098977068d8d3` stops before tests on
 `_subtensor.py`'s extra helper-crate mapping. All five supporting jobs pass.
 Raw main log is 61,923 bytes, SHA256
 `dc01e374fe32111e15206f169f139132dd17361e8e2dc8ca775f790359584fb8`;
-bounded proof is `check-38790070632.json`. Tests/doctests/docs were not reached.
+the bounded proof is not retained. Tests/doctests/docs were not reached.
 The preceding 97090f2 run caught the combined header's incomplete source path;
 splitting that header exposed the remaining helper mappings.
 
@@ -1533,8 +1521,8 @@ unchanged dependency inputs. The matrix changes exactly the eight reviewed
 file rows: 228/357 reconciled, 129 pending, with 20 pending e2e mappings.
 Role inventories and host flags are unchanged; graph changes are only CPU,
 time and source provenance. All compatibility, runtime and oracle claims
-remain unchanged. Proofs are `564-report-review.json` and
-`564-report-adoption.json`; no archive or extraction directory is retained.
+remain unchanged. Review/adoption proofs, archives and extraction directories
+are not retained.
 The next source batch reaches 236/357 reconciled files, with 121 pending and
 20 pending e2e mappings; its generated reports and tests remain pending.
 Strict M8 completeness remains off. No milestone has been accepted.
@@ -1557,7 +1545,7 @@ policy payloads alongside sanitized diagnostics; accepts Python edge whitespace
 for EVM secrets/artifacts and bridge tokens; handles CRLF/bare-CR artifact and
 successful macOS password output; and preserves scalar JSON array coercion.
 ABI array acquisition checks entry counts before collection or deserializing
-an excess top-level element. Independent source reviews and root rereads pass;
+an excess top-level element. Independent source reviews and rereads pass;
 no local build/test or native password/browser service ran. Snapshot siblings
 resolve eagerly and need an open connection; D-007 explicitly covers derived
 slot timing from the retained runtime. Timelock parser/deadline, precompile
@@ -1565,9 +1553,8 @@ table/diagnostic, Vault browser/QR and picker source gaps remain pending.
 
 All 70 selected S9 regressions passed in prior ordinary run 38780323094 at
 `262be704a322e82efcbcaf0ee5764f1adb5519aa`; all 29 selected boundary/test
-files are byte-identical at `97090f2`. Immutable run/job/head identities,
-raw-log digest and exact PASS lines are in
-`m9-security-targeted-ci-38780323094.json`. That run failed three other tests;
+files are byte-identical at `97090f2`. The bounded record of immutable run/job/head
+identities, raw-log digest and exact PASS lines is not retained in the repository. That run failed three other tests;
 these targeted results do not establish C1 or close the findings. M2-S02
 Ed25519 final-drop erasure remains open and unaccepted.
 
@@ -1580,8 +1567,8 @@ three reviewed rows: 212 reconciled/145 pending, with 21 e2e keys pending.
 Existing oracle and compatibility claims, role package inventories and host
 flags stay unchanged. Record the hosted CPU accurately as measurement provenance.
 
-Proofs are `546-generation-review.json` and `546-generation-adoption.json`;
-no archive/extraction directory remains. Root replaces test-only unwraps with
+Review/adoption proofs are not retained in the repository;
+no archive/extraction directory remains. Test-only unwraps are replaced with
 checked fixture diagnostics, retaining all assertions and workspace lints.
 Push this adoption head for normal combined hosted validation. No current
 passing tests/doctests/docs or milestone acceptance is claimed.
@@ -1595,10 +1582,10 @@ its annotation. Untyped unknown u64 remains a refusal. A real pinned-metadata
 fixture covers Crowdloan contribution/cap/minimum arguments and unknown-u64
 refusals. Log50,999bytes SHA256
 `25153a7a1381b10724723066a49845ba5de5a03b34eb8e55c00e7b332f5eeb28`;
-proof `check-38776671979.json`. No adopted artifact or new test success.
+proof not retained. No adopted artifact or new test success.
 
 
-Root follow-up aligns decimal ABI integer strings with Python's default
+A follow-up aligns decimal ABI integer strings with Python's default
 4,300-digit limit, including leading zeroes; hexadecimal remains exempt.
 Public coercion fixture source covers both sides, signs, Unicode digits and
 separators while retaining native u64 and ABI-width checks. Formatting and
@@ -1611,7 +1598,7 @@ cancellation-aware hash request needs an explicit JSON Value type before its
 null check. Add that annotation, preserving the same request and cancellation
 path. Raw log51,419bytes SHA256
 `b7fba301dd5137e054148f0eb0b567f7549004ee42a998fc8d96b8f9186dfeb4`;
-proof `check-38776446102.json`. No generated artifact or new test result.
+proof not retained. No generated artifact or new test result.
 Retry hosted generation on the corrected clean source before ordinary CI.
 
 Normal [38770765426](https://github.com/sam0x17/rtao/actions/runs/38770765426)
@@ -1620,8 +1607,8 @@ strict Clippy and ordinary parity pass. Nextest runs 2,831 tests: 2,784 pass,
 47 fail and 4 are skipped. Doctests/docs are not reached. Raw main log is
 1,258,642 bytes, SHA256
 `b5a3c5b4b04cc477e8b322c38d131a3703149d6877e63296592007e5318acc9a`;
-bounded exact-source failures are retained in
-`test-failures-38770765426.json`. These results predate the later source batch.
+the bounded exact-source failure record is
+not retained in the repository. These results predate the later source batch.
 
 All 47 failure causes now have source corrections or reviewed fixture repairs.
 Production corrections include signer-specific metadata digests without stale
@@ -1630,7 +1617,7 @@ Vault replacement close, upgrade repository validation and decrypted-title
 stream. Fake request recording preserves every separate transport call while
 excluding internal delegation, including recovery after injected panic.
 Fixture repairs preserve one-submit/deadline/nonce/shield, parent-runtime and
-exact numeric-bit checks. Independent source rereviews and root cross-review
+exact numeric-bit checks. Independent source rereviews and a cross-review
 pass; hosted execution is still required.
 
 The same batch repairs closed-client snapshot/subscription admission and
@@ -1672,8 +1659,8 @@ inventories and host selection remain unchanged. Matrix differences are exactly
 five reconciled source rows, two corrected pending root-claim homes, three
 qualified client lifecycle bindings and new unverified D064/D065. Source counts
 are 209 reconciled/148 pending; 21 e2e mappings remain pending. Every existing
-oracle classification and compatibility claim is unchanged. Proof is
-`ddd-generation-adoption.json`; no archive/extraction directory remains.
+oracle classification and compatibility claim is unchanged. The adoption proof
+is not retained; no archive/extraction directory remains.
 
 At 16:49 UTC normal run `38770765426` still has main/features active and four
 supporting jobs passing. Retain that run to obtain its ordinary test outcome;
@@ -1710,11 +1697,10 @@ existing five fee contracts remain ordinary CI targets; no runtime success
 is asserted. Current committed matrix/reports still describe the prior source
 until authenticated hosted refresh/adoption.
 
-Root review and available independent case/gate reviews found no remaining
+Primary review and available independent case/gate reviews found no remaining
 source defect in this batch. Direct formatting and whitespace checks pass;
-hosted compilation, generation checks and execution remain required. Proofs
-include `client-source-batch-root-review.json`, `client-unit-source-identities.json`
-and the individual source reports in the existing recovery root. No local
+hosted compilation, generation checks and execution remain required. Review
+proofs and the individual source reports are not retained in the repository. No local
 build/test, service, temporary directory, upstream filing or milestone acceptance.
 
 Normal run [38769405520](https://github.com/sam0x17/rtao/actions/runs/38769405520)
@@ -1725,7 +1711,7 @@ the existing document validator and call that same function from the fixture,
 preserving all cases without temporary files or a new dependency. The transfer
 lifecycle target has no reported compiler diagnostic in the completed Clippy
 log; execution remains unverified. Supply, MSRV, no-host and semver pass;
-features is still active at inspection. Proof: `check-38769405520.json`.
+features is still active at inspection. The proof is not retained.
 This small compiler correction is pushed separately from the later source
 batch so ordinary hosted validation can proceed while that batch is reviewed.
 
@@ -1737,8 +1723,8 @@ ordering bug: optional pending M10 D031 is required to have pinning tests before
 the validator reaches its documented deferral. Limit the empty-list allowance
 to that exact pending/M10/addition tuple. A full-register regression exercises
 the actual strict validator, then rejects active/M9/changed-class mutations.
-Independent source rereview clears the correction. Proof is
-`check-38767926902.json`; Clippy, ordinary tests, doctests and docs were not
+Independent source rereview clears the correction. The proof is
+not retained; Clippy, ordinary tests, doctests and docs were not
 reached. A fresh normal combined hosted run is required.
 
 Independent review clears the balance/property source mappings, workspace
@@ -1763,7 +1749,7 @@ branch still need implementation/coverage. Three new transfer/batch transcript
 fixtures preserve exact upstream amounts, production Executor signing, independent
 expected calls, explicit receipt state and exact hash/key-qualified balance reads.
 Two negative fixtures reject wrong calls and script exhaustion before submission
-or state advance. Root and independent source rereview find no remaining defect;
+or state advance. Primary and independent source rereviews find no remaining defect;
 hosted compilation/execution and mapping integration are pending. No chain
 economics, atomicity or rollback is claimed. No local build/test, service,
 temporary directory or upstream filing.
@@ -1775,7 +1761,7 @@ inputs. The matrix changes only the two reviewed balance/property dispositions
 and five corrected derived-code homes. Source counts are 204 reconciled and
 153 pending; all 115 e2e rows, oracle classifications and runtime qualifications
 are unchanged. Dependency inventories, host selection and compatibility claims
-also stay fixed. Proof is `41f-generation-adoption.json`; no archive or
+also stay fixed. The adoption proof is not retained; no archive or
 extraction directory remains. Normal combined hosted validation is next.
 Independent rereviews of the balance mapping and final mapping/discovery gates
 are active. No local build/test, service, new filing or milestone acceptance.
@@ -1789,7 +1775,7 @@ index considered only packages under `crates/`. Discover declared explicit
 workspace members and immediate-child globs, retaining exclusions, repository
 bounds, feature/harness/ignore checks and the inclusion-graph limit. Add focused
 positive and refusal fixtures. Preserve the D022 reference and price assertions.
-Proof is `check-38762528504.json`, including the full parity-layer report.
+The proof, including the full parity-layer report, is not retained in the repository.
 
 Correct five map rows whose dependency/producer references were incorrectly
 presented as derived-code homes. Retain actual native ports and literal outputs;
@@ -1816,7 +1802,7 @@ D055's exact module reference and the scoped e2e evidence described below.
 All 115 e2e keys remain: 72 intent plans, 6 read fixtures, 5 client contracts,
 6 hosted scenario sources, 2 inapplicable and 24 pending. Runtime claims remain
 unverified or inapplicable; no fixture result is reported as a chain execution.
-Proof is `8cd-generation-adoption.json`; no archive/extraction directory remains.
+The adoption proof is not retained; no archive/extraction directory remains.
 Combined normal hosted validation and independent gate-integration rereview
 remain pending. A spelling-only source inspection finds all 199 registered
 divergence functions, including two manually traced module aliases; this does
@@ -1827,8 +1813,8 @@ is terminal: all five supporting jobs, main compilation and strict Clippy pass.
 Parity stops before tests on D055's incorrect `client::tests` module path.
 The unchanged fixture is declared in `client::attempt_budget_tests`; correct
 only its registered witness path. Its body preserves completed oversized-body
-refusals across both timing boundaries, without sleeps or retries. Evidence is
-`check-38759055202.json`, with the full raw-log digest. Do not infer nextest,
+refusals across both timing boundaries, without sleeps or retries. The evidence record,
+with the full raw-log digest, is not retained. Do not infer nextest,
 doctest or docs success. Compatibility refresh `38761443333` at `a9a7ea5`
 predates this register correction; its matrix cannot be adopted as current.
 The corrected source requires a fresh hosted report followed by normal CI.
@@ -1846,8 +1832,8 @@ exact native homes. D062 discloses existing owner/window preflight and D063
 discloses decoded-account replay identity. Correct the contradictory owner-list
 fixture assertion and canonical attribution. Repair CLI contact JSON types and
 stable hierarchical alias order; independent rereview closes the natural-key
-tie found during that repair. All ten blobs/SHA256 pins are reverified in
-`ten-source-identities.json`.
+tie found during that repair. All ten blobs/SHA256 pins are reverified; that
+identity record is not retained in the repository.
 
 Five independently reviewed policy/fee scenario sources now use real intents
 and Executor, independent expected calls, exact fee-query decoding and refusal
@@ -1856,8 +1842,8 @@ entries reduce pending e2e rows from 29 to 24. New validation/matrix code binds
 only those five client contracts, requires unverified runtime/fee limits, checks
 ordinary CI inclusion and classifies every existing mapping's source evidence.
 Strict pending and oracle rules remain intact. The gate integration needs an
-independent reread and hosted execution; its review request is retained in
-`e2e-mapping-integration-review-request.txt`. Fresh hosted matrix generation and
+independent reread and hosted execution; its review request is
+not retained in the repository. Fresh hosted matrix generation and
 combined ordinary validation remain required. No local build/test, service,
 temporary directory, new filing or milestone acceptance is claimed.
 
@@ -1868,7 +1854,7 @@ the archive identity/digest and all 23 unchanged dependency inputs. Role counts
 and host selection stay fixed. The matrix changes only the twelve reviewed
 core-py source rows, retaining oracle-only/unverified classifications; source
 counts are 192 reconciled/165 pending, with 29 e2e mappings pending. Compatibility
-and runtime claims are unchanged. Proof is `303-generation-adoption.json`.
+and runtime claims are unchanged. The adoption proof is not retained.
 No archive, extraction directory or local build was created.
 
 The previous normal run `38756773737` is terminal: supply, MSRV, no-host,
@@ -1888,7 +1874,7 @@ for source reconciliation, contrary to the existing Q30 separation. Keep the
 same classification and all image/Python/differential/device/published-wheel
 coverage unverified. Native product source and export obligations are unchanged.
 The file map is now 192 reconciled/165 pending; 29 e2e mappings remain pending.
-Proof is `core-py-source-review.json`; no Python, container or local build ran.
+The review proof is not retained; no Python, container or local build ran.
 Fresh hosted matrix generation is required before ordinary validation.
 
 Normal run [38756773737](https://github.com/sam0x17/rtao/actions/runs/38756773737)
@@ -1896,7 +1882,7 @@ at `d179b14` passes semver and MSRV at inspection; supply, no-host and features
 remain live. Main Clippy stops before tests on two cloned values used only to
 create borrowed one-element slices in the new Children ordering fixture. Use
 `std::slice::from_ref` at those call sites, preserving both assertions and the
-later owned tool arguments. Proof is `check-38756773737.json`. No lint gate or
+later owned tool arguments. The proof is not retained. No lint gate or
 assertion is disabled; the corrected source needs another normal hosted run.
 
 Compatibility refresh
@@ -1906,7 +1892,7 @@ archive identity/digest and all 23 dependency inputs. Only xtask's reviewed
 license input hash changes; role packages and host selection are unchanged.
 The matrix changes only D-057's two portable pinning references, with all other
 source statuses and oracle classifications retained. Runtime validation claims
-remain empty. Proof is `877-generation-adoption.json`. The combined source and
+remain empty. The adoption proof is not retained. The combined source and
 reports now need the next normal hosted check; no test or milestone acceptance
 is inferred from generation.
 
@@ -1920,7 +1906,7 @@ environment artifact are byte-identical. Chain rules gain only the reviewed
 proxy-codec and reveal payload/epoch-prefix sections; existing rules are
 unchanged. Matrix changes are eleven file homes/statuses, three e2e dispositions
 and new unverified D-061. Compatibility/runtime/oracle claims do not change.
-Bounded proof is `d65-generation-adoption.json`; no archive or extraction
+The bounded proof is not retained; no archive or extraction
 directory remains.
 
 Normal run [38753200118](https://github.com/sam0x17/rtao/actions/runs/38753200118)
@@ -1930,7 +1916,7 @@ Unix-only D-057 pinning reference. Declare the existing combined Apache
 obligation in xtask's manifest and register the existing unconditional regular
 file/rotation witnesses. Keep the Unix FIFO and broken-symlink tests intact as
 additional platform fixtures, with their execution still pending. No coverage
-or license rule changes. Evidence is `check-38753200118.json`.
+or license rule changes. The bounded evidence record is not retained.
 
 The changed manifest needs a fresh hosted dependency/compatibility record,
 and the changed D-057 witnesses need an updated matrix. Use a compatibility-only
@@ -1945,8 +1931,7 @@ current full workspace test success is established.
 The next source batch reconciles eight more files: 180 of 357 source rows are
 now reconciled, with 177 pending. Two exact ordinary read bindings and the
 obsolete core tempo-rejection disposition reduce pending e2e mappings to 29.
-Source evidence is in `intent-map-batch-review.txt`, `plan-registry-review.txt`
-and `e2e-source-audit.md`. Complete Plan approval JSON and all nine manifest
+Source review records are not retained in the repository. Complete Plan approval JSON and all nine manifest
 fields have stronger fixtures. Registry diagnostics now retain Python quoting
 and the sorted callable operation set; generated AnyIntent needs hosted refresh.
 Subnet creation discloses a pinned exact cost and queue/pruning flow. D-061
@@ -1966,8 +1951,8 @@ Normal run [38751673871](https://github.com/sam0x17/rtao/actions/runs/3875167387
 at `4f28dbf` passes semver, MSRV, no-host and supply at inspection; features is
 still running. The three fixture type errors are gone. Main check stops before
 tests on one Clippy type-complexity finding in the nested-policy signing
-recorder. Name that fixture type without suppressing the lint. Retained evidence
-is `check-38751673871.json`. Final independent rereads find no remaining defect
+recorder. Name that fixture type without suppressing the lint. Bounded evidence
+is not retained. Final independent rereads find no remaining defect
 in the corrected multisig dynamic-role continuation or pinned-only shielding
 guard; executed regression closure remains pending. No local build or test ran.
 The run is now terminal; features was cancelled when the lint-correction push
@@ -1980,7 +1965,7 @@ errors: Crowdloan state needs typed seeding in two fixtures, and V15 pallet
 metadata exposes `error`, not `errors`. Correct those fixtures and remove the
 unused descriptor import. Formatting and diff checks pass; execution of the
 corrected source requires the next normal hosted run. The bounded failure
-record is `check-38750380241.json`. No local build or test ran.
+record is not retained. No local build or test ran.
 That run is now terminal: no-host also passed, and its features job was
 cancelled when the fixture-correction push superseded the run.
 
@@ -1990,8 +1975,8 @@ its eighteen exact regular members and both archive digests are verified, along
 with all 23 dependency-input hashes. Role inventories and host selections are
 unchanged. All thirteen generated Rust files and environment data are identical.
 Only reviewed file/divergence matrix rows and measurement provenance change;
-no runtime/oracle success is added. The private proof is
-`4c-generation-adoption.json`. Reports are adopted for the next normal CI run;
+no runtime/oracle success is added. The adoption proof is
+not retained. Reports are adopted for the next normal CI run;
 combined compilation, regression execution and final security disposition remain
 pending. No local build or extraction directory was created.
 
@@ -2000,7 +1985,7 @@ at `5125fb9` finishes with all five supporting jobs passing, including supply.
 Main compilation and strict Clippy also pass. Parity then stops before tests
 on the missing basket producer's canonical attribution and a renamed D-044
 fixture reference; both are now corrected in source. The bounded log record
-is `check-38746145922.json`. No current nextest/doctest success is established.
+is not retained. No current nextest/doctest success is established.
 
 The next source batch adds M9 resource/secret/composition repairs and the public
 typed multisig adapters. [The M9 report](../security/m9.md) preserves its nine
@@ -2079,8 +2064,8 @@ its commit. Generation run `38718933791` at `e2e19b4` then succeeds and is
 verified/adopted: seventeen exact regular members, all 23 dependency hashes,
 unchanged role inventories, only the six frozen basket records removed from
 the shared catalog, four M6 test mappings and the exact divergence registrations.
-All other generated interfaces remain unchanged. Its private evidence is
-`m6-checkpoint-adoption.json`; ordinary combined validation is next.
+All other generated interfaces remain unchanged. Its bounded evidence is
+not retained; ordinary combined validation is next.
 
 The keyfile parser repair is committed in `f16e97c` after independent source
 review. A fresh M4 review records four findings and source repairs in
@@ -2124,7 +2109,7 @@ tests and nine doctests; four nextest tests are skipped. It then fails strict
 rustdoc because six generated parameter descriptions contain unescaped HTML
 placeholders. The generator and adopted hosted output now render them literally;
 the docs check must be rerun. These results exclude the newer M6 source and parser
-repair. Bounded evidence is private `check-38714093697.json`.
+repair. Bounded evidence is not retained.
 Generation run [38714402721](https://github.com/sam0x17/rtao/actions/runs/38714402721)
 at `afd989a` fails before regeneration because the new blocking-accessor format
 string has an unmatched closing brace. The generator source now escapes each
@@ -2139,7 +2124,7 @@ decoding, all implemented command advertisement, distinct account spellings,
 last-allocated nonce semantics and the valid subnet boundary 4095. Explicit
 refusals for 4096/65535 are added to the native policy fixture. No assertion or
 gate is disabled. The all-83 planning test passes; doctests and docs are not
-reached. Evidence: private `check-38710720744.json`. The new read/facade source
+reached. Bounded evidence is not retained. The new read/facade source
 was not included in that run and has no compiled/tested claim.
 
 Source through `a929bcd` implements all 83 intents and 40 of 102 reads,
@@ -2201,8 +2186,8 @@ without changing order or duplicates, and strictly decode the fixed-width
 public PoW hash. No assertion or gate is removed. No-host, supply and semver
 pass; features remains running at inspection. Tests, doctests and docs builds
 were not reached. The next ordinary hosted run must validate the corrections.
-Bounded private evidence is `check-38709461377.json`. Local output remains
-534 MB in target and 146 MB in recovery; no local build or scratch root.
+Bounded evidence is not retained. Local output remains
+534 MB in target; no local build or scratch root.
 
 Earlier normal hosted run
 [38707066144](https://github.com/sam0x17/rtao/actions/runs/38707066144)
@@ -2212,7 +2197,7 @@ fixture for missing its explicit class token. Meaningful existing trade and
 claim-aware fixture bindings now name their concrete intent types. A bounded
 lexical source audit finds assertion-body references for all 83 classes; the
 hosted Cargo/cfg/harness qualification remains authoritative. Tests, doctests
-and docs builds were not reached. Private evidence is `check-38707066144.json`.
+and docs builds were not reached. Bounded evidence is not retained.
 
 The final ten ports, 20 M5 CLI routes, 21-constructor policy fixture, all-83
 plan fixture and transaction reference have verified generated integration.
@@ -2233,7 +2218,7 @@ not explicitly reference the three Rust classes required by the pending gate.
 The fixture now matches MoveLock, SetPerpetualLock and SetRejectLockedAlpha
 and asserts their decoded fields before checking bytes and previews. The gate
 is unchanged. Tests, doctests and docs builds were not reached. Bounded failure
-evidence is retained privately as `check-38705671132.json`.
+evidence is not retained.
 
 Earlier normal hosted run
 [38705303263](https://github.com/sam0x17/rtao/actions/runs/38705303263)
@@ -2241,8 +2226,8 @@ at `1c807e1` fails compilation in check and features because `SimSwapResult`
 needs client `ReadValue` registration. The existing model already derives
 typed decoding; the source registration is corrected. Supply, no-host and
 semver pass; MSRV remains in progress. Tests, doctests and documentation builds
-were not reached. Bounded logs and diagnostics are retained privately as
-`check-38705303263.json`.
+were not reached. Bounded logs and diagnostics are not
+retained.
 
 Earlier normal hosted run
 [38703332560](https://github.com/sam0x17/rtao/actions/runs/38703332560)
@@ -2251,7 +2236,7 @@ stops at strict Clippy: the leasing pass-through generator clones its Copy
 `Percent` and `Option<u32>` arguments. The source generator now recognizes
 these Copy types, including optional Copy values. Verified generated output
 is adopted; tests and doctests were not reached on this checkpoint. The bounded
-private failure record is `check-38703332560.json`.
+failure record is not retained.
 
 Seven further ports have verified generated integration: Batch, SetIdentity, SwapHotkey, AddStake,
 AddStakeLimit, SwapStake and MoveSwapStake. Batch uses a unanimous instance
@@ -2286,7 +2271,7 @@ map value. The source fixture now seeds an explicit map miss so the actual
 ValueQuery default is exercised, retaining the equality-refusal assertions.
 Doctests were not reached. This run does not validate the later seventeen ports
 or money JSON correction. The bounded failure inventory and log digest are
-retained privately as `check-38701008514.json`.
+not retained.
 
 Earlier normal hosted run
 [38697413448](https://github.com/sam0x17/rtao/actions/runs/38697413448)
@@ -2296,8 +2281,8 @@ were skipped. Doctests were not reached. The failures cover CLI schema/output
 fixtures, wallet accounting fixtures, stale pending-operation assertions and
 an unknown SS58 prefix in a coldkey fixture. Their source fixes and the next
 thirteen-intent batch are committed; this run does not validate that batch.
-The bounded log digest and exact failure inventory are retained privately as
-`check-38697413448.json` in the recovery directory.
+The bounded log digest and exact failure inventory are not
+retained.
 
 Earlier normal hosted run
 [38695489489](https://github.com/sam0x17/rtao/actions/runs/38695489489)
@@ -2318,18 +2303,17 @@ and report refresh
 were verified and adopted unchanged in `5f4b8fa` and `3afa90b`.
 Review checked artifact digests, exact regular-file members, all 23 dependency
 hashes, unchanged role package inventories, the two read-status changes and
-D-044/D-045 regression references. Private bounded records are
-`m5-read-adoption.json` and `m5-persistence-adoption.json` under
-`.local/recovery/2026-10-14/`. Report refresh
+D-044/D-045 regression references. Bounded adoption records are
+not retained. Report refresh
 [38692634551](https://github.com/sam0x17/rtao/actions/runs/38692634551)
 was verified and adopted in `a9c720c`, covering the CLI owner feature and sha2
-dependency. Its proof is `m4-pruning-adoption.json` in the same recovery directory.
+dependency; its proof is not retained.
 Hosted generation
 [38694967521](https://github.com/sam0x17/rtao/actions/runs/38694967521)
 at `70fca29` was verified and adopted unchanged. Exact archive paths/digests,
 all 23 dependency inputs, unchanged role inventories, twelve pending-body
 removals, nine pass-through additions, the pre-serde guard and matching matrix
-changes were checked. Its proof is `m5-crowdloan-root-adoption.json`.
+changes were checked; its proof is not retained.
 Hosted generation
 [38696143491](https://github.com/sam0x17/rtao/actions/runs/38696143491)
 at `18679e3` was also verified and adopted unchanged. Its thirteen exact
@@ -2337,13 +2321,13 @@ members include only four availability/pending changes and three call-map
 additions; all other generated interfaces and matrix families are unchanged.
 All 23 dependency hashes include the updated CLI feature declaration, with
 unchanged role package sets/counts and no runtime claims. Its bounded proof is
-`m5-coldkey-adoption.json` in the same recovery directory.
+not retained.
 Follow-up generation
 [38696690648](https://github.com/sam0x17/rtao/actions/runs/38696690648)
 at `7c9c8ca` corrects two unused zero-argument pass-through bindings. Review
 verified the same thirteen paths and 23 hashes, exactly two parameter-name
 changes, unchanged other interfaces/matrix and unchanged role inventories.
-Its proof is `m5-fieldless-adoption.json`.
+Its proof is not retained.
 Runtime validation remains null/empty; Linux graph measurement does not
 establish native Mac, hardware, oracle or chain interoperability coverage.
 
@@ -2358,7 +2342,7 @@ and [disk-cleanup.md](disk-cleanup.md).
 ## Disk cleanup completed
 
 Removed the entire task-created
-`~/workspace/rtao/target/execute-plan.6Ro0PC` directory. Its measured
+temporary build root under `target/`. Its measured
 allocation before cleanup was 335,709,460 KiB (320.16 GiB). The task-owned Cargo
 cache shared inside that temporary root and fifteen additional compiler target directories were removed.
 Tools, copied caches, source clones, disposable fixtures and raw logs were
@@ -2366,23 +2350,19 @@ also removed after checking running processes/open files, launchd/config,
 symlinks, virtual environments and Git worktree/alternate dependencies.
 No task build, test or node process remains. No remote scratch was created.
 
-Canonical authored source remains in this repository. Unfinished source,
-172 patches and handoff metadata are retained privately in
-`.local/recovery/2026-10-14/unfinished-source.tar.gz` (152,583,783 bytes).
+Canonical authored source remains in this repository. Unfinished source and
+172 patches were archived outside the repository (152,583,783 bytes).
 The archive's 18,888 members were checked against the recovery selection.
 Its SHA-256 is
 `770d9d50a9c855e61a4e7476c91caef52b6d0161c297c996a9fdf46c0852969b`.
-The recovery directory is excluded from Git and Docker contexts; its README and source
-manifest describe recovery. Preserving a candidate does not adopt or
+Preserving a candidate does not adopt or
 validate it. See [disk-cleanup.md](disk-cleanup.md).
 
 At the initial cleanup, the pre-existing `target/debug` was preserved and the
 remaining target directory was 547,192 KiB (534 MiB). By the 2026-10-16
 checkpoint, `target` is absent. Shared Cargo/toolchain caches, other
-projects and all wallets/recovery state are untouched. Retained durable
-wallet/recovery data: `~/.local/share/rtao/testnet-soak`. No service
-or task still depends on the deleted temporary root. backup snapshots
-are untouched; deleted file allocation is not a promise of an equal immediate
+projects and all wallets/recovery state are untouched. No service
+or task still depends on the deleted temporary root. Deleted file allocation is not a promise of an equal immediate
 increase in physical free space.
 
 ## Historical execution record
@@ -2393,13 +2373,12 @@ prerequisites or local validation requirements are historical and superseded
 by Q30 and the cleanup above. Referenced raw scratch logs were discarded;
 bounded repository evidence remains. Preserve the recorded test limitations.
 
-## External prerequisites and the user's 2026-10-14 response
+## External prerequisites decision, 2026-10-14
 
-M0-01 requested PLAN.md §12.13's prerequisites. The user answered:
-"I can provide testnet tao to whatever wallet address you need; just use my
-github; we will skip sophisticated github runners, I want to just use
-ubuntu-latest free ones; I don't see why we need github pages, that seems
-overkill; I have a ledger we can use" (PLAN.md Q23).
+M0-01 requested PLAN.md §12.13's prerequisites. Decision (PLAN.md Q23): testnet
+TAO is available on request, the maintainer's GitHub namespace is used, only
+free `ubuntu-latest` runners are used, GitHub Pages is not needed, and a
+maintainer-held Ledger is available.
 
 Use `sam0x17` for GitHub and `ghcr.io/sam0x17/rtao-oracle` for the oracle
 namespace. All hosted jobs use free Linux x64 `ubuntu-latest`; no paid,
@@ -2408,14 +2387,14 @@ and ship as downloadable rustdoc/book release assets without Pages.
 
 Q29 waives the 24-hour testnet soak and its dedicated funding, subnet setup and
 host prerequisites. No funding request, setup transaction or deployment is needed.
-Preserve the prepared local wallet and recovery state. The user's Ledger is
+A maintainer-held Ledger is
 available for manual device runs when the checklist is ready; actual run
 results and model/app compatibility remain to verify.
 
 Preserve full parity and all release targets. Linux builds need a fixed,
 digest-pinned Ubuntu 22.04 container for the glibc 2.35 floor; ARM cross tooling
 and resources must be validated and never described as native test coverage.
-Mac Studio builds/checks use the recorded temporary root. Keychain parity
+macOS builds/checks use a recorded temporary root. Keychain parity
 requires a separate isolated harness that restores the default keychain and
 search list on every exit, preserving user secrets; `cargo xtask gates` changes
 no host settings. Equivalent Mac checks and trustworthy provenance for local
@@ -2431,14 +2410,14 @@ and its prior emulator evidence; validation is in `docs/upstream/pr-u17.md`.
 
 ## Historical verification before Q30
 
-The user explicitly approved Q26's BLS build-graph criterion, Q27's exact
+The maintainer approved Q26's BLS build-graph criterion, Q27's exact
 dormant lru exception and Q28's exact dormant ruzstd exception. The reviewed
 Q28 patch is applied; activation, unknown-entry/advisory and changed-range
 regressions are retained. The full supply job passes against the final
 canonical locks: cargo-deny passes, both raw audits remain nonzero/visible,
 and all 53 dormant graph checks pass. Current Rust and Rust 1.89 pass the
 12 guard tests and the gate regression; fresh isolated Clippy passes.
-Evidence: `supply-ruzstd.md` and `ci/supply-24734` under the recorded root.
+Evidence: `supply-ruzstd.md`.
 The complete gates still have to pass
 before any commit or push. Initial oracle staging reports pending/M2-05 and
 retains full verification once real artifacts exist. No rtao commit, push,
@@ -2448,7 +2427,7 @@ through M9.
 Native Q25 balances use checked u64 rao and distinct TAO/alpha units. Native
 properties, input rejection, JSON regressions, Rust 1.89 and strict Clippy
 pass; codec replay covers 2,899 samples. Signed authentication nonces are a
-separate HTTP protocol domain. Evidence: `primitives.txt` and `btauth.txt`.
+separate HTTP protocol domain. Raw evidence logs are not retained in the repository.
 
 M1 source generation, model/shape checks, transport, read-only live probes,
 fuzzing, release preparation and feature checks have bounded evidence in
@@ -2476,8 +2455,8 @@ Filed upstream contributions: U17 #3242, U15 #3243, U14 #3244, U12 #3245,
 U1 #3246, U2 #3247 and U5 #3248. Their evidence is in `docs/upstream/`.
 Security issues #3251 (Ed25519 erasure) and #3252 (secret URI diagnostics) are
 also filed. With U9/U10 below and Zondax #295/#296, the live inventory is eight
-PRs and five issues, all open on 2026-10-14. The user requested an independent
-accuracy and fix-verification audit of every filing; that audit is active,
+PRs and five issues, all open on 2026-10-14. An independent
+accuracy and fix-verification audit of every filing was requested; that audit is active,
 and does not imply hosted, physical-device or full-preflight validation.
 
 The audit's Rust review workspaces share the task build cache. An unwrapped
@@ -2502,14 +2481,14 @@ disposable proof files were audited and removed; compiler wrappers and shared
 caches remain live. Evidence is in `docs/upstream/validation/quality-ir-keys.md`.
 During U1 validation, the first binding check invoked local Python
 through PyO3 discovery, contrary to the CI-only instruction. No oracle,
-recorder or corpus ran locally. The incident is recorded in
-`docs/upstream/validation/pr-u1-python-discovery-incident.txt`; later checks
+recorder or corpus ran locally. The raw incident record is
+not retained in the repository; later checks
 and the workspace default set `PYO3_NO_PYTHON=1`.
 
-Completed workers audited and removed their isolated fixture, filing and
+Completed work steps audited and removed their isolated fixture, filing and
 rehearsal directories. Shared build, tool, upstream-source, advisory and fuzz
-caches under the recorded execution root remain live dependencies. Root
-integration logs also use that root. Audit processes, launchd, configuration,
+caches under the recorded execution root remain live dependencies.
+Integration logs also use that root. Audit processes, launchd, configuration,
 symlinks, virtual environments and Git dependencies before exact cleanup.
 
 M2-22 pin automation is prepared: isolated candidate preparation/adoption,
@@ -2520,12 +2499,12 @@ Rust 1.89; nine original recorder replay tests and strict Clippy pass.
 Workflow/actionlint and shell syntax checks pass. Main/testnet previews both
 resolve the pinned v478 commit and fingerprint with no reported changes.
 A local force run refuses before candidate/container execution and preserves
-pins. Evidence is in `m2-pin-pipeline.md`, `m2-pin-validation.txt`, and the
-three retained pin-plan/upstream-preview JSON files. Authenticated hosted
+pins. Evidence is in `m2-pin-pipeline.md`; the raw validation log and the three
+pin-plan/upstream-preview JSON files are not retained in the repository. Authenticated hosted
 oracle/recording output, current-spec replay, e2e/canary/interop, and actual
 force pipeline evidence remain pending; no milestone exit is claimed.
 Task-owned test/tool directories were audited and removed. Shared build and
-source caches remain live for root integration. Q26 subsequently corrected the
+source caches remain live for integration. Q26 subsequently corrected the
 BLS lock/build criterion; complete pin-force and hosted evidence remain pending.
 
 ## M3 preparation and final integration
@@ -2553,7 +2532,7 @@ published and remote/body verified: #3246 at
 current/MSRV, binding-compile, wasm and pinned strict Clippy gates pass. They
 use pinned Python 3.12/Unicode 15 data: native independent comparison
 covers all 1,112,064 valid scalars, finding 80 extra digits and 5,812 printability
-differences in the old Unicode 16 dependency. Root now pins category 0.6.0 and
+differences in the old Unicode 16 dependency. The follow-up now pins category 0.6.0 and
 uses authenticated printable data in the staged formatter. Full required Unicode
 notices are retained in source, NOTICE and docs/licenses. Release archive,
 standalone asset, checksum/provenance and validator/template image source
@@ -2599,29 +2578,28 @@ isolated affected-package tests pass 151 cases on each compiler; the oracle's
 inputs but no locally produced Python outputs or hosted acceptance.
 Canonical current/MSRV affected-package suites passed 151 each; final server
 regressions and staged receipt/Unicode tests passed. Extraction, regeneration
-and parity/dependency checks passed through `tmp/root-m4-01-integration-checks.sh`.
+and parity/dependency checks passed.
 The stale build-weight report was remeasured from actual graphs and compatibility
 outputs regenerated; repeated full gates passed those checks and remain live
-at workspace test enumeration (exec session 7448). Samples identify delayed
+at workspace test enumeration. Samples identify delayed
 new-executable startup in macOS dyld before Rust main, also observed by isolated
 workers. No host security setting or gate was weakened; no complete gates pass
-is claimed. Evidence counts/hashes are in `m4-hyperparams-validation.json`.
-Proof and live snapshots remain under `m4-hyperparams-work` and
-`m4-hyperparams-oracle-work`; finished disposable builds were audited/removed.
+is claimed. Raw evidence counts/hashes are not retained in the repository;
+finished disposable builds were audited/removed.
 Evidence: `m4-hyperparams.md`. No M4 completion or milestone exit is claimed.
 
 The previous canonical full gate attempts caught three integration defects:
 the authored Unicode notice followed the generated importer block; a private
 btauth authentication error response triggered current Clippy's large-error
 lint; and two staged calls used a method form rejected by the pinned upstream
-lint. Root moved the complete notice before the unchanged generated block,
+lint. The repair moved the complete notice before the unchanged generated block,
 boxed the private response, and called the existing checked integer helper
 directly. The corrected importer and upstream lint pass, workspace Clippy
 passed after the response repair, and all 14 current server tests pass.
-Initial failure logs remain under `tmp/root-final-*`. The current full gate
+Initial failure logs are not retained. The current full gate
 run still must finish; those narrow successes do not establish complete gates.
 
-Root adopted M4-02 owner planning, M4-03/04 shield/raw/multisig submission,
+The canonical worktree adopted M4-02 owner planning, M4-03/04 shield/raw/multisig submission,
 M4-05 CPU PoW, all 11 M4-06 owner/registration intents and the 22 M4-07 reads
 across 66 source paths. The composition includes the final multisig runtime-cap
 checks, D-040's mutable start delay and the nested dynamic-decoder repair.
@@ -2630,48 +2608,43 @@ changes were preserved. Regeneration completed on the combined source,
 reporting 20 implemented intents and 38 implemented reads. This counts source
 behaviors, not authenticated oracle acceptance. Combined matrix, extraction,
 regeneration checks, dependency measurement and affected current/MSRV tests
-run through `tmp/root-m4-combined-checks.sh`. The matrix (1,533 rows), extraction,
+run as one combined local check. The matrix (1,533 rows), extraction,
 regeneration, dependency measurement, dependency and parity checks and
 formatting pass. The current-Rust affected run exits successfully with 810
 native tests and three doctests; its one hosted oracle replay remains ignored.
 Rust 1.89 also passes 810 native tests and three doctests with the same hosted
 replay ignored. No complete-workspace gate success is inferred
-from this subset. Details: `m4-integration.md` and the bounded
-manifests under `root-m4-integration/` in the execution root.
+from this subset. Details: `m4-integration.md`.
 Owner orchestration/monitoring (M4-08) and CLI machinery (M4-09) are being
 prepared in separate source snapshots while these checks and the feature
 harness repair run. Live snapshots/proof remain until adoption and audited
-cleanup. The finished 3.7 MiB root composition rehearsal was removed after exact
+cleanup. The finished 3.7 MiB composition rehearsal was removed after exact
 dependency audits; the reversible source backup and active build cache remain
 live. No M4 completion or milestone exit is claimed.
 
 Read-only testnet readiness evidence and the concrete wallet/setup requirements
 are recorded in `testnet-prerequisites.md`. Host and existing-versus-new subnet
-information were requested; the user selected a new subnet and
-`maintainer@build-host`, with low compute use because the host is shared.
+information were requested; the maintainer selected a new subnet and a
+shared remote macOS host, with low compute use because the host is shared.
 Read-only SSH host inspection passed. Builds and PoW stay off that host;
 the planned validator has two Tokio worker threads, lower scheduling priority,
 resource measurements and bounded log retention. The reviewed native wallet
 helper passed seven fixture tests, including 24 altered complete-state cases,
-native encrypted recovery and no-replacement failures. Root audited source,
-binary/artifact hashes and dependencies, then prepared the new local wallet and
-verified identical public-only reinspection. The coldkey funding address is
-`<testnet-coldkey>`.
-Wallet/recovery data are retained at `~/.local/share/rtao/testnet-soak`
-and excluded from scratch cleanup; `testnet-wallet-public.json` contains only
-public identities, paths and lifecycle state. No private material was printed.
+native encrypted recovery and no-replacement failures. Source,
+binary/artifact hashes and dependencies were audited; the new local wallet was
+then prepared and passed identical public-only reinspection. Its coldkey is the
+maintainer-provided testnet coldkey. Wallet/recovery data are retained outside
+the repository and excluded from scratch cleanup. No private material was printed.
 No chain transaction, remote wallet copy or host service has run. Q29 now waives
 the 24-hour testnet soak and its funding, chain setup and host prerequisites;
-quote preparation and deployment are stopped. Existing unrelated user wallets
+quote preparation and deployment are stopped. Existing unrelated wallets
 are untouched. All automated validator, localnet, image, oracle and interoperability
 checks remain required.
 
-The user explicitly reiterated cleanup of task-created Mac Studio directories
+Task-created remote-host directories are cleaned up
 when finished. Finished owned builds/fixtures are dependency-audited and removed;
 active build roots, source snapshots and retained wallet/state are recorded live
-dependencies. Remote host use so far is read-only SSH inspection. Current local
-build host is `workstation.local`; the selected remote soak host is
-`build-host.local`. No remote scratch directory was created by the
+dependencies. Remote host use so far is read-only SSH inspection. No remote scratch directory was created by the
 host inspection or wallet preparation.
 
 One formal decision remains pending: correct M0 exit 9's literal license
@@ -2694,13 +2667,13 @@ failed during synchronous native-root enumeration for plaintext-only endpoints.
 Both independently reviewed repairs are now adopted. Current/MSRV affected RPC
 suites each pass 80 tests and the miner integration test passes; strict Clippy
 passes both toolchains. Production TLS validation and original test deadlines
-remain. The complete gate rerun is active in `tmp/root-tls-repaired-gates-final.log`;
+remain. The complete gate rerun was then active;
 That rerun passed 1,190 of 1,191 tests; all four RPC failures were resolved.
 The remaining miner deadline exposed eager axon-publisher native-root loading
 even with an explicit IP. The verified two-path lazy publisher repair is now
 adopted; current/MSRV publisher tests and the unchanged miner test pass, with
 strict Clippy on both. No-host separately passed before publisher adoption.
-The complete rerun at `tmp/root-publisher-repaired-gates.log` terminated at
+The next complete rerun terminated at
 the features job. Its earlier source passed all 1,192 workspace tests
 (43.321 seconds), with four separate skipped
 cases: three run as isolated children of passing parent tests; immutable hosted
@@ -2718,7 +2691,7 @@ pruning only dev-only forwarding, preserving invalid-feature errors and real
 normal/build/target, alias, collision and weak-feature behavior. Its final
 isolated 14 tests and strict Clippy pass on both compilers; the real 95-check
 feature matrix, all original profiles and examples pass. The complete canonical
-all-job rerun is live at `tmp/root-m4-feature-repaired-gates.log`; no full gate
+all-job rerun is live; no full gate
 success or hosted acceptance is claimed.
 Evidence: `tls-roots-repair.md`.
 
@@ -2727,8 +2700,8 @@ code hash, final v478 release and published image. Testnet is spec 479; its
 authenticated V15/V16 comparison is additive (one call, two errors, two events
 and two storage entries). No final v479 tag/release/image or source association
 was verified. Keep core/parity v478; record testnet metadata only through the
-drift tool at a source-stable point. Evidence is retained under the recorded
-root at `runtime-479-drift/`; no runtime behavior range, transaction or public
+drift tool at a source-stable point. Raw evidence is not retained in the
+repository; no runtime behavior range, transaction or public
 filing follows from those observations.
 
 Owner proxy routing and CLI machinery remain isolated pending final native
@@ -2740,7 +2713,7 @@ final tests and canonical registration remain pending. Config/tools/explain
 source is ready with 16 authored fixtures, without completed Cargo checks.
 M5 offline import review caught and is repairing the core decoded-call versus
 encoder input mismatch before adoption. The Keychain harness remains injected
-only. Details and exact evidence roots: `m4-cli-preparation.md`.
+only. Details: `m4-cli-preparation.md`.
 
 The recorded eight PRs and five issues were freshly checked on GitHub; all
 remain open and no new filing was made. Canonical gates remain live in nextest
@@ -2752,8 +2725,7 @@ unchanged; all already approved decisions remain applied.
 ## Earlier source-artifact task, 2026-10-15
 
 No temporary root remains. Hosted archives and logs are inspected in memory;
-only bounded adoption and failure records are retained in the existing
-private recovery directory. No local builds or workspace copies are created.
+bounded adoption and failure records are not retained in the repository. No local builds or workspace copies are created.
 
 The Q30 follow-up audit removes the stale macOS-local requirement and adds
 hosted documentation coverage to the existing check job: strict rustdoc, a

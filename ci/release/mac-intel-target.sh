@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install target stdlib under the recorded task root, never under the user's
-# rustup/toolchain home. This does not select a default toolchain or install Rosetta.
+# Install target stdlib under the recorded task root, never under the
+# shared rustup/toolchain home. This does not select a default toolchain or install Rosetta.
 : "${RTAO_TEMP_ROOT:?record the task root}"
 source ci/release/pins.env
 case "$(rustc --version)" in "rustc $RTAO_MAC_INTEL_RUST_VERSION ("*) ;; *)

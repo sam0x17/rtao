@@ -37,8 +37,8 @@ publication without unlock or submission, the ignored-certificate case,
 scheduled rate limits, actual pool-rejection mapping and refreshed scheduling,
 the 65-byte boundary, non-global rejection, IPv6 encoding and bounded discovery
 fallback. At that checkpoint, current Rust and Rust 1.89 passed all nine as
-part of the 61-test neuron suite. Strict MSRV all-feature/all-target Clippy also passed. Historical logs were
-`tmp/neuron-publisher-tests.log` under `target/execute-plan.6Ro0PC`.
+part of the 61-test neuron suite. Strict MSRV all-feature/all-target Clippy also passed. Historical logs are not
+retained in the repository.
 
 These historical checks establish no current hosted result or milestone exit.
 The fixture discovery listeners were awaited and fake clients closed; no

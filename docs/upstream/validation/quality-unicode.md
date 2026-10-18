@@ -23,7 +23,8 @@ Official versioned UnicodeData 15 has SHA256
 `806e9aed65037197f1ec85e12be6e8cd870fc5608b4de0fffd990f689f376a73`.
 The pinned CPython generated `Objects/unicodetype_db.h` has SHA256
 `ab60f0ca6db86dc14bb19ca5bcce6b0274282172500dd1c3ef61030e4b080cc8`.
-The retained provenance manifest records every source URL, size and hash.
+The provenance manifest (not retained in the repository) recorded every source
+URL, size and hash.
 
 A small C evaluator reads that authenticated generated CPython table,
 using the printable and decimal flag masks and generated whitespace
@@ -70,9 +71,9 @@ range expansion, binary-search bounds, quote selection and escape widths.
 The review identified the full Unicode notice as a shipping requirement;
 the generated shipping table now includes it.
 
-## Root consumers and dependency boundary
+## rtao consumers and dependency boundary
 
-The same Unicode 16 mismatch affects root primitives and RPC string
+The same Unicode 16 mismatch affects rtao primitives and RPC string
 formatting, integer/float/ratio parsing, btauth numeric header parsing,
 configuration cache keys, custom pool-error conversion, hyperparameter
 proportions and timelock durations. Existing Unicode 15 digits must remain
@@ -84,7 +85,7 @@ Its crate archive matches the official registry SHA256
 `2281c8c1d221438e373249e065ca4989c4c36952c211ff21a0ee91c44a3869e7`.
 Its built native API, using the current production printable and decimal-run
 algorithms, matches CPython 3.12 across all Rust scalars, including exactly
-680 decimal digits. Root can pin this exact version for existing consumers.
+680 decimal digits. rtao can pin this exact version for existing consumers.
 The staged core extension instead uses the authenticated generated table,
 preserving its required upstream dependency boundary.
 
@@ -96,41 +97,38 @@ change: both versions contain the same 170 `Cf` characters.
 
 ## Reviewable audit output
 
-Prototype files are under the recorded task root at
-`upstream-quality/unicode-audit/`:
+The prototype files were kept in a local task directory and are not retained in
+the repository:
 
-- `python_printable.rs`, `generate_unicode15.rb`, `provenance.json` and source licenses.
-- `upstream-unicode15.patch`: submitted U1 formatter, generated table,
+- The printable-table generator, provenance record and source licenses.
+- An upstream patch: submitted U1 formatter, generated table,
   dependency/lock removal and a focused 21-case public regression.
-- `root-staged-unicode15.patch`: root staged formatter/table, removal of
+- An rtao staged patch: rtao formatter/table, removal of
   its unsupported dependency, and the same focused regression.
-- `patch-manifest.json`: original and corrected file hashes.
-- `unicode_probe.rs`, `category06_probe.rs`, `cpython_unicode_oracle.c`
-  and `cpython_unicode15.bin`: reproducible native/source proof.
+- A patch manifest with original and corrected file hashes.
+- Native probes, a CPython Unicode oracle and its output: reproducible
+  native/source proof.
 
 Both patches pass `git apply --check` against their recorded originals.
-The root patch intentionally leaves the workspace version and lock update
-to root integration. Neither published branch nor root production source was
-modified during the audit. Root subsequently reviewed the patch and authorized
-the publication below. U1/U2 stacked ancestry remains intact.
+The rtao patch intentionally leaves the workspace version and lock update
+to rtao integration. Neither published branch nor rtao production source was
+modified during the audit. The patch was subsequently reviewed and the
+publication below authorized. U1/U2 stacked ancestry remains intact.
 
-The final proofs are recorded in task-root `tmp/` as
-`quality-unicode-public-api-proof-final.log`,
-`quality-unicode-category06-proof.log` and
-`quality-unicode-generator.log`. The native proof passes on Rust 1.89.0;
+The final public-API, category and generator proof logs are not retained in the
+repository. The native proof passes on Rust 1.89.0;
 the audit prototype did not yet establish integrated branch validation.
 No hosted Python execution or runtime oracle replay is claimed.
 
-The bounded source/proof archive is `tmp/quality-unicode-proofs.tar.gz`,
+The bounded source/proof archive, not retained in the repository, was
 502,308 bytes, SHA256
 `2356d197fb4f82be7c2a27194463d94f0fd5142e72736d7295e2106f8c9fe75d`.
 After checking processes, open files, launchd, configuration, symlinks and
 virtual-environment references, the three compiled probe executables and
 the separate 0.6.0 build directory were removed, freeing 12,142,842 bytes.
-`tmp/quality-unicode-cleanup.json` records the exact paths and zero live
-dependencies. Authenticated source, generated tables, prototype patches and
-reference rows remain live for root integration review; shared build and
-original wrappers remain owned by root. The later publication removed its two
+The cleanup audit found zero live dependencies. Authenticated source, generated
+tables, prototype patches and reference rows were kept for rtao integration
+review; the shared build and original wrappers were retained. The later publication removed its two
 finished worktrees and disposable targets after a separate audit.
 
 ## Published correction
@@ -164,7 +162,7 @@ Each new SHA has ten hosted workflows ending in `startup_failure`, all with
 zero jobs and zero check-runs. Vercel requires authorization. Hosted Python
 execution and live integration remain pending.
 
-The [publication record](quality-unicode-publication.md) links the actual logs,
-artifact/source hashes, body snapshots, remote evidence and cleanup results.
+The [publication record](quality-unicode-publication.md) summarizes the actual
+logs, artifact/source hashes, body snapshots, remote evidence and cleanup results.
 Incremental corrective patches are retained separately from the original U1/U2
 patches. No local Python, Docker or host-setting change was used.

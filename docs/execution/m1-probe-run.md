@@ -18,4 +18,5 @@ Network `testnet`: passed.
 - `events`: passed
 - `compiled_metadata_hash`: passed
 
-Machine-readable observations: `docs/execution/m1-probe.json`.
+Machine-readable observations were written alongside this report; that JSON
+file is not retained in the repository.

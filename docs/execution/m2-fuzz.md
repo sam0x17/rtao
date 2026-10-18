@@ -10,11 +10,11 @@ below preserves earlier source snapshots and their measured results.
 ## Historical preparation and validation
 
 At the recorded historical snapshot, all seven targets passed a nightly coverage-instrumented libFuzzer
-run with address sanitizer on the Mac Studio. Each requested 15 seconds of
+run with address sanitizer on a local macOS build machine. Each requested 15 seconds of
 fuzzing. The archived nightly design used 120-second defaults; no schedule is
-active, and Q30 requires no new campaign. Machine results are
-retained in `m2-fuzz.json`, including the compiler identity, timing and each
-process exit status.
+active, and Q30 requires no new campaign. The machine-readable report
+(compiler identity, timing and each process exit status) is not retained in
+the repository.
 
 The run covered authentication headers, signature verification, production
 event splitting, JSON-RPC frames, encrypted-keyfile format detection, the
@@ -34,7 +34,7 @@ The archived nightly workflow design discovers targets through the updated
 targets compile. Instrumented execution is stronger evidence than that compile
 check; neither result establishes a hosted run or a milestone exit.
 
-Historical outputs used `target/execute-plan.6Ro0PC/fuzz`. That root is retired
+Historical outputs used a task-scoped fuzz directory. That root is retired
 and absent; no instrumented build/tool output there is a current dependency. No local Python, user
 wallet or Keychain access was involved.
 

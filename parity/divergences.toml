@@ -279,7 +279,7 @@ milestone = "M9"
 pinning_tests = [
   "rtao_cli::hparams_commands::epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_json",
 ]
-upstream_report = "Independent source review and both-mode CLI round-trip fixture authored; hosted compilation/execution remain pending. No new filing under the user's instruction."
+upstream_report = "Independent source review and both-mode CLI round-trip fixture authored; hosted compilation/execution remain pending. No new upstream filing was made, per maintainer decision."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/hyperparams_view.py#L135-L145"
 
 [[divergences]]
@@ -534,7 +534,7 @@ milestone = "M5"
 pinning_tests = [
   "rtao_cli::commands::multisig::tests::unknown_upgrade_layer_is_not_rendered_as_absent_after_failed_asset_enrichment",
 ]
-upstream_report = "Human status evidence correction; source fixture exists and hosted execution remains pending. No new upstream issue or PR is filed under the user's current filing constraint."
+upstream_report = "Human status evidence correction; source fixture exists and hosted execution remains pending. No new upstream issue or PR is filed under the maintainer's current filing constraint."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/upgrade.py"
 
 [[divergences]]
@@ -550,7 +550,7 @@ milestone = "M5"
 pinning_tests = [
   "rtao_cli::commands::proxy::tests::pure_lifecycle_persists_event_coordinates_only_after_actual_success",
 ]
-upstream_report = "Local book lifecycle correction with source fixtures; hosted execution remains pending. No new upstream issue or PR is filed under the user's current filing constraint."
+upstream_report = "Local book lifecycle correction with source fixtures; hosted execution remains pending. No new upstream issue or PR is filed under the maintainer's current filing constraint."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/proxy.py"
 
 [[divergences]]
@@ -655,7 +655,7 @@ upstream_symbol = "bittensor.balance.Balance"
 python_behavior = "Arbitrary signed integer rao and Python local amount arithmetic."
 rtao_behavior = "All balance types use u64 rao with checked arithmetic; negative and oversized inputs are rejected. Exact constructors reject sub-rao precision; lossy float conversion is explicit. Valid-chain display and JSON retain Python formatting."
 class = "stricter"
-rationale = "The user chose the chain-native balance API in PLAN.md Q25, superseding signed DynBalance in Q24."
+rationale = "The maintainer chose the chain-native balance API in PLAN.md Q25, superseding signed DynBalance in Q24."
 decision = "PLAN.md Q25 (2026-10-14)"
 pinning_tests = [
   "rtao_primitives::money::tests::native_balance_rejects_negative_and_oversized_input",

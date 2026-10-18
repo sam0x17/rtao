@@ -94,8 +94,8 @@ isolated results do not prove the current combined source passes. Python
 oracle, interop and node scenarios are optional targeted hosted evidence under
 Q30; native Keychain and device acceptance remain deferred and unverified.
 
-Recovery member hashes and adoption paths are recorded under
-`.local/recovery/2026-10-14/cli-adoption.json`. Command-family integration and
+Recovery member hashes and adoption paths are not retained in the repository.
+Command-family integration and
 applicable hosted checks remain pending. D-041 and D-042 are registered and
 included in the checked-in parity matrix. The prepared tx/query corrections and
 remaining gaps are recorded in [m4-generated-review.md](m4-generated-review.md).

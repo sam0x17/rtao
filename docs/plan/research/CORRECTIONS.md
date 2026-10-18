@@ -11,9 +11,9 @@
    spec_version, 477 -> 478). Many runtime releases are behavior-only; rtao's drift tooling must treat
    "spec bumped, surface unchanged" as the common case (the Python codegen header deliberately omits
    spec_version for the same reason, A2 finding 3).
-3. **Publishability-driven recommendations are superseded by the user.** Reports B (§9 option d), E (summary
+3. **Publishability-driven recommendations are superseded by the maintainer.** Reports B (§9 option d), E (summary
    table), F (§0 item 6, 9) and G (§8 item 10) recommend not depending on `bittensor-core` mainly because it
-   is `publish = false` with git/patch dependencies that crates.io rejects. The user has decided crates.io does
+   is `publish = false` with git/patch dependencies that crates.io rejects. The maintainer has decided crates.io does
    not matter, git dependencies are fine, and rtao should be a veneer over bittensor-core. The *technical*
    points in those reports still stand and must be addressed: blocking reqwest HTTP client (not tokio), polling
    block streams, no subscriptions, dynamic `Value` codec in Python/cyscale shapes, the 64-block MEV-shield era

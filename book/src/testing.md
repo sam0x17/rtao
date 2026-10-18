@@ -109,9 +109,8 @@ as a downloadable artifact.
 The nextest `ci` profile excludes the `e2e`, `interop`, `core_oracle` and
 `ledger_emu` binaries. The ordinary workflow starts no live node, Python oracle
 or hardware service. Optional integration machinery remains in the repository,
-but its presence supplies no execution result. Do not run those campaigns on
-the shared laptop or Mac Studio; PLAN.md Q30 keeps substantial validation in
-hosted CI and the testnet soak is waived.
+but its presence supplies no execution result. Substantial validation runs in
+hosted CI, and no long-running testnet soak is part of the required checks.
 
 Record which tests passed at the final commit and which features they exercised.
 A fake-transport test establishes its client assertions. Actual runtime

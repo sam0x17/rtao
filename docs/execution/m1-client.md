@@ -10,8 +10,8 @@ M1-22 and M1-24 remain optional targeted hosted evidence, and M1-23 is deferred.
 passed all six blocking jobs: check, features, MSRV, no-host, supply and semver.
 The main job passed 3,051 tests with zero failures and four skipped tests, plus
 nine doctests across 19 crate suites, strict Clippy, documentation and the
-blocking source, pin and dependency checks. The bounded
-`m0-m1-d01830c-hosted-results.json` record retains 45 exact M1 fixture passes.
+blocking source, pin and dependency checks. The bounded hosted-results record,
+not retained in the repository, recorded 45 exact M1 fixture passes.
 The separate one-test RPC two-provider result and authenticated graph are
 recorded in [m1-transport-policy.md](m1-transport-policy.md).
 
