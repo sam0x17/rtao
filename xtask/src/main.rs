@@ -82,6 +82,8 @@ fn main() -> Result<()> {
   cargo xtask extract [--check]\n\
   cargo xtask regen [--check] [--models-only|--namespaces-only]\n\
   cargo xtask compat [--check] [--milestone M<n>]\n\
+  cargo xtask compat report --kind e2e|interop|drift --out <path> [--image-digest <sha256:...>] [--runtime-spec <n>] (hosted lanes only)\n\
+  cargo xtask compat adopt --dir <downloaded reports>\n\
   cargo xtask drift diff <old.v15.scale> <new.v15.scale> [--out <directory>]\n\
   cargo xtask drift --network <finney|testnet|devnet|localnet-main> [--check]\n\
   cargo xtask probe --networks finney,testnet [--output <json>] [--report <markdown>]\n\

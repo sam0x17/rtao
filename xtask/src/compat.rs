@@ -15,6 +15,9 @@ use serde_json::{Value as Json, json};
 use sha2::{Digest, Sha256};
 use toml_edit::{DocumentMut, Item, TableLike};
 
+#[path = "compat_evidence.rs"]
+mod evidence;
+
 const EVIDENCE: &str = "docs/compat/validation.json";
 const MAX_REPORT_BYTES: usize = 1024 * 1024;
 const HASH_KIND: &str = "blake2b-256-raw";
@@ -741,6 +744,27 @@ impl Validation {
     }
 }
 
+const RUN_URL_PREFIX: &str = "https://github.com/sam0x17/rtao/actions/runs/";
+
+/// The numeric run id and head commit a report records.
+fn report_run(report: &Json) -> Result<(String, String)> {
+    let run = &report["run"];
+    let url = json_text(run, "url")?;
+    let id = url
+        .strip_prefix(RUN_URL_PREFIX)
+        .context("compatibility report requires an rtao GitHub Actions run URL")?;
+    ensure!(
+        !id.is_empty() && id.len() <= 20 && id.bytes().all(|byte| byte.is_ascii_digit()),
+        "invalid compatibility run URL"
+    );
+    let commit = json_text(run, "head_commit")?;
+    ensure!(
+        canonical_hash(commit, "", 40),
+        "invalid compatibility run commit"
+    );
+    Ok((id.to_owned(), commit.to_owned()))
+}
+
 fn validate(
     inputs: &Json,
     evidence: &Json,
@@ -833,19 +857,7 @@ fn validate(
             json_text(&report, "inputs_sha256")? == input_hash,
             "compatibility report has stale inputs"
         );
-        let run = &report["run"];
-        let url = json_text(run, "url")?;
-        let id = url
-            .strip_prefix("https://github.com/sam0x17/rtao/actions/runs/")
-            .context("compatibility report requires an rtao GitHub Actions run URL")?;
-        ensure!(
-            !id.is_empty() && id.bytes().all(|byte| byte.is_ascii_digit()),
-            "invalid compatibility run URL"
-        );
-        ensure!(
-            canonical_hash(json_text(run, "head_commit")?, "", 40),
-            "invalid compatibility run commit"
-        );
+        report_run(&report)?;
         match json_text(&report, "kind")? {
             kind @ ("e2e" | "interop") => {
                 let tested = members(&report, "runtimes")?;
@@ -1039,9 +1051,9 @@ fn markdown(document: &Json) -> Result<String> {
     }
     output.push_str("No PyPI release has been verified from the pinned Python commit. The Python version above is the source project version.\n\n");
     if document["validated_spec_range"].is_null() {
-        output.push_str("No runtime range has passed the required drift, e2e and interop validation. Clients warn for every connected runtime. Metadata pins describe fetched inputs; per-call surface checks still determine which operations are available.\n\n");
+        output.push_str("No runtime range has passed the required drift, e2e and interop validation. Clients warn for every runtime on a pinned public network. Metadata pins describe fetched inputs; per-call surface checks still determine which operations are available.\n\n");
     } else {
-        output.push_str("The validated identities and immutable report checksums are listed in [compat.json](compat.json). Validation requires passing drift, e2e and interop reports for each runtime and every listed localnet digest. Clients warn outside those identities; per-call surface checks determine which operations are available.\n\n");
+        output.push_str("The validated identities and immutable report checksums are listed in [compat.json](compat.json). Validation requires passing drift, e2e and interop reports for each runtime and every listed localnet digest. Clients match by genesis, spec and metadata hash and warn on a pinned public network outside those identities; per-call surface checks determine which operations are available.\n\n");
     }
     output.push_str("## Metadata inputs\n\n| network | spec | finalized block | version | raw bytes | SHA-256 checksum | runtime metadata hash |\n|---|---|---|---|---|---|---|\n");
     for pin in members(document, "metadata_pins")? {
@@ -1093,7 +1105,7 @@ fn markdown(document: &Json) -> Result<String> {
             output.push_str(&format!("\nMeasured on `{}` with `{}`, source `{}`{}; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.\n\n", json_text(record,"host")?,json_text(record,"compiler")?.lines().next().context("compiler missing")?,json_text(&record["source"],"head_commit")?, if record["source"]["dirty"]==true { " with dependency changes in the working tree" } else { "" }));
         }
     }
-    output.push_str("Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).\n");
+    output.push_str("Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. Validation evidence comes from `pr-gates` with `validate_compat=true` and is adopted with `ci/compat/adopt.sh`. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).\n");
     Ok(output)
 }
 
@@ -1107,10 +1119,13 @@ fn verify_output(path: &Path, expected: &[u8]) -> Result<()> {
 }
 
 pub(super) fn run(args: Vec<String>) -> Result<()> {
-    let options = options(args)?;
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .context("xtask has no workspace root")?;
+    if let Some(command @ ("report" | "adopt")) = args.first().map(String::as_str) {
+        return evidence::run(root, command, args[1..].to_vec());
+    }
+    let options = options(args)?;
     if options.measure_build_weight {
         measure_build_weight(root, options.build_target.as_deref())?;
     }
@@ -1420,7 +1435,10 @@ btcli = "bittensor.cli.main:main"
                 );
             }
         }
-        ensure!(markdown(&document)?.contains("Clients warn for every connected runtime"));
+        ensure!(
+            markdown(&document)?
+                .contains("Clients warn for every runtime on a pinned public network")
+        );
         Ok(())
     }
 
