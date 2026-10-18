@@ -1,0 +1,27 @@
+name: mainnet-watch
+# Hourly read-only comparison of Finney's finalized runtime with the parity
+# pin. A difference opens or refreshes one issue; a match closes it.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: mainnet-watch
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare Finney's finalized runtime with the parity pin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RTAO_TEMP_ROOT: ${{ runner.temp }}/mainnet-watch
+        run: timeout 300s ci/mainnet-watch.sh --issue "$GITHUB_REPOSITORY"

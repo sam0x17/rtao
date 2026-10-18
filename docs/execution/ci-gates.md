@@ -12,9 +12,17 @@ pull requests and merge groups trigger it. Superseded runs for the same ref
 are cancelled; each job has a 45-minute timeout. Its token has read-only
 contents permission.
 
-This is the only active workflow. The former node/container, scheduled,
-release and upkeep workflows are retained as inactive reference drafts in
-`.github/deferred-workflows/`. They cannot launch from pushes or schedules.
+The only other active workflow is `.github/workflows/mainnet-watch.yml`. Every
+hour (or on manual dispatch) it runs `ci/mainnet-watch.sh`, which reads
+Finney's finalized `specVersion` and `:code` hash over public RPC and compares
+them with the parity spec and the Finney metadata pin in `upstream.toml`. When
+they differ it opens one issue, or refreshes the open one, with the observed
+runtime, the upstream commits on `main` that declare the spec and the re-pin
+steps; once the pin matches it closes that issue. It builds nothing, has
+`contents: read` and `issues: write` and stops within ten minutes. The former
+node/container, scheduled, release and upkeep workflows are retained as
+inactive reference drafts in `.github/deferred-workflows/`. They cannot launch
+from pushes or schedules.
 
 GitHub executes the job definitions in `xtask/src/gates.rs`. The existing
 gates command remains a CI entry point; do not invoke it as a local pre-push
