@@ -143,7 +143,7 @@ pub fn run(args: &[String]) -> Result<()> {
             let listing = fs::read_to_string(root.join("vendor/upstream/tree.txt"))?;
             fs::create_dir_all(root.join("parity"))?;
             fs::write(destination, seed_map(&document, &listing, tag)?)?;
-            println!("parity: seeded all 357 documented rows as pending");
+            println!("parity: seeded all 362 documented rows as pending");
             Ok(())
         }
         _ => {
@@ -624,12 +624,12 @@ pub fn seed_map(document: &str, listing: &str, tag: &str) -> Result<String> {
         }
     }
     ensure!(
-        package_count == 220,
-        "expected all 220 explicit package rows, found {package_count}"
+        package_count == 223,
+        "expected all 223 explicit package rows, found {package_count}"
     );
     ensure!(
-        rows.len() == 357,
-        "expected all 357 documented map rows, found {}",
+        rows.len() == 362,
+        "expected all 362 documented map rows, found {}",
         rows.len()
     );
     let rows: Vec<_> = rows.into_values().collect();
@@ -789,7 +789,7 @@ fn write_map(rows: &[Row]) -> String {
     let mut document = DocumentMut::new();
     document["file"] = Item::ArrayOfTables(tables);
     format!(
-        "# Seeded from docs/plan/python-module-map.md; all 357 rows initially pending.\n# rs preserves each documented Rust home; milestone and notes preserve its scope.\n# tree.txt is the complete watched listing from architecture §4.9, not a list\n# derived from this map. Every listing entry must have a row; none is ignored.\n# Package, tests/{{unit,harness,fixtures,e2e}}, codegen, completions, both core\n# crates, rpc_info and eco-tests are recursive roots. Only the three named\n# Python record/basket scripts and the named chain sources/catalogs are watched.\n# Python tests/__init__.py and conftest.py, other scripts, and pallet lib.rs\n# are outside that scope (lib.rs constants are separate extraction inputs).\n# A pending home is prospective. Blessed ported/generated/extracted rows plus\n# actual attribution headers determine which packages contain derived material.\n\n{document}"
+        "# Seeded from docs/plan/python-module-map.md; all 362 rows initially pending.\n# rs preserves each documented Rust home; milestone and notes preserve its scope.\n# tree.txt is the complete watched listing from architecture §4.9, not a list\n# derived from this map. Every listing entry must have a row; none is ignored.\n# Package, tests/{{unit,harness,fixtures,e2e}}, codegen, completions, both core\n# crates, rpc_info and eco-tests are recursive roots. Only the three named\n# Python record/basket scripts and the named chain sources/catalogs are watched.\n# Python tests/__init__.py and conftest.py, other scripts, and pallet lib.rs\n# are outside that scope (lib.rs constants are separate extraction inputs).\n# A pending home is prospective. Blessed ported/generated/extracted rows plus\n# actual attribution headers determine which packages contain derived material.\n\n{document}"
     )
 }
 
@@ -1453,19 +1453,19 @@ mod tests {
             .collect::<String>();
         let seed = seed_map(&document, &listing, "v478")?;
         let rows = read_map(&seed)?;
-        assert_eq!(rows.len(), 357);
+        assert_eq!(rows.len(), 362);
         assert_eq!(
             rows.iter()
                 .filter(|row| row.py.starts_with(PACKAGE))
                 .count(),
-            220
+            223
         );
         for (kind, expected) in [
             ("extracted", 6),
             ("vendored", 24),
             ("generated", 29),
             ("n/a", 18),
-            ("ported", 143),
+            ("ported", 146),
         ] {
             assert_eq!(
                 rows.iter()
