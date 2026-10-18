@@ -80,6 +80,19 @@ Rust setup's built-in cache is disabled; the workflow invokes the explicit
 pinned cache action. Its checked composite implementation also references
 that same rust-cache commit. All action references use actual immutable SHAs.
 
+The `validate_compat` jobs added two actions, verified through each repository's
+Git reference API on 2026-10-18. Both tags reference commits directly:
+
+| Action | Release | Immutable commit |
+|---|---|---|
+| `actions/download-artifact` | `v4.3.0` | `d3f86a106a0bac45b974a628896c90dbdf5c8093` |
+| `actions/attest-build-provenance` | `v4.2.2` | `4d101475d8b20a2381f78447822ac1eab6504dd8` |
+
+The download action matches the artifact format of the pinned upload action.
+Only the `compat-ledger` job, which checks out no repository code, has
+`id-token: write` and `attestations: write`. See
+[recording compatibility validation](../compat/README.md#producing-and-adopting-reports).
+
 ## Historical validation
 
 - Seven gate tests pass, covering job selection, stopping on blocking failure,

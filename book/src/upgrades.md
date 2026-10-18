@@ -27,12 +27,24 @@ responding to a chain upgrade.
    unknown transaction outcome needs reconciliation before a replacement is
    sent.
 
-The current compatibility record has no validated runtime range. Every
-connected runtime therefore produces a compatibility warning. Downloaded
-metadata records an input; a successful hosted client build records its own
-scope. Neither establishes live-chain interoperability. Runtime validation
-requires the exact network, genesis, spec version and raw metadata hash in
-the compiled evidence, as well as its recorded range.
+A runtime is validated only when the compiled evidence lists its exact
+genesis, spec version and raw metadata hash within the recorded range. The
+client identifies the chain by its genesis hash, not by the network label, so
+an explicit endpoint for a public network is checked like its named preset.
+A runtime outside the evidence produces a compatibility warning on Finney,
+testnet and devnet. Local and custom chains have their own genesis and can
+never be validated, so the client logs that message at debug level there.
+Downloaded metadata records an input; a successful hosted client build records
+its own scope. Neither establishes live-chain interoperability.
+
+Validation evidence comes from the manual `pr-gates` workflow dispatched with
+`validate_compat=true`. It checks that the pinned network's finalized runtime
+is the pinned input, runs the e2e suite and core oracle on one localnet lane
+per distinct pinned image digest, and attests each passed report. A maintainer
+adopts a successful run with `ci/compat/adopt.sh <run-id>`, which verifies the
+attestations before recording the reports and regenerating `compat.json`. See
+[recording compatibility validation](https://github.com/sam0x17/rtao/blob/main/docs/compat/README.md)
+for the report requirements.
 
 Typed composition checks the required call surfaces, and reads check their
 own descriptors. `CallBytes` records both specification and transaction
