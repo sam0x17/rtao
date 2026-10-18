@@ -25,7 +25,7 @@ const QUERY: &str = "sdk/python/bittensor/cli/query.py";
 const HYPER: &str = "sdk/python/bittensor/reads/hyperparameters.py";
 const CATALOG: &str = "vendor/upstream/catalog/reads.json";
 const OUTPUT: &str = "vendor/upstream/extracted/read_params.json";
-const READ_COUNT: usize = 102;
+use crate::extract::READ_COUNT;
 
 struct Source {
     path: String,

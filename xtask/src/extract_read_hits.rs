@@ -305,7 +305,10 @@ pub(super) fn outputs(
         reads.push(json!({"name":name,"hits":hits,"helpers":seen,"pinning":if pinned||hits.len()>1{"pinned"}else{"single"},"render":render,"provenance":{"path":module.path,"blob":module.blob,"sha256":format!("{:x}",sha2::Sha256::digest(module.source.as_bytes()))}}));
     }
     use sha2::Digest;
-    ensure!(reads.len() == 102, "expected all102 read hit records");
+    ensure!(
+        reads.len() == crate::extract::READ_COUNT,
+        "expected every read hit record"
+    );
     let document = json!({"format":1,"parity":{"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str()},"reads":reads});
     Ok(vec![(
         "vendor/upstream/extracted/read_hits.json",
@@ -408,7 +411,7 @@ mod tests {
             "out-of-module touches must stay reviewed extras"
         );
         ensure!(
-            document["reads"].as_array().context("reads")?.len() == 102,
+            document["reads"].as_array().context("reads")?.len() == crate::extract::READ_COUNT,
             "read coverage changed"
         );
         Ok(())

@@ -2,9 +2,9 @@
   "format": 1,
   "provenance": {
     "blob": "0a2fdf4710f4c6a3868aad7f300414775e218d71",
-    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
     "path": "sdk/python/tests/unit/test_http_auth.py",
-    "tag": "v478"
+    "tag": "v481"
   },
   "values": {
     "BODY": {

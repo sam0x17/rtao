@@ -850,8 +850,11 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
         rows.push(json!({"name":name,"setter":setter,"params":params,"current":current,"shape":shape,"cooldown":policy,"setter_signature":tokens(&method.sig),"setter_body":tokens(&method.block)}));
     }
     ensure!(
-        owners.len() == 34 && setters.len() == 33 && alpha.len() == 2,
-        "owner allowlist coverage changed"
+        owners.len() == 33 && setters.len() == 32 && alpha.len() == 2,
+        "owner allowlist coverage changed: {} owners, {} setters, {} alpha",
+        owners.len(),
+        setters.len(),
+        alpha.len()
     );
     let mut operations = Vec::new();
     for setter in [

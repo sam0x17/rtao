@@ -1654,8 +1654,8 @@ mod tests {
             .parent()
             .context("workspace absent")?;
         let checked = catalogs(root)?;
-        assert_eq!(checked["intents"], json!(83));
-        assert_eq!(checked["reads"], json!(102));
+        assert_eq!(checked["intents"], json!(crate::extract::INTENT_COUNT));
+        assert_eq!(checked["reads"], json!(crate::extract::READ_COUNT));
         Ok(())
     }
     #[test]
