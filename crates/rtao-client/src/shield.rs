@@ -101,6 +101,12 @@ pub struct ShieldOptions {
     pub wait: Wait,
     /// Optional maximum inner-call fee, enforced before either signature.
     pub max_fee: Option<Balance<Tao>>,
+    /// How long to wait for finality to come within the era before refusing.
+    ///
+    /// The era is anchored at the finalized head. Fast development chains
+    /// finalize in bursts, so a lag that would expire the era usually clears
+    /// within a few seconds; a stalled or distant finality still refuses.
+    pub finality_wait: Duration,
     /// Shared deadlines, reconciliation and metadata-signing display settings.
     ///
     /// Its mortality, nonce and wait are replaced by the shield's paired nonces,
@@ -113,10 +119,16 @@ impl Default for ShieldOptions {
             period: ShieldPeriod::P8,
             wait: Wait::Inclusion,
             max_fee: None,
+            finality_wait: SHIELD_FINALITY_WAIT,
             submit: SubmitOptions::default(),
         }
     }
 }
+
+/// Default wait for finality to come within a shield era before refusing.
+pub const SHIELD_FINALITY_WAIT: Duration = Duration::from_secs(60);
+/// Interval between finality-lag checks while waiting for an era anchor.
+const SHIELD_FINALITY_POLL: Duration = Duration::from_millis(500);
 
 struct ShieldReceiptWindow {
     finalized_anchor: u64,
@@ -204,19 +216,38 @@ impl Client {
             }
             // Interactive preparation may span many blocks. Both heights used
             // by the era guard must be observed after the signer is ready.
-            let best = limits
-                .admission
-                .run(self, self.at(BlockRef::Best))
-                .await?
-                .block()
-                .number;
-            let finalized = limits
-                .admission
-                .run(self, self.at(BlockRef::Finalized))
-                .await?
-                .block()
-                .number;
-            check_era(opts.period, best, finalized)?;
+            // Wait, within the admission deadline, for finality to come within
+            // the era before anchoring it; refuse once the wait is exhausted.
+            let waiting = tokio::time::Instant::now();
+            let finalized = loop {
+                let best = limits
+                    .admission
+                    .run(self, self.at(BlockRef::Best))
+                    .await?
+                    .block()
+                    .number;
+                let finalized = limits
+                    .admission
+                    .run(self, self.at(BlockRef::Finalized))
+                    .await?
+                    .block()
+                    .number;
+                match check_era(opts.period, best, finalized) {
+                    Ok(()) => break finalized,
+                    Err(refusal) if waiting.elapsed() >= opts.finality_wait => {
+                        return Err(refusal);
+                    }
+                    Err(_) => {
+                        limits
+                            .admission
+                            .run(self, async {
+                                tokio::time::sleep(SHIELD_FINALITY_POLL).await;
+                                Ok::<(), ClientError>(())
+                            })
+                            .await?;
+                    }
+                }
+            };
             let (carrier_lease, inner_lease) = limits
                 .admission
                 .run(self, self.nonces().lease_pair(&account))

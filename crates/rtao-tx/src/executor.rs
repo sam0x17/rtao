@@ -776,6 +776,7 @@ impl Executor {
                             period,
                             wait: submit.wait,
                             max_fee: None,
+                            finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                             submit,
                         },
                     )
@@ -861,6 +862,7 @@ impl Executor {
                 // The semantic preflight above owns the exact inner fee model.
                 // The client-level guard is for callers without that review.
                 max_fee: None,
+                finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                 submit,
             };
             let result = self
