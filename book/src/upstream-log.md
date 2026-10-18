@@ -54,14 +54,15 @@ between replay, injected transport and device coverage.
 ## 2026-10-18: parity moves to unreleased spec 481
 
 The parity pin moves from `v478` (`850f2755bb05a3851f948489f0ab27b0645cebce`)
-to spec 481 at upstream `main`, commit
-`6a972693ae9580541225bd37696ac2fee26b8ae9`. Testnet finalizes spec 481 and
-Finney spec 479; upstream has published no release after v478, so the pin is
-recorded with `release = "unreleased"`, `source_branch = "main"` and
-`network = "testnet"`. `pin --check` verifies that the commit is still on
-`main`, declares spec 481 in its runtime source and that no release has since
-tagged `v481` elsewhere; re-pin with `--parity v481` once upstream publishes
-it. Code-generation metadata is the testnet 481 runtime
+to spec 481 at commit `6a972693ae9580541225bd37696ac2fee26b8ae9`, the head of
+upstream's `testnet` branch, which tracks the testnet runtime (`main` and
+`devnet` are at the same commit). Testnet finalizes spec 481 and Finney spec
+479; upstream has published no release after v478, so the pin is recorded with
+`release = "unreleased"`, `source_branch = "testnet"` and `network = "testnet"`.
+`pin --check` verifies that the commit is still on `testnet`, declares spec 481
+in its runtime source and that no release has since tagged `v481` elsewhere;
+re-pin with `--parity v481` once upstream publishes it, or with
+`--parity branch:testnet` to follow a newer testnet runtime. Code-generation metadata is the testnet 481 runtime
 (`vendor/metadata/testnet/481.*`), and the pinned localnet image is
 `sha-6a972693…`, built from that commit.
 
