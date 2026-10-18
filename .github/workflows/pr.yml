@@ -34,12 +34,16 @@ on:
         description: Run the M10 interop harnesses and the RemoteSigner localnet exit check
         type: boolean
         default: false
+      validate_compat:
+        description: Run the drift, e2e and interop lanes that produce attested compatibility validation reports
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.ref }}-${{ inputs.m10_interop && 'm10-interop' || inputs.refresh_canonical_abis && 'canonical-abis' || inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
+  group: pr-${{ github.ref }}-${{ inputs.validate_compat && 'validate-compat' || inputs.m10_interop && 'm10-interop' || inputs.refresh_canonical_abis && 'canonical-abis' || inputs.refresh_tls_provider_lock && 'tls-lock' || inputs.prepare_core_patch && 'core-patch' || inputs.refresh_lock && 'lock' || (inputs.refresh_compat || inputs.refresh_codegen) && 'compat' || 'checks' }}
   cancel-in-progress: true
 
 env:
@@ -54,7 +58,7 @@ env:
 # Python and live Docker/hardware targets are excluded by the ci test profile.
 jobs:
   check:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat)
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -96,7 +100,7 @@ jobs:
           retention-days: 7
 
   no-host:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -116,7 +120,7 @@ jobs:
       - run: cargo run --locked -p xtask -- gates --job no-host
 
   msrv:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -140,7 +144,7 @@ jobs:
           timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -198,7 +202,7 @@ jobs:
         run: timeout 300s cargo test --locked -p rtao-wallet --no-default-features --test keyfile
 
   supply:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -233,7 +237,7 @@ jobs:
           retention-days: 14
 
   semver:
-    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop))
+    if: github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -541,3 +545,141 @@ jobs:
           path: target/remote-signer-localnet/*.log
           if-no-files-found: ignore
           retention-days: 7
+
+  compat-matrix:
+    if: github.event_name == 'workflow_dispatch' && inputs.validate_compat
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lanes: ${{ steps.lanes.outputs.lanes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select one localnet lane per distinct pinned image digest
+        id: lanes
+        run: python3 -I ci/compat/lanes.py upstream.toml >> "$GITHUB_OUTPUT"
+
+  compat-drift:
+    if: github.event_name == 'workflow_dispatch' && inputs.validate_compat
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: ~/.cargo/git
+      - name: Compare the pinned network's finalized runtime with the pinned input
+        run: cargo run --locked -p xtask -- compat report --kind drift --out "$RTAO_TEMP_ROOT/compat-reports"
+      - name: Retain the drift reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compat-report-drift
+          path: target/pr-gates/compat-reports/*.json
+          if-no-files-found: error
+          retention-days: 7
+
+  compat-lanes:
+    needs: compat-matrix
+    if: github.event_name == 'workflow_dispatch' && inputs.validate_compat
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      TMPDIR: ${{ github.workspace }}/target/pr-gates/tmp
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.compat-matrix.outputs.lanes) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p "$TMPDIR"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: . -> target/pr-gates/build
+          cache-directories: |
+            ~/.cargo/git
+            target/pr-gates/tools
+      - name: Check outbound drand
+        run: curl -fsS --proto '=https' --tlsv1.2 https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/latest -o "$RTAO_TEMP_ROOT/drand-preflight.json"
+      - name: Install pinned nextest
+        run: |
+          cargo install cargo-nextest --version 0.9.143 --locked --root "$RTAO_TEMP_ROOT/tools"
+          echo "$RTAO_TEMP_ROOT/tools/bin" >> "$GITHUB_PATH"
+      - name: Run the e2e suite and core oracle, reporting each passed stage
+        env:
+          LANE: ${{ matrix.lane }}
+          DIGEST: ${{ matrix.digest }}
+          RTAO_COMPAT_REPORTS: ${{ github.workspace }}/target/pr-gates/compat-reports
+        run: bash ci/compat/lane.sh "$LANE" "$DIGEST"
+      - name: Retain the lane's reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compat-report-${{ matrix.lane }}
+          path: target/pr-gates/compat-reports/*.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain bounded localnet and test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compat-lane-logs-${{ matrix.lane }}
+          path: |
+            target/pr-gates/*.log
+            target/pr-gates/build/nextest/**/junit.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  compat-ledger:
+    needs: [compat-drift, compat-lanes]
+    if: github.event_name == 'workflow_dispatch' && inputs.validate_compat
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Collect every lane's reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: compat-report-*
+          path: compat-validation
+          merge-multiple: true
+      - name: Refuse reports from another run or commit
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          reports=(compat-validation/*.json)
+          test "${#reports[@]}" -gt 0
+          test -z "$(find compat-validation -mindepth 1 \( -type d -o ! -name '*.json' \) -print -quit)"
+          for report in "${reports[@]}"; do
+            jq -e --arg url "$RUN_URL" --arg commit "$GITHUB_SHA" \
+              '.schema == 1 and .status == "passed" and .run.url == $url and .run.head_commit == $commit' "$report" > /dev/null
+          done
+      - name: Attest each report's provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: compat-validation/*.json
+      - name: Retain the attested validation reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compat-validation-${{ github.sha }}
+          path: compat-validation/*.json
+          if-no-files-found: error
+          retention-days: 30
