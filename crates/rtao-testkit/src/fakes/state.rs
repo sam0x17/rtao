@@ -238,11 +238,11 @@ impl Default for FakeState {
 }
 
 impl FakeState {
-    /// Parse the checked-in pinned testnet runtime and load extracted Python defaults.
+    /// Parse the checked-in pinned finney runtime and load extracted Python defaults.
     pub fn try_default() -> Result<Self, CoreError> {
         let runtime = Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/testnet/481.v15.scale"),
-            481,
+            include_bytes!("../../../../vendor/metadata/finney/479.v15.scale"),
+            479,
             1,
             42,
         )
@@ -1971,19 +1971,19 @@ mod tests {
         )?;
         assert_eq!(rtao_core::ops::metadata::decode_v15(&missing)?, None);
         let mut upgraded =
-            Runtime::parse(&state.runtime.metadata_bytes, 482, 2, 42).map_err(CoreError::from)?;
-        upgraded.spec_version = 482;
+            Runtime::parse(&state.runtime.metadata_bytes, 480, 2, 42).map_err(CoreError::from)?;
+        upgraded.spec_version = 480;
         let hash = state
             .block_hash(98)
             .ok_or_else(|| CoreError::Codec("missing block".into()))?;
         state.set_runtime_at(hash.clone(), Arc::new(upgraded));
         assert_eq!(
             call(&mut state, "state_getRuntimeVersion", json!([hash]))?.get("specVersion"),
-            Some(&json!(482))
+            Some(&json!(480))
         );
         assert_eq!(
             call(&mut state, "state_getRuntimeVersion", json!([]))?.get("specVersion"),
-            Some(&json!(481))
+            Some(&json!(479))
         );
         Ok(())
     }

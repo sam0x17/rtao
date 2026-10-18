@@ -3,9 +3,9 @@
     "format": 1,
     "provenance": {
       "blob": "1d9f3cb8d00c601eb76fde8aa27db24add6f0d10",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
       "path": "runtime/src/transaction_payment_wrapper.rs",
-      "tag": "v481"
+      "tag": "v479"
     },
     "scope": "Reviewed validate-time payer/priority/tip policy and fee-dispatch projection only. Concrete priority values, discount implementations, preparation, account debits/refunds and runtime admission are runtime-owned and unexecuted; the client's any-leaf coldkey warning is not a payer resolver.",
     "values": {
@@ -47,9 +47,9 @@
     "format": 1,
     "provenance": {
       "blob": "2ec5233ed198d33132d1b9bc9cf352861fb5dd93",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
       "path": "runtime/src/check_mortality.rs",
-      "tag": "v481"
+      "tag": "v479"
     },
     "values": {
       "MAX_SHIELD_ERA_PERIOD": {
@@ -60,27 +60,27 @@
     }
   },
   "provenance": {
-    "blob": "6e08005e844e501dc144054111a86d3a610d8c67",
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "blob": "e2b79e7bc52ae68357801adc6131ec83420ef246",
+    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
     "path": "pallets/subtensor/src/lib.rs",
-    "sha256": "6e5803f9e9c4b2ae8b6b44b704d1ec4c25beb24a9669c018241327d08aba26a4",
-    "tag": "v481"
+    "sha256": "9bda7170f7efa6bfe337b182d616702f7ec448c1c1436920ba6d0ca1e1923eff",
+    "tag": "v479"
   },
   "proxy_contract": {
     "format": 1,
     "provenance": {
       "blob": "5a9636a7571cafd85cfc2d8ff00205b0d2b6b023",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
       "path": "common/src/proxy.rs",
-      "tag": "v481"
+      "tag": "v479"
     },
     "python_mirror": {
       "path": "sdk/python/bittensor/intents/proxy.py",
       "provenance": {
         "blob": "e19113d503ef0b2f488af38bec57cadb934e1f56",
-        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+        "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v481"
+        "tag": "v479"
       },
       "table": "PROXY_TYPES"
     },
@@ -167,24 +167,24 @@
     }
   },
   "rate_limiting_provenance": {
-    "blob": "e6c0a6fec37a86c98e7f7fb0edd657599fcaeb6a",
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb",
+    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
     "path": "pallets/subtensor/src/utils/rate_limiting.rs",
-    "tag": "v481"
+    "tag": "v479"
   },
   "reveal_contract": {
     "core_provenance": {
       "blob": "aec057443ad430fdc96db518cfea5aacdacf9a51",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
       "path": "sdk/bittensor-core/src/timelock/mod.rs",
-      "tag": "v481"
+      "tag": "v479"
     },
     "format": 1,
     "provenance": {
       "blob": "32b0f98a75e383a2e34d3328561761ee506084d9",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
       "path": "pallets/subtensor/src/coinbase/reveal_commits.rs",
-      "tag": "v481"
+      "tag": "v479"
     },
     "scope": "SCALE payload fields and first three reveal-epoch bindings only; runtime reveal/decryption/dispatch acceptance is not certified",
     "values": {
@@ -315,14 +315,6 @@
         "production_expression": "7_200",
         "signature": "fn MechanismEmissionRateLimit < T : Config > () -> u64",
         "type": "u64"
-      },
-      "SubnetEmissionWeightsRateLimit": {
-        "fast": 1,
-        "fast_expression": "1",
-        "production": 50400,
-        "production_expression": "50_400",
-        "signature": "fn SubnetEmissionWeightsRateLimit < T : Config > () -> u64",
-        "type": "u64"
       }
     },
     "transaction_type_rules": {
@@ -407,7 +399,7 @@
         "signature": "fn rate_limit < T : Config > (& self) -> u64"
       },
       "rate_limit_on_subnet": {
-        "body": "{ # [allow (clippy :: match_single_binding)] match self { Self :: SetWeightsVersionKey => (Tempo :: < T > :: get (netuid) as u64) . saturating_mul (WeightsVersionKeyRateLimit :: < T > :: get ()) , Self :: OwnerHyperparamUpdate (Hyperparameter :: EmissionWeights) => { SubnetEmissionWeightsRateLimit :: < T > :: get () } Self :: OwnerHyperparamUpdate (_) => { let epochs = OwnerHyperparamRateLimit :: < T > :: get () as u64 ; (Tempo :: < T > :: get (netuid) as u64) . saturating_mul (epochs) } Self :: SetSNOwnerHotkey => DefaultSetSNOwnerHotkeyRateLimit :: < T > :: get () , Self :: AddStakeBurn => Tempo :: < T > :: get (netuid) as u64 , Self :: TempoUpdate => MIN_TEMPO as u64 , _ => self . rate_limit :: < T > () , } }",
+        "body": "{ # [allow (clippy :: match_single_binding)] match self { Self :: SetWeightsVersionKey => (Tempo :: < T > :: get (netuid) as u64) . saturating_mul (WeightsVersionKeyRateLimit :: < T > :: get ()) , Self :: OwnerHyperparamUpdate (_) => { let epochs = OwnerHyperparamRateLimit :: < T > :: get () as u64 ; (Tempo :: < T > :: get (netuid) as u64) . saturating_mul (epochs) } Self :: SetSNOwnerHotkey => DefaultSetSNOwnerHotkeyRateLimit :: < T > :: get () , Self :: AddStakeBurn => Tempo :: < T > :: get (netuid) as u64 , Self :: TempoUpdate => MIN_TEMPO as u64 , _ => self . rate_limit :: < T > () , } }",
         "signature": "fn rate_limit_on_subnet < T : Config > (& self , netuid : NetUid) -> u64"
       },
       "set_last_block_on_subnet": {

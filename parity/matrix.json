@@ -1,9 +1,9 @@
 {
   "e2e_evidence_classes": {
     "client-contract": 11,
-    "hosted-scenario-source": 7,
+    "hosted-scenario-source": 6,
     "intent-plan": 72,
-    "not-required": 21,
+    "not-required": 20,
     "read-fixture": 6
   },
   "families": {
@@ -211,11 +211,6 @@
       },
       {
         "name": "BondsMovingAverageMaxReached",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "BurnEmissionMustBeZero",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -551,31 +546,6 @@
       },
       {
         "name": "DynamicTempoBlockedByCommitReveal",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "EmissionWeightIndexDuplicated",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "EmissionWeightIndexOutOfRange",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "EmissionWeightsDoNotSumToOne",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "EmissionWeightsLengthMismatch",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "EmissionWeightsNotSettableOnRoot",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -980,11 +950,6 @@
         "rtao": "generated"
       },
       {
-        "name": "LeasedSubnetOwnerCutBelowMinimum",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
         "name": "LimitOrdersDisabled",
         "oracle": "unverified",
         "rtao": "generated"
@@ -1106,11 +1071,6 @@
       },
       {
         "name": "MinAllowedUidsGreaterThanMaxAllowedUids",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "MinerEmissionBelowMinimum",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -1415,11 +1375,6 @@
         "rtao": "generated"
       },
       {
-        "name": "OwnerEmissionAboveMaximum",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
         "name": "POWRegistrationDisabled",
         "oracle": "unverified",
         "rtao": "generated"
@@ -1481,11 +1436,6 @@
       },
       {
         "name": "RandomSubjectTooLong",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "RecycleEmissionMustBeZero",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -1951,16 +1901,6 @@
       },
       {
         "name": "UnverifiedPulse",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "ValidatorEmissionAboveMaximum",
-        "oracle": "unverified",
-        "rtao": "generated"
-      },
-      {
-        "name": "ValidatorEmissionTooLowToPreserveRoot",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -2681,7 +2621,7 @@
         "oracle": "unverified",
         "rtao": "active",
         "tests": [
-          "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_85_ops",
+          "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_84_ops",
           "rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata"
         ]
       },
@@ -2852,7 +2792,7 @@
         "name": "intent_add_proxy",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2865,7 +2805,7 @@
         "name": "intent_add_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2878,7 +2818,7 @@
         "name": "intent_add_stake_limit",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2891,7 +2831,7 @@
         "name": "intent_announce_coldkey_swap",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2904,7 +2844,7 @@
         "name": "intent_associate_evm_key",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2917,7 +2857,7 @@
         "name": "intent_associate_hotkey",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2930,7 +2870,7 @@
         "name": "intent_batch",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2943,7 +2883,7 @@
         "name": "intent_burned_register",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2956,7 +2896,7 @@
         "name": "intent_claim_root",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2969,7 +2909,7 @@
         "name": "intent_claim_root_with_hotkey",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2982,7 +2922,7 @@
         "name": "intent_clear_coldkey_swap_announcement",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -2995,7 +2935,7 @@
         "name": "intent_commit_weights",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3008,7 +2948,7 @@
         "name": "intent_contribute_crowdloan",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3021,7 +2961,7 @@
         "name": "intent_create_crowdloan",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3034,7 +2974,7 @@
         "name": "intent_create_pure_proxy",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3047,7 +2987,7 @@
         "name": "intent_decrease_take",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3060,7 +3000,7 @@
         "name": "intent_dispute_coldkey_swap",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3073,7 +3013,7 @@
         "name": "intent_dissolve_crowdloan",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3086,7 +3026,7 @@
         "name": "intent_evm_withdraw",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3099,7 +3039,7 @@
         "name": "intent_execute_proxy_announced",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3112,7 +3052,7 @@
         "name": "intent_finalize_crowdloan",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3125,7 +3065,7 @@
         "name": "intent_fund_evm_key",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3138,7 +3078,7 @@
         "name": "intent_increase_take",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3151,7 +3091,7 @@
         "name": "intent_kill_pure_proxy",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3164,7 +3104,7 @@
         "name": "intent_lock_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3177,7 +3117,7 @@
         "name": "intent_move_lock",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3190,7 +3130,7 @@
         "name": "intent_move_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3203,7 +3143,7 @@
         "name": "intent_multisig_approve",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3216,7 +3156,7 @@
         "name": "intent_multisig_cancel",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3229,7 +3169,7 @@
         "name": "intent_multisig_execute",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3242,7 +3182,7 @@
         "name": "intent_multisig_threshold_1",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3255,7 +3195,7 @@
         "name": "intent_refund_crowdloan",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3268,7 +3208,7 @@
         "name": "intent_register_leased_network",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3281,7 +3221,7 @@
         "name": "intent_register_subnet",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3294,7 +3234,7 @@
         "name": "intent_remove_proxies",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3307,7 +3247,7 @@
         "name": "intent_remove_proxy",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3320,7 +3260,7 @@
         "name": "intent_remove_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3333,7 +3273,7 @@
         "name": "intent_remove_stake_limit",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3346,7 +3286,7 @@
         "name": "intent_reset_axon",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3359,7 +3299,7 @@
         "name": "intent_reveal_weights",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3372,7 +3312,7 @@
         "name": "intent_root_register",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3385,7 +3325,7 @@
         "name": "intent_serve_axon",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3398,7 +3338,7 @@
         "name": "intent_serve_axon_tls",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3411,7 +3351,7 @@
         "name": "intent_serve_prometheus",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3424,7 +3364,7 @@
         "name": "intent_set_auto_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3437,7 +3377,7 @@
         "name": "intent_set_childkey_take",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3450,7 +3390,7 @@
         "name": "intent_set_children",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3463,7 +3403,7 @@
         "name": "intent_set_crowdloan_max_contribution",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3476,7 +3416,7 @@
         "name": "intent_set_hyperparameter",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3489,7 +3429,7 @@
         "name": "intent_set_identity",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3502,7 +3442,7 @@
         "name": "intent_set_mechanism_count",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3515,7 +3455,7 @@
         "name": "intent_set_perpetual_lock",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3539,7 +3479,7 @@
         "name": "intent_set_subnet_identity",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3552,7 +3492,7 @@
         "name": "intent_set_take",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3565,7 +3505,7 @@
         "name": "intent_set_weights",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3578,7 +3518,7 @@
         "name": "intent_stake_burn",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3591,7 +3531,7 @@
         "name": "intent_start_call",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3604,7 +3544,7 @@
         "name": "intent_swap_coldkey_announced",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3617,7 +3557,7 @@
         "name": "intent_swap_hotkey",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3630,7 +3570,7 @@
         "name": "intent_swap_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3643,7 +3583,7 @@
         "name": "intent_terminate_lease",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3656,7 +3596,7 @@
         "name": "intent_transfer",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3669,7 +3609,7 @@
         "name": "intent_transfer_all",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3682,7 +3622,7 @@
         "name": "intent_transfer_stake",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3695,7 +3635,7 @@
         "name": "intent_trim_subnet",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3708,7 +3648,7 @@
         "name": "intent_unstake_all",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3721,7 +3661,7 @@
         "name": "intent_unstake_all_alpha",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3734,7 +3674,7 @@
         "name": "intent_update_crowdloan_cap",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3747,7 +3687,7 @@
         "name": "intent_update_crowdloan_end",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3760,7 +3700,7 @@
         "name": "intent_update_crowdloan_min_contribution",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3773,7 +3713,7 @@
         "name": "intent_update_symbol",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -3786,31 +3726,7 @@
         "name": "intent_withdraw_crowdloan",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
-      },
-      {
-        "evidence": {
-          "runtime": "not-applicable",
-          "runtime_limits": [],
-          "scope": "not-required"
-        },
-        "name": "pyt:e2e/test_emission_weights_cli.py::test_btcli_subnets_emission_against_localnet",
-        "oracle": "unverified",
-        "rtao": "not_required",
-        "test": null
-      },
-      {
-        "evidence": {
-          "runtime": "unverified",
-          "runtime_limits": [
-            "hosted-runtime-execution-not-recorded"
-          ],
-          "scope": "hosted-scenario-source"
-        },
-        "name": "pyt:e2e/test_emission_weights_cli.py::test_root_is_paid_its_baseline_off_the_top_via_python_sdk",
-        "oracle": "unverified",
-        "rtao": "mapped",
-        "test": "e2e::scenario_18_emission_weights_pay_root_its_baseline"
+        "test": "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain"
       },
       {
         "evidence": {
@@ -5392,12 +5308,6 @@
       },
       {
         "oracle": "unverified",
-        "python": "bittensor.SetSubnetEmissionWeights",
-        "rtao": "module_map",
-        "source": "sdk/python/bittensor/__init__.py"
-      },
-      {
-        "oracle": "unverified",
         "python": "bittensor.SetSubnetIdentity",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
@@ -6490,12 +6400,6 @@
       },
       {
         "oracle": "unverified",
-        "python": "bittensor.intents.SetSubnetEmissionWeights",
-        "rtao": "decision",
-        "source": "sdk/python/bittensor/intents/__init__.py"
-      },
-      {
-        "oracle": "unverified",
         "python": "bittensor.intents.SetSubnetIdentity",
         "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
@@ -7083,9 +6987,9 @@
         "rtao": "reconciled",
         "rust": [
           "crates/rtao-intents/src/hyperparameters/planner.rs (selective owner current-value and freeze/cooldown planning)",
-          "vendor/upstream/extracted/owner_map.json (33 owner names over 32 setters plus four operation policies and source provenance)"
+          "vendor/upstream/extracted/owner_map.json (34 owner names over 33 setters plus four operation policies and source provenance)"
         ],
-        "synced_blob": "59b354eb3208bd12b4b8c24867436da1fdacb2f3"
+        "synced_blob": "f438b23549c74e8d740c66a2e1897b5ff68b7aa7"
       },
       {
         "kind": "extracted",
@@ -7107,7 +7011,7 @@
         "rust": [
           "vendor/upstream/extracted/owner_map.json (framework_rules.blocks_until_next_auto_epoch client projection)"
         ],
-        "synced_blob": "52803e85351b4f0b9ac704641f474442e54ee60f"
+        "synced_blob": "b97ad0e448f879425a1407a4e320802877d2e4ab"
       },
       {
         "kind": "extracted",
@@ -7225,7 +7129,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated subnet_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "d5be553b8444e8eab680bc2e2b672effa15a6ff7"
+        "synced_blob": "8767adb6c0db9c8f0a96eb11be21ce583ca8445a"
       },
       {
         "kind": "ported",
@@ -7249,7 +7153,7 @@
           "crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)",
           "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)"
         ],
-        "synced_blob": "e01351853f8a1d92f13488beb20853f89b1b0bf9"
+        "synced_blob": "293d3cd0ea578bc091c7f282357843d81246be8e"
       },
       {
         "kind": "ported",
@@ -7274,7 +7178,7 @@
           "crates/rtao-neuron/src/weights.rs (LastUpdate fallback and activity-cutoff alarm)",
           "vendor/upstream/extracted/owner_map.json (authenticated helper bodies and selected getter storage linkage)"
         ],
-        "synced_blob": "17cbe4581ef163e886a06ba0771341e8956c87dd"
+        "synced_blob": "a1db5d139dd79bc5afaa2642ecb25540448f5bca"
       },
       {
         "kind": "ported",
@@ -7287,7 +7191,7 @@
           "vendor/upstream/extracted/owner_map.json (selected owner policy source projection)",
           "vendor/upstream/extracted/chain_rules.json (selected production/fast rate-limit projection)"
         ],
-        "synced_blob": "e6c0a6fec37a86c98e7f7fb0edd657599fcaeb6a"
+        "synced_blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb"
       },
       {
         "kind": "extracted",
@@ -7895,7 +7799,7 @@
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "f562ba4b5cd05c7f1e1125007cb2b8d880f3be57"
+        "synced_blob": "433550f1f7795499c67bd9abf21a820df4b8b2ac"
       },
       {
         "kind": "generated",
@@ -7917,7 +7821,7 @@
         "rust": [
           "`rtao_runtime::generated::errors::MODULE_ERRORS`"
         ],
-        "synced_blob": "58ee69d04168cf2e8402440434e783a59691c4a3"
+        "synced_blob": "7c6c82ee096277e5b5d7373dc4ca81231cd1be91"
       },
       {
         "kind": "generated",
@@ -7928,7 +7832,7 @@
         "rust": [
           "`rtao_runtime::generated::runtime_apis`"
         ],
-        "synced_blob": "3cbf01616c3175fd11d4195c9ebcb567b96f4929"
+        "synced_blob": "a1a9e335b789753144c2766c4510f9a540e3f664"
       },
       {
         "kind": "generated",
@@ -7939,7 +7843,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "693f6d768fc48ac912797f0d758fbe508f41991b"
+        "synced_blob": "dcb8434663fae65371eed21753acf330e3160668"
       },
       {
         "kind": "n/a",
@@ -8526,23 +8430,12 @@
         "kind": "ported",
         "milestone": "M4–M6",
         "oracle": "unverified",
-        "python": "sdk/python/bittensor/cli/commands/subnet_emission.py",
-        "rtao": "reconciled",
-        "rust": [
-          "crates/rtao-cli/src/commands/subnet_emission.rs"
-        ],
-        "synced_blob": "afa97fe485d8a118db6370587016f04d09f203f3"
-      },
-      {
-        "kind": "ported",
-        "milestone": "M4–M6",
-        "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/subnets.py",
         "rtao": "reconciled",
         "rust": [
           "crates/rtao-cli/src/commands/subnets.rs"
         ],
-        "synced_blob": "f5a2393fd9418d1413e6418a75b004687d75a5df"
+        "synced_blob": "28b14c45f069b65484420e37fa7351f1112998bd"
       },
       {
         "kind": "ported",
@@ -8878,17 +8771,6 @@
         "synced_blob": "2958b5d1b8036388354204f0a718f809756cf23a"
       },
       {
-        "kind": "ported",
-        "milestone": "M4–M6",
-        "oracle": "unverified",
-        "python": "sdk/python/bittensor/emission_weights.py",
-        "rtao": "reconciled",
-        "rust": [
-          "crates/rtao-primitives/src/emission_weights.rs"
-        ],
-        "synced_blob": "9d6633e22db5395aa1aa23b89be3947cffeaf182"
-      },
-      {
         "kind": "generated",
         "milestone": "M2",
         "oracle": "unverified",
@@ -9084,7 +8966,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "7cd168c03019cc1962fa40c0ad1e7862fee57c5f"
+        "synced_blob": "975e7f44fd6d134c104d58d841e4123eed999265"
       },
       {
         "kind": "generated",
@@ -9139,7 +9021,7 @@
         "rust": [
           "rtao_catalog::errors::{ErrorCode, CHAIN_ERRORS}; rtao_catalog::py"
         ],
-        "synced_blob": "53ddb99f8237c5fc1647f2879c2bc23443d69598"
+        "synced_blob": "6c2da0a89c165339a2d665b1da914c022bd701ec"
       },
       {
         "kind": "n/a",
@@ -9366,7 +9248,7 @@
           "vendor/upstream/evm/abi/subnet.json",
           "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "52cc9d27e5ee89fd81e2e8bbe73b3be524428351"
+        "synced_blob": "1505d7c7b1902a380fe918b6e36d26ca4c571abe"
       },
       {
         "kind": "vendored",
@@ -9501,7 +9383,7 @@
           "crates/rtao-client/src/shield.rs",
           "crates/rtao-client/src/compose.rs"
         ],
-        "synced_blob": "b113eb41267aa2b5f349ec210384c66e1b53056f"
+        "synced_blob": "93e41ea0474e702ccdce39eb57f5b6f64dcac074"
       },
       {
         "kind": "n/a",
@@ -9648,7 +9530,7 @@
         "rust": [
           "rtao_catalog::hyperparams::TABLE; rtao_primitives::{hyperparams,hyperparam_table,ratio}"
         ],
-        "synced_blob": "43bc87b856befdadcd4bf9b492c6609726cfe2e6"
+        "synced_blob": "acd67c9910489c0d94a6b09a60dd763fb12e5ade"
       },
       {
         "kind": "n/a",
@@ -9659,7 +9541,7 @@
         "rust": [
           "`rtao_intents` crate root"
         ],
-        "synced_blob": "4d481e32a0ee00faecd01c14cd3ddae552fc967b"
+        "synced_blob": "2ddf088f61acaccb836789437e97e7b965be9610"
       },
       {
         "kind": "ported",
@@ -9707,7 +9589,7 @@
         "rust": [
           "`rtao_tx::{IntentInterface, Intent, DynIntent, IntentPreflight, Built, BuildCx, PreflightCx}`"
         ],
-        "synced_blob": "fc60c057bf0fdf03298c71d26177c79ac9832b09"
+        "synced_blob": "89e2008189d424d4a9fcb31cc201815acabf10bc"
       },
       {
         "kind": "ported",
@@ -9766,17 +9648,6 @@
       },
       {
         "kind": "ported",
-        "milestone": "M4",
-        "oracle": "unverified",
-        "python": "sdk/python/bittensor/intents/emission_weights.py",
-        "rtao": "reconciled",
-        "rust": [
-          "crates/rtao-intents/src/emission_weights.rs"
-        ],
-        "synced_blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4"
-      },
-      {
-        "kind": "ported",
         "milestone": "M5",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/evm.py",
@@ -9811,7 +9682,7 @@
           "rtao_intents::generated::interfaces",
           "rtao_catalog::owner_map::OWNER_HYPERPARAMETERS"
         ],
-        "synced_blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493"
+        "synced_blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63"
       },
       {
         "kind": "ported",
@@ -9872,7 +9743,7 @@
           "rtao_tx::{Policy, PolicySubject, Plan}",
           "rtao_tx::Executor::{plan, plan_dyn}"
         ],
-        "synced_blob": "066fcd9abe97d3521edd19ebe28e7bc00d20f333"
+        "synced_blob": "0cbdf4018fef1932c78168042650d21f7156d4ae"
       },
       {
         "kind": "ported",
@@ -10290,12 +10161,12 @@
         "python": "sdk/python/bittensor/reads/subnets.py",
         "rtao": "reconciled",
         "rust": [
-          "rtao_reads::reads::subnets::{metagraph, token_symbols, commit_reveal_enabled, mechanism_count, subnet_emission_weights, emission_weights_rate_limit_key, root_preservation_inputs}",
+          "rtao_reads::reads::subnets::{metagraph, token_symbols, commit_reveal_enabled, mechanism_count}",
           "rtao_reads::reads::owner::{burn, subnet_hyperparameters, subnet_identity, subnet_names, subnet_start_schedule, mechanism_emission_split}",
           "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "32cb6b8b6af7550159045cec8b6b684a5c139c89"
+        "synced_blob": "ad3143c03524a250fe99501ebd74888f5c69a684"
       },
       {
         "kind": "ported",
@@ -10540,7 +10411,7 @@
           "rtao_catalog::py::PYTHON_TABLES",
           "xtask/src/parity_catalog.rs"
         ],
-        "synced_blob": "9dd65bd98971333d635ea2bd1954c6ec51b211e8"
+        "synced_blob": "a859b70612e8b92d0ae14e51c657e996ab9052e2"
       },
       {
         "kind": "n/a",
@@ -10656,17 +10527,6 @@
         "kind": "oracle-only",
         "milestone": "M2-M7",
         "oracle": "unverified",
-        "python": "sdk/python/tests/e2e/test_emission_weights_cli.py",
-        "rtao": "reconciled",
-        "rust": [
-          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
-        ],
-        "synced_blob": "162175b7a78bc12973bc1a6f0442c0add5886934"
-      },
-      {
-        "kind": "oracle-only",
-        "milestone": "M2-M7",
-        "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_null_consensus.py",
         "rtao": "reconciled",
         "rust": [
@@ -10752,7 +10612,7 @@
         "rust": [
           "rtao_testkit::fakes::FakeState"
         ],
-        "synced_blob": "49d5f33b1ce951924c5c06d6814f48bbd26f67ed"
+        "synced_blob": "33390704ec44e76236dede067ea1e3a52a418200"
       },
       {
         "kind": "extracted",
@@ -10766,7 +10626,7 @@
           "crates/rtao-intents/tests/intent_plans.rs",
           "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "91ff2aff459b6ea8e51f4ad3b17e59005451191b"
+        "synced_blob": "027e7b0b746a9e45d45340393f4691acc8575ecf"
       },
       {
         "kind": "n/a",
@@ -10816,7 +10676,7 @@
           "crates/rtao-cli/tests/generated_commands.rs",
           "crates/rtao-cli/tests/m8_help_theme.rs"
         ],
-        "synced_blob": "2d48caba1b308f5cc1075a4fdd6ab8bdf84cfa1f"
+        "synced_blob": "110fe05a0c88595be6febdd3d71f19f8cf164b07"
       },
       {
         "kind": "ported",
@@ -10864,20 +10724,6 @@
           "Complete reviewed upstream pytest input; native analogues in crates/rtao-primitives/tests/primitives.rs, crates/rtao-runtime/src/{handle.rs,models/tests.rs} and recorded codec fixtures"
         ],
         "synced_blob": "db1928ae4c1bb51efafff579d74b55ff64de65b1"
-      },
-      {
-        "kind": "ported",
-        "milestone": "the milestone of the code each tests",
-        "oracle": "unverified",
-        "python": "sdk/python/tests/unit/test_emission_weights.py",
-        "rtao": "reconciled",
-        "rust": [
-          "crates/rtao-primitives/tests/emission_weights.rs",
-          "crates/rtao-intents/tests/emission_weights.rs",
-          "crates/rtao-reads/tests/subnets.rs",
-          "crates/rtao-cli/tests/subnet_emission_commands.rs"
-        ],
-        "synced_blob": "ca9f33b66bd23c97b066d375897d979d6f3b06e5"
       },
       {
         "kind": "ported",
@@ -10987,7 +10833,7 @@
           "crates/rtao-intents/src/staking_claims.rs",
           "crates/rtao-intents/src/children.rs"
         ],
-        "synced_blob": "3657bd862a3b708e4f01d2339a503f4b9c9bd9bc"
+        "synced_blob": "ee7896ea707810ab76eb5e2db68969c1cf9fa997"
       },
       {
         "kind": "oracle-only",
@@ -11091,7 +10937,7 @@
         "rust": [
           "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "c5db8e616b72a79d606e7489f308e987333b6c8c"
+        "synced_blob": "d2f332a664f1a7cbd050b86ccfc0b5e016c72a94"
       },
       {
         "kind": "ported",
@@ -11210,7 +11056,7 @@
           "vendor/upstream/catalog/errors.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "a44cb6edd1dc2256f16e152c803555f3f36775ab"
+        "synced_blob": "5bc3535a0f105a362fe7b882bbcf09f8848bee2c"
       },
       {
         "kind": "vendored",
@@ -11222,7 +11068,7 @@
           "vendor/upstream/catalog/intents.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "f3e3ac969f8fcb798ea38a9d1a7127f6035f1e57"
+        "synced_blob": "d6cf5c4a1a2c551bca8e9373886d17d2001622c1"
       },
       {
         "kind": "vendored",
@@ -11234,7 +11080,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "8fe0a4fb9e165984eaba5930b7da25a1644a0022"
+        "synced_blob": "34f374f063431d882f92788fa33acc5a2c7b791c"
       }
     ],
     "intents": [
@@ -11596,12 +11442,6 @@
         "name": "set_subnet_emission_enabled",
         "oracle": "missing",
         "python_class": "SetSubnetEmissionEnabled",
-        "rtao": "implemented"
-      },
-      {
-        "name": "set_subnet_emission_weights",
-        "oracle": "missing",
-        "python_class": "SetSubnetEmissionWeights",
         "rtao": "implemented"
       },
       {
@@ -12171,11 +12011,6 @@
         "rtao": "implemented"
       },
       {
-        "name": "subnet_emission_weights",
-        "oracle": "missing",
-        "rtao": "implemented"
-      },
-      {
         "name": "subnet_hyperparameters",
         "oracle": "missing",
         "rtao": "implemented"
@@ -12360,8 +12195,8 @@
     ]
   },
   "pin": {
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
-    "tag": "v481"
+    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+    "tag": "v479"
   },
   "schema": 1,
   "status_semantics": {

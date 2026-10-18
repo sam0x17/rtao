@@ -218,8 +218,6 @@ pub mod subnet_emission_enabled {
         None
     }
 }
-/// Extracted defaults for `subnet_emission_weights`.
-pub mod subnet_emission_weights {}
 /// Extracted defaults for `subnet_hyperparameters`.
 pub mod subnet_hyperparameters {}
 /// Extracted defaults for `subnet_identity`.

@@ -599,7 +599,7 @@ mod tests {
         // A runtime mismatch refuses before pending-state access as well.
         let newer = RuntimeHandle::parse(
             include_bytes!("../../../vendor/metadata/finney/478.v15.scale"),
-            479,
+            480,
             1,
             42,
         )?;
