@@ -1,7 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/harness/samples.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_reads_table.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/harness/samples.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_reads_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Pure literal decoding and native FakeChain seeds shared by table consumers.
 //!
 //! Callers authenticate the catalog tables and run their own real SDK or CLI
@@ -326,44 +326,6 @@ fn seed_availability(state: &mut FakeState) -> Result<(), CoreError> {
     Ok(())
 }
 
-/// Mainnet `SubtensorInitialTaoWeight` (about 5.27%) used by the emission fixtures.
-pub const EMISSION_TAO_WEIGHT: u64 = 971_718_665_099_567_868;
-/// Root TAO in rao that the emission fixtures are seeded with.
-pub const EMISSION_ROOT_TAO: u64 = 5_443_000 * 1_000_000_000;
-/// The sample subnet's alpha issuance in rao for the emission fixtures.
-pub const EMISSION_ALPHA_ISSUANCE: u64 = 6_457_000 * 1_000_000_000;
-
-// py: sdk/python/tests/harness/samples.py:23-51
-/// Root's baseline share in parts, `V0 * x / (x + A)` with `x = T * w / ONE`,
-/// derived exactly as the chain's `get_subnet_emission_weights` reports it.
-pub fn emission_root_baseline_share() -> u64 {
-    use rtao_primitives::emission_weights::{DEFAULT_VALIDATOR, ONE};
-    let root_x = u128::from(EMISSION_ROOT_TAO) * u128::from(EMISSION_TAO_WEIGHT) / u128::from(ONE);
-    let share =
-        u128::from(DEFAULT_VALIDATOR) * root_x / (root_x + u128::from(EMISSION_ALPHA_ISSUANCE));
-    u64::try_from(share).unwrap_or(ONE)
-}
-
-/// The chain's default emission weight vector record for `netuid`
-/// (18% owner, 41% validator, 41% miner), with root's baseline share.
-pub fn emission_weights_info(netuid: NetUid) -> Value {
-    use rtao_primitives::emission_weights::{DEFAULT_OWNER, DEFAULT_VALIDATOR, ONE};
-    let miner = ONE - DEFAULT_OWNER - DEFAULT_VALIDATOR;
-    let baseline = emission_root_baseline_share();
-    json!({
-        "netuid": netuid.0,
-        "weights": [0, 0, DEFAULT_OWNER, DEFAULT_VALIDATOR, miner],
-        "burn": 0,
-        "recycle": 0,
-        "owner": DEFAULT_OWNER,
-        "validator": DEFAULT_VALIDATOR,
-        "miner": miner,
-        "root_baseline_share": baseline,
-        "root_share": baseline.min(DEFAULT_VALIDATOR),
-        "created_via_lease": false,
-    })
-}
-
 /// Seed valid native SCALE state for the complete authenticated intent table.
 ///
 /// This holds only public fixture identities; proof binding stays in callers.
@@ -438,12 +400,6 @@ pub fn intent_state(runtime: Arc<Runtime>, op: &str) -> Result<FakeState, CoreEr
         "get_basket_payout",
         json!(10_000_000),
     )?;
-    // py: sdk/python/tests/unit/test_intents_table.py:35-40
-    state.seed_runtime(
-        "SubnetInfoRuntimeApi",
-        "get_subnet_emission_weights",
-        emission_weights_info(SUBNET),
-    )?;
     seed_availability(&mut state)?;
     if op == "finalize_crowdloan" {
         // The sample finalizes ID 0. Its target-only contract is explicit;
@@ -511,11 +467,6 @@ pub fn read_state(availability_coldkey: &str) -> Result<FakeState, CoreError> {
         (
             "SubnetInfoRuntimeApi",
             "get_subnet_hyperparams_v3",
-            Value::Null,
-        ),
-        (
-            "SubnetInfoRuntimeApi",
-            "get_subnet_emission_weights",
             Value::Null,
         ),
         ("SubnetInfoRuntimeApi", "get_subnet_state", Value::Null),

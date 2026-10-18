@@ -158,7 +158,6 @@ const REQUIRED_SCENARIOS: &[&str] = &[
     "scenario_15_",
     "scenario_16_",
     "scenario_17_",
-    "scenario_18_",
 ];
 fn check_contracts(source: &str) -> Result<()> {
     let source = syn::parse_file(source)?;

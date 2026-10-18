@@ -72,9 +72,9 @@ fn params(value: Value) -> Map<String, Value> {
 
 #[test]
 fn all_read_names_have_authenticated_defaults_and_parameters() {
-    assert_eq!(ReadName::ALL.len(), 103);
+    assert_eq!(ReadName::ALL.len(), 102);
     let names: BTreeSet<_> = ReadName::ALL.iter().map(|name| name.as_str()).collect();
-    assert_eq!(names.len(), 103);
+    assert_eq!(names.len(), 102);
     for name in ReadName::ALL {
         assert_eq!(name.as_str().parse::<ReadName>().unwrap(), name);
         let spec = name.catalog_spec();
@@ -229,7 +229,7 @@ async fn pending_reads_are_explicit_and_do_no_io() {
     ))
     .unwrap();
     let all: BTreeSet<_> = ReadName::ALL.into_iter().collect();
-    assert_eq!(all.len(), 103);
+    assert_eq!(all.len(), 102);
     let expected_pending: BTreeSet<_> = all
         .iter()
         .copied()

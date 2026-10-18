@@ -28,8 +28,6 @@ mod node_examples;
 
 use node_examples::neurons_api;
 
-#[path = "e2e/emission_weights.rs"]
-mod emission_weights;
 #[path = "e2e/framework.rs"]
 mod framework;
 #[path = "e2e/lost_watch.rs"]
@@ -526,11 +524,6 @@ async fn scenario_08_runtime_upgrade_mid_session() -> TestResult {
 #[tokio::test]
 async fn scenario_16_pr_u4_localnet_reveal() -> TestResult {
     pr_u4::scenario_16_pr_u4_localnet_reveal().await
-}
-
-#[tokio::test]
-async fn scenario_18_emission_weights_pay_root_its_baseline() -> TestResult {
-    emission_weights::run(&localnet().await?).await
 }
 
 #[tokio::test]

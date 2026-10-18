@@ -6448,7 +6448,6 @@ dependencies = [
  "rtao-metagraph",
  "rtao-neuron",
  "rtao-primitives",
- "rtao-reads",
  "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",

@@ -406,7 +406,6 @@ impl Executor {
         if let Some(args) = plan.args.as_object_mut() {
             args.remove("op");
         }
-        plan.preview = preview.preview.clone();
         Ok((plan, preview))
     }
 

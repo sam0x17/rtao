@@ -13,10 +13,10 @@ use toml_edit::DocumentMut;
 
 /// Intents in the pinned upstream catalog; a change requires review of the
 /// complete generated surface.
-pub(crate) const INTENT_COUNT: usize = 85;
+pub(crate) const INTENT_COUNT: usize = 84;
 /// Reads in the pinned upstream catalog; a change requires review of the
 /// complete generated surface.
-pub(crate) const READ_COUNT: usize = 103;
+pub(crate) const READ_COUNT: usize = 102;
 
 #[path = "extract_resolved.rs"]
 mod resolved;

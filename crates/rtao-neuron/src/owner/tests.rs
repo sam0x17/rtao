@@ -147,19 +147,20 @@ setter_tests!(
     yuma3_enabled,
     bonds_reset_enabled,
     transfers_enabled,
+    owner_cut_enabled,
     owner_cut_auto_lock_enabled
 );
 
 #[test]
 fn allowlist_has_exact_row_and_setter_counts() {
-    assert_eq!(OWNER_HYPERPARAMETERS.len(), 33);
+    assert_eq!(OWNER_HYPERPARAMETERS.len(), 34);
     assert_eq!(
         OWNER_HYPERPARAMETERS
             .iter()
             .map(|row| row.setter)
             .collect::<std::collections::BTreeSet<_>>()
             .len(),
-        32
+        33
     );
     for (name, variant) in [
         ("commit_reveal_period", "WeightCommitInterval"),
@@ -265,7 +266,7 @@ async fn freeze_equality_pending_expiry_and_zero_tempo() -> anyhow::Result<()> {
             Ok(())
         })
         .await?;
-        for name in ["transfers_enabled", "owner_cut_auto_lock_enabled"] {
+        for name in ["owner_cut_enabled", "owner_cut_auto_lock_enabled"] {
             let plan = planner.plan(&client, NET, name, true.into()).await?;
             assert_eq!(
                 (plan.earliest_block, !plan.reasons.is_empty()),
@@ -357,8 +358,6 @@ async fn invalid_owner_name_value_and_legacy_calls_fail() -> anyhow::Result<()> 
         "sn_owner_hotkey",
         "recycle_or_burn",
         "set_tempo",
-        // Derived from the emission weight vector since spec 481.
-        "owner_cut_enabled",
     ] {
         assert!(planner.plan(&client, NET, name, 1u16.into()).await.is_err());
     }
@@ -369,7 +368,7 @@ async fn invalid_owner_name_value_and_legacy_calls_fail() -> anyhow::Result<()> 
         ("activity_cutoff_factor", 50001u32.into()),
         ("collateral_lock_share", 62259u16.into()),
         ("epoch_consensus", "yuma".into()),
-        ("owner_cut_auto_lock_enabled", 2u16.into()),
+        ("owner_cut_enabled", 2u16.into()),
     ] {
         assert!(
             planner.plan(&client, NET, name, value).await.is_err(),

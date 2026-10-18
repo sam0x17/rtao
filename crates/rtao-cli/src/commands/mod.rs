@@ -39,8 +39,6 @@ pub mod root;
 pub mod schema;
 /// Stake aliases of ordinary generated transaction operations.
 pub mod stake;
-/// Subnet emission weight vector views and owner changes.
-pub mod subnet_emission;
 /// Subnet creation, registration and metagraph views.
 pub mod subnets;
 /// Standalone timelock encryption, decryption and envelope inspection.
