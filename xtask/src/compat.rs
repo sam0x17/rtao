@@ -16,7 +16,6 @@ use sha2::{Digest, Sha256};
 use toml_edit::{DocumentMut, Item, TableLike};
 
 const EVIDENCE: &str = "docs/compat/validation.json";
-const METADATA_INDEX: &str = "vendor/metadata/finney/index.toml";
 const MAX_REPORT_BYTES: usize = 1024 * 1024;
 const HASH_KIND: &str = "blake2b-256-raw";
 const BUILD_WEIGHT: &str = "docs/compat/build-weight";
@@ -545,7 +544,8 @@ fn sha256(bytes: &[u8]) -> String {
 
 fn metadata(root: &Path, pins: &DocumentMut) -> Result<Vec<Json>> {
     crate::metadata_pin::verify(root, pins)?;
-    let index = toml(root, METADATA_INDEX)?;
+    let pinned = crate::metadata_pin::pinned_network(pins)?;
+    let index = toml(root, &format!("vendor/metadata/{pinned}/index.toml"))?;
     let network = index
         .get("network")
         .and_then(Item::as_str)

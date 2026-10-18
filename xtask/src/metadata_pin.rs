@@ -1,4 +1,5 @@
-//! Immutable, finalized Finney metadata inputs for code generation.
+//! Immutable, finalized metadata inputs for code generation, recorded from the
+//! network that proves the parity runtime (Finney for a published release).
 
 use std::{
     collections::BTreeSet,
@@ -14,9 +15,6 @@ use serde_json::{Value as Json, json};
 use sha2::{Digest, Sha256};
 use toml_edit::{ArrayOfTables, DocumentMut, InlineTable, Item, Table, Value, value};
 
-const DIRECTORY: &str = "vendor/metadata/finney";
-const INDEX: &str = "vendor/metadata/finney/index.toml";
-const GENESIS: &str = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03";
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,7 +36,62 @@ struct Row {
     blobs: [Blob; 2],
 }
 
+/// The network whose metadata feeds code generation, with its index location.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Network {
+    name: String,
+    genesis: String,
+}
+
+impl Network {
+    fn from_pins(pins: &DocumentMut) -> Result<Self> {
+        let name = pinned_network(pins)?;
+        let genesis = pins
+            .get("networks")
+            .and_then(|i| i.get(name))
+            .and_then(|i| i.get("genesis"))
+            .and_then(Item::as_str)
+            .with_context(|| format!("[networks.{name}] genesis is missing"))?;
+        Ok(Self {
+            name: name.to_owned(),
+            genesis: genesis.to_owned(),
+        })
+    }
+
+    fn directory(&self) -> String {
+        format!("vendor/metadata/{}", self.name)
+    }
+
+    fn index(&self) -> String {
+        format!("vendor/metadata/{}/index.toml", self.name)
+    }
+}
+
+/// The network whose finalized runtime the parity pin was proven on.
+pub(crate) fn pinned_network(pins: &DocumentMut) -> Result<&str> {
+    let name = pins
+        .get("parity")
+        .and_then(|i| i.get("network"))
+        .map_or(Some("finney"), Item::as_str)
+        .context("parity.network must be a string")?;
+    ensure!(
+        ["finney", "testnet", "devnet"].contains(&name),
+        "unsupported pinned metadata network {name}"
+    );
+    Ok(name)
+}
+
+/// The `[networks.<pinned>.metadata]` table that selects code-generation inputs.
+pub(crate) fn pinned_metadata(pins: &DocumentMut) -> Result<&Item> {
+    let name = pinned_network(pins)?;
+    pins.get("networks")
+        .and_then(|i| i.get(name))
+        .and_then(|i| i.get("metadata"))
+        .with_context(|| format!("[networks.{name}.metadata] is missing"))
+}
+
 pub(super) struct Prepared {
+    network: Network,
     row: Row,
     index: DocumentMut,
     bytes: [Vec<u8>; 2],
@@ -61,11 +114,9 @@ fn field<'a>(table: &'a dyn toml_edit::TableLike, key: &str) -> Result<&'a str> 
 }
 
 fn metadata_table(pins: &DocumentMut) -> Result<&dyn toml_edit::TableLike> {
-    pins.get("networks")
-        .and_then(|i| i.get("finney"))
-        .and_then(|i| i.get("metadata"))
-        .and_then(Item::as_table_like)
-        .context("[networks.finney.metadata] is missing")
+    pinned_metadata(pins)?
+        .as_table_like()
+        .context("pinned network metadata must be a table")
 }
 
 fn spec(table: &dyn toml_edit::TableLike) -> Result<u32> {
@@ -78,7 +129,7 @@ fn spec(table: &dyn toml_edit::TableLike) -> Result<u32> {
     Ok(spec)
 }
 
-fn parse_row(table: &Table) -> Result<Row> {
+fn parse_row(table: &Table, network: &Network) -> Result<Row> {
     let spec = spec(table)?;
     let read_blob = |version: u8| -> Result<Blob> {
         let blob = table
@@ -118,7 +169,11 @@ fn parse_row(table: &Table) -> Result<Row> {
         endpoint: field(table, "endpoint")?.to_owned(),
         blobs: [read_blob(15)?, read_blob(16)?],
     };
-    ensure!(row.genesis == GENESIS, "metadata index is not Finney");
+    ensure!(
+        row.genesis == network.genesis,
+        "metadata index is not {}",
+        network.name
+    );
     ensure!(
         row.tag == format!("v{spec}"),
         "metadata tag differs from spec"
@@ -257,8 +312,8 @@ fn path_exists(path: &Path) -> Result<bool> {
     }
 }
 
-fn verify_blob(root: &Path, blob: &Blob, version: u8) -> Result<()> {
-    let path = regular_file(root, &format!("{DIRECTORY}/{}", blob.path))?;
+fn verify_blob(root: &Path, network: &Network, blob: &Blob, version: u8) -> Result<()> {
+    let path = regular_file(root, &format!("{}/{}", network.directory(), blob.path))?;
     ensure!(
         fs::metadata(&path)?.len() == blob.bytes as u64,
         "{} byte length differs from index",
@@ -273,14 +328,14 @@ fn verify_blob(root: &Path, blob: &Blob, version: u8) -> Result<()> {
     validate_metadata(&raw, version).with_context(|| format!("validate {}", path.display()))
 }
 
-fn read_index(root: &Path) -> Result<(DocumentMut, Vec<Row>)> {
-    let index = crate::pin::read_document(&regular_file(root, INDEX)?)?;
+fn read_index(root: &Path, network: &Network) -> Result<(DocumentMut, Vec<Row>)> {
+    let index = crate::pin::read_document(&regular_file(root, &network.index())?)?;
     ensure!(
         index.get("schema").and_then(Item::as_integer) == Some(1),
         "unsupported metadata index schema"
     );
     ensure!(
-        index.get("network").and_then(Item::as_str) == Some("finney"),
+        index.get("network").and_then(Item::as_str) == Some(network.name.as_str()),
         "incorrect metadata index network"
     );
     let entries = index
@@ -290,14 +345,14 @@ fn read_index(root: &Path) -> Result<(DocumentMut, Vec<Row>)> {
     let mut rows = Vec::new();
     let mut specs = BTreeSet::new();
     for entry in entries {
-        let row = parse_row(entry)?;
+        let row = parse_row(entry, network)?;
         ensure!(
             specs.insert(row.spec),
             "duplicate metadata index spec {}",
             row.spec
         );
         for (version, blob) in [15, 16].into_iter().zip(&row.blobs) {
-            verify_blob(root, blob, version)?;
+            verify_blob(root, network, blob, version)?;
         }
         rows.push(row);
     }
@@ -306,7 +361,8 @@ fn read_index(root: &Path) -> Result<(DocumentMut, Vec<Row>)> {
 }
 
 pub(super) fn verify(root: &Path, pins: &DocumentMut) -> Result<()> {
-    let (_, rows) = read_index(root)?;
+    let network = Network::from_pins(pins)?;
+    let (_, rows) = read_index(root, &network)?;
     let table = metadata_table(pins)?;
     let pinned_spec = spec(table)?;
     ensure!(
@@ -342,16 +398,13 @@ pub(super) fn verify(root: &Path, pins: &DocumentMut) -> Result<()> {
         );
     }
     ensure!(
-        pins.get("networks")
-            .and_then(|i| i.get("finney"))
-            .and_then(|i| i.get("genesis"))
-            .and_then(Item::as_str)
-            == Some(&row.genesis),
+        network.genesis == row.genesis,
         "metadata genesis differs from network pin"
     );
     for (version, blob) in [15, 16].into_iter().zip(&row.blobs) {
         ensure!(
-            field(table, &format!("v{version}"))? == format!("{DIRECTORY}/{}", blob.path),
+            field(table, &format!("v{version}"))?
+                == format!("{}/{}", network.directory(), blob.path),
             "pinned metadata path differs from index"
         );
         ensure!(
@@ -371,13 +424,15 @@ pub(super) fn prepare(
     endpoint: &str,
     mut rpc: impl FnMut(&str, Json) -> Result<Json>,
 ) -> Result<Prepared> {
+    let network = Network::from_pins(pins)?;
     let table = metadata_table(pins)?;
     let spec = spec(table)?;
     let head = field(table, "finalized_head")?;
     let code = field(table, "code_hash")?;
     ensure!(
-        rpc("chain_getBlockHash", json!([0]))?.as_str() == Some(GENESIS),
-        "metadata endpoint is not Finney"
+        rpc("chain_getBlockHash", json!([0]))?.as_str() == Some(network.genesis.as_str()),
+        "metadata endpoint is not {}",
+        network.name
     );
     ensure!(
         rpc("state_getRuntimeVersion", json!([head]))?["specVersion"].as_u64()
@@ -412,7 +467,7 @@ pub(super) fn prepare(
     let mut row = Row {
         spec,
         code_hash: code.to_owned(),
-        genesis: GENESIS.to_owned(),
+        genesis: network.genesis.clone(),
         tag: pins["parity"]["tag"]
             .as_str()
             .context("parity tag missing")?
@@ -427,9 +482,9 @@ pub(super) fn prepare(
             .try_into()
             .map_err(|_| anyhow::anyhow!("both metadata versions required"))?,
     };
-    parse_row(&row_table(&row))?;
-    let mut index = if path_exists(&root.join(INDEX))? {
-        let (index, rows) = read_index(root)?;
+    parse_row(&row_table(&row), &network)?;
+    let mut index = if path_exists(&root.join(network.index()))? {
+        let (index, rows) = read_index(root, &network)?;
         if let Some(old) = rows.iter().find(|old| old.spec == row.spec) {
             ensure!(
                 old.code_hash == row.code_hash
@@ -445,7 +500,7 @@ pub(super) fn prepare(
     } else {
         let mut index = DocumentMut::new();
         index["schema"] = value(1);
-        index["network"] = value("finney");
+        index["network"] = value(&network.name);
         index["runtimes"] = Item::ArrayOfTables(ArrayOfTables::new());
         index
     };
@@ -459,6 +514,7 @@ pub(super) fn prepare(
         entries.push(row_table(&row));
     }
     Ok(Prepared {
+        network,
         row,
         index,
         bytes: bytes
@@ -469,10 +525,11 @@ pub(super) fn prepare(
 
 impl Prepared {
     pub(super) fn update_pins(&self, pins: &mut DocumentMut) {
-        let table = &mut pins["networks"]["finney"]["metadata"];
+        let directory = self.network.directory();
+        let table = &mut pins["networks"][self.network.name.as_str()]["metadata"];
         table["finalized_head"] = value(&self.row.finalized_head);
         for (version, blob) in [15, 16].into_iter().zip(&self.row.blobs) {
-            table[&format!("v{version}")] = value(format!("{DIRECTORY}/{}", blob.path));
+            table[&format!("v{version}")] = value(format!("{directory}/{}", blob.path));
             table[&format!("v{version}_sha256")] = value(&blob.sha256);
         }
     }
@@ -505,8 +562,10 @@ impl Prepared {
     }
 
     fn publish_from_stage(&self, root: &Path, stage: &Path) -> Result<()> {
-        let directory = root.join(DIRECTORY);
-        for relative in ["vendor", "vendor/metadata", DIRECTORY] {
+        let relative_directory = self.network.directory();
+        let index = self.network.index();
+        let directory = root.join(&relative_directory);
+        for relative in ["vendor", "vendor/metadata", relative_directory.as_str()] {
             let path = root.join(relative);
             match fs::create_dir(&path) {
                 Ok(()) => {}
@@ -529,7 +588,7 @@ impl Prepared {
             match fs::hard_link(&staged, &destination) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                    verify_blob(root, blob, version)
+                    verify_blob(root, &self.network, blob, version)
                         .context("existing immutable metadata differs; refusing replacement")?;
                 }
                 Err(error) => return Err(error).context("publish immutable metadata blob"),
@@ -552,16 +611,26 @@ impl Prepared {
                 "metadata destination parent is not a directory"
             );
         }
-        if path_exists(&root.join(INDEX))? {
-            regular_file(root, INDEX)?;
+        if path_exists(&root.join(&index))? {
+            regular_file(root, &index)?;
         }
-        fs::rename(staged, root.join(INDEX)).context("publish metadata index")
+        fs::rename(staged, root.join(&index)).context("publish metadata index")
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const GENESIS: &str = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03";
+
+    /// The committed pins' metadata network, directory and index.
+    fn committed(repository: &Path) -> Result<(Network, String, String)> {
+        let pins = crate::pin::read_document(&repository.join("upstream.toml"))?;
+        let network = Network::from_pins(&pins)?;
+        let (directory, index) = (network.directory(), network.index());
+        Ok((network, directory, index))
+    }
 
     #[test]
     fn opaque_metadata_requires_exact_some_envelope() -> Result<()> {
@@ -616,7 +685,7 @@ mod tests {
         let head = format!("0x{}", "11".repeat(32));
         let code = format!("0x{}", "22".repeat(32));
         let pins: DocumentMut = format!(
-            "[parity]\ntag='v478'\ncommit='{}'\n[networks.finney.metadata]\nspec=478\nfinalized_head='{head}'\ncode_hash='{code}'\n",
+            "[parity]\ntag='v478'\ncommit='{}'\n[networks.finney]\ngenesis='{GENESIS}'\n[networks.finney.metadata]\nspec=478\nfinalized_head='{head}'\ncode_hash='{code}'\n",
             "33".repeat(20)
         ).parse()?;
         for broken in 0..3 {
@@ -727,11 +796,12 @@ mod tests {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
         ));
         fs::create_dir(&scratch)?;
-        let directory = scratch.join(DIRECTORY);
+        let (network, metadata_directory, metadata_index) = committed(repository)?;
+        let directory = scratch.join(&metadata_directory);
         fs::create_dir_all(&directory)?;
         let mut copied = Vec::new();
         let result = (|| -> Result<()> {
-            for entry in fs::read_dir(repository.join(DIRECTORY))? {
+            for entry in fs::read_dir(repository.join(&metadata_directory))? {
                 let entry = entry?;
                 ensure!(
                     entry.file_type()?.is_file(),
@@ -754,13 +824,14 @@ mod tests {
                 "tampered metadata was accepted"
             );
             fs::write(&path, &bytes)?;
-            pins["networks"]["finney"]["metadata"]["v15_sha256"] = value("00".repeat(32));
+            pins["networks"][network.name.as_str()]["metadata"]["v15_sha256"] =
+                value("00".repeat(32));
             ensure!(
                 verify(&scratch, &pins).is_err(),
                 "tampered metadata pin was accepted"
             );
             pins = crate::pin::read_document(&repository.join("upstream.toml"))?;
-            let mut index = crate::pin::read_document(&scratch.join(INDEX))?;
+            let mut index = crate::pin::read_document(&scratch.join(&metadata_index))?;
             let runtime = index["runtimes"]
                 .as_array_of_tables_mut()
                 .context("fixture index rows missing")?
@@ -768,12 +839,15 @@ mod tests {
                 .find(|row| row["spec"].as_integer() == pins["parity"]["spec_version"].as_integer())
                 .context("fixture runtime missing")?;
             runtime["commit"] = value("00".repeat(20));
-            fs::write(scratch.join(INDEX), index.to_string())?;
+            fs::write(scratch.join(&metadata_index), index.to_string())?;
             ensure!(
                 verify(&scratch, &pins).is_err(),
                 "tampered metadata provenance was accepted"
             );
-            fs::copy(repository.join(INDEX), scratch.join(INDEX))?;
+            fs::copy(
+                repository.join(&metadata_index),
+                scratch.join(&metadata_index),
+            )?;
             #[cfg(unix)]
             {
                 fs::remove_file(&path)?;
@@ -816,7 +890,8 @@ mod tests {
             .parent()
             .context("workspace parent missing")?;
         let mut pins = crate::pin::read_document(&repository.join("upstream.toml"))?;
-        let (_, rows) = read_index(repository)?;
+        let (network, metadata_directory, _) = committed(repository)?;
+        let (_, rows) = read_index(repository, &network)?;
         let original = rows
             .iter()
             .find(|row| Some(i64::from(row.spec)) == pins["parity"]["spec_version"].as_integer())
@@ -824,10 +899,10 @@ mod tests {
         let raw: Vec<_> = original
             .blobs
             .iter()
-            .map(|blob| fs::read(repository.join(DIRECTORY).join(&blob.path)))
+            .map(|blob| fs::read(repository.join(&metadata_directory).join(&blob.path)))
             .collect::<std::io::Result<_>>()?;
         let newer_head = format!("0x{}", "55".repeat(32));
-        pins["networks"]["finney"]["metadata"]["finalized_head"] = value(&newer_head);
+        pins["networks"][network.name.as_str()]["metadata"]["finalized_head"] = value(&newer_head);
         let fetch = |change: bool| -> Result<Prepared> {
             prepare(
                 repository,
@@ -835,7 +910,7 @@ mod tests {
                 "https://alternate-finney.example",
                 |method, params| {
                     Ok(match method {
-                        "chain_getBlockHash" => json!(GENESIS),
+                        "chain_getBlockHash" => json!(network.genesis),
                         "state_getRuntimeVersion" => json!({"specVersion": original.spec}),
                         "state_getStorageHash" => json!(original.code_hash),
                         "state_call" => {

@@ -96,7 +96,7 @@ export RTAO_PYTHON_LANE=record
 export RTAO_ORACLE_RECORD_IMAGE="$image_id"
 export RTAO_ORACLE_RECORD_BUILT=true
 bash ci/oracle/record-localnet.sh
-spec=$(jq -er '.metadata_pins[] | select(.network=="finney") | .spec_version' compat.json)
+spec=$(jq -er '.parity.tag as $tag | [.metadata_pins[] | select(.tag == $tag) | .spec_version] | if length == 1 then .[0] else error("expected one metadata pin for parity tag") end' compat.json)
 if test "$force" != true; then
   if test -d "vendor/recorded/$spec"; then
     mv "vendor/recorded/$spec" "$RTAO_TEMP_ROOT/previous-recorded"

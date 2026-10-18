@@ -1261,28 +1261,31 @@ fn live(args: &[String]) -> Result<()> {
         println!("{}", report.markdown());
         return Ok(());
     }
-    if network == "finney" {
+    // The network that proves the parity runtime feeds code generation; only a
+    // completed pin may record or promote its runtime rows.
+    let pinned = crate::metadata_pin::pinned_network(&pins)? == network;
+    if pinned {
         ensure!(
             pins["parity"]["spec_version"].as_integer() == Some(i64::from(spec))
-                && pins["networks"]["finney"]["metadata"]["code_hash"].as_str()
+                && crate::metadata_pin::pinned_metadata(&pins)?["code_hash"].as_str()
                     == Some(code.as_str()),
-            "verified Finney preview retained; complete cargo xtask pin --parity v{spec} before recording or promoting code generation"
+            "verified {network} preview retained; complete cargo xtask pin --parity v{spec} before recording or promoting code generation"
         );
     }
     let directory = PathBuf::from("vendor/metadata").join(&network);
     ordinary_parents(&root, &directory)?;
     let mut row = toml_edit::Table::new();
     row["spec"] = value(i64::from(spec));
-    if network == "finney" {
+    if pinned {
         row["tag"] = value(
             pins["parity"]["tag"]
                 .as_str()
-                .context("Finney parity tag missing")?,
+                .context("pinned parity tag missing")?,
         );
         row["commit"] = value(
             pins["parity"]["commit"]
                 .as_str()
-                .context("Finney parity commit missing")?,
+                .context("pinned parity commit missing")?,
         );
     }
     for (field, text) in [

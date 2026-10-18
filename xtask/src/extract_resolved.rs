@@ -2262,13 +2262,13 @@ impl<'a> Resolver<'a> {
                 fs::read_to_string(self.root.join("upstream.toml"))?.parse::<DocumentMut>()?;
             crate::metadata_pin::verify(self.root, &pins)
                 .context("verify pinned metadata before resolving descriptors")?;
-            let path = pins["networks"]["finney"]["metadata"]["v15"]
+            let path = crate::metadata_pin::pinned_metadata(&pins)?["v15"]
                 .as_str()
                 .context("missing pinned V15 metadata")?;
             let bytes = fs::read(self.root.join(path))?;
             let metadata = RuntimeMetadataPrefixed::decode_all(&mut &bytes[..])?;
             let spec = u32::try_from(
-                pins["networks"]["finney"]["metadata"]["spec"]
+                crate::metadata_pin::pinned_metadata(&pins)?["spec"]
                     .as_integer()
                     .context("missing metadata spec")?,
             )?;

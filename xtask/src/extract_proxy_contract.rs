@@ -248,7 +248,7 @@ pub(super) fn output(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<
         "chain ProxyType differs from authenticated Python PROXY_TYPES"
     );
     crate::metadata_pin::verify(root, pins)?;
-    let pin = &pins["networks"]["finney"]["metadata"];
+    let pin = crate::metadata_pin::pinned_metadata(pins)?;
     let bytes = fs::read(root.join(pin["v15"].as_str().context("V15 path missing")?))?;
     let frame_metadata::RuntimeMetadata::V15(metadata) =
         frame_metadata::RuntimeMetadataPrefixed::decode_all(&mut &bytes[..])?.1

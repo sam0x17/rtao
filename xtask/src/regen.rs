@@ -247,18 +247,12 @@ fn run_at(args: Vec<String>, root_path: &Path) -> Result<()> {
     if args.iter().any(|arg| arg == "--reads-only") {
         return reads::run(&root, check);
     }
-    let finney = pins
-        .get("networks")
-        .and_then(|v| v.get("finney"))
-        .context("finney pin missing")?;
+    let pin = crate::metadata_pin::pinned_metadata(&pins)?;
     let spec = u32::try_from(
-        finney
-            .get("metadata")
-            .and_then(|v| v.get("spec"))
+        pin.get("spec")
             .and_then(|v| v.as_integer())
-            .context("finney spec missing")?,
+            .context("pinned metadata spec missing")?,
     )?;
-    let pin = finney.get("metadata").context("metadata pin missing")?;
     let blob = |name| -> Result<Vec<u8>> {
         let path = pin
             .get(name)
