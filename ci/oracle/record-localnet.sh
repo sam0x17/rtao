@@ -17,7 +17,9 @@ else
   image_flag=--image
   docker pull "$RTAO_ORACLE_RECORD_IMAGE"
 fi
-image=$(jq -er '.parity.tag as $tag | if .localnet.pinned.tag == $tag then .localnet.image + "@" + .localnet.pinned.digest else error("localnet and parity tags differ") end' compat.json)
+# A release pins its tag's image; an unreleased pin pins the image built from
+# its exact commit (sha-<commit>).
+image=$(jq -er '.parity as $parity | if .localnet.pinned.tag == $parity.tag or .localnet.pinned.tag == ("sha-" + $parity.commit) then .localnet.image + "@" + .localnet.pinned.digest else error("localnet image is not built from the parity pin") end' compat.json)
 spec=$(jq -er '.parity.tag as $tag | [.metadata_pins[] | select(.tag == $tag) | .spec_version] | if length == 1 then .[0] else error("expected one metadata pin for parity tag") end' compat.json)
 curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
   https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/latest \
