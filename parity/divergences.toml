@@ -1329,3 +1329,21 @@ pinning_tests = [
 ]
 upstream_report = "Local persistence and input policy, without an upstream defect allegation or new filing. Source and regression fixtures are prepared; hosted validation is pending. See docs/execution/m5-book-cache.md."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/config.py"
+
+[[divergences]]
+id = "D-077"
+upstream_symbol = "bittensor.executor.Executor.submit_shielded"
+python_behavior = "Seals the inner extrinsic with the NextKey read before preparation, submits one carrier, and reports a dropped inner ('not included before its era expired') without retrying."
+rtao_behavior = "Re-reads NextKey immediately before sealing, waits (bounded by ShieldOptions::finality_wait) until finality leaves half the 8-block era for inclusion, and when an included carrier's inner is proven absent through its finalized era expiry, re-seals the call with a fresh key and nonce pair up to ShieldOptions::dropped_inner_retries (default 3) more times. Rejection and unknown fate are still never retried."
+rationale = "The shield key rotates every block and is valid for two block periods, so on fast development chains (250 ms blocks) a carrier has well under a second to land and the block author silently drops undecryptable inners. Proven absence through finalized era expiry means the inner never executed, so re-sealing cannot execute it twice; each retry costs one more small carrier fee. On mainnet the window is 12-24 s and retries are rare."
+decision = "PLAN.md execution rule 5; live localnet CLI walkthrough of burned registration and staking on a fast spec 481 node (2026-10-18)"
+status = "active"
+class = "addition"
+milestone = "M5"
+pinning_tests = [
+  "rtao_client::shield::proven_dropped_inner_is_resealed_with_a_fresh_carrier",
+  "rtao_client::shield::finality_lag_waits_for_finality_to_come_within_the_era",
+  "rtao_client::shield::ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_canonical_scan",
+]
+upstream_report = "Client reliability policy with no upstream defect allegation and no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/6a972693ae9580541225bd37696ac2fee26b8ae9/sdk/python/bittensor/executor.py"

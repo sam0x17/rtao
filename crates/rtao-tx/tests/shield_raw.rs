@@ -837,7 +837,14 @@ async fn missing_inner_retains_shield_metadata_and_reviewed_extras() {
         });
     });
     let result = ex
-        .submit_shielded(&Required::default(), &keys, &ShieldOptions::default())
+        .submit_shielded(
+            &Required::default(),
+            &keys,
+            &ShieldOptions {
+                dropped_inner_retries: 0,
+                ..Default::default()
+            },
+        )
         .await
         .unwrap();
     assert!(!result.success);
