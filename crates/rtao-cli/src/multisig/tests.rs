@@ -72,7 +72,7 @@ struct RootCall;
 impl ProbeKind for RootCall {
     // The wrapper test below guards this authenticated catalog position;
     // enabling the public M5 intent feature is unnecessary for this fixture.
-    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[58];
+    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[59];
     type Role = Coldkey;
     type Origin = Root;
 }
@@ -166,6 +166,7 @@ impl<M: ProbeKind> Intent for Probe<M> {
             estimated_fee: Some(Balance::from_rao(123)),
             facts: vec![("reserved".into(), "25 rao".into())],
             facts_title: FactsTitle::Custom("semantic facts".into()),
+            preview: serde_json::Map::new(),
         })
     }
 }
@@ -356,6 +357,7 @@ async fn plan_preserves_the_semantic_contract_and_exact_python_dispatch_shape() 
             "warnings": ["semantic warning"],
             "violations": [],
             "ok": true,
+            "preview": {},
             "docs_url": format!("{}/tx/multisig-execute", rtao_catalog::py::DOCS_URL),
         })
     );

@@ -23,6 +23,9 @@ plural = "Vec<rtao_primitives::Ss58Address>"
 "serve_prometheus.version" = "u32"
 "register_leased_network.emissions_share" = "rtao_primitives::Percent"
 "set_mechanism_count.mechanism_count" = "rtao_primitives::MechId"
+# Python canonicalizes named or numbered slots and human shares to exact u64 parts.
+"set_subnet_emission_weights.slots" = "Vec<serde_json::Value>"
+"set_subnet_emission_weights.values" = "Vec<serde_json::Value>"
 # Python leaves this default integer untouched until the PoW timeout is used.
 "pow_register.mining_timeout" = "serde_json::Number"
 

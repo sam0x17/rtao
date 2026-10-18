@@ -115,7 +115,7 @@ async fn preparation_anchors_finalized_era_and_does_not_reserve_nonce() {
         client.at(BlockRef::Number(90)).await.unwrap().block().hash
     );
     assert_eq!(prepared.payload_json()["nonce"], json!("0x00000000"));
-    assert_eq!(prepared.payload_json()["specVersion"], json!("0x000001de"));
+    assert_eq!(prepared.payload_json()["specVersion"], json!("0x000001e1"));
     assert_eq!(
         prepared.payload_json()["transactionVersion"],
         json!("0x00000001")
@@ -387,7 +387,7 @@ async fn metadata_verifying_signer_receives_a_proof_consistent_with_the_signed_p
     fake.mutate_state(|state| {
         state.set_result(
             "state_getRuntimeVersion",
-            json!({"specName":"runtime-renamed","specVersion":478,"transactionVersion":1,"apis":[]}),
+            json!({"specName":"runtime-renamed","specVersion":481,"transactionVersion":1,"apis":[]}),
         )
     });
     let call = call(&client, vec![1]).await;
@@ -1688,7 +1688,7 @@ async fn prepared_signature_refuses_same_spec_transaction_version_change() {
     fake.mutate_state(|state| {
         state.set_result(
             "state_getRuntimeVersion",
-            json!({"specName":"node-subtensor","specVersion":478,"transactionVersion":2,"apis":[]}),
+            json!({"specName":"node-subtensor","specVersion":481,"transactionVersion":2,"apis":[]}),
         )
     });
     assert!(

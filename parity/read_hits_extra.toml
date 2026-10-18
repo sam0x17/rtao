@@ -1,4 +1,4 @@
-# Out-of-module descriptor accesses reviewed against the pinned v478 Python source.
+# Out-of-module descriptor accesses reviewed against the pinned v481 Python source.
 [read.timestamp]
 hits = [{ kind = "storage", container = "Timestamp", name = "Now", reason = "Client.timestamp reads the Timestamp pallet; Snapshot forwards its pinned block.", python = "sdk/python/bittensor/client.py:332-335; sdk/python/bittensor/snapshot.py:82-84" }]
 
@@ -33,5 +33,5 @@ hits = [{ kind = "runtime", container = "SwapRuntimeApi", name = "current_alpha_
 # D-040 retains raw Python hit evidence and replaces only the corrected access.
 [read.subnet_start_schedule]
 replacements = [
-  { divergence = "D-040", from_kind = "constant", from_container = "SubtensorModule", from_name = "InitialStartCallDelay", kind = "storage", container = "SubtensorModule", name = "StartCallDelay", source_path = "sdk/python/bittensor/reads/subnets.py", source_blob = "ad3143c03524a250fe99501ebd74888f5c69a684", source_sha256 = "c7049b583e8de525c7509939d197e11209f84f7e5b85c8883978380879525139", runtime_path = "pallets/subtensor/src/subnets/subnet.rs", runtime_sha256 = "3732ca61fcf02883f5a72797f8032628982527edfa98cd57fb93a9ce52c87812", runtime_predicate = "registration_block_number.saturating_add(StartCallDelay::<T>::get())", reason = "D-040: live start eligibility uses mutable StartCallDelay and native saturating u64 addition; InitialStartCallDelay is only its default." },
+  { divergence = "D-040", from_kind = "constant", from_container = "SubtensorModule", from_name = "InitialStartCallDelay", kind = "storage", container = "SubtensorModule", name = "StartCallDelay", source_path = "sdk/python/bittensor/reads/subnets.py", source_blob = "32cb6b8b6af7550159045cec8b6b684a5c139c89", source_sha256 = "56af850e42baa119fba7548f860541804667b71a70998742a0b5cc77805aa70d", runtime_path = "pallets/subtensor/src/subnets/subnet.rs", runtime_sha256 = "3d7c1c987b8dfc59a004060218fbeeebec1c66375642c952aef7ea9179126a4c", runtime_predicate = "registration_block_number.saturating_add(StartCallDelay::<T>::get())", reason = "D-040: live start eligibility uses mutable StartCallDelay and native saturating u64 addition; InitialStartCallDelay is only its default." },
 ]

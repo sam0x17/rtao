@@ -13,7 +13,10 @@ use serde_json::{Value, json};
 use subxt_rpcs::RpcClient;
 
 async fn fixture(crypto: CryptoType) -> (Client, FakeChain, KeypairSigner) {
-    let fake = FakeChain::from_state(FakeState::default());
+    fixture_with(crypto, FakeState::default()).await
+}
+async fn fixture_with(crypto: CryptoType, state: FakeState) -> (Client, FakeChain, KeypairSigner) {
+    let fake = FakeChain::from_state(state);
     let mut cfg = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
     cfg.track_heads = false;
     cfg.runtime_cache_dir = None;
@@ -103,7 +106,7 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
             );
             assert_eq!(value["era"], "00");
             assert_eq!(value["payload_json"]["nonce"], "0x00000003");
-            assert_eq!(value["payload_json"]["specVersion"], "0x000001de");
+            assert_eq!(value["payload_json"]["specVersion"], "0x000001e1");
             assert_eq!(value["payload_json"]["transactionVersion"], "0x00000001");
             assert_eq!(
                 value["payload_json"]["tip"],
@@ -448,7 +451,12 @@ async fn transfer_proxy_and_sudo_survive_unsigned_json_roundtrip_and_attachment(
 
 #[tokio::test]
 async fn fuzz_unsigned_seed_reconstructs_signs_and_attaches_under_authenticated_context() {
-    let (client, fake, _) = fixture(CryptoType::Sr25519).await;
+    // The committed seed's trusted context is spec 478, as in its fuzz target.
+    let mut state = FakeState::default();
+    state.runtime = std::sync::Arc::new(
+        rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 478, 1, 42).unwrap(),
+    );
+    let (client, fake, _) = fixture_with(CryptoType::Sr25519, state).await;
     let signer = KeypairSigner::from_uri("//Alice", CryptoType::Sr25519).unwrap();
     client.nonces().pin(&signer.account(), 80);
     // This is the same hand-authored public candidate used by the standalone
@@ -706,7 +714,7 @@ async fn bad_external_signature_refuses_before_nonce_mutation_and_author_rpc() {
 
 #[tokio::test]
 async fn live_spec_and_transaction_upgrade_refuse_import_and_external_submit() {
-    for (spec, tx) in [(479, 1), (478, 2)] {
+    for (spec, tx) in [(482, 1), (481, 2)] {
         let (client, fake, signer) = fixture(CryptoType::Ed25519).await;
         let unsigned = prepared(&client, &signer, false).await;
         let signature = signer

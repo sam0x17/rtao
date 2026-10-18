@@ -331,6 +331,7 @@ fn leaf_safety(
             | "set_min_collateral"
             | "set_perpetual_lock"
             | "set_reject_locked_alpha"
+            | "set_reject_staking_hotkey_growth"
             | "sudo_set_root_claim_threshold"
             | "set_subnet_identity"
             | "set_mechanism_weights"
@@ -383,6 +384,7 @@ fn leaf_safety(
             | "sudo_set_owner_cut_auto_lock_enabled"
             | "sudo_set_mechanism_count"
             | "sudo_set_subnet_emission_enabled"
+            | "sudo_set_subnet_emission_weights"
             | "sudo_trim_null_uids_batch"
             | "sudo_trim_to_max_allowed_uids",
         ) => None,

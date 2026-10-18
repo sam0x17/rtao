@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnets.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnets.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/metagraph_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Registration and raw metagraph inspection through real SDK operations.
 
@@ -120,7 +120,9 @@ pub fn command() -> Result<Command, CliError> {
             )
             .arg(Arg::new("hotkey").long("hotkey"))
             .arg(Arg::new("all").long("all").action(ArgAction::SetTrue)),
-        );
+        )
+        // py: sdk/python/bittensor/cli/commands/subnets.py:31-33
+        .subcommand(super::subnet_emission::command());
     for name in [
         "list",
         "show",
@@ -185,6 +187,11 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
         "show" | "burn-cost" | "price" => Ok(vec!["netuid"]),
         "hyperparameters" => Ok(vec!["netuid", "name"]),
         "conviction" => Ok(vec!["netuid", "hotkey", "all"]),
+        "emission" => super::subnet_emission::reserved(
+            matches
+                .subcommand_matches("emission")
+                .ok_or_else(|| CliError::input("missing subnets emission command"))?,
+        ),
         _ => Err(CliError::input(format!("unknown subnets command {name:?}"))),
     }
 }
@@ -215,6 +222,8 @@ pub enum Request {
     Pow(PowRegistration),
     /// Raw catalog metagraph read, optionally at a historical height.
     Metagraph(QueryRequest),
+    /// Emission weight vector view or owner change.
+    Emission(super::subnet_emission::Request),
 }
 
 impl Request {
@@ -266,6 +275,9 @@ impl Request {
             }
             "create" => TxRequest::from_matches(ctx, "register_subnet", matches, history)
                 .map(Self::Transaction),
+            "emission" => {
+                super::subnet_emission::Request::from_matches(matches).map(Self::Emission)
+            }
             "metagraph" => QueryRequest::from_matches(ctx, ReadName::Metagraph, matches, history)
                 .map(Self::Metagraph),
             "register" => {
@@ -1394,6 +1406,9 @@ pub async fn execute(
         Request::Pow(request) => {
             let request = prepare_pow(ctx, client, request).await?;
             generated::execute_tx(ctx, client, &request, options, external, history).await
+        }
+        Request::Emission(request) => {
+            super::subnet_emission::execute(ctx, client, request, options, external, history).await
         }
         Request::Metagraph(request) => {
             let at = client

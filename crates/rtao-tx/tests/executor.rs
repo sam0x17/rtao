@@ -944,7 +944,7 @@ async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_chan
 async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
     let (executor, _, _) = fixture().await;
     let tools = executor.tools().unwrap();
-    assert_eq!(tools.len(), 83);
+    assert_eq!(tools.len(), 85);
     assert!(tools.windows(2).all(|pair| pair[0].name < pair[1].name));
     for (spec, tool) in rtao_catalog::INTENTS.iter().zip(tools) {
         let catalog: Value = serde_json::from_str(spec.catalog_json).unwrap();
@@ -989,7 +989,7 @@ async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
 async fn coldkey_fee_warning_precedes_failed_fee_probe_and_stays_out_of_preflight() {
     struct HotWeights;
     impl IntentInterface for HotWeights {
-        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[61];
+        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[63];
         type Role = rtao_signer::Hotkey;
         type Origin = Signed;
         type Output = ();

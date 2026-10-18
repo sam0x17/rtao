@@ -885,6 +885,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             format!(
                 "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::hyperparameters::canonicalize(&mut intent)?;"
             )
+        } else if spec.name == "set_subnet_emission_weights" {
+            format!(
+                "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::emission_weights::canonicalize(&mut intent)?;"
+            )
         } else if spec.name == "create_crowdloan" {
             format!(
                 "crate::crowdloan::check_constructor_input(&args)?; let intent:super::interfaces::{class}=serde_json::from_value(args)?;"
@@ -1491,11 +1495,11 @@ mod tests {
         );
     }
     #[test]
-    fn all_44_reviewed_passthrough_calls_are_distinct_catalog_members() {
+    fn all_45_reviewed_passthrough_calls_are_distinct_catalog_members() {
         let root = root();
         let config = document(root, "codegen/intent_callmap.toml").unwrap();
         let mappings = config["passthrough"].as_table().unwrap();
-        assert_eq!(mappings.len(), 44);
+        assert_eq!(mappings.len(), 45);
         for (name, call) in mappings.iter() {
             let spec = rtao_catalog::INTENTS
                 .iter()

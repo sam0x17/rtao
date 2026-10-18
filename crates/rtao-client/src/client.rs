@@ -840,7 +840,7 @@ mod tests {
                 .unwrap();
             assert_eq!(upgraded_call.stamp(), runtime.stamp());
             assert!(old_call.ensure_runtime(&runtime).is_err());
-            assert_eq!(old_runtime.spec_version(), 478);
+            assert_eq!(old_runtime.spec_version(), 481);
             assert_eq!(old_runtime.transaction_version(), 1);
             assert_eq!(
                 raw.requests().len(),
