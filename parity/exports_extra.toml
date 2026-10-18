@@ -1296,6 +1296,17 @@ pinning_tests = [
 ]
 
 [[export]]
+python = "bittensor.intents.SetRejectStakingHotkeyGrowth"
+home = "rtao_intents::SetRejectStakingHotkeyGrowth"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+  "rtao_intents::emission_weights::reject_staking_hotkey_growth_builds_the_account_flag_call",
+]
+
+[[export]]
 python = "bittensor.intents.SetRootClaimThreshold"
 home = "rtao_intents::SetRootClaimThreshold"
 reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
@@ -1313,6 +1324,17 @@ source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
   "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
+
+[[export]]
+python = "bittensor.intents.SetSubnetEmissionWeights"
+home = "rtao_intents::SetSubnetEmissionWeights"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+  "rtao_intents::emission_weights::intent_plan_renormalizes_and_reports_root_baseline",
 ]
 
 [[export]]

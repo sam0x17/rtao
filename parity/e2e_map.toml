@@ -220,6 +220,12 @@ rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_cha
 [tests."intent_withdraw_crowdloan"]
 rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
 
+[tests."pyt:e2e/test_emission_weights_cli.py::test_btcli_subnets_emission_against_localnet"]
+na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."
+
+[tests."pyt:e2e/test_emission_weights_cli.py::test_root_is_paid_its_baseline_off_the_top_via_python_sdk"]
+na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
+
 [tests."pyt:e2e/test_null_consensus.py::test_null_yuma_null_emissions_via_python_sdk"]
 na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
