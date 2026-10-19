@@ -405,7 +405,7 @@ impl View for Snapshot {
             }
         }
         let mut found = BTreeMap::new();
-        for chunk in unique.chunks(256) {
+        for chunk in unique.chunks(STORAGE_PAGE) {
             let result = self
                 .client
                 .read_request(
@@ -1000,7 +1000,7 @@ pub trait ViewExt: View {
         let query = descriptor.at(key);
         async move { self.fetch(query).await }
     }
-    /// Coalesce all storage queries at one hash, with at most 256 keys per RPC.
+    /// Coalesce all storage queries at one hash, with at most 1,000 keys per RPC.
     fn fetch<F: Fetch>(
         &self,
         plan: F,
@@ -1368,6 +1368,12 @@ pub trait ViewExt: View {
 }
 impl<T: View + ?Sized> ViewExt for T {}
 
+/// Keys per map page and per coalesced storage query. Public endpoints pace
+/// requests, so pages use the node's `state_getKeysPaged` maximum; Python sends
+/// every key of a read in one `state_queryStorageAt`, so 1,000 stays within
+/// the request shapes public nodes already serve.
+const STORAGE_PAGE: usize = 1000;
+
 fn storage_stream<'a, V: View + ?Sized, T: Send + 'static, D>(
     view: &'a V,
     pallet: &'a str,
@@ -1433,9 +1439,14 @@ where
                     if done {
                         return Ok(None);
                     }
-                    let keys = View::keys_paged(&snapshot, &encoded_prefix, 256, cursor.as_deref())
-                        .await?;
-                    done = keys.len() < 256;
+                    let keys = View::keys_paged(
+                        &snapshot,
+                        &encoded_prefix,
+                        STORAGE_PAGE as u32,
+                        cursor.as_deref(),
+                    )
+                    .await?;
+                    done = keys.len() < STORAGE_PAGE;
                     if keys.is_empty() {
                         return Ok(None);
                     }
@@ -2044,7 +2055,7 @@ mod tests {
         assert_state_pinned(&fake);
     }
     #[tokio::test]
-    async fn fetch_chunks_three_hundred_keys_and_uses_live_hashers() {
+    async fn fetch_chunks_eleven_hundred_keys_and_uses_live_hashers() {
         let mut runtime = current_core();
         runtime
             .pallets
@@ -2063,7 +2074,7 @@ mod tests {
             .storage_entry("SubtensorModule", "Tempo")
             .unwrap();
         let mut plan = ReadPlan::new();
-        for index in 0..300u16 {
+        for index in 0..1100u16 {
             let args = vec![Value::Int(i128::from(index))];
             let key = snapshot
                 .block
@@ -2079,14 +2090,14 @@ mod tests {
             plan.push(storage::subtensor_module::TEMPO.surface(), args);
         }
         let values = snapshot.fetch(plan).await.unwrap();
-        assert_eq!(values.len(), 300);
+        assert_eq!(values.len(), 1100);
         for (index, value) in values.into_iter().enumerate() {
             assert_eq!(value.as_u128(), Some(index as u128));
         }
         let requests = fake.requests.lock().unwrap();
         assert_eq!(requests.len(), 2);
-        assert_eq!(requests[0].1[0].as_array().unwrap().len(), 256);
-        assert_eq!(requests[1].1[0].as_array().unwrap().len(), 44);
+        assert_eq!(requests[0].1[0].as_array().unwrap().len(), 1000);
+        assert_eq!(requests[1].1[0].as_array().unwrap().len(), 100);
         drop(requests);
         assert_state_pinned(&fake);
     }
@@ -2098,7 +2109,7 @@ mod tests {
             .runtime
             .storage_entry("SubtensorModule", "Tempo")
             .unwrap();
-        for index in 0..300u16 {
+        for index in 0..1100u16 {
             let key = snapshot
                 .block
                 .runtime
@@ -2112,7 +2123,7 @@ mod tests {
         }
         let stream = snapshot.storage_iter(&storage::subtensor_module::TEMPO, ());
         let values = stream.try_collect::<Vec<_>>().await.unwrap();
-        assert_eq!(values.len(), 300);
+        assert_eq!(values.len(), 1100);
         for (keys, value) in values {
             assert_eq!(keys.len(), 1);
             assert_eq!(keys[0].as_u128(), Some(u128::from(value)));

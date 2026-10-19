@@ -3539,7 +3539,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         let message = policy.to_string();
         let (client, chain, keys) = fixture(1_000_000_000).await?;
         chain.queue_transport_error(
-            "chain_getBlockHash",
+            "chain_getHeader",
             rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
                 policy.clone(),
             )))),
@@ -3572,7 +3572,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         let (ctx, sink) = saved_context(&member_keys, &["--yes", "--json", "--no-mev-shield"], 3)?;
         let start = chain.requests().len();
         chain.queue_transport_error(
-            "chain_getBlockHash",
+            "chain_getHeader",
             rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
                 policy.clone(),
             )))),
@@ -3602,7 +3602,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         assert_eq!(
             requests[start..]
                 .iter()
-                .filter(|request| request.method == "chain_getBlockHash")
+                .filter(|request| request.method == "chain_getHeader")
                 .count(),
             1
         );

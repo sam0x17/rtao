@@ -344,7 +344,7 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         let expected_message = policy.to_string();
         let start = chain.requests().len();
         chain.queue_transport_error(
-            "chain_getBlockHash",
+            "chain_getHeader",
             rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
                 policy,
             )))),
@@ -361,7 +361,7 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         assert_eq!(
             chain.requests()[start..]
                 .iter()
-                .filter(|request| request.method == "chain_getBlockHash")
+                .filter(|request| request.method == "chain_getHeader")
                 .count(),
             1
         );

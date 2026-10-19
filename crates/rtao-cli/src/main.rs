@@ -448,7 +448,11 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
             "subnets" => {
                 let request =
                     subnets::Request::from_matches(&mut app, matches, &mut invocation.history)?;
-                let runner = app.clone();
+                let mut runner = app.clone();
+                runner.track_heads = !matches!(
+                    request,
+                    subnets::Request::Inspect(_) | subnets::Request::Metagraph(_)
+                );
                 let app_ref = &mut app;
                 let history = &mut invocation.history;
                 runner
@@ -473,7 +477,8 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
             "root" => {
                 let request =
                     root::Request::from_matches(&mut app, matches, &mut invocation.history)?;
-                let runner = app.clone();
+                let mut runner = app.clone();
+                runner.track_heads = !matches!(request, root::Request::List { .. });
                 let app_ref = &mut app;
                 let history = &mut invocation.history;
                 runner
@@ -540,7 +545,8 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                 } else {
                     None
                 };
-                let runner = app.clone();
+                let mut runner = app.clone();
+                runner.track_heads = read.is_none();
                 let app_ref = &mut app;
                 let history = &mut invocation.history;
                 runner
@@ -611,7 +617,11 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                 } else {
                     None
                 };
-                let runner = app.clone();
+                let mut runner = app.clone();
+                runner.track_heads = !matches!(
+                    parsed,
+                    Some(hparams::Request::Hyperparameters { .. } | hparams::Request::Read(_))
+                );
                 let app_ref = &mut app;
                 let history = &mut invocation.history;
                 runner
@@ -648,7 +658,11 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                 if stake::execute_local(&app, &request)? {
                     return Ok(());
                 }
-                let runner = app.clone();
+                let mut runner = app.clone();
+                runner.track_heads = !matches!(
+                    request,
+                    stake::Request::Show { .. } | stake::Request::List { .. }
+                );
                 let app_ref = &mut app;
                 let history = &mut invocation.history;
                 runner
@@ -731,7 +745,8 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                     leaf,
                     &mut invocation.history,
                 )?;
-                let runner = app.clone();
+                let mut runner = app.clone();
+                runner.track_heads = false;
                 let output = app.output.clone();
                 runner
                     .run(|client| async move {

@@ -252,7 +252,7 @@ impl RawSignerFactory for RefuseFollowupAfterRelease<'_> {
                 "policy refusal must follow a successful submission"
             );
             self.chain.queue_transport_error(
-                "chain_getBlockHash",
+                "chain_getHeader",
                 rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
                     self.policy.clone(),
                 )))),

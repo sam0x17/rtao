@@ -187,15 +187,17 @@ pub struct RateLimit {
     pub burst: u32,
 }
 impl RateLimit {
-    /// Public endpoint preset: one request per second with one burst token.
+    /// Public endpoint preset: one request per second sustained, with ten
+    /// burst tokens so a short command's startup reads are not serialized.
     ///
-    /// Bounded observations of the public pools support this pacing. Providers
-    /// do not publish a quota in successful upgrade headers, so this is a
-    /// conservative per-session preset rather than a provider quota guarantee.
-    /// Multiple sessions sharing an IP must coordinate their combined traffic.
+    /// Bounded observations of the public pools support this pacing: each
+    /// accepted a back-to-back burst of twelve light reads. Providers do not
+    /// publish a quota in successful upgrade headers, so this is a conservative
+    /// per-session preset rather than a provider quota guarantee. Multiple
+    /// sessions sharing an IP must coordinate their combined traffic.
     pub const PUBLIC: Self = Self {
         per_second: 1.0,
-        burst: 1,
+        burst: 10,
     };
 }
 /// Configuration for one supervised WebSocket session.

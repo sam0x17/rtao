@@ -1453,27 +1453,40 @@ async fn ratelimit_paces_public_presets() -> Result {
     }
     let mut cfg = SessionConfig::public(EndpointPool::new(Url::parse(node.url())?));
     cfg.silence_timeout = Duration::from_secs(5);
+    let burst = rtao_rpc::RateLimit::PUBLIC.burst as usize;
     let session = Session::connect(cfg).await?;
-    let results = timeout(Duration::from_secs(5), async {
-        tokio::join!(
-            session.request::<String>(ReadMethod::SystemChain, json!([])),
-            session.request::<String>(ReadMethod::SystemChain, json!([])),
-        )
-    })
+    // Discovery plus `burst + 1` reads: the preset's burst covers the first
+    // ten requests, then the sustained rate spaces the remaining two.
+    let results = timeout(
+        Duration::from_secs(10),
+        futures::future::join_all(
+            (0..=burst).map(|_| session.request::<String>(ReadMethod::SystemChain, json!([]))),
+        ),
+    )
     .await?;
-    assert_eq!(results.0?, "FakeChain");
-    assert_eq!(results.1?, "FakeChain");
+    for result in results {
+        assert_eq!(result?, "FakeChain");
+    }
     session.close().await;
     let arrivals = arrivals
         .lock()
         .map_err(|_| "arrival recorder was poisoned")?;
-    assert_eq!(arrivals.len(), 3);
+    assert_eq!(arrivals.len(), burst + 2);
     assert_eq!(arrivals[0].0, "rpc_methods");
-    // Discovery and both simultaneously queued reads share the same preset.
-    // Allow 100ms for socket scheduling, while rejecting the old eight-token
-    // startup burst and a limiter that omits the diagnostic discovery request.
-    for pair in arrivals.windows(2) {
-        assert!(pair[1].1.duration_since(pair[0].1) >= Duration::from_millis(900));
+    // Discovery and the queued reads share the same preset. Allow 100ms for
+    // socket scheduling, while rejecting a limiter that omits discovery.
+    let gaps: Vec<_> = arrivals
+        .windows(2)
+        .map(|pair| pair[1].1.duration_since(pair[0].1))
+        .collect();
+    assert!(
+        gaps[..burst - 1]
+            .iter()
+            .all(|gap| *gap < Duration::from_millis(500)),
+        "{gaps:?}"
+    );
+    for gap in &gaps[burst - 1..] {
+        assert!(*gap >= Duration::from_millis(900), "{gaps:?}");
     }
     Ok(())
 }
@@ -1637,6 +1650,12 @@ async fn policy_during_paced_reconnect(reads: usize, policy_close: bool) -> Resu
     let pool =
         EndpointPool::new(Url::parse(node.url())?).with_fallbacks([Url::parse(fallback.url())?]);
     let mut cfg = SessionConfig::public(pool);
+    // The replay mechanics under test assume one token per second, independent
+    // of the public preset's startup burst.
+    cfg.rate_limit = Some(rtao_rpc::RateLimit {
+        per_second: 1.0,
+        burst: 1,
+    });
     cfg.retry_forever = true;
     cfg.silence_timeout = Duration::from_secs(30);
     let session = Session::connect(cfg).await?;
