@@ -57,7 +57,11 @@ node. Set `ClientConfig::set_submit_endpoint` in code, `--submit-endpoint` or
 miner. The submit endpoint then handles the account nonce, the fee estimate,
 `author_*` submission and watch calls, and the receipt reads at the inclusion
 block, including the finality waits that resolve a receipt. Every other read,
-including transaction preparation, uses the main endpoint. The submit
+including transaction preparation, uses the main endpoint. A follow-up read at
+a receipt's block uses `Client::at_receipt`, which falls back to the submit
+endpoint while the main endpoint lacks that block, and `Client::receipt_client`
+gives one coherent view of the chain that reported a receipt. The bundled
+weight, owner, multisig and registration flows use them. The submit
 connection opens on first use, so read-only commands never contact it. It has
 its own pool and the usual pacing for its URL, and it must serve the same
 genesis. Without a submit endpoint, all requests go to the main endpoint as

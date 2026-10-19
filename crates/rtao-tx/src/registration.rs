@@ -162,6 +162,10 @@ async fn follow(
     opts: &ExecuteOptions,
     deferred_dispatch: bool,
 ) -> Result<ExtrinsicResult, TxError> {
+    // Follow the receipt on the endpoint that reported it. A separate read
+    // endpoint may not have imported the inclusion block yet, and the
+    // canonical checks below must agree with that block.
+    let client = &client.receipt_client().await?;
     let included_at = result
         .extrinsic_id
         .as_deref()

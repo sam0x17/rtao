@@ -176,7 +176,9 @@ impl SubmitRoute {
         let client = tokio::select! {
             biased;
             () = self.cancelled.cancelled() => return Err(rtao_rpc::RpcError::Closed.into()),
-            client = self.client.get_or_try_init(|| self.connect()) => client?,
+            // Boxed: the connection future is large and would otherwise be
+            // inlined into every submission future that may open it.
+            client = self.client.get_or_try_init(|| Box::pin(self.connect())) => client?,
         };
         Ok(client.clone())
     }
@@ -483,6 +485,36 @@ impl Client {
     /// Whether a separate submission endpoint is configured.
     pub fn has_submit_endpoint(&self) -> bool {
         self.inner.submit.is_some()
+    }
+
+    /// The connection that resolves receipts: the submission endpoint's client
+    /// when one is configured (connecting it on first use), else this client.
+    ///
+    /// A receipt's inclusion block comes from the submission endpoint, and the
+    /// read endpoint may not have imported or finalized it yet. Follow-up reads
+    /// that must agree with a receipt (its block, finality and canonical
+    /// height) can run here as one coherent view of that chain.
+    pub async fn receipt_client(&self) -> Result<Self, ClientError> {
+        self.submit_client().await
+    }
+
+    /// Snapshot at a receipt's inclusion block.
+    ///
+    /// It reads from this endpoint when it has the block. When it does not and
+    /// a submission endpoint is configured, the snapshot comes from the
+    /// submission endpoint that reported the block. [`crate::Snapshot::client`]
+    /// is the connection that served it. Without a submission endpoint this is
+    /// exactly `self.at(BlockRef::Hash(block))`.
+    pub async fn at_receipt(&self, block: H256) -> Result<crate::Snapshot, ClientError> {
+        match self.at(crate::BlockRef::Hash(block)).await {
+            Err(ClientError::BlockNotFound(_)) if self.inner.submit.is_some() => {
+                self.submit_client()
+                    .await?
+                    .at(crate::BlockRef::Hash(block))
+                    .await
+            }
+            result => result,
+        }
     }
 
     /// The connection that carries submissions: the submission endpoint's

@@ -9,6 +9,32 @@ use rtao_testkit::{FakeChain, FakeState};
 
 pub(super) const HOTKEY: AccountId = AccountId([7; 32]);
 pub(super) async fn fixture() -> anyhow::Result<(FakeChain, Client)> {
+    let chain = FakeChain::from_state(fixture_state()?);
+    let client = Client::from_rpc(RpcClient::new(chain.clone()), fixture_config()?).await?;
+    Ok((chain, client))
+}
+
+/// A read endpoint and a separate submission endpoint over the same state.
+pub(super) async fn split_fixture() -> anyhow::Result<(FakeChain, FakeChain, Client)> {
+    let read = FakeChain::from_state(fixture_state()?);
+    let node = FakeChain::from_state(fixture_state()?);
+    let client = Client::from_rpc_with_submit(
+        RpcClient::new(read.clone()),
+        RpcClient::new(node.clone()),
+        fixture_config()?,
+    )
+    .await?;
+    Ok((read, node, client))
+}
+
+fn fixture_config() -> anyhow::Result<ClientConfig> {
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    Ok(config)
+}
+
+fn fixture_state() -> anyhow::Result<FakeState> {
     let mut state = FakeState::try_default()?;
     state.set_finalized(97)?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), HOTKEY), 0u16)?;
@@ -41,12 +67,7 @@ pub(super) async fn fixture() -> anyhow::Result<(FakeChain, Client)> {
     state.seed(&st::PENDING_EPOCH_AT, (NetUid(1),), 0u64)?;
     state.seed(&st::SUBNET_EPOCH_INDEX, (NetUid(1),), 5u64)?;
     state.seed(&st::BLOCKS_SINCE_LAST_STEP, (NetUid(1),), 0u64)?;
-    let chain = FakeChain::from_state(state);
-    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
-    config.runtime_cache_dir = None;
-    config.config_store = None;
-    let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
-    Ok((chain, client))
+    Ok(state)
 }
 
 pub(super) fn seed_at<K: IntoCoreValue, V: IntoCoreValue>(

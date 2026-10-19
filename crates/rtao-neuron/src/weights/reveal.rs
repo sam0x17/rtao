@@ -223,7 +223,9 @@ impl RevealWatcher {
         let next_epoch = predicted_epoch
             .checked_add(1)
             .ok_or_else(|| anyhow::anyhow!("commit epoch overflow"))?;
-        let snapshot = client.at(BlockRef::Hash(hash)).await?;
+        // The commit's inclusion block may so far exist only on a separate
+        // submission endpoint; read it where it exists.
+        let snapshot = client.at_receipt(hash).await?;
         let (first, second) = snapshot
             .fetch((
                 st::TIMELOCKED_WEIGHT_COMMITS.at((index, predicted_epoch)),
@@ -633,12 +635,33 @@ fn reveal_matches(attributes: &Value, index: NetUidStorageIndex, hotkey: Account
 mod tests {
     #![allow(clippy::expect_used)]
     use super::*;
-    use crate::weights::tests::{HOTKEY, fixture, header, seed_at};
+    use crate::weights::tests::{HOTKEY, fixture, header, seed_at, split_fixture};
     use rtao_primitives::IntoCoreValue;
 
     async fn slipped() -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)>
     {
         let (chain, client) = fixture().await?;
+        let (watcher, metrics) = record_slipped(&chain, &client, |_, hash| async move {
+            Ok(crate::weights::submit::WeightSubmission {
+                block_hash: hash,
+                block_number: 110,
+            })
+        })
+        .await?;
+        Ok((chain, client, watcher, metrics))
+    }
+
+    /// Seed a commit included at block 110 on `chain` (one epoch after the
+    /// predicted one), locate it with `locate` and record it.
+    async fn record_slipped<F, Fut>(
+        chain: &rtao_testkit::FakeChain,
+        client: &Client,
+        locate: F,
+    ) -> anyhow::Result<(RevealWatcher, Metrics)>
+    where
+        F: FnOnce(Client, rtao_primitives::H256) -> Fut,
+        Fut: std::future::Future<Output = anyhow::Result<crate::weights::submit::WeightSubmission>>,
+    {
         let best = client.at(BlockRef::Best).await?;
         let state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
         let commit = PreparedWeightCommit {
@@ -718,16 +741,13 @@ mod tests {
             seed_at(state, 130, "Drand", "LastStoredRound", (), 501u64)?;
             Ok(())
         })?;
-        let included = header(&chain, 110)?;
-        let report = crate::weights::submit::WeightSubmission {
-            block_hash: included.hash,
-            block_number: 110,
-        };
+        let included = header(chain, 110)?;
+        let report = locate(client.clone(), included.hash).await?;
         let metrics = Metrics::default();
         let mut watcher = RevealWatcher::default();
         watcher
             .record(
-                &client,
+                client,
                 NetUid(1),
                 MechId(0),
                 HOTKEY,
@@ -739,7 +759,33 @@ mod tests {
                 &metrics,
             )
             .await?;
-        Ok((chain, client, watcher, metrics))
+        Ok((watcher, metrics))
+    }
+
+    /// With a separate submission endpoint, the commit's inclusion block may
+    /// exist only on that endpoint. Locating and recording it still succeeds.
+    #[tokio::test]
+    async fn split_endpoint_commit_is_located_and_recorded_while_reads_lag() -> anyhow::Result<()> {
+        let (read, node, client) = split_fixture().await?;
+        let (watcher, metrics) = record_slipped(&node, &client, |client, hash| async move {
+            // The read endpoint has not imported the inclusion block.
+            assert!(client.at(BlockRef::Hash(hash)).await.is_err());
+            crate::weights::submit::inclusion(&client, hash).await
+        })
+        .await?;
+        assert!(header(&read, 110).is_err(), "the read endpoint lags");
+        assert_eq!(watcher.pending(), 1);
+        assert!(watcher.unlocated.is_empty());
+        assert_eq!(watcher.pending[0].inclusion_block, 110);
+        assert_eq!(watcher.pending[0].commit_epoch, 6);
+        assert_eq!(watcher.pending[0].reveal_epoch, 7);
+        assert!(
+            metrics
+                .render()
+                .contains("rtao_weights_commit_epoch_slip_total 1")
+        );
+        client.close().await;
+        Ok(())
     }
     fn success_event() -> serde_json::Value {
         serde_json::json!([{"phase":"Initialization","event":{"SubtensorModule":{"TimelockedWeightsRevealed":[1,HOTKEY.to_string()]}},"topics":[]}])
