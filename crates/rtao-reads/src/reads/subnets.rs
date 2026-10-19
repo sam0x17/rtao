@@ -92,8 +92,14 @@ pub async fn token_symbols<V: View + ?Sized>(
 // py: sdk/python/bittensor/reads/base.py:169-184
 pub(crate) fn utf8_text(value: JsonValue) -> Result<JsonValue, ReadError> {
     let bytes = match &value {
+        // The core decoder renders a byte string as UTF-8 text when it is
+        // valid and as 0x-hex otherwise, so "0x" text that is not hex (a subnet
+        // named "0xgrizz") is already decoded and stays as it is (D-079).
         JsonValue::String(text) if text.starts_with("0x") => {
-            Some(crate::commitments::python_fromhex(&text[2..], "text")?)
+            match rtao_primitives::pyfmt::bytes_fromhex(&text[2..]) {
+                Ok(bytes) => Some(bytes),
+                Err(_) => return Ok(value),
+            }
         }
         JsonValue::Array(values) => values
             .iter()
@@ -161,7 +167,6 @@ pub async fn mechanism_count<V: View + ?Sized>(view: &V, netuid: NetUid) -> Resu
 #[allow(clippy::unwrap_used, clippy::panic)] // Test failures identify unexpected fixture values.
 mod tests {
     use super::*;
-    use crate::commitments::CommitmentError;
     use serde_json::json;
 
     #[test]
@@ -181,35 +186,24 @@ mod tests {
     }
 
     #[test]
-    fn utf8_text_retains_invalid_nonbyte_sequences_and_reports_invalid_hex() {
+    fn utf8_text_retains_invalid_nonbyte_sequences_and_decoded_0x_text() {
         assert_eq!(utf8_text(json!(["256"])).unwrap(), json!(["256"]));
         assert_eq!(utf8_text(json!([true, "65"])).unwrap(), json!("\u{1}A"));
         assert_eq!(utf8_text(json!("raw")).unwrap(), json!("raw"));
-        let ReadError::Commitment(CommitmentError { message, .. }) =
-            utf8_text(json!("0xz")).unwrap_err()
-        else {
-            panic!("wrong error")
-        };
-        assert!(message.contains("position 0"));
+        // The decoder emits valid UTF-8 byte strings as text, so a chain value
+        // that reads "0xgrizz" arrives here already decoded.
+        assert_eq!(utf8_text(json!("0xz")).unwrap(), json!("0xz"));
+        assert_eq!(utf8_text(json!("0xgrizz")).unwrap(), json!("0xgrizz"));
     }
 
     #[test]
-    fn utf8_text_hex_accepts_vertical_tabs_and_keeps_python_non_ascii_priority() {
+    fn utf8_text_hex_accepts_vertical_tabs_and_keeps_non_hex_text() {
         assert_eq!(
             utf8_text(json!("0x61\u{b}62\u{b}63")).unwrap(),
             json!("abc")
         );
-        for (input, position) in [("0xggé", 2), ("0x6\u{b}1", 1)] {
-            let ReadError::Commitment(CommitmentError { field, message }) =
-                utf8_text(json!(input)).unwrap_err()
-            else {
-                panic!("wrong error")
-            };
-            assert_eq!(field, "text");
-            assert_eq!(
-                message,
-                format!("non-hexadecimal number found in fromhex() arg at position {position}")
-            );
+        for input in ["0xggé", "0x6\u{b}1"] {
+            assert_eq!(utf8_text(json!(input)).unwrap(), json!(input));
         }
     }
 

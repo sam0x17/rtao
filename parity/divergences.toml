@@ -1364,3 +1364,20 @@ pinning_tests = [
 ]
 upstream_report = "Endpoint preference with no upstream defect allegation and no new filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/settings.py"
+
+[[divergences]]
+id = "D-079"
+upstream_symbol = "bittensor.reads.base.utf8_text"
+python_behavior = "Applies bytes.fromhex to every string that starts with 0x. The shared core decoder renders a valid UTF-8 byte string as text, so a chain value such as a subnet identity reading \"0xgrizz\" raises ValueError and fails the whole read (for example `subnets list` on testnet)."
+rtao_behavior = "A 0x string that is valid hex is decoded as before; one that is not hex is text the decoder already produced and is returned unchanged."
+rationale = "The decoder's own hex rendering is always valid hex, so non-hex 0x text can only be decoded UTF-8. One user-chosen identity string must not break listing every subnet."
+decision = "Live testnet use of `rtao subnets list` failed on a subnet identity reading \"0xgrizz\" (2026-10-19)"
+status = "active"
+class = "improved"
+milestone = "M10"
+pinning_tests = [
+  "rtao_reads::reads::subnets::tests::utf8_text_retains_invalid_nonbyte_sequences_and_decoded_0x_text",
+  "rtao_reads::reads::subnets::tests::utf8_text_hex_accepts_vertical_tabs_and_keeps_non_hex_text",
+]
+upstream_report = "Shared upstream decoding defect; no new filing per the no-new-upstream-issues rule."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/reads/base.py#L169-L184"
