@@ -1318,6 +1318,21 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::SubnetEmissionWeights => {
+            let args: super::interfaces::SubnetEmissionWeightsParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::subnet_emission_weights(view, args.netuid).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::SubnetHyperparameters => {
             let args: super::interfaces::SubnetHyperparametersParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {

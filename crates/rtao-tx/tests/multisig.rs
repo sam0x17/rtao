@@ -268,7 +268,7 @@ async fn approval_rechecks_a_reduced_runtime_cap_before_funding_help_or_unlock()
                     .seed_constant("Multisig", "MaxSignatories", json!(2))
                     .unwrap();
                 let upgraded =
-                    rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 480, 1, 42)
+                    rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42)
                         .unwrap();
                 state.runtime = Arc::new(upgraded);
                 state.advance(2);

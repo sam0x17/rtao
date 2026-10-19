@@ -1359,6 +1359,21 @@ pub async fn subnet_emission_enabled<V: rtao_client::View + ?Sized>(
     )
     .await
 }
+#[doc = "Typed parameters for `subnet_emission_weights`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubnetEmissionWeightsParams {
+    #[doc = "Subnet whose emission weight vector to read."]
+    pub netuid: rtao_primitives::NetUid,
+}
+#[doc = "The subnet's emission weight vector `[burn, recycle, owner, validator,\nminer]` with the bounds that apply to it, or None if the subnet does not\nexist (the root subnet has no vector).\n\nPair with the `set_subnet_emission_weights` intent: `min_validator`\nand `created_via_lease` are the per-subnet inputs the chain uses to\naccept or reject a change (`min_validator` moves with root stake, alpha\nissuance and the global TAO weight, so it is a snapshot of this block)."]
+#[doc(alias = "bittensor.reads.subnet_emission_weights")]
+pub async fn subnet_emission_weights<V: rtao_client::View + ?Sized>(
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Option<crate::reads::subnets::SubnetEmissionWeights>, crate::ReadError> {
+    crate::reads::subnets::subnet_emission_weights(view, netuid).await
+}
 #[doc = "Typed parameters for `subnet_hyperparameters`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]

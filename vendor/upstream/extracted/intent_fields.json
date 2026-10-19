@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
     "path": "website/apps/bittensor-website/public/catalog/intents.json",
-    "sha256": "00b0921eacdb80813d59521ff884c675764b8a88367e3fc37213b9a19d9a45b4",
-    "tag": "v479"
+    "sha256": "b648e7040b2dff5a73922cbfc9147b67e097d4272686959d03c0d7d7f5376113",
+    "tag": "v481"
   },
   "format": 1,
   "intents": [
@@ -3593,12 +3593,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-            "end_byte": 5791,
-            "end_line": 116,
-            "line": 116,
+            "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+            "end_byte": 5728,
+            "end_line": 115,
+            "line": 115,
             "path": "sdk/python/bittensor/intents/hyperparameters.py",
-            "start_byte": 5699
+            "start_byte": 5636
           },
           "required": true
         },
@@ -3611,12 +3611,12 @@
           },
           "name": "name",
           "provenance": {
-            "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-            "end_byte": 5858,
-            "end_line": 117,
-            "line": 117,
+            "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+            "end_byte": 5795,
+            "end_line": 116,
+            "line": 116,
             "path": "sdk/python/bittensor/intents/hyperparameters.py",
-            "start_byte": 5796
+            "start_byte": 5733
           },
           "required": true
         },
@@ -3629,24 +3629,24 @@
           },
           "name": "value",
           "provenance": {
-            "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-            "end_byte": 5941,
-            "end_line": 118,
-            "line": 118,
+            "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+            "end_byte": 5878,
+            "end_line": 117,
+            "line": 117,
             "path": "sdk/python/bittensor/intents/hyperparameters.py",
-            "start_byte": 5863
+            "start_byte": 5800
           },
           "required": true
         }
       ],
       "name": "set_hyperparameter",
       "provenance": {
-        "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-        "end_byte": 7811,
-        "end_line": 155,
-        "line": 93,
+        "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+        "end_byte": 7748,
+        "end_line": 154,
+        "line": 92,
         "path": "sdk/python/bittensor/intents/hyperparameters.py",
-        "start_byte": 4582
+        "start_byte": 4519
       },
       "python_class": "SetHyperparameter"
     },
@@ -4103,6 +4103,92 @@
         "start_byte": 761
       },
       "python_class": "SetSubnetEmissionEnabled"
+    },
+    {
+      "fields": [
+        {
+          "annotation": "int",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "netuid",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 4925,
+            "end_line": 115,
+            "line": 115,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 4833
+          },
+          "required": true
+        },
+        {
+          "annotation": "list[int | str]",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "slots",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 4991,
+            "end_line": 116,
+            "line": 116,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 4930
+          },
+          "required": true
+        },
+        {
+          "annotation": "list[int | float | str]",
+          "default": {
+            "factory": false,
+            "present": false,
+            "value": null
+          },
+          "name": "values",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 5067,
+            "end_line": 117,
+            "line": 117,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 4996
+          },
+          "required": true
+        },
+        {
+          "annotation": "bool",
+          "default": {
+            "factory": false,
+            "present": true,
+            "value": false
+          },
+          "name": "renormalize",
+          "provenance": {
+            "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+            "end_byte": 5149,
+            "end_line": 118,
+            "line": 118,
+            "path": "sdk/python/bittensor/intents/emission_weights.py",
+            "start_byte": 5072
+          },
+          "required": false
+        }
+      ],
+      "name": "set_subnet_emission_weights",
+      "provenance": {
+        "blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4",
+        "end_byte": 12287,
+        "end_line": 281,
+        "line": 93,
+        "path": "sdk/python/bittensor/intents/emission_weights.py",
+        "start_byte": 3664
+      },
+      "python_class": "SetSubnetEmissionWeights"
     },
     {
       "fields": [
@@ -5720,7 +5806,7 @@
     }
   ],
   "parity": {
-    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
-    "tag": "v479"
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "tag": "v481"
   }
 }

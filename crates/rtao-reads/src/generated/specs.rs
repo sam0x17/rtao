@@ -165,7 +165,7 @@ pub struct ReadSpec {
     pub pinning: Pinning,
 }
 /// Every read's complete authenticated metadata, in catalog order.
-pub static READ_SPECS: [ReadSpec; 102] = [
+pub static READ_SPECS: [ReadSpec; 103] = [
     ReadSpec {
         name: "accepts_locked_alpha",
         summary: "Whether a coldkey accepts incoming locked alpha transfers.",
@@ -2474,6 +2474,61 @@ pub static READ_SPECS: [ReadSpec; 102] = [
         }],
         render: None,
         pinning: Pinning::Single,
+    },
+    ReadSpec {
+        name: "subnet_emission_weights",
+        summary: "The subnet's emission weight vector `[burn, recycle, owner, validator,",
+        description: "The subnet's emission weight vector `[burn, recycle, owner, validator,\nminer]` with the bounds that apply to it, or None if the subnet does not\nexist (the root subnet has no vector).\n\nPair with the `set_subnet_emission_weights` intent: `min_validator`\nand `created_via_lease` are the per-subnet inputs the chain uses to\naccept or reject a change (`min_validator` moves with root stake, alpha\nissuance and the global TAO weight, so it is a snapshot of this block).",
+        params: &[ParamSpec {
+            name: "netuid",
+            json_type: JsonType::Integer,
+            doc: "Subnet whose emission weight vector to read.",
+            required: true,
+            default: None,
+            own_key: false,
+        }],
+        category: Category::Subnets,
+        namespace: "subnets",
+        docs_url: "/docs/query/subnet-emission-weights",
+        hits: &[
+            Hit {
+                kind: HitKind::RuntimeApi,
+                container: "SubnetInfoRuntimeApi",
+                name: "get_subnet_emission_weights",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "LastRateLimitedBlock",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetAlphaIn",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetAlphaOut",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetTAO",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "TaoWeight",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "Swap",
+                name: "BalancerAlphaReservoir",
+            },
+        ],
+        render: None,
+        pinning: Pinning::Pinned,
     },
     ReadSpec {
         name: "subnet_hyperparameters",
