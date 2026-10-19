@@ -1165,6 +1165,17 @@ impl SyncHyperparameters<'_> {
     }
 }
 impl SyncSubnets<'_> {
+    #[doc = "The subnet's emission weight vector `[burn, recycle, owner, validator,\nminer]` with the bounds that apply to it, or None if the subnet does not\nexist (the root subnet has no vector).\n\nPair with the `set_subnet_emission_weights` intent: `min_validator`\nand `created_via_lease` are the per-subnet inputs the chain uses to\naccept or reject a change (`min_validator` moves with root stake, alpha\nissuance and the global TAO weight, so it is a snapshot of this block)."]
+    pub fn subnet_emission_weights(
+        &self,
+        netuid: rtao_primitives::NetUid,
+    ) -> Result<Option<rtao_reads::reads::subnets::SubnetEmissionWeights>, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::subnet_emission_weights(&view, netuid).await
+        })
+    }
+}
+impl SyncSubnets<'_> {
     #[doc = "All hyperparameters for a subnet, as a flat name -> raw value mapping.\n\nThe set of names is version-dependent; None if the subnet does not exist.\nUses the forward-compatible `get_subnet_hyperparams_v3` runtime API, so\nnewly added chain hyperparameters (e.g. `burn_half_life`) show up\nwithout a client update."]
     pub fn subnet_hyperparameters(
         &self,

@@ -2,9 +2,9 @@
   "format": 1,
   "provenance": {
     "blob": "132871ca8047858efc2d6c0991dcf818312b5303",
-    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
     "path": "sdk/python/bittensor/_transport/rpc.py",
-    "tag": "v479"
+    "tag": "v481"
   },
   "values": {
     "POLICY_BODY_LIMIT": {

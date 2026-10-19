@@ -1024,13 +1024,13 @@ mod tests {
                 .seed_constant("System", "BlockHashCount", json!(old_constant + 1))
                 .unwrap();
             state.runtime = Arc::new(
-                rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 480, 2, 42)
+                rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 2, 42)
                     .unwrap(),
             );
         });
         raw.publish_method(
             "state_subscribeRuntimeVersion",
-            json!({"specVersion":480, "transactionVersion":2}),
+            json!({"specVersion":479, "transactionVersion":2}),
         )
         .unwrap();
         tokio::time::timeout(Duration::from_secs(5), async {
@@ -1038,7 +1038,7 @@ mod tests {
             // This never fetches metadata or polls an in-flight refresh for it.
             loop {
                 if let Some(runtime) = client.inner.cache.peek_head().await
-                    && runtime.spec_version() == 480
+                    && runtime.spec_version() == 479
                     && runtime.transaction_version() == 2
                 {
                     break;
@@ -1047,7 +1047,7 @@ mod tests {
             }
             let requests_before_observation = raw.requests().len();
             let runtime = View::runtime(&client).await.unwrap();
-            assert_eq!(runtime.spec_version(), 480);
+            assert_eq!(runtime.spec_version(), 479);
             assert_eq!(runtime.transaction_version(), 2);
             assert_ne!(
                 runtime.core().metadata_bytes,
@@ -1059,7 +1059,7 @@ mod tests {
                 .unwrap();
             assert_eq!(upgraded_call.stamp(), runtime.stamp());
             assert!(old_call.ensure_runtime(&runtime).is_err());
-            assert_eq!(old_runtime.spec_version(), 479);
+            assert_eq!(old_runtime.spec_version(), 481);
             assert_eq!(old_runtime.transaction_version(), 1);
             assert_eq!(
                 raw.requests().len(),

@@ -339,7 +339,7 @@ async fn block_execution_uses_parent_runtime_during_upgrade() {
         .find(|variant| variant.name == "set")
         .unwrap()
         .index = 200;
-    state.runtime = Arc::new(Runtime::parse(&metadata.encode(), 480, 1, 42).unwrap());
+    state.runtime = Arc::new(Runtime::parse(&metadata.encode(), 479, 1, 42).unwrap());
     let upgraded_runtime = state.runtime.clone();
     state.set_runtime_at(block_hash, upgraded_runtime);
     let (client, chain) = setup_client(state).await;

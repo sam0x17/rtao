@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ f4786f9087cac84cfab37cbdf1e01c399042653a (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/staking.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
 //! Basket deposits and rebalances, reward routing and alpha consolidation.
 
 use rtao_client::{View, ViewExt};
@@ -511,41 +511,6 @@ mod tests {
         let mut bytes = vec![7, index];
         bytes.extend_from_slice(HOTKEY.as_bytes());
         bytes
-    }
-
-    // py: sdk/python/bittensor/intents/staking.py:25-57
-    #[tokio::test]
-    async fn reject_staking_hotkey_growth_builds_the_account_flag_call() -> anyhow::Result<()> {
-        let (chain, client, snapshot) = fixture(0, 0, json!([])).await?;
-        let requests = chain.requests().len();
-        for enabled in [true, false] {
-            let intent = SetRejectStakingHotkeyGrowth { enabled };
-            assert_eq!(
-                intent.summary(),
-                format!(
-                    "{} staking-hotkey list growth caused by other accounts",
-                    if enabled { "reject" } else { "allow" }
-                )
-            );
-            assert_eq!(intent.spec().name, "set_reject_staking_hotkey_growth");
-            assert!(intent.touches_netuids().is_empty());
-            assert_eq!(intent.spend(), Spend::None);
-            let built = build(&intent, &snapshot, OriginView::Account(ORIGIN)).await?;
-            assert_eq!(
-                built.call.as_bytes(),
-                calls::set_reject_staking_hotkey_growth(enabled)
-                    .compose(&snapshot.block().runtime)?
-                    .as_bytes()
-            );
-            assert_eq!(built.call.as_bytes().last(), Some(&u8::from(enabled)));
-            let decoded = decode(&built.call, &snapshot.block().runtime)?;
-            assert_eq!(decoded["call_function"], "set_reject_staking_hotkey_growth");
-            assert_eq!(decoded["call_args"][0]["value"], json!(enabled));
-            assert!(built.extras.is_empty());
-        }
-        assert_eq!(chain.requests().len(), requests);
-        client.close().await;
-        Ok(())
     }
 
     #[tokio::test]

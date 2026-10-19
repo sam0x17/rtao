@@ -1,59 +1,59 @@
 {
   "format": 1,
   "metadata_provenance": {
-    "finalized_head": "0x07ff6dbc0cf575696f0a4037ee3d7b5ae088c871fef9330273ba7b285faae496",
-    "path": "vendor/metadata/finney/479.v15.scale",
-    "sha256": "c7da61c83be58ab45484360a9d9ac95b017645b6f5d86de98e0184b9d618f4a5",
-    "spec": 479
+    "finalized_head": "0x0e95c496689be181f358bfbb1848f8b4ed89fbcf64e85d3cf83044f19508e94a",
+    "path": "vendor/metadata/testnet/481.v15.scale",
+    "sha256": "025da0822b26fd7dbff2e04fe0a88e2ee1073ae38d96ad4730c3724aa01af0f0",
+    "spec": 481
   },
   "provenance": {
-    "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-    "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+    "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
     "path": "sdk/python/bittensor/intents/hyperparameters.py",
-    "tag": "v479"
+    "tag": "v481"
   },
   "sources": [
     {
-      "blob": "809d9c6000e203b1f5f439defaf6eea2d27a4a63",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "sdk/python/bittensor/intents/hyperparameters.py",
-      "tag": "v479"
+      "tag": "v481"
     },
     {
-      "blob": "acd67c9910489c0d94a6b09a60dd763fb12e5ade",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "blob": "43bc87b856befdadcd4bf9b492c6609726cfe2e6",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "sdk/python/bittensor/hyperparams.py",
-      "tag": "v479"
+      "tag": "v481"
     },
     {
-      "blob": "f438b23549c74e8d740c66a2e1897b5ff68b7aa7",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "blob": "59b354eb3208bd12b4b8c24867436da1fdacb2f3",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "pallets/admin-utils/src/lib.rs",
-      "tag": "v479"
+      "tag": "v481"
     },
     {
       "blob": "98c0081114fb19d18d4f7a76b2fecd67a8b53243",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "pallets/subtensor/src/coinbase/tempo_control.rs",
-      "tag": "v479"
+      "tag": "v481"
     },
     {
-      "blob": "998a036dd6f9e8cadcf9275a80f9f5772c9246fb",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "blob": "e6c0a6fec37a86c98e7f7fb0edd657599fcaeb6a",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "pallets/subtensor/src/utils/rate_limiting.rs",
-      "tag": "v479"
+      "tag": "v481"
     },
     {
-      "blob": "a1db5d139dd79bc5afaa2642ecb25540448f5bca",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "blob": "17cbe4581ef163e886a06ba0771341e8956c87dd",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "pallets/subtensor/src/utils/misc.rs",
-      "tag": "v479"
+      "tag": "v481"
     },
     {
-      "blob": "b97ad0e448f879425a1407a4e320802877d2e4ab",
-      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "blob": "52803e85351b4f0b9ac704641f474442e54ee60f",
+      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
       "path": "pallets/subtensor/src/coinbase/run_coinbase.rs",
-      "tag": "v479"
+      "tag": "v481"
     }
   ],
   "values": {
@@ -579,25 +579,6 @@
         "setter": "sudo_set_owner_cut_auto_lock_enabled",
         "setter_body": "{ pallet_subtensor :: Pallet :: < T > :: ensure_subnet_owner_or_root (origin , netuid) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; pallet_subtensor :: Pallet :: < T > :: set_owner_cut_auto_lock_enabled (netuid , enabled) ; log :: debug ! (\"OwnerCutAutoLockEnabledSet( netuid: {netuid:?}, enabled: {enabled:?} ) \") ; Ok (()) }",
         "setter_signature": "fn sudo_set_owner_cut_auto_lock_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
-        "shape": {
-          "kind": "bool"
-        }
-      },
-      {
-        "cooldown": {
-          "kind": "none"
-        },
-        "current": {
-          "name": "OwnerCutEnabled",
-          "pallet": "SubtensorModule"
-        },
-        "name": "owner_cut_enabled",
-        "params": [
-          "enabled"
-        ],
-        "setter": "sudo_set_owner_cut_enabled",
-        "setter_body": "{ pallet_subtensor :: Pallet :: < T > :: ensure_subnet_owner_or_root (origin , netuid) ? ; pallet_subtensor :: Pallet :: < T > :: ensure_admin_window_open (netuid) ? ; ensure ! (pallet_subtensor :: Pallet ::< T >:: if_subnet_exist (netuid) , Error ::< T >:: SubnetDoesNotExist) ; ensure ! (! netuid . is_root () , Error ::< T >:: NotPermittedOnRootSubnet) ; pallet_subtensor :: Pallet :: < T > :: set_owner_cut_enabled_flag (netuid , enabled) ; log :: debug ! (\"OwnerCutEnabledSet( netuid: {netuid:?}, enabled: {enabled:?} ) \") ; Ok (()) }",
-        "setter_signature": "fn sudo_set_owner_cut_enabled (origin : OriginFor < T > , netuid : NetUid , enabled : bool ,) -> DispatchResult",
         "shape": {
           "kind": "bool"
         }
