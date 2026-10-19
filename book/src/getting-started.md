@@ -50,6 +50,19 @@ integer rao. Call `client.close().await` when finished, including when a read
 fails. Client clones share the connection, so closing one closes that shared
 client.
 
+Reads and submissions can use different endpoints. For example, reads can go
+to a pruned, archive or indexing endpoint while transactions go through a full
+node. Set `ClientConfig::set_submit_endpoint` in code, `--submit-endpoint` or
+`BT_SUBMIT_ENDPOINT` in the CLI, or the same flag or variable for a validator or
+miner. The submit endpoint then handles the account nonce, the fee estimate,
+`author_*` submission and watch calls, and the receipt reads at the inclusion
+block, including the finality waits that resolve a receipt. Every other read,
+including transaction preparation, uses the main endpoint. The submit
+connection opens on first use, so read-only commands never contact it. It has
+its own pool and the usual pacing for its URL, and it must serve the same
+genesis. Without a submit endpoint, all requests go to the main endpoint as
+before.
+
 Balances use checked native `u64` rao. Keep TAO and subnet alpha units distinct;
 negative amounts and values above the chain's balance range are rejected.
 

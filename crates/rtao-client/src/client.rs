@@ -44,6 +44,16 @@ pub struct ClientConfig {
     /// Setting this to false applies to the client, its snapshots and dynamic
     /// views. Per-read options and `RTAO_METAGRAPH_VIEW=0` can also disable it.
     pub metagraph_view: bool,
+    /// Optional separate transport for transaction submission (rtao addition).
+    ///
+    /// When set, the account nonce query, the fee estimate, the `author_*`
+    /// submission and watch calls, and the receipt reads at the inclusion
+    /// block (with the finality waits that resolve a receipt) use this
+    /// endpoint. Every other read stays on [`Self::session`]. Reads can then
+    /// come from a pruned, archive or indexing endpoint while transactions go
+    /// through a full node that sees the pool and the newest blocks. The
+    /// connection opens on first use and must serve the same genesis.
+    pub submit: Option<SessionConfig>,
 }
 
 impl ClientConfig {
@@ -69,7 +79,45 @@ impl ClientConfig {
             track_heads: true,
             read_at_one_block: false,
             metagraph_view: true,
+            submit: None,
         })
+    }
+
+    /// Route submissions through a separate endpoint (a name or ws(s) URL).
+    ///
+    /// The endpoint gets its own pool and the pacing any endpoint gets: a
+    /// public preset URL is paced as that preset, and a custom URL is pinned
+    /// and unpaced. It copies `session.retry_forever`, so set that first.
+    /// Headers and other transport options of the main session are not copied.
+    pub fn set_submit_endpoint(&mut self, endpoint: &str) -> Result<(), ClientError> {
+        let network =
+            Network::resolve(endpoint).map_err(|error| ClientError::Protocol(error.to_string()))?;
+        let pool = network
+            .endpoint_pool()
+            .map_err(|error| ClientError::Protocol(error.to_string()))?;
+        self.submit = Some(SessionConfig {
+            pool,
+            rate_limit: network.rate_limit(),
+            retry_forever: self.session.retry_forever,
+            ..SessionConfig::default()
+        });
+        Ok(())
+    }
+
+    /// The configuration of the separate submission connection.
+    fn submit_client_config(&self, session: SessionConfig) -> Self {
+        Self {
+            network: self.network.clone(),
+            session,
+            head_policy: crate::HeadPolicy::Best,
+            runtime_cache_dir: self.runtime_cache_dir.clone(),
+            config_store: None,
+            startup_timeout: self.startup_timeout,
+            track_heads: self.track_heads,
+            read_at_one_block: false,
+            metagraph_view: self.metagraph_view,
+            submit: None,
+        }
     }
 
     /// Resolve a network name or explicit WebSocket endpoint.
@@ -101,7 +149,64 @@ struct ClientInner {
     hash_cache: tokio::sync::Mutex<HashCache>,
     /// The block every best read uses under `read_at_one_block`.
     best_pin: tokio::sync::Mutex<Option<crate::PinnedBlock>>,
+    /// Separate submission connection, when configured.
+    submit: Option<Arc<SubmitRoute>>,
     cancelled: CancellationToken,
+}
+
+/// Lazily connected submission endpoint shared by a client and its nonces.
+///
+/// A read-only use of the client never opens it.
+pub(crate) struct SubmitRoute {
+    config: ClientConfig,
+    /// Supplied transport (fake chains); otherwise a session is connected.
+    rpc: Option<RpcClient>,
+    genesis: H256,
+    client: tokio::sync::OnceCell<Client>,
+    /// The owning client's shutdown token.
+    cancelled: CancellationToken,
+}
+
+impl SubmitRoute {
+    /// The connected submission client, opening it on first use.
+    pub(crate) async fn client(&self) -> Result<Client, ClientError> {
+        if self.cancelled.is_cancelled() {
+            return Err(rtao_rpc::RpcError::Closed.into());
+        }
+        let client = tokio::select! {
+            biased;
+            () = self.cancelled.cancelled() => return Err(rtao_rpc::RpcError::Closed.into()),
+            client = self.client.get_or_try_init(|| self.connect()) => client?,
+        };
+        Ok(client.clone())
+    }
+
+    async fn connect(&self) -> Result<Client, ClientError> {
+        let config = self.config.clone();
+        let client = match &self.rpc {
+            Some(rpc) => Client::from_rpc_inner(rpc.clone(), None, config, false).await?,
+            None => Client::connect_inner(config, false).await?,
+        };
+        if client.genesis() != self.genesis {
+            client.close_transport().await;
+            return Err(ClientError::Protocol(format!(
+                "submit endpoint serves a different chain: genesis {}, expected {}",
+                hash_hex(client.genesis()),
+                hash_hex(self.genesis)
+            )));
+        }
+        if self.cancelled.is_cancelled() {
+            client.close_transport().await;
+            return Err(rtao_rpc::RpcError::Closed.into());
+        }
+        Ok(client)
+    }
+
+    async fn close(&self) {
+        if let Some(client) = self.client.get() {
+            client.close_transport().await;
+        }
+    }
 }
 
 /// Asynchronous chain connection and its immutable network identity.
@@ -127,14 +232,20 @@ impl std::fmt::Debug for Client {
 
 impl Client {
     /// Connect a supervised WebSocket session and verify the chain preconditions.
+    ///
+    /// A configured [`ClientConfig::submit`] endpoint connects on first use.
     pub async fn connect(config: ClientConfig) -> Result<Self, ClientError> {
+        Self::connect_inner(config, true).await
+    }
+
+    async fn connect_inner(config: ClientConfig, symbols: bool) -> Result<Self, ClientError> {
         let timeout = config.startup_timeout;
         let startup = async {
             let session = Session::connect(config.session.clone())
                 .await
                 .map_err(ClientError::from)?;
             let rpc = RpcClient::new(session.clone());
-            match Self::initialize(rpc, config, Some(session.clone())).await {
+            match Self::initialize(rpc, config, Some(session.clone()), None).await {
                 Ok(client) => Ok(client),
                 Err(error) => {
                     session.close().await;
@@ -145,17 +256,45 @@ impl Client {
         let client = tokio::time::timeout(timeout, startup)
             .await
             .map_err(|_| startup_timeout_error(timeout))??;
-        client.load_token_symbols_within(timeout).await;
+        if symbols {
+            client.load_token_symbols_within(timeout).await;
+        }
         Ok(client)
     }
 
     /// Initialize over a supplied RPC implementation, including fake chains.
+    ///
+    /// A configured [`ClientConfig::submit`] endpoint is connected as a
+    /// session on first use.
     pub async fn from_rpc(rpc: RpcClient, config: ClientConfig) -> Result<Self, ClientError> {
+        Self::from_rpc_inner(rpc, None, config, true).await
+    }
+
+    /// Initialize over supplied read and submission transports.
+    ///
+    /// `submit` takes the place of [`ClientConfig::submit`] and is initialized
+    /// on first use, like a configured submit endpoint.
+    pub async fn from_rpc_with_submit(
+        rpc: RpcClient,
+        submit: RpcClient,
+        config: ClientConfig,
+    ) -> Result<Self, ClientError> {
+        Self::from_rpc_inner(rpc, Some(submit), config, true).await
+    }
+
+    async fn from_rpc_inner(
+        rpc: RpcClient,
+        submit: Option<RpcClient>,
+        config: ClientConfig,
+        symbols: bool,
+    ) -> Result<Self, ClientError> {
         let timeout = config.startup_timeout;
-        let client = tokio::time::timeout(timeout, Self::initialize(rpc, config, None))
+        let client = tokio::time::timeout(timeout, Self::initialize(rpc, config, None, submit))
             .await
             .map_err(|_| startup_timeout_error(timeout))??;
-        client.load_token_symbols_within(timeout).await;
+        if symbols {
+            client.load_token_symbols_within(timeout).await;
+        }
         Ok(client)
     }
 
@@ -163,6 +302,7 @@ impl Client {
         rpc: RpcClient,
         config: ClientConfig,
         session: Option<Session>,
+        submit_rpc: Option<RpcClient>,
     ) -> Result<Self, ClientError> {
         let genesis = parse_hash(&rpc_request(&rpc, "chain_getBlockHash", json!([0])).await?)?;
         let expected = config
@@ -264,6 +404,19 @@ impl Client {
         } else {
             None
         };
+        let submit_session = match (&submit_rpc, &config.submit) {
+            (Some(_), _) => Some(config.session.clone()),
+            (None, session) => session.clone(),
+        };
+        let submit = submit_session.map(|session| {
+            Arc::new(SubmitRoute {
+                config: config.submit_client_config(session),
+                rpc: submit_rpc,
+                genesis,
+                client: tokio::sync::OnceCell::new(),
+                cancelled: cancelled.clone(),
+            })
+        });
         let alive = Arc::new(cancelled.clone().drop_guard());
         let inner = Arc::new(ClientInner {
             rpc: rpc.clone(),
@@ -272,12 +425,13 @@ impl Client {
             genesis,
             signing_disabled,
             cache,
-            nonces: NonceManager::new(rpc),
+            nonces: NonceManager::with_route(rpc, submit.clone()),
             cancelled,
             heads,
             token_symbols: tokio::sync::RwLock::new(std::collections::BTreeMap::new()),
             hash_cache: tokio::sync::Mutex::new(HashCache::default()),
             best_pin: tokio::sync::Mutex::new(None),
+            submit,
         });
         let client = Self {
             inner: inner.clone(),
@@ -287,6 +441,9 @@ impl Client {
         // wakes it and closes the underlying session before releasing state.
         tokio::spawn(async move {
             inner.cancelled.cancelled().await;
+            if let Some(submit) = &inner.submit {
+                submit.close().await;
+            }
             if let Some(session) = &inner.session {
                 session.close().await;
             }
@@ -321,6 +478,22 @@ impl Client {
     /// The supplied transport, for advanced callers and integrations.
     pub fn rpc(&self) -> &RpcClient {
         &self.inner.rpc
+    }
+
+    /// Whether a separate submission endpoint is configured.
+    pub fn has_submit_endpoint(&self) -> bool {
+        self.inner.submit.is_some()
+    }
+
+    /// The connection that carries submissions: the submission endpoint's
+    /// client when one is configured (connecting it on first use), else this
+    /// client itself.
+    pub(crate) async fn submit_client(&self) -> Result<Self, ClientError> {
+        self.ensure_open()?;
+        match &self.inner.submit {
+            Some(route) => route.client().await,
+            None => Ok(self.clone()),
+        }
     }
 
     /// Recovering best and finalized head tracker, when enabled in configuration.
@@ -623,6 +796,15 @@ impl Client {
     /// Cancel background tasks and close this shared connection.
     pub async fn close(&self) {
         self.inner.cancelled.cancel();
+        if let Some(submit) = &self.inner.submit {
+            submit.close().await;
+        }
+        self.close_transport().await;
+    }
+
+    /// Close this connection alone; a submission client has no route of its own.
+    async fn close_transport(&self) {
+        self.inner.cancelled.cancel();
         if let Some(session) = &self.inner.session {
             session.close().await;
         }
@@ -820,6 +1002,8 @@ impl Client {
         let guard = self.inner.nonces.invalidate_on_drop(signer_address);
         self.ensure_signing().await?;
         let hash: Value = self
+            .submit_client()
+            .await?
             .request(
                 "author_submitExtrinsic",
                 json!([format!("0x{}", hex::encode(bytes))]),
@@ -894,6 +1078,27 @@ mod tests {
         config.config_store = None;
         config.session.rate_limit = None;
         config
+    }
+
+    #[test]
+    fn submit_endpoint_gets_its_own_pool_and_endpoint_pacing() {
+        let mut cfg = config("local");
+        assert!(cfg.submit.is_none());
+        cfg.session.retry_forever = true;
+        cfg.set_submit_endpoint("wss://node.example:443").unwrap();
+        let submit = cfg.submit.clone().unwrap();
+        assert_eq!(submit.pool.urls.len(), 1);
+        assert_eq!(submit.pool.urls[0].host_str(), Some("node.example"));
+        assert!(submit.rate_limit.is_none(), "a custom endpoint is unpaced");
+        assert!(submit.retry_forever);
+        // The main session's pool is untouched.
+        assert_eq!(cfg.session.pool.urls, config("local").session.pool.urls);
+        cfg.set_submit_endpoint("finney").unwrap();
+        assert!(
+            cfg.submit.unwrap().rate_limit.is_some(),
+            "a public preset is paced like any public endpoint"
+        );
+        assert!(config("local").set_submit_endpoint("not a url").is_err());
     }
 
     #[tokio::test]

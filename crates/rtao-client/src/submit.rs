@@ -486,7 +486,12 @@ impl Client {
         )
         .map_err(CoreError::from)?;
         let request = rtao_core::ops::fee::request(&probe, None).map_err(CoreError::from)?;
-        let response: serde_json::Value = self.request(request.method, request.params).await?;
+        // The fee is queried at the head of the node that receives submissions.
+        let response: serde_json::Value = self
+            .submit_client()
+            .await?
+            .request(request.method, request.params)
+            .await?;
         rtao_core::ops::fee::decode(runtime.core(), &response)
             .map_err(CoreError::from)
             .map_err(ClientError::from)
@@ -617,9 +622,10 @@ impl Client {
             let mut attempted = false;
             let response: serde_json::Value = limit
                 .run(self, async {
+                    let chain = self.submit_client().await?;
                     attempted = true;
                     let _ = attempted_hash.hash.set(hash);
-                    self.request("author_submitExtrinsic", params).await
+                    chain.request("author_submitExtrinsic", params).await
                 })
                 .await
                 .map_err(|error| author_ack_error(error, attempted, attempted_hash))?;
@@ -650,9 +656,11 @@ impl Client {
         let mut attempted = false;
         let mut subscription = limit
             .run(self, async {
+                let chain = self.submit_client().await?;
                 attempted = true;
                 let _ = attempted_hash.hash.set(hash);
-                self.rpc()
+                chain
+                    .rpc()
                     .subscribe_raw(
                         "author_submitAndWatchExtrinsic",
                         Some(raw),
@@ -767,6 +775,8 @@ impl Client {
     }
 
     /// Resolve an included extrinsic through its block's parent-selected runtime.
+    ///
+    /// Like every receipt read, this uses the submit endpoint when one is set.
     pub async fn resolve_extrinsic(
         &self,
         hash: H256,
@@ -778,7 +788,21 @@ impl Client {
             .map_err(|error| unresolved_error(hash, error, None))
     }
 
+    /// Receipt reads at the inclusion block go to the submission endpoint,
+    /// which reported that block and may be the only side that has it yet.
     async fn resolve_report(
+        &self,
+        hash: H256,
+        block: H256,
+        finalized: bool,
+    ) -> Result<ExtrinsicReport, SubmitFailure> {
+        self.submit_client()
+            .await?
+            .receipt_at(hash, block, finalized)
+            .await
+    }
+
+    async fn receipt_at(
         &self,
         hash: H256,
         block: H256,
@@ -840,7 +864,20 @@ impl Client {
         })
     }
 
+    /// Finality of a reported inclusion is confirmed on the submission endpoint.
     async fn confirm_finality(
+        &self,
+        extrinsic_hash: H256,
+        hash: H256,
+        number: u64,
+    ) -> Result<(), SubmitFailure> {
+        self.submit_client()
+            .await?
+            .confirm_finality_here(extrinsic_hash, hash, number)
+            .await
+    }
+
+    async fn confirm_finality_here(
         &self,
         extrinsic_hash: H256,
         hash: H256,
@@ -878,7 +915,21 @@ impl Client {
         tokio::select! {()=self.closed()=>Err(rtao_rpc::RpcError::Closed.into()),()=tokio::time::sleep(Duration::from_secs(12))=>Ok(())}
     }
 
+    /// Reconciliation scans the submission endpoint's finalized history: it
+    /// resolves the receipt of a transaction that endpoint received.
     pub(crate) async fn reconcile(
+        &self,
+        hash: H256,
+        start: u64,
+        expiry: Option<u64>,
+    ) -> Result<ExtrinsicReport, SubmitFailure> {
+        self.submit_client()
+            .await?
+            .reconcile_here(hash, start, expiry)
+            .await
+    }
+
+    async fn reconcile_here(
         &self,
         hash: H256,
         start: u64,

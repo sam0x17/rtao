@@ -19,6 +19,8 @@ use crate::ClientError;
 #[derive(Clone)]
 pub struct NonceManager {
     rpc: RpcClient,
+    /// Separate submission endpoint that answers nonce queries, when set.
+    route: Option<Arc<crate::client::SubmitRoute>>,
     accounts: Arc<SyncMutex<BTreeMap<String, Arc<AccountNonce>>>>,
 }
 
@@ -116,8 +118,17 @@ impl NonceManager {
     }
     /// Start an empty cache over the client's transport.
     pub fn new(rpc: RpcClient) -> Self {
+        Self::with_route(rpc, None)
+    }
+
+    /// Start an empty cache whose queries use the submission endpoint, if any.
+    pub(crate) fn with_route(
+        rpc: RpcClient,
+        route: Option<Arc<crate::client::SubmitRoute>>,
+    ) -> Self {
         Self {
             rpc,
+            route,
             accounts: Arc::new(SyncMutex::new(BTreeMap::new())),
         }
     }
@@ -249,9 +260,15 @@ impl NonceManager {
     }
 
     async fn query(&self, address: &str) -> Result<u64, ClientError> {
-        let value =
-            crate::rpc_request(&self.rpc, "account_nextIndex", serde_json::json!([address]))
-                .await?;
+        let params = serde_json::json!([address]);
+        // The pool-aware nonce comes from the node that receives submissions.
+        let value = match &self.route {
+            Some(route) => {
+                let client = route.client().await?;
+                crate::rpc_request(client.rpc(), "account_nextIndex", params).await?
+            }
+            None => crate::rpc_request(&self.rpc, "account_nextIndex", params).await?,
+        };
         value
             .as_u64()
             .or_else(|| {
