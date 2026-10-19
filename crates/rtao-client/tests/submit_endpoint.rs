@@ -459,3 +459,214 @@ const DEFAULT_METHODS: &[&str] = &[
     "author_submitExtrinsic",
 ];
 const DEFAULT_DIGEST: &str = "e5302805ea229928b9e99eba9e8b6bb2f454d4867cd1e8dc708fee7a6ffc8da1";
+
+/// An encoded 1184-byte ML-KEM-768 encapsulation key accepted by the core.
+fn shield_key(fill: u8) -> Vec<u8> {
+    vec![fill; 1184]
+}
+
+fn seed_shield(state: &mut FakeState, key: Vec<u8>) {
+    state
+        .seed_constant("Aura", "SlotDuration", serde_json::json!(1))
+        .unwrap();
+    state.seed_typed("MevShield", "NextKey", (), key).unwrap();
+}
+
+/// Drive a pooled shielded submission and return the recorded methods with a
+/// digest of each request. The carrier's ciphertext is randomized, so author
+/// requests contribute their method alone.
+async fn shield_flow(client: &Client, fake: &FakeChain) -> (Vec<String>, String) {
+    use blake2::{Blake2b, Digest, digest::consts::U32};
+
+    let signer = signer();
+    fake.mutate_state(|state| state.set_nonce(signer.account().to_string(), 5));
+    let call = remark(client, vec![6]).await;
+    let start = fake.requests().len();
+    let opts = rtao_client::ShieldOptions {
+        wait: Wait::Pool,
+        ..Default::default()
+    };
+    let report = client.submit_shielded(call, &signer, &opts).await.unwrap();
+    assert_eq!(report.inclusion, Inclusion::PoolAccepted);
+    let mut digest = Blake2b::<U32>::new();
+    for request in fake.requests().iter().skip(start) {
+        digest.update(request.method.as_bytes());
+        if !request.method.starts_with("author_") {
+            digest.update(request.params.to_string().as_bytes());
+        }
+    }
+    (methods(fake, start), hex::encode(digest.finalize()))
+}
+
+/// Without a submit endpoint a shielded submission issues exactly the
+/// requests it issued before submit endpoints existed.
+#[tokio::test]
+async fn without_a_submit_endpoint_shield_requests_are_unchanged() {
+    let mut state = FakeState::default();
+    seed_shield(&mut state, shield_key(0));
+    let fake = FakeChain::from_state(state);
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config())
+        .await
+        .unwrap();
+    let (observed, digest) = shield_flow(&client, &fake).await;
+    assert_eq!(digest, SHIELD_DIGEST, "observed: {observed:?}");
+    client.close().await;
+}
+
+/// Recorded from the client before shield reads followed the submit endpoint.
+const SHIELD_DIGEST: &str = "38d50ed6bf3e44cff16c3cea784c1e1af9dca741f1993524f1f55fa84b258ec9";
+
+/// A read endpoint behind the submitting node, with its own NextKey.
+async fn shield_split(
+    read_key: Vec<u8>,
+    node_key: Vec<u8>,
+    node_ahead: u64,
+) -> (Client, FakeChain, FakeChain) {
+    let mut read = FakeState::default();
+    seed_shield(&mut read, read_key);
+    let mut node = FakeState::default();
+    seed_shield(&mut node, node_key);
+    node.advance(node_ahead);
+    let read = FakeChain::from_state(read);
+    let node = FakeChain::from_state(node);
+    let client = Client::from_rpc_with_submit(
+        RpcClient::new(read.clone()),
+        RpcClient::new(node.clone()),
+        config(),
+    )
+    .await
+    .unwrap();
+    (client, read, node)
+}
+
+/// NextKey rotates every block: the carrier is sealed to the submitting node's
+/// key, never to the stale key a lagging read endpoint still serves.
+#[tokio::test]
+async fn shield_seals_to_the_submit_endpoint_key_when_the_read_endpoint_lags() {
+    let stale = shield_key(0);
+    let current = shield_key(1);
+    let (client, read, node) = shield_split(stale.clone(), current.clone(), 2).await;
+    let signer = signer();
+    let opts = rtao_client::ShieldOptions {
+        wait: Wait::Pool,
+        ..Default::default()
+    };
+    let read_start = read.requests().len();
+    let report = client
+        .submit_shielded(remark(&client, vec![8]).await, &signer, &opts)
+        .await
+        .unwrap();
+    assert_eq!(report.inclusion, Inclusion::PoolAccepted);
+    let submissions = node.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 1);
+    assert!(read.state().lock().unwrap().submissions.is_empty());
+    let carrier = &submissions[0];
+    let contains = |key: &[u8]| {
+        let hash = rtao_core::mlkem::twox_128(key);
+        carrier.windows(hash.len()).any(|window| window == hash)
+    };
+    assert!(
+        contains(&current),
+        "carrier is not sealed to the submit endpoint's key"
+    );
+    assert!(
+        !contains(&stale),
+        "carrier is sealed to the read endpoint's stale key"
+    );
+    // The key and the era guard's best height come from the node; the read
+    // endpoint is never asked for MevShield storage.
+    assert!(
+        node.requests()
+            .iter()
+            .any(|request| request.method == "state_queryStorageAt")
+    );
+    assert!(
+        read.requests()
+            .iter()
+            .skip(read_start)
+            .all(|request| request.method != "state_queryStorageAt"),
+        "{:?}",
+        methods(&read, read_start)
+    );
+    client.close().await;
+}
+
+/// The era guard measures the submitting node's best head against the read
+/// endpoint's finalized anchor, so a lagging read endpoint cannot hide a lag
+/// that leaves the era too short for inclusion.
+#[tokio::test]
+async fn shield_era_guard_uses_the_submit_endpoint_best_head() {
+    let (client, read, node) = shield_split(shield_key(0), shield_key(1), 6).await;
+    let signer = signer();
+    let opts = rtao_client::ShieldOptions {
+        wait: Wait::Pool,
+        finality_wait: std::time::Duration::ZERO,
+        ..Default::default()
+    };
+    let error = client
+        .submit_shielded(remark(&client, vec![9]).await, &signer, &opts)
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(
+            error,
+            rtao_client::SubmitFailure::ShieldEraExpired {
+                finality_lag: 6,
+                ..
+            }
+        ),
+        "{error:?}"
+    );
+    assert!(node.state().lock().unwrap().submissions.is_empty());
+    assert!(read.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+
+/// A submit endpoint that cannot be opened is named in the error, which keeps
+/// its transport variant.
+#[tokio::test]
+async fn a_submit_endpoint_connect_failure_names_the_submit_endpoint() {
+    // A port that was bound and released refuses connections.
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let read = FakeChain::from_state(FakeState::default());
+    let mut cfg = config();
+    cfg.set_submit_endpoint(&format!("ws://127.0.0.1:{port}"))
+        .unwrap();
+    cfg.startup_timeout = std::time::Duration::from_secs(5);
+    let client = Client::from_rpc(RpcClient::new(read.clone()), cfg)
+        .await
+        .unwrap();
+    assert!(client.has_submit_endpoint());
+    let error = tokio::time::timeout(std::time::Duration::from_secs(30), client.receipt_client())
+        .await
+        .expect("connect failure is bounded")
+        .unwrap_err();
+    assert!(
+        matches!(error, rtao_client::ClientError::Rpc(_)),
+        "{error:?}"
+    );
+    assert!(error.to_string().contains("submit endpoint"), "{error}");
+    // Reads are unaffected.
+    client.at(BlockRef::Finalized).await.unwrap();
+    client.close().await;
+}
+
+/// Closing the client closes the submit connection it opened.
+#[tokio::test]
+async fn close_closes_an_opened_submit_session() {
+    let (client, _read, node) = split().await;
+    let submit = client.receipt_client().await.unwrap();
+    assert!(!submit.is_closed());
+    submit.at(BlockRef::Finalized).await.unwrap();
+    let before = node.requests().len();
+    client.close().await;
+    assert!(client.is_closed());
+    assert!(submit.is_closed());
+    assert!(submit.at(BlockRef::Finalized).await.is_err());
+    assert!(client.receipt_client().await.is_err());
+    assert_eq!(node.requests().len(), before);
+}

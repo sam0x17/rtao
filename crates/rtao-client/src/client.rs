@@ -186,9 +186,10 @@ impl SubmitRoute {
     async fn connect(&self) -> Result<Client, ClientError> {
         let config = self.config.clone();
         let client = match &self.rpc {
-            Some(rpc) => Client::from_rpc_inner(rpc.clone(), None, config, false).await?,
-            None => Client::connect_inner(config, false).await?,
-        };
+            Some(rpc) => Client::from_rpc_inner(rpc.clone(), None, config, false).await,
+            None => Client::connect_inner(config, false).await,
+        }
+        .map_err(submit_endpoint_context)?;
         if client.genesis() != self.genesis {
             client.close_transport().await;
             return Err(ClientError::Protocol(format!(
@@ -208,6 +209,43 @@ impl SubmitRoute {
         if let Some(client) = self.client.get() {
             client.close_transport().await;
         }
+    }
+}
+
+/// Name the submit endpoint in a failure to open it.
+///
+/// The error keeps its variant, so retry and fate classification are
+/// unchanged; only a diagnostic gains the endpoint's role.
+fn submit_endpoint_context(error: ClientError) -> ClientError {
+    use rtao_rpc::RpcError;
+    const ROLE: &str = "submit endpoint";
+    let named = |detail: String| {
+        if detail.is_empty() {
+            ROLE.to_owned()
+        } else if detail.starts_with(ROLE) {
+            detail
+        } else {
+            format!("{ROLE}: {detail}")
+        }
+    };
+    match error {
+        ClientError::Rpc(error) => ClientError::Rpc(match error {
+            RpcError::MaxRetriesExceeded { detail } => RpcError::MaxRetriesExceeded {
+                detail: named(detail),
+            },
+            RpcError::Timeout { detail } => RpcError::Timeout {
+                detail: named(detail),
+            },
+            RpcError::Handshake { status, detail } => RpcError::Handshake {
+                status,
+                detail: named(detail),
+            },
+            RpcError::Protocol(detail) => RpcError::Protocol(named(detail)),
+            RpcError::Transport(detail) => RpcError::Transport(named(detail)),
+            other => other,
+        }),
+        ClientError::Protocol(detail) => ClientError::Protocol(named(detail)),
+        other => other,
     }
 }
 
@@ -1110,6 +1148,54 @@ mod tests {
         config.config_store = None;
         config.session.rate_limit = None;
         config
+    }
+
+    #[test]
+    fn submit_endpoint_context_names_the_role_and_keeps_the_variant() {
+        use rtao_rpc::RpcError;
+        let wrap = |error: RpcError| match submit_endpoint_context(error.into()) {
+            ClientError::Rpc(error) => error,
+            other => panic!("variant changed: {other:?}"),
+        };
+        assert!(matches!(
+            wrap(RpcError::Transport("refused".into())),
+            RpcError::Transport(detail) if detail == "submit endpoint: refused"
+        ));
+        assert!(matches!(
+            wrap(RpcError::Protocol("bad frame".into())),
+            RpcError::Protocol(detail) if detail == "submit endpoint: bad frame"
+        ));
+        assert!(matches!(
+            wrap(RpcError::Timeout { detail: "handshake".into() }),
+            RpcError::Timeout { detail } if detail == "submit endpoint: handshake"
+        ));
+        assert!(matches!(
+            wrap(RpcError::MaxRetriesExceeded { detail: "down".into() }),
+            RpcError::MaxRetriesExceeded { detail } if detail == "submit endpoint: down"
+        ));
+        assert!(matches!(
+            wrap(RpcError::Handshake { status: 403, detail: String::new() }),
+            RpcError::Handshake { status: 403, detail } if detail == "submit endpoint"
+        ));
+        // Variants without a diagnostic of their own pass through unchanged.
+        assert_eq!(wrap(RpcError::Closed), RpcError::Closed);
+        assert_eq!(
+            wrap(RpcError::ConnectionLost { resent: false }),
+            RpcError::ConnectionLost { resent: false }
+        );
+        let fate = RpcError::FateUnknown {
+            hash: Default::default(),
+        };
+        assert_eq!(wrap(fate.clone()), fate);
+        let hash = H256([3; 32]);
+        assert!(matches!(
+            submit_endpoint_context(ClientError::Protocol("no runtime".into())),
+            ClientError::Protocol(detail) if detail == "submit endpoint: no runtime"
+        ));
+        assert!(matches!(
+            submit_endpoint_context(ClientError::BlockNotFound(hash)),
+            ClientError::BlockNotFound(found) if found == hash
+        ));
     }
 
     #[test]

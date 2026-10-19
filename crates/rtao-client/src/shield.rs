@@ -248,8 +248,14 @@ impl Client {
                     .into());
                 }
             }
+            // NextKey rotates every block and the carrier is included where it
+            // is submitted, so the key and the era guard's best height come
+            // from the submission endpoint. A lagging read endpoint would
+            // yield an expired key and an undecryptable, silently dropped
+            // inner. Without a submission endpoint this is the client itself.
+            let chain = limits.admission.run(self, self.submit_client()).await?;
             // Fail before signer preparation when the shield is inactive.
-            limits.admission.run(self, self.shield_next_key()).await?;
+            limits.admission.run(self, chain.shield_next_key()).await?;
             limits
                 .admission
                 .run(self, async {
@@ -272,11 +278,14 @@ impl Client {
             // Wait, within the admission deadline, until finality leaves at
             // least half the era for inclusion before anchoring it. After the
             // wait, proceed if the era can still cover inclusion, else refuse.
+            // The anchor is the read endpoint's finalized head, where the
+            // signing payload resolves it; best is the submission endpoint's.
+            // A lagging read endpoint only widens the measured lag.
             let waiting = tokio::time::Instant::now();
             let finalized = loop {
                 let best = limits
                     .admission
-                    .run(self, self.at(BlockRef::Best))
+                    .run(self, chain.at(BlockRef::Best))
                     .await?
                     .block()
                     .number;
@@ -343,7 +352,7 @@ impl Client {
             // Seal with the key current now: signer preparation and the
             // finality wait can outlast a key rotation on fast chains, and a
             // stale key leaves the inner undecryptable and silently dropped.
-            let (next_key, _) = limits.admission.run(self, self.shield_next_key()).await?;
+            let (next_key, _) = limits.admission.run(self, chain.shield_next_key()).await?;
             let ciphertext = limits
                 .admission
                 .run(self, ShieldCiphertext::seal(&next_key, &inner_bytes))
@@ -372,7 +381,7 @@ impl Client {
                 .await?;
             let current_best = limits
                 .admission
-                .run(self, self.at(BlockRef::Best))
+                .run(self, chain.at(BlockRef::Best))
                 .await?
                 .block()
                 .number;
@@ -397,7 +406,7 @@ impl Client {
                 .await?;
             let current_best = limits
                 .admission
-                .run(self, self.at(BlockRef::Best))
+                .run(self, chain.at(BlockRef::Best))
                 .await?
                 .block()
                 .number;
@@ -454,7 +463,6 @@ impl Client {
                     let max_polls = rtao_catalog::py::SHIELDED_POLL_ATTEMPTS_PER_BLOCK
                         .saturating_mul(opts.period.get().saturating_add(1));
                     // The carrier's receipt is read where it was submitted.
-                    let chain = self.submit_client().await?;
                     let canonical = chain
                         .shield_finalized_hash(block, interval, max_polls, limits.full)
                         .await?;

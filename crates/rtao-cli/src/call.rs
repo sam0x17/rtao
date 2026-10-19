@@ -2395,13 +2395,12 @@ pub async fn await_pending_visible(
     Ok(())
 }
 
-async fn raw_pending(
-    client: &Client,
+async fn raw_pending<V: View>(
+    view: &V,
     address: AccountId,
     hash: [u8; 32],
 ) -> Result<Option<MultisigInfo>, CliError> {
-    client
-        .storage(&rtao_runtime::storage::multisig::MULTISIGS, (address, hash))
+    view.storage(&rtao_runtime::storage::multisig::MULTISIGS, (address, hash))
         .await
         .map_err(CliError::from)
 }
@@ -2410,7 +2409,24 @@ async fn raw_query_pending(
     client: &Client,
     ms: &Multisig,
     call: &CallBytes,
+    receipt_block: Option<rtao::primitives::H256>,
 ) -> Result<Option<MultisigInfo>, CliError> {
+    // The approval's inclusion block holds the pending state it produced. It
+    // is read there, from the endpoint that reported the receipt when the
+    // read endpoint has not imported that block yet. Head polling remains
+    // for receipts without a block or a block no endpoint can serve.
+    if let Some(block) = receipt_block {
+        match client.at_receipt(block).await {
+            Ok(snapshot) => {
+                if let Some(pending) = raw_pending(&snapshot, ms.address, call.hash()).await? {
+                    return Ok(Some(pending));
+                }
+                return raw_scan_pending(&snapshot, ms, call).await;
+            }
+            Err(rtao::client::ClientError::BlockNotFound(_)) => {}
+            Err(error) => return Err(error.into()),
+        }
+    }
     for attempt in 0..6 {
         if let Some(pending) = raw_pending(client, ms.address, call.hash()).await? {
             return Ok(Some(pending));
@@ -2419,9 +2435,17 @@ async fn raw_query_pending(
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
     }
-    // Same pending-map fallback as Python, narrowed to the known first key.
-    // Iteration is pinned at one fresh head and retains live metadata decoding.
-    let stream = client.storage_iter(&rtao_runtime::storage::multisig::MULTISIGS, (ms.address,));
+    raw_scan_pending(client, ms, call).await
+}
+
+/// Same pending-map fallback as Python, narrowed to the known first key.
+/// Iteration is pinned at one block and retains live metadata decoding.
+async fn raw_scan_pending<V: View>(
+    view: &V,
+    ms: &Multisig,
+    call: &CallBytes,
+) -> Result<Option<MultisigInfo>, CliError> {
+    let stream = view.storage_iter(&rtao_runtime::storage::multisig::MULTISIGS, (ms.address,));
     tokio::pin!(stream);
     while let Some(row) = stream.next().await {
         let (keys, pending) = row.map_err(CliError::from)?;
@@ -2814,7 +2838,7 @@ pub async fn multisig_followup_for_spec(
     if multisig_executed(result) {
         return Ok(common("executed"));
     }
-    if let Some(pending) = raw_query_pending(client, ms, call).await? {
+    if let Some(pending) = raw_query_pending(client, ms, call, result.block_hash).await? {
         return pending_multisig_followup(ctx, request, raw, ms, call, Some(&pending));
     }
     if raw_has_multisig_event(result) {
