@@ -172,16 +172,22 @@ if command -v gh >/dev/null; then
   )
 fi
 
-if [[ -n "$suggested" ]]; then
+if [[ "$release" == yes ]]; then
+  suggestion="the published release \`v$spec\`${tag_commit:+ (\`$tag_commit\`)}"
+elif [[ -n "$suggested" ]]; then
   suggestion="\`$suggested\`, the release-$spec merge on \`main\`"
 else
   suggestion="none found; pick the commit on \`main\` that merged the release-$spec runtime"
 fi
 if [[ "$release" == yes ]]; then
-  repin="cargo xtask pin --parity v$spec"
+  repin="RTAO_PIN_CANDIDATE=1 cargo xtask pin --parity v$spec --prepare-candidate"
+  repin_note=
 else
   repin="RTAO_PIN_CANDIDATE=1 cargo xtask pin --parity branch:main@${suggested:-<commit>} --prepare-candidate"
+  repin_note=$'\n'"   (\`--parity v$spec\` once upstream publishes a v$spec release)."
 fi
+tag_line=none
+[[ -n "$tag_commit" ]] && tag_line="\`$tag_commit\`"
 
 cat >"$out/issue.md" <<EOF
 $marker
@@ -199,7 +205,7 @@ Observed through \`$endpoint\`.
 ## Upstream
 
 - Published release \`v$spec\`: $release
-- Tag \`v$spec\`: ${tag_commit:+\`$tag_commit\`}${tag_commit:-none}
+- Tag \`v$spec\`: $tag_line
 
 | Branch | Head | Declared spec |
 |---|---|---|
@@ -216,13 +222,12 @@ records Finney's finalized metadata for it.
 
 ## Re-pin
 
-1. \`$repin\`
-   (\`--parity v$spec\` once upstream publishes a v$spec release).
+1. \`$repin\`$repin_note
 2. \`cargo xtask import-upstream\`, \`cargo xtask extract\`, \`cargo xtask regen\`,
    then port the source changes and reconcile \`parity/map.toml\`, exports and
-   the e2e map until \`cargo xtask parity check --strict\` passes. If the new
-   spec carries the emission weight vector, \`git revert\` the commit "Park the
-   spec 480/481 emission weights port until mainnet runs it" first.
+   the e2e map until \`cargo xtask parity check --strict\` passes. If rtao
+   already ported this spec and later moved away from it, reverting those
+   pin-move commits restores the port and its generated surfaces.
 3. \`cargo xtask compat --measure-build-weight --build-target aarch64-apple-darwin\`
    and \`cargo xtask compat\`; run the hosted \`validate_compat\` lanes and adopt
    their reports.
