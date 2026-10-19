@@ -265,7 +265,8 @@ pub async fn run(
         return m8::history::run(ctx, leaf, history).await;
     }
     if matches!(name, "balance" | "inspect") || m8::is_chain(name) {
-        let runner = ctx.clone();
+        let mut runner = ctx.clone();
+        runner.track_heads = m8::transaction_op(name).is_some();
         return runner
             .run(|client| async move { run_with_client(ctx, &client, group, history).await })
             .await;

@@ -321,7 +321,10 @@ async fn complete_startup_deadline_closes_unfinished_socket() {
     cfg.startup_timeout = std::time::Duration::from_millis(50);
     let connect = tokio::spawn(Client::connect(cfg));
     let error = connect.await.unwrap().unwrap_err().to_string();
-    assert_eq!(error, "the connection timed out without a response");
+    assert!(
+        error.starts_with("client startup did not finish within 0.05s"),
+        "{error}"
+    );
     if node.connect_attempts() > 0 {
         tokio::time::timeout(std::time::Duration::from_secs(1), node.wait_for_closed(1))
             .await

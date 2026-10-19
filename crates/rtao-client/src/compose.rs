@@ -704,15 +704,16 @@ mod tests {
         let key = fixture.key.clone();
         fixture.fake.mutate_state(|state| {
             state.requests.clear();
-            state.set_handler("chain_getBlockHash", move |state, request| {
+            state.set_handler("chain_getHeader", move |state, request| {
                 if request.params.as_array().is_some_and(Vec::is_empty) {
                     // Snapshot the valid old pending entry, then remove it at
                     // the next best head before the pending read is issued.
+                    let old_header = state.header(&old_hash);
                     state.advance(1);
                     if let Some(new_hash) = state.block_hash(state.block) {
                         state.seed_at(new_hash, key.clone(), None);
                     }
-                    Reply::result(json!(old_hash))
+                    Reply::result(old_header.unwrap_or(serde_json::Value::Null))
                 } else {
                     state.dispatch(request)
                 }
@@ -732,7 +733,7 @@ mod tests {
         assert_eq!(
             requests
                 .iter()
-                .filter(|request| request.method == "chain_getBlockHash"
+                .filter(|request| request.method == "chain_getHeader"
                     && request.params.as_array().is_some_and(Vec::is_empty))
                 .count(),
             1

@@ -2026,6 +2026,7 @@ fn signer_address_for_backend(
         passwords: ctx.passwords.clone(),
         terminal: ctx.terminal.clone(),
         interruption: ctx.interruption.clone(),
+        track_heads: ctx.track_heads,
     };
     let resolved = selected.external_signer_address()?;
     if selected

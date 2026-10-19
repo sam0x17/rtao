@@ -1375,17 +1375,17 @@ Exceeding storage work returns a terminal `-32004`. Three mechanisms keep operat
 1. **Coalesced reads** (§3.6): a weights preflight that reads about 18 storage items becomes one
    `state_queryStorageAt` plus one or two `state_call`s, where a naive client issues about 20 requests [J-PD §2.5].
 2. **Client-side token bucket** `RateLimit { per_second, burst }` in `request_raw`. It is on by default for the
-   public presets (`finney`, `test`, `devnet`, `archive`: 1 r/s, burst 1, based on the bounded observations in
+   public presets (`finney`, `test`, `devnet`, `archive`: 1 r/s, burst 10, based on the bounded observations in
    [`m1-endpoint-quotas.md`](../execution/m1-endpoint-quotas.md), §15.2 Q6) and off for
    `local` and custom URLs. Submissions take priority in the queue. Waiting is logged at debug level and exported as a
    metric, never an error.
    This bucket belongs to one session; operators sharing a source IP across sessions or processes must coordinate
    their combined traffic. The observed operating rate is not a provider quota ceiling or a guarantee for expensive
    runtime/storage work, and successful upgrade headers do not disclose such a ceiling.
-3. **Page sizes**: 100 keys per `state_getKeysPaged` page on public endpoints (Python's choice,
-   `PY/_transport/interface.py:304`), 1,000 on custom endpoints (the core's, `CORE/client.rs:33`).
-   `state_queryStorageAt` is chunked at ≤256 keys per call at one pinned hash. Python sends all keys in one call, and
-   the results are identical.
+3. **Page sizes**: 1,000 keys per `state_getKeysPaged` page (the node's maximum and the core's default,
+   `CORE/client.rs:33`; Python uses 100, `PY/_transport/interface.py:304`). `state_queryStorageAt` is chunked at
+   ≤1,000 keys per call at one pinned hash. Python sends all keys in one call, and the results are identical. On a
+   paced endpoint each page costs a request, so a map of about 600 subnets is two requests rather than eight.
 
 The docs tell operators to run their own lite node for production (`UP/docs/guides/local-development.mdx:158-163` [V]).
 

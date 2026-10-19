@@ -472,7 +472,7 @@ async fn refreshes_after_twelve_seconds_without_polling_empty_batches() {
     assert_eq!(
         fake.requests()
             .iter()
-            .filter(|r| r.method == "chain_getBlockHash" && r.params.as_array().unwrap().is_empty())
+            .filter(|r| r.method == "chain_getHeader" && r.params.as_array().unwrap().is_empty())
             .count(),
         1
     );

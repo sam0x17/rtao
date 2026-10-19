@@ -54,6 +54,10 @@ pub struct AppContext {
     /// Optional invocation-local interrupt latch. Library contexts install no
     /// process signal handler; clones share this handle when explicitly bound.
     pub interruption: Option<crate::prompt::TerminalCancel>,
+    /// Maintain head subscriptions for the connection. Read-only commands turn
+    /// this off: they never wait on heads, and the subscriptions would spend
+    /// paced public-endpoint requests before the command's first read.
+    pub track_heads: bool,
 }
 impl AppContext {
     // py: sdk/python/bittensor/cli/context.py:711-714
@@ -104,6 +108,7 @@ impl AppContext {
             passwords,
             terminal,
             interruption: None,
+            track_heads: true,
         }
     }
     /// Bind an invocation handle without installing any signal handler.
@@ -297,6 +302,7 @@ impl AppContext {
         }
         config.session.retry_forever = self.globals.retry_forever;
         config.config_store = self.config_store.clone();
+        config.track_heads = self.track_heads;
         Ok(config)
     }
     /// Connect, run real typed client work, then close on success or error.

@@ -435,7 +435,7 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
             let expected_message = policy.to_string();
             let start = refused_chain.requests().len();
             refused_chain.queue_transport_error(
-                "chain_getBlockHash",
+                "chain_getHeader",
                 rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
                     policy,
                 )))),
@@ -465,7 +465,7 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
             assert_eq!(
                 requests[start..]
                     .iter()
-                    .filter(|request| request.method == "chain_getBlockHash")
+                    .filter(|request| request.method == "chain_getHeader")
                     .count(),
                 1
             );

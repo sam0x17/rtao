@@ -131,11 +131,9 @@ impl Client {
                 }
             }
         };
-        let client = tokio::time::timeout(timeout, startup).await.map_err(|_| {
-            ClientError::from(rtao_rpc::RpcError::Timeout {
-                detail: String::new(),
-            })
-        })??;
+        let client = tokio::time::timeout(timeout, startup)
+            .await
+            .map_err(|_| startup_timeout_error(timeout))??;
         client.load_token_symbols_within(timeout).await;
         Ok(client)
     }
@@ -145,11 +143,7 @@ impl Client {
         let timeout = config.startup_timeout;
         let client = tokio::time::timeout(timeout, Self::initialize(rpc, config, None))
             .await
-            .map_err(|_| {
-                ClientError::from(rtao_rpc::RpcError::Timeout {
-                    detail: String::new(),
-                })
-            })??;
+            .map_err(|_| startup_timeout_error(timeout))??;
         client.load_token_symbols_within(timeout).await;
         Ok(client)
     }
@@ -173,13 +167,18 @@ impl Client {
                     hash_hex(genesis)
                 )
             });
-        let properties = rpc_request(&rpc, "system_properties", json!([])).await?;
-        let ss58 = properties
-            .get("ss58Format")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| {
-                ClientError::Protocol("system_properties returned no ss58Format".into())
-            })?;
+        // A verified public genesis fixes the ss58 format; skip the paced request.
+        let ss58 = if expected == Some(genesis) {
+            rtao_catalog::py::SS58_FORMAT
+        } else {
+            rpc_request(&rpc, "system_properties", json!([]))
+                .await?
+                .get("ss58Format")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| {
+                    ClientError::Protocol("system_properties returned no ss58Format".into())
+                })?
+        };
         if ss58 != rtao_catalog::py::SS58_FORMAT {
             return Err(ClientError::Protocol(format!(
                 "ss58 format must be 42, found {ss58}"
@@ -192,17 +191,36 @@ impl Client {
             ss58 as u16,
             config.runtime_cache_dir.clone(),
         );
+        // The head runtime is resolved on first use (signing always rechecks
+        // it), so a read-only command does not spend a paced request on it.
         let runtime = cache.runtime_at_state(finalized).await?;
-        let head_runtime = cache.refresh_head().await?;
         let _ = runtime.surface_report();
-        let _ = head_runtime.surface_report();
         if !crate::compat::runtime_validated(genesis, &runtime) {
             // Evidence can only cover pinned public networks; a local or
-            // custom development chain is expected to be outside it.
-            if crate::compat::pinned_public_genesis(genesis) {
+            // custom development chain is expected to be outside it. Testnet
+            // and devnet routinely run ahead of the mainnet runtime rtao pins,
+            // so only mainnet warrants a warning.
+            let validated = crate::compat::validated_spec_range().map_or_else(
+                || "none".to_owned(),
+                |(min, max)| {
+                    if min == max {
+                        min.to_string()
+                    } else {
+                        format!("{min}-{max}")
+                    }
+                },
+            );
+            if crate::compat::mainnet_genesis(genesis) {
                 tracing::warn!(
-                    spec_version = runtime.spec_version(),
-                    "connected runtime is outside the compiled validated compatibility evidence"
+                    "mainnet runs runtime spec {}, which this rtao build has not validated \
+                     (validated: {validated}); check for an rtao update",
+                    runtime.spec_version()
+                );
+            } else if crate::compat::pinned_public_genesis(genesis) {
+                tracing::info!(
+                    "connected runtime spec {} is outside this build's validated mainnet \
+                     runtime (validated: {validated})",
+                    runtime.spec_version()
                 );
             } else {
                 tracing::debug!(
@@ -213,13 +231,12 @@ impl Client {
         }
         let cancelled = CancellationToken::new();
         let heads = if config.track_heads {
-            let best_hash = parse_hash(&rpc_request(&rpc, "chain_getBlockHash", json!([])).await?)?;
-            let best_raw =
-                rpc_request(&rpc, "chain_getHeader", json!([hash_hex(best_hash)])).await?;
+            // The best header's hash is derived from its encoding, saving a
+            // separate chain_getBlockHash request.
+            let best_raw = rpc_request(&rpc, "chain_getHeader", json!([])).await?;
             let finalized_raw =
                 rpc_request(&rpc, "chain_getHeader", json!([hash_hex(finalized)])).await?;
-            let best_header =
-                crate::BlockHeader::from_json_with_hash(best_raw, best_hash).map_err(head_error)?;
+            let best_header = crate::BlockHeader::from_json(best_raw).map_err(head_error)?;
             let finalized_header =
                 crate::BlockHeader::from_json_with_hash(finalized_raw, finalized)
                     .map_err(head_error)?;
@@ -262,7 +279,10 @@ impl Client {
                 session.close().await;
             }
         });
-        client.start_runtime_watcher();
+        client.start_runtime_watcher(Some((
+            runtime.spec_version(),
+            runtime.transaction_version(),
+        )));
         Ok(client)
     }
 
@@ -373,7 +393,7 @@ impl Client {
         let mut start = None;
         let mut symbols = std::collections::BTreeMap::new();
         loop {
-            let page = View::keys_paged(&snapshot, &prefix, 128, start.as_deref()).await?;
+            let page = View::keys_paged(&snapshot, &prefix, 1000, start.as_deref()).await?;
             if page.is_empty() {
                 break;
             }
@@ -465,19 +485,31 @@ impl Client {
             .ok_or_else(|| ClientError::Protocol("head tracking is disabled".into()))
     }
 
-    fn start_runtime_watcher(&self) {
+    fn start_runtime_watcher(&self, mut finalized_runtime: Option<(u32, u32)>) {
         if !self.inner.config.track_heads {
             return;
         }
+        // Public endpoints are paced at about one request per second, so the
+        // watchers avoid requests whose answer is already known: the runtime
+        // subscription delivers versions itself, polling runs only while it is
+        // down, and a finalized block is rechecked only while its runtime may
+        // differ from the head's.
+        let followed = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let inner = self.inner.clone();
+        let following = followed.clone();
         let mut finalized = self.inner.heads.as_ref().map(crate::HeadTracker::finalized);
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(12));
+            let period = Duration::from_secs(12);
+            let mut interval =
+                tokio::time::interval_at(tokio::time::Instant::now() + period, period);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
                 tokio::select! {
                     () = inner.cancelled.cancelled() => break,
                     _ = interval.tick() => {
+                        if following.load(std::sync::atomic::Ordering::Acquire) {
+                            continue;
+                        }
                         if let Err(error) = inner.cache.refresh_head().await
                             && !inner.cancelled.is_cancelled()
                         {
@@ -493,11 +525,22 @@ impl Client {
                         if changed.is_none() { finalized = None; }
                         else if let Some(watch) = &finalized {
                             let hash = watch.borrow().hash;
-                            // A refresh in flight at close fails with the session; stay quiet.
-                            if let Err(error) = inner.cache.runtime_at_state(hash).await
-                                && !inner.cancelled.is_cancelled()
-                            {
-                                tracing::warn!(%error,"finalized runtime version refresh failed");
+                            let head = inner.cache.peek_head().await.map(|runtime| {
+                                (runtime.spec_version(), runtime.transaction_version())
+                            });
+                            if head.is_some() && head == finalized_runtime {
+                                continue;
+                            }
+                            match inner.cache.runtime_at_state(hash).await {
+                                Ok(runtime) => {
+                                    finalized_runtime =
+                                        Some((runtime.spec_version(), runtime.transaction_version()));
+                                }
+                                // A refresh in flight at close fails with the session; stay quiet.
+                                Err(error) if !inner.cancelled.is_cancelled() => {
+                                    tracing::warn!(%error,"finalized runtime version refresh failed");
+                                }
+                                Err(_) => {}
                             }
                         }
                     }
@@ -523,14 +566,18 @@ impl Client {
                         item = subscription.next() => item,
                     };
                     match item {
-                        Some(Ok(_)) => {
-                            inner.cache.invalidate_head().await;
-                            if let Err(error) = inner.cache.refresh_head().await
-                                && !inner.cancelled.is_cancelled()
-                            {
-                                tracing::warn!(%error,"runtime upgrade refresh failed");
+                        Some(Ok(version)) => match inner.cache.follow_head(&version).await {
+                            Ok(_) => {
+                                followed.store(true, std::sync::atomic::Ordering::Release);
+                                inner.cache.set_head_followed(true).await;
                             }
-                        }
+                            Err(error) => {
+                                if !inner.cancelled.is_cancelled() {
+                                    tracing::warn!(%error,"runtime upgrade refresh failed");
+                                }
+                                break;
+                            }
+                        },
                         Some(Err(error)) => {
                             tracing::warn!(%error,"runtime subscription lost");
                             break;
@@ -538,6 +585,9 @@ impl Client {
                         None => break,
                     }
                 }
+                followed.store(false, std::sync::atomic::Ordering::Release);
+                inner.cache.set_head_followed(false).await;
+                inner.cache.invalidate_head().await;
             }
         });
     }
@@ -633,24 +683,36 @@ impl Client {
     /// Resolve a requested block once and retain its parent-selected runtime.
     pub async fn at(&self, block: crate::BlockRef) -> Result<crate::Snapshot, ClientError> {
         self.ensure_open()?;
-        let hash = match block {
-            crate::BlockRef::Hash(hash) => hash,
+        // Public endpoints are paced, so the best header is read in one request
+        // with its hash derived from the encoding, and the runtime lookup reuses
+        // the header's parent instead of fetching the header again.
+        let header = match block {
             crate::BlockRef::Best => {
-                parse_hash(&self.request("chain_getBlockHash", json!([])).await?)?
+                let raw: Value = self.request("chain_getHeader", json!([])).await?;
+                crate::BlockHeader::from_json(raw).map_err(head_error)?
             }
+            crate::BlockRef::Hash(hash) => self.header_by_hash(hash).await?,
             crate::BlockRef::Finalized => {
-                parse_hash(&self.request("chain_getFinalizedHead", json!([])).await?)?
+                let hash = parse_hash(&self.request("chain_getFinalizedHead", json!([])).await?)?;
+                self.header_by_hash(hash).await?
             }
-            crate::BlockRef::Number(number) => self.hash_for_number(number).await?,
+            crate::BlockRef::Number(number) => {
+                let hash = self.hash_for_number(number).await?;
+                self.header_by_hash(hash).await?
+            }
         };
-        let raw: Value = self
-            .request("chain_getHeader", json!([hash_hex(hash)]))
-            .await?;
-        if raw.is_null() {
-            return Err(ClientError::BlockNotFound(hash));
-        }
-        let header = crate::BlockHeader::from_json_with_hash(raw, hash).map_err(head_error)?;
-        let runtime = self.runtime_for(Some(hash)).await?;
+        let hash = header.hash;
+        let runtime = match header.parent_hash {
+            Some(parent) => {
+                self.ensure_open()?;
+                tokio::select! {
+                    biased;
+                    () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+                    runtime = self.inner.cache.runtime_at_parent(hash, parent) => runtime?,
+                }
+            }
+            None => self.runtime_for(Some(hash)).await?,
+        };
         Ok(crate::Snapshot::new(
             self.clone(),
             crate::PinnedBlock {
@@ -659,6 +721,16 @@ impl Client {
                 runtime,
             },
         ))
+    }
+
+    async fn header_by_hash(&self, hash: H256) -> Result<crate::BlockHeader, ClientError> {
+        let raw: Value = self
+            .request("chain_getHeader", json!([hash_hex(hash)]))
+            .await?;
+        if raw.is_null() {
+            return Err(ClientError::BlockNotFound(hash));
+        }
+        crate::BlockHeader::from_json_with_hash(raw, hash).map_err(head_error)
     }
 
     async fn hash_for_number(&self, number: u64) -> Result<H256, ClientError> {
@@ -750,6 +822,17 @@ impl Client {
     }
 }
 
+fn startup_timeout_error(timeout: Duration) -> ClientError {
+    rtao_rpc::RpcError::Timeout {
+        detail: format!(
+            "client startup did not finish within {}s; the endpoint may be slow or \
+             throttling this connection",
+            timeout.as_secs_f64()
+        ),
+    }
+    .into()
+}
+
 fn head_error(error: crate::head::HeadError) -> ClientError {
     match error {
         crate::head::HeadError::Rpc(error) => ClientError::from(error),
@@ -782,6 +865,46 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn steady_state_runtime_watch_makes_no_per_block_version_requests() {
+        use std::time::Duration;
+
+        let raw = FakeChain::from_state(FakeState::default());
+        let client = Client::from_rpc(RpcClient::new(raw.clone()), config("local"))
+            .await
+            .unwrap();
+        let versions = || {
+            raw.requests()
+                .iter()
+                .filter(|request| request.method == "state_getRuntimeVersion")
+                .count()
+        };
+        let settle = || async {
+            for _ in 0..50 {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        };
+        settle().await;
+        // The subscription's initial item is installed without a version request.
+        assert!(
+            raw.requests()
+                .iter()
+                .any(|request| request.method == "state_subscribeRuntimeVersion")
+        );
+        // Startup checks finalized and head once each; the display symbol scan
+        // resolves the runtime of the block it pins.
+        let startup = versions();
+        assert!(startup <= 3, "{startup} startup version requests");
+        raw.advance(6).unwrap();
+        settle().await;
+        assert_eq!(
+            versions(),
+            startup,
+            "unchanged runtimes need no per-block recheck"
+        );
+        client.close().await;
+    }
+
+    #[tokio::test]
     async fn runtime_version_subscription_refreshes_codec_without_explicit_refresh() {
         use std::{
             sync::Arc,
@@ -807,8 +930,9 @@ mod tests {
         let old_call = rtao_runtime::calls::system::remark(vec![])
             .compose(&old_runtime)
             .unwrap();
-        // Let the watcher's immediate periodic check finish before changing state.
-        // Its next twelve-second tick cannot satisfy the five-second assertion.
+        // Wait for the subscription before changing state. The fallback poll's
+        // first tick is twelve seconds away and cannot satisfy the five-second
+        // assertion.
         tokio::time::timeout(Duration::from_secs(5), async {
             loop {
                 let requests = raw.requests();
@@ -819,7 +943,7 @@ mod tests {
                             && request.params == json!([null])
                     })
                     .count();
-                if versions >= 2
+                if versions >= 1
                     && requests
                         .iter()
                         .any(|request| request.method == "state_subscribeRuntimeVersion")

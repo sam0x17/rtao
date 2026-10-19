@@ -39,6 +39,7 @@ static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 type RuntimeKey = (H256, u32, u32);
 type RuntimeFetch = Shared<BoxFuture<'static, Result<RuntimeHandle, ClientError>>>;
+type VersionFetch = Shared<BoxFuture<'static, Result<RuntimeInfo, ClientError>>>;
 
 #[derive(Debug)]
 struct Lru<K, V> {
@@ -84,8 +85,13 @@ struct CacheState {
     runtimes: Lru<RuntimeKey, RuntimeHandle>,
     blocks: Lru<H256, RuntimeKey>,
     inflight: BTreeMap<RuntimeKey, RuntimeFetch>,
+    /// Concurrent lookups of one state's runtime version share a request.
+    versions: BTreeMap<H256, VersionFetch>,
     head: Option<(RuntimeHandle, Instant)>,
     head_generation: u64,
+    /// A live runtime-version subscription keeps the head current, so the TTL
+    /// recheck is unnecessary while it runs.
+    head_followed: bool,
 }
 
 struct FetchContext {
@@ -137,8 +143,10 @@ impl RuntimeCache {
                 runtimes: Lru::new(RUNTIME_CACHE_SIZE),
                 blocks: Lru::new(BLOCK_CACHE_SIZE),
                 inflight: BTreeMap::new(),
+                versions: BTreeMap::new(),
                 head: None,
                 head_generation: 0,
+                head_followed: false,
             }),
         }))
     }
@@ -225,7 +233,7 @@ impl RuntimeCache {
         let Some(block) = block else {
             let state = self.0.state.lock().await;
             if let Some((runtime, checked_at)) = &state.head
-                && checked_at.elapsed() < HEAD_TTL
+                && (state.head_followed || checked_at.elapsed() < HEAD_TTL)
             {
                 return Ok(runtime.clone());
             }
@@ -254,20 +262,61 @@ impl RuntimeCache {
             header.get("parentHash").unwrap_or(&Value::Null),
             "parentHash",
         )?;
-        let at = if parent.0 == [0; 32] { block } else { parent };
-        let value = rpc_request(
-            &self.0.context.rpc,
-            "state_getRuntimeVersion",
-            json!([hash_hex(at)]),
-        )
-        .await?;
-        if value.is_null() {
-            return Err(ClientError::Protocol(format!(
-                "No runtime information for block '{}'",
-                hash_hex(block)
-            )));
+        self.runtime_at_parent(block, parent).await
+    }
+
+    /// [`Self::runtime_at`] for a block whose parent is already known, such as
+    /// a tracked head, without re-reading its header.
+    pub async fn runtime_at_parent(
+        &self,
+        block: H256,
+        parent: H256,
+    ) -> Result<RuntimeHandle, ClientError> {
+        {
+            let mut state = self.0.state.lock().await;
+            if let Some(key) = state.blocks.get(&block)
+                && let Some(runtime) = state.runtimes.get(&key)
+            {
+                return Ok(runtime);
+            }
         }
-        let info = RuntimeInfo::parse(&value)?;
+        let at = if parent.0 == [0; 32] { block } else { parent };
+        let lookup = {
+            let mut state = self.0.state.lock().await;
+            if let Some(lookup) = state.versions.get(&at) {
+                lookup.clone()
+            } else {
+                let context = self.0.context.clone();
+                let inner = Arc::downgrade(&self.0);
+                let lookup = async move {
+                    let result = async {
+                        let value = rpc_request(
+                            &context.rpc,
+                            "state_getRuntimeVersion",
+                            json!([hash_hex(at)]),
+                        )
+                        .await?;
+                        if value.is_null() {
+                            return Err(ClientError::Protocol(format!(
+                                "No runtime information for block '{}'",
+                                hash_hex(block)
+                            )));
+                        }
+                        RuntimeInfo::parse(&value)
+                    }
+                    .await;
+                    if let Some(inner) = inner.upgrade() {
+                        inner.state.lock().await.versions.remove(&at);
+                    }
+                    result
+                }
+                .boxed()
+                .shared();
+                state.versions.insert(at, lookup.clone());
+                lookup
+            }
+        };
+        let info = lookup.await?;
         self.0
             .state
             .lock()
@@ -294,18 +343,55 @@ impl RuntimeCache {
     /// Recheck the current runtime version, bypassing the twelve-second head TTL.
     pub async fn refresh_head(&self) -> Result<RuntimeHandle, ClientError> {
         let checked_at = Instant::now();
-        let generation = {
-            let mut state = self.0.state.lock().await;
-            state.head_generation = state.head_generation.wrapping_add(1);
-            state.head_generation
-        };
+        let generation = self.next_head_generation().await;
         let info = rpc_request(
             &self.0.context.rpc,
             "state_getRuntimeVersion",
             json!([null]),
         )
         .await?;
-        let runtime = self.fetch(RuntimeInfo::parse(&info)?, None).await?;
+        self.install_head(&info, checked_at, generation).await
+    }
+
+    /// Install the head runtime advertised by a runtime-version notification.
+    ///
+    /// The notification carries the same object `state_getRuntimeVersion`
+    /// returns, so no request is made unless that runtime's metadata is new.
+    pub async fn follow_head(&self, version: &Value) -> Result<RuntimeHandle, ClientError> {
+        let checked_at = Instant::now();
+        let generation = self.next_head_generation().await;
+        self.install_head(version, checked_at, generation).await
+    }
+
+    /// Mark whether a live runtime-version subscription is keeping the head current.
+    pub async fn set_head_followed(&self, followed: bool) {
+        self.0.state.lock().await.head_followed = followed;
+    }
+
+    /// The installed head runtime, without fetching.
+    pub(crate) async fn peek_head(&self) -> Option<RuntimeHandle> {
+        self.0
+            .state
+            .lock()
+            .await
+            .head
+            .as_ref()
+            .map(|(runtime, _)| runtime.clone())
+    }
+
+    async fn next_head_generation(&self) -> u64 {
+        let mut state = self.0.state.lock().await;
+        state.head_generation = state.head_generation.wrapping_add(1);
+        state.head_generation
+    }
+
+    async fn install_head(
+        &self,
+        version: &Value,
+        checked_at: Instant,
+        generation: u64,
+    ) -> Result<RuntimeHandle, ClientError> {
+        let runtime = self.fetch(RuntimeInfo::parse(version)?, None).await?;
         let mut state = self.0.state.lock().await;
         if state.head_generation == generation {
             state.head = Some((runtime.clone(), checked_at));
@@ -321,18 +407,6 @@ impl RuntimeCache {
         let mut state = self.0.state.lock().await;
         state.head = None;
         state.head_generation = state.head_generation.wrapping_add(1);
-    }
-
-    /// Inspect the installed head without fetching or joining an in-flight refresh.
-    #[cfg(test)]
-    pub(crate) async fn peek_head(&self) -> Option<RuntimeHandle> {
-        self.0
-            .state
-            .lock()
-            .await
-            .head
-            .as_ref()
-            .map(|(runtime, _)| runtime.clone())
     }
 
     async fn fetch(

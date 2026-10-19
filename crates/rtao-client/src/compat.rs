@@ -37,6 +37,18 @@ pub fn pinned_public_genesis(genesis: H256) -> bool {
     .contains(&genesis.as_str())
 }
 
+/// Whether a genesis hash identifies Finney, the mainnet.
+pub fn mainnet_genesis(genesis: H256) -> bool {
+    crate::hash_hex(genesis) == network_pins::FINNEY_GENESIS
+}
+
+/// The validated runtime spec range compiled into this build, when present.
+pub fn validated_spec_range() -> Option<(u64, u64)> {
+    let document = serde_json::from_str::<Value>(COMPILED_COMPAT).ok()?;
+    let range = document.get("validated_spec_range")?;
+    Some((range.get("min")?.as_u64()?, range.get("max")?.as_u64()?))
+}
+
 fn validated_by(document: &Value, genesis: H256, runtime: &RuntimeHandle) -> bool {
     let Some(range) = document.get("validated_spec_range") else {
         return false;

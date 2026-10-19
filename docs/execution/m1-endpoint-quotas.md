@@ -95,3 +95,29 @@ processes, open files, launchd/configuration references, symlinks and virtual
 environments. The former plan build/scratch root is retired and absent; no
 current dependency on those caches remains. Shared global Cargo caches and
 unrelated work are preserved.
+
+## Burst allowance, 2026-10-19
+
+With burst 1, every request a command makes costs a full second, so a
+one-shot CLI read spent 15–20 seconds connecting. On 2026-10-19 at
+04:42 UTC, one connection to each of four public endpoints sent twelve
+lightweight reads back to back (`chain_getBlockHash`, `chain_getFinalizedHead`,
+`chain_getHeader`, `state_getRuntimeVersion`). Every endpoint accepted all
+twelve without a JSON-RPC error, policy refusal or close:
+
+| Endpoint | Accepted | Burst duration, ms |
+|---|---:|---:|
+| `entrypoint-finney.opentensor.ai:443` | 12/12 | 146 |
+| `lite.chain.opentensor.ai:443` | 12/12 | 148 |
+| `test.chain.opentensor.ai:443` | 12/12 | 153 |
+| `dev.chain.opentensor.ai:443` | 12/12 | 108 |
+
+Earlier on 2026-10-18, a template miner and two validators ran for several
+hours against `test.chain.opentensor.ai` without client pacing (as a custom
+endpoint) and saw no refusal. `RateLimit::PUBLIC` therefore keeps
+`per_second: 1.0` and allows `burst: 10`, below the observed twelve. Sustained
+traffic stays at about one request per second, as the upstream guide asks;
+only the first ten requests of an idle session go out without waiting.
+`test.finney.opentensor.ai`, now the testnet fallback, was not probed because
+it was already throttling this source.
+
