@@ -98,13 +98,22 @@ also loopback and reaches the miner. Each neuron keeps its checkpoint in its
 `--state-dir`; use a fresh directory when you change the netuid or hotkey.
 
 The validator logs `btauth echo accepted` for each authenticated query and
-sets weights through commit-reveal once it holds a validator permit, after the
-subnet's next epoch:
+`weights committed` once it holds a validator permit. The chain reveals the
+weights after the reveal period, and the epoch after that pays incentive and
+dividends:
 
 ```sh
 rtao subnets metagraph 2
+rtao query weights --netuid 2
 rtao query blocks-since-last-update --netuid 2 --uid 1
 ```
+
+`subnets metagraph --json` returns the runtime's `get_metagraph` record as is.
+Current runtimes no longer compute `rank`, `trust` or `pruning_score`, so those
+arrays are empty; use `consensus`, `incentives` and `dividends`. Consensus
+follows stake: if the subnet owner's hotkey holds most of the stake weight (on
+a public network its root stake counts), the owner must also set weights before
+miners earn incentive.
 
 ## 6. Make it yours
 

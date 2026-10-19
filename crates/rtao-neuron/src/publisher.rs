@@ -67,7 +67,7 @@ impl AxonConfig {
         Self {
             port: config.axon_port,
             external_ip: config.axon_external_ip,
-            allow_non_global: config.network == "local",
+            allow_non_global: config.network == "local" || config.axon_allow_private,
             ..Self::default()
         }
     }
@@ -112,7 +112,7 @@ impl AxonConfig {
     fn check_ip(&self, ip: IpAddr) -> Result<(), PublisherError> {
         if !self.allow_non_global && !is_global(ip) {
             return Err(PublisherError::Configuration(format!(
-                "axon address {ip} is not globally routable; set allow_non_global only for a local network"
+                "axon address {ip} is not globally routable; pass --axon.allow-private for a miner and validator on one host or private network"
             )));
         }
         Ok(())

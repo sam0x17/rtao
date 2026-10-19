@@ -770,6 +770,7 @@ impl WeightScheduler {
                         block_number: report.block_number,
                     };
                 }
+                log_submitted(mech, report.block_number, commit.is_some());
                 if let Some(commit) = commit {
                     self.reveals
                         .record(
@@ -801,6 +802,7 @@ impl WeightScheduler {
                 block_number: report.block_number,
             };
         }
+        log_submitted(mech, report.block_number, commit.is_some());
         if let Some(commit) = commit {
             self.reveals
                 .record(
@@ -821,6 +823,19 @@ impl WeightScheduler {
         cx.metrics
             .update_readiness(|ready| ready.last_weight_succeeded = true);
         Ok(())
+    }
+}
+
+/// Operators watch this line to confirm the validator is scoring on chain.
+fn log_submitted(mech: MechId, block: u64, committed: bool) {
+    if committed {
+        tracing::info!(
+            mechanism = mech.0,
+            block,
+            "weights committed; the chain reveals them after the reveal period"
+        );
+    } else {
+        tracing::info!(mechanism = mech.0, block, "weights set");
     }
 }
 
