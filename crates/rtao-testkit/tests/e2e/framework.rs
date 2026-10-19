@@ -232,6 +232,7 @@ impl FrameworkFixture {
                 wait_for_registration: false,
                 axon_port: 0,
                 axon_external_ip: None,
+                axon_allow_private: false,
                 state_dir: Some(state_dir),
                 metrics_addr: None,
                 log: None,

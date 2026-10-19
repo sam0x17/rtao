@@ -96,6 +96,11 @@ pub struct NeuronConfig {
     /// Public axon address supplied by the operator.
     #[arg(long = "axon.external-ip", env = "BT_AXON_EXTERNAL_IP")]
     pub axon_external_ip: Option<IpAddr>,
+    /// Allow publishing a loopback or private axon address, for a miner and
+    /// validator on one host or LAN. Always allowed with `--network local`.
+    #[arg(long = "axon.allow-private", env = "BT_AXON_ALLOW_PRIVATE", action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", default_value = "false", value_parser = parse_bool)]
+    #[serde(default)]
+    pub axon_allow_private: bool,
     /// Override the default neuron state directory.
     #[arg(long, env = "RTAO_STATE_DIR")]
     pub state_dir: Option<PathBuf>,
@@ -263,6 +268,15 @@ impl NeuronConfig {
             })
             .map_err(|error| invalid("network", error))?;
         }
+        let axon_allow_private = match flag::<bool>(matches, "axon_allow_private") {
+            Some(value) => value,
+            None => environment_string(environment, "BT_AXON_ALLOW_PRIVATE")?
+                .map(|value| {
+                    parse_bool(&value).map_err(|error| invalid("BT_AXON_ALLOW_PRIVATE", error))
+                })
+                .transpose()?
+                .unwrap_or(false),
+        };
         let retry_forever = if let Some(value) = flag::<bool>(matches, "retry_forever") {
             value
         } else if let Some(value) = environment_string(environment, "BT_RETRY_FOREVER")? {
@@ -304,6 +318,7 @@ impl NeuronConfig {
                 "axon_external_ip",
                 "BT_AXON_EXTERNAL_IP",
             )?,
+            axon_allow_private,
             state_dir: path_layer(
                 matches,
                 environment,

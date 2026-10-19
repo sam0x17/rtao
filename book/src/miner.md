@@ -55,7 +55,11 @@ Without an explicit external IP, the publisher tries the configured IPv4
 discovery services with five-second deadlines. An explicit IP can be IPv4 or
 IPv6. Publication rejects private, loopback and other non-global addresses.
 The `local` network setting permits non-global addresses for callers using an
-existing development endpoint. It does not start or manage a localnet.
+existing development endpoint. It does not start or manage a localnet. On a
+public network, `--axon.allow-private` (or `BT_AXON_ALLOW_PRIVATE=true`)
+permits a loopback or private address, for example to run a miner and a
+validator on one host against testnet. Validators elsewhere cannot reach such
+an address.
 
 The publisher compares IP, port, IP type, protocol and version with stored axon
 data. An unchanged endpoint produces no new serving transaction. The default
