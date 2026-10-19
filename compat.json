@@ -10,7 +10,7 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1792335794,
+        "measured_unix_seconds": 1792443511,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -20,7 +20,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "71eb5d25c92d64c3eff6c664932befb88e5e619196463a86b8a539696cb6e800",
+            "feature_graph_sha256": "7a6d74c9d5e8c1b17cbce6e1af5f2ae1edfa515db90393156c1c34a2c2aa52d4",
             "features": [],
             "normal_build_packages": 225,
             "package": "rtao-core",
@@ -256,7 +256,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "8b63a1cb14347eee452db055a842f797344c1212ce537b4006598ed5842d9b14",
+            "feature_graph_sha256": "34092844f0e6d493f6779492b8e39a5a52cd79e7bc57454533871f45aea80c3b",
             "features": [
               "validator"
             ],
@@ -631,7 +631,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "c04e71d0b1f1229ad356ba78ffa75deee3a33d40cdb7965112cbc2abfc086ba7",
+            "feature_graph_sha256": "a5206841eb1df3a01b70f1e377c1c4ebf7935a698c4467dab8d816da1e1645c8",
             "features": [
               "miner"
             ],
@@ -1010,7 +1010,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "9c9cc45eef64b93d45f51a20053c0336364ef8369fa2f476dd0e064a958b9049",
+            "feature_graph_sha256": "bc00c22aad71e58b1578838f50535450829e4aa5538778f089db128408c45c6d",
             "features": [
               "owner"
             ],
@@ -1467,16 +1467,16 @@
             "crates/rtao-tx/Cargo.toml": "0c9c304bb1f8f4d3646bce5af40d5544d501a03251db84796e5dfce769e5c035",
             "crates/rtao-wallet/Cargo.toml": "a956707a77f207cbb4d3bba6fbc935e4337c6886ec612c61a8ddbfe3ecaeee97",
             "crates/rtao/Cargo.toml": "7063fc567ec64639f77e2b13b2ef659163c6fe42fc4b4e0e31578fcdd55699aa",
-            "upstream.toml": "23584b27f65c9e9fe78edf9c103f4e4246aefd8d0a80fdc5d8a3351f3d1de377",
+            "upstream.toml": "ccfc71fb95779842be215eabe923d513a6e515b29a6da226f3879e024bbbbe2a",
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
-          "dependency_inputs_sha256": "a11cd2125c63db9f5ea85f940381bcbb9159989a996dad308402eb924d426a1c",
+          "dependency_inputs_sha256": "6c3919cb662382ff75cf3fe4fad9e287c4211f92200b7447064f68bd4eacfebb",
           "dirty": false,
-          "head_commit": "855f3c59863f68d876cc587896defd01d011e90a"
+          "head_commit": "9b73ccc2982b337311fc08bfd82b6644beb20bb3"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "ca13145b14713dba0a75e40f7001939c303d761533bc1668aca7a1480e213169"
+      "sha256": "51a1dc8188a994432b5bc87682c7c0fadda9bee5dc9351e05f2399d2f9a039ca"
     }
   ],
   "core": {
@@ -1500,12 +1500,12 @@
       "tag": "main"
     },
     "mainnet": {
-      "digest": "sha256:743922761409312d562d9338addd7e4c621aac87c16b5db2d698c5b3651e6051",
+      "digest": "sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e",
       "tag": "mainnet"
     },
     "pinned": {
-      "digest": "sha256:e5d3f7c3ceb8c380033d03df17505f6d008ef43f877d88edac41b005d2f8bf9f",
-      "tag": "sha-6a972693ae9580541225bd37696ac2fee26b8ae9"
+      "digest": "sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e",
+      "tag": "v481"
     },
     "testnet": {
       "digest": "sha256:e5d3f7c3ceb8c380033d03df17505f6d008ef43f877d88edac41b005d2f8bf9f",
@@ -1514,12 +1514,40 @@
   },
   "metadata_pins": [
     {
+      "code_hash": "0x18b52484d9c5d7523f704c86b17b2ab959fffbc6edb6766a77e9877f0ad19387",
+      "commit": "5c6e83e2f4936f257234f246957f75684c35227c",
+      "endpoint": "https://archive.chain.opentensor.ai:443",
+      "finalized_head": "0x1b7cadae2cfc3d2cc96053c13b8b21cbd05738b3142196b42b508add50543531",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "network": "finney",
+      "spec_version": 477,
+      "tag": "v477",
+      "v15": {
+        "bytes": 400688,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0xa4eb84a65f0e49dac8d425d75d7953e19149e3e78fd0aead40567f72a9def820"
+        },
+        "path": "vendor/metadata/finney/477.v15.scale",
+        "sha256": "64d37ffe1ee7e006d74f0a01c8e4bfb82e04a8907ac92c5600a49510862a76fa"
+      },
+      "v16": {
+        "bytes": 404727,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0x3cdac4b849501441962a81f63a48d4ed812c929b736dc25f9b68207203a3b7a0"
+        },
+        "path": "vendor/metadata/finney/477.v16.scale",
+        "sha256": "af0870c1c32b53d8543859c6e0400551620401351a19bd6d111e4a629402acba"
+      }
+    },
+    {
       "code_hash": "0x7e722b3aa5c9192c98665a5d65fa91364bf9055e21fc90efce6d59bf4ef414e1",
       "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
-      "endpoint": "https://test.finney.opentensor.ai:443",
-      "finalized_head": "0x896a929adb8f2ab17b12eb21a5e4e6069e7b6a87316429778e6af14d8913bea0",
-      "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
-      "network": "testnet",
+      "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+      "finalized_head": "0x2bc979722ab7c83b9992900c5463dfd1daebbac77d5e64ae1e45413c69e5401f",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "network": "finney",
       "spec_version": 478,
       "tag": "v478",
       "v15": {
@@ -1528,7 +1556,7 @@
           "kind": "blake2b-256-raw",
           "value": "0x1c3d74d0316aed364c9df9857b175845eb9d215472f5642e9d29085817edec06"
         },
-        "path": "vendor/metadata/testnet/478.v15.scale",
+        "path": "vendor/metadata/finney/478.v15.scale",
         "sha256": "17cdbed812cb59a833cc64d2764d734aee5d08174385868167a1cf284d6ff502"
       },
       "v16": {
@@ -1537,17 +1565,45 @@
           "kind": "blake2b-256-raw",
           "value": "0xaa06a96435a6a75424542e692063cc1b3a3b2c9d5aaa4f0be0173ad0b04cd4c3"
         },
-        "path": "vendor/metadata/testnet/478.v16.scale",
+        "path": "vendor/metadata/finney/478.v16.scale",
         "sha256": "723240b9f3761915eed75a5e158484bfdb39f6eea8ddd06d32e77996e67b14c7"
+      }
+    },
+    {
+      "code_hash": "0x44e952fd1cebe9bd15c0c55cee6e1d7c6c97b44d941b79127343118dbbd342bc",
+      "commit": "f4786f9087cac84cfab37cbdf1e01c399042653a",
+      "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+      "finalized_head": "0x07ff6dbc0cf575696f0a4037ee3d7b5ae088c871fef9330273ba7b285faae496",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "network": "finney",
+      "spec_version": 479,
+      "tag": "v479",
+      "v15": {
+        "bytes": 402207,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0x8513fb35b98d09336e0bdd8d52a6b9f3021511a014e3519ead39adc0cc625e50"
+        },
+        "path": "vendor/metadata/finney/479.v15.scale",
+        "sha256": "c7da61c83be58ab45484360a9d9ac95b017645b6f5d86de98e0184b9d618f4a5"
+      },
+      "v16": {
+        "bytes": 406248,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0x75740c9388100dfdbd35e1c0c0d1ed558c12a67ef8239b6ed28bafe66007acaf"
+        },
+        "path": "vendor/metadata/finney/479.v16.scale",
+        "sha256": "0fc79dbdd1ff5c3bbd42828bd5450894745fde4a72b32314e5412958c1f80d6b"
       }
     },
     {
       "code_hash": "0x5fb504c1c793a3ddb5456f189ddef98b5146853aea6ff998501f1b6c6eb720bc",
       "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
-      "endpoint": "https://test.finney.opentensor.ai:443",
-      "finalized_head": "0x0e95c496689be181f358bfbb1848f8b4ed89fbcf64e85d3cf83044f19508e94a",
-      "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
-      "network": "testnet",
+      "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+      "finalized_head": "0x80f3788feefb5453a794a70bf242e41e0e1fc4a94adc2405b55bc6782b09c149",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "network": "finney",
       "spec_version": 481,
       "tag": "v481",
       "v15": {
@@ -1556,7 +1612,7 @@
           "kind": "blake2b-256-raw",
           "value": "0xb915fe11da46ee515a06a0d27a0a70a995ef4127ee01b6b40aec038a07e26df4"
         },
-        "path": "vendor/metadata/testnet/481.v15.scale",
+        "path": "vendor/metadata/finney/481.v15.scale",
         "sha256": "025da0822b26fd7dbff2e04fe0a88e2ee1073ae38d96ad4730c3724aa01af0f0"
       },
       "v16": {
@@ -1565,7 +1621,7 @@
           "kind": "blake2b-256-raw",
           "value": "0x933cc1dd0946eaf6771eb200d5d4f8d7d7a4961eb8fc896874fe090881aa4727"
         },
-        "path": "vendor/metadata/testnet/481.v16.scale",
+        "path": "vendor/metadata/finney/481.v16.scale",
         "sha256": "0fce0674c994e6de24a4ee496f9a404bd64274f30f93a934a41de8a24fed170a"
       }
     }
@@ -1579,73 +1635,10 @@
   },
   "rtao_version": "0.1.0",
   "schema": 1,
-  "validated_runtimes": [
-    {
-      "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
-      "metadata_hash": {
-        "kind": "blake2b-256-raw",
-        "value": "0x933cc1dd0946eaf6771eb200d5d4f8d7d7a4961eb8fc896874fe090881aa4727"
-      },
-      "network": "testnet",
-      "spec_version": 481
-    },
-    {
-      "genesis": "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105",
-      "metadata_hash": {
-        "kind": "blake2b-256-raw",
-        "value": "0xb915fe11da46ee515a06a0d27a0a70a995ef4127ee01b6b40aec038a07e26df4"
-      },
-      "network": "testnet",
-      "spec_version": 481
-    }
-  ],
-  "validated_spec_range": {
-    "max": 481,
-    "min": 481
-  },
+  "validated_runtimes": [],
+  "validated_spec_range": null,
   "validation": {
-    "inputs_sha256": "ecd38cb58673d13be83270cbc8ca0ff4b70eaa864efc7669b33c2fa022acf8c4",
-    "reports": [
-      {
-        "path": "docs/compat/reports/39141096815-drift-481-481-933cc1dd0946.json",
-        "sha256": "3b6138b6d18440730e8913c2d4efc993b3130539600e457b9a26f82c56ebac85"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-drift-481-481-b915fe11da46.json",
-        "sha256": "8f39a4a5d9beda2f7a84ade3485df9964ad0bb34cf016745fedcd432bbb37d08"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-e2e-111ebdbead40.json",
-        "sha256": "704fa87100cc827443b0a0aeebc2bf2e3a2571faccd19f3851664748e14a2064"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-e2e-36e323ef3037.json",
-        "sha256": "4a7be225d6aeeb6dd15266fefe9c708b352247df80bf3f297693db1040031382"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-e2e-743922761409.json",
-        "sha256": "24ccb810017dfdca23e6092e8dea63bab97d36dc360ad4e9806a379e5f77af57"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-e2e-e5d3f7c3ceb8.json",
-        "sha256": "1b3d8fb030698754c2daed6efb105f1de73009cd685447e339dcb56e959c4195"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-interop-111ebdbead40.json",
-        "sha256": "d767d30af1de9f3048ad44a760b3ab24d69a5f36523c88e7dc2acae03a716003"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-interop-36e323ef3037.json",
-        "sha256": "aa82ae5895d361c4a17496abc946f03271dbe0e316921aa42684fd3facd6c1c6"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-interop-743922761409.json",
-        "sha256": "5ac257fa78fc16ad280593b7c63b9b7bc6b7219f65f5fec586641f5f469f99b6"
-      },
-      {
-        "path": "docs/compat/reports/39141096815-interop-e5d3f7c3ceb8.json",
-        "sha256": "3b463d72ad8bdae510be6c90be899f1b1f8aed739c854e2398da37dcd6a3f095"
-      }
-    ]
+    "inputs_sha256": "f78655653e89041e1a600aa65d86685c1f4dd7f95523decce9f83db26d5f672f",
+    "reports": []
   }
 }
