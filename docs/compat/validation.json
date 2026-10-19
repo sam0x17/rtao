@@ -1,0 +1,70 @@
+{
+  "inputs_sha256": "f78655653e89041e1a600aa65d86685c1f4dd7f95523decce9f83db26d5f672f",
+  "reports": [
+    {
+      "path": "docs/compat/reports/39328208457-drift-481-481-933cc1dd0946.json",
+      "sha256": "732637985b18099081c46e0e6045245db28cbc8938c09010b09994884d30ed95"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-drift-481-481-b915fe11da46.json",
+      "sha256": "2270d347d1aaf5129a30e8d0874f406d12afbb18abce390f0e0250d040235dce"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-e2e-111ebdbead40.json",
+      "sha256": "8bc385907913fee857cc698b5f112299d49baf262a88bce85989c431dfaebc86"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-e2e-36e323ef3037.json",
+      "sha256": "a74946a88543788988c6e2157dd42914cb82775c6170266ff07c752b62d574a3"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-e2e-c2eb81b1a39d.json",
+      "sha256": "adbfa1ee30d719f58bbb4fef25ad734d5cb6797c910355ba21e00148685bc9fd"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-e2e-e5d3f7c3ceb8.json",
+      "sha256": "ee42a476c8b4870a9260384b570b88a0db1a45e09b4ec2bc9dde2228289630f7"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-interop-111ebdbead40.json",
+      "sha256": "0bb30c5cee34f8ad448f695091536169f0d115d11fd944efc015201c5049af4a"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-interop-36e323ef3037.json",
+      "sha256": "53b41d206f6dabc2ffb6791887d7a8c60285504dcf6c3d68b4309f776c66be0d"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-interop-c2eb81b1a39d.json",
+      "sha256": "32f610975a4f11ad104081fd03697871566da539a7842442082555c71feb2b7f"
+    },
+    {
+      "path": "docs/compat/reports/39328208457-interop-e5d3f7c3ceb8.json",
+      "sha256": "8c7dbe44575c5de569d92b54e509a189375555ac4057b64692a6c69037c1b9d0"
+    }
+  ],
+  "runtimes": [
+    {
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "metadata_hash": {
+        "kind": "blake2b-256-raw",
+        "value": "0x933cc1dd0946eaf6771eb200d5d4f8d7d7a4961eb8fc896874fe090881aa4727"
+      },
+      "network": "finney",
+      "spec_version": 481
+    },
+    {
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "metadata_hash": {
+        "kind": "blake2b-256-raw",
+        "value": "0xb915fe11da46ee515a06a0d27a0a70a995ef4127ee01b6b40aec038a07e26df4"
+      },
+      "network": "finney",
+      "spec_version": 481
+    }
+  ],
+  "schema": 1,
+  "validated_spec_range": {
+    "max": 481,
+    "min": 481
+  }
+}
