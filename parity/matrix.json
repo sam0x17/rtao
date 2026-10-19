@@ -2787,6 +2787,15 @@
           "rtao_client::network::tests::testnet_prefers_the_chain_endpoint_and_keeps_python_preset_as_fallback",
           "rtao_client::network::tests::every_extracted_label_and_exact_url_resolves_to_the_same_network"
         ]
+      },
+      {
+        "id": "D-079",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_reads::reads::subnets::tests::utf8_text_retains_invalid_nonbyte_sequences_and_decoded_0x_text",
+          "rtao_reads::reads::subnets::tests::utf8_text_hex_accepts_vertical_tabs_and_keeps_non_hex_text"
+        ]
       }
     ],
     "e2e": [
