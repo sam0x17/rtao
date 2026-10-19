@@ -76,6 +76,8 @@ pub struct Globals {
     pub fallback_endpoints: Option<String>,
     /// Comma-separated archive endpoint override, or `none`.
     pub archive_endpoints: Option<String>,
+    /// Separate endpoint for nonce, fee, submission and receipt calls.
+    pub submit_endpoint: Option<String>,
     /// Cycle the endpoint pool indefinitely on connection failures.
     pub retry_forever: bool,
     /// Remote signer base URL (`--signer remote`).
@@ -119,6 +121,11 @@ fn common() -> Vec<Arg> {
             "archive_endpoints",
             "archive-endpoints",
             "Comma-separated archive endpoints ('none' disables).",
+        ),
+        option(
+            "submit_endpoint",
+            "submit-endpoint",
+            "ws:// endpoint for nonces, fees, submissions and receipts; reads stay on --network.",
         ),
         flag(
             "retry_forever",
@@ -464,6 +471,7 @@ impl Globals {
                 .or_else(|| env("BT_EXTENSION_BRIDGE").filter(|v| !v.is_empty())),
             fallback_endpoints: resolve("fallback_endpoints", Some("BT_FALLBACK_ENDPOINTS"), None),
             archive_endpoints: resolve("archive_endpoints", Some("BT_ARCHIVE_ENDPOINTS"), None),
+            submit_endpoint: resolve("submit_endpoint", Some("BT_SUBMIT_ENDPOINT"), None),
             retry_forever: yes(root, "retry_forever")
                 || match env("BT_RETRY_FOREVER").filter(|v| !v.is_empty()) {
                     Some(v) => env_bool(&v)?,
@@ -543,6 +551,9 @@ impl Globals {
         }
         if let Some(v) = value("archive_endpoints") {
             self.archive_endpoints = Some(v);
+        }
+        if let Some(v) = value("submit_endpoint") {
+            self.submit_endpoint = Some(v);
         }
         self.retry_forever |= enabled("retry_forever");
         self.json |= enabled("json");

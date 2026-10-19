@@ -301,6 +301,16 @@ impl AppContext {
             config.session.pool.archive = endpoint_pool(value)?;
         }
         config.session.retry_forever = self.globals.retry_forever;
+        if let Some(endpoint) = &self.globals.submit_endpoint {
+            if !(endpoint.starts_with("ws://") || endpoint.starts_with("wss://")) {
+                return Err(CliError::input(format!(
+                    "--submit-endpoint must be a ws:// or wss:// endpoint, got {endpoint:?}"
+                )));
+            }
+            config
+                .set_submit_endpoint(endpoint)
+                .map_err(|e| CliError::input(e.to_string()))?;
+        }
         config.config_store = self.config_store.clone();
         config.track_heads = self.track_heads;
         // A read-only command reports one block and pins it only once.
@@ -1808,6 +1818,38 @@ mod tests {
         out.message("diagnostic")?;
         assert_eq!(sink.text(Stream::Stdout)?, "");
         let _ = LiveTerminal;
+        Ok(())
+    }
+
+    #[test]
+    fn submit_endpoint_is_a_separate_pool_and_absent_by_default()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let ctx = context(&["--network", "local"], Value::Null, terminal(false, ""))?;
+        assert!(ctx.client_config()?.submit.is_none());
+        let ctx = context(
+            &[
+                "--network",
+                "local",
+                "--submit-endpoint",
+                "ws://127.0.0.1:9955",
+                "--retry-forever",
+            ],
+            Value::Null,
+            terminal(false, ""),
+        )?;
+        let config = ctx.client_config()?;
+        let submit = config.submit.ok_or("submit endpoint missing")?;
+        assert_eq!(submit.pool.urls.len(), 1);
+        assert_eq!(submit.pool.urls[0].port(), Some(9955));
+        assert!(submit.rate_limit.is_none());
+        assert!(submit.retry_forever);
+        assert_ne!(config.session.pool.urls, submit.pool.urls);
+        let ctx = context(
+            &["--network", "local", "--submit-endpoint", "finney"],
+            Value::Null,
+            terminal(false, ""),
+        )?;
+        assert_eq!(ctx.client_config().err().ok_or("name accepted")?.code, 2);
         Ok(())
     }
 

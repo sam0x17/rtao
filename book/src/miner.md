@@ -36,7 +36,10 @@ the shared btcli file, then defaults. `BTCLI_CONFIG` selects another shared
 file. Network and wallet settings accept `BT_NETWORK`, `BT_CHAIN_ENDPOINT`,
 `BT_WALLET`, `BT_WALLET_HOTKEY` and `BT_WALLET_PATH`. Use `RTAO_STATE_DIR` and
 `RTAO_METRICS_ADDR` for framework paths and telemetry. `BT_AXON_EXTERNAL_IP`
-sets the advertised IP. The subnet identity is mandatory; the axon port and
+sets the advertised IP. `--submit-endpoint` or `BT_SUBMIT_ENDPOINT` sends axon
+publishes and their receipts through a separate full node while reads stay on
+the network endpoint (see [Getting started](getting-started.md)). The subnet
+identity is mandatory; the axon port and
 registration wait are flag-only settings.
 
 Your binary parses its own arguments and passes the matches to

@@ -83,6 +83,12 @@ pub struct NeuronConfig {
     /// Explicit archive pool, accepting the single value `none` to disable it.
     #[arg(long, env = "BT_ARCHIVE_ENDPOINTS", value_delimiter = ',')]
     pub archive_endpoints: Option<Vec<String>>,
+    /// Separate ws(s) endpoint for nonces, fees, submissions and their
+    /// receipts, for example a full node while reads use a pruned, archive or
+    /// indexing endpoint. Absent sends everything to the network endpoint.
+    #[arg(long = "submit-endpoint", env = "BT_SUBMIT_ENDPOINT")]
+    #[serde(default)]
+    pub submit_endpoint: Option<String>,
     /// Continue reconnecting after the ordinary retry budget is exhausted.
     #[arg(long, env = "BT_RETRY_FOREVER", action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", default_value = "false", value_parser = parse_bool)]
     pub retry_forever: bool,
@@ -268,6 +274,22 @@ impl NeuronConfig {
             })
             .map_err(|error| invalid("network", error))?;
         }
+        let submit_endpoint: Option<String> = parsed_layer(
+            matches,
+            environment,
+            "submit_endpoint",
+            "BT_SUBMIT_ENDPOINT",
+        )?;
+        if let Some(endpoint) = &submit_endpoint {
+            let valid = Url::parse(endpoint)
+                .is_ok_and(|url| matches!(url.scheme(), "ws" | "wss") && url.host_str().is_some());
+            if !valid {
+                return Err(invalid(
+                    "submit_endpoint",
+                    "expected a ws:// or wss:// endpoint with a host",
+                ));
+            }
+        }
         let axon_allow_private = match flag::<bool>(matches, "axon_allow_private") {
             Some(value) => value,
             None => environment_string(environment, "BT_AXON_ALLOW_PRIVATE")?
@@ -309,6 +331,7 @@ impl NeuronConfig {
                 "archive_endpoints",
                 "BT_ARCHIVE_ENDPOINTS",
             )?,
+            submit_endpoint,
             retry_forever,
             wait_for_registration: flag::<bool>(matches, "wait_for_registration").unwrap_or(false),
             axon_port: flag::<u16>(matches, "axon_port").unwrap_or(8091),
@@ -764,6 +787,62 @@ mod tests {
         );
     }
     #[test]
+    fn submit_endpoint_comes_from_flag_or_environment_and_reaches_the_client() {
+        let resolve = |flags: &[&str], env: &[(&str, &str)]| {
+            let env = env
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), OsString::from(*value)))
+                .collect::<BTreeMap<_, _>>();
+            NeuronConfig::resolve_layers(
+                Some(&matches(flags)),
+                &env,
+                &ConfigData::new(),
+                Path::new("/isolated/home"),
+                None,
+            )
+            .expect("resolve")
+        };
+        let absent = resolve(&["validator", "--netuid", "1", "--network", "local"], &[]);
+        assert_eq!(absent.submit_endpoint, None);
+        #[cfg(any(feature = "validator", feature = "miner"))]
+        assert!(
+            crate::client_config(&absent)
+                .expect("client config")
+                .submit
+                .is_none()
+        );
+        let env = resolve(
+            &["validator", "--netuid", "1", "--network", "local"],
+            &[("BT_SUBMIT_ENDPOINT", "ws://127.0.0.1:9955")],
+        );
+        assert_eq!(env.submit_endpoint.as_deref(), Some("ws://127.0.0.1:9955"));
+        let flag = resolve(
+            &[
+                "validator",
+                "--netuid",
+                "1",
+                "--network",
+                "local",
+                "--submit-endpoint",
+                "wss://node.example:443",
+            ],
+            &[("BT_SUBMIT_ENDPOINT", "ws://127.0.0.1:9955")],
+        );
+        assert_eq!(
+            flag.submit_endpoint.as_deref(),
+            Some("wss://node.example:443")
+        );
+        #[cfg(any(feature = "validator", feature = "miner"))]
+        {
+            let chain = crate::client_config(&flag).expect("client config");
+            let submit = chain.submit.expect("submit session");
+            assert_eq!(submit.pool.urls.len(), 1);
+            assert_eq!(submit.pool.urls[0].host_str(), Some("node.example"));
+            // Reads keep the network's own endpoint.
+            assert_ne!(chain.session.pool.urls, submit.pool.urls);
+        }
+    }
+    #[test]
     fn malformed_selected_values_fail_without_consulting_lower_precedence_layers() {
         for (key, value) in [
             ("BT_NETWORK", "unknown"),
@@ -771,6 +850,8 @@ mod tests {
             ("BT_RETRY_FOREVER", "sometimes"),
             ("RTAO_METRICS_ADDR", "anywhere"),
             ("BT_FALLBACK_ENDPOINTS", "none,wss://example.com"),
+            ("BT_SUBMIT_ENDPOINT", "https://example.com"),
+            ("BT_SUBMIT_ENDPOINT", "finney"),
         ] {
             let env = BTreeMap::from([(key.into(), OsString::from(value))]);
             assert!(

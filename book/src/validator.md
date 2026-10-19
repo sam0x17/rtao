@@ -21,6 +21,9 @@ Configuration resolves flags, then environment variables, then the shared btcli
 file, then defaults. `BTCLI_CONFIG` selects another shared file. Network and wallet
 names use `BT_NETWORK`, `BT_CHAIN_ENDPOINT`, `BT_WALLET`, `BT_WALLET_HOTKEY` and
 `BT_WALLET_PATH`. Framework settings use `RTAO_STATE_DIR` and `RTAO_METRICS_ADDR`.
+`--submit-endpoint` or `BT_SUBMIT_ENDPOINT` sends weight commits, reveals and
+their receipts through a separate full node while reads stay on the network
+endpoint (see [Getting started](getting-started.md)).
 Your binary parses arguments and passes its matches to
 `NeuronConfig::resolve_matches`; the library never reads argv. Embedded callers
 can use `NeuronConfig::load_for(NetUid(...))`.

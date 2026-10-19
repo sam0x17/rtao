@@ -453,10 +453,12 @@ impl Client {
                     let interval = self.block_time().await?;
                     let max_polls = rtao_catalog::py::SHIELDED_POLL_ATTEMPTS_PER_BLOCK
                         .saturating_mul(opts.period.get().saturating_add(1));
-                    let canonical = self
+                    // The carrier's receipt is read where it was submitted.
+                    let chain = self.submit_client().await?;
+                    let canonical = chain
                         .shield_finalized_hash(block, interval, max_polls, limits.full)
                         .await?;
-                    if self.find_extrinsic(hash, canonical).await?.is_none() {
+                    if chain.find_extrinsic(hash, canonical).await?.is_none() {
                         carrier_report = self
                             .reconcile(hash, unsigned.submission_head(), unsigned.expiry())
                             .await?;
@@ -538,6 +540,9 @@ impl Client {
         let max_polls = rtao_catalog::py::SHIELDED_POLL_ATTEMPTS_PER_BLOCK
             .checked_mul(window.period.get().saturating_add(1))
             .ok_or_else(|| ClientError::Protocol("shield poll bound overflow".into()))?;
+        // The inner's receipt is scanned on the endpoint that received the
+        // carrier, which sees best-chain blocks before any read endpoint.
+        let chain = self.submit_client().await?;
         let mut block = included_at;
         // Python shares the missing-height allowance across the era range.
         // Four misses at one not-yet-produced height must not expire the scan.
@@ -545,7 +550,7 @@ impl Client {
         let mut reorgs_left = rtao_catalog::py::SHIELDED_FINALITY_RPC_RETRIES;
         while block <= deadline {
             limit.check(self)?;
-            let Some(block_hash) = self.shield_block_hash(block).await? else {
+            let Some(block_hash) = chain.shield_block_hash(block).await? else {
                 waits_left -= 1;
                 if waits_left == 0 {
                     return Err(ClientError::Protocol(format!(
@@ -556,7 +561,11 @@ impl Client {
                 tokio::time::sleep(interval).await;
                 continue;
             };
-            if self.find_extrinsic(inner_hash, block_hash).await?.is_none() {
+            if chain
+                .find_extrinsic(inner_hash, block_hash)
+                .await?
+                .is_none()
+            {
                 if block == deadline {
                     break;
                 }
@@ -564,7 +573,8 @@ impl Client {
                 continue;
             }
             let resolved_hash = if wait == Wait::Finalization {
-                self.shield_finalized_hash(block, interval, max_polls, limit)
+                chain
+                    .shield_finalized_hash(block, interval, max_polls, limit)
                     .await?
             } else {
                 block_hash
@@ -575,7 +585,7 @@ impl Client {
                     limit.check(self)?;
                     match tokio::time::timeout(
                         interval.max(Duration::from_millis(100)),
-                        self.find_extrinsic(inner_hash, resolved_hash),
+                        chain.find_extrinsic(inner_hash, resolved_hash),
                     )
                     .await
                     {
@@ -606,7 +616,7 @@ impl Client {
                     continue;
                 }
             }
-            let mut inner = self
+            let mut inner = chain
                 .resolve_extrinsic(inner_hash, resolved_hash, wait == Wait::Finalization)
                 .await?;
             inner.shield = outer.shield;
@@ -616,17 +626,18 @@ impl Client {
         // lookup may have inspected an orphan. First establish finalized
         // expiry, then rescan its canonical ancestors from the signing anchor.
         // The anchor also covers a carrier re-included earlier after a reorg.
-        self.shield_finalized_hash(deadline, interval, max_polls, limit)
+        chain
+            .shield_finalized_hash(deadline, interval, max_polls, limit)
             .await?;
         for height in window.finalized_anchor..=deadline {
             limit.check(self)?;
-            let hash = self.shield_block_hash(height).await?.ok_or_else(|| {
+            let hash = chain.shield_block_hash(height).await?.ok_or_else(|| {
                 ClientError::Protocol(format!(
                     "finalized shield receipt block {height} is unavailable; canonical absence has not been established"
                 ))
             })?;
-            if self.find_extrinsic(inner_hash, hash).await?.is_some() {
-                let mut inner = self.resolve_extrinsic(inner_hash, hash, true).await?;
+            if chain.find_extrinsic(inner_hash, hash).await?.is_some() {
+                let mut inner = chain.resolve_extrinsic(inner_hash, hash, true).await?;
                 inner.shield = outer.shield;
                 return Ok(inner);
             }

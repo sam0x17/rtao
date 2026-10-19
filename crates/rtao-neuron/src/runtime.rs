@@ -369,6 +369,9 @@ pub fn client_config(config: &NeuronConfig) -> anyhow::Result<ClientConfig> {
             .collect::<Result<_, _>>()?;
     }
     chain.session.retry_forever = config.retry_forever;
+    if let Some(endpoint) = &config.submit_endpoint {
+        chain.set_submit_endpoint(endpoint)?;
+    }
     Ok(chain)
 }
 pub(crate) async fn initialize(

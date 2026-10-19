@@ -228,6 +228,7 @@ impl FrameworkFixture {
                 netuid,
                 fallback_endpoints: Some(vec!["none".into()]),
                 archive_endpoints: Some(vec!["none".into()]),
+                submit_endpoint: None,
                 retry_forever: false,
                 wait_for_registration: false,
                 axon_port: 0,
