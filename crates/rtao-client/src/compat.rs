@@ -130,33 +130,33 @@ mod tests {
         )
     }
 
-    // Evidence rows say `testnet` while the Python label is `test`; matching
-    // is by genesis, so the label never decides validation.
+    // Matching is by genesis, so an evidence row's network label never
+    // decides validation: the same runtime is refused under another genesis.
     #[test]
-    fn evidence_row_matches_the_pinned_testnet_runtime_by_genesis() {
+    fn evidence_row_matches_the_pinned_finney_runtime_by_genesis() {
         let runtime = RuntimeHandle::parse(
-            include_bytes!("../../../vendor/metadata/testnet/481.v15.scale"),
+            include_bytes!("../../../vendor/metadata/finney/481.v15.scale"),
             481,
             1,
             42,
         )
         .unwrap();
-        let testnet = genesis(network_pins::TEST_GENESIS);
+        let finney = genesis(network_pins::FINNEY_GENESIS);
         let compiled: Value = serde_json::from_str(COMPILED_COMPAT).unwrap();
         let pin = compiled["metadata_pins"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|pin| pin["network"] == "testnet" && pin["spec_version"] == 481)
+            .find(|pin| pin["network"] == "finney" && pin["spec_version"] == 481)
             .unwrap();
         // The runtime's metadata hash is the hash `cargo xtask compat` records.
-        let row = json!({"network":"testnet","genesis":network_pins::TEST_GENESIS,"spec_version":481,"metadata_hash":pin["v15"]["metadata_hash"]});
+        let row = json!({"network":"finney","genesis":network_pins::FINNEY_GENESIS,"spec_version":481,"metadata_hash":pin["v15"]["metadata_hash"]});
         let evidence =
             json!({"validated_spec_range":{"min":481,"max":481},"validated_runtimes":[row]});
-        assert!(validated_by(&evidence, testnet, &runtime));
+        assert!(validated_by(&evidence, finney, &runtime));
         assert!(!validated_by(
             &evidence,
-            genesis(network_pins::FINNEY_GENESIS),
+            genesis(network_pins::TEST_GENESIS),
             &runtime
         ));
     }

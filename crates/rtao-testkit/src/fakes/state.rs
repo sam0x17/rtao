@@ -241,7 +241,7 @@ impl FakeState {
     /// Parse the checked-in pinned testnet runtime and load extracted Python defaults.
     pub fn try_default() -> Result<Self, CoreError> {
         let runtime = Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/testnet/481.v15.scale"),
+            include_bytes!("../../../../vendor/metadata/finney/481.v15.scale"),
             481,
             1,
             42,
