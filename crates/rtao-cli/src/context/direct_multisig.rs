@@ -8,7 +8,7 @@ use crate::{
     error::CliError,
 };
 use rtao::{
-    client::{BlockRef, Client, View, config::MAX_JSON_FILE_BYTES},
+    client::{Client, View, config::MAX_JSON_FILE_BYTES},
     primitives::AccountId,
     tx::{DynIntent, ExtrinsicResult, IntentOutput, Multisig, MultisigCall},
 };
@@ -128,7 +128,8 @@ pub(super) async fn followup(
     // Decode at inclusion when known. Hash equality alone cannot authenticate
     // SCALE, and a moving latest runtime must not reinterpret included bytes.
     let snapshot = match result.block_hash {
-        Some(hash) => client.at(BlockRef::Hash(hash)).await,
+        // A submission endpoint may be the only side with the block yet.
+        Some(hash) => client.at_receipt(hash).await,
         None => client.pin().await,
     }
     .map_err(CliError::from)?;

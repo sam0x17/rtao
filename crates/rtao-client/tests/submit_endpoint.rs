@@ -176,6 +176,79 @@ async fn nonce_fee_submission_and_receipt_use_the_submit_endpoint() {
     client.close().await;
 }
 
+/// Follow-up reads at a receipt's block work while the read endpoint lags.
+#[tokio::test]
+async fn receipt_reads_fall_back_to_the_submit_endpoint() {
+    let (client, read, node) = split().await;
+    let signer = signer();
+    let report = client
+        .submit(
+            remark(&client, vec![5]).await,
+            &signer,
+            &SubmitOptions::default(),
+        )
+        .await
+        .unwrap();
+    let block = report.block_hash.unwrap();
+    // The read endpoint has not imported the inclusion block.
+    assert!(matches!(
+        client.at(BlockRef::Hash(block)).await,
+        Err(rtao_client::ClientError::BlockNotFound(_))
+    ));
+    let snapshot = client.at_receipt(block).await.unwrap();
+    assert_eq!(snapshot.block().hash, block);
+    assert_eq!(Some(snapshot.block().number), report.block_number);
+    // The receipt connection is one coherent view of the reporting chain.
+    let chain = client.receipt_client().await.unwrap();
+    let finalized = chain.at(BlockRef::Finalized).await.unwrap();
+    assert!(finalized.block().number >= snapshot.block().number);
+    assert_eq!(
+        chain
+            .at(BlockRef::Number(snapshot.block().number))
+            .await
+            .unwrap()
+            .block()
+            .hash,
+        block
+    );
+    // A block the read endpoint has is read there.
+    let read_head = client.at(BlockRef::Finalized).await.unwrap().block().hash;
+    let node_before = node.requests().len();
+    let read_before = read.requests().len();
+    assert_eq!(
+        client.at_receipt(read_head).await.unwrap().block().hash,
+        read_head
+    );
+    assert_eq!(node.requests().len(), node_before);
+    assert!(read.requests().len() > read_before);
+    client.close().await;
+}
+
+/// Without a submit endpoint the receipt helpers are the plain reads.
+#[tokio::test]
+async fn receipt_reads_without_a_submit_endpoint_stay_on_the_client() {
+    let fake = FakeChain::from_state(FakeState::default());
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config())
+        .await
+        .unwrap();
+    let head = client.at(BlockRef::Finalized).await.unwrap().block().hash;
+    let start = fake.requests().len();
+    client.at(BlockRef::Hash(head)).await.unwrap();
+    let plain = methods(&fake, start);
+    let start = fake.requests().len();
+    client.at_receipt(head).await.unwrap();
+    assert_eq!(methods(&fake, start), plain);
+    let missing = rtao_primitives::H256([9; 32]);
+    assert!(matches!(
+        client.at_receipt(missing).await,
+        Err(rtao_client::ClientError::BlockNotFound(_))
+    ));
+    let start = fake.requests().len();
+    client.receipt_client().await.unwrap();
+    assert_eq!(fake.requests().len(), start);
+    client.close().await;
+}
+
 #[tokio::test]
 async fn pool_submission_and_raw_bytes_use_the_submit_endpoint() {
     let (client, read, node) = split().await;

@@ -3,7 +3,7 @@
 
 use super::SUPPORTED_CR_VERSION;
 use crate::NeuronCx;
-use rtao_client::{BlockRef, View};
+use rtao_client::View;
 use rtao_intents::weights::PreparedWeightCommit;
 use rtao_primitives::{H256, MechId, NetUid, Uid};
 use rtao_runtime::{Call, CallDescriptor, calls::subtensor_module as calls};
@@ -130,15 +130,22 @@ pub(super) async fn execute(
     let block_hash = result
         .block_hash
         .ok_or_else(|| SubmissionError::Uncertain("no finalized inclusion hash".into()))?;
-    let snapshot = cx
-        .client
-        .at(BlockRef::Hash(block_hash))
-        .await
-        .map_err(|error| {
-            SubmissionError::Uncertain(format!(
-                "accepted submission's finalized inclusion header is unavailable: {error}"
-            ))
-        })?;
+    inclusion(&cx.client, block_hash).await
+}
+
+/// Locate an accepted submission's finalized inclusion block.
+///
+/// The receipt may come from a separate submission endpoint whose block the
+/// read endpoint has not imported yet, so the header is read where it exists.
+pub(super) async fn inclusion(
+    client: &rtao_client::Client,
+    block_hash: H256,
+) -> anyhow::Result<WeightSubmission> {
+    let snapshot = client.at_receipt(block_hash).await.map_err(|error| {
+        SubmissionError::Uncertain(format!(
+            "accepted submission's finalized inclusion header is unavailable: {error}"
+        ))
+    })?;
     Ok(WeightSubmission {
         block_hash,
         block_number: snapshot.block().number,

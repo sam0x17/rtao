@@ -612,11 +612,11 @@ impl TrimNullSession {
                 }
                 let at = self
                     .client
-                    .at(BlockRef::Hash(
+                    .at_receipt(
                         receipt
                             .block_hash
                             .ok_or_else(|| invalid("missing switch inclusion"))?,
-                    ))
+                    )
                     .await?;
                 if queued_commits(&at, self.report.netuid).await? {
                     return Err(invalid(
@@ -1032,25 +1032,45 @@ async fn finalized_after(
     let hash = receipt
         .block_hash
         .ok_or_else(|| invalid("missing finalized pruning block"))?;
-    let included = client.at(BlockRef::Hash(hash)).await?;
+    let (included, finalized, canonical) = finalized_receipt(client, hash).await?;
     if included.block().number <= previous {
         return Err(invalid(
             "Null pruning receipt did not advance finalized state",
         ));
     }
-    let finalized = client.at(BlockRef::Finalized).await?;
     if finalized.block().number < included.block().number {
         return Err(invalid(
             "Null pruning receipt is ahead of finalized storage",
         ));
     }
-    let canonical = client.at(BlockRef::Number(included.block().number)).await?;
     if canonical.block().hash != hash {
         return Err(invalid(
             "Null pruning receipt is outside finalized canonical history",
         ));
     }
     read_state(&included, netuid).await
+}
+
+/// A receipt's inclusion block with the finalized head and the canonical block
+/// at its height, all read from one endpoint.
+///
+/// That is the read endpoint when it has finalized the block. Otherwise, with a
+/// separate submission endpoint, it is the endpoint that reported the receipt:
+/// the read endpoint may still lag behind it.
+async fn finalized_receipt(
+    client: &Client,
+    hash: H256,
+) -> Result<(Snapshot, Snapshot, Snapshot), TxError> {
+    let mut included = client.at_receipt(hash).await?;
+    let mut chain = included.client().clone();
+    let mut finalized = chain.at(BlockRef::Finalized).await?;
+    if finalized.block().number < included.block().number && client.has_submit_endpoint() {
+        chain = client.receipt_client().await?;
+        included = chain.at(BlockRef::Hash(hash)).await?;
+        finalized = chain.at(BlockRef::Finalized).await?;
+    }
+    let canonical = chain.at(BlockRef::Number(included.block().number)).await?;
+    Ok((included, finalized, canonical))
 }
 
 struct SubmissionJournal {
@@ -1222,9 +1242,7 @@ impl SubmissionJournal {
         }
         let hash = receipt_block_hash(&record["receipt"]["block_hash"])
             .ok_or_else(|| self.unresolved())?;
-        let included = client.at(BlockRef::Hash(hash)).await?;
-        let finalized = client.at(BlockRef::Finalized).await?;
-        let canonical = client.at(BlockRef::Number(included.block().number)).await?;
+        let (included, finalized, canonical) = finalized_receipt(client, hash).await?;
         if finalized.block().number < included.block().number || canonical.block().hash != hash {
             return Err(self.unresolved());
         }
@@ -1505,9 +1523,7 @@ impl SubmissionJournal {
         let mut record = self.read()?;
         let (account, hash) = multisig_identity(&record)?;
         let included = client
-            .at(BlockRef::Hash(
-                receipt.block_hash.ok_or_else(|| self.unresolved())?,
-            ))
+            .at_receipt(receipt.block_hash.ok_or_else(|| self.unresolved())?)
             .await?;
         let (opening, signer) = self.approval_opening(&record, included.block().number)?;
         let pending = included
@@ -1530,9 +1546,7 @@ impl SubmissionJournal {
         let record = self.read()?;
         let (account, hash) = multisig_identity(&record)?;
         let included = client
-            .at(BlockRef::Hash(
-                receipt.block_hash.ok_or_else(|| self.unresolved())?,
-            ))
+            .at_receipt(receipt.block_hash.ok_or_else(|| self.unresolved())?)
             .await?;
         if included
             .storage(&rtao_runtime::storage::multisig::MULTISIGS, (account, hash))
