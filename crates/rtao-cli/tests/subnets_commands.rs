@@ -787,13 +787,33 @@ fn inspection_arguments_match_python_and_hparams_alias_stays_hidden() -> TestRes
             assert!(request.all);
         }
     }
+    // D-080: every inspection takes the subnet positionally or as --netuid.
     for args in [
         vec!["rtao", "subnets", "show", "--netuid", "7"],
         vec!["rtao", "subnets", "price", "7"],
+        vec!["rtao", "subnets", "conviction", "7"],
+        vec!["rtao", "subnets", "hyperparameters", "--netuid", "7"],
+    ] {
+        let parsed = parse(&args)?;
+        let (mut ctx, _) = context(&parsed)?;
+        let Request::Inspect(request) = Request::from_matches(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?
+        else {
+            return Err("expected inspection".into());
+        };
+        assert_eq!(request.netuid, Some(NetUid(7)), "{args:?}");
+    }
+    for args in [
+        vec!["rtao", "subnets", "show", "7", "--netuid", "7"],
+        vec!["rtao", "subnets", "price"],
         vec!["rtao", "subnets", "show", "4096"],
+        vec!["rtao", "subnets", "price", "--netuid", "4096"],
         vec!["rtao", "subnets", "show", "-1"],
     ] {
-        assert!(parse(&args).is_err());
+        assert!(parse(&args).is_err(), "{args:?}");
     }
     let mut command = subnets::command()?;
     let help = command.render_long_help().to_string();

@@ -1381,3 +1381,54 @@ pinning_tests = [
 ]
 upstream_report = "Shared upstream decoding defect; no new filing per the no-new-upstream-issues rule."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/reads/base.py#L169-L184"
+
+[[divergences]]
+id = "D-080"
+upstream_symbol = "bittensor.cli.commands.subnets (subnet_price, subnet_conviction, show, hyperparameters, burn_cost)"
+python_behavior = "Each subnet inspection accepts the subnet one way: `subnets show 7` positionally, `subnets price --netuid 7` as an option. The other spelling is a usage error."
+rtao_behavior = "Every subnet inspection accepts the subnet positionally or as `--netuid`; giving both is an error, and an interactive session prompts for it when neither is given. Prompt replay hints use the positional spelling."
+rationale = "Users moving between neighbouring commands should not have to remember which one Python made positional. Every Python spelling still works."
+decision = "Operator direction to break Python parity where it improves user experience (2026-10-19)"
+status = "active"
+class = "improved"
+milestone = "M10"
+pinning_tests = [
+  "rtao_cli::subnets_commands::inspection_arguments_match_python_and_hparams_alias_stays_hidden",
+  "rtao_cli::cli_source_tree::every_enabled_source_registration_and_owned_spelling_exists_in_installed_tree",
+]
+upstream_report = "CLI convenience with no upstream defect allegation and no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/commands/subnets.py"
+
+[[divergences]]
+id = "D-081"
+upstream_symbol = "bittensor.cli read commands (subnets list/show/hyperparameters, stake list, wallet balance)"
+python_behavior = "Each read inside a command resolves the chain head separately, and `subnets list`, `subnets show` and `subnets hyperparameters` fetch each per-subnet value with its own map scan or storage request."
+rtao_behavior = "Read-only commands read every value at the block of their first read (ClientConfig::read_at_one_block), so one command reports one consistent block. `subnets list` scans only NetworksAdded and looks every other column up in one coalesced query; `subnets show` and the supplemental hyperparameters each use one coalesced query. Absent map entries stay absent, so the values match Python's scans."
+rationale = "Public endpoints are paced at about one request per second, so every extra head lookup or per-map scan adds a second. On mainnet `subnets list` falls from 22 requests (14 s) to 9 (2 s) and `stake list` from 16 to 12; reading at one block also stops a command mixing values from different blocks."
+decision = "Operator direction to break Python parity where it improves performance (2026-10-19)"
+status = "active"
+class = "improved"
+milestone = "M10"
+pinning_tests = [
+  "rtao_reads::m6_root::subnet_listing_matches_the_map_scans_with_one_scan_and_one_lookup",
+  "rtao_client::client::tests::read_at_one_block_serves_every_head_read_from_the_first",
+]
+upstream_report = "Client request-volume policy with no upstream defect allegation and no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/reads/subnets.py"
+
+[[divergences]]
+id = "D-082"
+upstream_symbol = "bittensor.settings.NETWORKS; bittensor.cli account-name lookup"
+python_behavior = "Only the preset labels finney, test, archive, devnet and local name a network, so `-n mainnet` and `-n testnet` are unknown networks. A name that is neither an address, a saved name nor a wallet fails with the bare I/O kind (\"cannot read wallet public key: entity not found\")."
+rtao_behavior = "`mainnet` and `testnet` resolve to the finney and test presets (same label, genesis pin, caches and endpoints). An unresolvable account name says it is not an ss58 address, a saved name or a wallet in the wallet directory, and points at --wallet, --wallet-path and `rtao wallet create`."
+rationale = "Users type the everyday network names, and a lookup failure should name what was looked up and how to fix it."
+decision = "Operator direction to break Python parity where it improves user experience (2026-10-19)"
+status = "active"
+class = "improved"
+milestone = "M10"
+pinning_tests = [
+  "rtao_client::network::tests::everyday_aliases_resolve_to_their_presets",
+  "rtao_cli::entrypoint_contract::historical_misc_alias_dispatches_and_rejects_bad_accounts_before_connection",
+]
+upstream_report = "CLI convenience with no upstream defect allegation and no new filing."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/settings.py"

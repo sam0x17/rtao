@@ -505,6 +505,47 @@ async fn turnover_bucket_uses_integer_refills_and_clamps_excess_availability() {
 }
 
 #[tokio::test]
+async fn subnet_listing_matches_the_map_scans_with_one_scan_and_one_lookup() {
+    let mut state = seed();
+    // The Python harness answers unwritten keys with defaults; a node reads
+    // them as null, which is what keyed lookups must treat as absent.
+    for item in [
+        "Tempo",
+        "Burn",
+        "SubnetworkN",
+        "MaxAllowedUids",
+        "SubnetTaoInEmission",
+    ] {
+        state.clear_default("SubtensorModule", item).unwrap();
+    }
+    let (client, chain) = client(state).await;
+    let scanned = (
+        reads::subnets(&client).await.unwrap(),
+        rtao_reads::reads::owner::subnet_names(&client)
+            .await
+            .unwrap(),
+        reads::subnet_tao_flows(&client).await.unwrap(),
+    );
+    let before = chain.requests().len();
+    let listing = reads::subnet_listing(&client).await.unwrap();
+    // Missing tempo, burn and count rows stay zero, exactly as the scans report.
+    assert_eq!(listing.subnets, scanned.0);
+    assert_eq!(listing.names, scanned.1);
+    assert_eq!(listing.tao_flows, scanned.2);
+    let requests = chain.requests();
+    let count = |method: &str| {
+        requests[before..]
+            .iter()
+            .filter(|request| request.method == method)
+            .count()
+    };
+    assert_eq!(count("state_getKeysPaged"), 1);
+    assert_eq!(count("state_queryStorageAt"), 2);
+    assert_eq!(count("state_getStorage"), 0);
+    client.close().await;
+}
+
+#[tokio::test]
 // upstream-e2e: sdk/bittensor-core/tests/e2e.rs::test_subnets_all_batched
 async fn subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows() {
     let (client, chain) = client(seed()).await;

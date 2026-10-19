@@ -288,7 +288,7 @@ async fn actual_prompted_price_caller_teaches_the_typed_native_read_without_auth
     assert_eq!(
         hints,
         format!(
-            "skip the prompts next time: rtao subnets price --netuid 7\nthe same read from the Rust SDK: {expected}\n"
+            "skip the prompts next time: rtao subnets price 7\nthe same read from the Rust SDK: {expected}\n"
         )
     );
     // Exercise the exact API named in the teaching line on the same fake view.

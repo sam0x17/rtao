@@ -853,29 +853,42 @@ pub async fn fetch_hyperparameters<V: View + ?Sized>(
     let mut params: Map<String, Value> = params.into_iter().collect();
     // The extracted storage table is the same source allowlist used by Python's
     // view. Do not substitute the setter's paired/newtype storage representation.
-    for row in OWNER_HYPERPARAMETERS {
-        if params.contains_key(row.name) {
-            continue;
-        }
-        let Some(item) = TABLE.storage.iter().find(|item| item.parameter == row.name) else {
-            continue;
-        };
-        let mut value = snapshot
-            .storage_dyn(
+    // Python reads each supplemental value separately; one coalesced query at
+    // the pinned block returns the same values.
+    let rows: Vec<_> = OWNER_HYPERPARAMETERS
+        .iter()
+        .filter(|row| !params.contains_key(row.name))
+        .filter_map(|row| {
+            TABLE
+                .storage
+                .iter()
+                .find(|item| item.parameter == row.name)
+                .map(|item| (row.name, item))
+        })
+        .collect();
+    let entries: Vec<_> = rows
+        .iter()
+        .map(|(_, item)| {
+            (
                 item.container,
                 item.name,
-                &[CoreValue::Uint(u128::from(netuid.0))],
+                vec![CoreValue::Uint(u128::from(netuid.0))],
             )
-            .await
-            .map_err(CliError::from)?
-            .to_json();
+        })
+        .collect();
+    let values = snapshot
+        .storage_dyn_many(&entries)
+        .await
+        .map_err(CliError::from)?;
+    for ((name, _), value) in rows.into_iter().zip(values) {
+        let mut value = value.to_json();
         if value.as_object().is_some_and(|fields| fields.len() == 1)
             && let Some(bits) = value.get("bits")
         {
             value = bits.clone();
         }
         if !value.is_null() {
-            params.insert(row.name.into(), value);
+            params.insert(name.into(), value);
         }
     }
     Ok(Some(params))

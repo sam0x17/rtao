@@ -303,6 +303,8 @@ impl AppContext {
         config.session.retry_forever = self.globals.retry_forever;
         config.config_store = self.config_store.clone();
         config.track_heads = self.track_heads;
+        // A read-only command reports one block and pins it only once.
+        config.read_at_one_block = !self.track_heads;
         Ok(config)
     }
     /// Connect, run real typed client work, then close on success or error.

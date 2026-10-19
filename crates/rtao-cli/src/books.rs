@@ -831,14 +831,14 @@ impl AccountLookup for FsAccountLookup {
         self.reference(wallet, "default")?
             .public_info(SignerRole::Coldkey)
             .map(|info| info.account.to_string())
-            .map_err(public_lookup_error)
+            .map_err(|error| public_lookup_error(error, wallet))
     }
 
     fn hotkey(&self, wallet: &str, hotkey: &str) -> Result<String, ResolveError> {
         self.reference(wallet, hotkey)?
             .public_info(SignerRole::Hotkey)
             .map(|info| info.account.to_string())
-            .map_err(public_lookup_error)
+            .map_err(|error| public_lookup_error(error, &format!("{wallet}/{hotkey}")))
     }
 
     fn candidates(&self) -> Vec<NameCandidate> {
@@ -887,10 +887,19 @@ impl AccountLookup for FsAccountLookup {
     }
 }
 
-fn public_lookup_error(error: WalletError) -> ResolveError {
+fn public_lookup_error(error: WalletError, name: &str) -> ResolveError {
     // Preserve a useful public cause without exposing absolute home paths or
     // passing keyfile/parser diagnostics into an account-name error.
     let message = match error {
+        // Python reports the bare I/O kind ("entity not found"); name what was
+        // looked up and how to fix it instead (D-082).
+        WalletError::Io { error, .. } if error.kind() == std::io::ErrorKind::NotFound => {
+            format!(
+                "{} is not an ss58 address, a saved name or a wallet in the wallet directory; \
+                 check --wallet and --wallet-path, or create it with `rtao wallet create`",
+                crate::output::terminal_text(name)
+            )
+        }
         WalletError::Io { error, .. } => format!("cannot read wallet public key: {}", error.kind()),
         WalletError::PublicKeyUnavailable(_) => "wallet public key is unavailable".into(),
         WalletError::InvalidName(message) => message,

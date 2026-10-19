@@ -16,6 +16,17 @@ use crate::generated::network_pins;
 /// failover pool behind the rtao primary.
 const PRIMARY_OVERRIDES: &[(&str, &str)] = &[("test", "wss://test.chain.opentensor.ai:443")];
 
+/// Everyday names accepted beside Python's preset labels (D-082).
+const ALIASES: &[(&str, &str)] = &[("mainnet", "finney"), ("testnet", "test")];
+
+/// The preset label an alias stands for (`mainnet` is `finney`), or the input.
+pub fn canonical_name(input: &str) -> &str {
+    ALIASES
+        .iter()
+        .find(|(alias, _)| *alias == input)
+        .map_or(input, |(_, name)| name)
+}
+
 /// A named network or explicit WebSocket endpoint.
 ///
 /// Known endpoint strings retain Python's corresponding network label. An
@@ -37,6 +48,7 @@ impl Network {
         input: &str,
         mut read: impl FnMut(&str) -> Option<String>,
     ) -> Result<Self, NetworkError> {
+        let input = canonical_name(input);
         let presets = py::NETWORKS
             .iter()
             .map(|(name, endpoint)| (*name, endpoint.resolve(&mut read)))
@@ -243,6 +255,20 @@ mod tests {
             assert_eq!(named.label(), *name);
             assert_eq!(named.genesis()?.is_some(), *name != "local");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn everyday_aliases_resolve_to_their_presets() -> Result<(), NetworkError> {
+        assert_eq!(
+            Network::resolve_with("mainnet", |_| None)?,
+            Network::resolve_with("finney", |_| None)?
+        );
+        let testnet = Network::resolve_with("testnet", |_| None)?;
+        assert_eq!(testnet.label(), "test");
+        assert_eq!(testnet, Network::resolve_with("test", |_| None)?);
+        assert_eq!(canonical_name("devnet"), "devnet");
+        assert!(Network::resolve_with("Mainnet", |_| None).is_err());
         Ok(())
     }
 
