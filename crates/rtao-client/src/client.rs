@@ -31,6 +31,14 @@ pub struct ClientConfig {
     pub startup_timeout: Duration,
     /// Start best/finalized subscriptions and runtime upgrade monitoring.
     pub track_heads: bool,
+    /// Serve every best-block read made through the client itself from the
+    /// block of its first such read (rtao addition).
+    ///
+    /// A one-shot read command then reports one consistent block and skips a
+    /// header request per read. Leave it off for long-lived clients and for
+    /// submissions, which need fresh reads. Explicit snapshots and other block
+    /// references are unaffected.
+    pub read_at_one_block: bool,
     /// Allow the exact-shape borrowed metagraph decoder for this connection.
     ///
     /// Setting this to false applies to the client, its snapshots and dynamic
@@ -59,6 +67,7 @@ impl ClientConfig {
                 .map(crate::config::Store::new),
             startup_timeout: Duration::from_secs(30),
             track_heads: true,
+            read_at_one_block: false,
             metagraph_view: true,
         })
     }
@@ -90,6 +99,8 @@ struct ClientInner {
     heads: Option<crate::HeadTracker>,
     token_symbols: tokio::sync::RwLock<std::collections::BTreeMap<rtao_primitives::NetUid, String>>,
     hash_cache: tokio::sync::Mutex<HashCache>,
+    /// The block every best read uses under `read_at_one_block`.
+    best_pin: tokio::sync::Mutex<Option<crate::PinnedBlock>>,
     cancelled: CancellationToken,
 }
 
@@ -266,6 +277,7 @@ impl Client {
             heads,
             token_symbols: tokio::sync::RwLock::new(std::collections::BTreeMap::new()),
             hash_cache: tokio::sync::Mutex::new(HashCache::default()),
+            best_pin: tokio::sync::Mutex::new(None),
         });
         let client = Self {
             inner: inner.clone(),
@@ -680,9 +692,29 @@ impl Client {
         self.inner.config.head_policy
     }
 
+    /// Whether head reads through the client share the first read's block.
+    pub(crate) fn reads_at_one_block(&self) -> bool {
+        self.inner.config.read_at_one_block
+    }
+
     /// Resolve a requested block once and retain its parent-selected runtime.
     pub async fn at(&self, block: crate::BlockRef) -> Result<crate::Snapshot, ClientError> {
         self.ensure_open()?;
+        if matches!(block, crate::BlockRef::Best) && self.reads_at_one_block() {
+            // Holding the slot while resolving also makes concurrent first
+            // reads share one request.
+            let mut slot = self.inner.best_pin.lock().await;
+            if let Some(pinned) = slot.as_ref() {
+                return Ok(crate::Snapshot::new(self.clone(), pinned.clone()));
+            }
+            let snapshot = self.resolve_at(block).await?;
+            *slot = Some(snapshot.block().clone());
+            return Ok(snapshot);
+        }
+        self.resolve_at(block).await
+    }
+
+    async fn resolve_at(&self, block: crate::BlockRef) -> Result<crate::Snapshot, ClientError> {
         // Public endpoints are paced, so the best header is read in one request
         // with its hash derived from the encoding, and the runtime lookup reuses
         // the header's parent instead of fetching the header again.
@@ -862,6 +894,38 @@ mod tests {
         config.config_store = None;
         config.session.rate_limit = None;
         config
+    }
+
+    #[tokio::test]
+    async fn read_at_one_block_serves_every_head_read_from_the_first() {
+        let raw = FakeChain::from_state(FakeState::default());
+        let mut cfg = config("local");
+        cfg.track_heads = false;
+        cfg.read_at_one_block = true;
+        let client = Client::from_rpc(RpcClient::new(raw.clone()), cfg)
+            .await
+            .unwrap();
+        let headers = || {
+            raw.requests()
+                .iter()
+                .filter(|request| request.method == "chain_getHeader")
+                .count()
+        };
+        let first = View::pin(&client).await.unwrap().block().hash;
+        raw.advance(3).unwrap();
+        let (again, best) = futures::join!(View::pin(&client), client.at(crate::BlockRef::Best));
+        assert_eq!(again.unwrap().block().hash, first);
+        assert_eq!(best.unwrap().block().hash, first);
+        // Startup's display-symbol scan already pinned the block the command reuses.
+        assert_eq!(
+            headers(),
+            1,
+            "one header request for startup and the command"
+        );
+        // Other block references still resolve live.
+        let finalized = client.at(crate::BlockRef::Finalized).await.unwrap();
+        assert_ne!(finalized.block().hash, first);
+        client.close().await;
     }
 
     #[tokio::test]

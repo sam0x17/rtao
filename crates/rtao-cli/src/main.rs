@@ -808,7 +808,16 @@ async fn main() -> ExitCode {
                 if error.code == 0 {
                     print!("{}", error.message);
                 } else {
-                    eprintln!("rtao: {}", terminal_text(&error.message));
+                    // Keep the message's own line breaks (clap usage errors span
+                    // several lines) while still escaping controls within lines.
+                    let text = error
+                        .message
+                        .trim_end_matches('\n')
+                        .split('\n')
+                        .map(terminal_text)
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    eprintln!("rtao: {text}");
                 }
             }
             ExitCode::from(cancel.exit_code(error.code))

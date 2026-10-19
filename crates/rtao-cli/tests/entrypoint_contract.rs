@@ -162,7 +162,7 @@ fn m6_families_and_historical_aliases_reach_real_leaf_help()
         ),
         (
             vec!["subnet", "hyperparameters", "--help"],
-            vec!["<netuid>", "--name", "--json"],
+            vec!["[NETUID]", "--netuid", "--name", "--json"],
         ),
         (
             vec!["conviction", "--help"],
@@ -242,7 +242,10 @@ fn historical_misc_alias_dispatches_and_rejects_bad_accounts_before_connection()
     assert!(output.stdout.is_empty());
     let error = String::from_utf8(output.stderr)?;
     assert!(!error.contains("unknown command"), "{error}");
-    assert!(error.contains("wallet public key"), "{error}");
+    assert!(
+        error.contains("missing-hotkey") && error.contains("rtao wallet create"),
+        "{error}"
+    );
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())
 }
@@ -342,7 +345,9 @@ fn doctor_missing_patch_fails_with_the_exact_required_patch_through_the_binary()
     let expected_patch =
         format!("[patch.crates-io]\nw3f-bls = {{ git = {repository:?}, tag = {tag:?} }}");
     assert!(diagnostic.contains("the final workspace needs this exact core-matching patch"));
-    assert!(diagnostic.contains(&rtao_cli::output::terminal_text(&expected_patch).into_owned()));
+    // Line breaks are kept so the patch can be pasted; controls within a line
+    // stay escaped.
+    assert!(diagnostic.contains(&expected_patch), "{diagnostic}");
     assert!(diagnostic.contains("root Cargo.toml"));
     Ok(())
 }

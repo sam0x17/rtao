@@ -56,7 +56,7 @@ pub use events::{Event, EventRecord, Events, Phase, RawEvent};
 pub use head::{
     BlockHeader, BlockStream, Finality, HeadError, HeadEvent, HeadProvider, HeadTracker, Reorg,
 };
-pub use network::{Network, NetworkError};
+pub use network::{Network, NetworkError, canonical_name as canonical_network_name};
 pub use nonce::{NonceLease, NonceManager};
 pub use offline::{PublicPrepareOptions, UntrustedUnsignedExtrinsic};
 pub use read_decode::{ReadValue, decode_typed};
@@ -74,6 +74,7 @@ pub use submit::{
 };
 pub use view::{
     BlockRef, DynView, Fetch, FromStorage, HeadPolicy, IntoCoreValues, KeyArgs, PinnedBlock,
-    ReadKind, ReadObserver, ReadPlan, ReadSpec, ReadTouch, Snapshot, View, ViewExt,
+    PresencePlan, ReadKind, ReadObserver, ReadPlan, ReadSpec, ReadTouch, Snapshot, View, ViewExt,
+    decode_present,
 };
 pub use waits::{EpochEvent, WaitError};

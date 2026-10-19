@@ -2796,6 +2796,33 @@
           "rtao_reads::reads::subnets::tests::utf8_text_retains_invalid_nonbyte_sequences_and_decoded_0x_text",
           "rtao_reads::reads::subnets::tests::utf8_text_hex_accepts_vertical_tabs_and_keeps_non_hex_text"
         ]
+      },
+      {
+        "id": "D-080",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::subnets_commands::inspection_arguments_match_python_and_hparams_alias_stays_hidden",
+          "rtao_cli::cli_source_tree::every_enabled_source_registration_and_owned_spelling_exists_in_installed_tree"
+        ]
+      },
+      {
+        "id": "D-081",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_reads::m6_root::subnet_listing_matches_the_map_scans_with_one_scan_and_one_lookup",
+          "rtao_client::client::tests::read_at_one_block_serves_every_head_read_from_the_first"
+        ]
+      },
+      {
+        "id": "D-082",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::network::tests::everyday_aliases_resolve_to_their_presets",
+          "rtao_cli::entrypoint_contract::historical_misc_alias_dispatches_and_rejects_bad_accounts_before_connection"
+        ]
       }
     ],
     "e2e": [

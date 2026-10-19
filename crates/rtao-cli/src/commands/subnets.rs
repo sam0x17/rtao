@@ -12,7 +12,6 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use futures::TryStreamExt;
 use rtao::{
     client::{BlockRef, Client, ViewExt},
     primitives::{AccountId, NetUid, hyperparams::RawInteger, ratio::integer_division},
@@ -95,31 +94,25 @@ pub fn command() -> Result<Command, CliError> {
         .subcommand(generated::intent_command("register_subnet")?.name("create"))
         .subcommand(graph)
         .subcommand(Command::new("list").about("List subnets, highest emission first."))
-        .subcommand(inspect_command("show", "Inspect one subnet.", true))
+        .subcommand(inspect_command("show", "Inspect one subnet."))
         .subcommand(
-            inspect_command("hyperparameters", "Show subnet hyperparameters.", true)
+            inspect_command("hyperparameters", "Show subnet hyperparameters.")
                 .alias("hparams")
                 .arg(Arg::new("name").long("name")),
         )
         .subcommand(inspect_command(
             "burn-cost",
             "Show the hotkey registration cost.",
-            true,
         ))
         .subcommand(Command::new("create-cost").about("Show the subnet registration cost."))
         .subcommand(inspect_command(
             "price",
             "Show the spot TAO price of alpha.",
-            false,
         ))
         .subcommand(
-            inspect_command(
-                "conviction",
-                "Show per-hotkey subnet ownership conviction.",
-                false,
-            )
-            .arg(Arg::new("hotkey").long("hotkey"))
-            .arg(Arg::new("all").long("all").action(ArgAction::SetTrue)),
+            inspect_command("conviction", "Show per-hotkey subnet ownership conviction.")
+                .arg(Arg::new("hotkey").long("hotkey"))
+                .arg(Arg::new("all").long("all").action(ArgAction::SetTrue)),
         );
     for name in [
         "list",
@@ -135,15 +128,29 @@ pub fn command() -> Result<Command, CliError> {
     Ok(command)
 }
 
-fn inspect_command(name: &'static str, about: &'static str, positional: bool) -> Command {
-    let arg = Arg::new("netuid")
-        .required(true)
-        .value_parser(clap::value_parser!(u16).range(0..4096));
-    Command::new(name).about(about).arg(if positional {
-        arg.index(1)
-    } else {
-        arg.long("netuid")
-    })
+/// One subnet inspection, taking the subnet as `<netuid>` or `--netuid`.
+///
+/// Python accepts one spelling per command (positional for `show`, an option
+/// for `price`); every rtao inspection accepts both (D-080).
+fn inspect_command(name: &'static str, about: &'static str) -> Command {
+    let netuid = || clap::value_parser!(u16).range(0..4096);
+    Command::new(name)
+        .about(about)
+        .arg(
+            Arg::new("netuid")
+                .index(1)
+                .value_name("NETUID")
+                .value_parser(netuid())
+                .required_unless_present("netuid_option")
+                .conflicts_with("netuid_option"),
+        )
+        .arg(
+            Arg::new("netuid_option")
+                .long("netuid")
+                .value_name("NETUID")
+                .value_parser(netuid())
+                .help("Same as the positional subnet"),
+        )
 }
 
 /// Public, signer-free subnet inspection inputs.
@@ -182,9 +189,9 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
         }
         "metagraph" => Ok(generated::read_reserved(ReadName::Metagraph)),
         "list" | "create-cost" => Ok(vec![]),
-        "show" | "burn-cost" | "price" => Ok(vec!["netuid"]),
-        "hyperparameters" => Ok(vec!["netuid", "name"]),
-        "conviction" => Ok(vec!["netuid", "hotkey", "all"]),
+        "show" | "burn-cost" | "price" => Ok(vec!["netuid", "netuid_option"]),
+        "hyperparameters" => Ok(vec!["netuid", "netuid_option", "name"]),
+        "conviction" => Ok(vec!["netuid", "netuid_option", "hotkey", "all"]),
         _ => Err(CliError::input(format!("unknown subnets command {name:?}"))),
     }
 }
@@ -239,10 +246,9 @@ impl Request {
                     .flatten();
                 Ok(Self::Inspect(InspectRequest {
                     command: name.into(),
-                    netuid: matches
-                        .try_get_one::<u16>("netuid")
-                        .ok()
-                        .flatten()
+                    netuid: ["netuid", "netuid_option"]
+                        .into_iter()
+                        .find_map(|id| matches.try_get_one::<u16>(id).ok().flatten())
                         .copied()
                         .map(NetUid),
                     name: matches
@@ -490,32 +496,34 @@ async fn execute_inspect(
         }
         "show" => {
             let netuid = netuid()?;
-            if !at
-                .storage(&st::NETWORKS_ADDED, (netuid,))
+            // Python reads these one at a time; one coalesced query at the
+            // pinned block returns the same values.
+            let (added, tempo, burn, neuron_count, identity, owner, hotkey, registered, max) = at
+                .fetch((
+                    st::NETWORKS_ADDED.at((netuid,)),
+                    st::TEMPO.at((netuid,)),
+                    st::BURN.at((netuid,)),
+                    st::SUBNETWORK_N.at((netuid,)),
+                    st::SUBNET_IDENTITIES_V3.at((netuid,)),
+                    st::SUBNET_OWNER.at((netuid,)),
+                    st::SUBNET_OWNER_HOTKEY.at((netuid,)),
+                    st::NETWORK_REGISTERED_AT.at((netuid,)),
+                    st::MAX_ALLOWED_UIDS.at((netuid,)),
+                ))
                 .await
-                .map_err(CliError::from)?
-            {
+                .map_err(CliError::from)?;
+            if !added {
                 return Err(failure(format!("subnet {netuid} does not exist")));
             }
-            let info = m6_root::subnet(&at, netuid).await.map_err(CliError::from)?;
-            let identity = owner::subnet_identity(&at, netuid)
-                .await
-                .map_err(CliError::from)?;
-            let owner = at
-                .storage(&st::SUBNET_OWNER, (netuid,))
-                .await
-                .map_err(CliError::from)?;
-            let hotkey = at
-                .storage(&st::SUBNET_OWNER_HOTKEY, (netuid,))
-                .await
-                .map_err(CliError::from)?;
-            let registered = at
-                .storage(&st::NETWORK_REGISTERED_AT, (netuid,))
-                .await
-                .map_err(CliError::from)?;
-            let max = at
-                .storage(&st::MAX_ALLOWED_UIDS, (netuid,))
-                .await
+            let info = m6_root::SubnetInfo {
+                netuid,
+                tempo,
+                burn: rtao::primitives::DynBalance::from_rao(burn.0, NetUid::ROOT),
+                neuron_count,
+            };
+            let identity = identity
+                .map(owner::normalize_identity)
+                .transpose()
                 .map_err(CliError::from)?;
             let name = identity
                 .as_ref()
@@ -601,42 +609,18 @@ async fn execute_inspect(
             Ok(())
         }
         "list" => {
-            let mut infos = m6_root::subnets(&at).await.map_err(CliError::from)?;
-            let names = owner::subnet_names(&at).await.map_err(CliError::from)?;
+            let listing = m6_root::subnet_listing(&at).await.map_err(CliError::from)?;
+            let names = listing.names;
             output
                 .update_subnet_names(names.iter().map(|(id, name)| (id.0, name.clone())))
                 .map_err(failure)?;
             let prices = m6_staking::alpha_prices(&at)
                 .await
                 .map_err(CliError::from)?;
-            let flows = m6_root::subnet_tao_flows(&at)
-                .await
-                .map_err(CliError::from)?;
-            let max = at
-                .storage_iter(&st::MAX_ALLOWED_UIDS, ())
-                .try_collect::<Vec<_>>()
-                .await
-                .map_err(CliError::from)?;
-            let emissions = at
-                .storage_iter(&st::SUBNET_TAO_IN_EMISSION, ())
-                .try_collect::<Vec<_>>()
-                .await
-                .map_err(CliError::from)?;
-            let key = |keys: &[rtao::core::DynValue]| -> Result<NetUid, CliError> {
-                keys.last()
-                    .and_then(rtao::core::DynValue::as_u128)
-                    .and_then(|v| u16::try_from(v).ok())
-                    .map(NetUid)
-                    .ok_or_else(|| failure("subnet map key is not a native NetUid"))
-            };
-            let max = max
-                .into_iter()
-                .map(|(k, v)| Ok((key(&k)?, v)))
-                .collect::<Result<BTreeMap<_, _>, CliError>>()?;
-            let emissions = emissions
-                .into_iter()
-                .map(|(k, v)| Ok((key(&k)?, v.0)))
-                .collect::<Result<BTreeMap<_, _>, CliError>>()?;
+            let flows = listing.tao_flows;
+            let max = listing.max_uids;
+            let emissions = listing.tao_in_emission;
+            let mut infos = listing.subnets;
             infos.sort_by_key(|i| {
                 (
                     std::cmp::Reverse(emissions.get(&i.netuid).copied().unwrap_or(0)),

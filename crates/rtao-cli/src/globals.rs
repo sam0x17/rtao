@@ -403,6 +403,7 @@ impl Globals {
                 Some("BT_NETWORK"),
                 Some(rtao_catalog::py::DEFAULT_NETWORK.into()),
             )
+            .map(|network| rtao::client::canonical_network_name(&network).to_owned())
             .ok_or("network is missing")?,
             wallet_name: resolve("wallet", Some("BT_WALLET"), Some("default".into()))
                 .ok_or("wallet is missing")?,
@@ -524,7 +525,7 @@ impl Globals {
         };
         let enabled = |id: &str| !reserved.contains(&id) && yes(command, id);
         if let Some(v) = value("network") {
-            self.network = v;
+            self.network = rtao::client::canonical_network_name(&v).to_owned();
         }
         if let Some(v) = value("wallet") {
             self.wallet_name = v;

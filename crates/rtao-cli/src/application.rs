@@ -471,11 +471,15 @@ fn parse_required(
     loop {
         for arg in selected_command
             .get_arguments()
-            .filter(|arg| arg.is_required_set())
+            .filter(|arg| arg.is_required_set() || doubled_positional(selected_command, arg))
         {
             if selected_matches
                 .value_source(arg.get_id().as_str())
                 .is_some()
+                || (doubled_positional(selected_command, arg)
+                    && selected_matches
+                        .value_source(&format!("{}_option", arg.get_id()))
+                        .is_some())
             {
                 continue;
             }
@@ -958,6 +962,17 @@ fn required_value_placeholder(arg: &Arg) -> Option<String> {
                 .join("|")
         })
     }
+}
+
+/// A positional that an `<id>_option` twin can also supply (`subnets price 7`
+/// or `--netuid 7`). Neither is required alone, but one of them is, so a
+/// prompting session asks for the positional when both are absent.
+fn doubled_positional(command: &Command, arg: &Arg) -> bool {
+    let twin = format!("{}_option", arg.get_id());
+    arg.is_positional()
+        && command
+            .get_arguments()
+            .any(|other| other.get_id().as_str() == twin)
 }
 
 fn relax_required(mut command: Command) -> Command {

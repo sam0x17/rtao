@@ -465,6 +465,17 @@ impl FakeState {
         Ok(())
     }
 
+    /// Stop answering an item's unwritten keys with a default, as a real node
+    /// does: absent keys then read as `null`.
+    pub fn clear_default(&mut self, pallet: &str, item: &str) -> Result<(), CoreError> {
+        let info = self
+            .runtime
+            .storage_entry(pallet, item)
+            .ok_or_else(|| CoreError::NotInRuntime(format!("storage {pallet}.{item}")))?;
+        self.storage_defaults.remove(&storage_prefix(info));
+        Ok(())
+    }
+
     /// Encode runtime-API output for any encoded input to this method.
     pub fn seed_runtime(&mut self, api: &str, method: &str, value: Value) -> Result<(), CoreError> {
         let info = rtao_core::ops::runtime_api::runtime_api_method(&self.runtime, api, method)?;

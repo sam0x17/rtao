@@ -353,9 +353,15 @@ impl View for Client {
         self.at(self.head_policy().into()).await
     }
     async fn runtime(&self) -> Result<RuntimeHandle, ClientError> {
+        if self.reads_at_one_block() {
+            return Ok(View::pin(self).await?.block.runtime);
+        }
         self.runtime_for(None).await
     }
     async fn storage_raw(&self, key: &[u8]) -> Result<Option<Bytes>, ClientError> {
+        if self.reads_at_one_block() {
+            return View::storage_raw(&View::pin(self).await?, key).await;
+        }
         storage_raw(self, key, None).await
     }
     async fn storage_raw_many(&self, keys: &[Vec<u8>]) -> Result<Vec<Option<Bytes>>, ClientError> {
@@ -368,9 +374,15 @@ impl View for Client {
         count: u32,
         start: Option<&[u8]>,
     ) -> Result<Vec<Vec<u8>>, ClientError> {
+        if self.reads_at_one_block() {
+            return View::keys_paged(&View::pin(self).await?, prefix, count, start).await;
+        }
         keys_paged(self, prefix, count, start, None).await
     }
     async fn state_call(&self, method: &str, args: &[u8]) -> Result<Bytes, ClientError> {
+        if self.reads_at_one_block() {
+            return View::state_call(&View::pin(self).await?, method, args).await;
+        }
         state_call(self, method, args, None).await
     }
 }
@@ -853,6 +865,68 @@ impl Fetch for ReadPlan {
     }
 }
 
+/// A coalesced plan that keeps each entry's presence (rtao addition).
+///
+/// [`ReadPlan`] and typed queries apply live storage defaults, which suits a
+/// single lookup but cannot replace a complete map scan, where an absent entry
+/// is simply not listed. Fetching this plan returns the raw value or `None`
+/// for each pushed query, in order; decode present bytes with
+/// [`decode_present`]. Many per-key lookups across several maps then cost one
+/// coalesced storage request instead of a paged scan per map.
+#[derive(Clone, Debug, Default)]
+pub struct PresencePlan {
+    queries: Vec<ReadSpec>,
+}
+impl PresencePlan {
+    /// Create an empty plan; fetching it performs no storage RPC.
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Append one typed query.
+    pub fn push<K: KeyArgs + 'static, V: FromStorage>(
+        &mut self,
+        query: rtao_runtime::StorageQuery<K, V>,
+    ) {
+        self.queries.extend(query.queries());
+    }
+    /// Number of queries.
+    pub fn len(&self) -> usize {
+        self.queries.len()
+    }
+    /// Whether this plan has no queries.
+    pub fn is_empty(&self) -> bool {
+        self.queries.is_empty()
+    }
+}
+impl Fetch for PresencePlan {
+    type Output = Vec<Option<Bytes>>;
+    fn queries(&self) -> Vec<ReadSpec> {
+        self.queries.clone()
+    }
+    fn decode(
+        self,
+        _runtime: &RuntimeHandle,
+        values: &[Option<Bytes>],
+    ) -> Result<Self::Output, ClientError> {
+        if self.queries.len() != values.len() {
+            return Err(ClientError::Protocol(
+                "coalesced storage result length differs from its plan".into(),
+            ));
+        }
+        Ok(values.to_vec())
+    }
+}
+
+/// Decode one present storage value fetched through a [`PresencePlan`].
+pub fn decode_present<K: KeyArgs, V: FromStorage>(
+    runtime: &RuntimeHandle,
+    descriptor: &StorageDescriptor<K, V>,
+    raw: &[u8],
+) -> Result<V::Value, ClientError> {
+    let info = storage_info(runtime, descriptor.surface())?;
+    <V::Value as crate::read_decode::ReadValue>::decode(runtime, info.value_type, raw)
+}
+
 fn decode_error(what: impl Into<std::borrow::Cow<'static, str>>, source: CoreError) -> ClientError {
     ClientError::Decode {
         what: what.into(),
@@ -1307,6 +1381,55 @@ pub trait ViewExt: View {
             } else {
                 decode()
             }
+        }
+    }
+    /// [`Self::storage_dyn`] for several entries in one coalesced query.
+    ///
+    /// Each entry is `(pallet, item, keys)`; results follow input order with
+    /// the same default handling as single lookups.
+    fn storage_dyn_many(
+        &self,
+        entries: &[(&str, &str, Vec<Value>)],
+    ) -> impl Future<Output = Result<Vec<DynValue>, ClientError>> + Send {
+        async move {
+            let snapshot = View::pin(self).await?;
+            let runtime = snapshot.block.runtime.clone();
+            let mut infos = Vec::with_capacity(entries.len());
+            let mut keys = Vec::with_capacity(entries.len());
+            for (pallet, item, args) in entries {
+                let info = runtime
+                    .storage_entry(pallet, item)
+                    .ok_or_else(|| CoreError::NotInRuntime(format!("storage {pallet}.{item}")))?
+                    .clone();
+                if args.len() != info.key_types.len() {
+                    return Err(ClientError::Protocol(format!(
+                        "{pallet}.{item} expects {} key arguments, got {}",
+                        info.key_types.len(),
+                        args.len()
+                    )));
+                }
+                keys.push(
+                    runtime
+                        .core()
+                        .storage_key(&info, args)
+                        .map_err(CoreError::from)?,
+                );
+                infos.push(info);
+            }
+            let values = View::storage_raw_many(&snapshot, &keys).await?;
+            infos
+                .iter()
+                .zip(&values)
+                .map(|(info, raw)| {
+                    rtao_core::ops::storage::decode_storage_bytes(
+                        runtime.core(),
+                        info,
+                        raw.as_deref(),
+                    )
+                    .map(DynValue::new)
+                    .map_err(|error| decode_error("storage", error.into()))
+                })
+                .collect()
         }
     }
     /// Call a named runtime API with exact Python output shapes.

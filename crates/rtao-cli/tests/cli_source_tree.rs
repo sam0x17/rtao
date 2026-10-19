@@ -124,8 +124,18 @@ fn every_enabled_source_registration_and_owned_spelling_exists_in_installed_tree
                 failures.push(format!("{} lacks {spelling}", registration.path));
             }
         }
+        // D-080: a positional that doubles an option of the same name (`subnets
+        // price 1` beside `--netuid 1`) is an rtao addition, not a mismatch.
+        let doubled = command
+            .get_positionals()
+            .filter(|arg| {
+                let id = arg.get_id().as_str();
+                !registration.positionals.iter().any(|name| name == id)
+                    && has_option(command, &format!("--{id}"))
+            })
+            .count();
         if registration.generated_intent.is_none()
-            && command.get_positionals().count() != registration.positionals.len()
+            && command.get_positionals().count() - doubled != registration.positionals.len()
         {
             failures.push(format!(
                 "{} has {} positionals; Python declares {:?}",

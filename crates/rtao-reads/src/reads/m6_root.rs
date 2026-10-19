@@ -567,6 +567,108 @@ pub async fn subnets<V: View + ?Sized>(view: &V) -> Result<Vec<SubnetInfo>, Read
         .collect())
 }
 
+/// Everything the subnet listing shows, keyed by subnet.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SubnetListing {
+    /// Added subnets in native order, as [`subnets`] returns them.
+    pub subnets: Vec<SubnetInfo>,
+    /// Non-empty identity names, as [`owner::subnet_names`] returns them.
+    pub names: BTreeMap<NetUid, String>,
+    /// Neuron capacity of each subnet that records one.
+    pub max_uids: BTreeMap<NetUid, u16>,
+    /// TAO injected per block, in rao, for each subnet that records it.
+    pub tao_in_emission: BTreeMap<NetUid, u64>,
+    /// Recorded EMA TAO flows, as [`subnet_tao_flows`] returns them.
+    pub tao_flows: BTreeMap<NetUid, f64>,
+}
+
+/// The subnet listing from one map scan plus one coalesced lookup (rtao addition).
+///
+/// Python scans each per-subnet map completely, which on a paced public
+/// endpoint costs a key page and a value query per map. Here only
+/// `NetworksAdded` is scanned; every other column is looked up by netuid in a
+/// single coalesced query at the same block. Values match the scans exactly:
+/// an absent entry stays absent rather than taking the storage default.
+pub async fn subnet_listing<V: View + ?Sized>(view: &V) -> Result<SubnetListing, ReadError> {
+    let snapshot = view.pin().await?;
+    let added = snapshot
+        .storage_iter(&st::NETWORKS_ADDED, ())
+        .try_collect::<Vec<_>>()
+        .await?;
+    let mut netuids = BTreeSet::new();
+    for (keys, is_added) in added {
+        if is_added {
+            netuids.insert(subnet_key(&keys, "SubtensorModule.NetworksAdded")?);
+        }
+    }
+    const COLUMNS: usize = 7;
+    let mut plan = rtao_client::PresencePlan::new();
+    for &netuid in &netuids {
+        plan.push(st::TEMPO.at((netuid,)));
+        plan.push(st::BURN.at((netuid,)));
+        plan.push(st::SUBNETWORK_N.at((netuid,)));
+        plan.push(st::MAX_ALLOWED_UIDS.at((netuid,)));
+        plan.push(st::SUBNET_TAO_IN_EMISSION.at((netuid,)));
+        plan.push(st::SUBNET_EMA_TAO_FLOW.at((netuid,)));
+        plan.push(st::SUBNET_IDENTITIES_V3.at((netuid,)));
+    }
+    let raw = snapshot.fetch(plan).await?;
+    let runtime = &snapshot.block().runtime;
+    let mut listing = SubnetListing::default();
+    for (&netuid, row) in netuids.iter().zip(raw.chunks(COLUMNS)) {
+        let [tempo, burn, count, max, emission, flow, identity] = row else {
+            return Err(surface("SubnetListing", "coalesced row is incomplete"));
+        };
+        let tempo = tempo
+            .as_deref()
+            .map(|raw| rtao_client::decode_present(runtime, &st::TEMPO, raw))
+            .transpose()?;
+        let burn = burn
+            .as_deref()
+            .map(|raw| rtao_client::decode_present(runtime, &st::BURN, raw))
+            .transpose()?;
+        let count = count
+            .as_deref()
+            .map(|raw| rtao_client::decode_present(runtime, &st::SUBNETWORK_N, raw))
+            .transpose()?;
+        if let Some(raw) = max.as_deref() {
+            listing.max_uids.insert(
+                netuid,
+                rtao_client::decode_present(runtime, &st::MAX_ALLOWED_UIDS, raw)?,
+            );
+        }
+        if let Some(raw) = emission.as_deref() {
+            let value = rtao_client::decode_present(runtime, &st::SUBNET_TAO_IN_EMISSION, raw)?;
+            listing.tao_in_emission.insert(netuid, value.0);
+        }
+        if let Some(raw) = flow.as_deref() {
+            let (_, ema) = rtao_client::decode_present(runtime, &st::SUBNET_EMA_TAO_FLOW, raw)?;
+            listing.tao_flows.insert(netuid, ema.to_f64());
+        }
+        if let Some(raw) = identity.as_deref() {
+            let record = owner::normalize_identity(rtao_client::decode_present(
+                runtime,
+                &st::SUBNET_IDENTITIES_V3,
+                raw,
+            )?)?;
+            if let Some(name) = record
+                .get("subnet_name")
+                .and_then(serde_json::Value::as_str)
+                .filter(|name| !name.is_empty())
+            {
+                listing.names.insert(netuid, name.to_owned());
+            }
+        }
+        listing.subnets.push(SubnetInfo {
+            netuid,
+            tempo: tempo.unwrap_or(0),
+            burn: DynBalance::from_rao(burn.map_or(0, |burn| burn.0), NetUid::ROOT),
+            neuron_count: count.unwrap_or(0),
+        });
+    }
+    Ok(listing)
+}
+
 /// Recorded signed EMA TAO flows in rao per block, retaining fractional rao.
 // py: sdk/python/bittensor/reads/subnets.py:93-111
 pub async fn subnet_tao_flows<V: View + ?Sized>(

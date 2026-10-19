@@ -288,7 +288,8 @@ pub async fn subnet_emission_enabled<V: View + ?Sized>(
     ))
 }
 
-fn normalize_identity<T: models::ToDynamic>(record: T) -> Result<JsonValue, ReadError> {
+/// Render an identity record with its byte fields decoded to text.
+pub fn normalize_identity<T: models::ToDynamic>(record: T) -> Result<JsonValue, ReadError> {
     let mut record = DynValue::new(record.to_dynamic()).to_json();
     let fields = record
         .as_object_mut()
