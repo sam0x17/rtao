@@ -27,14 +27,11 @@ tag = "v481"
 commit = "6a972693ae9580541225bd37696ac2fee26b8ae9"
 spec_version = 481
 python_package_version = "11.3.1.dev0"
-release = "unreleased"
-source_branch = "testnet"
-network = "testnet"
 
 [localnet]
 image = "ghcr.io/raofoundation/subtensor-localnet"
-pinned = { tag = "sha-6a972693ae9580541225bd37696ac2fee26b8ae9", digest = "sha256:e5d3f7c3ceb8c380033d03df17505f6d008ef43f877d88edac41b005d2f8bf9f" }
-mainnet = { tag = "mainnet", digest = "sha256:743922761409312d562d9338addd7e4c621aac87c16b5db2d698c5b3651e6051" }
+pinned = { tag = "v481", digest = "sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e" }
+mainnet = { tag = "mainnet", digest = "sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e" }
 testnet = { tag = "testnet", digest = "sha256:e5d3f7c3ceb8c380033d03df17505f6d008ef43f877d88edac41b005d2f8bf9f" }
 devnet = { tag = "devnet", digest = "sha256:111ebdbead406a3c11a6c357caf3d67106e030c83e7ce2fa83b35ba16bacd45e" }
 main = { tag = "main", digest = "sha256:36e323ef303711c3d6447b70615a09ba122fc78f998b6e94587f2c11c5476432" }
@@ -45,18 +42,18 @@ main = { tag = "main", digest = "sha256:36e323ef303711c3d6447b70615a09ba122fc78f
 genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
 genesis_endpoint = "https://entrypoint-finney.opentensor.ai:443"
 
+[networks.finney.metadata]
+spec = 481
+code_hash = "0x5fb504c1c793a3ddb5456f189ddef98b5146853aea6ff998501f1b6c6eb720bc"
+finalized_head = "0x80f3788feefb5453a794a70bf242e41e0e1fc4a94adc2405b55bc6782b09c149"
+v15 = "vendor/metadata/finney/481.v15.scale"
+v15_sha256 = "025da0822b26fd7dbff2e04fe0a88e2ee1073ae38d96ad4730c3724aa01af0f0"
+v16 = "vendor/metadata/finney/481.v16.scale"
+v16_sha256 = "0fce0674c994e6de24a4ee496f9a404bd64274f30f93a934a41de8a24fed170a"
+
 [networks.testnet]
 genesis = "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105"
 genesis_endpoint = "https://test.finney.opentensor.ai:443"
-
-[networks.testnet.metadata]
-spec = 481
-code_hash = "0x5fb504c1c793a3ddb5456f189ddef98b5146853aea6ff998501f1b6c6eb720bc"
-finalized_head = "0x0e95c496689be181f358bfbb1848f8b4ed89fbcf64e85d3cf83044f19508e94a"
-v15 = "vendor/metadata/testnet/481.v15.scale"
-v15_sha256 = "025da0822b26fd7dbff2e04fe0a88e2ee1073ae38d96ad4730c3724aa01af0f0"
-v16 = "vendor/metadata/testnet/481.v16.scale"
-v16_sha256 = "0fce0674c994e6de24a4ee496f9a404bd64274f30f93a934a41de8a24fed170a"
 
 [networks.devnet]
 genesis = "0x077899043eb684c5277b6814a39161f4ce072b45e782e12c81a521c63fb4f3e5"
