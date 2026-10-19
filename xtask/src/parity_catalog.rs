@@ -293,7 +293,8 @@ fn schema_kinds(schema: &Value) -> Result<BTreeSet<&str>> {
 // Check the catalog's normalized kind, rather than copying the metadata width
 // resolver from regen. Regeneration checks exact integer widths. Flexible
 // Python carriers retain their documented catalog kind here: WeightsArg also
-// accepts mappings, and Value backs the Python dict and numeric/text unions.
+// accepts mappings, and Value backs the Python dict and numeric/text unions
+// (including the emission-weight slot and share list items).
 fn check_field_kind(ty: &str, annotation: &str, schema: &Value) -> Result<()> {
     let optional_annotation = annotation
         .strip_prefix("Optional[")
@@ -342,6 +343,7 @@ fn check_field_kind(ty: &str, annotation: &str, schema: &Value) -> Result<()> {
             "serde_json::Value" => match annotation {
                 "dict" => BTreeSet::from(["object"]),
                 "int | float | str" => BTreeSet::from(["integer", "number", "string"]),
+                "int | str" => BTreeSet::from(["integer", "string"]),
                 _ => bail!("unchecked flexible JSON carrier annotation {annotation}"),
             },
             "crate::WeightsArg" => {

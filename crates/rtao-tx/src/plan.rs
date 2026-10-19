@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/plan.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/plan.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
 //! Reviewable plans retaining exactly the call later submitted.
 
 use rtao_primitives::{AccountId, Balance, Spend, Tao};
@@ -31,6 +31,10 @@ pub struct Plan {
     pub spend: Spend,
     /// Parsed exact intent arguments, without op.
     pub args: Value,
+    /// Structured, JSON-native counterpart of `effects` for intents whose
+    /// preview has a fixed shape, such as a before/after vector; empty when
+    /// the intent only produces prose.
+    pub preview: Map<String, Value>,
     call: CallBytes,
 }
 impl Plan {
@@ -53,6 +57,7 @@ impl Plan {
             extras: Map::new(),
             spend: Spend::None,
             args: Value::Null,
+            preview: Map::new(),
             call,
         }
     }
@@ -66,7 +71,7 @@ impl Plan {
     }
     /// Python's to_dict shape; signing bytes and extras stay outside it.
     pub fn to_json(&self) -> Value {
-        json!({"op":self.op,"summary":self.summary,"signer":self.signer.as_str(),"signer_address":self.signer_address,"args":self.args,"fee_tao":self.fee.map(crate::output::tao_json),"spend_tao":match self.spend {Spend::Bounded(amount)=>Some(crate::output::tao_json(amount)),_=>None},"spend_unbounded":matches!(self.spend,Spend::Unbounded),"effects":self.effects,"warnings":self.warnings,"violations":self.violations,"ok":self.ok(),"docs_url":format!("{}/tx/{}",rtao_catalog::py::DOCS_URL,self.op.replace('_',"-"))})
+        json!({"op":self.op,"summary":self.summary,"signer":self.signer.as_str(),"signer_address":self.signer_address,"args":self.args,"fee_tao":self.fee.map(crate::output::tao_json),"spend_tao":match self.spend {Spend::Bounded(amount)=>Some(crate::output::tao_json(amount)),_=>None},"spend_unbounded":matches!(self.spend,Spend::Unbounded),"effects":self.effects,"warnings":self.warnings,"violations":self.violations,"ok":self.ok(),"preview":self.preview,"docs_url":format!("{}/tx/{}",rtao_catalog::py::DOCS_URL,self.op.replace('_',"-"))})
     }
 }
 
@@ -123,6 +128,7 @@ mod tests {
                 "warnings":["warning sentinel"],
                 "violations":["policy sentinel"],
                 "ok":false,
+                "preview":{},
                 "docs_url":"https://www.bittensor.com/docs/tx/transfer-all"
             })
         );
@@ -155,6 +161,7 @@ mod tests {
                     "warnings":[],
                     "violations":[],
                     "ok":true,
+                    "preview":{},
                     "docs_url":"https://www.bittensor.com/docs/tx/transfer-all"
                 })
             );

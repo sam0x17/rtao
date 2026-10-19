@@ -817,9 +817,9 @@ async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_chan
     fn upgrade(fake: &FakeChain, spec_change: bool, revision: u32) {
         fake.mutate_state(|state| {
             let (spec_version, transaction_version) = if spec_change {
-                (479 + revision, 1)
+                (478 + revision, 1)
             } else {
-                (479, 1 + revision)
+                (478, 1 + revision)
             };
             state.runtime = Arc::new(
                 rtao_core::runtime::Runtime::parse(
@@ -908,7 +908,7 @@ async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_chan
     assert_eq!(keys.keys.unlocks.load(Ordering::SeqCst), 1);
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
     let current = executor.client().refresh_runtime().await.unwrap();
-    assert_eq!(current.spec_version(), 479 + u32::from(spec_change));
+    assert_eq!(current.spec_version(), 478 + u32::from(spec_change));
     assert_eq!(current.transaction_version(), 1 + u32::from(!spec_change));
     let (executor, fake, keys) = fixture().await;
     let keys = UpgradeKeys {
@@ -944,7 +944,7 @@ async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_chan
 async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
     let (executor, _, _) = fixture().await;
     let tools = executor.tools().unwrap();
-    assert_eq!(tools.len(), 84);
+    assert_eq!(tools.len(), 85);
     assert!(tools.windows(2).all(|pair| pair[0].name < pair[1].name));
     for (spec, tool) in rtao_catalog::INTENTS.iter().zip(tools) {
         let catalog: Value = serde_json::from_str(spec.catalog_json).unwrap();
@@ -989,7 +989,7 @@ async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
 async fn coldkey_fee_warning_precedes_failed_fee_probe_and_stays_out_of_preflight() {
     struct HotWeights;
     impl IntentInterface for HotWeights {
-        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[62];
+        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[63];
         type Role = rtao_signer::Hotkey;
         type Origin = Signed;
         type Output = ();

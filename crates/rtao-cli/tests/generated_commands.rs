@@ -102,7 +102,7 @@ impl DynKeySource for SamplePublicKeys {
 fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
     let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
         .ok_or("authenticated CLI sample table")?;
-    assert_eq!(table.blob, "027e7b0b746a9e45d45340393f4691acc8575ecf");
+    assert_eq!(table.blob, "91ff2aff459b6ea8e51f4ad3b17e59005451191b");
     let extracted = rtao::primitives::json::from_str::<Value>(table.value_json)?;
     let decoded = literal(&extracted)?;
     Ok(decoded
@@ -465,7 +465,7 @@ fn complete_query_tree_exposes_every_read_and_authenticated_parameter() -> TestR
         .into_iter()
         .map(|name| name.as_str().replace('_', "-"))
         .collect::<BTreeSet<_>>();
-    assert_eq!(actual.len(), 102);
+    assert_eq!(actual.len(), 103);
     assert_eq!(actual, expected);
     for name in rtao::reads::ReadName::ALL {
         let spelling = name.as_str().replace('_', "-");
@@ -1034,13 +1034,13 @@ fn missing_required_values_refuse_with_input_status_before_any_connection() -> T
 // keys. Installed subprocess exits and wallet-file access are separate fixtures.
 // pyt: unit/test_cli_commands.py::test_tx_dry_run_from_sample
 #[tokio::test]
-async fn all_84_samples_run_through_actual_cli_json_dry_run_without_private_access() -> TestResult {
+async fn all_85_samples_run_through_actual_cli_json_dry_run_without_private_access() -> TestResult {
     let samples = cli_samples("INTENT_SAMPLES")?;
     let expected = rtao_catalog::INTENTS
         .iter()
         .map(|spec| spec.name)
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 84);
+    assert_eq!(expected.len(), 85);
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,
@@ -1198,13 +1198,13 @@ async fn all_84_samples_run_through_actual_cli_json_dry_run_without_private_acce
 
 // pyt: unit/test_cli_commands.py::test_query_from_sample
 #[tokio::test]
-async fn all_102_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
+async fn all_103_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
     let samples = cli_samples("READ_SAMPLES")?;
     let expected = ReadName::ALL
         .into_iter()
         .map(|name| name.as_str())
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 102);
+    assert_eq!(expected.len(), 103);
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,

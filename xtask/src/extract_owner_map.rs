@@ -850,7 +850,7 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
         rows.push(json!({"name":name,"setter":setter,"params":params,"current":current,"shape":shape,"cooldown":policy,"setter_signature":tokens(&method.sig),"setter_body":tokens(&method.block)}));
     }
     ensure!(
-        owners.len() == 34 && setters.len() == 33 && alpha.len() == 2,
+        owners.len() == 33 && setters.len() == 32 && alpha.len() == 2,
         "owner allowlist coverage changed: {} owners, {} setters, {} alpha",
         owners.len(),
         setters.len(),
@@ -1181,7 +1181,7 @@ mod tests {
             };
             policies.insert(name.clone(), complete_policy(policy, &codes, &rates)?);
         }
-        assert_eq!(policies.len(), 34);
+        assert_eq!(policies.len(), 33);
         for (name, variant) in [
             ("commit_reveal_period", "WeightCommitInterval"),
             ("commit_reveal_weights_enabled", "CommitRevealEnabled"),
@@ -1197,7 +1197,6 @@ mod tests {
         }
         assert_eq!(policies["tempo"]["code"], 11);
         assert_eq!(policies["weights_version"]["code"], 4);
-        assert_eq!(policies["owner_cut_enabled"]["kind"], "none");
         assert_eq!(policies["owner_cut_auto_lock_enabled"]["kind"], "none");
         let mut changed = admin["sudo_set_commit_reveal_weights_interval"].clone();
         changed.block = syn::parse_str(&tokens(&changed.block).replacen(
@@ -1206,7 +1205,7 @@ mod tests {
             1,
         ))?;
         assert!(direct_policy(&changed, &variants).is_err());
-        let mut changed = admin["sudo_set_owner_cut_enabled"].clone();
+        let mut changed = admin["sudo_set_owner_cut_auto_lock_enabled"].clone();
         changed.block = syn::parse_str(
             &tokens(&changed.block).replace("ensure_admin_window_open", "changed_window"),
         )?;

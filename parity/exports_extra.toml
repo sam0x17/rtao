@@ -149,7 +149,7 @@ pinning_tests = [
 [[export]]
 python = "bittensor.error_descriptions.DESCRIPTIONS"
 home = "rtao_catalog::CHAIN_ERRORS; rtao_catalog::ChainErrorSpec::{name,description}"
-reason = "Immutable typed error records replace the mutable Python dictionary. All 392 full explanatory texts come from the authenticated Python description assembly; these are distinct from runtime metadata error docs."
+reason = "Immutable typed error records replace the mutable Python dictionary. All 404 full explanatory texts come from the authenticated Python description assembly; these are distinct from runtime metadata error docs."
 source = "sdk/python/bittensor/error_descriptions/__init__.py"
 pinning_tests = [
   "rtao_catalog::specs::all_semantic_and_chain_error_records_preserve_documentation_and_sources",
@@ -688,240 +688,240 @@ pinning_tests = [
 [[export]]
 python = "bittensor.intents.AddCollateral"
 home = "rtao_intents::AddCollateral"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.AddProxy"
 home = "rtao_intents::AddProxy"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.AddStake"
 home = "rtao_intents::AddStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.AddStakeLimit"
 home = "rtao_intents::AddStakeLimit"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.AnnounceColdkeySwap"
 home = "rtao_intents::AnnounceColdkeySwap"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.AssociateEvmKey"
 home = "rtao_intents::AssociateEvmKey"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.AssociateHotkey"
 home = "rtao_intents::AssociateHotkey"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.Batch"
 home = "rtao_intents::Batch"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.BurnedRegister"
 home = "rtao_intents::BurnedRegister"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ClaimRoot"
 home = "rtao_intents::ClaimRoot"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ClaimRootWithHotkey"
 home = "rtao_intents::ClaimRootWithHotkey"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ClearColdkeySwapAnnouncement"
 home = "rtao_intents::ClearColdkeySwapAnnouncement"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.CommitWeights"
 home = "rtao_intents::CommitWeights"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ContributeCrowdloan"
 home = "rtao_intents::ContributeCrowdloan"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.CreateCrowdloan"
 home = "rtao_intents::CreateCrowdloan"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.CreatePureProxy"
 home = "rtao_intents::CreatePureProxy"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.DecreaseTake"
 home = "rtao_intents::DecreaseTake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.DisputeColdkeySwap"
 home = "rtao_intents::DisputeColdkeySwap"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.DissolveCrowdloan"
 home = "rtao_intents::DissolveCrowdloan"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.EvmWithdraw"
 home = "rtao_intents::EvmWithdraw"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ExecuteProxyAnnounced"
 home = "rtao_intents::ExecuteProxyAnnounced"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.FinalizeCrowdloan"
 home = "rtao_intents::FinalizeCrowdloan"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.FundEvmKey"
 home = "rtao_intents::FundEvmKey"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.IncreaseTake"
 home = "rtao_intents::IncreaseTake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
@@ -938,20 +938,20 @@ pinning_tests = [
 [[export]]
 python = "bittensor.intents.KillPureProxy"
 home = "rtao_intents::KillPureProxy"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.LockStake"
 home = "rtao_intents::LockStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
@@ -968,70 +968,70 @@ pinning_tests = [
 [[export]]
 python = "bittensor.intents.MoveLock"
 home = "rtao_intents::MoveLock"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.MoveStake"
 home = "rtao_intents::MoveStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.MoveSwapStake"
 home = "rtao_intents::MoveSwapStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.MultisigApprove"
 home = "rtao_intents::MultisigApprove"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.MultisigCancel"
 home = "rtao_intents::MultisigCancel"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.MultisigExecute"
 home = "rtao_intents::MultisigExecute"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.MultisigThreshold1"
 home = "rtao_intents::MultisigThreshold1"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
@@ -1058,301 +1058,312 @@ pinning_tests = [
 [[export]]
 python = "bittensor.intents.PowRegister"
 home = "rtao_intents::PowRegister"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RefundCrowdloan"
 home = "rtao_intents::RefundCrowdloan"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RegisterLeasedNetwork"
 home = "rtao_intents::RegisterLeasedNetwork"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RegisterSubnet"
 home = "rtao_intents::RegisterSubnet"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RemoveProxies"
 home = "rtao_intents::RemoveProxies"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RemoveProxy"
 home = "rtao_intents::RemoveProxy"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RemoveStake"
 home = "rtao_intents::RemoveStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RemoveStakeLimit"
 home = "rtao_intents::RemoveStakeLimit"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ResetAxon"
 home = "rtao_intents::ResetAxon"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RevealWeights"
 home = "rtao_intents::RevealWeights"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.RootRegister"
 home = "rtao_intents::RootRegister"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ServeAxon"
 home = "rtao_intents::ServeAxon"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ServeAxonTls"
 home = "rtao_intents::ServeAxonTls"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.ServePrometheus"
 home = "rtao_intents::ServePrometheus"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetAutoStake"
 home = "rtao_intents::SetAutoStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetChildkeyTake"
 home = "rtao_intents::SetChildkeyTake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetChildren"
 home = "rtao_intents::SetChildren"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetCrowdloanMaxContribution"
 home = "rtao_intents::SetCrowdloanMaxContribution"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetHyperparameter"
 home = "rtao_intents::SetHyperparameter"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetIdentity"
 home = "rtao_intents::SetIdentity"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetMechanismCount"
 home = "rtao_intents::SetMechanismCount"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetMinCollateral"
 home = "rtao_intents::SetMinCollateral"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetPerpetualLock"
 home = "rtao_intents::SetPerpetualLock"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetRejectLockedAlpha"
 home = "rtao_intents::SetRejectLockedAlpha"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetRejectStakingHotkeyGrowth"
 home = "rtao_intents::SetRejectStakingHotkeyGrowth"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
-  "rtao_intents::staking_baskets::tests::reject_staking_hotkey_growth_builds_the_account_flag_call",
+  "rtao_intents::emission_weights::reject_staking_hotkey_growth_builds_the_account_flag_call",
 ]
 
 [[export]]
 python = "bittensor.intents.SetRootClaimThreshold"
 home = "rtao_intents::SetRootClaimThreshold"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetSubnetEmissionEnabled"
 home = "rtao_intents::SetSubnetEmissionEnabled"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+]
+
+[[export]]
+python = "bittensor.intents.SetSubnetEmissionWeights"
+home = "rtao_intents::SetSubnetEmissionWeights"
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+source = "sdk/python/bittensor/intents/__init__.py"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
+  "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
+  "rtao_intents::emission_weights::intent_plan_renormalizes_and_reports_root_baseline",
 ]
 
 [[export]]
 python = "bittensor.intents.SetSubnetIdentity"
 home = "rtao_intents::SetSubnetIdentity"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetTake"
 home = "rtao_intents::SetTake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SetWeights"
 home = "rtao_intents::SetWeights"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
@@ -1368,210 +1379,210 @@ pinning_tests = [
 [[export]]
 python = "bittensor.intents.StakeBurn"
 home = "rtao_intents::StakeBurn"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.StakeIntoBasket"
 home = "rtao_intents::StakeIntoBasket"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.StartCall"
 home = "rtao_intents::StartCall"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SwapBasket"
 home = "rtao_intents::SwapBasket"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SwapBasketMany"
 home = "rtao_intents::SwapBasketMany"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SwapColdkeyAnnounced"
 home = "rtao_intents::SwapColdkeyAnnounced"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SwapHotkey"
 home = "rtao_intents::SwapHotkey"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.SwapStake"
 home = "rtao_intents::SwapStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.TerminateLease"
 home = "rtao_intents::TerminateLease"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.Transfer"
 home = "rtao_intents::Transfer"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.TransferAll"
 home = "rtao_intents::TransferAll"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.TransferStake"
 home = "rtao_intents::TransferStake"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.TrimNullSubnetBatch"
 home = "rtao_intents::TrimNullSubnetBatch"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.TrimSubnet"
 home = "rtao_intents::TrimSubnet"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.UnstakeAll"
 home = "rtao_intents::UnstakeAll"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.UnstakeAllAlpha"
 home = "rtao_intents::UnstakeAllAlpha"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.UpdateCrowdloanCap"
 home = "rtao_intents::UpdateCrowdloanCap"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.UpdateCrowdloanEnd"
 home = "rtao_intents::UpdateCrowdloanEnd"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.UpdateCrowdloanMinContribution"
 home = "rtao_intents::UpdateCrowdloanMinContribution"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.UpdateSymbol"
 home = "rtao_intents::UpdateSymbol"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
 [[export]]
 python = "bittensor.intents.WithdrawCrowdloan"
 home = "rtao_intents::WithdrawCrowdloan"
-reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 84-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
+reason = "Public typed intent reexport, enabled by its documented Cargo feature. The generated interface preserves the pinned schema and signer/origin metadata; the complete 85-operation sample fixture constructs and plans this operation against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
   "rtao_cli::generated_commands::catalog_interface_metadata_covers_every_operation_and_pending_body",
 ]
 
@@ -1583,7 +1594,7 @@ source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = [
   "rtao_intents::registry::tests::owned_tools_keep_constructor_normalization_and_role",
   "rtao_intents::tests::tool_arguments_require_an_object_and_keep_unknown_op_precedence",
-  "rtao_intents::intent_plans::all_84_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
 ]
 
 [[export]]

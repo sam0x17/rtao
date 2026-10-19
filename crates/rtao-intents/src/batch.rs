@@ -920,6 +920,7 @@ mod tests {
                 estimated_fee: fee.map(Balance::<Tao>::from_rao),
                 facts: vec![("child fact".into(), tag.to_string())],
                 facts_title: FactsTitle::Quote,
+                preview: serde_json::Map::new(),
             },
         }
     }

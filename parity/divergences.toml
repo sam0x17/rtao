@@ -1099,12 +1099,12 @@ id = "D-029"
 upstream_symbol = "btcli tools / list_tools"
 python_behavior = "9 keys per tool (`PY/intents/registry.py:43-66`)"
 rtao_behavior = "adds `rust {type, role, output, cli}`"
-rationale = "Keep the nine Python discovery fields while adding separate native type, role, output and CLI metadata. Fixtures compare all 84 catalog operations and distinguish implemented/compiled interfaces from unavailable ones. Source review only; hosted validation remains pending."
+rationale = "Keep the nine Python discovery fields while adding separate native type, role, output and CLI metadata. Fixtures compare all 83 catalog operations and distinguish implemented/compiled interfaces from unavailable ones. Source review only; hosted validation remains pending."
 status = "active"
 class = "addition"
 milestone = "M8"
 pinning_tests = [
-  "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_84_ops",
+  "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_85_ops",
   "rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata",
 ]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/registry.py#L43-L66"

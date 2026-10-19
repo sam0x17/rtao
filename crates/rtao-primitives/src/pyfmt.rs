@@ -182,6 +182,19 @@ pub fn balance_str(rao: u64, netuid: NetUid, symbol: Option<&str>) -> String {
     out
 }
 
+/// Format a non-negative integer as Python's `format(n, ",")`.
+pub fn fmt_grouped(value: u128) -> String {
+    let digits = value.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (index, digit) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(digit);
+    }
+    out
+}
+
 // py: sdk/python/bittensor/balance.py:90 (Decimal(str(amount)))
 /// Format Python's `repr(float)`: shortest round trip with Python's notation.
 ///
