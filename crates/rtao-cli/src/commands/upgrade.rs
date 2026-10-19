@@ -866,7 +866,13 @@ async fn submit_verified(
     }
     // A successful submission remains the authoritative outcome if follow-up
     // status is unavailable; never turn it into an invitation to submit again.
-    let latest = match client.at(BlockRef::Best).await {
+    // The approval's inclusion block holds the layer it produced, read from
+    // the endpoint that reported it when the read endpoint lags.
+    let snapshot = match result.block_hash {
+        Some(block) => client.at_receipt(block).await,
+        None => client.at(BlockRef::Best).await,
+    };
+    let latest = match snapshot {
         Ok(latest) => chain::sudo_layer(&latest, reviewed_sudo, finalizing.hash()).await,
         Err(error) => Err(failure(error)),
     };
