@@ -23,6 +23,8 @@ mod wire;
 pub mod decoding;
 /// Local drand round, timestamp and duration helpers.
 pub mod drand;
+/// Per-subnet emission weight vector rules, parsing and renormalisation.
+pub mod emission_weights;
 /// Portable EVM address normalization and native-account mappings.
 pub mod evm;
 /// Table-free conversion of human proportions into chain integers.

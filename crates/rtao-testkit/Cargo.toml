@@ -55,7 +55,8 @@ tokio-tungstenite = { workspace = true }
 [dev-dependencies]
 docify.workspace = true
 rtao-tx = { workspace = true }
-rtao-intents = { workspace = true, features = ["transfer", "weights"] }
+rtao-intents = { workspace = true, features = ["transfer", "weights", "staking", "emission_weights"] }
+rtao-reads = { workspace = true }
 rtao-neuron = { workspace = true, features = ["validator"] }
 rtao-metagraph = { workspace = true }
 rtao-wallet = { workspace = true }

@@ -351,6 +351,15 @@ pub struct TableSpec {
     pub footer: Option<String>,
 }
 
+/// One titled block of aligned `(key, value, optional note)` rows.
+#[derive(Clone, Debug, Default)]
+pub struct KvSection {
+    /// Optional block heading.
+    pub header: Option<String>,
+    /// Rows in display order.
+    pub rows: Vec<(String, String, Option<String>)>,
+}
+
 /// One stage of a human-only pre-sign review card.
 #[derive(Clone, Debug)]
 pub struct ReviewSection {
@@ -822,6 +831,53 @@ impl Output {
             return self.line(Stream::Stdout, "  none");
         }
         self.fields(fields, 2)
+    }
+
+    // py: sdk/python/bittensor/cli/output.py:796-833
+    /// Aligned key/value sections: the raw value first, then an optional
+    /// reading beside it. `json_fields` is the complete machine shape.
+    pub fn kv_sections(
+        &self,
+        title: Option<&str>,
+        sections: &[KvSection],
+        json_fields: &Value,
+        hint: Option<&str>,
+    ) -> Result<(), OutputError> {
+        if self.options.json_mode {
+            return self.json(Stream::Stdout, json_fields);
+        }
+        if let Some(title) = title {
+            self.line(Stream::Stdout, title)?;
+        }
+        for section in sections.iter().filter(|section| !section.rows.is_empty()) {
+            self.line(Stream::Stdout, "")?;
+            if let Some(header) = &section.header {
+                self.line(Stream::Stdout, header)?;
+            }
+            let width = section
+                .rows
+                .iter()
+                .map(|(key, _, _)| key.chars().count())
+                .max()
+                .unwrap_or(0);
+            for (key, value, note) in &section.rows {
+                let mut line = format!(
+                    "  {}{key}  {}",
+                    " ".repeat(width.saturating_sub(key.chars().count())),
+                    self.prose(value)
+                );
+                if let Some(note) = note.as_deref().filter(|note| !note.is_empty()) {
+                    line.push_str("  ");
+                    line.push_str(note);
+                }
+                self.line(Stream::Stdout, &line)?;
+            }
+        }
+        if let Some(hint) = hint {
+            self.line(Stream::Stdout, "")?;
+            self.sub_diag(Stream::Stdout, "help", hint)?;
+        }
+        Ok(())
     }
 
     /// Render public wallet fields with borrowed secret fields in JSON mode.

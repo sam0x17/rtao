@@ -18,6 +18,7 @@
 "pallets/subtensor/src/rpc_info/stake_info.rs::StakeAvailability" = "2d52e2de04425fb6"
 "pallets/subtensor/src/rpc_info/stake_info.rs::StakeInfo" = "8cef3fae262a623e"
 "pallets/subtensor/src/rpc_info/subnet_info.rs::HyperparamEntry" = "3fee3576c33e216c"
+"pallets/subtensor/src/rpc_info/subnet_info.rs::SubnetEmissionWeightsInfo" = "4cd41617c4b67f55"
 "pallets/subtensor/src/rpc_info/subnet_info.rs::SubnetHyperparams" = "5a0830a4518a7325"
 "pallets/subtensor/src/rpc_info/subnet_info.rs::SubnetHyperparamsV2" = "336a6658e70b5554"
 "pallets/subtensor/src/rpc_info/subnet_info.rs::SubnetInfo" = "f691073111c39620"

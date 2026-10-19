@@ -209,6 +209,7 @@ impl<M: ProbeKind> Intent for Probe<M> {
             estimated_fee: Some(Balance::from_rao(123)),
             facts: vec![("reserved".into(), "25 rao".into())],
             facts_title: FactsTitle::Custom("semantic facts".into()),
+            preview: serde_json::Map::new(),
         })
     }
 }
@@ -424,6 +425,7 @@ async fn plan_preserves_the_semantic_contract_and_exact_python_dispatch_shape() 
             "warnings": ["semantic warning"],
             "violations": [],
             "ok": true,
+            "preview": {},
             "docs_url": format!("{}/tx/multisig-execute", rtao_catalog::py::DOCS_URL),
         })
     );
@@ -1049,7 +1051,7 @@ async fn actual_runtime_cap_refuses_a_previously_valid_group_before_fee_or_funds
             .seed_constant("Multisig", "MaxSignatories", json!(2))
             .unwrap();
         let upgraded =
-            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 480, 1, 42).unwrap();
+            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
         state.runtime = Arc::new(upgraded);
         state.advance(2);
     });
@@ -1150,7 +1152,7 @@ async fn wrapping_rechecks_a_cap_reduced_after_adapter_construction() {
             .seed_constant("Multisig", "MaxSignatories", json!(2))
             .unwrap();
         let upgraded =
-            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 480, 1, 42).unwrap();
+            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
         state.runtime = Arc::new(upgraded);
         state.advance(2);
     });
@@ -1458,7 +1460,7 @@ async fn pinned_calls_refuse_a_new_signing_runtime_at_construction_and_review() 
     .unwrap();
     fake.mutate_state(|state| {
         let upgraded =
-            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 480, 1, 42).unwrap();
+            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
         state.runtime = Arc::new(upgraded);
         state.advance(2);
     });
