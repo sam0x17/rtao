@@ -1,8 +1,8 @@
 {
   "format": 1,
   "metadata_provenance": {
-    "finalized_head": "0x0e95c496689be181f358bfbb1848f8b4ed89fbcf64e85d3cf83044f19508e94a",
-    "path": "vendor/metadata/testnet/481.v15.scale",
+    "finalized_head": "0x80f3788feefb5453a794a70bf242e41e0e1fc4a94adc2405b55bc6782b09c149",
+    "path": "vendor/metadata/finney/481.v15.scale",
     "sha256": "025da0822b26fd7dbff2e04fe0a88e2ee1073ae38d96ad4730c3724aa01af0f0",
     "spec": 481
   },
