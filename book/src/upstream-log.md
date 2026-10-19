@@ -178,7 +178,9 @@ localnet-only e2e and core-oracle targets, run below, and the hosted-only
 xtask fixture); and the compat lane script passes against the pinned v481
 localnet on fast blocks (20/20 e2e scenarios including scenario 18's emission
 weights, scenario 8's live runtime upgrade, and both core-oracle tests).
-Hosted pr-gates and attested validation lanes run after merge.
+Hosted validation run 39328208457 attests drift, e2e and interop for the
+pinned, testnet, devnet and main lanes, and its reports are adopted as the
+validated spec range 481-481.
 
 ## Recording the next change
 
