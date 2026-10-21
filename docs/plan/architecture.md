@@ -2087,7 +2087,7 @@ pub struct ShieldOptions { pub period: ShieldPeriod /* P8 */, pub wait: Wait /* 
                            pub max_fee: Option<Balance<Tao>> }
 ```
 
-1. Read `MevShield.NextKey` at the best head. If it is absent, retry twice, one block apart
+1. Read `MevShield.NextKey` without a block hash, from the endpoint's newest state. If it is absent, retry twice, one block apart
    (`executor.py:1027-1034`). Run `Signer::prepare_shielded` within the submission admission deadline before
    reserving nonces or selecting the mortal era. The default does nothing; Vault waits for its page connection and
    requests camera startup. `Arc<S>` forwards the hook. Preparation must preserve account and algorithm; a change
