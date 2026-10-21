@@ -391,13 +391,13 @@ async fn absent_next_key_is_retried_twice_one_block_apart_then_refused() {
     let (client, fake, signer) = fixture().await;
     let key_prefix = rtao_core::mlkem::twox_128(b"MevShield");
     fake.mutate_state(|state| {
-        state.set_handler("state_queryStorageAt", move |state, request| {
-            let key = request.params[0][0].as_str().unwrap();
+        state.set_handler("state_getStorage", move |state, request| {
+            let key = request.params[0].as_str().unwrap();
             if hex::decode(key.trim_start_matches("0x"))
                 .unwrap()
                 .starts_with(&key_prefix)
             {
-                Reply::result(json!([{"block":request.params[1],"changes":[[key,null]]}]))
+                Reply::result(serde_json::Value::Null)
             } else {
                 state.dispatch(request)
             }
@@ -407,10 +407,18 @@ async fn absent_next_key_is_retried_twice_one_block_apart_then_refused() {
     assert!(
         matches!(client.submit_shielded(call(&client,1).await,&signer,&pool()).await,Err(SubmitFailure::Client(ClientError::Protocol(ref msg))) if msg.contains("NextKey not available"))
     );
+    // Each attempt is one unpinned read of the endpoint's newest state.
+    let mut next_key = rtao_core::mlkem::twox_128(b"MevShield").to_vec();
+    next_key.extend_from_slice(&rtao_core::mlkem::twox_128(b"NextKey"));
+    let next_key = format!("0x{}", hex::encode(next_key));
     let reads = fake
         .requests()
         .iter()
-        .filter(|r| r.method == "state_queryStorageAt")
+        .filter(|r| r.method.starts_with("state_") && r.params.to_string().contains(&next_key))
+        .inspect(|r| {
+            assert_eq!(r.method, "state_getStorage", "{r:?}");
+            assert_eq!(r.params, json!([next_key]), "{r:?}");
+        })
         .count();
     assert_eq!(reads, 3);
     assert!(started.elapsed() >= Duration::from_millis(2));

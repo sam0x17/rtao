@@ -529,6 +529,38 @@ async fn storage_raw(
         decode_hex(&result).map(Some)
     }
 }
+
+impl Client {
+    /// Read one typed storage entry from the endpoint's newest state.
+    ///
+    /// The request carries no block hash, so the endpoint answers from its
+    /// own latest state rather than a header the client resolved first; an
+    /// endpoint whose headers trail its state cannot return an older value.
+    /// This ignores `ClientConfig::read_at_one_block`. The value is decoded
+    /// with the head runtime, and the live entry's shape is checked first;
+    /// that runtime is itself read unpinned but may be cached for a few
+    /// seconds, so an entry whose type changes in a runtime upgrade can be
+    /// checked against the previous metadata until the head is refreshed.
+    pub(crate) async fn storage_unpinned<K: KeyArgs + 'static, V: FromStorage>(
+        &self,
+        descriptor: &StorageDescriptor<K, V>,
+        key: K,
+    ) -> Result<V::Out, ClientError> {
+        let query = descriptor.at(key);
+        let runtime = self.runtime_for(None).await?;
+        let surface = descriptor.surface();
+        check_surface(
+            &runtime,
+            rtao_runtime::SurfaceDescriptor::Storage(surface),
+            format!("storage:{}.{}", surface.pallet, surface.name),
+            surface.name,
+        )?;
+        let raw_key = storage_key(&runtime, surface, &query.keys.clone().into_core_values())?;
+        let value = storage_raw(self, &raw_key, None).await?;
+        query.decode(&runtime, &[value])
+    }
+}
+
 async fn keys_paged(
     client: &Client,
     prefix: &[u8],

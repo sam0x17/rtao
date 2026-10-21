@@ -352,7 +352,7 @@ impl Client {
             // Seal with the key current now: signer preparation and the
             // finality wait can outlast a key rotation on fast chains, and a
             // stale key leaves the inner undecryptable and silently dropped.
-            let (next_key, _) = limits.admission.run(self, chain.shield_next_key()).await?;
+            let next_key = limits.admission.run(self, chain.shield_next_key()).await?;
             let ciphertext = limits
                 .admission
                 .run(self, ShieldCiphertext::seal(&next_key, &inner_bytes))
@@ -504,18 +504,25 @@ impl Client {
         })
     }
 
-    async fn shield_next_key(&self) -> Result<(Vec<u8>, u64), ClientError> {
+    /// Read the freshest MevShield NextKey this endpoint has.
+    ///
+    /// The key rotates every block and the author only accepts a carrier
+    /// sealed to the key at the parent of the block it builds, so it is read
+    /// without a block hash. A node answers from its best state, as a read at
+    /// its best header would; an endpoint whose headers trail its state would
+    /// otherwise return a key that has already expired. The era guard reads
+    /// its best height separately.
+    async fn shield_next_key(&self) -> Result<Vec<u8>, ClientError> {
         for attempt in 0..=2 {
-            let best = self.at(BlockRef::Best).await?;
-            if let Some(key) = best
-                .storage(&rtao_runtime::storage::mev_shield::NEXT_KEY, ())
+            if let Some(key) = self
+                .storage_unpinned(&rtao_runtime::storage::mev_shield::NEXT_KEY, ())
                 .await?
                 && !key.is_empty()
             {
-                return Ok((key, best.block().number));
+                return Ok(key);
             }
             if attempt < 2 {
-                tokio::time::sleep(best.block_time().await?).await;
+                tokio::time::sleep(self.block_time().await?).await;
             }
         }
         Err(ClientError::Protocol(

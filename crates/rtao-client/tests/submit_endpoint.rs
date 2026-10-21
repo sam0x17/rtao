@@ -2,7 +2,9 @@
 //! calls; every other read stays on the main endpoint.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use rtao_client::{BlockRef, Client, ClientConfig, Inclusion, Network, SubmitOptions, Wait};
+use rtao_client::{
+    BlockRef, Client, ClientConfig, Inclusion, Network, SubmitOptions, ViewExt, Wait,
+};
 use rtao_signer::{CryptoType, KeypairSigner, Signer};
 use rtao_testkit::{FakeChain, FakeState};
 use subxt_rpcs::RpcClient;
@@ -499,7 +501,8 @@ async fn shield_flow(client: &Client, fake: &FakeChain) -> (Vec<String>, String)
 }
 
 /// Without a submit endpoint a shielded submission issues exactly the
-/// requests it issued before submit endpoints existed.
+/// requests it issued before submit endpoints existed, apart from the
+/// deliberate NextKey change explained at `SHIELD_DIGEST`.
 #[tokio::test]
 async fn without_a_submit_endpoint_shield_requests_are_unchanged() {
     let mut state = FakeState::default();
@@ -513,8 +516,11 @@ async fn without_a_submit_endpoint_shield_requests_are_unchanged() {
     client.close().await;
 }
 
-/// Recorded from the client before shield reads followed the submit endpoint.
-const SHIELD_DIGEST: &str = "38d50ed6bf3e44cff16c3cea784c1e1af9dca741f1993524f1f55fa84b258ec9";
+/// Recorded from the client before shield reads followed the submit endpoint,
+/// then updated once when NextKey became an unpinned read: each of the two
+/// `chain_getHeader` and `state_queryStorageAt(key, best)` pairs became one
+/// `state_getStorage(key)`. Every other request is unchanged.
+const SHIELD_DIGEST: &str = "477f8d0746e803fe1a3b7131a68295f5a933c43c8aea2e499f2756caa593b9ce";
 
 /// A read endpoint behind the submitting node, with its own NextKey.
 async fn shield_split(
@@ -560,34 +566,181 @@ async fn shield_seals_to_the_submit_endpoint_key_when_the_read_endpoint_lags() {
     let submissions = node.state().lock().unwrap().submissions.clone();
     assert_eq!(submissions.len(), 1);
     assert!(read.state().lock().unwrap().submissions.is_empty());
-    let carrier = &submissions[0];
-    let contains = |key: &[u8]| {
-        let hash = rtao_core::mlkem::twox_128(key);
-        carrier.windows(hash.len()).any(|window| window == hash)
-    };
     assert!(
-        contains(&current),
+        sealed_to(&submissions[0], &current),
         "carrier is not sealed to the submit endpoint's key"
     );
     assert!(
-        !contains(&stale),
+        !sealed_to(&submissions[0], &stale),
         "carrier is sealed to the read endpoint's stale key"
     );
     // The key and the era guard's best height come from the node; the read
     // endpoint is never asked for MevShield storage.
+    assert!(!next_key_reads(&node, 0).is_empty());
     assert!(
-        node.requests()
-            .iter()
-            .any(|request| request.method == "state_queryStorageAt")
-    );
-    assert!(
-        read.requests()
-            .iter()
-            .skip(read_start)
-            .all(|request| request.method != "state_queryStorageAt"),
+        next_key_reads(&read, read_start).is_empty(),
         "{:?}",
         methods(&read, read_start)
     );
+    client.close().await;
+}
+
+/// The hex storage key of the plain `MevShield.NextKey` value.
+fn next_key_storage_key() -> String {
+    let mut key = rtao_core::mlkem::twox_128(b"MevShield").to_vec();
+    key.extend_from_slice(&rtao_core::mlkem::twox_128(b"NextKey"));
+    format!("0x{}", hex::encode(key))
+}
+
+/// Recorded storage requests, from `from` on, that name `MevShield.NextKey`;
+/// asserts each is an unpinned single-key read of the newest state.
+fn next_key_reads(fake: &FakeChain, from: usize) -> Vec<rtao_testkit::RpcRequest> {
+    let key = next_key_storage_key();
+    let reads: Vec<_> = fake
+        .requests()
+        .into_iter()
+        .skip(from)
+        .filter(|request| {
+            request.method.starts_with("state_") && request.params.to_string().contains(&key)
+        })
+        .collect();
+    for request in &reads {
+        assert_eq!(request.method, "state_getStorage", "{request:?}");
+        assert_eq!(request.params, serde_json::json!([key]), "{request:?}");
+    }
+    reads
+}
+
+/// Whether a submitted carrier is sealed to `key`: its envelope carries the
+/// key's hash.
+fn sealed_to(carrier: &[u8], key: &[u8]) -> bool {
+    let hash = rtao_core::mlkem::twox_128(key);
+    carrier.windows(hash.len()).any(|window| window == hash)
+}
+
+/// An endpoint whose newest state is one block past the header it reports as
+/// best: it serves headers from its finalized view but answers storage reads
+/// without a block hash from its latest state. NextKey rotated in that newest
+/// block, so the header's state holds a key that has already expired.
+fn trailing_headers_with_rotated_key(expired: Vec<u8>, current: Vec<u8>) -> FakeState {
+    let mut state = FakeState::default();
+    seed_shield(&mut state, expired);
+    state.advance(1);
+    state.set_finalized(state.block - 1).unwrap();
+    state
+        .seed_typed("MevShield", "NextKey", (), current)
+        .unwrap();
+    state.set_handler("chain_getHeader", |state, request| {
+        let best = request
+            .params
+            .as_array()
+            .is_none_or(|params| params.first().is_none_or(serde_json::Value::is_null));
+        if best {
+            let finalized = state.block_hash(state.finalized).unwrap();
+            rtao_testkit::Reply::result(state.header(&finalized).unwrap())
+        } else {
+            state.dispatch(request)
+        }
+    });
+    state
+}
+
+/// The key comes from an unpinned read, so a best header that trails the
+/// endpoint's state does not seal the carrier to an expired key.
+#[tokio::test]
+async fn shield_key_is_read_unpinned_when_the_best_header_trails_the_state() {
+    let expired = shield_key(0);
+    let current = shield_key(1);
+    let fake = FakeChain::from_state(trailing_headers_with_rotated_key(
+        expired.clone(),
+        current.clone(),
+    ));
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config())
+        .await
+        .unwrap();
+    // The reported best header trails the newest state by one block, and a
+    // read at its hash still returns the expired key.
+    let best = client.at(BlockRef::Best).await.unwrap();
+    assert_eq!(best.block().number + 1, fake.state().lock().unwrap().block);
+    assert_eq!(
+        best.storage(&rtao_runtime::storage::mev_shield::NEXT_KEY, ())
+            .await
+            .unwrap(),
+        Some(expired.clone())
+    );
+    let start = fake.requests().len();
+    let report = client
+        .submit_shielded(
+            remark(&client, vec![10]).await,
+            &signer(),
+            &rtao_client::ShieldOptions {
+                wait: Wait::Pool,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.inclusion, Inclusion::PoolAccepted);
+    let submissions = fake.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 1);
+    assert!(
+        sealed_to(&submissions[0], &current),
+        "not sealed to the newest key"
+    );
+    assert!(
+        !sealed_to(&submissions[0], &expired),
+        "sealed to the expired key"
+    );
+    // Availability check and seal: two unpinned reads, none at a block hash.
+    assert_eq!(next_key_reads(&fake, start).len(), 2);
+    client.close().await;
+}
+
+/// The same holds for a submit endpoint whose best header trails its state
+/// while the read endpoint lags further behind.
+#[tokio::test]
+async fn shield_key_is_read_unpinned_from_a_submit_endpoint_with_trailing_headers() {
+    let expired = shield_key(1);
+    let current = shield_key(2);
+    let mut read = FakeState::default();
+    seed_shield(&mut read, shield_key(0));
+    let read = FakeChain::from_state(read);
+    let node = FakeChain::from_state(trailing_headers_with_rotated_key(
+        expired.clone(),
+        current.clone(),
+    ));
+    let client = Client::from_rpc_with_submit(
+        RpcClient::new(read.clone()),
+        RpcClient::new(node.clone()),
+        config(),
+    )
+    .await
+    .unwrap();
+    let read_start = read.requests().len();
+    let report = client
+        .submit_shielded(
+            remark(&client, vec![11]).await,
+            &signer(),
+            &rtao_client::ShieldOptions {
+                wait: Wait::Pool,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.inclusion, Inclusion::PoolAccepted);
+    let submissions = node.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 1);
+    assert!(
+        sealed_to(&submissions[0], &current),
+        "not sealed to the newest key"
+    );
+    assert!(
+        !sealed_to(&submissions[0], &expired),
+        "sealed to the expired key"
+    );
+    assert_eq!(next_key_reads(&node, 0).len(), 2);
+    assert!(next_key_reads(&read, read_start).is_empty());
     client.close().await;
 }
 
