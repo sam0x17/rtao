@@ -3,9 +3,11 @@
 The maintainer approved Q27's guarded exception on 2026-10-14. It is implemented
 in `cargo xtask supply` and the supply gate. The maintainer subsequently approved
 Q28's separate exact dormant ruzstd exception; see `supply-ruzstd.md`. Its
-reviewed patch is applied. The full supply job passes against the final
-canonical workspace and fuzz locks, with both raw audit failures retained; the
-final raw evidence is not retained in the repository.
+reviewed patch is applied. Q31 later added the separate exact dormant
+webpki-root-certs exception; see `supply-webpki-root-certs.md`. The full supply
+job passes against the final canonical workspace and fuzz locks, with both raw
+audit failures retained; the final raw evidence is not retained in the
+repository.
 
 Only [RUSTSEC-2026-0253](https://rustsec.org/advisories/RUSTSEC-2026-0253) may pass
 for this exact lock entry, while it remains absent from every checked graph:
@@ -45,7 +47,7 @@ Lock snapshots must still match after inspection.
 The exact 14 existing `unmaintained` advisory/package pairs remain visible and
 informational, preserving the previous cargo-audit behavior. The list is fixed
 in `xtask/src/supply.rs`; unknown maintenance findings block. Beyond the exact
-Q27/Q28 dormant findings, every other
+Q27/Q28/Q31 dormant findings, every other
 vulnerability, unsound warning, notice or yanked finding blocks. Cargo-deny's
 existing advisory, license, source and ban checks remain the first blocking
 supply step:

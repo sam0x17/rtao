@@ -25,7 +25,7 @@ infrastructure remain deferred.
 | M0-13 parity | File/symbol inventories, pending behaviors, licenses and attribution are mechanically checked |
 | M0-14 core | Curated reexports retain no-host and feature guards |
 | M0-15 Clippy | Forbidden core/host paths are declared; strict all-target checking runs in CI |
-| M0-16 supply | Q27/Q28 allow only the recorded dormant findings; full raw audits and activation guards remain |
+| M0-16 supply | Q27/Q28/Q31 allow only the recorded dormant findings; full raw audits and activation guards remain |
 | M0-17 verification | Strict verification covers both algorithms and wrapped-message refusal |
 | M0-18 surface | Typed core-surface probes cover the curated public boundary |
 | M0-19 staged | Header, symbol, diagnostic and upstream-presence guards are committed |

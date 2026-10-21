@@ -19,6 +19,9 @@ const CHECKSUM: &str = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b
 const FIXED: &str = "0.18.2";
 const RUZSTD_ADVISORY: &str = "RUSTSEC-2026-0344";
 const RUZSTD_CHECKSUM: &str = "a7c1c839d570d835527c9a5e4db7cb2198683a988cb9d7293fc8674e6bd58fc8";
+const WEBPKI_ROOT_CERTS_ADVISORY: &str = "RUSTSEC-2026-0383";
+const WEBPKI_ROOT_CERTS_CHECKSUM: &str =
+    "75c7f0ef91146ebfb530314f5f1d24528d7f0767efbfd31dce919275413e393e";
 const PROC_MACRO_ADVISORY: &str = "RUSTSEC-2026-0173";
 const PROC_MACRO_CHECKSUM: &str =
     "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802";
@@ -111,6 +114,15 @@ const EXCEPTIONS: &[DormantException] = &[
         checksum: RUZSTD_CHECKSUM,
         advisory: RUZSTD_ADVISORY,
         fixed: "0.9.1",
+    },
+    // The last 0.26.x release re-exports webpki-root-certs 1.x; the locks keep
+    // that fixed 1.x entry, which this rule leaves unaffected.
+    DormantException {
+        name: "webpki-root-certs",
+        version: "0.26.11",
+        checksum: WEBPKI_ROOT_CERTS_CHECKSUM,
+        advisory: WEBPKI_ROOT_CERTS_ADVISORY,
+        fixed: "1.0.10",
     },
 ];
 // These existing maintenance notices remain visible and nonblocking. Any new
@@ -940,7 +952,7 @@ fn selections(metadata: &Json) -> Result<Vec<Selection>> {
 pub(crate) fn run(args: Vec<String>) -> Result<()> {
     if args == ["--help"] || args == ["-h"] {
         println!(
-            "cargo xtask supply\nRetains raw cargo-audit text/JSON and graph evidence under RTAO_TEMP_ROOT/ci/supply-<pid>.\nOnly exact dormant lru RUSTSEC-2026-0253, ruzstd RUSTSEC-2026-0344 and known maintenance notices may pass; tool/schema errors and activation block."
+            "cargo xtask supply\nRetains raw cargo-audit text/JSON and graph evidence under RTAO_TEMP_ROOT/ci/supply-<pid>.\nOnly exact dormant lru RUSTSEC-2026-0253, ruzstd RUSTSEC-2026-0344, webpki-root-certs RUSTSEC-2026-0383 and known maintenance notices may pass; tool/schema errors and activation block."
         );
         return Ok(());
     }
@@ -1983,6 +1995,196 @@ mod tests {
         variants.push(duplicate);
         for report in variants {
             ensure!(validate_audit(&report, &locks).is_err());
+        }
+        Ok(())
+    }
+
+    // The fixed 1.x entry stays in the locks as the re-export target.
+    const WEBPKI_ROOT_CERTS_FIXED_CHECKSUM: &str =
+        "58ec80e73fd8baf57bf0d9615554c75348bda990d6d5bbeab964dd068319fecb";
+
+    fn webpki_root_certs_lock() -> String {
+        format!(
+            "[[package]]\nname = 'webpki-root-certs'\nversion = '0.26.11'\nsource = '{SOURCE}'\nchecksum = '{WEBPKI_ROOT_CERTS_CHECKSUM}'\ndependencies = ['webpki-root-certs 1.0.10']\n\n[[package]]\nname = 'webpki-root-certs'\nversion = '1.0.10'\nsource = '{SOURCE}'\nchecksum = '{WEBPKI_ROOT_CERTS_FIXED_CHECKSUM}'\n"
+        )
+    }
+
+    fn all_dormant_locks() -> Result<BTreeSet<Identity>> {
+        lock_identities(&format!(
+            "{}{}{}",
+            lock(),
+            ruzstd_lock(),
+            webpki_root_certs_lock()
+        ))
+    }
+
+    fn webpki_root_certs_report() -> Json {
+        let mut report = combined_report();
+        report["lockfile"]["dependency-count"] = json!(4);
+        let mut webpki = finding(None);
+        webpki["package"]["name"] = json!("webpki-root-certs");
+        webpki["package"]["version"] = json!("0.26.11");
+        webpki["package"]["checksum"] = json!(WEBPKI_ROOT_CERTS_CHECKSUM);
+        webpki["advisory"]["id"] = json!(WEBPKI_ROOT_CERTS_ADVISORY);
+        webpki["advisory"]["package"] = json!("webpki-root-certs");
+        webpki["versions"]["patched"] = json!([">=1.0.10"]);
+        let ruzstd = report["vulnerabilities"]["list"][0].clone();
+        report["vulnerabilities"] = json!({"found": true, "count": 2, "list": [ruzstd, webpki]});
+        report
+    }
+
+    #[test]
+    fn exact_dormant_webpki_root_certs_keeps_raw_failure_and_existing_rules() -> Result<()> {
+        let locks = all_dormant_locks()?;
+        let report = webpki_root_certs_report();
+        ensure!(
+            validate_audit(&report, &locks)?
+                == Audit {
+                    exceptions: 3,
+                    maintenance: 0,
+                    failing_status: true,
+                }
+        );
+        for fixed in ["1.0.10", "1.0.11"] {
+            check_graph(
+                &format!("rtao v0.1.0\n\nlru v0.18.2\nruzstd v0.9.1\nwebpki-root-certs v{fixed}\n"),
+                &["rtao".into()],
+            )?;
+        }
+        #[cfg(unix)]
+        {
+            let terminal = format!(
+                "      Loaded 1300 security advisories\n    Scanning Cargo.lock for vulnerabilities (4 crate dependencies)\nID:        {RUZSTD_ADVISORY}\nID:        {WEBPKI_ROOT_CERTS_ADVISORY}\nID:        {ADVISORY}\nerror: 2 vulnerabilities found!\nerror: 1 denied warning found!\n"
+            );
+            ensure!(
+                raw_audit(1, &terminal, &report)?
+                    .validate(&locks)?
+                    .exceptions
+                    == 3
+            );
+            ensure!(raw_audit(0, &terminal, &report)?.validate(&locks).is_err());
+            let missing =
+                terminal.replace(&format!("ID:        {WEBPKI_ROOT_CERTS_ADVISORY}\n"), "");
+            ensure!(raw_audit(1, &missing, &report)?.validate(&locks).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn webpki_root_certs_activation_and_unknown_affected_lock_entries_block() -> Result<()> {
+        for version in ["0.26.10", "0.26.11", "1.0.0", "1.0.9"] {
+            let graph = format!("rtao v0.1.0\nwebpki-root-certs v{version}\n");
+            ensure!(
+                check_graph(&graph, &["rtao".into()]).is_err(),
+                "accepted active webpki-root-certs {version}"
+            );
+        }
+        let lock = webpki_root_certs_lock();
+        for changed in [
+            lock.replacen("0.26.11", "0.26.10", 1),
+            lock.replace("version = '1.0.10'", "version = '1.0.9'"),
+            lock.replace(
+                &format!("version = '0.26.11'\nsource = '{SOURCE}'"),
+                "version = '0.26.11'\nsource = 'git+https://example.test/webpki-root-certs#1234'",
+            ),
+            lock.replace(WEBPKI_ROOT_CERTS_CHECKSUM, "changed"),
+            lock.replace(&format!("checksum = '{WEBPKI_ROOT_CERTS_CHECKSUM}'\n"), ""),
+            format!("{lock}{lock}"),
+        ] {
+            ensure!(
+                lock_identities(&changed).is_err(),
+                "accepted lock {changed:?}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn webpki_root_certs_exception_rejects_other_advisories_identities_ranges_and_filters()
+    -> Result<()> {
+        let locks = all_dormant_locks()?;
+        let baseline = webpki_root_certs_report();
+        ensure!(validate_audit(&baseline, &locks).is_ok());
+        let mut variants = Vec::new();
+        for (section, key, changed) in [
+            ("advisory", "id", "RUSTSEC-2099-9999"),
+            ("advisory", "id", RUZSTD_ADVISORY),
+            ("advisory", "id", ADVISORY),
+            ("advisory", "package", "ruzstd"),
+            ("package", "name", "unexpected"),
+            ("package", "version", "0.26.10"),
+            (
+                "package",
+                "source",
+                "git+https://example.test/webpki-root-certs#1234",
+            ),
+            ("package", "checksum", "changed"),
+        ] {
+            let mut report = baseline.clone();
+            report["vulnerabilities"]["list"][1][section][key] = json!(changed);
+            variants.push(report);
+        }
+        // The advisory may not move onto the fixed 1.x lock entry.
+        let mut fixed = baseline.clone();
+        fixed["vulnerabilities"]["list"][1]["package"]["version"] = json!("1.0.10");
+        fixed["vulnerabilities"]["list"][1]["package"]["checksum"] =
+            json!(WEBPKI_ROOT_CERTS_FIXED_CHECKSUM);
+        variants.push(fixed);
+        for (key, changed) in [
+            ("patched", json!([">=1.0.9"])),
+            ("patched", json!([">=0.26.12"])),
+            ("patched", json!([">=1.0.10", "^0.26.12"])),
+            ("unaffected", json!(["<0.26.0"])),
+        ] {
+            let mut report = baseline.clone();
+            report["vulnerabilities"]["list"][1]["versions"][key] = changed;
+            variants.push(report);
+        }
+        for (key, changed) in [
+            ("ignore", json!([WEBPKI_ROOT_CERTS_ADVISORY])),
+            ("severity", json!("high")),
+            ("target_arch", json!(["x86_64"])),
+            ("target_os", json!(["linux"])),
+        ] {
+            let mut report = baseline.clone();
+            report["settings"][key] = changed;
+            variants.push(report);
+        }
+        let mut cross_identity = baseline.clone();
+        cross_identity["vulnerabilities"]["list"][1]["advisory"]["id"] = json!(RUZSTD_ADVISORY);
+        cross_identity["vulnerabilities"]["list"][1]["versions"]["patched"] = json!([">=0.9.1"]);
+        variants.push(cross_identity);
+        let mut cross_identity = baseline.clone();
+        cross_identity["vulnerabilities"]["list"][0]["advisory"]["id"] =
+            json!(WEBPKI_ROOT_CERTS_ADVISORY);
+        cross_identity["vulnerabilities"]["list"][0]["versions"]["patched"] = json!([">=1.0.10"]);
+        variants.push(cross_identity);
+        let mut cross_identity = baseline.clone();
+        cross_identity["vulnerabilities"]["list"][1]["advisory"]["id"] = json!(ADVISORY);
+        cross_identity["vulnerabilities"]["list"][1]["versions"]["patched"] = json!([">=0.18.2"]);
+        variants.push(cross_identity);
+        let mut cross_identity = baseline.clone();
+        cross_identity["warnings"]["unsound"][0]["advisory"]["id"] =
+            json!(WEBPKI_ROOT_CERTS_ADVISORY);
+        cross_identity["warnings"]["unsound"][0]["versions"]["patched"] = json!([">=1.0.10"]);
+        variants.push(cross_identity);
+        let mut informational = baseline.clone();
+        informational["vulnerabilities"]["list"][1]["advisory"]["informational"] =
+            json!("unmaintained");
+        variants.push(informational);
+        let mut duplicate = baseline.clone();
+        duplicate["vulnerabilities"]["count"] = json!(3);
+        duplicate["vulnerabilities"]["list"] = json!([
+            baseline["vulnerabilities"]["list"][0].clone(),
+            baseline["vulnerabilities"]["list"][1].clone(),
+            baseline["vulnerabilities"]["list"][1].clone(),
+        ]);
+        variants.push(duplicate);
+        for report in variants {
+            ensure!(
+                validate_audit(&report, &locks).is_err(),
+                "accepted report {report}"
+            );
         }
         Ok(())
     }
