@@ -5504,9 +5504,12 @@ vectors from the previous tag stay authoritative until the image builds [J-PD co
   raw statuses for both workspace and fuzz locks. Q27 permits only RUSTSEC-2026-0253 on dormant lru 0.16.4,
   crates.io checksum `7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39`; Q28 permits only
   RUSTSEC-2026-0344 on dormant ruzstd 0.8.3, crates.io checksum
-  `a7c1c839d570d835527c9a5e4db7cb2198683a988cb9d7293fc8674e6bd58fc8`. Patched ranges must remain >=0.18.2
-  and >=0.9.1 respectively, with no unaffected ranges. All-feature/all-target workspace, fuzz and shipped
-  normal/build/dev profiles must contain neither affected package. Activation, unexpected identities/advisories,
+  `a7c1c839d570d835527c9a5e4db7cb2198683a988cb9d7293fc8674e6bd58fc8`; Q31 permits only RUSTSEC-2026-0383 on
+  dormant webpki-root-certs 0.26.11, crates.io checksum
+  `75c7f0ef91146ebfb530314f5f1d24528d7f0767efbfd31dce919275413e393e`. Patched ranges must remain >=0.18.2,
+  >=0.9.1 and >=1.0.10 respectively, with no unaffected ranges. All-feature/all-target workspace, fuzz and
+  shipped normal/build/dev profiles must contain no affected version of these packages; the fixed
+  webpki-root-certs 1.0.10 entry may stay active. Activation, unexpected identities/advisories,
   changed ranges, filtering and tool/schema/status failures block. The exact existing maintenance notices stay
   visible and informational; cargo-deny's advisory/license/source/ban checks remain blocking and unchanged.
 - **Dependency update automation is deferred.** Review relevant third-party updates as client work requires.
@@ -6214,7 +6217,7 @@ Actual workflow files must follow the bounded client scope of PLAN.md §9.7 befo
 
 - Use only free `ubuntu-latest`. Pin actions by SHA, set timeouts, and cancel superseded development runs.
 - Run applicable Rust tests, Clippy, formatting, doctests, source/generated/pin/dependency guards, supply audits
-  and selected MSRV/features in hosted jobs. Preserve raw audit output and the exact Q26-Q28 guards.
+  and selected MSRV/features in hosted jobs. Preserve raw audit output and the exact Q26-Q28 and Q31 guards.
 - `cargo xtask gates` is hosted orchestration. Local workstations do not run the full matrix before pushes. The cargo-hack
   no-dev snapshot is temporary CI data; validate retained lock identities and remove it after the job. Do not copy
   its targets/caches to local workstations or prepare local replicas.

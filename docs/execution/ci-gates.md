@@ -29,7 +29,7 @@ gates command remains a CI entry point; do not invoke it as a local pre-push
 routine. Even `cargo xtask gates --list` can first compile xtask on a cold
 machine, so inspect the source when only the command list is needed. A
 blocking hosted failure stops its job. The approved Q26 built-dependency BLS
-criterion and Q27/Q28 guarded dormant advisory exceptions remain in force.
+criterion and Q27/Q28/Q31 guarded dormant advisory exceptions remain in force.
 
 The previous local execution root is being retired by
 the disk cleanup recorded in `state.md`. Do not recreate its caches or

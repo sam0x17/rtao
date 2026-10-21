@@ -14,6 +14,19 @@ infrastructure, scheduled, oracle and release workflows are inactive drafts
 in `.github/deferred-workflows/`. No workflow was dispatched during
 the cleanup itself. Subsequent client checkpoints use hosted CI as recorded below.
 
+## Q31 dormant webpki-root-certs exception, 2026-10-21
+
+The fixed `webpki-root-certs 1.0.10` lock left the semver-trick release
+0.26.11 as the only RUSTSEC-2026-0383 finding. The maintainer approved Q31's
+exact dormant exception, alongside Q27's lru and Q28's ruzstd rules. The
+supply guard permits only that advisory on the exact registry 0.26.11 entry
+with its pinned checksum and patched range >=1.0.10, while every checked
+graph excludes it. Both raw audits stay unfiltered and nonzero, and
+cargo-deny is unchanged. Locally the supply guard exits 0 with all 60 graph
+checks passing; cargo-deny, deps-check, strict xtask Clippy and the guard
+regressions pass. Hosted CI remains authoritative.
+Evidence: `supply-webpki-root-certs.md`.
+
 ## M10 implementation, 2026-10-17
 
 Optional M10 is

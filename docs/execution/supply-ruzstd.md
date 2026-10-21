@@ -5,7 +5,9 @@ reviewed patch (SHA-256 below; not retained in the repository) is applied to
 the active guard. Q27 continues to cover lru; Q28 adds only the exact ruzstd
 identity below. The full active supply job passes against the canonical locks,
 including the pinned Unicode 0.6.0 dependency. Both raw audit failures remain
-visible. No manifest or lockfile was changed to apply Q28.
+visible. No manifest or lockfile was changed to apply Q28. Q31 later added
+the separate exact dormant webpki-root-certs rule; see
+`supply-webpki-root-certs.md`.
 
 The advisory describes a decompression bomb: a small compressed input can
 cause several gigabytes of allocation and terminate the decoder process.
