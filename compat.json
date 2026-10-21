@@ -10,7 +10,7 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1792443511,
+        "measured_unix_seconds": 1792552873,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -20,7 +20,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "7a6d74c9d5e8c1b17cbce6e1af5f2ae1edfa515db90393156c1c34a2c2aa52d4",
+            "feature_graph_sha256": "0b327c3f306c75e1af0e985bb304eb2c849fc238a9420bb9acb90bf0812a6416",
             "features": [],
             "normal_build_packages": 225,
             "package": "rtao-core",
@@ -256,7 +256,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "34092844f0e6d493f6779492b8e39a5a52cd79e7bc57454533871f45aea80c3b",
+            "feature_graph_sha256": "dfede9542e37ac369d3a06c0613a7ef6fd9c2ad61b64e0b8cc39d60a6bb20469",
             "features": [
               "validator"
             ],
@@ -508,7 +508,7 @@
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
               "rustls-platform-verifier v0.7.1",
-              "rustls-webpki v0.103.15",
+              "rustls-webpki v0.103.16",
               "rustversion v1.0.23 (proc-macro)",
               "ryu v1.0.23",
               "scale-bits v0.7.0",
@@ -631,7 +631,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "a5206841eb1df3a01b70f1e377c1c4ebf7935a698c4467dab8d816da1e1645c8",
+            "feature_graph_sha256": "2057721bfddf4533a9de1720d6148532d7b750027b1a89ceb2c88853cf996ff0",
             "features": [
               "miner"
             ],
@@ -886,7 +886,7 @@
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
               "rustls-platform-verifier v0.7.1",
-              "rustls-webpki v0.103.15",
+              "rustls-webpki v0.103.16",
               "rustversion v1.0.23 (proc-macro)",
               "ryu v1.0.23",
               "scale-bits v0.7.0",
@@ -1010,7 +1010,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "bc00c22aad71e58b1578838f50535450829e4aa5538778f089db128408c45c6d",
+            "feature_graph_sha256": "a9ed0ec65522f17d9f19250cdd4e7b999ad53bed1703fe7296a10ea21c1bfbe7",
             "features": [
               "owner"
             ],
@@ -1302,7 +1302,7 @@
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
               "rustls-platform-verifier v0.7.1",
-              "rustls-webpki v0.103.15",
+              "rustls-webpki v0.103.16",
               "rustversion v1.0.23 (proc-macro)",
               "ryu v1.0.23",
               "salsa20 v0.10.2",
@@ -1442,7 +1442,7 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "25f01ffc69b438a23192ccda3dd4a39aae76290382dffe884a1e36f53c15a2e2",
+            "Cargo.lock": "10d8c00069949fefc70616d80c620d5d4bc1ead0af4c36dd9e76c6c54e6bb448",
             "Cargo.toml": "21fdb33f5b38607fe6863f3ce739a37a3691fb203812a98b5d89f6ccc1ddf42f",
             "crates/rtao-btauth/Cargo.toml": "9cc0a6f7860ca136dbbcb89b9de5036f15fded779336566b7503adb6674bfe9d",
             "crates/rtao-catalog/Cargo.toml": "c37ed0509fa3f5da5f393631b0bf51f1bd3e62ebe7156e25fa4035da65e964d5",
@@ -1470,13 +1470,13 @@
             "upstream.toml": "ccfc71fb95779842be215eabe923d513a6e515b29a6da226f3879e024bbbbe2a",
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
-          "dependency_inputs_sha256": "6c3919cb662382ff75cf3fe4fad9e287c4211f92200b7447064f68bd4eacfebb",
+          "dependency_inputs_sha256": "c2521094697ffa5c5d07daee4951a94cea4e4d16f1fe91b84331b4c696b36dec",
           "dirty": false,
-          "head_commit": "9b73ccc2982b337311fc08bfd82b6644beb20bb3"
+          "head_commit": "76d291e3f8de5bd7b6d921c8262578e9009e7b53"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "51a1dc8188a994432b5bc87682c7c0fadda9bee5dc9351e05f2399d2f9a039ca"
+      "sha256": "dea5d5000cc601d60bac3f5e6a29f5b26496830a6079344c533d95dff7bb0540"
     }
   ],
   "core": {
