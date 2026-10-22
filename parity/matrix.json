@@ -360,6 +360,16 @@
         "rtao": "generated"
       },
       {
+        "name": "ColdkeySwapDestinationReservationNotFound",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "ColdkeySwapDestinationReserved",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
         "name": "ColdkeySwapDisputed",
         "oracle": "unverified",
         "rtao": "generated"
@@ -5299,6 +5309,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.ReleaseOwnColdkeySwapDestinationReservation",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.RemoveProxies",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
@@ -7018,7 +7034,7 @@
         "rust": [
           "vendor/upstream/extracted/chain_rules.json (proxy_contract source/metadata/Python codec reconciliation)"
         ],
-        "synced_blob": "5a9636a7571cafd85cfc2d8ff00205b0d2b6b023"
+        "synced_blob": "09b0e8c2ede9de401b8badcbcb0c4e26d3c4d2f1"
       },
       {
         "kind": "extracted",
@@ -7085,7 +7101,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "9c913295e51ed1108e365531fb3d718af9531280"
+        "synced_blob": "08767cbbd2f475c4c0a8b566cadfdab4f3c455fd"
       },
       {
         "kind": "n/a",
@@ -7152,7 +7168,7 @@
         "rust": [
           "vendor/upstream/extracted/owner_map.json (framework_rules.blocks_until_next_auto_epoch client projection)"
         ],
-        "synced_blob": "52803e85351b4f0b9ac704641f474442e54ee60f"
+        "synced_blob": "49ddf970fec690db7fa1163408861e28e40c5a33"
       },
       {
         "kind": "extracted",
@@ -7294,7 +7310,7 @@
           "crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)",
           "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)"
         ],
-        "synced_blob": "e01351853f8a1d92f13488beb20853f89b1b0bf9"
+        "synced_blob": "3a890e95a98c19f39c83c2fcba6a40900ef458c2"
       },
       {
         "kind": "ported",
@@ -7366,7 +7382,7 @@
           "xtask/src/extract_fee_contract.rs",
           "vendor/upstream/extracted/chain_rules.json"
         ],
-        "synced_blob": "1d9f3cb8d00c601eb76fde8aa27db24add6f0d10"
+        "synced_blob": "e5cbde67e69d5e957bf0f2f343aa7a3edf6bd12f"
       },
       {
         "kind": "oracle-only",
@@ -7896,7 +7912,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "3a8b58727b538d94f6a90613c3535e8f2284fd24"
+        "synced_blob": "5e377c55a9a8cb5fa5d12a2113e9ac7af5d86e3b"
       },
       {
         "kind": "n/a",
@@ -7907,7 +7923,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "05c8136831c80627d16cb4463bb692db65ef64c5"
+        "synced_blob": "e775b3164ecaeeb1d909bc190ad38d757b0bfc07"
       },
       {
         "kind": "ported",
@@ -7940,7 +7956,7 @@
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "f562ba4b5cd05c7f1e1125007cb2b8d880f3be57"
+        "synced_blob": "15fa3e3a25d2edcbc01a03e16f9c3f679ff13a31"
       },
       {
         "kind": "generated",
@@ -7962,7 +7978,7 @@
         "rust": [
           "`rtao_runtime::generated::errors::MODULE_ERRORS`"
         ],
-        "synced_blob": "58ee69d04168cf2e8402440434e783a59691c4a3"
+        "synced_blob": "d22bed1d91846bc573cfe2ec3da031aa405a727c"
       },
       {
         "kind": "generated",
@@ -7984,7 +8000,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "693f6d768fc48ac912797f0d758fbe508f41991b"
+        "synced_blob": "c2cc266ded297ee3c80566a662e161a8b3033744"
       },
       {
         "kind": "n/a",
@@ -8013,7 +8029,7 @@
           "crates/rtao-tx/src/executor.rs",
           "crates/rtao-rpc/src/session.rs"
         ],
-        "synced_blob": "e6c51b0314b60e179500076bc3bda712ae7c303f"
+        "synced_blob": "03316a548082418fa7e33523a34445370b0894d2"
       },
       {
         "kind": "ported",
@@ -8398,7 +8414,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm/association.rs"
         ],
-        "synced_blob": "84a0f6e45fe5998e20a05510f8e0f0e75f45d996"
+        "synced_blob": "493e1593cc8bf78d2caf43f239f76feaab8694fb"
       },
       {
         "kind": "ported",
@@ -8521,7 +8537,7 @@
         "rust": [
           "`rtao-cli/src/commands/proxy.rs`"
         ],
-        "synced_blob": "20c4a074f006963b4a9a985e1bc68319905da786"
+        "synced_blob": "0b4ef6dec16aa4923a8f87fbadc879a98f96c702"
       },
       {
         "kind": "ported",
@@ -8598,7 +8614,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/hparams.rs"
         ],
-        "synced_blob": "f14dc639d85743a151a12b81c38638071c05e97e"
+        "synced_blob": "85974d177e9273128d41f1f5186c848f239fd3e0"
       },
       {
         "kind": "ported",
@@ -8635,7 +8651,7 @@
           "crates/rtao-cli/src/commands/wallet_m8/views.rs",
           "crates/rtao-cli/src/commands/wallet_m8/history.rs"
         ],
-        "synced_blob": "e994f7d04bab68e7405788f122f06796eaa538cb"
+        "synced_blob": "15d5ddaede7cbfa33fc6f5da3a305b76ad53f3d4"
       },
       {
         "kind": "ported",
@@ -9129,7 +9145,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "7cd168c03019cc1962fa40c0ad1e7862fee57c5f"
+        "synced_blob": "a056b56d1977c617b78d8fa39f0cc99f64758cfb"
       },
       {
         "kind": "generated",
@@ -9184,7 +9200,7 @@
         "rust": [
           "rtao_catalog::errors::{ErrorCode, CHAIN_ERRORS}; rtao_catalog::py"
         ],
-        "synced_blob": "53ddb99f8237c5fc1647f2879c2bc23443d69598"
+        "synced_blob": "7650f6e03378941fa9953a0774dc1d86dd5cb0d4"
       },
       {
         "kind": "n/a",
@@ -9315,7 +9331,7 @@
           "vendor/upstream/evm/abi/neuron.json",
           "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "ea58f43977bb139fbb52c8d9a9b24fc16468f78d"
+        "synced_blob": "aab0898d06dfc4e0fe49c8713854004fac9bd333"
       },
       {
         "kind": "vendored",
@@ -9693,7 +9709,7 @@
         "rust": [
           "rtao_catalog::hyperparams::TABLE; rtao_primitives::{hyperparams,hyperparam_table,ratio}"
         ],
-        "synced_blob": "43bc87b856befdadcd4bf9b492c6609726cfe2e6"
+        "synced_blob": "55bbf1e289f2ae9092e99584b9e2e7997f046694"
       },
       {
         "kind": "n/a",
@@ -9785,7 +9801,7 @@
         "rust": [
           "`rtao_intents::coldkey` (feature `coldkey`)"
         ],
-        "synced_blob": "2afbd304453223a3f3c4719cdcd13c85d41f98d3"
+        "synced_blob": "98ee9b926b96bf9dabe4a01ad3c19f8dd6d4c914"
       },
       {
         "kind": "ported",
@@ -9929,7 +9945,7 @@
           "rtao_intents::proxy::{PROXY_TYPES,check_proxy_type,AddProxy,RemoveProxy,RemoveProxies,CreatePureProxy,KillPureProxy,ExecuteProxyAnnounced}",
           "rtao_intents::generated::{interfaces,defaults,passthrough,any_intent}"
         ],
-        "synced_blob": "e19113d503ef0b2f488af38bec57cadb934e1f56"
+        "synced_blob": "30b4e4d42f161e970e1bacdad9ad2175ce6318da"
       },
       {
         "kind": "ported",
@@ -9941,7 +9957,7 @@
           "rtao_intents::{registration,registration_pow,root_claim,registration_swap}",
           "rtao_cli::context::registration"
         ],
-        "synced_blob": "96645c419f9b5e95f9b0407164bdb0578c5efd85"
+        "synced_blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c"
       },
       {
         "kind": "generated",
@@ -9965,7 +9981,7 @@
           "rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}",
           "rtao_intents::generated::interfaces"
         ],
-        "synced_blob": "dc097fe4177bb426a24552cc0e7109c43e62b438"
+        "synced_blob": "1e7d78e639d650b602620fe387a1912a731d3ceb"
       },
       {
         "kind": "ported",
@@ -10160,7 +10176,7 @@
           "rtao_reads::reads::m6_accounts::{existential_deposit, coldkey_swap_announcement, multisig}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5"
+        "synced_blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9"
       },
       {
         "kind": "ported",
@@ -10237,7 +10253,7 @@
           "rtao_reads::reads::hyperparameters",
           "rtao_reads::reads::owner::{difficulty, subnet_emission_enabled}"
         ],
-        "synced_blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0"
+        "synced_blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b"
       },
       {
         "kind": "ported",
@@ -10585,7 +10601,7 @@
           "rtao_catalog::py::PYTHON_TABLES",
           "xtask/src/parity_catalog.rs"
         ],
-        "synced_blob": "9dd65bd98971333d635ea2bd1954c6ec51b211e8"
+        "synced_blob": "d0db99c8e1dee8c3cd8188ee7cf9a12f9179474c"
       },
       {
         "kind": "n/a",
@@ -10811,7 +10827,7 @@
           "crates/rtao-intents/tests/intent_plans.rs",
           "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "91ff2aff459b6ea8e51f4ad3b17e59005451191b"
+        "synced_blob": "987cfa63d8b94b7f18440fc5c7d81bd256fbf613"
       },
       {
         "kind": "n/a",
@@ -11255,7 +11271,7 @@
           "vendor/upstream/catalog/errors.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "a44cb6edd1dc2256f16e152c803555f3f36775ab"
+        "synced_blob": "bb30dd7767942afc716ab2d22ca7baf2417083c8"
       },
       {
         "kind": "vendored",
@@ -11267,7 +11283,7 @@
           "vendor/upstream/catalog/intents.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "f3e3ac969f8fcb798ea38a9d1a7127f6035f1e57"
+        "synced_blob": "9429cb6cbf42db52e3c034fd4371e51fd405052c"
       },
       {
         "kind": "vendored",
@@ -11279,7 +11295,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "8fe0a4fb9e165984eaba5930b7da25a1644a0022"
+        "synced_blob": "389ff5cd126c4ead27bcefcb6c92857241bc7692"
       }
     ],
     "intents": [
@@ -11503,6 +11519,12 @@
         "name": "register_subnet",
         "oracle": "missing",
         "python_class": "RegisterSubnet",
+        "rtao": "implemented"
+      },
+      {
+        "name": "release_own_coldkey_swap_destination_reservation",
+        "oracle": "missing",
+        "python_class": "ReleaseOwnColdkeySwapDestinationReservation",
         "rtao": "implemented"
       },
       {
@@ -12405,8 +12427,8 @@
     ]
   },
   "pin": {
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
-    "tag": "v481"
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "tag": "v482"
   },
   "schema": 1,
   "status_semantics": {

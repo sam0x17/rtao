@@ -220,6 +220,37 @@ and the stale matrix. Final row/export review, matrix regeneration, broader
 validation and hosted compatibility adoption remain outstanding. No new
 localnet, public-chain probe, oracle campaign or hosted CI run is recorded here.
 
+## 2026-10-22: bounded v482 source identity reconciliation
+
+The follow-up to `69ba38d` records exact source evidence for all 362 watched
+paths: 332 retain their Git blobs and 30 have explicit changed-path mapping
+decisions. The comparison authenticates the cached upstream v481/v482 trees,
+all 388 pinned artifacts, retained metadata and normal producer inputs. It
+does not carry forward an unchanged-extraction assertion from the pin report.
+
+Seventy-two unchanged sources have equal recorded extraction fragments; four
+need narrower comparisons for source offsets, separately named provenance or
+the added release intent's inherited defaults. The remaining 256 have no
+such projection and carry only exact unchanged source evidence plus their
+normal checks. Whole extraction outputs remain different. See the
+[source reconciliation record](../../docs/compat/v482-source-reconciliation.md)
+and `parity/v482-{sources,decisions}.json` for the precise scope.
+
+The Null scheduler ordering remains runtime-owned, outside the unchanged
+client timing projection. V2 coldkey commitment prose and the core e2e
+fixture differ; the client submits the cleartext account without computing
+that runtime commitment. Independent semantic review of the inherited
+production port remains **OPEN**, including dynamic proxy signers, recovery
+reads, failed receipt fields and omitted identity fields. No runtime range,
+attested runtime row, oracle execution or milestone acceptance is added.
+
+Normal offline source reconciliation, matrix generation and strict parity now
+pass, including normal extraction, catalog and metadata-generation guards.
+Guard logic is unchanged. Probe-pin and compatibility-output checks pass as
+well. These local source checks leave runtime range null and the attested
+runtime catalog empty;
+they are not hosted CI or semantic approval of the port.
+
 ## Recording the next change
 
 Append an entry when a pin changes. Include the old and new tag/commit, affected

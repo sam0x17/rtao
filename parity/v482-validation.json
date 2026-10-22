@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "date": "2026-10-22",
+  "candidate_base": "69ba38df8361dda00ba5cee17451dbd522f64faa",
+  "scope": "Local offline source reconciliation and deterministic generation checks only; inherited production-port semantic review remains OPEN.",
+  "execution": {
+    "build": "cargo build --locked --offline -p xtask",
+    "commands_use": "The freshly built xtask executable; every Cargo invocation serialized with the shared lock and target; offline, umask 022, task-local scratch.",
+    "new_runtime_tests": false,
+    "new_remote_ci": false,
+    "new_source_acquisition": false
+  },
+  "records": [
+    {
+      "path": "parity/map.toml",
+      "sha256": "ae346de67ee2c4956b41e9b00a605d2a2f43f5cd618e91d8596c9c2905853031"
+    },
+    {
+      "path": "parity/matrix.json",
+      "sha256": "54a2e19f5049577d4a09ce96c94877b402f263711ea1e0fbe1578edc5cbc57f9"
+    },
+    {
+      "path": "parity/v482-decisions.json",
+      "sha256": "35a6fe0c5b000c176d2fdd1eb9aeba29873b24489b794d068800a5de59fbfc63"
+    },
+    {
+      "path": "parity/v482-sources.json",
+      "sha256": "93e8f9700f3660d8141d2cf7103492807c4edb083d9c475521c8a724ef5a3cd9"
+    }
+  ],
+  "checks": [
+    {
+      "command": "xtask parity bless <362 individually authenticated and explicitly reviewed paths>",
+      "exit_code": 0,
+      "log_name": "bless.log",
+      "log_sha256": "9dd7e2c5c4700a99a43d96afa35a6443c2bf6b9fc4e3734f6e8a19f49a08c631"
+    },
+    {
+      "command": "xtask parity matrix",
+      "exit_code": 0,
+      "log_name": "matrix.log",
+      "log_sha256": "491f4c7bfc4858c7e8471231e7d5787793838fc671f65432835a11383fad9b62"
+    },
+    {
+      "command": "xtask parity check --strict",
+      "exit_code": 0,
+      "log_name": "strict.log",
+      "log_sha256": "7f996be34f436905404c128693c1689233f2e49a3418a3e717e3e9e42c4f0f07"
+    },
+    {
+      "command": "xtask probe pins --check",
+      "exit_code": 0,
+      "log_name": "probe.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "xtask compat --check",
+      "exit_code": 0,
+      "log_name": "compat.log",
+      "log_sha256": "ac5e2698d75a28a1bf303fbe0011b22888f7ece08ebcfa3e05e49ff66ee530dd"
+    }
+  ],
+  "normal_producer_checks": {
+    "unchanged_guard_logic": true,
+    "extraction": "checked through normal producer and strict-parity gates",
+    "metadata_and_interfaces": "normal regeneration checked through producer gate",
+    "matrix": "regenerated and checked through strict parity",
+    "intents": 86,
+    "reads": 103,
+    "metadata_surface": {
+      "calls": 316,
+      "storage_entries": 410,
+      "constants": 136,
+      "runtime_api_methods": 125,
+      "errors": 421
+    },
+    "catalog_chain_errors": 406
+  },
+  "preservation": {
+    "inherited_checkpoint": "320a4d8",
+    "original_paths": 49,
+    "allowed_record_changes": [
+      "parity/map.toml",
+      "parity/matrix.json"
+    ],
+    "other_original_paths_byte_identical": 47,
+    "root_locks_and_upstream_pin": "unchanged from candidate base"
+  },
+  "remaining": {
+    "independent_inherited_port_semantic_review": "OPEN",
+    "validated_spec_range": null,
+    "validated_runtimes": [],
+    "validation_reports": [],
+    "oracle": "optional-unverified under existing Q30; no independent Python parity",
+    "runtime_lifecycle": "deferred; source checks do not establish execution",
+    "actual_target_Mac_trial": "OPEN",
+    "full_suite_and_hosted_adoption": "not performed by this follow-up"
+  }
+}
