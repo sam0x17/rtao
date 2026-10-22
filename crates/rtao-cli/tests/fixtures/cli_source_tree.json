@@ -20,7 +20,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
-      "sha256": "84b758ae9be1c4ced1d5ec960e01c983c21d66cea629342baded99e07a8daf06"
+      "sha256": "a6aec2bfb73c83c0de56db4578b434d22839fd4e14e880a248b11c972c798e76"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
@@ -48,7 +48,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
-      "sha256": "d02e784e77bbf5266cdcdc91ebee1c473d66951a6cd7362fb31b7a778a3f6af7"
+      "sha256": "0b5222ccd326ae7dd0a984600f6485460e02925cffa0b04cab22a7f86be77dae"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py",
@@ -60,7 +60,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
-      "sha256": "02361a35dbbafe34de6c3ac35c7307a7acea7b51eff2ad35c84ffc24832b35ca"
+      "sha256": "8c0745db9143f51cc611c54fad088cec7278eb73d3a00b7b171e021767990b4e"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
@@ -124,7 +124,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/association.py",
-      "sha256": "2748ab0c54b31440ee1ed93ae2628bc015dee0dfdd71d3759b9c1dc7fadf4298"
+      "sha256": "4043f58ee14475d4b15c580ade54c756dc0af960746a960b195f47b9394da049"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
@@ -774,7 +774,12 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
       "function": "set_subnet_identity",
       "options": [
+        "--additional",
+        "--contact",
         "--description",
+        "--discord",
+        "--github-repo",
+        "--logo-url",
         "--name",
         "--netuid",
         "--url"

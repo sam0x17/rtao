@@ -16,7 +16,7 @@ fn every_intent_and_read_retains_its_complete_catalog_record() -> Result {
         serde_json::from_str(include_str!("../../../vendor/upstream/catalog/reads.json"))?;
     let intent_rows = intents.as_array().ok_or("intent catalog is not an array")?;
     let read_rows = reads.as_array().ok_or("read catalog is not an array")?;
-    assert_eq!(INTENTS.len(), 85);
+    assert_eq!(INTENTS.len(), 86);
     assert_eq!(READS.len(), 103);
     assert_eq!(INTENTS.len(), intent_rows.len());
     assert_eq!(READS.len(), read_rows.len());
@@ -90,7 +90,7 @@ fn all_semantic_and_chain_error_records_preserve_documentation_and_sources() -> 
         .as_object()
         .ok_or("chain errors missing")?;
     assert_eq!(SEMANTIC_ERRORS.len(), 18);
-    assert_eq!(CHAIN_ERRORS.len(), 404);
+    assert_eq!(CHAIN_ERRORS.len(), 406);
     let mut semantic_names = BTreeSet::new();
     for spec in &SEMANTIC_ERRORS {
         assert!(semantic_names.insert(spec.code.as_str()));

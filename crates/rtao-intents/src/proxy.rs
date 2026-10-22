@@ -1,9 +1,10 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/proxy.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/proxy.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 //! Proxy delegation, keyless accounts and announced-call dispatch.
 
 use rtao_client::{DynView, View};
 use rtao_primitives::{IntoCoreValue, NetUid, Spend};
 use rtao_runtime::{Call, calls::proxy};
+use rtao_signer::SignerRole;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, PreflightCx};
 use serde_json::Value;
 use smallvec::SmallVec;
@@ -14,7 +15,7 @@ pub use crate::{
 
 /// Runtime proxy type names, in the Python choice and on-chain variant order.
 #[doc(alias = "bittensor.intents.proxy.PROXY_TYPES")]
-pub const PROXY_TYPES: [&str; 19] = [
+pub const PROXY_TYPES: [&str; 21] = [
     "Any",
     "Owner",
     "NonCritical",
@@ -34,6 +35,8 @@ pub const PROXY_TYPES: [&str; 19] = [
     "SubnetLeaseBeneficiary",
     "RootClaim",
     "BasketTrading",
+    "Validate",
+    "Weights",
 ];
 
 /// Validate an exact Python proxy choice without normalizing its spelling.
@@ -50,6 +53,23 @@ pub fn check_proxy_type(proxy_type: &str) -> Result<&str, IntentError> {
     }
 }
 
+/// Proxy types whose calls are hotkey-signed (weights, serving, commitments,
+/// EVM association), so the real account is the validator hotkey.
+///
+/// A coldkey grant of these types could dispatch nothing useful.
+#[doc(alias = "bittensor.intents.proxy.HOTKEY_PROXY_TYPES")]
+pub const HOTKEY_PROXY_TYPES: [&str; 2] = ["Validate", "Weights"];
+
+/// Key that signs add/remove for `proxy_type`: the hotkey for hotkey-scoped types.
+#[doc(alias = "bittensor.intents.proxy.proxy_grant_signer")]
+pub fn proxy_grant_signer(proxy_type: &str) -> SignerRole {
+    if HOTKEY_PROXY_TYPES.contains(&proxy_type) {
+        SignerRole::Hotkey
+    } else {
+        SignerRole::Coldkey
+    }
+}
+
 /// Bound nested arguments before generated serde conversion clones them.
 pub(crate) fn check_constructor_input(args: &Value) -> Result<(), IntentError> {
     if let Some(inner_args) = args.get("inner_args") {
@@ -59,6 +79,10 @@ pub(crate) fn check_constructor_input(args: &Value) -> Result<(), IntentError> {
 }
 
 impl Intent for AddProxy {
+    fn signer_role(&self) -> Result<SignerRole, IntentError> {
+        Ok(proxy_grant_signer(&self.proxy_type))
+    }
+
     fn summary(&self) -> String {
         format!(
             "add {} proxy {} (delay {})",
@@ -82,6 +106,12 @@ impl Intent for AddProxy {
                 "an Any proxy can do everything this account can, including transfers; prefer a narrower proxy type".into(),
             );
         }
+        if proxy_grant_signer(&self.proxy_type) == SignerRole::Hotkey {
+            warnings.push(format!(
+                "{} acts for the hotkey: the hotkey signs this grant and needs free TAO for the deposit and fee",
+                self.proxy_type
+            ));
+        }
         Ok(warnings)
     }
 
@@ -92,6 +122,10 @@ impl Intent for AddProxy {
 }
 
 impl Intent for RemoveProxy {
+    fn signer_role(&self) -> Result<SignerRole, IntentError> {
+        Ok(proxy_grant_signer(&self.proxy_type))
+    }
+
     fn summary(&self) -> String {
         format!(
             "remove {} proxy {} (delay {})",
@@ -111,8 +145,21 @@ impl Intent for RemoveProxy {
 }
 
 impl Intent for RemoveProxies {
+    fn signer_role(&self) -> Result<SignerRole, IntentError> {
+        Ok(if self.from_hotkey {
+            SignerRole::Hotkey
+        } else {
+            SignerRole::Coldkey
+        })
+    }
+
     fn summary(&self) -> String {
-        "remove ALL proxies for the signer".into()
+        let signer = if self.from_hotkey {
+            "hotkey"
+        } else {
+            "coldkey"
+        };
+        format!("remove ALL proxies for the {signer}")
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
@@ -328,7 +375,7 @@ mod tests {
 
     #[test]
     fn proxy_choices_validate_exact_spelling_with_python_diagnostic() -> anyhow::Result<()> {
-        assert_eq!(PROXY_TYPES.len(), 19);
+        assert_eq!(PROXY_TYPES.len(), 21);
         for name in PROXY_TYPES {
             assert_eq!(check_proxy_type(name)?, name);
         }
@@ -338,7 +385,7 @@ mod tests {
                     .expect_err("invalid choice")
                     .to_string(),
                 format!(
-                    "unknown proxy type {}; expected one of: Any, Owner, NonCritical, NonTransfer, Senate, NonFungible, Triumvirate, Governance, Staking, Registration, Transfer, SmallTransfer, RootWeights, ChildKeys, SudoUncheckedSetCode, SwapHotkey, SubnetLeaseBeneficiary, RootClaim, BasketTrading",
+                    "unknown proxy type {}; expected one of: Any, Owner, NonCritical, NonTransfer, Senate, NonFungible, Triumvirate, Governance, Staking, Registration, Transfer, SmallTransfer, RootWeights, ChildKeys, SudoUncheckedSetCode, SwapHotkey, SubnetLeaseBeneficiary, RootClaim, BasketTrading, Validate, Weights",
                     rtao_primitives::pyfmt::string_repr(name)
                 )
             );
@@ -456,10 +503,13 @@ mod tests {
                 }
             }
         }
-        let built = build(&RemoveProxies {}, &view, runtime).await?;
-        assert_eq!(built.call.as_bytes(), &[16, 3]);
-        assert!(built.extras.is_empty());
-        assert_eq!(decode(&built.call, runtime)?["call_args"], json!([]));
+        // The hotkey variant changes only who signs, never the call.
+        for from_hotkey in [false, true] {
+            let built = build(&RemoveProxies { from_hotkey }, &view, runtime).await?;
+            assert_eq!(built.call.as_bytes(), &[16, 3]);
+            assert!(built.extras.is_empty());
+            assert_eq!(decode(&built.call, runtime)?["call_args"], json!([]));
+        }
         for prefix in [0, 2, 42, 110] {
             let spelling = DELEGATE.to_ss58(prefix);
             let intent = AddProxy {
@@ -523,7 +573,7 @@ mod tests {
             (
                 "remove_proxies",
                 json!({}),
-                "remove ALL proxies for the signer".into(),
+                "remove ALL proxies for the coldkey".into(),
                 vec![
                     "revokes every delegate at once; pure-proxy accounts would become inaccessible",
                 ],
@@ -643,6 +693,102 @@ mod tests {
             &outer_built.call.as_bytes()[69..],
             inner_built.call.as_bytes()
         );
+        assert!(view.touches().is_empty());
+        assert_eq!(chain.requests().len(), requests);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn hotkey_scoped_grants_sign_with_the_hotkey_and_warn_about_its_deposit()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let view = RecordingView::new(snapshot.clone());
+        let requests = chain.requests().len();
+        assert_eq!(HOTKEY_PROXY_TYPES, ["Validate", "Weights"]);
+        for name in PROXY_TYPES {
+            let expected = if HOTKEY_PROXY_TYPES.contains(&name) {
+                SignerRole::Hotkey
+            } else {
+                SignerRole::Coldkey
+            };
+            assert_eq!(proxy_grant_signer(name), expected, "{name}");
+            for op in ["add_proxy", "remove_proxy"] {
+                let intent = crate::AnyIntent::from_tool(
+                    op,
+                    json!({"delegate_ss58":DELEGATE.to_string(),"proxy_type":name}),
+                )?;
+                assert_eq!(intent.as_dyn().signer_role_dyn()?, expected, "{op} {name}");
+                // The catalog keeps Python's class-level default.
+                assert_eq!(intent.spec().signer, "coldkey");
+            }
+            // Pure proxies and kills stay with the spawner's coldkey.
+            let create =
+                crate::AnyIntent::from_tool("create_pure_proxy", json!({"proxy_type":name}))?;
+            assert_eq!(create.as_dyn().signer_role_dyn()?, SignerRole::Coldkey);
+        }
+        for name in HOTKEY_PROXY_TYPES {
+            let add = AddProxy {
+                delegate_ss58: DELEGATE.into(),
+                proxy_type: name.into(),
+                delay: 0,
+            };
+            let built = build(&add, &view, runtime).await?;
+            let preview = add
+                .preflight_dyn(&PreflightCx {
+                    view: &view as &dyn DynView,
+                    runtime,
+                    clock: &SystemClock,
+                    spec: add.spec(),
+                    client: &client,
+                    dispatch_origin: ORIGIN,
+                    fee_payer: ORIGIN,
+                    call: &built.call,
+                })
+                .await?;
+            assert_eq!(
+                preview.warnings,
+                vec![
+                    "reserves a proxy deposit from the signer (returned on removal)".to_owned(),
+                    format!(
+                        "{name} acts for the hotkey: the hotkey signs this grant and needs free TAO for the deposit and fee"
+                    ),
+                ]
+            );
+        }
+        for (args, role, summary) in [
+            (
+                json!({}),
+                SignerRole::Coldkey,
+                "remove ALL proxies for the coldkey",
+            ),
+            (
+                json!({"from_hotkey":false}),
+                SignerRole::Coldkey,
+                "remove ALL proxies for the coldkey",
+            ),
+            (
+                json!({"from_hotkey":true}),
+                SignerRole::Hotkey,
+                "remove ALL proxies for the hotkey",
+            ),
+        ] {
+            let intent = crate::AnyIntent::from_tool("remove_proxies", args)?;
+            assert_eq!(intent.as_dyn().signer_role_dyn()?, role);
+            assert_eq!(intent.as_dyn().summary_dyn(), summary);
+            assert_eq!(
+                crate::AnyIntent::from_tool("remove_proxies", intent.to_json())?,
+                intent
+            );
+        }
+        for invalid in [json!(1), json!("true"), Value::Null] {
+            assert!(
+                crate::AnyIntent::from_tool("remove_proxies", json!({"from_hotkey":invalid}))
+                    .is_err()
+            );
+        }
         assert!(view.touches().is_empty());
         assert_eq!(chain.requests().len(), requests);
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));

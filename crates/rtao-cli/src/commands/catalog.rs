@@ -58,7 +58,7 @@ pub fn explain_command() -> Command {
     )
 }
 
-/// Project all 85 intents into Python's nine tool fields plus D-029's `rust`.
+/// Project all 86 intents into Python's nine tool fields plus D-029's `rust`.
 ///
 /// This mirrors [`rtao::tx::Executor::tools`]: deserialize the authenticated
 /// catalog record into [`ToolSpec`] and normalize its documentation URL.

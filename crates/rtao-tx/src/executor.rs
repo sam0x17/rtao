@@ -1986,8 +1986,8 @@ mod tests {
     #[test]
     fn coldkey_warning_follows_python_wrapper_leaves() -> Result<(), Box<dyn std::error::Error>> {
         let runtime = rtao_runtime::RuntimeHandle::parse(
-            include_bytes!("../../../vendor/metadata/finney/478.v15.scale"),
-            478,
+            include_bytes!("../../../vendor/metadata/finney/482.v15.scale"),
+            482,
             1,
             42,
         )?;
@@ -2035,8 +2035,8 @@ mod tests {
     #[test]
     fn coldkey_fee_proxy_leaf_is_the_python_serve_axon_call() -> TestResult {
         let runtime = rtao_runtime::RuntimeHandle::parse(
-            include_bytes!("../../../vendor/metadata/finney/478.v15.scale"),
-            478,
+            include_bytes!("../../../vendor/metadata/finney/482.v15.scale"),
+            482,
             1,
             42,
         )?;

@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 //! Remaining wallet operations share the ordinary SDK acquisition and submit path.
 
 use super::*;
@@ -146,7 +146,7 @@ pub(super) fn commands() -> Vec<Command> {
                 .arg(option("new_coldkey_ss58", "new-coldkey", "Previously announced replacement coldkey.").alias("new-coldkey-ss58").required(true))),
             Tier::Tx,
         ),
-        with_globals(Command::new("swap-check").about("Check a pending coldkey swap announcement.").arg(coldkey()), Tier::Read),
+        with_globals(Command::new("swap-check").about("Check a pending coldkey swap announcement and recovery lock.").arg(coldkey()), Tier::Read),
         with_globals(
             period(Command::new("announce-coldkey-swap").about("Announce a replacement coldkey and start the waiting period.")
                 .arg(option("new_coldkey_ss58", "new-coldkey", "Replacement coldkey.").alias("new-coldkey-ss58").required(true))),
@@ -353,14 +353,31 @@ pub(super) async fn swap_check(
             )
             .map_err(failure);
     };
+    let Some(execute_block) = announcement.execute_block else {
+        return ctx
+            .output
+            .detail(
+                Some("coldkey swap status"),
+                &[
+                    ("status".into(), json!("recovery locked (no announcement)")),
+                    ("recovery_locked".into(), json!(true)),
+                    (
+                        "allowed".into(),
+                        json!("announce, execute, or dispute a coldkey swap; shielded submission"),
+                    ),
+                ],
+                None,
+            )
+            .map_err(failure);
+    };
     let current_block = view.block().number;
-    let remaining = u64::from(announcement.execute_block).saturating_sub(current_block);
+    let remaining = u64::from(execute_block).saturating_sub(current_block);
     let executable = swap_executable(remaining, jiff::Zoned::now())?;
     ctx.output
         .detail(
             Some("coldkey swap status"),
             &[
-                ("execute_block".into(), json!(announcement.execute_block)),
+                ("execute_block".into(), json!(execute_block)),
                 ("current_block".into(), json!(current_block)),
                 ("blocks_remaining".into(), json!(remaining)),
                 ("executable".into(), json!(executable)),
@@ -370,6 +387,10 @@ pub(super) async fn swap_check(
                 ),
                 ("disputed".into(), json!(announcement.disputed)),
                 ("dispute_block".into(), json!(announcement.dispute_block)),
+                (
+                    "recovery_locked".into(),
+                    json!(announcement.recovery_locked),
+                ),
             ],
             None,
         )

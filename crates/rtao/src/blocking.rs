@@ -1697,7 +1697,7 @@ mod tests {
         let (client, chain, starts) = setup();
         inspect_all_namespaces(&client);
         assert_eq!(client.reads().len(), 103);
-        assert_eq!(client.tools().unwrap().len(), 85);
+        assert_eq!(client.tools().unwrap().len(), 86);
         assert!(format!("{client:?}").contains("started: false"));
         assert_eq!(starts.load(Ordering::SeqCst), 0);
         assert!(chain.requests().is_empty());

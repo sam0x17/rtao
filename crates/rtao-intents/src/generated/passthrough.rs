@@ -16,6 +16,19 @@ pub(crate) async fn add_proxy<V: rtao_client::View + ?Sized>(
         extras: serde_json::Map::new(),
     })
 }
+#[cfg(feature = "coldkey")]
+pub(crate) async fn announce_coldkey_swap<V: rtao_client::View + ?Sized>(
+    intent: &super::interfaces::AnnounceColdkeySwap,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call = rtao_runtime::calls::subtensor_module::announce_coldkey_swap_v2(
+        intent.new_coldkey_ss58.account(),
+    );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
 #[cfg(feature = "association")]
 pub(crate) async fn associate_hotkey<V: rtao_client::View + ?Sized>(
     intent: &super::interfaces::AssociateHotkey,
@@ -278,6 +291,20 @@ pub(crate) async fn register_subnet<V: rtao_client::View + ?Sized>(
                 .map(rtao_primitives::Ss58Address::account),
         )?,
     );
+    Ok(rtao_tx::Built {
+        call: call.compose(cx.runtime)?,
+        extras: serde_json::Map::new(),
+    })
+}
+#[cfg(feature = "coldkey")]
+pub(crate) async fn release_own_coldkey_swap_destination_reservation<
+    V: rtao_client::View + ?Sized,
+>(
+    _intent: &super::interfaces::ReleaseOwnColdkeySwapDestinationReservation,
+    cx: &rtao_tx::BuildCx<'_, V>,
+) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
+    let call =
+        rtao_runtime::calls::subtensor_module::release_own_coldkey_swap_destination_reservation();
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),

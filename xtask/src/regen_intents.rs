@@ -1495,11 +1495,11 @@ mod tests {
         );
     }
     #[test]
-    fn all_45_reviewed_passthrough_calls_are_distinct_catalog_members() {
+    fn all_47_reviewed_passthrough_calls_are_distinct_catalog_members() {
         let root = root();
         let config = document(root, "codegen/intent_callmap.toml").unwrap();
         let mappings = config["passthrough"].as_table().unwrap();
-        assert_eq!(mappings.len(), 45);
+        assert_eq!(mappings.len(), 47);
         for (name, call) in mappings.iter() {
             let spec = rtao_catalog::INTENTS
                 .iter()

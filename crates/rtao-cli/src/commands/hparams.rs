@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/sudo.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/sudo.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/hyperparams_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/null_pruning.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Subnet-owner commands using the ordinary semantic submission boundary.
@@ -602,7 +602,11 @@ pub fn command() -> Result<Command, CliError> {
         let mut child = generated::intent_command(op)?.name(name);
         if name == "set-identity" {
             child = child
+                .about("Set subnet identity metadata (subnet owner). The chain replaces the whole identity, so every field not passed as a flag is prompted for, with Enter keeping its current value.")
                 .mut_arg("subnet_name", |arg| arg.long("name").alias("subnet-name"))
+                .mut_arg("subnet_contact", |arg| {
+                    arg.long("contact").alias("subnet-contact")
+                })
                 .mut_arg("subnet_url", |arg| arg.long("url").alias("subnet-url"));
         }
         group = group.subcommand(child);
@@ -660,6 +664,179 @@ fn leaf(matches: &ArgMatches) -> Result<(&str, &ArgMatches), CliError> {
     }
 }
 
+/// Subnet identity fields in Python's prompt order, with their flags.
+const IDENTITY_FLAGS: [(&str, &str); 8] = [
+    ("subnet_name", "--name"),
+    ("github_repo", "--github-repo"),
+    ("subnet_contact", "--contact"),
+    ("subnet_url", "--url"),
+    ("discord", "--discord"),
+    ("description", "--description"),
+    ("logo_url", "--logo-url"),
+    ("additional", "--additional"),
+];
+
+/// `set-identity` with only its explicitly passed fields.
+///
+/// The chain replaces the whole identity, so omitted fields are prompted for
+/// with the current value as the Enter default, or keep the current value
+/// without a terminal. Without an identity the name stays required.
+pub struct IdentityRequest {
+    netuid: NetUid,
+    given: Map<String, Value>,
+    period: Option<u32>,
+}
+
+struct IdentityResolver<'a> {
+    fields: &'a [schema::Field],
+}
+impl PromptResolver for IdentityResolver<'_> {
+    fn parse(&mut self, spec: &PromptSpec, raw: &str) -> Result<Value, PromptValidation> {
+        let field = self
+            .fields
+            .iter()
+            .find(|field| field.name == spec.field)
+            .ok_or_else(|| PromptValidation::Message("unknown subnet identity field".into()))?;
+        if field.name == "netuid" {
+            schema::coerce(field, raw).map_err(|error| PromptValidation::Message(error.message))
+        } else {
+            Ok(json!(raw))
+        }
+    }
+}
+
+impl IdentityRequest {
+    fn fields() -> Result<Vec<schema::Field>, CliError> {
+        schema::intent_fields(
+            rtao_catalog::INTENTS
+                .iter()
+                .find(|spec| spec.name == "set_subnet_identity")
+                .ok_or_else(|| failure("missing subnet identity operation"))?,
+        )
+    }
+
+    fn from_matches(
+        ctx: &AppContext,
+        matches: &ArgMatches,
+        history: &mut PromptHistory,
+    ) -> Result<Self, CliError> {
+        let fields = Self::fields()?;
+        let mut given = Map::new();
+        for field in &fields {
+            if let Some(raw) = matches.get_one::<String>(field.name) {
+                given.insert(field.name.into(), schema::coerce(field, raw)?);
+            }
+        }
+        let missing = if given.contains_key("netuid") {
+            Vec::new()
+        } else {
+            vec![PromptSpec::new("netuid", "--netuid")]
+        };
+        let mut terminal = ctx.terminal.clone();
+        fill_missing(
+            &ctx.prompt_context(),
+            &mut terminal,
+            &missing,
+            &mut given,
+            &mut IdentityResolver { fields: &fields },
+            history,
+        )
+        .map_err(prompt_error)?;
+        let netuid = given
+            .remove("netuid")
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|error| CliError::input(error.to_string()))?
+            .ok_or_else(|| CliError::input("set-identity requires --netuid"))?;
+        Ok(Self {
+            netuid,
+            given,
+            period: matches
+                .try_get_one::<u32>("__period")
+                .ok()
+                .flatten()
+                .copied(),
+        })
+    }
+
+    /// Show the current identity, then fill every omitted field from it.
+    pub async fn complete(
+        &self,
+        ctx: &AppContext,
+        client: &Client,
+        history: &mut PromptHistory,
+    ) -> Result<TxRequest, CliError> {
+        let netuid = self.netuid;
+        let current = rtao::reads::reads::owner::subnet_identity(client, netuid)
+            .await
+            .map_err(CliError::from)?
+            .and_then(|identity| identity.as_object().cloned())
+            .unwrap_or_default();
+        if !ctx.output.options.json_mode {
+            if current.is_empty() {
+                ctx.output
+                    .message(&format!("subnet {netuid} has no identity yet"))
+                    .map_err(failure)?;
+            } else {
+                ctx.output
+                    .detail(
+                        Some(&format!("subnet {netuid} current identity")),
+                        &current.clone().into_iter().collect::<Vec<_>>(),
+                        None,
+                    )
+                    .map_err(failure)?;
+            }
+        }
+        let current_value = |field: &str| match current.get(field) {
+            Some(Value::String(text)) => text.clone(),
+            Some(Value::Null) | None => String::new(),
+            Some(other) => other.to_string(),
+        };
+        let fields = Self::fields()?;
+        let specs = IDENTITY_FLAGS
+            .iter()
+            .filter(|(field, _)| !self.given.contains_key(*field))
+            .map(|(field, flag)| {
+                let mut spec = PromptSpec::new(*field, *flag);
+                spec.help = fields
+                    .iter()
+                    .find(|candidate| candidate.name == *field)
+                    .map(|candidate| candidate.help.clone());
+                // Enter keeps the current value; the name has no fallback when
+                // there is no identity yet, so it stays required.
+                let default = current_value(field);
+                spec.default = (*field != "subnet_name" || !default.is_empty()).then_some(default);
+                spec
+            })
+            .collect::<Vec<_>>();
+        let mut args = self.given.clone();
+        let mut terminal = ctx.terminal.clone();
+        fill_missing(
+            &ctx.prompt_context(),
+            &mut terminal,
+            &specs,
+            &mut args,
+            &mut IdentityResolver { fields: &fields },
+            history,
+        )
+        .map_err(prompt_error)?;
+        // Non-interactive sessions keep the current (or empty) value for omitted flags.
+        for (field, _) in IDENTITY_FLAGS {
+            if !args.contains_key(field) {
+                args.insert(field.into(), json!(current_value(field)));
+            }
+        }
+        args.insert("netuid".into(), json!(netuid));
+        let request = TxRequest {
+            op: "set_subnet_identity",
+            args,
+            period: self.period,
+        };
+        request.intent()?;
+        Ok(request)
+    }
+}
+
 /// Command-owned identifiers to reserve from leaf-global overrides.
 pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
     let (name, _) = leaf(matches)?;
@@ -695,6 +872,8 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
 pub enum Request {
     /// A real SDK intent, retaining all normal review and signing controls.
     Transaction(TxRequest),
+    /// `set-identity`, completed from the subnet's current identity once connected.
+    Identity(IdentityRequest),
     /// Raw hyperparameters plus the owner-settable supplemental storage values.
     Hyperparameters {
         /// Catalog read and optional historical block.
@@ -732,6 +911,9 @@ impl Request {
         }
         if name == "trim-null" {
             return NullPruningRequest::from_matches(ctx, matches, history).map(Self::NullPruning);
+        }
+        if name == "set-identity" {
+            return IdentityRequest::from_matches(ctx, matches, history).map(Self::Identity);
         }
         if let Some(op) = mutation(name) {
             return TxRequest::from_matches(ctx, op, matches, history).map(Self::Transaction);
@@ -1166,6 +1348,10 @@ pub async fn execute(
         }
         Request::Transaction(request) => {
             generated::execute_tx(ctx, client, request, options, external, history).await
+        }
+        Request::Identity(request) => {
+            let request = request.complete(ctx, client, history).await?;
+            generated::execute_tx(ctx, client, &request, options, external, history).await
         }
         Request::Hyperparameters { query, name } => {
             let snapshot = client

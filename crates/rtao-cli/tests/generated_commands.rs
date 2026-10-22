@@ -102,7 +102,7 @@ impl DynKeySource for SamplePublicKeys {
 fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
     let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
         .ok_or("authenticated CLI sample table")?;
-    assert_eq!(table.blob, "91ff2aff459b6ea8e51f4ad3b17e59005451191b");
+    assert_eq!(table.blob, "987cfa63d8b94b7f18440fc5c7d81bd256fbf613");
     let extracted = rtao::primitives::json::from_str::<Value>(table.value_json)?;
     let decoded = literal(&extracted)?;
     Ok(decoded
@@ -1034,13 +1034,13 @@ fn missing_required_values_refuse_with_input_status_before_any_connection() -> T
 // keys. Installed subprocess exits and wallet-file access are separate fixtures.
 // pyt: unit/test_cli_commands.py::test_tx_dry_run_from_sample
 #[tokio::test]
-async fn all_85_samples_run_through_actual_cli_json_dry_run_without_private_access() -> TestResult {
+async fn all_86_samples_run_through_actual_cli_json_dry_run_without_private_access() -> TestResult {
     let samples = cli_samples("INTENT_SAMPLES")?;
     let expected = rtao_catalog::INTENTS
         .iter()
         .map(|spec| spec.name)
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 85);
+    assert_eq!(expected.len(), 86);
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,

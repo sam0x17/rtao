@@ -119,8 +119,8 @@ pub struct ExtrinsicResult<O = ()> {
     pub fee: Option<Balance<Tao>>,
     /// Decoded receipt events, including failed dispatch and nested execution.
     ///
-    /// Native multisig/recovery checks retain these diagnostics where Python's
-    /// failed-result constructor omits them (D-023). JSON output omits events.
+    /// Native multisig/recovery checks inspect these on failed receipts too,
+    /// as Python's results also keep them. JSON output omits events (D-023).
     pub events: Vec<EventRecord>,
     /// Python-shaped classified chain failure.
     pub error: Option<ChainError>,
@@ -156,11 +156,13 @@ impl ExtrinsicResult {
             block_hash: report.block_hash,
             extrinsic_id: report.extrinsic_id,
             explorer_url,
-            fee: report
-                .success
-                .then_some(report.fee)
-                .flatten()
-                .map(|fee| Balance::<Tao>::from_rao(fee.0)),
+            // An included failure still paid its fee; Python reports zero when
+            // the receipt carries no fee event. Pool rejections never reach here.
+            fee: if report.success {
+                report.fee.map(|fee| Balance::<Tao>::from_rao(fee.0))
+            } else {
+                Some(Balance::<Tao>::from_rao(report.fee.map_or(0, |fee| fee.0)))
+            },
             events: report.events,
             error,
             data: if report.success { data } else { Map::new() },

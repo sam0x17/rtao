@@ -135,8 +135,8 @@ mod tests {
     #[test]
     fn evidence_row_matches_the_pinned_finney_runtime_by_genesis() {
         let runtime = RuntimeHandle::parse(
-            include_bytes!("../../../vendor/metadata/finney/481.v15.scale"),
-            481,
+            include_bytes!("../../../vendor/metadata/finney/482.v15.scale"),
+            482,
             1,
             42,
         )
@@ -147,12 +147,12 @@ mod tests {
             .as_array()
             .unwrap()
             .iter()
-            .find(|pin| pin["network"] == "finney" && pin["spec_version"] == 481)
+            .find(|pin| pin["network"] == "finney" && pin["spec_version"] == 482)
             .unwrap();
         // The runtime's metadata hash is the hash `cargo xtask compat` records.
-        let row = json!({"network":"finney","genesis":network_pins::FINNEY_GENESIS,"spec_version":481,"metadata_hash":pin["v15"]["metadata_hash"]});
+        let row = json!({"network":"finney","genesis":network_pins::FINNEY_GENESIS,"spec_version":482,"metadata_hash":pin["v15"]["metadata_hash"]});
         let evidence =
-            json!({"validated_spec_range":{"min":481,"max":481},"validated_runtimes":[row]});
+            json!({"validated_spec_range":{"min":482,"max":482},"validated_runtimes":[row]});
         assert!(validated_by(&evidence, finney, &runtime));
         assert!(!validated_by(
             &evidence,

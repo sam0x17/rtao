@@ -1273,7 +1273,14 @@ mod tests {
 
     #[test]
     fn imported_calls_require_complete_canonical_core_roundtrips() {
-        let runtime = RuntimeHandle::parse(METADATA, 478, 1, 42).unwrap();
+        // Proxy calls carry the pinned ProxyType, which spec 482 extended.
+        let runtime = RuntimeHandle::parse(
+            include_bytes!("../../../vendor/metadata/finney/482.v15.scale"),
+            482,
+            1,
+            42,
+        )
+        .unwrap();
         let inner = crate::calls::system::remark(vec![1, 2, 3])
             .compose(&runtime)
             .unwrap();
