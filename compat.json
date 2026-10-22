@@ -10,7 +10,7 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1792552873,
+        "measured_unix_seconds": 1792686952,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -20,7 +20,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "0b327c3f306c75e1af0e985bb304eb2c849fc238a9420bb9acb90bf0812a6416",
+            "feature_graph_sha256": "55b739262620f2cac527001bd36d3597c8cf7dce78b34cf04833b33fdf54b318",
             "features": [],
             "normal_build_packages": 225,
             "package": "rtao-core",
@@ -256,7 +256,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "dfede9542e37ac369d3a06c0613a7ef6fd9c2ad61b64e0b8cc39d60a6bb20469",
+            "feature_graph_sha256": "c2988fe6b48ff977f8be87f89e0ff45e96ef808fb777604b7f740732c8948a6b",
             "features": [
               "validator"
             ],
@@ -631,7 +631,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "2057721bfddf4533a9de1720d6148532d7b750027b1a89ceb2c88853cf996ff0",
+            "feature_graph_sha256": "fc74d63c284923630b0201a6e3902684a1e507a650c67ba1844f4fc03461ceb6",
             "features": [
               "miner"
             ],
@@ -1010,7 +1010,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "a9ed0ec65522f17d9f19250cdd4e7b999ad53bed1703fe7296a10ea21c1bfbe7",
+            "feature_graph_sha256": "37a4800e227a36800abc2d6ec28b3414651729e636f72db6d448a9305ba025c8",
             "features": [
               "owner"
             ],
@@ -1455,7 +1455,7 @@
             "crates/rtao-evm/Cargo.toml": "d848f120554a01218e1284e29cf3d274de2e9f89afcf4c3e781bf3cbed2c91a2",
             "crates/rtao-intents/Cargo.toml": "5b153c7c494e280d478b2990f046ee867bacd93250e8d933a52eae751faf4dae",
             "crates/rtao-metagraph/Cargo.toml": "9b5dd870dc26de5a78d19f82638b68400c9aa1a8b4a072461d74da39c233f9e0",
-            "crates/rtao-neuron/Cargo.toml": "dd505dd2a58aadf4f0bb55d17283d5773ee8ad231b00e39a51c2176b3cf8946c",
+            "crates/rtao-neuron/Cargo.toml": "42de823700801b7bbeda0af0bdd72f933896e6fa63ea6822afb8d5b9e0c29ba3",
             "crates/rtao-primitives/Cargo.toml": "0cc9a952f3b3153979bb84c41bbc48b766c046001d370302948cb3c7f54c7b75",
             "crates/rtao-reads/Cargo.toml": "b9d8791a6074a483c1e7805073a33ce40743d52a7c9d51b2dab34994ce5b6640",
             "crates/rtao-remote-signer/Cargo.toml": "1902e063439a34fab8b156636f4f6acabf3c8b9b21e8d6f77557be140b374380",
@@ -1467,16 +1467,16 @@
             "crates/rtao-tx/Cargo.toml": "0c9c304bb1f8f4d3646bce5af40d5544d501a03251db84796e5dfce769e5c035",
             "crates/rtao-wallet/Cargo.toml": "a956707a77f207cbb4d3bba6fbc935e4337c6886ec612c61a8ddbfe3ecaeee97",
             "crates/rtao/Cargo.toml": "7063fc567ec64639f77e2b13b2ef659163c6fe42fc4b4e0e31578fcdd55699aa",
-            "upstream.toml": "ccfc71fb95779842be215eabe923d513a6e515b29a6da226f3879e024bbbbe2a",
+            "upstream.toml": "b0d5aa754e0290a45ac7e584053be60f86860918d64ed26be917c322a6acbb49",
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
-          "dependency_inputs_sha256": "c2521094697ffa5c5d07daee4951a94cea4e4d16f1fe91b84331b4c696b36dec",
-          "dirty": false,
-          "head_commit": "76d291e3f8de5bd7b6d921c8262578e9009e7b53"
+          "dependency_inputs_sha256": "6026fad0752486e5e5f5c34b6a66c7b129346e22767bd48d6e80ae717947807a",
+          "dirty": true,
+          "head_commit": "e59d38b1fe512cec9970d36158707012871ab4f6"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "dea5d5000cc601d60bac3f5e6a29f5b26496830a6079344c533d95dff7bb0540"
+      "sha256": "c534ddb50be7fbca412d6970e477a97b8b1c599e9808901607431724106a6860"
     }
   ],
   "core": {
@@ -1484,31 +1484,31 @@
     "tag": "v478"
   },
   "interop": {
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
     "package": "bittensor",
     "source_version": "11.3.1.dev0",
-    "tag": "v481"
+    "tag": "v482"
   },
   "localnet": {
     "devnet": {
-      "digest": "sha256:111ebdbead406a3c11a6c357caf3d67106e030c83e7ce2fa83b35ba16bacd45e",
+      "digest": "sha256:0dd5335b49ed3a20431dc404ddf375f17d2219094457f00e12c12181959f9345",
       "tag": "devnet"
     },
     "image": "ghcr.io/raofoundation/subtensor-localnet",
     "main": {
-      "digest": "sha256:36e323ef303711c3d6447b70615a09ba122fc78f998b6e94587f2c11c5476432",
+      "digest": "sha256:24aa318a945b3cccd87c05a07b88f986933dcb59dfedd7e877c82b081a38a2e6",
       "tag": "main"
     },
     "mainnet": {
-      "digest": "sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e",
+      "digest": "sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8",
       "tag": "mainnet"
     },
     "pinned": {
-      "digest": "sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e",
-      "tag": "v481"
+      "digest": "sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8",
+      "tag": "v482"
     },
     "testnet": {
-      "digest": "sha256:e5d3f7c3ceb8c380033d03df17505f6d008ef43f877d88edac41b005d2f8bf9f",
+      "digest": "sha256:c55447365f752826d366101fce0dec458b4b61fe0ad7332ae2efa29e112dfc3c",
       "tag": "testnet"
     }
   },
@@ -1624,84 +1624,49 @@
         "path": "vendor/metadata/finney/481.v16.scale",
         "sha256": "0fce0674c994e6de24a4ee496f9a404bd64274f30f93a934a41de8a24fed170a"
       }
+    },
+    {
+      "code_hash": "0x37d83888085e2f1b7c9c36c1341cfb6c0d6689f8efd6e0c6128e3666eb5d8b62",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+      "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+      "finalized_head": "0xc565db18d6b580eb2769f563fcad41077fea53f0af555711bfd03fe7e1c09b75",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "network": "finney",
+      "spec_version": 482,
+      "tag": "v482",
+      "v15": {
+        "bytes": 411511,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0xd31d5ed4b70b1cafc38b313c43ef6189e2b6c33ba77ed4f5c94e37d15dffa545"
+        },
+        "path": "vendor/metadata/finney/482.v15.scale",
+        "sha256": "e1104feeb153ca201da1d1e88174c4c6d52d9d9e12e54e463778900136afb1fc"
+      },
+      "v16": {
+        "bytes": 415559,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0x3c982165f0a3ca4f1df12bce8807c265ae37a1228c88c907e063eabc85f0a468"
+        },
+        "path": "vendor/metadata/finney/482.v16.scale",
+        "sha256": "6d662b835afe9c02132cff8fe46c24d9cc93d3bcc5d77c039a99384cf18e88fb"
+      }
     }
   ],
   "milestone": null,
   "parity": {
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
     "pypi_release": null,
     "python_source_version": "11.3.1.dev0",
-    "tag": "v481"
+    "tag": "v482"
   },
   "rtao_version": "0.1.0",
   "schema": 1,
-  "validated_runtimes": [
-    {
-      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
-      "metadata_hash": {
-        "kind": "blake2b-256-raw",
-        "value": "0x933cc1dd0946eaf6771eb200d5d4f8d7d7a4961eb8fc896874fe090881aa4727"
-      },
-      "network": "finney",
-      "spec_version": 481
-    },
-    {
-      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
-      "metadata_hash": {
-        "kind": "blake2b-256-raw",
-        "value": "0xb915fe11da46ee515a06a0d27a0a70a995ef4127ee01b6b40aec038a07e26df4"
-      },
-      "network": "finney",
-      "spec_version": 481
-    }
-  ],
-  "validated_spec_range": {
-    "max": 481,
-    "min": 481
-  },
+  "validated_runtimes": [],
+  "validated_spec_range": null,
   "validation": {
-    "inputs_sha256": "f78655653e89041e1a600aa65d86685c1f4dd7f95523decce9f83db26d5f672f",
-    "reports": [
-      {
-        "path": "docs/compat/reports/39328208457-drift-481-481-933cc1dd0946.json",
-        "sha256": "732637985b18099081c46e0e6045245db28cbc8938c09010b09994884d30ed95"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-drift-481-481-b915fe11da46.json",
-        "sha256": "2270d347d1aaf5129a30e8d0874f406d12afbb18abce390f0e0250d040235dce"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-e2e-111ebdbead40.json",
-        "sha256": "8bc385907913fee857cc698b5f112299d49baf262a88bce85989c431dfaebc86"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-e2e-36e323ef3037.json",
-        "sha256": "a74946a88543788988c6e2157dd42914cb82775c6170266ff07c752b62d574a3"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-e2e-c2eb81b1a39d.json",
-        "sha256": "adbfa1ee30d719f58bbb4fef25ad734d5cb6797c910355ba21e00148685bc9fd"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-e2e-e5d3f7c3ceb8.json",
-        "sha256": "ee42a476c8b4870a9260384b570b88a0db1a45e09b4ec2bc9dde2228289630f7"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-interop-111ebdbead40.json",
-        "sha256": "0bb30c5cee34f8ad448f695091536169f0d115d11fd944efc015201c5049af4a"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-interop-36e323ef3037.json",
-        "sha256": "53b41d206f6dabc2ffb6791887d7a8c60285504dcf6c3d68b4309f776c66be0d"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-interop-c2eb81b1a39d.json",
-        "sha256": "32f610975a4f11ad104081fd03697871566da539a7842442082555c71feb2b7f"
-      },
-      {
-        "path": "docs/compat/reports/39328208457-interop-e5d3f7c3ceb8.json",
-        "sha256": "8c7dbe44575c5de569d92b54e509a189375555ac4057b64692a6c69037c1b9d0"
-      }
-    ]
+    "inputs_sha256": "6d8d3e4b0b13f4f7a71fec2cde54c01286b32b37000128ed6fccdd7a9bbb1fbc",
+    "reports": []
   }
 }
