@@ -137,6 +137,11 @@ impl Signer for JournalSigner {
                 .unwrap_or(Step::Remove);
             if matches!(step, Step::Cancel) {
                 self.cancel.cancel();
+                // Reach the real signer and its durable journal before moving
+                // the deadline. A short wall-clock budget can expire in review
+                // or preparation under concurrent test load instead.
+                tokio::time::pause();
+                tokio::time::advance(Duration::from_secs(60)).await;
                 futures::future::pending::<()>().await;
             }
             if matches!(step, Step::CancelFinalized) {
@@ -598,13 +603,27 @@ async fn bad_receipt_or_unadvanced_storage_retains_record_and_blocks_restart() -
 #[tokio::test]
 async fn cancellation_during_signing_keeps_record_before_any_broadcast() -> anyhow::Result<()> {
     let mut f = fixture(300, [Step::Cancel]).await?;
-    f.owner.config.operation_timeout = Some(Duration::from_millis(100));
+    f.owner.config.operation_timeout = Some(Duration::from_secs(30));
     let error = f
         .owner
         .trim_null(NET, TARGET, &f.recovery)
         .await
         .expect_err("cancel");
-    assert!(error.to_string().contains("timed out"));
+    assert!(
+        matches!(error, TxError::Rpc(rtao_rpc::RpcError::Timeout { .. })),
+        "signing must reach its deadline: {error}"
+    );
+    assert!(f.owner.cancel.is_cancelled());
+    assert_eq!(
+        f.owner
+            .keys
+            .signer
+            .calls
+            .lock()
+            .expect("signing calls")
+            .len(),
+        1
+    );
     assert!(f.recovery.is_file());
     assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
     f.owner.client().close().await;
