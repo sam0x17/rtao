@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor runtime/src/transaction_payment_wrapper.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor runtime/src/transaction_payment_wrapper.rs @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 //! Authenticated source policy used by client fee defaults and documentation.
 //!
 //! This validates reviewed runtime AST shapes; it neither executes the extension
@@ -38,7 +38,6 @@ use sp_runtime::traits::{
 use sp_runtime::transaction_validity::{
     TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
 };
-use sp_std::boxed::Box;
 use sp_std::vec::Vec;
 use subtensor_macros::freeze_struct;
 
@@ -48,6 +47,8 @@ type RuntimeCallOf<T> = <T as frame_system::Config>::RuntimeCall;
 type RuntimeOriginOf<T> = <T as frame_system::Config>::RuntimeOrigin;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type LookupOf<T> = <T as frame_system::Config>::Lookup;
+
+const MAX_REAL_PAYS_FEE_PROXY_DEPTH: u8 = 3;
 
 /// Runtime-supplied policy: which calls have their fee charged to the signing
 /// hotkey's coldkey. Keeping the concrete list in the runtime (see `fee_filters`)
@@ -84,64 +85,41 @@ where
     T: ColdkeyFeeCallFilter<RuntimeCallOf<T>>,
     RuntimeOriginOf<T>: AsSystemOriginSigner<AccountIdOf<T>> + Clone,
 {
-    fn extract_proxy_parts<'a>(
-        call: &'a RuntimeCallOf<T>,
-        signer: &AccountIdOf<T>,
-    ) -> Option<(
-        AccountIdOf<T>,
-        AccountIdOf<T>,
-        &'a Box<<T as pallet_proxy::Config>::RuntimeCall>,
-    )> {
+    fn resolve_proxy_call(call: &RuntimeCallOf<T>) -> Option<(AccountIdOf<T>, &RuntimeCallOf<T>)> {
         match call.is_sub_type()? {
             pallet_proxy::Call::proxy { real, call, .. } => {
                 let real = LookupOf::<T>::lookup(real.clone()).ok()?;
-                Some((real, signer.clone(), call))
+                Some((real, call.as_ref().into_ref()))
             }
             _ => None,
         }
     }
-    fn extract_real_fee_payer(
+    fn resolve_real_fee_payer(
         call: &RuntimeCallOf<T>,
         origin: &RuntimeOriginOf<T>,
     ) -> Option<AccountIdOf<T>> {
         let signer = origin.as_system_origin_signer()?;
-        let (outer_real, delegate, inner_call) = Self::extract_proxy_parts(call, signer)?;
+        let (mut real, mut inner_call) = Self::resolve_proxy_call(call)?;
 
-        // Check if the outer real account has opted in to pay for the delegate.
-        if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&outer_real, &delegate) {
+        if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&real, signer) {
             return None;
         }
 
-        // outer_real pays. Try to push the fee deeper into nested proxy structures.
-        let inner_call: &RuntimeCallOf<T> = (*inner_call).as_ref().into_ref();
+        for _ in 1..MAX_REAL_PAYS_FEE_PROXY_DEPTH {
+            let Some((inner_real, next_call)) = Self::resolve_proxy_call(inner_call) else {
+                return Self::resolve_batch_proxy_payer(inner_call, &real).or(Some(real));
+            };
+            if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&inner_real, &real) {
+                break;
+            }
 
-        // Case 2: inner call is another proxy call.
-        if let Some(inner_payer) = Self::extract_inner_proxy_payer(inner_call, &outer_real) {
-            return Some(inner_payer);
+            real = inner_real;
+            inner_call = next_call;
         }
 
-        // Case 3: inner call is a batch of proxy calls with the same real.
-        if let Some(batch_payer) = Self::extract_batch_proxy_payer(inner_call, &outer_real) {
-            return Some(batch_payer);
-        }
-
-        // Case 1: simple proxy, outer_real pays.
-        Some(outer_real)
+        Some(real)
     }
-    fn extract_inner_proxy_payer(
-        inner_call: &RuntimeCallOf<T>,
-        outer_real: &AccountIdOf<T>,
-    ) -> Option<AccountIdOf<T>> {
-        let (inner_real, inner_delegate, _call) =
-            Self::extract_proxy_parts(inner_call, outer_real)?;
-
-        if pallet_proxy::Pallet::<T>::is_real_pays_fee(&inner_real, &inner_delegate) {
-            Some(inner_real)
-        } else {
-            None
-        }
-    }
-    fn extract_batch_proxy_payer(
+    fn resolve_batch_proxy_payer(
         inner_call: &RuntimeCallOf<T>,
         outer_real: &AccountIdOf<T>,
     ) -> Option<AccountIdOf<T>> {
@@ -161,14 +139,13 @@ where
 
         for call in calls.iter() {
             let call_ref: &RuntimeCallOf<T> = call.into_ref();
-            let (inner_real, inner_delegate, _) = Self::extract_proxy_parts(call_ref, outer_real)?;
+            let (inner_real, _) = Self::resolve_proxy_call(call_ref)?;
 
             match &common_real {
                 None => {
-                    // Check RealPaysFee once on the first item and memoize. For `proxy`
-                    // calls the delegate is always `outer_real`, so a single read covers
-                    // the entire batch; for `proxy_announced` it uses the explicit delegate.
-                    if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&inner_real, &inner_delegate) {
+                    // Every item must have the same real and implicit delegate, so one
+                    // RealPaysFee read covers the entire batch.
+                    if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&inner_real, outer_real) {
                         return None;
                     }
                     common_real = Some(inner_real);
@@ -235,7 +212,7 @@ where
         // does not buy priority in this wrapper (priority is overridden above), and billing it
         // to another account would let the signer spend that account's funds without limit,
         // regardless of what the proxy type allows. Only a self-paying signer keeps its tip.
-        let (fee_origin, tip) = if let Some(real) = Self::extract_real_fee_payer(call, &origin) {
+        let (fee_origin, tip) = if let Some(real) = Self::resolve_real_fee_payer(call, &origin) {
             (frame_system::RawOrigin::Signed(real).into(), Zero::zero())
         } else if let Some(coldkey) = Self::extract_coldkey_fee_payer(call, &origin) {
             (
@@ -313,9 +290,12 @@ fn production_context(file: &syn::File) -> Result<Vec<String>> {
     file.items
         .iter()
         .map(|item| match item {
-            Item::Use(_) | Item::Type(_) | Item::Trait(_) | Item::Struct(_) | Item::Fn(_) => {
-                Ok(tokens(item))
-            }
+            Item::Use(_)
+            | Item::Type(_)
+            | Item::Const(_)
+            | Item::Trait(_)
+            | Item::Struct(_)
+            | Item::Fn(_) => Ok(tokens(item)),
             Item::Impl(item) => Ok(implementation_header(item)),
             Item::Mod(item) if item.ident == "tests" && item.content.is_some() => {
                 let mut header = item.clone();
@@ -384,7 +364,7 @@ fn values(source: &str) -> Result<Value> {
     Ok(json!({
         "priority": {"Normal":"NORMAL_DISPATCH_BASE_PRIORITY", "Mandatory":"NORMAL_DISPATCH_BASE_PRIORITY", "Operational":"OPERATIONAL_DISPATCH_PRIORITY", "tip_increases_priority":false},
         "payer_precedence":["proxy_real_pays_fee_opt_in", "allowlisted_hotkey_owner", "signer"],
-        "proxy": {"call":"Proxy.proxy", "proxy_announced":false, "maximum_layers":2, "outer_opt_in_required":true, "batch_calls":["Utility.batch", "Utility.batch_all", "Utility.force_batch"], "batch_nonempty":true, "batch_members":"all direct proxies with the same real and shared opt-in"},
+        "proxy": {"call":"Proxy.proxy", "proxy_announced":false, "maximum_layers":3, "outer_opt_in_required":true, "every_hop_opt_in_required":true, "payer":"deepest consecutively opted-in real", "batch_calls":["Utility.batch", "Utility.batch_all", "Utility.force_batch"], "batch_nonempty":true, "batch_position":"final level only; items are never descended", "batch_members":"all direct proxies with the same real and shared opt-in"},
         "tip": {"payer_override":0, "no_payer_override":"signer_selected"},
         "dispatch_origin":"original_origin",
         "fee_pricing":"call_weight.saturating_sub(runtime_fee_weight_discount)",
@@ -428,7 +408,8 @@ mod tests {
         );
         ensure!(projected["tip"]["payer_override"] == 0);
         ensure!(projected["dispatch_origin"] == "original_origin");
-        ensure!(projected["proxy"]["maximum_layers"] == 2);
+        ensure!(projected["proxy"]["maximum_layers"] == 3);
+        ensure!(projected["proxy"]["every_hop_opt_in_required"] == true);
         ensure!(projected["proxy"]["batch_nonempty"] == true);
         Ok(())
     }
@@ -442,11 +423,23 @@ mod tests {
                 "pallet_proxy::Call::proxy_announced { real, call, .. }",
             ),
             (
-                "if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&outer_real, &delegate)",
-                "if pallet_proxy::Pallet::<T>::is_real_pays_fee(&outer_real, &delegate)",
+                "if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&real, signer)",
+                "if pallet_proxy::Pallet::<T>::is_real_pays_fee(&real, signer)",
             ),
             (
-                "Self::extract_real_fee_payer(call, &origin)",
+                "if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&inner_real, &real)",
+                "if !pallet_proxy::Pallet::<T>::is_real_pays_fee(&inner_real, signer)",
+            ),
+            (
+                "const MAX_REAL_PAYS_FEE_PROXY_DEPTH: u8 = 3;",
+                "const MAX_REAL_PAYS_FEE_PROXY_DEPTH: u8 = 4;",
+            ),
+            (
+                "for _ in 1..MAX_REAL_PAYS_FEE_PROXY_DEPTH",
+                "for _ in 0..MAX_REAL_PAYS_FEE_PROXY_DEPTH",
+            ),
+            (
+                "Self::resolve_real_fee_payer(call, &origin)",
                 "Self::extract_coldkey_fee_payer(call, &origin)",
             ),
             (
@@ -459,12 +452,12 @@ mod tests {
                 "Some(existing) if *existing == inner_real",
             ),
             (
-                "Self::extract_proxy_parts(call_ref, outer_real)?",
-                "Self::extract_proxy_parts(call_ref, outer_real).unwrap()",
+                "Self::resolve_proxy_call(call_ref)?",
+                "Self::resolve_proxy_call(call_ref).unwrap()",
             ),
             (
-                "Self::extract_inner_proxy_payer(inner_call, &outer_real)",
-                "Self::extract_real_fee_payer(inner_call, origin)",
+                "Self::resolve_batch_proxy_payer(inner_call, &real).or(Some(real))",
+                "Self::resolve_real_fee_payer(inner_call, origin)",
             ),
             (
                 "if !T::charges_coldkey(call)",

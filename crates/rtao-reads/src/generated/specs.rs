@@ -700,8 +700,8 @@ pub static READ_SPECS: [ReadSpec; 103] = [
     },
     ReadSpec {
         name: "coldkey_swap_announcement",
-        summary: "A coldkey's pending swap announcement (execute block, new-key hash, disputed), or None.",
-        description: "A coldkey's pending swap announcement (execute block, new-key hash, disputed), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.",
+        summary: "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.",
+        description: "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending.",
         params: &[ParamSpec {
             name: "coldkey_ss58",
             json_type: JsonType::String,
@@ -2454,8 +2454,8 @@ pub static READ_SPECS: [ReadSpec; 103] = [
     },
     ReadSpec {
         name: "subnet_emission_enabled",
-        summary: "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent).",
-        description: "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent).",
+        summary: "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). New registrations start enabled. When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent).",
+        description: "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). New registrations start enabled. When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent).",
         params: &[ParamSpec {
             name: "netuid",
             json_type: JsonType::Integer,

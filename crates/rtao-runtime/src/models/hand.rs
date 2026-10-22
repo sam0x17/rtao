@@ -1007,6 +1007,10 @@ pub enum ProxyType {
     RootClaim,
     /// The runtime's `BasketTrading` permission category.
     BasketTrading,
+    /// The runtime's `Validate` permission category.
+    Validate,
+    /// The runtime's `Weights` permission category.
+    Weights,
 }
 impl ToDynamic for ProxyType {
     fn to_dynamic(&self) -> Value {
@@ -1031,6 +1035,8 @@ impl ToDynamic for ProxyType {
                 Self::SubnetLeaseBeneficiary => "SubnetLeaseBeneficiary",
                 Self::RootClaim => "RootClaim",
                 Self::BasketTrading => "BasketTrading",
+                Self::Validate => "Validate",
+                Self::Weights => "Weights",
             }
             .into(),
         )

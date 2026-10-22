@@ -1,10 +1,10 @@
 {
   "catalog": {
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
     "count": 103,
     "path": "website/apps/bittensor-website/public/catalog/reads.json",
-    "sha256": "6be8237404051eb173d34bf09d7baad0e5a41f4fce8311a96891a9a947fccd66",
-    "tag": "v481"
+    "sha256": "5c1d2a6edba535e96d4aedfb00d67a46420eeb726020bd1ec05a0fd20930d2a3",
+    "tag": "v482"
   },
   "format": 1,
   "modules": {
@@ -20,8 +20,8 @@
     ]
   },
   "parity": {
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
-    "tag": "v481"
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "tag": "v482"
   },
   "reads": [
     {
@@ -306,7 +306,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
             "end_byte": 487,
             "end_line": 20,
             "line": 20,
@@ -318,7 +318,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 445,
           "end_line": 19,
           "line": 14,
@@ -326,7 +326,7 @@
           "start_byte": 287
         },
         "fetch": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 673,
           "end_line": 23,
           "line": 20,
@@ -348,7 +348,7 @@
           "name": "coldkey_ss58s",
           "own_key": false,
           "provenance": {
-            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
             "end_byte": 889,
             "end_line": 32,
             "line": 32,
@@ -360,7 +360,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 839,
           "end_line": 31,
           "line": 26,
@@ -368,7 +368,7 @@
           "start_byte": 677
         },
         "fetch": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 1243,
           "end_line": 38,
           "line": 32,
@@ -975,7 +975,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
             "end_byte": 2509,
             "end_line": 77,
             "line": 77,
@@ -987,7 +987,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 2449,
           "end_line": 76,
           "line": 71,
@@ -995,9 +995,9 @@
           "start_byte": 2259
         },
         "fetch": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
-          "end_byte": 3300,
-          "end_line": 95,
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
+          "end_byte": 3763,
+          "end_line": 100,
           "line": 77,
           "path": "sdk/python/bittensor/reads/accounts.py",
           "start_byte": 2450
@@ -1472,7 +1472,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 592,
           "end_line": 22,
           "line": 18,
@@ -1488,7 +1488,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,
@@ -1553,7 +1553,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 1306,
           "end_line": 41,
           "line": 41,
@@ -1561,7 +1561,7 @@
           "start_byte": 1247
         },
         "fetch": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 1527,
           "end_line": 45,
           "line": 42,
@@ -1782,7 +1782,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 1337,
           "end_line": 41,
           "line": 37,
@@ -1798,7 +1798,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,
@@ -2073,7 +2073,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 1189,
           "end_line": 36,
           "line": 30,
@@ -2089,7 +2089,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,
@@ -2281,7 +2281,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 902,
           "end_line": 29,
           "line": 23,
@@ -2297,7 +2297,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,
@@ -2448,12 +2448,12 @@
           "name": "account_ss58",
           "own_key": false,
           "provenance": {
-            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
-            "end_byte": 3638,
-            "end_line": 107,
-            "line": 107,
+            "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
+            "end_byte": 4101,
+            "end_line": 112,
+            "line": 112,
             "path": "sdk/python/bittensor/reads/accounts.py",
-            "start_byte": 3621
+            "start_byte": 4084
           },
           "required": true
         },
@@ -2466,32 +2466,32 @@
           "name": "call_hash",
           "own_key": false,
           "provenance": {
-            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
-            "end_byte": 3654,
-            "end_line": 107,
-            "line": 107,
+            "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
+            "end_byte": 4117,
+            "end_line": 112,
+            "line": 112,
             "path": "sdk/python/bittensor/reads/accounts.py",
-            "start_byte": 3640
+            "start_byte": 4103
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
-          "end_byte": 3595,
-          "end_line": 106,
-          "line": 98,
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
+          "end_byte": 4058,
+          "end_line": 111,
+          "line": 103,
           "path": "sdk/python/bittensor/reads/accounts.py",
-          "start_byte": 3304
+          "start_byte": 3767
         },
         "fetch": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
-          "end_byte": 4285,
-          "end_line": 119,
-          "line": 107,
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
+          "end_byte": 4748,
+          "end_line": 124,
+          "line": 112,
           "path": "sdk/python/bittensor/reads/accounts.py",
-          "start_byte": 3596
+          "start_byte": 4059
         }
       }
     },
@@ -2815,7 +2815,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+            "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
             "end_byte": 1736,
             "end_line": 54,
             "line": 54,
@@ -2827,7 +2827,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 1694,
           "end_line": 53,
           "line": 48,
@@ -2835,7 +2835,7 @@
           "start_byte": 1531
         },
         "fetch": {
-          "blob": "a26f493be9bdc7d69d28e3f03cff6453c8c0ecf5",
+          "blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9",
           "end_byte": 2255,
           "end_line": 68,
           "line": 54,
@@ -2990,7 +2990,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 1477,
           "end_line": 46,
           "line": 42,
@@ -3006,7 +3006,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,
@@ -3838,8 +3838,8 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
-          "end_byte": 1821,
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
+          "end_byte": 1854,
           "end_line": 54,
           "line": 47,
           "path": "sdk/python/bittensor/reads/hyperparameters.py",
@@ -3854,7 +3854,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,
@@ -4584,7 +4584,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 467,
           "end_line": 17,
           "line": 13,
@@ -4600,7 +4600,7 @@
           "start_byte": 5928
         },
         "helper": {
-          "blob": "a05696994a7b6b12d8b2160200e4df29ed0b53f0",
+          "blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b",
           "end_byte": 314,
           "end_line": 10,
           "line": 9,

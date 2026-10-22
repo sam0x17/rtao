@@ -2,10 +2,10 @@
   "fee_contract": {
     "format": 1,
     "provenance": {
-      "blob": "1d9f3cb8d00c601eb76fde8aa27db24add6f0d10",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "blob": "e5cbde67e69d5e957bf0f2f343aa7a3edf6bd12f",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
       "path": "runtime/src/transaction_payment_wrapper.rs",
-      "tag": "v481"
+      "tag": "v482"
     },
     "scope": "Reviewed validate-time payer/priority/tip policy and fee-dispatch projection only. Concrete priority values, discount implementations, preparation, account debits/refunds and runtime admission are runtime-owned and unexecuted; the client's any-leaf coldkey warning is not a payer resolver.",
     "values": {
@@ -31,9 +31,12 @@
         ],
         "batch_members": "all direct proxies with the same real and shared opt-in",
         "batch_nonempty": true,
+        "batch_position": "final level only; items are never descended",
         "call": "Proxy.proxy",
-        "maximum_layers": 2,
+        "every_hop_opt_in_required": true,
+        "maximum_layers": 3,
         "outer_opt_in_required": true,
+        "payer": "deepest consecutively opted-in real",
         "proxy_announced": false
       },
       "tip": {
@@ -47,9 +50,9 @@
     "format": 1,
     "provenance": {
       "blob": "2ec5233ed198d33132d1b9bc9cf352861fb5dd93",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
       "path": "runtime/src/check_mortality.rs",
-      "tag": "v481"
+      "tag": "v482"
     },
     "values": {
       "MAX_SHIELD_ERA_PERIOD": {
@@ -60,27 +63,27 @@
     }
   },
   "provenance": {
-    "blob": "6e08005e844e501dc144054111a86d3a610d8c67",
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "blob": "219980b4a137d39156aea62f89387070d56f118e",
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
     "path": "pallets/subtensor/src/lib.rs",
-    "sha256": "6e5803f9e9c4b2ae8b6b44b704d1ec4c25beb24a9669c018241327d08aba26a4",
-    "tag": "v481"
+    "sha256": "61fecf799f6a7b15e8ce70c4c470a2a3053f74a618f020f8baf27da4f1fe36fd",
+    "tag": "v482"
   },
   "proxy_contract": {
     "format": 1,
     "provenance": {
-      "blob": "5a9636a7571cafd85cfc2d8ff00205b0d2b6b023",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "blob": "09b0e8c2ede9de401b8badcbcb0c4e26d3c4d2f1",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
       "path": "common/src/proxy.rs",
-      "tag": "v481"
+      "tag": "v482"
     },
     "python_mirror": {
       "path": "sdk/python/bittensor/intents/proxy.py",
       "provenance": {
-        "blob": "e19113d503ef0b2f488af38bec57cadb934e1f56",
-        "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+        "blob": "30b4e4d42f161e970e1bacdad9ad2175ce6318da",
+        "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v481"
+        "tag": "v482"
       },
       "table": "PROXY_TYPES"
     },
@@ -162,29 +165,37 @@
         {
           "index": 18,
           "name": "BasketTrading"
+        },
+        {
+          "index": 19,
+          "name": "Validate"
+        },
+        {
+          "index": 20,
+          "name": "Weights"
         }
       ]
     }
   },
   "rate_limiting_provenance": {
     "blob": "e6c0a6fec37a86c98e7f7fb0edd657599fcaeb6a",
-    "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
     "path": "pallets/subtensor/src/utils/rate_limiting.rs",
-    "tag": "v481"
+    "tag": "v482"
   },
   "reveal_contract": {
     "core_provenance": {
       "blob": "aec057443ad430fdc96db518cfea5aacdacf9a51",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
       "path": "sdk/bittensor-core/src/timelock/mod.rs",
-      "tag": "v481"
+      "tag": "v482"
     },
     "format": 1,
     "provenance": {
       "blob": "32b0f98a75e383a2e34d3328561761ee506084d9",
-      "commit": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
       "path": "pallets/subtensor/src/coinbase/reveal_commits.rs",
-      "tag": "v481"
+      "tag": "v482"
     },
     "scope": "SCALE payload fields and first three reveal-epoch bindings only; runtime reveal/decryption/dispatch acceptance is not certified",
     "values": {
