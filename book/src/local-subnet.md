@@ -34,7 +34,7 @@ selects fast blocks (about four per second):
 
 ```sh
 docker run -d --name localnet -p 127.0.0.1:9944:9944 \
-  ghcr.io/raofoundation/subtensor-localnet@sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e True
+  ghcr.io/raofoundation/subtensor-localnet@sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8 True
 ```
 
 Every development chain shares one genesis, so nodes on a shared Docker

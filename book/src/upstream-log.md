@@ -182,6 +182,44 @@ Hosted validation run 39328208457 attests drift, e2e and interop for the
 pinned, testnet, devnet and main lanes, and its reports are adopted as the
 validated spec range 481-481.
 
+## 2026-10-22: v482 candidate inputs; validation pending
+
+The candidate parity pin moves from published v481 (`6a972693…`) to published
+v482 (`8cf229f8ef969389d054a4c161b53ffd164a041f`). The core remains at v478
+with patch `626f2a4f…`. Finney's v482 V15/V16 metadata is retained alongside
+the previous rows, and the pinned localnet image is
+`sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8`.
+
+The interrupted candidate already contains the generated surface and client
+ports for coldkey-swap V2 and destination-reservation release, recovery-lock
+reads, Validate/Weights hotkey proxies, fees on included failed receipts and
+preserving omitted subnet-identity fields. Its catalogs contain 86 intents,
+103 reads and 406 chain errors. These candidate changes still require final
+source reconciliation and independent review; this entry does not certify
+the entire port.
+
+A bounded offline continuation refreshes probe pins and compatibility metadata
+from the existing input files. Build-weight dependency graphs are remeasured
+from a clean committed candidate without building or executing a Mac binary.
+The regenerated compatibility record has no validated runtime range, runtime
+rows or reports: downloaded metadata does not attest execution. The old v481
+compatibility record cannot supply a v482 metadata row or validation claim.
+
+Local development checks pass for all 43 pruning tests, the three runtime
+compatibility tests, scoped strict pruning Clippy, extraction, regeneration,
+probe-pin checking and compatibility-output checking. The signing-cancellation
+fixture now enters the real fixture signer with its recovery journal before
+advancing virtual time to the deadline; it asserts a timeout, retained journal
+and zero broadcasts rather than racing a 100 ms preparation budget.
+
+The offline porting report identifies 30 changed watched files and the added
+release-reservation intent. It does not establish unchanged extraction or an
+authenticated oracle comparison, and no rows were automatically reconciled.
+Strict parity still fails on old source/tag reconciliation, producer provenance
+and the stale matrix. Final row/export review, matrix regeneration, broader
+validation and hosted compatibility adoption remain outstanding. No new
+localnet, public-chain probe, oracle campaign or hosted CI run is recorded here.
+
 ## Recording the next change
 
 Append an entry when a pin changes. Include the old and new tag/commit, affected

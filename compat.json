@@ -10,7 +10,7 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1792686952,
+        "measured_unix_seconds": 1792687163,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1471,12 +1471,12 @@
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
           "dependency_inputs_sha256": "6026fad0752486e5e5f5c34b6a66c7b129346e22767bd48d6e80ae717947807a",
-          "dirty": true,
-          "head_commit": "e59d38b1fe512cec9970d36158707012871ab4f6"
+          "dirty": false,
+          "head_commit": "edd4894cdb66b75113b8cc6de598f9f330b465da"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "c534ddb50be7fbca412d6970e477a97b8b1c599e9808901607431724106a6860"
+      "sha256": "5171aea0a0d350d515fca1da9cbec22fdc3dbaf896469e6f3f5932f481d7a1a4"
     }
   ],
   "core": {
