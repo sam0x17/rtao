@@ -75,6 +75,8 @@ pub enum NoncePolicy {
 /// Preparation and waiting options for one transaction.
 #[derive(Clone, Debug)]
 pub struct SubmitOptions {
+    /// Optional durable operation; signed bytes are synced before dispatch.
+    pub journal: Option<crate::journal::JournalBinding>,
     /// Validity era, normally the extracted 128-block default.
     pub mortality: Mortality,
     /// Inclusion state to await.
@@ -98,6 +100,7 @@ pub struct SubmitOptions {
 impl Default for SubmitOptions {
     fn default() -> Self {
         Self {
+            journal: None,
             mortality: Mortality::Mortal(Period::new(rtao_catalog::py::DEFAULT_ERA_PERIOD)),
             wait: Wait::Finalization,
             nonce: NoncePolicy::Auto,
@@ -520,9 +523,11 @@ impl Client {
             self.submit_with_lease(call, signer, lease, opts, limits, &attempted_hash)
                 .await
         };
-        limits.full.run(self, operation).await.map_err(|error| {
+        let outcome = limits.full.run(self, operation).await.map_err(|error| {
             submission_attempt_error(self, signer.account(), error, &attempted_hash)
-        })
+        });
+        persist_journal_report(opts, &outcome).await?;
+        outcome
     }
 
     /// Submit a caller-owned nonce lease, settling only on resolved acceptance.
@@ -535,7 +540,7 @@ impl Client {
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         let limits = SubmissionLimits::new(opts)?;
         let attempted_hash = SubmissionAttempt::default();
-        limits
+        let outcome = limits
             .full
             .run(
                 self,
@@ -544,7 +549,9 @@ impl Client {
             .await
             .map_err(|error| {
                 submission_attempt_error(self, signer.account(), error, &attempted_hash)
-            })
+            });
+        persist_journal_report(opts, &outcome).await?;
+        outcome
     }
 
     async fn submit_with_lease(
@@ -569,6 +576,12 @@ impl Client {
                 self.prepare_at_nonce(call, signer, opts, lease.value()),
             )
             .await?;
+        if let Some(journal) = &opts.journal {
+            journal
+                .check(self, &unsigned)
+                .await
+                .map_err(ClientError::Journal)?;
+        }
         let request = unsigned.signing_request(SignPurpose::Extrinsic);
         let signature = limits
             .admission
@@ -580,6 +593,12 @@ impl Client {
             .admission
             .run(self, self.attach_signature(&unsigned, signature))
             .await?;
+        if let Some(journal) = &opts.journal {
+            journal
+                .signed(&unsigned, &bytes, hash)
+                .await
+                .map_err(ClientError::Journal)?;
+        }
         let outcome = self
             .send_and_watch(&bytes, hash, opts, limits.admission, attempted_hash)
             .await;
@@ -984,11 +1003,23 @@ impl Client {
         let limits = SubmissionLimits::new(opts)?;
         let attempted_hash = SubmissionAttempt::default();
         let operation = async {
+            if let Some(journal) = &opts.journal {
+                journal
+                    .check(self, unsigned)
+                    .await
+                    .map_err(ClientError::Journal)?;
+            }
             unsigned.verify_signature(signature)?;
             let (bytes, hash) = limits
                 .admission
                 .run(self, self.attach_signature(unsigned, signature))
                 .await?;
+            if let Some(journal) = &opts.journal {
+                journal
+                    .signed(unsigned, &bytes, hash)
+                    .await
+                    .map_err(ClientError::Journal)?;
+            }
             let lease = self
                 .nonces()
                 .lease_explicit(&unsigned.address, unsigned.nonce);
@@ -1017,9 +1048,11 @@ impl Client {
                 }
             }
         };
-        limits.full.run(self, operation).await.map_err(|error| {
+        let outcome = limits.full.run(self, operation).await.map_err(|error| {
             submission_attempt_error(self, unsigned.address, error, &attempted_hash)
-        })
+        });
+        persist_journal_report(opts, &outcome).await?;
+        outcome
     }
     async fn prepare_at_nonce(
         &self,
@@ -1673,4 +1706,16 @@ fn watch_name(text: &str) -> Option<&'static str> {
     rtao_catalog::py::WATCH_STATUS_NAMES
         .iter()
         .find_map(|(name, resolved)| (*name == status).then_some(*resolved))
+}
+
+async fn persist_journal_report(
+    opts: &SubmitOptions,
+    outcome: &Result<ExtrinsicReport, SubmitFailure>,
+) -> Result<(), SubmitFailure> {
+    if let (Some(journal), Ok(report)) = (&opts.journal, outcome) {
+        journal.observed(report).await.map_err(|error| {
+            unresolved_error(report.hash, ClientError::Journal(error).into(), None)
+        })?;
+    }
+    Ok(())
 }

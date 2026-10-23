@@ -194,6 +194,12 @@ impl Client {
         signer: &dyn Signer,
         opts: &ShieldOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
+        if opts.submit.journal.is_some() {
+            return Err(ClientError::Journal(crate::journal::JournalError::Blocked(
+                "journaled paired shield recovery requires a dedicated adapter".into(),
+            ))
+            .into());
+        }
         let mut retries = opts.dropped_inner_retries;
         loop {
             let report = self

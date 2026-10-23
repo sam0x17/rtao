@@ -12,6 +12,8 @@ use rtao_rpc::{PolicyRefusal, RpcError, SubmitError};
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ClientError {
+    /// Durable storage, authorization or unresolved-operation refusal.
+    Journal(crate::journal::JournalError),
     /// A typed transport error, with gateway metadata retained.
     Rpc(RpcError),
     /// Metadata or SCALE decoding failed.
@@ -66,6 +68,7 @@ impl ClientError {
     pub fn code(&self) -> rtao_catalog::ErrorCode {
         use rtao_catalog::ErrorCode;
         match self {
+            Self::Journal(_) => ErrorCode::PolicyViolation,
             Self::Rpc(RpcError::Policy(policy)) => {
                 rtao_catalog::errors::classify_error(&policy.message, None)
             }
@@ -100,6 +103,7 @@ impl ClientError {
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Journal(error) => error.fmt(f),
             Self::Rpc(RpcError::Policy(policy)) => fmt::Display::fmt(policy, f),
             Self::Rpc(error) => {
                 let detail = error.to_string();

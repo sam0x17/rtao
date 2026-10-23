@@ -27,3 +27,12 @@ and state checks before it establishes the intended effect.
 
 The facade's validator, miner and owner examples supply complete application
 setup.
+
+The native validator runtime persists weight work in `weights-journal.json`
+under its state directory. Embedded schedulers opt in with `with_journal`;
+plain `WeightScheduler::new` stays in memory. `WeightsProposal::Operation`
+supplies stable application IDs, and observation-only `recover_finalized`
+restores unresolved submissions and pending reveal tracking before new work.
+Missing history and ambiguous native events retain uncertainty. Pause controls
+stop new weight dispatch while automatic native reveals remain observable.
+See `docs/recovery/durable-work.md` for the exact recovery and chain limits.

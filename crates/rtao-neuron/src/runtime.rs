@@ -107,6 +107,11 @@ pub trait Validator: Send + Sync + 'static {
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
     /// Produce a row without network I/O or holding state across asynchronous work.
     fn weights(&self, cx: &NeuronCx, state: &Self::State, mechanism: MechId) -> WeightsProposal;
+    /// Optional application semantic contract checked in the current signing runtime.
+    /// Matching metadata shapes alone do not establish unchanged application meaning.
+    fn weight_semantics(&self) -> Option<(String, Arc<dyn rtao_client::journal::SemanticGuard>)> {
+        None
+    }
     /// Drop or reset scores after registration identities change.
     fn on_metagraph(&self, _diff: &MetagraphDiff, _state: &mut Self::State) {}
     /// Set scoring cadence, timeout and failure backoff.
@@ -130,6 +135,8 @@ pub struct NeuronRuntime<V = ()> {
     #[cfg(feature = "validator")]
     weight_policy: crate::WeightPolicy,
     #[cfg(feature = "validator")]
+    weight_journal: Option<Arc<rtao_client::journal::OperationJournal>>,
+    #[cfg(feature = "validator")]
     metrics: Metrics,
     #[cfg(feature = "validator")]
     clock: Arc<dyn crate::Clock>,
@@ -145,6 +152,7 @@ impl<V: Validator> NeuronRuntime<V> {
             validator: Arc::new(validator),
             injected: None,
             weight_policy: crate::WeightPolicy::default(),
+            weight_journal: None,
             metrics: Metrics::default(),
             clock: Arc::new(SystemClock),
         }
@@ -160,6 +168,15 @@ impl<V: Validator> NeuronRuntime<V> {
     /// never copies the chain's required version into a proposal automatically.
     pub fn with_weight_policy(mut self, policy: crate::WeightPolicy) -> Self {
         self.weight_policy = policy;
+        self
+    }
+    /// Share the durable journal with the application for inspection and pause.
+    /// Otherwise the runtime opens its native journal under the state directory.
+    pub fn with_weight_journal(
+        mut self,
+        journal: Arc<rtao_client::journal::OperationJournal>,
+    ) -> Self {
+        self.weight_journal = Some(journal);
         self
     }
     /// Share the recorder explicitly installed by the binary before chain startup.
@@ -266,6 +283,7 @@ impl<V: Validator> NeuronRuntime<V> {
                 clock_guard,
                 self.clock,
                 self.weight_policy,
+                self.weight_journal,
             )
             .await
         });
