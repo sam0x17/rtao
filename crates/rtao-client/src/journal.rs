@@ -896,8 +896,7 @@ impl JournalBinding {
         match record.finalized_effect() {
             Err(_) => return Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
             Ok(Some(attempt)) => {
-                return Self::recover_receipt(client, attempt, record.effect_shield(attempt)?)
-                    .await;
+                return self.recover_receipt(client, attempt).await;
             }
             Ok(None) => {}
         }
@@ -931,9 +930,7 @@ impl JournalBinding {
         let current = self.record()?;
         match current.finalized_effect() {
             Err(_) => Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
-            Ok(Some(attempt)) => {
-                Self::recover_receipt(client, attempt, current.effect_shield(attempt)?).await
-            }
+            Ok(Some(attempt)) => self.recover_receipt(client, attempt).await,
             Ok(None) if matches!(current.mode, ExecutionMode::Shielded(_)) => {
                 self.recover_shield_absence(client, &mut remaining).await
             }
@@ -951,35 +948,47 @@ impl JournalBinding {
     }
 
     async fn recover_receipt(
+        &self,
         client: &Client,
         attempt: &SignedAttempt,
-        shield: Option<crate::ShieldReport>,
     ) -> Result<RecoveryStatus, JournalError> {
-        let AttemptOutcome::Finalized {
-            block,
-            number,
-            success,
-            ..
-        } = attempt.outcome
-        else {
+        let AttemptOutcome::Finalized { block, number, .. } = attempt.outcome else {
             return Err(JournalError::Identity);
         };
-        Ok(
-            match client.resolve_extrinsic(attempt.hash, block, true).await {
-                Ok(mut report)
-                    if report.hash == attempt.hash
-                        && report.block_hash == Some(block)
-                        && report.block_number == Some(number)
-                        && report.inclusion == crate::Inclusion::Finalized
-                        && report.success == success =>
-                {
-                    report.shield = shield;
-                    RecoveryStatus::Finalized(Box::new(report))
-                }
-                Ok(_) => RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict),
-                Err(_) => RecoveryStatus::Unresolved(RecoveryReason::ReceiptUnavailable),
-            },
-        )
+        let mut report = match client.resolve_extrinsic(attempt.hash, block, true).await {
+            Ok(report)
+                if report.hash == attempt.hash
+                    && report.block_hash == Some(block)
+                    && report.block_number == Some(number)
+                    && report.inclusion == crate::Inclusion::Finalized =>
+            {
+                report
+            }
+            Ok(_) => return Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
+            Err(_) => {
+                return Ok(RecoveryStatus::Unresolved(
+                    RecoveryReason::ReceiptUnavailable,
+                ));
+            }
+        };
+        // A recognized terminal receipt is evidence even if its dispatch
+        // status contradicts the retained outcome. Never forget it on restart.
+        self.observed(&report).await?;
+        // Both the receipt RPC and evidence publication can race another
+        // observer. Project only from the complete CURRENT retained graph.
+        let current = self.record()?;
+        let selected = match current.finalized_effect() {
+            Ok(Some(selected)) if selected.hash == report.hash => selected,
+            _ => return Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
+        };
+        if !matches!(selected.outcome, AttemptOutcome::Finalized {
+            block: at, number: height, success, ..
+        } if Some(at) == report.block_hash && Some(height) == report.block_number && success == report.success)
+        {
+            return Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict));
+        }
+        report.shield = current.effect_shield(selected)?;
+        Ok(RecoveryStatus::Finalized(Box::new(report)))
     }
 
     // A single finite budget is shared across every physical identity. This

@@ -46,6 +46,11 @@ before network I/O. It is deliberately not guessed to be unexecuted.
 history. It returns `Rebuildable`, a decoded `Finalized` receipt, or structured
 `Unresolved` evidence needs. A successful body read advances the durable cursor;
 a missing block, RPC failure or stale/disagreeing finalized identity does not.
+An exact finalized receipt with a contradictory dispatch outcome is retained
+alongside the earlier evidence, including across restart. Receipt recovery joins
+the current journal graph after the lookup and evidence publication, so a
+concurrent conflict cannot escape as a cached finalized result. Wrong-identity
+or malformed receipts remain unresolved without being attached to another attempt.
 Only complete history excluding the exact bytes through mortal validity,
 after finality has passed expiry, permits replacement. An immortal attempt
 cannot acquire this expiry proof. Repeated calls continue or return the same

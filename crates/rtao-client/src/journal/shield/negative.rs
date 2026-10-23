@@ -753,9 +753,7 @@ impl JournalBinding {
         let current = self.record()?;
         match current.finalized_effect() {
             Err(_) => Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
-            Ok(Some(attempt)) => {
-                Self::recover_receipt(client, attempt, current.effect_shield(attempt)?).await
-            }
+            Ok(Some(attempt)) => self.recover_receipt(client, attempt).await,
             Ok(None)
                 if current.shield_pairs.iter().all(|p| {
                     !matches!(p.phase, PairPhase::DispatchAuthorized { .. })
