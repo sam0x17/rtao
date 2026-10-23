@@ -233,10 +233,55 @@ impl Client {
         };
         let limits = SubmissionLimits::new(&submit)?;
         let attempted_hash = SubmissionAttempt::default();
+        let authorization = std::sync::OnceLock::<(u64, H256, H256)>::new();
         let operation = async {
             limits.admission.run(self, self.ensure_signing()).await?;
             let account = signer.account();
             let crypto_type = signer.crypto_type();
+            let mut durable: Option<(
+                crate::journal::ShieldPreparation,
+                crate::journal::QualifiedShieldRuntime,
+            )> = if let Some(binding) = &opts.submit.journal {
+                if opts.wait != Wait::Finalization {
+                    return Err(ClientError::Journal(crate::journal::JournalError::Blocked(
+                        "durable shield requires finalized inner wait".into(),
+                    ))
+                    .into());
+                }
+                if binding
+                    .record()
+                    .map_err(ClientError::Journal)?
+                    .intent
+                    .account
+                    != account
+                {
+                    return Err(ClientError::Journal(crate::journal::JournalError::Identity).into());
+                }
+                limits
+                    .admission
+                    .run(self, self.native_author_session())
+                    .await?;
+                let policy = binding
+                    .shield_policy(
+                        opts.period.get(),
+                        opts.dropped_inner_retries,
+                        opts.max_fee.map(|fee| fee.rao()),
+                    )
+                    .map_err(ClientError::Journal)?;
+                let preparation = binding.claim_shield(policy).map_err(ClientError::Journal)?;
+                let context = limits
+                    .admission
+                    .run(self, async {
+                        binding
+                            .qualify_shield_head(self)
+                            .await
+                            .map_err(ClientError::Journal)
+                    })
+                    .await?;
+                Some((preparation, context))
+            } else {
+                None
+            };
             if let Some(max_fee) = opts.max_fee {
                 let fee = limits
                     .admission
@@ -318,6 +363,12 @@ impl Client {
                     }
                 }
             };
+            if durable.is_some() {
+                // Other clients/restarts sharing the journal do not share this
+                // connection's nonce cache. The account owner is held here;
+                // resolve the actual author endpoint before allocating a pair.
+                self.nonces().clear_account(&account);
+            }
             let (carrier_lease, inner_lease) = limits
                 .admission
                 .run(self, self.nonces().lease_pair(&account))
@@ -342,6 +393,30 @@ impl Client {
                 })?,
                 period: opts.period,
             };
+            if let Some((preparation, context)) = &mut durable {
+                let binding =
+                    opts.submit.journal.as_ref().ok_or_else(|| {
+                        ClientError::Journal(crate::journal::JournalError::Identity)
+                    })?;
+                *context = limits
+                    .admission
+                    .run(self, async {
+                        binding
+                            .qualify_shield_head(self)
+                            .await
+                            .map_err(ClientError::Journal)
+                    })
+                    .await?;
+                limits
+                    .admission
+                    .run(self, async {
+                        preparation
+                            .check_inner(&chain, &inner, context)
+                            .await
+                            .map_err(ClientError::Journal)
+                    })
+                    .await?;
+            }
             let signature = limits
                 .admission
                 .run(self, async {
@@ -355,6 +430,21 @@ impl Client {
                 .admission
                 .run(self, self.attach_signature(&inner, signature))
                 .await?;
+            let pair = if let Some((preparation, context)) = &durable {
+                Some(
+                    limits
+                        .admission
+                        .run(self, async {
+                            preparation
+                                .publish_inner(&inner, &inner_bytes, inner_hash, context)
+                                .await
+                                .map_err(ClientError::Journal)
+                        })
+                        .await?,
+                )
+            } else {
+                None
+            };
             // Seal with the key current now: signer preparation and the
             // finality wait can outlast a key rotation on fast chains, and a
             // stale key leaves the inner undecryptable and silently dropped.
@@ -423,8 +513,56 @@ impl Client {
                 .call()
                 .ensure_runtime(&runtime)
                 .map_err(ClientError::from)?;
+            let ownership = if let Some((preparation, context)) = durable.take() {
+                let pair = pair
+                    .ok_or_else(|| ClientError::Journal(crate::journal::JournalError::Identity))?;
+                limits
+                    .admission
+                    .run(self, async {
+                        preparation
+                            .publish_carrier(pair, &unsigned, &bytes, hash, &next_key, &context)
+                            .await
+                            .map_err(ClientError::Journal)
+                    })
+                    .await?;
+                let binding =
+                    opts.submit.journal.as_ref().ok_or_else(|| {
+                        ClientError::Journal(crate::journal::JournalError::Identity)
+                    })?;
+                let fresh = limits
+                    .admission
+                    .run(self, async {
+                        binding
+                            .qualify_shield_head(self)
+                            .await
+                            .map_err(ClientError::Journal)
+                    })
+                    .await?;
+                // Retain identities outside the deadline-cancelled future. A
+                // publication error around authorization may still be durable.
+                let _ = authorization.set((pair, hash, inner_hash));
+                let (owner, _retirement) = limits
+                    .admission
+                    .run(self, async {
+                        preparation
+                            .authorize(&chain, pair, &inner, &unsigned, &fresh)
+                            .await
+                            .map_err(ClientError::Journal)
+                    })
+                    .await?;
+                Some(owner)
+            } else {
+                None
+            };
             let mut carrier_report = match self
-                .send_and_watch(&bytes, hash, &submit, limits.admission, &attempted_hash)
+                .send_and_watch(
+                    &bytes,
+                    hash,
+                    &submit,
+                    limits.admission,
+                    &attempted_hash,
+                    ownership,
+                )
                 .await
             {
                 Ok(report) => {
@@ -509,9 +647,41 @@ impl Client {
             }
             Ok(report)
         };
-        limits.full.run(self, operation).await.map_err(|error| {
+        let outcome = limits.full.run(self, operation).await.map_err(|error| {
             submission_attempt_error(self, signer.account(), error, &attempted_hash)
-        })
+        });
+        let Some(binding) = &opts.submit.journal else {
+            return outcome;
+        };
+        let Some(&(pair, carrier_hash, inner_hash)) = authorization.get() else {
+            return outcome;
+        };
+        let pending = |reason| SubmitFailure::PendingShield {
+            operation: binding.id().to_owned(),
+            pair,
+            carrier_hash,
+            inner_hash,
+            reason,
+        };
+        match outcome {
+            Ok(report)
+                if report.hash == inner_hash && report.inclusion == crate::Inclusion::Finalized =>
+            {
+                if binding.observed(&report).await.is_err() {
+                    return Err(pending(crate::journal::RecoveryReason::ReceiptUnavailable));
+                }
+                match binding
+                    .record()
+                    .and_then(|r| r.finalized_effect().map(|effect| effect.map(|a| a.hash)))
+                {
+                    Ok(Some(hash)) if hash == inner_hash => Ok(report),
+                    _ => Err(pending(crate::journal::RecoveryReason::EvidenceConflict)),
+                }
+            }
+            // Even Closed/Policy/pool rejection or a finalized failed CARRIER
+            // leaves the authorized inner explicitly unresolved, never failed.
+            _ => Err(pending(crate::journal::RecoveryReason::InnerUnresolved)),
+        }
     }
 
     /// Read the freshest MevShield NextKey this endpoint has.
@@ -756,3 +926,6 @@ fn check_era(period: ShieldPeriod, best: u64, finalized: u64) -> Result<(), Subm
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod durable_tests;

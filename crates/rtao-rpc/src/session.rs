@@ -418,6 +418,31 @@ impl Session {
         .await
         .map_err(WireError::into_submit)
     }
+    /// Owned native author watch using the raw subscription representation.
+    /// It retains the same single-use queue/write custody as the typed method;
+    /// this lets higher client layers reuse their existing receipt/status reducer.
+    pub async fn submit_and_watch_owned_raw(
+        &self,
+        extrinsic: &[u8],
+        ownership: AuthorOwnership,
+    ) -> Result<RawRpcSubscription, SubmitError> {
+        let custody = ownership.for_bytes(extrinsic)?;
+        let subscription = self
+            .subscription_with_ownership(
+                "author_submitAndWatchExtrinsic",
+                json!([format!("0x{}", hex::encode(extrinsic))]),
+                "author_unwatchExtrinsic",
+                Some(custody),
+            )
+            .await
+            .map_err(WireError::into_submit)?;
+        let id = Some(subscription.id.clone());
+        Ok(RawRpcSubscription {
+            stream: Box::pin(RawSubscription(subscription)),
+            id,
+        })
+    }
+
     /// Watch connection state changes.
     pub fn state(&self) -> watch::Receiver<SessionState> {
         self.inner.state.clone()

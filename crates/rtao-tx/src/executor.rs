@@ -747,6 +747,16 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
+        let (scoped, _owner) = scoped_journal_execution(opts)?;
+        let opts = &scoped;
+        if opts.journal.is_some() && opts.shielded {
+            return Err(rtao_client::ClientError::Journal(
+                rtao_client::journal::JournalError::Blocked(
+                    "journaled shield author path remains gated for integration review".into(),
+                ),
+            )
+            .into());
+        }
         let shield_period = opts.shielded.then(|| opts.shield_period()).transpose()?;
         budget
             .run(
@@ -810,6 +820,23 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
+        if opts.execute.journal.is_some() {
+            if opts.execute.submit_options().wait != rtao_client::Wait::Finalization {
+                return Err(rtao_client::ClientError::Journal(
+                    rtao_client::journal::JournalError::Blocked(
+                        "durable shield requires finalized inner wait".into(),
+                    ),
+                )
+                .into());
+            }
+            self.client.native_author_session().await?;
+            return Err(rtao_client::ClientError::Journal(
+                rtao_client::journal::JournalError::Blocked(
+                    "journaled shield author path remains gated for integration review".into(),
+                ),
+            )
+            .into());
+        }
         let mut plan_opts = opts.execute.plan_options();
         let mut active_policy = opts
             .execute
@@ -1023,6 +1050,8 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
+        let (scoped, _owner) = scoped_journal_execution(opts)?;
+        let opts = &scoped;
         if let Some(journal) = &opts.journal {
             journal
                 .can_dispatch()
@@ -1300,6 +1329,28 @@ fn transient(error: &PoolRejection) -> bool {
     rtao_catalog::py::TRANSIENT_SUBSTRINGS
         .iter()
         .any(|needle| message.contains(needle))
+}
+
+fn scoped_journal_execution(
+    opts: &ExecuteOptions,
+) -> Result<
+    (
+        ExecuteOptions,
+        Option<rtao_client::journal::JournalPreparation>,
+    ),
+    rtao_client::ClientError,
+> {
+    let owner = opts
+        .journal
+        .as_ref()
+        .map(|binding| binding.reserve())
+        .transpose()
+        .map_err(rtao_client::ClientError::Journal)?;
+    let mut scoped = opts.clone();
+    if let Some(owner) = &owner {
+        scoped.journal = Some(owner.binding());
+    }
+    Ok((scoped, owner))
 }
 
 #[derive(Clone, Copy)]

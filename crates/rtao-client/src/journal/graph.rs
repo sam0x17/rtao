@@ -339,7 +339,13 @@ pub(super) fn validate_transition(
                 || old.id != new.id
                 || old.inner != new.inner
                 || old.material_generation != new.material_generation
-                || old.extensions != new.extensions
+                || if old.phase == PairPhase::Preparing && new.phase == PairPhase::Prepared {
+                    old.extensions
+                        .iter()
+                        .any(|(key, value)| new.extensions.get(key) != Some(value))
+                } else {
+                    old.extensions != new.extensions
+                }
                 || (old.carrier != new.carrier
                     && !matches!(
                         (&old.phase, &new.phase, old.carrier, new.carrier),

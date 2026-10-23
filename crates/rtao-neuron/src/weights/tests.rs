@@ -34,7 +34,7 @@ fn fixture_config() -> anyhow::Result<ClientConfig> {
     Ok(config)
 }
 
-fn fixture_state() -> anyhow::Result<FakeState> {
+pub(super) fn fixture_state() -> anyhow::Result<FakeState> {
     let mut state = FakeState::try_default()?;
     state.set_finalized(97)?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), HOTKEY), 0u16)?;

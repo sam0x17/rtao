@@ -340,6 +340,14 @@ impl RuntimeCache {
         self.fetch(RuntimeInfo::parse(&info)?, Some(block)).await
     }
 
+    pub(crate) async fn fresh_signing_metadata(&self, at: H256) -> Result<Vec<u8>, ClientError> {
+        self.0
+            .context
+            .download(Some(at))
+            .await
+            .map(|(bytes, _)| bytes)
+    }
+
     /// Recheck the current runtime version, bypassing the twelve-second head TTL.
     pub async fn refresh_head(&self) -> Result<RuntimeHandle, ClientError> {
         let checked_at = Instant::now();
