@@ -6,7 +6,10 @@
 //! No signing key is stored.
 //! Signed bytes and commit material are sensitive and are redacted from Debug.
 
+mod graph;
+mod migration;
 mod native;
+pub use graph::{AttemptRole, ExecutionMode, PairPhase, ShieldPair, ShieldPolicy};
 #[cfg(test)]
 mod tests;
 pub use native::NativeJournalStore;
@@ -22,7 +25,7 @@ use std::{
 };
 
 /// Current storage envelope version. Older supported versions migrate atomically.
-pub const JOURNAL_SCHEMA: u32 = 2;
+pub const JOURNAL_SCHEMA: u32 = 3;
 /// A storage, identity, concurrency or recovery refusal. Payloads are never included.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum JournalError {
@@ -62,6 +65,9 @@ pub struct Incompatibility {
     pub descriptor: Option<String>,
     /// Operator-readable remedy, without secret material.
     pub detail: String,
+    /// Uninterpreted fields retained across supported storage migrations.
+    #[serde(default, flatten)]
+    pub extensions: BTreeMap<String, Value>,
 }
 
 /// Optional semantic authorization immediately before signing in the current runtime.
@@ -95,6 +101,9 @@ pub struct OperationIntent {
     /// Optional stable semantic contract. Recovery must reinstall its guard.
     #[serde(default)]
     pub semantic_policy: Option<String>,
+    /// Uninterpreted fields retained without logging or inferring authorization.
+    #[serde(default, flatten)]
+    pub extensions: BTreeMap<String, Value>,
 }
 impl fmt::Debug for OperationIntent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -106,7 +115,7 @@ impl fmt::Debug for OperationIntent {
 }
 
 /// A finalized historical disposition, not an RPC or timer inference.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AttemptOutcome {
     /// Persisted before dispatch. A crash may have happened on either side of I/O.
     Unresolved,
@@ -120,11 +129,39 @@ pub enum AttemptOutcome {
         number: u64,
         /// Runtime dispatch status. Failure does not authorize blind replacement.
         success: bool,
+        /// Uninterpreted historical evidence retained across migration.
+        #[serde(default, flatten)]
+        extensions: BTreeMap<String, Value>,
     },
 }
+impl fmt::Debug for AttemptOutcome {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unresolved => f.write_str("Unresolved"),
+            Self::ExpiredUnexecuted => f.write_str("ExpiredUnexecuted"),
+            Self::Finalized {
+                block,
+                number,
+                success,
+                ..
+            } => f
+                .debug_struct("Finalized")
+                .field("block", block)
+                .field("number", number)
+                .field("success", success)
+                .finish_non_exhaustive(),
+        }
+    }
+}
 /// An exact signed attempt. Debug deliberately omits its bytes and material.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SignedAttempt {
+    /// Stable zero-based ordinal. Attempts are never removed or reordered.
+    pub id: u64,
+    /// Physical identity's role in the logical effect.
+    pub role: AttemptRole,
+    /// Exact material selection; unknown for migrated ordinary attempts.
+    pub material_generation: Option<u64>,
     /// Hash of exactly the persisted signed bytes.
     pub hash: H256,
     /// SCALE signed extrinsic. Never print this field in logs.
@@ -155,6 +192,11 @@ pub struct SignedAttempt {
     pub finalized: Option<(u64, H256)>,
     /// Historical result, initially unresolved.
     pub outcome: AttemptOutcome,
+    /// Contradictory terminal evidence, retained instead of silently overwritten.
+    pub evidence_conflicts: Vec<AttemptOutcome>,
+    /// Uninterpreted attempt fields survive supported migration and later writes.
+    #[serde(default, flatten)]
+    pub extensions: BTreeMap<String, Value>,
 }
 impl fmt::Debug for SignedAttempt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -168,6 +210,10 @@ impl fmt::Debug for SignedAttempt {
 /// Persisted operation including every attempt; unresolved records are never pruned.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct OperationRecord {
+    /// Route selection is durable before signing; it cannot change afterwards.
+    pub mode: ExecutionMode,
+    /// References into the existing attempts vector, not another attempt tracker.
+    pub shield_pairs: Vec<ShieldPair>,
     /// Immutable application work.
     pub intent: OperationIntent,
     /// Preparation/reveal material, persisted before signing or network dispatch.
@@ -192,12 +238,23 @@ impl fmt::Debug for OperationRecord {
     }
 }
 /// Explicit pause policy. Observation and reconciliation are always allowed.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JournalControl {
     /// Stop dispatch and accepting new logical operations.
     pub submissions_paused: bool,
     /// Permit existing explicitly authorized obligations while new work is paused.
     pub allow_obligations: bool,
+    /// Uninterpreted control fields retained, never treated as permissions.
+    #[serde(default, flatten)]
+    pub extensions: BTreeMap<String, Value>,
+}
+impl fmt::Debug for JournalControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("JournalControl")
+            .field("submissions_paused", &self.submissions_paused)
+            .field("allow_obligations", &self.allow_obligations)
+            .finish_non_exhaustive()
+    }
 }
 /// Versioned image passed through a storage adapter's atomic CAS boundary.
 #[derive(Clone, Serialize, Deserialize)]
@@ -257,9 +314,7 @@ impl OperationJournal {
     /// Adopt a versioned adapter; unsupported schemas are refused.
     pub fn new(store: Arc<dyn JournalStore>) -> Result<Arc<Self>, JournalError> {
         let image = store.load()?;
-        if image.schema_version != JOURNAL_SCHEMA {
-            return Err(JournalError::Schema(image.schema_version));
-        }
+        image.validate()?;
         Ok(Arc::new(Self {
             store,
             owners: Mutex::new(BTreeSet::new()),
@@ -271,19 +326,23 @@ impl OperationJournal {
     }
     /// Inspect all operations, including unresolved and finalized work.
     pub fn snapshot(&self) -> Result<JournalImage, JournalError> {
-        self.store.load()
+        let image = self.store.load()?;
+        image.validate()?;
+        Ok(image)
     }
     /// Atomically update a complete image. A conflict never authorizes dispatch.
     pub fn update<T>(
         &self,
         f: impl FnOnce(&mut JournalImage) -> Result<T, JournalError>,
     ) -> Result<T, JournalError> {
-        let mut image = self.store.load()?;
+        let mut image = self.snapshot()?;
         let before = image.revision;
+        let prior = image.clone();
         let result = f(&mut image)?;
         image.revision = before
             .checked_add(1)
             .ok_or_else(|| JournalError::Storage("generation exhausted".into()))?;
+        graph::validate_transition(&prior, &image)?;
         self.store.compare_exchange(before, &image)?;
         Ok(result)
     }
@@ -314,8 +373,14 @@ impl OperationJournal {
         })
     }
     /// Set pause control without stopping finalized observation.
-    pub fn control(&self, control: JournalControl) -> Result<(), JournalError> {
+    pub fn control(&self, mut control: JournalControl) -> Result<(), JournalError> {
         self.update(|image| {
+            for (key, value) in &image.control.extensions {
+                control
+                    .extensions
+                    .entry(key.clone())
+                    .or_insert_with(|| value.clone());
+            }
             image.control = control;
             Ok(())
         })
@@ -340,6 +405,8 @@ impl OperationJournal {
                 image.operations.insert(
                     intent.id.clone(),
                     OperationRecord {
+                        mode: ExecutionMode::Unselected,
+                        shield_pairs: Vec::new(),
                         intent: intent.clone(),
                         material: Value::Null,
                         material_generation: 0,
@@ -434,7 +501,7 @@ impl JournalBinding {
                 .operations
                 .get_mut(&self.id)
                 .ok_or(JournalError::Identity)?;
-            dispatchable(record, image.control)?;
+            dispatchable(record, &image.control)?;
             if record.material_generation != self.material_generation {
                 return Err(JournalError::Conflict);
             }
@@ -454,7 +521,7 @@ impl JournalBinding {
             .operations
             .get(&self.id)
             .ok_or(JournalError::Identity)?;
-        dispatchable(record, image.control)?;
+        dispatchable(record, &image.control)?;
         if record.material_generation != self.material_generation {
             return Err(JournalError::Conflict);
         }
@@ -506,6 +573,9 @@ impl JournalBinding {
     ) -> Result<(), JournalError> {
         let binding = self.clone();
         let attempt = SignedAttempt {
+            id: 0, // Assigned under the durable CAS, never by a signing task.
+            role: AttemptRole::Ordinary,
+            material_generation: Some(self.material_generation),
             hash,
             bytes: bytes.to_vec(),
             nonce: unsigned.nonce(),
@@ -520,6 +590,8 @@ impl JournalBinding {
             next: unsigned.submission_head(),
             finalized: None,
             outcome: AttemptOutcome::Unresolved,
+            evidence_conflicts: Vec::new(),
+            extensions: BTreeMap::new(),
         };
         crate::offload(move || {
             binding.journal.update(|image| {
@@ -527,11 +599,22 @@ impl JournalBinding {
                     .operations
                     .get_mut(&binding.id)
                     .ok_or(JournalError::Identity)?;
-                dispatchable(record, image.control)?;
+                dispatchable(record, &image.control)?;
                 if record.material_generation != binding.material_generation {
                     return Err(JournalError::Conflict);
                 }
+                if !matches!(
+                    record.mode,
+                    ExecutionMode::Unselected | ExecutionMode::Ordinary
+                ) {
+                    return Err(JournalError::Blocked(
+                        "shield dispatch adapter unavailable".into(),
+                    ));
+                }
+                record.mode = ExecutionMode::Ordinary;
                 let mut attempt = attempt;
+                attempt.id = u64::try_from(record.attempts.len())
+                    .map_err(|_| JournalError::Storage("attempt ordinal exhausted".into()))?;
                 attempt.material = record.material.clone();
                 record.attempts.push(attempt);
                 record.incompatibility = None;
@@ -559,16 +642,17 @@ impl JournalBinding {
                 let attempt = image
                     .operations
                     .get_mut(&binding.id)
-                    .and_then(|r| r.attempts.last_mut())
+                    .and_then(|r| r.attempts.iter_mut().find(|a| a.hash == hash))
                     .ok_or(JournalError::Identity)?;
-                if attempt.hash != hash {
-                    return Err(JournalError::Identity);
-                }
-                attempt.outcome = AttemptOutcome::Finalized {
-                    block,
-                    number,
-                    success,
-                };
+                graph::merge_outcome(
+                    attempt,
+                    AttemptOutcome::Finalized {
+                        block,
+                        number,
+                        success,
+                        extensions: BTreeMap::new(),
+                    },
+                );
                 Ok(())
             })
         })
@@ -576,7 +660,12 @@ impl JournalBinding {
         .map_err(|_| JournalError::Storage("journal worker stopped".into()))?
     }
 }
-fn dispatchable(record: &OperationRecord, control: JournalControl) -> Result<(), JournalError> {
+fn dispatchable(record: &OperationRecord, control: &JournalControl) -> Result<(), JournalError> {
+    if matches!(record.mode, ExecutionMode::Shielded(_)) {
+        return Err(JournalError::Blocked(
+            "shield dispatch adapter unavailable".into(),
+        ));
+    }
     if control.submissions_paused && !(control.allow_obligations && record.intent.obligation) {
         return Err(JournalError::Blocked(
             "submissions paused; observation remains enabled".into(),
@@ -585,7 +674,7 @@ fn dispatchable(record: &OperationRecord, control: JournalControl) -> Result<(),
     if record
         .attempts
         .iter()
-        .any(|a| a.outcome != AttemptOutcome::ExpiredUnexecuted)
+        .any(|a| a.outcome != AttemptOutcome::ExpiredUnexecuted || !a.evidence_conflicts.is_empty())
     {
         return Err(JournalError::Blocked(
             "reconcile existing attempts before replacement".into(),
@@ -599,6 +688,15 @@ fn dispatchable(record: &OperationRecord, control: JournalControl) -> Result<(),
 pub enum RecoveryReason {
     /// The current finalized endpoint cannot be read.
     FinalizedUnavailable,
+    /// Contradictory terminal evidence is retained; author I/O remains blocked.
+    EvidenceConflict,
+    /// Paired dispatch and historical protocol qualification are not enabled.
+    ShieldAdapterRequired,
+    /// A concurrent writer published this still-unresolved physical attempt.
+    PendingAttempt {
+        /// Stable current attempt ordinal; inspect the operation for its role/hash.
+        attempt: u64,
+    },
     /// The endpoint went backwards or disagrees with retained finalized history.
     StaleFinalizedView,
     /// A required historical header or block body is unavailable, not absent.
@@ -646,97 +744,169 @@ impl JournalBinding {
         if client.genesis() != record.intent.genesis {
             return Err(JournalError::Identity);
         }
-        let Some(mut attempt) = record.attempts.last().cloned() else {
-            return Ok(RecoveryStatus::Rebuildable);
-        };
-        use blake2::{Blake2b, Digest, digest::consts::U32};
-        if H256(Blake2b::<U32>::digest(&attempt.bytes).into()) != attempt.hash {
-            return Err(JournalError::Storage(
-                "signed attempt hash differs; retain original evidence".into(),
-            ));
+        let shielded = matches!(record.mode, ExecutionMode::Shielded(_));
+        match record.finalized_effect() {
+            Err(_) => return Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
+            Ok(Some(attempt)) => return Self::recover_receipt(client, attempt).await,
+            Ok(None) => {}
         }
-        match attempt.outcome {
-            AttemptOutcome::ExpiredUnexecuted => return Ok(RecoveryStatus::Rebuildable),
-            AttemptOutcome::Finalized { block, .. } => {
-                return Ok(
-                    match client.resolve_extrinsic(attempt.hash, block, true).await {
-                        Ok(report) => RecoveryStatus::Finalized(Box::new(report)),
-                        Err(_) => RecoveryStatus::Unresolved(RecoveryReason::ReceiptUnavailable),
-                    },
-                );
+        let mut remaining = maximum_blocks;
+        for attempt in record.attempts {
+            if attempt.outcome != AttemptOutcome::Unresolved {
+                continue;
             }
-            AttemptOutcome::Unresolved => {}
+            if let Some(status) = self
+                .recover_attempt(client, attempt, shielded, &mut remaining)
+                .await?
+            {
+                return Ok(status);
+            }
         }
+        // Another observer may have finalized a different exact attempt while
+        // this call was scanning. Never derive a terminal state from its stale
+        // initial record or from the last vector element (possibly a carrier).
+        let current = self.record()?;
+        match current.finalized_effect() {
+            Err(_) => Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
+            Ok(Some(attempt)) => Self::recover_receipt(client, attempt).await,
+            Ok(None) if matches!(current.mode, ExecutionMode::Shielded(_)) => Ok(
+                RecoveryStatus::Unresolved(RecoveryReason::ShieldAdapterRequired),
+            ),
+            Ok(None) => match current
+                .attempts
+                .iter()
+                .find(|a| a.outcome != AttemptOutcome::ExpiredUnexecuted)
+            {
+                Some(attempt) => Ok(RecoveryStatus::Unresolved(RecoveryReason::PendingAttempt {
+                    attempt: attempt.id,
+                })),
+                None => Ok(RecoveryStatus::Rebuildable),
+            },
+        }
+    }
+
+    async fn recover_receipt(
+        client: &Client,
+        attempt: &SignedAttempt,
+    ) -> Result<RecoveryStatus, JournalError> {
+        let AttemptOutcome::Finalized {
+            block,
+            number,
+            success,
+            ..
+        } = attempt.outcome
+        else {
+            return Err(JournalError::Identity);
+        };
+        Ok(
+            match client.resolve_extrinsic(attempt.hash, block, true).await {
+                Ok(report)
+                    if report.hash == attempt.hash
+                        && report.block_number == Some(number)
+                        && report.success == success =>
+                {
+                    RecoveryStatus::Finalized(Box::new(report))
+                }
+                Ok(_) => RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict),
+                Err(_) => RecoveryStatus::Unresolved(RecoveryReason::ReceiptUnavailable),
+            },
+        )
+    }
+
+    // A single finite budget is shared across every physical identity. This
+    // counts strict historical lookup reads (including repeated target reads),
+    // never maximum_blocks again per attempt/pair. Receipt decoding for found
+    // targets is additional, at most one such lookup per successful scan here;
+    // resolving an already persisted finalized receipt is a separate fast path.
+    async fn recover_attempt(
+        &self,
+        client: &Client,
+        mut attempt: SignedAttempt,
+        shielded: bool,
+        remaining: &mut u32,
+    ) -> Result<Option<RecoveryStatus>, JournalError> {
         let chain = match client.submit_client().await {
             Ok(chain) => chain,
             Err(_) => {
-                return Ok(RecoveryStatus::Unresolved(
+                return Ok(Some(RecoveryStatus::Unresolved(
                     RecoveryReason::FinalizedUnavailable,
-                ));
+                )));
             }
         };
         let finalized = match chain.at(crate::BlockRef::Finalized).await {
             Ok(s) => s.block().clone(),
             Err(_) => {
-                return Ok(RecoveryStatus::Unresolved(
+                return Ok(Some(RecoveryStatus::Unresolved(
                     RecoveryReason::FinalizedUnavailable,
-                ));
+                )));
             }
         };
         if let Some((height, hash)) = attempt.finalized {
             if finalized.number < height {
-                return Ok(RecoveryStatus::Unresolved(
+                return Ok(Some(RecoveryStatus::Unresolved(
                     RecoveryReason::StaleFinalizedView,
-                ));
+                )));
             }
             match chain.at(crate::BlockRef::Number(height)).await {
                 Ok(s) if s.block().hash == hash => {}
                 _ => {
-                    return Ok(RecoveryStatus::Unresolved(
+                    return Ok(Some(RecoveryStatus::Unresolved(
                         RecoveryReason::StaleFinalizedView,
-                    ));
+                    )));
                 }
             }
         }
-        let mut scanned = 0;
         while attempt.next <= finalized.number
             && attempt.expiry.is_none_or(|last| attempt.next <= last)
         {
-            if scanned >= maximum_blocks {
-                self.save_recovery(attempt.clone()).await?;
-                return Ok(RecoveryStatus::Unresolved(RecoveryReason::ScanBudget {
-                    next: attempt.next,
-                }));
+            if *remaining == 0 {
+                let next = attempt.next;
+                self.save_recovery(attempt).await?;
+                return Ok(Some(RecoveryStatus::Unresolved(
+                    RecoveryReason::ScanBudget { next },
+                )));
             }
             let block = match chain.at(crate::BlockRef::Number(attempt.next)).await {
                 Ok(s) => s.block().hash,
                 Err(_) => {
                     let next = attempt.next;
                     self.save_recovery(attempt).await?;
-                    return Ok(RecoveryStatus::Unresolved(
+                    return Ok(Some(RecoveryStatus::Unresolved(
                         RecoveryReason::HistoryUnavailable { next },
-                    ));
+                    )));
                 }
             };
+            *remaining -= 1;
             match chain.find_extrinsic_complete(attempt.hash, block).await {
                 Ok(Some(_)) => {
                     return match client.resolve_extrinsic(attempt.hash, block, true).await {
                         Ok(report) => {
                             self.observed(&report).await?;
-                            Ok(RecoveryStatus::Finalized(Box::new(report)))
+                            let current = self.record()?;
+                            match current.finalized_effect() {
+                                Err(_) => Ok(Some(RecoveryStatus::Unresolved(
+                                    RecoveryReason::EvidenceConflict,
+                                ))),
+                                Ok(Some(effect)) if effect.hash == report.hash => {
+                                    Ok(Some(RecoveryStatus::Finalized(Box::new(report))))
+                                }
+                                // A carrier is only a physical receipt; never
+                                // feed it to a logical effect consumer.
+                                _ => Ok(None),
+                            }
                         }
-                        Err(_) => Ok(RecoveryStatus::Unresolved(
+                        Err(_) => Ok(Some(RecoveryStatus::Unresolved(
                             RecoveryReason::ReceiptUnavailable,
-                        )),
+                        ))),
                     };
                 }
                 Ok(None) => {}
                 Err(_) => {
                     let next = attempt.next;
                     self.save_recovery(attempt).await?;
-                    return Ok(RecoveryStatus::Unresolved(
+                    return Ok(Some(RecoveryStatus::Unresolved(
                         RecoveryReason::HistoryUnavailable { next },
-                    ));
+                    )));
                 }
             }
             attempt.next = attempt
@@ -744,25 +914,29 @@ impl JournalBinding {
                 .checked_add(1)
                 .ok_or_else(|| JournalError::Storage("historical cursor exhausted".into()))?;
             attempt.finalized = Some((finalized.number, finalized.hash));
-            scanned += 1;
         }
         if attempt
             .expiry
             .is_some_and(|expiry| finalized.number > expiry && attempt.next > expiry)
         {
-            attempt.outcome = AttemptOutcome::ExpiredUnexecuted;
+            // Schema3 is not protocol qualification. In particular a carrier
+            // whose inner disappeared must not authorize a new logical effect.
+            if !shielded {
+                attempt.outcome = AttemptOutcome::ExpiredUnexecuted;
+            }
             self.save_recovery(attempt).await?;
-            return Ok(RecoveryStatus::Rebuildable);
+            return Ok(None);
         }
         let next = attempt.next;
         self.save_recovery(attempt).await?;
-        Ok(RecoveryStatus::Unresolved(
+        Ok(Some(RecoveryStatus::Unresolved(
             RecoveryReason::AwaitingFinality {
                 next,
                 finalized: finalized.number,
             },
-        ))
+        )))
     }
+
     async fn save_recovery(&self, attempt: SignedAttempt) -> Result<(), JournalError> {
         let binding = self.clone();
         crate::offload(move || {
@@ -770,20 +944,18 @@ impl JournalBinding {
                 let current = image
                     .operations
                     .get_mut(&binding.id)
-                    .and_then(|r| r.attempts.last_mut())
+                    .and_then(|r| r.attempts.iter_mut().find(|a| a.id == attempt.id))
                     .ok_or(JournalError::Identity)?;
-                if current.hash != attempt.hash {
+                if current.hash != attempt.hash || current.role != attempt.role {
                     return Err(JournalError::Conflict);
                 }
-                // A concurrent older scan cannot erase terminal evidence, even
-                // when both scans stopped at the same historical cursor.
-                if current.outcome != AttemptOutcome::Unresolved {
-                    return Ok(());
+                // Only progress and outcome can merge. Never replace immutable
+                // signed/material evidence with an observer's older snapshot.
+                if current.outcome == AttemptOutcome::Unresolved && attempt.next >= current.next {
+                    current.next = attempt.next;
+                    current.finalized = attempt.finalized;
                 }
-                if attempt.next < current.next {
-                    return Ok(());
-                }
-                *current = attempt;
+                graph::merge_outcome(current, attempt.outcome);
                 Ok(())
             })
         })

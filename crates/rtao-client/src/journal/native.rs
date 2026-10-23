@@ -21,6 +21,19 @@ pub struct NativeJournalStore {
     serial: Mutex<()>,
     owners: std::sync::Arc<Mutex<std::collections::BTreeSet<String>>>,
 }
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PublicationStage {
+    Encoded,
+    TempSynced,
+    Renamed,
+    DirectorySynced,
+}
+fn interrupt(stage: PublicationStage, fault: Option<PublicationStage>) -> Result<(), JournalError> {
+    if fault == Some(stage) {
+        return Err(error("injected publication interruption"));
+    }
+    Ok(())
+}
 fn error(e: impl std::fmt::Display) -> JournalError {
     JournalError::Storage(e.to_string())
 }
@@ -51,7 +64,14 @@ impl NativeJournalStore {
     }
     fn open_with_directory_sync(
         path: impl AsRef<Path>,
+        sync_directory: impl FnMut(&Path) -> std::io::Result<()>,
+    ) -> Result<Self, JournalError> {
+        Self::open_inner(path, sync_directory, None)
+    }
+    fn open_inner(
+        path: impl AsRef<Path>,
         mut sync_directory: impl FnMut(&Path) -> std::io::Result<()>,
+        migration_fault: Option<PublicationStage>,
     ) -> Result<Self, JournalError> {
         let path = path.as_ref();
         let parent = path
@@ -93,25 +113,16 @@ impl NativeJournalStore {
             owners: Default::default(),
         };
         if !store.path.exists() {
-            store.write(&JournalImage::default(), false)?;
+            store.write(&JournalImage::default(), None)?;
         } else {
-            let mut image = store.read()?;
-            match image.schema_version {
-                JOURNAL_SCHEMA => {}
-                1 => {
-                    image.schema_version = JOURNAL_SCHEMA;
-                    image.revision = image
-                        .revision
-                        .checked_add(1)
-                        .ok_or_else(|| error("generation exhausted"))?;
-                    store.write(&image, false)?;
-                }
-                v => return Err(JournalError::Schema(v)),
+            let (image, migrated) = super::migration::decode(store.read_raw()?, true)?;
+            if migrated {
+                store.write(&image, migration_fault)?;
             }
         }
         Ok(store)
     }
-    fn read(&self) -> Result<JournalImage, JournalError> {
+    fn read_raw(&self) -> Result<serde_json::Value, JournalError> {
         regular(&self.path)?;
         let file = options().read(true).open(&self.path).map_err(error)?;
         let metadata = file.metadata().map_err(error)?;
@@ -134,16 +145,27 @@ impl NativeJournalStore {
         if bytes.len() as u64 > MAX_JOURNAL_BYTES {
             return Err(error("journal exceeds its byte limit"));
         }
-        serde_json::from_slice(&bytes)
-            .map_err(|_| error("invalid journal; original bytes retained"))
+        super::migration::parse_unique(&bytes)
     }
-    fn write(&self, image: &JournalImage, interrupt: bool) -> Result<(), JournalError> {
+    fn read(&self) -> Result<JournalImage, JournalError> {
+        super::migration::decode(self.read_raw()?, false).map(|(image, _)| image)
+    }
+    fn write(
+        &self,
+        image: &JournalImage,
+        fault: Option<PublicationStage>,
+    ) -> Result<(), JournalError> {
         let bytes = serde_json::to_vec(image).map_err(|_| error("journal serialization failed"))?;
         if bytes.len() as u64 > MAX_JOURNAL_BYTES {
             return Err(error(
                 "journal capacity exceeded; migrate without discarding unresolved records",
             ));
         }
+        // Typed extension/material values can also serialize duplicate or
+        // reserved object names. Never publish an image the strict reader would
+        // subsequently refuse, even when it did not originate from a file.
+        super::migration::parse_unique(&bytes)?;
+        interrupt(PublicationStage::Encoded, fault)?;
         static NEXT: AtomicU64 = AtomicU64::new(0);
         let temp = self.path.with_file_name(format!(
             ".journal-write-{}-{}",
@@ -157,18 +179,18 @@ impl NativeJournalStore {
             .map_err(error)?;
         f.write_all(&bytes).map_err(error)?;
         f.sync_all().map_err(error)?;
-        if interrupt {
-            return Err(error("injected interruption before atomic publication"));
-        }
+        interrupt(PublicationStage::TempSynced, fault)?;
         regular(&self.path)?;
         fs::rename(&temp, &self.path).map_err(error)?;
+        interrupt(PublicationStage::Renamed, fault)?;
         File::open(
             self.path
                 .parent()
                 .ok_or_else(|| error("missing journal parent"))?,
         )
         .and_then(|f| f.sync_all())
-        .map_err(error)
+        .map_err(error)?;
+        interrupt(PublicationStage::DirectorySynced, fault)
     }
 }
 impl JournalStore for NativeJournalStore {
@@ -214,7 +236,8 @@ impl JournalStore for NativeJournalStore {
         if image.schema_version != JOURNAL_SCHEMA {
             return Err(JournalError::Schema(image.schema_version));
         }
-        self.write(image, false)
+        super::graph::validate_transition(&before, image)?;
+        self.write(image, None)
     }
 }
 struct ScopeLease {
@@ -309,6 +332,8 @@ mod tests {
         old.operations.insert(
             "legacy-op".into(),
             super::super::OperationRecord {
+                mode: super::super::ExecutionMode::Ordinary,
+                shield_pairs: Vec::new(),
                 intent: super::super::OperationIntent {
                     id: "legacy-op".into(),
                     correlation_id: Some("revision".into()),
@@ -318,13 +343,22 @@ mod tests {
                     effects: serde_json::json!({"effect":"retain"}),
                     obligation: false,
                     semantic_policy: None,
+                    extensions: Default::default(),
                 },
                 material: serde_json::json!({"commit":"retain"}),
                 material_generation: 0,
                 incompatibility: None,
                 extensions: Default::default(),
                 attempts: vec![super::super::SignedAttempt {
-                    hash: rtao_primitives::H256([3; 32]),
+                    id: 0,
+                    role: super::super::AttemptRole::Ordinary,
+                    material_generation: None,
+                    evidence_conflicts: Vec::new(),
+                    extensions: Default::default(),
+                    hash: {
+                        use blake2::{Blake2b, Digest, digest::consts::U32};
+                        rtao_primitives::H256(Blake2b::<U32>::digest([1, 2, 3]).into())
+                    },
                     bytes: vec![1, 2, 3],
                     nonce: 7,
                     spec_version: 481,
@@ -341,19 +375,36 @@ mod tests {
                 }],
             },
         );
-        store.write(&old, false).unwrap();
+        store.write(&old, None).unwrap();
         // Real older images have no material-generation field.
         let mut legacy = serde_json::to_value(&old).unwrap();
         legacy["operations"]["legacy-op"]
             .as_object_mut()
             .unwrap()
             .remove("material_generation");
+        legacy["operations"]["legacy-op"]
+            .as_object_mut()
+            .unwrap()
+            .remove("mode");
+        legacy["operations"]["legacy-op"]
+            .as_object_mut()
+            .unwrap()
+            .remove("shield_pairs");
+        for name in ["id", "role", "material_generation", "evidence_conflicts"] {
+            legacy["operations"]["legacy-op"]["attempts"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove(name);
+        }
         fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
         let original = fs::read(&path).unwrap();
-        let mut candidate = store.read().unwrap();
-        candidate.schema_version = JOURNAL_SCHEMA;
-        candidate.revision += 1;
-        assert!(store.write(&candidate, true).is_err());
+        let (candidate, _) =
+            super::super::migration::decode(store.read_raw().unwrap(), true).unwrap();
+        assert!(
+            store
+                .write(&candidate, Some(PublicationStage::TempSynced))
+                .is_err()
+        );
         assert_eq!(fs::read(&path).unwrap(), original);
         drop(store);
         let migrated = NativeJournalStore::open(&path).unwrap();
@@ -371,5 +422,58 @@ mod tests {
         assert_eq!(reopened.load().unwrap().revision, after.revision);
         drop(reopened);
         fs::remove_dir_all(parent).unwrap();
+    }
+    #[test]
+    fn migration_interruptions_reopen_complete_old_or_new_image() {
+        for (index, stage) in [
+            PublicationStage::Encoded,
+            PublicationStage::TempSynced,
+            PublicationStage::Renamed,
+            PublicationStage::DirectorySynced,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let root = PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").unwrap())
+                .join(format!("migration-stages-{}-{index}", std::process::id()));
+            fs::create_dir_all(&root).unwrap();
+            let path = root.join("journal.json");
+            let store = NativeJournalStore::open(&path).unwrap();
+            let mut raw = serde_json::to_value(store.load().unwrap()).unwrap();
+            raw["schema_version"] = serde_json::json!(2);
+            raw["extra-envelope"] = serde_json::json!({"unresolved":"keep"});
+            let original = serde_json::to_vec(&raw).unwrap();
+            fs::write(&path, &original).unwrap();
+            drop(store);
+            assert!(
+                NativeJournalStore::open_inner(
+                    &path,
+                    |directory| File::open(directory)?.sync_all(),
+                    Some(stage)
+                )
+                .is_err()
+            );
+            if matches!(
+                stage,
+                PublicationStage::Encoded | PublicationStage::TempSynced
+            ) {
+                assert_eq!(fs::read(&path).unwrap(), original);
+            } else {
+                let published: serde_json::Value =
+                    serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+                assert_eq!(published["schema_version"], JOURNAL_SCHEMA);
+                assert_eq!(published["revision"], 1);
+            }
+            let reopened = NativeJournalStore::open(&path).unwrap();
+            let image = reopened.load().unwrap();
+            assert_eq!(image.schema_version, JOURNAL_SCHEMA);
+            assert_eq!(image.revision, 1, "migration must not increment twice");
+            assert_eq!(
+                image.extensions.get("extra-envelope"),
+                raw.get("extra-envelope")
+            );
+            drop(reopened);
+            fs::remove_dir_all(root).unwrap();
+        }
     }
 }

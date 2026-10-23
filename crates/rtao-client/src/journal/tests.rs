@@ -113,6 +113,7 @@ fn begin(j: &Arc<OperationJournal>, client: &Client, signer: &KeypairSigner) -> 
         effects: json!({"action":"remark","input":"sensitive-effect"}),
         obligation: false,
         semantic_policy: None,
+        extensions: Default::default(),
     })
     .unwrap()
 }
@@ -168,6 +169,7 @@ fn exclusive_ownership_cas_pause_identity_and_reopen() {
         effects: json!({"secret":"do-not-log"}),
         obligation: false,
         semantic_policy: None,
+        extensions: Default::default(),
     };
     assert!(!format!("{intent:?}").contains("do-not-log"));
     let b = j.begin(intent.clone()).unwrap();
@@ -178,6 +180,7 @@ fn exclusive_ownership_cas_pause_identity_and_reopen() {
     j.control(JournalControl {
         submissions_paused: true,
         allow_obligations: true,
+        extensions: Default::default(),
     })
     .unwrap();
     assert!(b.can_dispatch().is_err());
@@ -205,6 +208,7 @@ async fn paused_journal_only_allows_preexisting_authorized_obligations_and_keeps
     j.control(JournalControl {
         submissions_paused: true,
         allow_obligations: true,
+        extensions: Default::default(),
     })
     .unwrap();
     assert!(ordinary.can_dispatch().is_err());
@@ -217,6 +221,7 @@ async fn paused_journal_only_allows_preexisting_authorized_obligations_and_keeps
     j.control(JournalControl {
         submissions_paused: true,
         allow_obligations: false,
+        extensions: Default::default(),
     })
     .unwrap();
     assert!(obligation.can_dispatch().is_err());
@@ -245,12 +250,20 @@ async fn stale_recovery_publication_cannot_erase_terminal_evidence() {
         b.record().unwrap().attempts[0].outcome,
         AttemptOutcome::ExpiredUnexecuted
     );
-    // A known inclusion also wins against a late absence scan.
+    // A known inclusion also wins against a late unresolved scan. Use separate
+    // work: an expiry proof contradicted by inclusion must be retained as a
+    // conflict in schema3, never overwritten to make this control pass.
+    let mut intent = b.record().unwrap().intent;
+    intent.id = "known-inclusion".into();
+    let b = j.begin(intent).unwrap();
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    let stale = b.record().unwrap().attempts[0].clone();
     j.update(|image| {
         image.operations.get_mut(b.id()).unwrap().attempts[0].outcome = AttemptOutcome::Finalized {
             block: H256([9; 32]),
             number: 101,
             success: false,
+            extensions: Default::default(),
         };
         Ok(())
     })
@@ -684,6 +697,7 @@ impl SemanticGuard for Deny {
                 code: "adapter-review".into(),
                 descriptor: None,
                 detail: "qualify adapter semantics".into(),
+                extensions: Default::default(),
             })
         })
     }
@@ -835,6 +849,895 @@ async fn failed_durable_write_refuses_dispatch_and_retains_intent() {
     assert_eq!(
         b.record().unwrap().intent.correlation_id.as_deref(),
         Some("caller-revision")
+    );
+    client.close().await;
+}
+
+// Schema3 fixtures inject retained pairs, not author hooks. Actual shield author
+// dispatch remains deliberately refused; these exercise the real recovery path.
+async fn signed_component(
+    client: &Client,
+    signer: &KeypairSigner,
+    call: crate::CallBytes,
+    nonce: u64,
+    id: u64,
+    role: AttemptRole,
+) -> SignedAttempt {
+    let unsigned = client
+        .prepare_call(
+            call,
+            signer,
+            &SubmitOptions {
+                nonce: crate::NoncePolicy::Explicit(nonce),
+                mortality: Mortality::Mortal(Period::new(4)),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let signature = signer
+        .sign(&unsigned.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    let (bytes, hash) = client.attach_signature(&unsigned, signature).await.unwrap();
+    SignedAttempt {
+        id,
+        role,
+        material_generation: Some(0),
+        hash,
+        bytes: bytes.to_vec(),
+        nonce: unsigned.nonce(),
+        spec_version: unsigned.call().stamp().spec_version,
+        transaction_version: unsigned.call().stamp().transaction_version,
+        start: unsigned.submission_head(),
+        expiry: unsigned.expiry(),
+        era_anchor: unsigned.era_block_hash(),
+        era: rtao_core::codec::value::to_corpus_json(unsigned.era()),
+        metadata_hash: unsigned.metadata_hash(),
+        material: json!({"private-marker":"retained-inner"}),
+        next: unsigned.submission_head(),
+        finalized: None,
+        outcome: AttemptOutcome::Unresolved,
+        evidence_conflicts: Vec::new(),
+        extensions: Default::default(),
+    }
+}
+async fn paired_record(client: &Client, signer: &KeypairSigner, b: &JournalBinding, count: u32) {
+    let selected = b
+        .clone()
+        .material(json!({"private-marker":"retained-inner"}))
+        .unwrap();
+    let generation = selected.record().unwrap().material_generation;
+    let mut attempts = Vec::new();
+    let mut pairs = Vec::new();
+    for pair in 0..u64::from(count) {
+        let mut inner = signed_component(
+            client,
+            signer,
+            rtao_runtime::calls::system::remark(vec![pair as u8])
+                .compose(&client.refresh_runtime().await.unwrap())
+                .unwrap(),
+            pair * 2 + 1,
+            pair * 2,
+            AttemptRole::Inner { pair },
+        )
+        .await;
+        inner.material_generation = Some(generation);
+        let sealed = crate::ShieldCiphertext::seal(&[0; 1184], &inner.bytes)
+            .await
+            .unwrap();
+        let mut carrier = signed_component(
+            client,
+            signer,
+            rtao_runtime::calls::mev_shield::submit_encrypted(sealed.into_bytes())
+                .compose(&client.refresh_runtime().await.unwrap())
+                .unwrap(),
+            pair * 2,
+            pair * 2 + 1,
+            AttemptRole::Carrier { pair },
+        )
+        .await;
+        carrier.material_generation = Some(generation);
+        pairs.push(ShieldPair {
+            id: pair,
+            material_generation: generation,
+            inner: inner.id,
+            carrier: Some(carrier.id),
+            phase: PairPhase::Prepared,
+            extensions: Default::default(),
+        });
+        attempts.extend([inner, carrier]);
+    }
+    b.journal
+        .update(|image| {
+            let revision = image.revision + 1;
+            let record = image.operations.get_mut(b.id()).unwrap();
+            record.mode = ExecutionMode::Shielded(ShieldPolicy {
+                protocol: "synthetic-signed-inner-only".into(),
+                period: 4,
+                maximum_pairs: count,
+                extensions: Default::default(),
+            });
+            for pair in &mut pairs {
+                pair.phase = PairPhase::DispatchAuthorized { revision };
+            }
+            record.shield_pairs = pairs;
+            record.attempts = attempts;
+            Ok(())
+        })
+        .unwrap();
+}
+fn pair_history(
+    fake: &FakeChain,
+    attempts: Vec<SignedAttempt>,
+    include_inner: bool,
+    failed_inner: bool,
+) {
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", move |state, request| {
+            let mut reply = state.dispatch(request);
+            if let Some(Ok(raw)) = &mut reply.outcome
+                && raw["block"]["header"]["number"].as_str() == Some("0x65") {
+                let mut events = Vec::new();
+                for attempt in &attempts {
+                    if !include_inner && matches!(attempt.role, AttemptRole::Inner { .. }) { continue; }
+                    let list = raw["block"]["extrinsics"].as_array_mut().unwrap();
+                    let index = list.len();
+                    list.push(json!(format!("0x{}", hex::encode(&attempt.bytes))));
+                    let failed = failed_inner && matches!(attempt.role, AttemptRole::Inner { .. });
+                    events.push(if failed {
+                        json!({"phase":"ApplyExtrinsic","extrinsic_idx":index,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Token":"FundsUnavailable"},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
+                    } else {
+                        json!({"phase":"ApplyExtrinsic","extrinsic_idx":index,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
+                    });
+                }
+                state.seed_events(request.params[0].as_str().unwrap(), json!(events)).unwrap();
+            }
+            reply
+        });
+        state.advance(10);
+    });
+}
+#[tokio::test]
+async fn schema3_actual_signed_pair_recovers_inner_not_vector_tail_or_carrier_receipt() {
+    for failed in [false, true] {
+        let f = Fixture::new();
+        let j = f.journal();
+        let (client, fake, signer) = chain().await;
+        let b = begin(&j, &client, &signer);
+        paired_record(&client, &signer, &b, 1).await;
+        let record = b.record().unwrap();
+        let inner_hash = record.attempts[0].hash;
+        let carrier_hash = record.attempts[1].hash;
+        pair_history(&fake, record.attempts, true, failed);
+        drop(b);
+        drop(j);
+        let reopened = f.journal();
+        let b = reopened.bind("logical-op").unwrap();
+        for _ in 0..2 {
+            let RecoveryStatus::Finalized(receipt) = b.recover(&client, 32).await.unwrap() else {
+                panic!("no inner receipt");
+            };
+            assert_eq!(receipt.hash, inner_hash);
+            assert_ne!(receipt.hash, carrier_hash);
+            assert_eq!(receipt.inclusion, crate::Inclusion::Finalized);
+            assert_eq!(receipt.success, !failed);
+        }
+        assert!(b.can_dispatch().is_err());
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        assert!(!format!("{:?}", b.record().unwrap()).contains("private-marker"));
+        client.close().await;
+    }
+}
+#[tokio::test]
+async fn schema3_carrier_only_complete_expiry_and_repeated_recovery_never_rebuild_or_send() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    paired_record(&client, &signer, &b, 1).await;
+    pair_history(&fake, b.record().unwrap().attempts, false, false);
+    for _ in 0..3 {
+        assert!(matches!(
+            b.recover(&client, 64).await.unwrap(),
+            RecoveryStatus::Unresolved(RecoveryReason::ShieldAdapterRequired)
+        ));
+    }
+    let record = b.record().unwrap();
+    assert_eq!(record.attempts[0].outcome, AttemptOutcome::Unresolved);
+    assert!(matches!(
+        record.attempts[1].outcome,
+        AttemptOutcome::Finalized { .. }
+    ));
+    assert!(record.finalized_effect().unwrap().is_none());
+    assert!(b.can_dispatch().is_err());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+#[tokio::test]
+async fn schema3_pairs_share_finite_body_budget_and_missing_body_preserves_target_cursor() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    paired_record(&client, &signer, &b, 2).await;
+    fake.mutate_state(|s| s.advance(10));
+    let before = b.record().unwrap();
+    fake.mutate_state(|s| s.queue_reply("chain_getBlock", Reply::result(json!({"block":{}}))));
+    assert!(matches!(
+        b.recover(&client, 1).await.unwrap(),
+        RecoveryStatus::Unresolved(RecoveryReason::HistoryUnavailable { .. })
+    ));
+    assert_eq!(
+        b.record().unwrap().attempts[0].next,
+        before.attempts[0].next
+    );
+    for _ in 0..12 {
+        let calls = fake
+            .state()
+            .lock()
+            .unwrap()
+            .requests
+            .iter()
+            .filter(|r| r.method == "chain_getBlock")
+            .count();
+        let status = b.recover(&client, 1).await.unwrap();
+        assert!(matches!(status, RecoveryStatus::Unresolved(_)));
+        let after = fake
+            .state()
+            .lock()
+            .unwrap()
+            .requests
+            .iter()
+            .filter(|r| r.method == "chain_getBlock")
+            .count();
+        assert!(after - calls <= 1, "per-target budget multiplication");
+    }
+    assert!(
+        b.record()
+            .unwrap()
+            .attempts
+            .iter()
+            .all(|a| a.outcome == AttemptOutcome::Unresolved)
+    );
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+#[tokio::test]
+async fn schema3_graph_refuses_ambiguous_identity_role_generation_nonce_and_budget_without_write() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    paired_record(&client, &signer, &b, 1).await;
+    let original = std::fs::read(f.0.join("journal.json")).unwrap();
+    for variant in 0..8 {
+        assert!(
+            j.update(|image| {
+                let r = image.operations.get_mut(b.id()).unwrap();
+                match variant {
+                    0 => r.attempts[1].id = 0,
+                    1 => r.attempts[1].role = AttemptRole::Inner { pair: 0 },
+                    2 => r.shield_pairs[0].inner = 99,
+                    3 => r.attempts[1].material_generation = Some(r.material_generation + 1),
+                    4 => r.attempts[1].nonce = 90,
+                    5 => {
+                        if let ExecutionMode::Shielded(policy) = &mut r.mode {
+                            policy.maximum_pairs = 0;
+                        }
+                    }
+                    6 => r.mode = ExecutionMode::Ordinary,
+                    _ => r.attempts[0].bytes.push(42),
+                }
+                Ok(())
+            })
+            .is_err()
+        );
+        assert_eq!(std::fs::read(f.0.join("journal.json")).unwrap(), original);
+    }
+    client.close().await;
+}
+#[tokio::test]
+async fn schema3_contradictory_terminal_evidence_survives_reopen_and_blocks_effect_recovery() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    paired_record(&client, &signer, &b, 1).await;
+    let mut negative = b.record().unwrap().attempts[0].clone();
+    negative.outcome = AttemptOutcome::ExpiredUnexecuted;
+    b.save_recovery(negative).await.unwrap();
+    pair_history(&fake, b.record().unwrap().attempts, true, false);
+    let hash = b.record().unwrap().attempts[0].hash;
+    let block = client
+        .at(crate::BlockRef::Number(101))
+        .await
+        .unwrap()
+        .block()
+        .hash;
+    let report = client.resolve_extrinsic(hash, block, true).await.unwrap();
+    b.observed(&report).await.unwrap();
+    b.observed(&report).await.unwrap();
+    assert_eq!(b.record().unwrap().attempts[0].evidence_conflicts.len(), 1);
+    drop(b);
+    drop(j);
+    let reopened = f.journal();
+    let b = reopened.bind("logical-op").unwrap();
+    assert!(matches!(
+        b.recover(&client, 32).await.unwrap(),
+        RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)
+    ));
+    assert_eq!(
+        b.record().unwrap().attempts[0].outcome,
+        AttemptOutcome::ExpiredUnexecuted
+    );
+    assert!(matches!(
+        b.record().unwrap().attempts[0].evidence_conflicts[0],
+        AttemptOutcome::Finalized { success: true, .. }
+    ));
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_migration_retains_nested_unknown_evidence_and_legacy_certainty() {
+    for schema in [1, 2] {
+        let f = Fixture::new();
+        let j = f.journal();
+        let (client, fake, signer) = chain().await;
+        let b = begin(&j, &client, &signer);
+        let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+        b.signed(&unsigned, &bytes, hash).await.unwrap();
+        let mut no_attempt = b.record().unwrap().intent;
+        no_attempt.id = "not-signed-yet".into();
+        j.begin(no_attempt).unwrap();
+        drop(b);
+        drop(j);
+        let path = f.0.join("journal.json");
+        let mut raw: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        raw["schema_version"] = json!(schema);
+        for record in raw["operations"].as_object_mut().unwrap().values_mut() {
+            record.as_object_mut().unwrap().remove("mode");
+            record.as_object_mut().unwrap().remove("shield_pairs");
+            record
+                .as_object_mut()
+                .unwrap()
+                .remove("material_generation");
+            for attempt in record["attempts"].as_array_mut().unwrap() {
+                for name in ["id", "role", "material_generation", "evidence_conflicts"] {
+                    attempt.as_object_mut().unwrap().remove(name);
+                }
+            }
+        }
+        raw["extra-envelope"] = json!({"evidence":[1,2]});
+        raw["control"]["extra-control"] = json!({"opaque":"preserve"});
+        raw["operations"]["logical-op"]["extra-record"] = json!(["retained"]);
+        raw["operations"]["logical-op"]["intent"]["extra-intent"] = json!({"opaque":[3,4]});
+        raw["operations"]["logical-op"]["attempts"][0]["extra-attempt"] =
+            json!({"evidence":"never-drop"});
+        raw["operations"]["logical-op"]["attempts"][0]["outcome"] = json!({"Finalized":{
+            "block": unsigned.era_block_hash(), "number":unsigned.submission_head(), "success":false,
+            "extra-receipt":{"opaque":"retain"}
+        }});
+        let prior_revision = raw["revision"].as_u64().unwrap();
+        std::fs::write(&path, serde_json::to_vec(&raw).unwrap()).unwrap();
+        let migrated = f.journal();
+        let b = migrated.bind("logical-op").unwrap();
+        let r = b.record().unwrap();
+        assert_eq!(r.mode, ExecutionMode::Ordinary);
+        assert_eq!(r.attempts[0].id, 0);
+        assert_eq!(r.attempts[0].role, AttemptRole::Ordinary);
+        assert_eq!(r.attempts[0].material_generation, None);
+        assert_eq!(r.attempts[0].bytes, bytes);
+        assert_eq!(r.attempts[0].hash, hash);
+        assert!(matches!(
+            r.attempts[0].outcome,
+            AttemptOutcome::Finalized { success: false, .. }
+        ));
+        assert!(b.can_dispatch().is_err());
+        assert_eq!(migrated.snapshot().unwrap().revision, prior_revision + 1);
+        assert_eq!(
+            migrated
+                .bind("not-signed-yet")
+                .unwrap()
+                .record()
+                .unwrap()
+                .mode,
+            ExecutionMode::Unselected
+        );
+        // Exercise another real CAS after migration, not just serialization.
+        migrated
+            .control(JournalControl {
+                submissions_paused: true,
+                ..Default::default()
+            })
+            .unwrap();
+        let after: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        for pointer in [
+            "/extra-envelope",
+            "/control/extra-control",
+            "/operations/logical-op/extra-record",
+            "/operations/logical-op/intent/extra-intent",
+            "/operations/logical-op/attempts/0/extra-attempt",
+            "/operations/logical-op/attempts/0/outcome/Finalized/extra-receipt",
+        ] {
+            assert_eq!(after.pointer(pointer), raw.pointer(pointer), "{pointer}");
+        }
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        client.close().await;
+    }
+}
+#[tokio::test]
+async fn schema3_legacy_reserved_field_collisions_and_unknown_schema_refuse_without_mutation() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    begin(&j, &client, &signer);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let mut raw: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    raw["schema_version"] = json!(2);
+    // A legacy extension with a newly reserved name is NOT overwritten into a
+    // guessed ordinary mode, even when it looks like a compatible enum.
+    raw["operations"]["logical-op"]["mode"] = json!("Ordinary");
+    for variant in 0..3 {
+        let mut candidate = raw.clone();
+        if variant == 1 {
+            candidate["schema_version"] = json!(99);
+        }
+        if variant == 2 {
+            candidate["schema_version"] = json!(3);
+            candidate["operations"]["logical-op"]["mode"] = json!("FutureEffectProtocol");
+        }
+        let bytes = serde_json::to_vec(&candidate).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        assert!(OperationJournal::open(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_transition_cannot_erase_authorized_pair_or_mutate_a_valid_signed_graph() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    paired_record(&client, &signer, &b, 1).await;
+    let original = std::fs::read(f.0.join("journal.json")).unwrap();
+    for variant in 0..6 {
+        assert!(
+            j.update(|image| {
+                if variant == 0 {
+                    image.operations.remove(b.id());
+                    return Ok(());
+                }
+                let r = image.operations.get_mut(b.id()).unwrap();
+                match variant {
+                    1 => {
+                        r.mode = ExecutionMode::Unselected;
+                        r.attempts.clear();
+                        r.shield_pairs.clear();
+                    }
+                    2 => r.shield_pairs[0].phase = PairPhase::Retired,
+                    3 => r.intent.effects = json!({"different-effect":true}),
+                    4 => {
+                        r.attempts[0].nonce += 2;
+                        r.attempts[1].nonce += 2;
+                    }
+                    _ => {
+                        if let ExecutionMode::Shielded(p) = &mut r.mode {
+                            p.maximum_pairs += 1;
+                        }
+                    }
+                }
+                Ok(())
+            })
+            .is_err()
+        );
+        assert_eq!(std::fs::read(f.0.join("journal.json")).unwrap(), original);
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_ordinary_conflict_blocks_dispatch_and_receipt_extensions_are_not_logged() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    let mut absent = b.record().unwrap().attempts[0].clone();
+    absent.outcome = AttemptOutcome::ExpiredUnexecuted;
+    b.save_recovery(absent).await.unwrap();
+    assert!(b.can_dispatch().is_ok());
+    let mut included = b.record().unwrap().attempts[0].clone();
+    included.outcome = AttemptOutcome::Finalized {
+        block: unsigned.era_block_hash(),
+        number: unsigned.submission_head(),
+        success: true,
+        extensions: BTreeMap::from([(
+            "unknown-evidence".into(),
+            json!("sensitive-receipt-marker"),
+        )]),
+    };
+    b.save_recovery(included.clone()).await.unwrap();
+    assert!(b.can_dispatch().is_err());
+    assert!(matches!(
+        b.recover(&client, 0).await.unwrap(),
+        RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)
+    ));
+    assert!(!format!("{:?}", included).contains("sensitive-receipt-marker"));
+    assert!(!format!("{:?}", included.outcome).contains("sensitive-receipt-marker"));
+    // A repeated observation of the same physical fact without unknown fields
+    // does not manufacture a second contradictory receipt.
+    if let AttemptOutcome::Finalized { extensions, .. } = &mut included.outcome {
+        extensions.clear();
+    }
+    b.save_recovery(included).await.unwrap();
+    assert_eq!(b.record().unwrap().attempts[0].evidence_conflicts.len(), 1);
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_review_duplicate_names_refuse_before_migration_without_losing_original_evidence() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    drop(b);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let current = std::fs::read(&path).unwrap();
+    let mut legacy: Value = serde_json::from_slice(&current).unwrap();
+    legacy["schema_version"] = json!(2);
+    let record = &mut legacy["operations"]["logical-op"];
+    record.as_object_mut().unwrap().remove("mode");
+    record.as_object_mut().unwrap().remove("shield_pairs");
+    for attempt in record["attempts"].as_array_mut().unwrap() {
+        for key in ["id", "role", "material_generation", "evidence_conflicts"] {
+            attempt.as_object_mut().unwrap().remove(key);
+        }
+        attempt["opaque"] = json!({"proof":"retained-marker"});
+    }
+    let record_text = record.to_string();
+    let attempt_text = record["attempts"][0].to_string();
+    let valid = legacy.to_string();
+    let duplicates = [
+        format!("{},\"operations\":{{}}}}", valid.strip_suffix('}').unwrap()),
+        format!(
+            "{},\"operat\\u0069ons\":{{}}}}",
+            valid.strip_suffix('}').unwrap()
+        ),
+        valid.replace(
+            &record_text,
+            &format!(
+                "{},\"attempts\":[]}}",
+                record_text.strip_suffix('}').unwrap()
+            ),
+        ),
+        valid.replace(
+            &attempt_text,
+            &format!(
+                "{},\"outcome\":\"ExpiredUnexecuted\"}}",
+                attempt_text.strip_suffix('}').unwrap()
+            ),
+        ),
+        valid.replace(
+            "\"proof\":\"retained-marker\"",
+            "\"proof\":\"retained-marker\",\"pr\\u006fof\":\"lost-marker\"",
+        ),
+        // Current-schema reads use the same strict byte boundary, not only migration.
+        String::from_utf8(current).unwrap().replace(
+            "\"outcome\":\"Unresolved\"",
+            "\"outcome\":\"Unresolved\",\"outcome\":\"ExpiredUnexecuted\"",
+        ),
+    ];
+    for (variant, duplicate) in duplicates.iter().enumerate() {
+        assert!(
+            serde_json::from_str::<Value>(duplicate).is_ok(),
+            "fixture is valid last-wins JSON"
+        );
+        std::fs::write(&path, duplicate).unwrap();
+        for _ in 0..2 {
+            let result = OperationJournal::open(&path);
+            assert!(
+                result.is_err(),
+                "duplicate variant {variant} erased evidence instead of refusing"
+            );
+            let message = result.err().unwrap().to_string();
+            assert!(!message.contains("retained-marker") && !message.contains("lost-marker"));
+            assert_eq!(std::fs::read(&path).unwrap(), duplicate.as_bytes());
+        }
+    }
+    for invalid in [
+        format!("{valid}{{}}"),
+        format!("{}0{}", "[".repeat(256), "]".repeat(256)),
+        "{\"truncated\": ".into(),
+    ] {
+        std::fs::write(&path, &invalid).unwrap();
+        assert!(OperationJournal::open(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), invalid.as_bytes());
+    }
+    // A uniquely named, otherwise identical legacy image still migrates/reopens.
+    std::fs::write(&path, valid).unwrap();
+    let reopened = f.journal();
+    let r = reopened.bind("logical-op").unwrap().record().unwrap();
+    assert_eq!(r.attempts[0].bytes, bytes);
+    assert_eq!(r.attempts[0].outcome, AttemptOutcome::Unresolved);
+    assert_eq!(
+        r.attempts[0].extensions.get("opaque"),
+        Some(&json!({"proof":"retained-marker"}))
+    );
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_review_concurrent_replacement_cannot_return_stale_rebuildable_readiness() {
+    use serde_json::value::RawValue;
+    use subxt_rpcs::client::{RawRpcFuture, RawRpcSubscription, RpcClientT};
+    struct PausedHistory {
+        fake: FakeChain,
+        once: std::sync::atomic::AtomicBool,
+        entered: Arc<tokio::sync::Notify>,
+        release: Arc<tokio::sync::Notify>,
+    }
+    impl RpcClientT for PausedHistory {
+        fn request_raw<'a>(
+            &'a self,
+            method: &'a str,
+            params: Option<Box<RawValue>>,
+        ) -> RawRpcFuture<'a, Box<RawValue>> {
+            Box::pin(async move {
+                let reply = self.fake.request_raw(method, params).await?;
+                if method == "chain_getBlock" && self.once.swap(false, Ordering::SeqCst) {
+                    self.entered.notify_one();
+                    self.release.notified().await;
+                }
+                Ok(reply)
+            })
+        }
+        fn subscribe_raw<'a>(
+            &'a self,
+            method: &'a str,
+            params: Option<Box<RawValue>>,
+            unsubscribe: &'a str,
+        ) -> RawRpcFuture<'a, RawRpcSubscription> {
+            self.fake.subscribe_raw(method, params, unsubscribe)
+        }
+    }
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    fake.mutate_state(|s| s.advance(unsigned.expiry().unwrap() + 2 - s.block));
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let stalled = Client::from_rpc(
+        subxt_rpcs::RpcClient::new(PausedHistory {
+            fake: fake.clone(),
+            once: std::sync::atomic::AtomicBool::new(true),
+            entered: entered.clone(),
+            release: release.clone(),
+        }),
+        config,
+    )
+    .await
+    .unwrap();
+    let replacement = async {
+        entered.notified().await;
+        assert!(matches!(
+            b.recover(&client, 32).await.unwrap(),
+            RecoveryStatus::Rebuildable
+        ));
+        let (fresh, bytes, hash) = prepared(&client, &signer).await;
+        b.signed(&fresh, &bytes, hash).await.unwrap();
+        assert_eq!(b.record().unwrap().attempts.len(), 2);
+        release.notify_one();
+    };
+    let (result, ()) = tokio::join!(b.recover(&stalled, 32), replacement);
+    assert!(
+        matches!(
+            result.unwrap(),
+            RecoveryStatus::Unresolved(RecoveryReason::PendingAttempt { attempt: 1 })
+        ),
+        "new unresolved attempt falsely became rebuildable"
+    );
+    assert_eq!(
+        b.record().unwrap().attempts[1].outcome,
+        AttemptOutcome::Unresolved
+    );
+    assert!(b.can_dispatch().is_err());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+    stalled.close().await;
+}
+
+fn image_for_schema(mut raw: Value, schema: u32) -> Value {
+    raw["schema_version"] = json!(schema);
+    if schema < JOURNAL_SCHEMA {
+        for record in raw["operations"].as_object_mut().unwrap().values_mut() {
+            record.as_object_mut().unwrap().remove("mode");
+            record.as_object_mut().unwrap().remove("shield_pairs");
+            for attempt in record["attempts"].as_array_mut().unwrap() {
+                for key in ["id", "role", "material_generation", "evidence_conflicts"] {
+                    attempt.as_object_mut().unwrap().remove(key);
+                }
+            }
+        }
+    }
+    raw
+}
+#[tokio::test]
+async fn schema3_magic_object_syntax_cannot_normalize_original_opaque_evidence() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    drop(b);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let original: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let probes = [
+        ("Number", r#"{"$serde_json::private::Number":"1"}"#),
+        (
+            "escaped-Number",
+            r#"{"$serde_json::private::Numb\u0065r":"1"}"#,
+        ),
+        (
+            "RawValue",
+            r#"{"$serde_json::private::RawValue":"{\"proof\":1}"}"#,
+        ),
+        (
+            "escaped-RawValue",
+            r#"{"$serde_json::private::RawVal\u0075e":"{\"proof\":1}"}"#,
+        ),
+        (
+            "RawValue-inner-duplicates",
+            r#"{"$serde_json::private::RawValue":"{\"proof\":1,\"proof\":2}"}"#,
+        ),
+    ];
+    let mut accepted = Vec::new();
+    for schema in [2, JOURNAL_SCHEMA] {
+        for (label, literal) in probes {
+            for material in [false, true] {
+                let mut candidate = image_for_schema(original.clone(), schema);
+                if material {
+                    candidate["operations"]["logical-op"]["attempts"][0]["material"] =
+                        json!([{"shape-probe":null}]);
+                } else {
+                    candidate["shape-probe"] = Value::Null;
+                }
+                let text = candidate.to_string().replace(
+                    "\"shape-probe\":null",
+                    &format!("\"shape-probe\":{literal}"),
+                );
+                std::fs::write(&path, &text).unwrap();
+                for _ in 0..2 {
+                    match OperationJournal::open(&path) {
+                        Ok(handle) => {
+                            // Baseline records actual acceptance/normalization
+                            // for every probe, rather than stopping at one case.
+                            let _ = handle.snapshot().unwrap();
+                            accepted.push((schema, label, material));
+                        }
+                        Err(error) => {
+                            assert!(!error.to_string().contains("proof"));
+                            assert_eq!(std::fs::read(&path).unwrap(), text.as_bytes());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "literal magic-object inputs accepted: {accepted:?}"
+    );
+    client.close().await;
+}
+#[tokio::test]
+async fn schema3_magic_refusal_keeps_actual_numbers_normal_objects_and_marker_strings() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    drop(b);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let original: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let numeric = r#"[9223372036854775808123456789012345,-9223372036854775808123456789012345,1.2345678901234567890123456789,1e1000,-1.23e-1000]"#;
+    let expected: Value = serde_json::from_str(numeric).unwrap();
+    for schema in [2, JOURNAL_SCHEMA] {
+        let mut raw = image_for_schema(original.clone(), schema);
+        raw["numeric-probe"] = Value::Null;
+        raw["marker-string"] = json!(r#"{"$serde_json::private::Number":"1"}"#);
+        raw["ordinary-object"] = json!({"before":true,"marker":"$serde_json::private::RawValue", "$serde_json::private::NumberSuffix":"retained","after":null});
+        let text = raw.to_string().replace(
+            "\"numeric-probe\":null",
+            &format!("\"numeric-probe\":{numeric}"),
+        );
+        std::fs::write(&path, text).unwrap();
+        let handle = f.journal();
+        let image = handle.snapshot().unwrap();
+        assert_eq!(image.extensions.get("numeric-probe"), Some(&expected));
+        assert_eq!(
+            image.extensions.get("marker-string"),
+            raw.get("marker-string")
+        );
+        assert_eq!(
+            image.extensions.get("ordinary-object"),
+            raw.get("ordinary-object")
+        );
+        handle
+            .control(JournalControl {
+                submissions_paused: true,
+                ..Default::default()
+            })
+            .unwrap();
+        drop(handle);
+        let reopened = f.journal();
+        assert_eq!(
+            reopened.snapshot().unwrap().extensions.get("numeric-probe"),
+            Some(&expected)
+        );
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_magic_material_or_shadow_fields_cannot_publish_an_unreadable_image() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let path = f.0.join("journal.json");
+    let original = std::fs::read(&path).unwrap();
+    for material in [
+        json!({"$serde_json::private::Number":"1"}),
+        json!({"nested":[{"$serde_json::private::RawValue":"null"}]}),
+    ] {
+        assert!(b.clone().material(material).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        assert_eq!(b.record().unwrap().material_generation, 0);
+    }
+    assert!(
+        j.update(|image| {
+            image.extensions.insert("revision".into(), json!(0));
+            Ok(())
+        })
+        .is_err()
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), original);
+    let numeric: Value = serde_json::from_str("9223372036854775808123456789012345").unwrap();
+    let selected = b.material(numeric.clone()).unwrap();
+    assert_eq!(selected.record().unwrap().material, numeric);
+    assert_eq!(selected.record().unwrap().material_generation, 1);
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    drop(selected);
+    drop(j);
+    let reopened = f.journal();
+    assert_eq!(
+        reopened
+            .bind("logical-op")
+            .unwrap()
+            .record()
+            .unwrap()
+            .material,
+        numeric
     );
     client.close().await;
 }

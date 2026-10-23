@@ -154,6 +154,7 @@ impl WeightScheduler {
             effects,
             obligation: false,
             semantic_policy: self.semantic_policy.clone(),
+            extensions: Default::default(),
         })?;
         Ok(())
     }
@@ -635,6 +636,7 @@ mod tests {
         journal.control(JournalControl {
             submissions_paused: true,
             allow_obligations: false,
+            extensions: Default::default(),
         })?;
         scheduler.resolve_uncertainty(MechId(0));
         assert!(scheduler.slots[&MechId(0)].uncertain);
@@ -866,6 +868,7 @@ mod handoff_tests {
         journal.control(rtao_client::journal::JournalControl {
             submissions_paused: true,
             allow_obligations: false,
+            extensions: Default::default(),
         })?;
         let mut restored =
             make()?.with_journal(journal.clone(), client.genesis(), NetUid(1), hotkey)?;
