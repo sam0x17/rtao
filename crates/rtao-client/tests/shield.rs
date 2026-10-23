@@ -1386,7 +1386,9 @@ impl Signer for PreparingSigner {
     }
 }
 
-#[tokio::test]
+// The three refused-lag cases each exercise the real default finality wait.
+// Advance that clock virtually instead of waiting three wall-clock minutes.
+#[tokio::test(start_paused = true)]
 async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
     for wrapper in ["direct", "arc", "dyn_arc"] {
         for lag in [2, 6] {
@@ -1408,11 +1410,13 @@ async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
             });
             let initial_finalized = fake.state().lock().unwrap().finalized;
             let inner_call = call(&client, 3).await;
+            let started = tokio::time::Instant::now();
             let result = client
                 .submit_shielded(inner_call.clone(), selected, &pool())
                 .await;
             assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
             if lag == 6 {
+                assert!(started.elapsed() >= rtao_client::SHIELD_FINALITY_WAIT);
                 assert!(matches!(
                     result,
                     Err(SubmitFailure::ShieldEraExpired {
