@@ -74,8 +74,14 @@ lossy conversions refuse without replacing the original image. The native byte
 parser rejects duplicate decoded object names recursively, including escaped
 equivalents and opaque extension fields, before constructing a JSON Value;
 otherwise last-key-wins parsing could discard evidence before the migration
-check sees it. The existing opened-file byte bound, JSON nesting limit and EOF
-check remain in force. Migration uses
+check sees it. Literal serde reserved Number/RawValue object keys are also
+refused before their special deserializer behavior can change opaque object
+shape; ordinary numeric tokens and marker-looking string values remain allowed.
+The native writer checks serialized material/extensions before publication too,
+so it cannot write a new ambiguous image that the reader would refuse. Migrated
+typed decoding uses JSON bytes rather than a Value-to-flattened-Content shortcut
+that would reject some supported large integers. The existing opened-file byte
+bound, JSON nesting limit and EOF check remain in force. Migration uses
 the same temporary-file sync, atomic rename and directory barriers; an
 interruption may leave a complete old or complete new image, never permission
 to reset. Schema2 readers refuse the new envelope; do not downgrade a journal.

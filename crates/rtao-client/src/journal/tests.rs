@@ -1561,3 +1561,183 @@ async fn schema3_review_concurrent_replacement_cannot_return_stale_rebuildable_r
     client.close().await;
     stalled.close().await;
 }
+
+fn image_for_schema(mut raw: Value, schema: u32) -> Value {
+    raw["schema_version"] = json!(schema);
+    if schema < JOURNAL_SCHEMA {
+        for record in raw["operations"].as_object_mut().unwrap().values_mut() {
+            record.as_object_mut().unwrap().remove("mode");
+            record.as_object_mut().unwrap().remove("shield_pairs");
+            for attempt in record["attempts"].as_array_mut().unwrap() {
+                for key in ["id", "role", "material_generation", "evidence_conflicts"] {
+                    attempt.as_object_mut().unwrap().remove(key);
+                }
+            }
+        }
+    }
+    raw
+}
+#[tokio::test]
+async fn schema3_magic_object_syntax_cannot_normalize_original_opaque_evidence() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    drop(b);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let original: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let probes = [
+        ("Number", r#"{"$serde_json::private::Number":"1"}"#),
+        (
+            "escaped-Number",
+            r#"{"$serde_json::private::Numb\u0065r":"1"}"#,
+        ),
+        (
+            "RawValue",
+            r#"{"$serde_json::private::RawValue":"{\"proof\":1}"}"#,
+        ),
+        (
+            "escaped-RawValue",
+            r#"{"$serde_json::private::RawVal\u0075e":"{\"proof\":1}"}"#,
+        ),
+        (
+            "RawValue-inner-duplicates",
+            r#"{"$serde_json::private::RawValue":"{\"proof\":1,\"proof\":2}"}"#,
+        ),
+    ];
+    let mut accepted = Vec::new();
+    for schema in [2, JOURNAL_SCHEMA] {
+        for (label, literal) in probes {
+            for material in [false, true] {
+                let mut candidate = image_for_schema(original.clone(), schema);
+                if material {
+                    candidate["operations"]["logical-op"]["attempts"][0]["material"] =
+                        json!([{"shape-probe":null}]);
+                } else {
+                    candidate["shape-probe"] = Value::Null;
+                }
+                let text = candidate.to_string().replace(
+                    "\"shape-probe\":null",
+                    &format!("\"shape-probe\":{literal}"),
+                );
+                std::fs::write(&path, &text).unwrap();
+                for _ in 0..2 {
+                    match OperationJournal::open(&path) {
+                        Ok(handle) => {
+                            // Baseline records actual acceptance/normalization
+                            // for every probe, rather than stopping at one case.
+                            let _ = handle.snapshot().unwrap();
+                            accepted.push((schema, label, material));
+                        }
+                        Err(error) => {
+                            assert!(!error.to_string().contains("proof"));
+                            assert_eq!(std::fs::read(&path).unwrap(), text.as_bytes());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "literal magic-object inputs accepted: {accepted:?}"
+    );
+    client.close().await;
+}
+#[tokio::test]
+async fn schema3_magic_refusal_keeps_actual_numbers_normal_objects_and_marker_strings() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    drop(b);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let original: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let numeric = r#"[9223372036854775808123456789012345,-9223372036854775808123456789012345,1.2345678901234567890123456789,1e1000,-1.23e-1000]"#;
+    let expected: Value = serde_json::from_str(numeric).unwrap();
+    for schema in [2, JOURNAL_SCHEMA] {
+        let mut raw = image_for_schema(original.clone(), schema);
+        raw["numeric-probe"] = Value::Null;
+        raw["marker-string"] = json!(r#"{"$serde_json::private::Number":"1"}"#);
+        raw["ordinary-object"] = json!({"before":true,"marker":"$serde_json::private::RawValue", "$serde_json::private::NumberSuffix":"retained","after":null});
+        let text = raw.to_string().replace(
+            "\"numeric-probe\":null",
+            &format!("\"numeric-probe\":{numeric}"),
+        );
+        std::fs::write(&path, text).unwrap();
+        let handle = f.journal();
+        let image = handle.snapshot().unwrap();
+        assert_eq!(image.extensions.get("numeric-probe"), Some(&expected));
+        assert_eq!(
+            image.extensions.get("marker-string"),
+            raw.get("marker-string")
+        );
+        assert_eq!(
+            image.extensions.get("ordinary-object"),
+            raw.get("ordinary-object")
+        );
+        handle
+            .control(JournalControl {
+                submissions_paused: true,
+                ..Default::default()
+            })
+            .unwrap();
+        drop(handle);
+        let reopened = f.journal();
+        assert_eq!(
+            reopened.snapshot().unwrap().extensions.get("numeric-probe"),
+            Some(&expected)
+        );
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_magic_material_or_shadow_fields_cannot_publish_an_unreadable_image() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let path = f.0.join("journal.json");
+    let original = std::fs::read(&path).unwrap();
+    for material in [
+        json!({"$serde_json::private::Number":"1"}),
+        json!({"nested":[{"$serde_json::private::RawValue":"null"}]}),
+    ] {
+        assert!(b.clone().material(material).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        assert_eq!(b.record().unwrap().material_generation, 0);
+    }
+    assert!(
+        j.update(|image| {
+            image.extensions.insert("revision".into(), json!(0));
+            Ok(())
+        })
+        .is_err()
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), original);
+    let numeric: Value = serde_json::from_str("9223372036854775808123456789012345").unwrap();
+    let selected = b.material(numeric.clone()).unwrap();
+    assert_eq!(selected.record().unwrap().material, numeric);
+    assert_eq!(selected.record().unwrap().material_generation, 1);
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    drop(selected);
+    drop(j);
+    let reopened = f.journal();
+    assert_eq!(
+        reopened
+            .bind("logical-op")
+            .unwrap()
+            .record()
+            .unwrap()
+            .material,
+        numeric
+    );
+    client.close().await;
+}

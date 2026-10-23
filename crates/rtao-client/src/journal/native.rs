@@ -161,6 +161,10 @@ impl NativeJournalStore {
                 "journal capacity exceeded; migrate without discarding unresolved records",
             ));
         }
+        // Typed extension/material values can also serialize duplicate or
+        // reserved object names. Never publish an image the strict reader would
+        // subsequently refuse, even when it did not originate from a file.
+        super::migration::parse_unique(&bytes)?;
         interrupt(PublicationStage::Encoded, fault)?;
         static NEXT: AtomicU64 = AtomicU64::new(0);
         let temp = self.path.with_file_name(format!(

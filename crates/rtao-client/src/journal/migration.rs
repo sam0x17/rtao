@@ -57,6 +57,47 @@ impl<'de> serde::Deserialize<'de> for UniqueNames {
     }
 }
 
+// Inspect literal object-key syntax, not a generic Visitor's map keys. With
+// arbitrary_precision, real numeric tokens also visit a synthetic Number map;
+// rejecting that visitor representation would reject supported numeric data.
+fn ordinary_object_syntax(bytes: &[u8]) -> Result<(), JournalError> {
+    let mut cursor = 0;
+    while cursor < bytes.len() {
+        if bytes[cursor] != b'"' {
+            cursor += 1;
+            continue;
+        }
+        let start = cursor;
+        cursor += 1;
+        while let Some(byte) = bytes.get(cursor) {
+            match byte {
+                b'\\' => cursor += 2,
+                b'"' => {
+                    cursor += 1;
+                    break;
+                }
+                _ => cursor += 1,
+            }
+        }
+        let end = cursor;
+        while bytes.get(cursor).is_some_and(u8::is_ascii_whitespace) {
+            cursor += 1;
+        }
+        if bytes.get(cursor) == Some(&b':') {
+            let name: String = serde_json::from_slice(&bytes[start..end]).map_err(|_| invalid())?;
+            if matches!(
+                name.as_str(),
+                "$serde_json::private::Number" | "$serde_json::private::RawValue"
+            ) {
+                return Err(JournalError::Storage(
+                    "unsupported reserved journal object name; original bytes retained".into(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn parse_unique(bytes: &[u8]) -> Result<Value, JournalError> {
     // from_slice enforces EOF and serde_json's default recursion limit on BOTH
     // passes. The native opened-descriptor byte limit is checked before here.
@@ -66,6 +107,7 @@ pub(super) fn parse_unique(bytes: &[u8]) -> Result<Value, JournalError> {
         )
     };
     serde_json::from_slice::<UniqueNames>(bytes).map_err(|_| error())?;
+    ordinary_object_syntax(bytes)?;
     serde_json::from_slice(bytes).map_err(|_| error())
 }
 
@@ -146,7 +188,12 @@ pub(super) fn decode(
         raw["schema_version"] = json!(JOURNAL_SCHEMA);
         raw["revision"] = json!(revision);
     }
-    let image: JournalImage = serde_json::from_value(raw.clone()).map_err(|_| invalid())?;
+    // Re-enter the JSON deserializer rather than Value::deserialize_any. The
+    // latter promotes some real JSON integers to u128/i128, which serde's
+    // flattened Content adapter cannot represent. JSON's synthetic-number path
+    // retains large integers/decimals/exponents without narrowing that domain.
+    let encoded = serde_json::to_vec(&raw).map_err(|_| invalid())?;
+    let image: JournalImage = serde_json::from_slice(&encoded).map_err(|_| invalid())?;
     let roundtrip = serde_json::to_value(&image).map_err(|_| invalid())?;
     if !preserves(&raw, &roundtrip) {
         return Err(invalid());
