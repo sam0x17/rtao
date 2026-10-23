@@ -1379,3 +1379,185 @@ async fn schema3_ordinary_conflict_blocks_dispatch_and_receipt_extensions_are_no
     assert_eq!(b.record().unwrap().attempts[0].evidence_conflicts.len(), 1);
     client.close().await;
 }
+
+#[tokio::test]
+async fn schema3_review_duplicate_names_refuse_before_migration_without_losing_original_evidence() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, _, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    drop(b);
+    drop(j);
+    let path = f.0.join("journal.json");
+    let current = std::fs::read(&path).unwrap();
+    let mut legacy: Value = serde_json::from_slice(&current).unwrap();
+    legacy["schema_version"] = json!(2);
+    let record = &mut legacy["operations"]["logical-op"];
+    record.as_object_mut().unwrap().remove("mode");
+    record.as_object_mut().unwrap().remove("shield_pairs");
+    for attempt in record["attempts"].as_array_mut().unwrap() {
+        for key in ["id", "role", "material_generation", "evidence_conflicts"] {
+            attempt.as_object_mut().unwrap().remove(key);
+        }
+        attempt["opaque"] = json!({"proof":"retained-marker"});
+    }
+    let record_text = record.to_string();
+    let attempt_text = record["attempts"][0].to_string();
+    let valid = legacy.to_string();
+    let duplicates = [
+        format!("{},\"operations\":{{}}}}", valid.strip_suffix('}').unwrap()),
+        format!(
+            "{},\"operat\\u0069ons\":{{}}}}",
+            valid.strip_suffix('}').unwrap()
+        ),
+        valid.replace(
+            &record_text,
+            &format!(
+                "{},\"attempts\":[]}}",
+                record_text.strip_suffix('}').unwrap()
+            ),
+        ),
+        valid.replace(
+            &attempt_text,
+            &format!(
+                "{},\"outcome\":\"ExpiredUnexecuted\"}}",
+                attempt_text.strip_suffix('}').unwrap()
+            ),
+        ),
+        valid.replace(
+            "\"proof\":\"retained-marker\"",
+            "\"proof\":\"retained-marker\",\"pr\\u006fof\":\"lost-marker\"",
+        ),
+        // Current-schema reads use the same strict byte boundary, not only migration.
+        String::from_utf8(current).unwrap().replace(
+            "\"outcome\":\"Unresolved\"",
+            "\"outcome\":\"Unresolved\",\"outcome\":\"ExpiredUnexecuted\"",
+        ),
+    ];
+    for (variant, duplicate) in duplicates.iter().enumerate() {
+        assert!(
+            serde_json::from_str::<Value>(duplicate).is_ok(),
+            "fixture is valid last-wins JSON"
+        );
+        std::fs::write(&path, duplicate).unwrap();
+        for _ in 0..2 {
+            let result = OperationJournal::open(&path);
+            assert!(
+                result.is_err(),
+                "duplicate variant {variant} erased evidence instead of refusing"
+            );
+            let message = result.err().unwrap().to_string();
+            assert!(!message.contains("retained-marker") && !message.contains("lost-marker"));
+            assert_eq!(std::fs::read(&path).unwrap(), duplicate.as_bytes());
+        }
+    }
+    for invalid in [
+        format!("{valid}{{}}"),
+        format!("{}0{}", "[".repeat(256), "]".repeat(256)),
+        "{\"truncated\": ".into(),
+    ] {
+        std::fs::write(&path, &invalid).unwrap();
+        assert!(OperationJournal::open(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), invalid.as_bytes());
+    }
+    // A uniquely named, otherwise identical legacy image still migrates/reopens.
+    std::fs::write(&path, valid).unwrap();
+    let reopened = f.journal();
+    let r = reopened.bind("logical-op").unwrap().record().unwrap();
+    assert_eq!(r.attempts[0].bytes, bytes);
+    assert_eq!(r.attempts[0].outcome, AttemptOutcome::Unresolved);
+    assert_eq!(
+        r.attempts[0].extensions.get("opaque"),
+        Some(&json!({"proof":"retained-marker"}))
+    );
+    client.close().await;
+}
+
+#[tokio::test]
+async fn schema3_review_concurrent_replacement_cannot_return_stale_rebuildable_readiness() {
+    use serde_json::value::RawValue;
+    use subxt_rpcs::client::{RawRpcFuture, RawRpcSubscription, RpcClientT};
+    struct PausedHistory {
+        fake: FakeChain,
+        once: std::sync::atomic::AtomicBool,
+        entered: Arc<tokio::sync::Notify>,
+        release: Arc<tokio::sync::Notify>,
+    }
+    impl RpcClientT for PausedHistory {
+        fn request_raw<'a>(
+            &'a self,
+            method: &'a str,
+            params: Option<Box<RawValue>>,
+        ) -> RawRpcFuture<'a, Box<RawValue>> {
+            Box::pin(async move {
+                let reply = self.fake.request_raw(method, params).await?;
+                if method == "chain_getBlock" && self.once.swap(false, Ordering::SeqCst) {
+                    self.entered.notify_one();
+                    self.release.notified().await;
+                }
+                Ok(reply)
+            })
+        }
+        fn subscribe_raw<'a>(
+            &'a self,
+            method: &'a str,
+            params: Option<Box<RawValue>>,
+            unsubscribe: &'a str,
+        ) -> RawRpcFuture<'a, RawRpcSubscription> {
+            self.fake.subscribe_raw(method, params, unsubscribe)
+        }
+    }
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    fake.mutate_state(|s| s.advance(unsigned.expiry().unwrap() + 2 - s.block));
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let stalled = Client::from_rpc(
+        subxt_rpcs::RpcClient::new(PausedHistory {
+            fake: fake.clone(),
+            once: std::sync::atomic::AtomicBool::new(true),
+            entered: entered.clone(),
+            release: release.clone(),
+        }),
+        config,
+    )
+    .await
+    .unwrap();
+    let replacement = async {
+        entered.notified().await;
+        assert!(matches!(
+            b.recover(&client, 32).await.unwrap(),
+            RecoveryStatus::Rebuildable
+        ));
+        let (fresh, bytes, hash) = prepared(&client, &signer).await;
+        b.signed(&fresh, &bytes, hash).await.unwrap();
+        assert_eq!(b.record().unwrap().attempts.len(), 2);
+        release.notify_one();
+    };
+    let (result, ()) = tokio::join!(b.recover(&stalled, 32), replacement);
+    assert!(
+        matches!(
+            result.unwrap(),
+            RecoveryStatus::Unresolved(RecoveryReason::PendingAttempt { attempt: 1 })
+        ),
+        "new unresolved attempt falsely became rebuildable"
+    );
+    assert_eq!(
+        b.record().unwrap().attempts[1].outcome,
+        AttemptOutcome::Unresolved
+    );
+    assert!(b.can_dispatch().is_err());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+    stalled.close().await;
+}

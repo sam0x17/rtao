@@ -2,6 +2,73 @@
 use super::{JOURNAL_SCHEMA, JournalError, JournalImage};
 use serde_json::{Value, json};
 
+// Validate object names while still reading bytes. Value's map deserializer
+// otherwise collapses repeated decoded names before a preservation check sees
+// them. A validation pass leaves actual numeric/Value decoding to serde_json.
+struct UniqueNames;
+impl<'de> serde::Deserialize<'de> for UniqueNames {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UniqueNames;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("JSON with unique object names")
+            }
+            fn visit_bool<E: serde::de::Error>(self, _: bool) -> Result<UniqueNames, E> {
+                Ok(UniqueNames)
+            }
+            fn visit_i64<E: serde::de::Error>(self, _: i64) -> Result<UniqueNames, E> {
+                Ok(UniqueNames)
+            }
+            fn visit_u64<E: serde::de::Error>(self, _: u64) -> Result<UniqueNames, E> {
+                Ok(UniqueNames)
+            }
+            fn visit_f64<E: serde::de::Error>(self, _: f64) -> Result<UniqueNames, E> {
+                Ok(UniqueNames)
+            }
+            fn visit_str<E: serde::de::Error>(self, _: &str) -> Result<UniqueNames, E> {
+                Ok(UniqueNames)
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<UniqueNames, E> {
+                Ok(UniqueNames)
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<UniqueNames, A::Error> {
+                while seq.next_element::<UniqueNames>()?.is_some() {}
+                Ok(UniqueNames)
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<UniqueNames, A::Error> {
+                let mut names = std::collections::BTreeSet::new();
+                while let Some(name) = map.next_key::<String>()? {
+                    if !names.insert(name) {
+                        return Err(serde::de::Error::custom("duplicate object name"));
+                    }
+                    map.next_value::<UniqueNames>()?;
+                }
+                Ok(UniqueNames)
+            }
+        }
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
+pub(super) fn parse_unique(bytes: &[u8]) -> Result<Value, JournalError> {
+    // from_slice enforces EOF and serde_json's default recursion limit on BOTH
+    // passes. The native opened-descriptor byte limit is checked before here.
+    let error = || {
+        JournalError::Storage(
+            "invalid JSON or duplicate journal field; original bytes retained".into(),
+        )
+    };
+    serde_json::from_slice::<UniqueNames>(bytes).map_err(|_| error())?;
+    serde_json::from_slice(bytes).map_err(|_| error())
+}
+
 fn invalid() -> JournalError {
     JournalError::Storage("unsupported or lossy journal image; original bytes retained".into())
 }

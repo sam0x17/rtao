@@ -70,7 +70,12 @@ restart support. No shielded dispatch silently ignores the journal option.
 The native backend migrates supported schema1/2 raw envelopes before typed
 conversion. Signed bytes, prior certainty, checkpoints and unknown nested
 fields remain retained. New graph-field collisions, unsupported variants and
-lossy conversions refuse without replacing the original image. Migration uses
+lossy conversions refuse without replacing the original image. The native byte
+parser rejects duplicate decoded object names recursively, including escaped
+equivalents and opaque extension fields, before constructing a JSON Value;
+otherwise last-key-wins parsing could discard evidence before the migration
+check sees it. The existing opened-file byte bound, JSON nesting limit and EOF
+check remain in force. Migration uses
 the same temporary-file sync, atomic rename and directory barriers; an
 interruption may leave a complete old or complete new image, never permission
 to reset. Schema2 readers refuse the new envelope; do not downgrade a journal.
@@ -92,7 +97,10 @@ it never interprets the last vector entry or a carrier as that effect. The
 historical scan allowance is shared across targets/pairs, not renewed for each.
 It bounds strict historical body lookups; historical receipt decoding for a
 found target is additional, and a cached finalized receipt has its own lookup.
-Missing/malformed bodies retain the corresponding target's cursor. This is a
+Missing/malformed bodies retain the corresponding target's cursor. A recovery
+call rechecks the current mode and all retained attempts before reporting
+Rebuildable; an attempt published concurrently keeps the operation unresolved
+with its stable attempt ID. This is a
 configured-RPC history trust boundary, not independent consensus or body-root
 verification.
 

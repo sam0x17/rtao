@@ -145,8 +145,7 @@ impl NativeJournalStore {
         if bytes.len() as u64 > MAX_JOURNAL_BYTES {
             return Err(error("journal exceeds its byte limit"));
         }
-        serde_json::from_slice(&bytes)
-            .map_err(|_| error("invalid journal; original bytes retained"))
+        super::migration::parse_unique(&bytes)
     }
     fn read(&self) -> Result<JournalImage, JournalError> {
         super::migration::decode(self.read_raw()?, false).map(|(image, _)| image)

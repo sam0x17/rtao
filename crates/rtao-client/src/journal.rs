@@ -692,6 +692,11 @@ pub enum RecoveryReason {
     EvidenceConflict,
     /// Paired dispatch and historical protocol qualification are not enabled.
     ShieldAdapterRequired,
+    /// A concurrent writer published this still-unresolved physical attempt.
+    PendingAttempt {
+        /// Stable current attempt ordinal; inspect the operation for its role/hash.
+        attempt: u64,
+    },
     /// The endpoint went backwards or disagrees with retained finalized history.
     StaleFinalizedView,
     /// A required historical header or block body is unavailable, not absent.
@@ -764,10 +769,19 @@ impl JournalBinding {
         match current.finalized_effect() {
             Err(_) => Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
             Ok(Some(attempt)) => Self::recover_receipt(client, attempt).await,
-            Ok(None) if shielded => Ok(RecoveryStatus::Unresolved(
-                RecoveryReason::ShieldAdapterRequired,
-            )),
-            Ok(None) => Ok(RecoveryStatus::Rebuildable),
+            Ok(None) if matches!(current.mode, ExecutionMode::Shielded(_)) => Ok(
+                RecoveryStatus::Unresolved(RecoveryReason::ShieldAdapterRequired),
+            ),
+            Ok(None) => match current
+                .attempts
+                .iter()
+                .find(|a| a.outcome != AttemptOutcome::ExpiredUnexecuted)
+            {
+                Some(attempt) => Ok(RecoveryStatus::Unresolved(RecoveryReason::PendingAttempt {
+                    attempt: attempt.id,
+                })),
+                None => Ok(RecoveryStatus::Rebuildable),
+            },
         }
     }
 
