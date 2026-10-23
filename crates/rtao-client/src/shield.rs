@@ -463,8 +463,13 @@ impl Client {
         signer: &dyn Signer,
         opts: &ShieldOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
-        self.submit_shielded_attempt(call, signer, opts, SubmissionLimits::new(&opts.submit)?)
-            .await
+        Box::pin(self.submit_shielded_attempt(
+            call,
+            signer,
+            opts,
+            SubmissionLimits::new(&opts.submit)?,
+        ))
+        .await
     }
     async fn submit_shielded_attempt(
         &self,
