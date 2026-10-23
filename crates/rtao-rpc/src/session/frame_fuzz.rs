@@ -73,6 +73,7 @@ impl Probe {
                     waited: Duration::ZERO,
                     required_epoch: None,
                     last_sent_epoch: 1,
+                    custody: None,
                 },
             );
             if id == 4 {
