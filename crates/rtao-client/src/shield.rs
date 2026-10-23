@@ -202,9 +202,9 @@ impl Client {
         }
         let mut retries = opts.dropped_inner_retries;
         loop {
-            let report = self
-                .submit_shielded_once(call.clone(), signer, opts)
-                .await?;
+            // Keep the signing/recovery state machine out of every caller's
+            // future frame. This remains one owned, cancellable operation.
+            let report = Box::pin(self.submit_shielded_once(call.clone(), signer, opts)).await?;
             if retries == 0 || !inner_proven_dropped(&report) {
                 return Ok(report);
             }
