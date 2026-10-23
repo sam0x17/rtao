@@ -3228,6 +3228,7 @@ dependencies = [
  "rtao-client",
  "rtao-core",
  "rtao-primitives",
+ "rtao-rpc",
  "rtao-runtime",
  "rustls",
  "scale-info",
