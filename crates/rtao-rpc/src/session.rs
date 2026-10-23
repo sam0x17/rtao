@@ -7,7 +7,7 @@ use crate::{
     *,
 };
 use blake2::{Blake2b, Digest, digest::consts::U32};
-use futures::{SinkExt, StreamExt};
+use futures::{Sink, SinkExt, Stream, StreamExt};
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Value, json, value::RawValue};
 use std::{
@@ -25,11 +25,15 @@ use tokio::{
     sync::{broadcast, mpsc, oneshot, watch},
     time::{Instant, sleep, sleep_until, timeout},
 };
-use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::{Error as WsError, Message};
 #[cfg(any(test, feature = "fuzzing"))]
 use url::Url;
 mod handshake;
 use handshake::{Socket, connect_socket};
+mod ownership;
+pub use ownership::{AuthorOwnership, AuthorRetirement};
+use ownership::{Custody, OwnedSocket, retire_socket};
+type TransportSocket = OwnedSocket<Socket>;
 type Response = Result<Reply, WireError>;
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -81,6 +85,7 @@ struct Pending {
     waited: Duration,
     required_epoch: Option<u64>,
     last_sent_epoch: u64,
+    custody: Option<Arc<Custody>>,
 }
 struct SubscriptionRequest {
     unsubscribe: String,
@@ -375,6 +380,44 @@ impl Session {
         .await
         .map_err(WireError::into_submit)
     }
+    /// Submit exact signed bytes while retaining strong ownership through every
+    /// native queue/frame reference. Local retirement is not chain finality.
+    pub async fn submit_owned(
+        &self,
+        extrinsic: &[u8],
+        ownership: AuthorOwnership,
+    ) -> Result<H256, SubmitError> {
+        let custody = ownership.for_bytes(extrinsic)?;
+        let reply = self
+            .call_with_ownership(
+                "author_submitExtrinsic",
+                json!([format!("0x{}", hex::encode(extrinsic))]),
+                None,
+                None,
+                Some(custody),
+            )
+            .await
+            .map_err(WireError::into_submit)?;
+        serde_json::from_value(reply.value)
+            .map_err(|e| SubmitError::Rpc(RpcError::Protocol(e.to_string())))
+    }
+    /// Submit and watch once with native queue/write ownership. Dropping the
+    /// outer future cannot release captured-write ownership prematurely.
+    pub async fn submit_and_watch_owned(
+        &self,
+        extrinsic: &[u8],
+        ownership: AuthorOwnership,
+    ) -> Result<Subscription<TxStatus>, SubmitError> {
+        let custody = ownership.for_bytes(extrinsic)?;
+        self.subscription_with_ownership(
+            "author_submitAndWatchExtrinsic",
+            json!([format!("0x{}", hex::encode(extrinsic))]),
+            "author_unwatchExtrinsic",
+            Some(custody),
+        )
+        .await
+        .map_err(WireError::into_submit)
+    }
     /// Watch connection state changes.
     pub fn state(&self) -> watch::Receiver<SessionState> {
         self.inner.state.clone()
@@ -464,6 +507,7 @@ impl Session {
                 waited: Duration::ZERO,
                 required_epoch: None,
                 last_sent_epoch: 0,
+                custody: None,
             },
             receiver,
         ))
@@ -483,6 +527,17 @@ impl Session {
         unsubscribe: Option<&str>,
         epoch: Option<u64>,
     ) -> Result<Reply, WireError> {
+        self.call_with_ownership(method, params, unsubscribe, epoch, None)
+            .await
+    }
+    async fn call_with_ownership(
+        &self,
+        method: &str,
+        params: Value,
+        unsubscribe: Option<&str>,
+        epoch: Option<u64>,
+        custody: Option<Arc<Custody>>,
+    ) -> Result<Reply, WireError> {
         if let Some(error) = self.terminal_error(method) {
             return Err(error);
         }
@@ -491,6 +546,7 @@ impl Session {
             .pending(method, params, unsubscribe, group)
             .map_err(WireError::Rpc)?;
         pending.required_epoch = epoch;
+        pending.custody = custody;
         let mut guard = RequestGuard {
             commands: self.inner.commands.clone(),
             ids: vec![pending.id],
@@ -533,7 +589,19 @@ impl Session {
         params: Value,
         unsubscribe: &str,
     ) -> Result<Subscription<T>, WireError> {
-        let reply = self.call(method, params, Some(unsubscribe)).await?;
+        self.subscription_with_ownership(method, params, unsubscribe, None)
+            .await
+    }
+    async fn subscription_with_ownership<T>(
+        &self,
+        method: &str,
+        params: Value,
+        unsubscribe: &str,
+        custody: Option<Arc<Custody>>,
+    ) -> Result<Subscription<T>, WireError> {
+        let reply = self
+            .call_with_ownership(method, params, Some(unsubscribe), None, custody)
+            .await?;
         let id = subscription_id(&reply.value).ok_or_else(|| {
             WireError::Rpc(RpcError::Protocol(format!(
                 "unexpected subscription id: {}",
@@ -710,7 +778,7 @@ impl Supervisor {
             self.epoch = self.epoch.wrapping_add(1);
             self.last_inbound = Instant::now();
             if let Err(error) = self.resend(&mut socket).await {
-                let _ = timeout(Duration::from_millis(500), socket.close(None)).await;
+                retire_socket(socket).await;
                 if let Err(error) = self.record_loss(error) {
                     self.finish(error);
                     return;
@@ -729,7 +797,7 @@ impl Supervisor {
             }
             .await;
             if let Err(error) = discovery_result {
-                let _ = timeout(Duration::from_millis(500), socket.close(None)).await;
+                retire_socket(socket).await;
                 if let Err(error) = self.record_loss(error) {
                     self.finish(error);
                     return;
@@ -746,7 +814,7 @@ impl Supervisor {
             });
             let _ = self.events.send(SessionEvent::Connected { endpoint });
             let reason = self.pump(&mut socket).await;
-            let _ = timeout(Duration::from_millis(500), socket.close(None)).await;
+            retire_socket(socket).await;
             if self.stopping {
                 self.finish(RpcError::Closed);
                 return;
@@ -765,7 +833,7 @@ impl Supervisor {
             }
         }
     }
-    async fn dial(&mut self) -> Result<Socket, RpcError> {
+    async fn dial(&mut self) -> Result<TransportSocket, RpcError> {
         let mut cycle = 0u32;
         loop {
             let mut last_error = RpcError::Closed;
@@ -784,7 +852,7 @@ impl Supervisor {
                     }}
                 };
                 match result {
-                    Ok(socket) => return Ok(socket),
+                    Ok(socket) => return Ok(OwnedSocket::new(socket)),
                     Err(error @ RpcError::Policy(_)) => return Err(error),
                     Err(error) => {
                         last_error = error;
@@ -1012,22 +1080,54 @@ impl Supervisor {
         }
         Ok(())
     }
-    async fn write_frame(&mut self, socket: &mut Socket, frame: Value) -> Result<(), RpcError> {
+    async fn write_frame<S>(
+        &mut self,
+        socket: &mut OwnedSocket<S>,
+        frame: Value,
+    ) -> Result<(), RpcError>
+    where
+        S: Sink<Message, Error = WsError> + Unpin,
+    {
+        self.write_frame_owned(socket, frame, Vec::new()).await
+    }
+    async fn write_frame_owned<S>(
+        &mut self,
+        socket: &mut OwnedSocket<S>,
+        frame: Value,
+        owners: Vec<Arc<Custody>>,
+    ) -> Result<(), RpcError>
+    where
+        S: Sink<Message, Error = WsError> + Unpin,
+    {
         let raw = frame.to_string();
         tracing::debug!(target:"rtao::rpc::raw",frame=%DiagnosticFrame(&raw),"WEBSOCKET_SEND");
-        let write = socket.send(Message::Text(raw.into()));
-        tokio::pin!(write);
-        let deadline = sleep(self.config.silence_timeout);
-        tokio::pin!(deadline);
-        loop {
-            tokio::select! {
-                result=&mut write=>return result.map_err(|error|RpcError::Transport(policy::safe_diagnostic(&error.to_string(),generated::py_rpc::POLICY_DETAIL_LIMIT))),
-                _=&mut deadline=>return Err(RpcError::Timeout {detail:format!("no progress writing to {} in {}s",policy::safe_endpoint(self.config.pool.urls[self.index].as_str()),self.config.silence_timeout.as_secs_f64())}),
-                command=self.commands.recv()=>{self.command(command);if self.stopping {return Err(RpcError::Closed);}},
+        let retained = socket.writers.len();
+        socket.writers.extend(owners);
+        let result = {
+            let write = socket.io.send(Message::Text(raw.into()));
+            tokio::pin!(write);
+            let deadline = sleep(self.config.silence_timeout);
+            tokio::pin!(deadline);
+            loop {
+                tokio::select! {
+                    result=&mut write=>break result.map_err(|error|RpcError::Transport(policy::safe_diagnostic(&error.to_string(),generated::py_rpc::POLICY_DETAIL_LIMIT))),
+                    _=&mut deadline=>break Err(RpcError::Timeout {detail:format!("no progress writing to {} in {}s",policy::safe_endpoint(self.config.pool.urls[self.index].as_str()),self.config.silence_timeout.as_secs_f64())}),
+                    command=self.commands.recv()=>{self.command(command);if self.stopping {break Err(RpcError::Closed);}},
+                }
             }
+        };
+        if result.is_ok() {
+            // send() has flushed this frame; no future socket action can emit it.
+            socket.writers.truncate(retained);
         }
+        // An error/cancellation can leave bytes buffered in the socket. Retain
+        // ownership until the socket is actually dropped, including close flush.
+        result
     }
-    async fn wait_for_token(&mut self, socket: &mut Socket) -> Result<(), RpcError> {
+    async fn wait_for_token<S>(&mut self, socket: &mut OwnedSocket<S>) -> Result<(), RpcError>
+    where
+        S: Stream<Item = Result<Message, WsError>> + Unpin,
+    {
         loop {
             if self.stopping {
                 return Err(RpcError::Closed);
@@ -1042,11 +1142,14 @@ impl Supervisor {
                 _=sleep(wait)=>{},
                 _=sleep_until(silence),if active=>return Err(RpcError::Timeout {detail:format!("no response from {} in {}s",policy::safe_endpoint(self.config.pool.urls[self.index].as_str()),self.config.silence_timeout.as_secs_f64())}),
                 command=self.commands.recv()=>self.command(command),
-                incoming=socket.next()=>{match incoming {Some(Ok(frame))=>self.inbound(frame)?,Some(Err(error))=>return Err(RpcError::Transport(error.to_string())),None=>return Err(RpcError::Transport("WebSocket connection ended".into()))}},
+                incoming=socket.io.next()=>{match incoming {Some(Ok(frame))=>self.inbound(frame)?,Some(Err(error))=>return Err(RpcError::Transport(error.to_string())),None=>return Err(RpcError::Transport("WebSocket connection ended".into()))}},
             }
         }
     }
-    async fn resend(&mut self, socket: &mut Socket) -> Result<(), RpcError> {
+    async fn resend<S>(&mut self, socket: &mut OwnedSocket<S>) -> Result<(), RpcError>
+    where
+        S: Sink<Message, Error = WsError> + Stream<Item = Result<Message, WsError>> + Unpin,
+    {
         self.prune();
         let ids: Vec<u64> = self
             .pending
@@ -1081,15 +1184,19 @@ impl Supervisor {
             }
             pending.last_sent_epoch = self.epoch;
             let frame = pending.frame.clone();
+            let owners = pending.custody.iter().cloned().collect();
             if idle {
                 self.last_inbound = Instant::now();
             }
             self.update_gauge();
-            self.write_frame(socket, frame).await?;
+            self.write_frame_owned(socket, frame, owners).await?;
         }
         Ok(())
     }
-    async fn release_queue(&mut self, socket: &mut Socket) -> Result<(), RpcError> {
+    async fn release_queue<S>(&mut self, socket: &mut OwnedSocket<S>) -> Result<(), RpcError>
+    where
+        S: Sink<Message, Error = WsError> + Stream<Item = Result<Message, WsError>> + Unpin,
+    {
         while let Some((epoch, frame)) = self.detached.pop_front() {
             if epoch != self.epoch {
                 continue;
@@ -1124,6 +1231,7 @@ impl Supervisor {
                 .map(|p| p.id)
                 .collect();
             let mut frames = Vec::new();
+            let mut owners = Vec::new();
             for id in ids {
                 if !self.bucket.take() {
                     break;
@@ -1139,6 +1247,9 @@ impl Supervisor {
                 entry.last_sent_epoch = self.epoch;
                 entry.waited = entry.started.elapsed();
                 frames.push(entry.frame.clone());
+                if let Some(custody) = &entry.custody {
+                    owners.push(custody.clone());
+                }
                 tracing::debug!(target:"rtao::rpc",method=%entry.method,wait_seconds=entry.waited.as_secs_f64(),"RPC request queue released");
                 #[cfg(feature = "metrics")]
                 metrics::histogram!("rtao_rpc_ratelimit_wait_seconds")
@@ -1156,10 +1267,10 @@ impl Supervisor {
             } else {
                 Value::Array(frames)
             };
-            self.write_frame(socket, frame).await?;
+            self.write_frame_owned(socket, frame, owners).await?;
         }
     }
-    async fn pump(&mut self, socket: &mut Socket) -> RpcError {
+    async fn pump(&mut self, socket: &mut TransportSocket) -> RpcError {
         loop {
             if self.stopping {
                 return RpcError::Closed;
@@ -1176,7 +1287,7 @@ impl Supervisor {
             };
             tokio::select! {
                 command=self.commands.recv()=>self.command(command),
-                frame=socket.next()=>{
+                frame=socket.io.next()=>{
                     match frame {
                         Some(Ok(frame))=>if let Err(error)=self.inbound(frame) {return error;},
                         Some(Err(error))=>return RpcError::Transport(policy::safe_diagnostic(&error.to_string(),generated::py_rpc::POLICY_DETAIL_LIMIT)),
