@@ -2032,6 +2032,16 @@
     ],
     "divergences": [
       {
+        "id": "D-083",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::journal::tests::crash_after_inclusion_before_ack_reopens_and_finds_actual_historical_receipt",
+          "rtao_client::journal::tests::concurrent_authorization_only_one_signed_attempt_is_dispatched",
+          "rtao_neuron::weights::durable::tests::pending_input_and_uncertainty_survive_pause_missed_epochs_and_parameter_changes"
+        ]
+      },
+      {
         "id": "D-076",
         "oracle": "unverified",
         "rtao": "active",

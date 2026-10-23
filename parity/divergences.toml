@@ -3,6 +3,24 @@
 schema = 1
 
 [[divergences]]
+id = "D-083"
+upstream_symbol = "bittensor.executor.Executor.execute and submit_signature"
+python_behavior = "These executor entrypoints accept intent/signature, policy and wait controls without an injected durable logical-operation journal binding."
+rtao_behavior = "Optional journal bindings persist exact signed attempts before author dispatch and reconcile finalized evidence before replacement. The native weight runtime also retains logical inputs, inclusion cadence and reveal tracking across restarts, with pause and semantic-check controls. Journaled shield pairs refuse until a dedicated adapter exists."
+rationale = "Lost acknowledgments, process death, missed scheduling windows and runtime changes must not erase authorized intent or become permission to repeat an uncertain effect."
+decision = "D-083; generic durable-work requirements and baseline main audit at 42b2c19"
+status = "active"
+class = "addition"
+milestone = "M5"
+pinning_tests = [
+  "rtao_client::journal::tests::crash_after_inclusion_before_ack_reopens_and_finds_actual_historical_receipt",
+  "rtao_client::journal::tests::concurrent_authorization_only_one_signed_attempt_is_dispatched",
+  "rtao_neuron::weights::durable::tests::pending_input_and_uncertainty_survive_pause_missed_epochs_and_parameter_changes",
+]
+upstream_report = "Generic native addition, without an upstream defect allegation or new filing. Focused local Rust/FakeChain and native-file checks pass; independent review and hosted qualification remain open. No live-runtime compatibility claim is added. See docs/recovery/durable-work.md."
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py"
+
+[[divergences]]
 id = "D-076"
 upstream_symbol = "bittensor.executor subnet registration completion failures"
 python_behavior = "Raises completion failures after the registration submission without a typed error carrier retaining its included receipt."

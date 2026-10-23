@@ -73,5 +73,6 @@ pub use telemetry::{Metrics, Readiness};
 #[cfg(feature = "validator")]
 #[cfg_attr(docsrs, doc(cfg(feature = "validator")))]
 pub use weights::{
-    VersionKey, WeightCadence, WeightPolicy, WeightScheduler, WeightsInput, WeightsProposal,
+    VersionKey, WeightCadence, WeightOpportunity, WeightPolicy, WeightScheduler, WeightsInput,
+    WeightsProposal,
 };

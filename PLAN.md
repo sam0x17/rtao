@@ -1138,6 +1138,7 @@ Classes: `stricter` (rtao refuses something Python allows), `improved`, `kept` (
 | D-061 | epoch-consensus setter example | suggests accepted Yuma/Null spellings instead of the numeric values rejected by Python's own setter; raw values stay exact; hosted validation pending | improved |
 | D-062 | owner-intent preflight | existing native planner checks effective owner, admin freeze and cooldown before key acquisition; matching Null continuation skips only cooldown; Python has no corresponding blocks hook; hosted validation pending | stricter |
 | D-063 | btauth replay identity | preserves exact signed sender text, then keys replay storage by decoded account and full signed nonce across SS58 prefixes; Python keys by literal sender text; hosted validation pending | stricter |
+| D-083 | durable native work | versioned logical-operation and signed-attempt journal extends client/executor submission; native exclusive atomic-file storage, bounded finalized recovery, durable weight/reveal restoration and explicit semantic/pause controls. Unknown evidence blocks replacement; runtime and business effects remain separate. See docs/recovery/durable-work.md; independent review and hosted qualification remain open | addition |
 
 ## 9. Testing strategy
 

@@ -2,6 +2,7 @@
 // Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/weights.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Coherent best-head weight preparation and actual-epoch reveal tracking.
 
+mod durable;
 mod reveal;
 mod submit;
 #[cfg(test)]
@@ -10,7 +11,7 @@ mod tests;
 use crate::{Clock, ClockGuard, NeuronCx, StateCell, Validator};
 use blake2::{Blake2b, Digest, digest::consts::U32};
 use futures::StreamExt;
-pub use reveal::{EpochNotice, RevealMissReason, RevealOutcome, RevealWatcher};
+pub use reveal::{EpochNotice, PendingReveal, RevealMissReason, RevealOutcome, RevealWatcher};
 use rtao_client::{BlockHeader, BlockRef, Client, Finality, ReadPlan, Snapshot, ViewExt};
 use rtao_core::{DynValue, codec::Value, timelock::epoch_schedule::EpochScheduleState};
 use rtao_intents::weights::{
@@ -32,6 +33,15 @@ pub const SUPPORTED_CR_VERSION: u16 = 4;
 pub enum WeightsProposal {
     /// Prepare and submit a new row.
     Set(WeightsInput),
+    /// Stable application work. Repeated callback delivery uses the same ID.
+    Operation {
+        /// Application operation identity; never reuse it for changed input.
+        id: String,
+        /// Opaque application correlation identity.
+        correlation_id: Option<String>,
+        /// Intended row, retained across missed epochs and restart.
+        input: WeightsInput,
+    },
     /// Retain the previous chain row.
     HoldPrevious,
     /// Skip this opportunity with an operator-visible reason.
@@ -39,7 +49,7 @@ pub enum WeightsProposal {
 }
 
 /// Destinations and scores accepted by a validator's pure weights callback.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum WeightsInput {
     /// Deterministically ordered UID-to-score mapping.
     ByUid(BTreeMap<Uid, f64>),
@@ -178,6 +188,35 @@ pub struct WeightAttempt {
     pub best_block: u64,
     /// Latest scheduling or finalized-submission outcome.
     pub outcome: WeightAttemptOutcome,
+}
+
+/// Next scheduling action under one observed chain view, not signing authority.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum WeightOpportunity {
+    /// Cadence permits preparation; runtime, policy and semantic checks still apply.
+    Ready,
+    /// New submissions are paused; continue finalized observation.
+    Paused,
+    /// Reconcile a retained attempt or continue bounded inclusion/reveal observation.
+    Reconcile,
+    /// Recheck chain limits at or after this best height.
+    RateLimited {
+        /// Earliest height under the currently observed chain limit.
+        retry_after_block: u64,
+    },
+    /// Wait for an observed epoch newer than this one, then apply its offset.
+    /// No wall-clock guarantee is implied by a predicted epoch boundary.
+    AwaitEpoch {
+        /// Last epoch already used by this scheduler.
+        after_epoch: u64,
+        /// Required elapsed blocks inside a newly observed epoch.
+        offset_blocks: u64,
+    },
+    /// Recheck the offset at or after this best height.
+    AwaitBlock {
+        /// Earliest height under the currently observed epoch state.
+        not_before_block: u64,
+    },
 }
 fn refuse(
     code: rtao_catalog::ErrorCode,
@@ -355,7 +394,7 @@ impl WeightPreflight {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 struct Slot {
     last_attempt_epoch: Option<u64>,
     last_attempt_block: Option<u64>,
@@ -389,6 +428,9 @@ pub struct WeightScheduler {
     attempts: BTreeMap<MechId, WeightAttempt>,
     advisories: BTreeMap<MechId, Advisories>,
     reveals: RevealWatcher,
+    durable: Option<durable::Durable>,
+    semantic_policy: Option<String>,
+    semantic_guard: Option<Arc<dyn rtao_client::journal::SemanticGuard>>,
 }
 impl WeightScheduler {
     /// Construct a scheduler with explicit wall time and a best-head skew guard.
@@ -405,6 +447,9 @@ impl WeightScheduler {
             attempts: BTreeMap::new(),
             advisories: BTreeMap::new(),
             reveals: RevealWatcher::default(),
+            durable: None,
+            semantic_policy: None,
+            semantic_guard: None,
         })
     }
     /// Borrow retained reveal outcomes and outstanding commitment state.
@@ -419,11 +464,56 @@ impl WeightScheduler {
     pub fn last_attempt(&self, mechanism: MechId) -> Option<&WeightAttempt> {
         self.attempts.get(&mechanism)
     }
-    /// Clear an uncertainty block only after an external operator has reconciled it.
+    /// Inspect scheduling using a fresh coherent preflight, without submitting.
+    /// Recompute after every relevant parameter change; this is not a future
+    /// chain guarantee or a replacement for runtime/policy/semantic checks.
+    pub fn next_action(
+        &self,
+        mechanism: MechId,
+        hotkey: AccountId,
+        state: &WeightPreflight,
+    ) -> anyhow::Result<WeightOpportunity> {
+        if let Some(d) = &self.durable {
+            anyhow::ensure!(hotkey == d.account, "scheduler account mismatch");
+            if d.journal.snapshot()?.control.submissions_paused {
+                return Ok(WeightOpportunity::Paused);
+            }
+        }
+        let pending = self.pending_work(mechanism)?;
+        if self.reveals.pending_for(mechanism) >= 10
+            || self.slots.get(&mechanism).is_some_and(|s| s.uncertain)
+            || pending
+                .as_ref()
+                .is_some_and(|(b, _)| b.can_dispatch().is_err())
+        {
+            return Ok(WeightOpportunity::Reconcile);
+        }
+        let version = pending
+            .as_ref()
+            .map_or(self.policy.version_key.value(), |(_, w)| w.version_key);
+        let uid = state.check(version)?;
+        let cadence = self
+            .policy
+            .cadence
+            .unwrap_or_else(|| default_cadence(hotkey, state.schedule.tempo, state.commit_reveal));
+        let empty = Slot::default();
+        Ok(cadence_opportunity(
+            cadence,
+            self.slots.get(&mechanism).unwrap_or(&empty),
+            state,
+            uid,
+        ))
+    }
+    /// Clear a legacy in-memory uncertainty block after external reconciliation.
     ///
     /// The scheduler normally reconciles through the executor. An unresolved
     /// result remains blocked so the same pool provides-tag cannot be duplicated.
+    /// Durable schedulers ignore this toggle and require retained chain evidence.
     pub fn resolve_uncertainty(&mut self, mechanism: MechId) {
+        // A manual memory toggle cannot authorize replacement of durable bytes.
+        if self.durable.is_some() {
+            return;
+        }
         if let Some(slot) = self.slots.get_mut(&mechanism) {
             slot.uncertain = false;
         }
@@ -436,9 +526,22 @@ impl WeightScheduler {
         finalized: &BlockHeader,
         mut proposals: impl FnMut(MechId) -> WeightsProposal,
     ) -> anyhow::Result<()> {
-        self.reveals
-            .observe(&cx.client, finalized, &cx.metrics)
+        if let Some(d) = &self.durable {
+            anyhow::ensure!(
+                cx.netuid == d.netuid && cx.hotkey.hotkey_address()? == d.account,
+                "scheduler context differs from durable identity"
+            );
+        }
+        self.recover_finalized(&cx.client, finalized, &cx.metrics)
             .await?;
+        if !self.reveals.caught_up(finalized.number) {
+            return Ok(());
+        }
+        if let Some(durable) = &self.durable
+            && durable.journal.snapshot()?.control.submissions_paused
+        {
+            return Ok(());
+        }
         if cx.shutdown.is_cancelled() {
             return Ok(());
         }
@@ -555,7 +658,12 @@ impl WeightScheduler {
             });
             return Ok(());
         }
-        let version_key = self.policy.version_key.value();
+        let pending_work = self.pending_work(mech)?;
+        let version_key = pending_work
+            .as_ref()
+            .map_or(self.policy.version_key.value(), |(_, work)| {
+                work.version_key
+            });
         let uid = match preflight.check(version_key) {
             Ok(uid) => uid,
             Err(error) => {
@@ -630,10 +738,24 @@ impl WeightScheduler {
         if !due(cadence, slot, &preflight, uid) {
             return Ok(());
         }
-        let proposal = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| proposals(mech)))
-            .map_err(|_| anyhow::anyhow!("validator weights callback panicked"))?;
-        let input = match proposal {
-            WeightsProposal::Set(input) => input,
+        let proposal = match &pending_work {
+            Some((_, work)) => WeightsProposal::Set(work.input.clone()),
+            None => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| proposals(mech)))
+                .map_err(|_| anyhow::anyhow!("validator weights callback panicked"))?,
+        };
+        let (input, operation) = match proposal {
+            WeightsProposal::Set(input) => (input, None),
+            WeightsProposal::Operation {
+                id,
+                correlation_id,
+                input,
+            } => {
+                anyhow::ensure!(
+                    self.durable.is_some(),
+                    "application operation IDs require a durable scheduler"
+                );
+                (input, Some((id, correlation_id)))
+            }
             WeightsProposal::HoldPrevious => {
                 if let Some(attempt) = self.attempts.get_mut(&mech) {
                     attempt.outcome = WeightAttemptOutcome::HoldPrevious;
@@ -649,6 +771,20 @@ impl WeightScheduler {
                 return Ok(());
             }
         };
+        if self.durable.is_some() && pending_work.is_none() {
+            let d = self
+                .durable
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("missing journal"))?;
+            let revision = d.journal.snapshot()?.revision;
+            let (id, correlation) =
+                operation.unwrap_or_else(|| (format!("{}:op:{revision}", d.scope), None));
+            self.enqueue(id, correlation, mech, input.clone())?;
+            if self.pending_work(mech)?.is_none() {
+                // The application redelivered a completed logical operation.
+                return Ok(());
+            }
+        }
         let row = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph)?;
         if hold_previous(&row, uid, owner, &graph) {
             if let Some(attempt) = self.attempts.get_mut(&mech) {
@@ -684,8 +820,11 @@ impl WeightScheduler {
         }
         // Reserve this cadence slot before await; pool-unknown outcomes must
         // never cause an unconditional resubmission on the next finalized head.
-        slot.last_attempt_epoch = Some(preflight.schedule.subnet_epoch_index);
-        slot.last_attempt_block = Some(preflight.at.number);
+        self.slots.entry(mech).or_default().last_attempt_epoch =
+            Some(preflight.schedule.subnet_epoch_index);
+        self.slots.entry(mech).or_default().last_attempt_block = Some(preflight.at.number);
+        let binding = self.prepare_binding(mech, row.clone(), commit.clone(), &preflight)?;
+        self.persist(None)?;
         let result = submit::execute(
             cx,
             mech,
@@ -693,11 +832,18 @@ impl WeightScheduler {
             version_key,
             commit.as_ref(),
             block_time,
+            binding.clone(),
         )
         .await;
         let report = match result {
             Ok(report) => report,
             Err(error) if submit::invalid_reveal_round(&error) && commit.is_some() => {
+                if binding.is_some() {
+                    // Even a rejection cannot prove the same signed bytes were never
+                    // accepted elsewhere. Durable recovery must exclude them first.
+                    self.slots.entry(mech).or_default().uncertain = true;
+                    return Err(error);
+                }
                 let fresh = cx.client.at(BlockRef::Best).await?;
                 let state = WeightPreflight::fetch(&fresh, cx.netuid, mech, hotkey).await?;
                 let uid = state.check(version_key)?;
@@ -744,8 +890,9 @@ impl WeightScheduler {
                 } else {
                     None
                 };
-                slot.last_attempt_epoch = Some(state.schedule.subnet_epoch_index);
-                slot.last_attempt_block = Some(state.at.number);
+                self.slots.entry(mech).or_default().last_attempt_epoch =
+                    Some(state.schedule.subnet_epoch_index);
+                self.slots.entry(mech).or_default().last_attempt_block = Some(state.at.number);
                 cx.metrics
                     .increment("rtao_weights_reveal_round_recomputed_total");
                 let retry = submit::execute(
@@ -755,12 +902,13 @@ impl WeightScheduler {
                     version_key,
                     commit.as_ref(),
                     block_time,
+                    None,
                 )
                 .await;
                 let report = match retry {
                     Ok(report) => report,
                     Err(error) => {
-                        slot.uncertain = submit::uncertain(&error);
+                        self.slots.entry(mech).or_default().uncertain = submit::uncertain(&error);
                         return Err(error);
                     }
                 };
@@ -792,10 +940,13 @@ impl WeightScheduler {
                 return Ok(());
             }
             Err(error) => {
-                slot.uncertain = submit::uncertain(&error);
+                self.slots.entry(mech).or_default().uncertain =
+                    binding.is_some() || submit::uncertain(&error);
+                self.persist(None)?;
                 return Err(error);
             }
         };
+        self.record_inclusion(&cx.client, mech, &report).await?;
         if let Some(attempt) = self.attempts.get_mut(&mech) {
             attempt.outcome = WeightAttemptOutcome::Submitted {
                 block_hash: report.block_hash,
@@ -819,6 +970,7 @@ impl WeightScheduler {
                 )
                 .await?;
         }
+        self.persist(binding.as_ref().map(|b| b.id()))?;
         cx.metrics.increment("rtao_weights_submitted_total");
         cx.metrics
             .update_readiness(|ready| ready.last_weight_succeeded = true);
@@ -855,25 +1007,54 @@ pub fn default_cadence(hotkey: AccountId, tempo: u16, commit_reveal: bool) -> We
     }
 }
 fn due(cadence: WeightCadence, slot: &Slot, state: &WeightPreflight, uid: Uid) -> bool {
+    cadence_opportunity(cadence, slot, state, uid) == WeightOpportunity::Ready
+}
+fn cadence_opportunity(
+    cadence: WeightCadence,
+    slot: &Slot,
+    state: &WeightPreflight,
+    uid: Uid,
+) -> WeightOpportunity {
     let last = state
         .last_update(uid)
         .max(slot.last_attempt_block.unwrap_or(0));
     if last != 0 && state.at.number.saturating_sub(last) < state.rate_limit {
-        return false;
+        return WeightOpportunity::RateLimited {
+            retry_after_block: last.saturating_add(state.rate_limit),
+        };
     }
     match cadence {
         WeightCadence::OncePerEpoch { offset_blocks } => {
-            slot.last_attempt_epoch != Some(state.schedule.subnet_epoch_index)
-                && state
-                    .at
-                    .number
-                    .saturating_sub(state.schedule.last_epoch_block)
-                    >= offset_blocks
+            if slot.last_attempt_epoch == Some(state.schedule.subnet_epoch_index) {
+                WeightOpportunity::AwaitEpoch {
+                    after_epoch: state.schedule.subnet_epoch_index,
+                    offset_blocks,
+                }
+            } else if state
+                .at
+                .number
+                .saturating_sub(state.schedule.last_epoch_block)
+                < offset_blocks
+            {
+                WeightOpportunity::AwaitBlock {
+                    not_before_block: state
+                        .schedule
+                        .last_epoch_block
+                        .saturating_add(offset_blocks),
+                }
+            } else {
+                WeightOpportunity::Ready
+            }
         }
         WeightCadence::RateLimited { margin } => {
-            last == 0
-                || state.at.number.saturating_sub(last)
-                    >= state.rate_limit.saturating_add(margin).max(1)
+            let delay = state.rate_limit.saturating_add(margin).max(1);
+            if last == 0 || state.at.number.saturating_sub(last) >= delay {
+                WeightOpportunity::Ready
+            } else {
+                WeightOpportunity::RateLimited {
+                    retry_after_block: last.saturating_add(delay),
+                }
+            }
         }
     }
 }
@@ -1050,8 +1231,25 @@ pub(crate) async fn run_scheduler<V: Validator>(
     guard: ClockGuard,
     clock: Arc<dyn Clock>,
     policy: WeightPolicy,
+    journal: Option<Arc<rtao_client::journal::OperationJournal>>,
 ) -> anyhow::Result<()> {
-    let mut scheduler = WeightScheduler::new(policy, clock, guard)?;
+    let journal = match journal {
+        Some(journal) => journal,
+        None => {
+            let path = cx.state_dir.join("weights-journal.json");
+            rtao_client::offload(move || rtao_client::journal::OperationJournal::open(path))
+                .await??
+        }
+    };
+    let mut scheduler = WeightScheduler::new(policy, clock, guard)?.with_journal(
+        journal,
+        cx.client.genesis(),
+        cx.netuid,
+        cx.hotkey.hotkey_address()?,
+    )?;
+    if let Some((contract, guard)) = validator.weight_semantics() {
+        scheduler = scheduler.with_semantic_guard(contract, guard);
+    }
     let mut heads = cx.client.blocks(Finality::Finalized)?;
     loop {
         let head = tokio::select! { biased; () = cx.shutdown.cancelled() => return Ok(()), next = heads.next() => next };

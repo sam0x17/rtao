@@ -27,6 +27,8 @@ pub mod events;
 pub mod generated;
 /// Best and finalized head followers with gap recovery.
 pub mod head;
+/// Versioned durable operations, native storage and restart reconciliation.
+pub mod journal;
 mod legacy_api;
 /// Network presets and immutable public-network identities.
 pub mod network;
