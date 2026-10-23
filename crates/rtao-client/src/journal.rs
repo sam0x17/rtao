@@ -737,15 +737,14 @@ fn material_replaceable(
     if control.submissions_paused && !(control.allow_obligations && record.intent.obligation) {
         return Err(JournalError::Blocked("material replacement paused".into()));
     }
-    if record
-        .shield_pairs
-        .iter()
-        .any(|pair| matches!(pair.phase, PairPhase::DispatchAuthorized { .. }))
-        || record.attempts.iter().any(|a| {
-            !a.evidence_conflicts.is_empty()
-                || matches!(a.outcome, AttemptOutcome::Finalized { .. })
-        })
-    {
+    if record.shield_pairs.iter().any(|pair| {
+        matches!(pair.phase, PairPhase::DispatchAuthorized { .. })
+            && !shield::replacement_proven(record, pair)
+    }) || record.attempts.iter().any(|a| {
+        !a.evidence_conflicts.is_empty()
+            || (matches!(a.outcome, AttemptOutcome::Finalized { .. })
+                && !matches!(a.role, AttemptRole::Carrier { .. }))
+    }) {
         return Err(JournalError::Blocked(
             "reconcile authorized shield material before replacement".into(),
         ));
@@ -787,6 +786,38 @@ pub enum RecoveryReason {
     ShieldAdapterRequired,
     /// An authorized carrier has not established a finalized inner effect.
     InnerUnresolved,
+    /// No trusted code qualification covers this historical signed component.
+    ShieldProtocolUnverified {
+        /// Retained signed identity requiring an audited adapter/context.
+        attempt: u64,
+    },
+    /// Exact canonical signed-envelope reconstruction is unavailable or refused.
+    ShieldCanonicalEncodingRequired {
+        /// Retained identity; raw-byte hash absence alone cannot replace it.
+        attempt: u64,
+    },
+    /// Canonical era birth differs from the retained signed mortality anchor.
+    ShieldEraAnchorMismatch {
+        /// Retained identity whose historical context needs investigation.
+        attempt: u64,
+    },
+    /// A complete small-window qualification requires this finite body budget.
+    ShieldQualificationBudget {
+        /// Minimum remaining reads; no old unqualified cursor is reused.
+        required: u32,
+    },
+    /// This adapter's total retained pair qualification bound is exceeded.
+    ShieldWorkLimit {
+        /// Maximum pairs this adapter will inspect in one logical operation.
+        maximum_pairs: u32,
+    },
+    /// Physical absence is proven, but the retained authorization has no pairs left.
+    ShieldPairBudgetExhausted {
+        /// Originally authorized total; recovery never renews it.
+        maximum_pairs: u32,
+        /// Retained pairs, including abandoned never-authorized preparation.
+        consumed: u32,
+    },
     /// A concurrent writer published this still-unresolved physical attempt.
     PendingAttempt {
         /// Stable current attempt ordinal; inspect the operation for its role/hash.
@@ -842,16 +873,31 @@ impl JournalBinding {
         let shielded = matches!(record.mode, ExecutionMode::Shielded(_));
         match record.finalized_effect() {
             Err(_) => return Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
-            Ok(Some(attempt)) => return Self::recover_receipt(client, attempt).await,
+            Ok(Some(attempt)) => {
+                return Self::recover_receipt(client, attempt, record.effect_shield(attempt)?)
+                    .await;
+            }
             Ok(None) => {}
         }
         let mut remaining = maximum_blocks;
-        for attempt in record.attempts {
+        for attempt in &record.attempts {
             if attempt.outcome != AttemptOutcome::Unresolved {
                 continue;
             }
+            if shielded {
+                let pair = match attempt.role {
+                    AttemptRole::Inner { pair } | AttemptRole::Carrier { pair } => pair,
+                    _ => return Err(JournalError::Identity),
+                };
+                if !matches!(
+                    record.shield_pairs[pair as usize].phase,
+                    PairPhase::DispatchAuthorized { .. }
+                ) {
+                    continue;
+                }
+            }
             if let Some(status) = self
-                .recover_attempt(client, attempt, shielded, &mut remaining)
+                .recover_attempt(client, attempt.clone(), shielded, &mut remaining)
                 .await?
             {
                 return Ok(status);
@@ -863,10 +909,12 @@ impl JournalBinding {
         let current = self.record()?;
         match current.finalized_effect() {
             Err(_) => Ok(RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)),
-            Ok(Some(attempt)) => Self::recover_receipt(client, attempt).await,
-            Ok(None) if matches!(current.mode, ExecutionMode::Shielded(_)) => Ok(
-                RecoveryStatus::Unresolved(RecoveryReason::ShieldAdapterRequired),
-            ),
+            Ok(Some(attempt)) => {
+                Self::recover_receipt(client, attempt, current.effect_shield(attempt)?).await
+            }
+            Ok(None) if matches!(current.mode, ExecutionMode::Shielded(_)) => {
+                self.recover_shield_absence(client, &mut remaining).await
+            }
             Ok(None) => match current
                 .attempts
                 .iter()
@@ -883,6 +931,7 @@ impl JournalBinding {
     async fn recover_receipt(
         client: &Client,
         attempt: &SignedAttempt,
+        shield: Option<crate::ShieldReport>,
     ) -> Result<RecoveryStatus, JournalError> {
         let AttemptOutcome::Finalized {
             block,
@@ -895,11 +944,14 @@ impl JournalBinding {
         };
         Ok(
             match client.resolve_extrinsic(attempt.hash, block, true).await {
-                Ok(report)
+                Ok(mut report)
                     if report.hash == attempt.hash
+                        && report.block_hash == Some(block)
                         && report.block_number == Some(number)
+                        && report.inclusion == crate::Inclusion::Finalized
                         && report.success == success =>
                 {
+                    report.shield = shield;
                     RecoveryStatus::Finalized(Box::new(report))
                 }
                 Ok(_) => RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict),
@@ -975,7 +1027,7 @@ impl JournalBinding {
             match chain.find_extrinsic_complete(attempt.hash, block).await {
                 Ok(Some(_)) => {
                     return match client.resolve_extrinsic(attempt.hash, block, true).await {
-                        Ok(report) => {
+                        Ok(mut report) => {
                             self.observed(&report).await?;
                             let current = self.record()?;
                             match current.finalized_effect() {
@@ -983,6 +1035,7 @@ impl JournalBinding {
                                     RecoveryReason::EvidenceConflict,
                                 ))),
                                 Ok(Some(effect)) if effect.hash == report.hash => {
+                                    report.shield = current.effect_shield(effect)?;
                                     Ok(Some(RecoveryStatus::Finalized(Box::new(report))))
                                 }
                                 // A carrier is only a physical receipt; never

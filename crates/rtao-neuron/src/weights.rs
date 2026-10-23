@@ -431,6 +431,7 @@ pub struct WeightScheduler {
     durable: Option<durable::Durable>,
     semantic_policy: Option<String>,
     semantic_guard: Option<Arc<dyn rtao_client::journal::SemanticGuard>>,
+    shield_protocol: Option<Arc<dyn rtao_client::journal::ShieldProtocolGuard>>,
 }
 impl WeightScheduler {
     /// Construct a scheduler with explicit wall time and a best-head skew guard.
@@ -450,6 +451,7 @@ impl WeightScheduler {
             durable: None,
             semantic_policy: None,
             semantic_guard: None,
+            shield_protocol: None,
         })
     }
     /// Borrow retained reveal outcomes and outstanding commitment state.

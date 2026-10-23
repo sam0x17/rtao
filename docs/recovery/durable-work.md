@@ -110,16 +110,61 @@ projection selects material by the unique finalized effect and report hash,
 never the vector tail; it composes the existing reveal watcher/checkpoint.
 
 **Public journaled shield dispatch remains refused pending completion and
-review.** This guarded internal implementation does not yet qualify complete
-historical negative evidence or authorize resealing of an earlier authorized
-pair. It is not full shield restart support. Complete canonical body coverage,
-every applicable historical runtime, actual mortality anchors and canonical
-signed-inner encoding are still needed before such a replacement can be safe.
-The ordinary default weight route remains journaled and unchanged.
+review.** The internal implementation now reconciles an earlier authorized pair
+before another preparation. It reconstructs the complete canonical signed
+envelopes using fresh historical metadata and verifies signatures, payloads,
+nonces, mortality and the signed birth hash. Carrier qualification accepts the
+signed-inner `MevShield.submit_encrypted` route. Deferred encrypted storage is
+outside this adapter. All actual execution parents throughout the signed
+validity window need an installed trusted code qualification. Old unqualified
+recovery cursors cannot supply any part of that negative evidence.
+
+A version1 pair certificate retains the actual hashes, material generation,
+profile, covered canonical blocks/parent code identities and finalized boundary.
+It is published atomically with the negative outcome in the schema3 extension
+`rtao_shield_absence_v1`. Original attempts and authorization revision remain.
+The graph refuses certificate replacement/deletion. Repeated recovery rechecks
+the retained finality anchor and installed code qualification; a late conflicting
+receipt retains both pieces of evidence and blocks new author I/O. Older SDKs
+preserve the extension and continue refusing shield replacement.
+
+The internal route can then reseal within the originally persisted policy using
+fresh nonce, key and signing context. It uses typed recovery states and never
+the legacy English dropped-inner message. A finalized inner dispatch failure
+is an executed effect and blocks automatic replacement. Repeated invocation of
+an already finalized operation returns its exact historical effect, including
+carrier/inner attribution, without another signing or author request. Proven
+absence with no remaining original authorization returns
+`ShieldPairBudgetExhausted`; the SDK preserves the logical intent and certificate
+and requests no new signature. This is held SDK authorization, not a claim that
+the chain lost or completed the application work.
+
+Qualification is finite: at most16 total pairs,64KiB per signed component for
+canonical reconstruction, and the caller's shared historical-body allowance.
+The native8192-byte ciphertext bound is unchanged. The complete atomic window
+requires five body lookups for a four-block era or nine for an eight-block era;
+smaller remaining allowances return `ShieldQualificationBudget`. Receipt
+decoding for a newly found target remains additional to the body-lookup allowance,
+as in ordinary recovery. No partial old cursor becomes a qualified proof.
+Unavailable history, metadata, canonical encoding or profile leaves work held.
+`WeightScheduler::with_shield_protocol` reinstalls the trusted adapter on rebound
+journal bindings; this recovery hook does not enable public shield submission.
+
+This remains a guarded implementation rather than full shield restart support.
+Public Client/Executor result hooks, complete scheduler composition, the full
+upgrade/crash lifecycle and a public executable shield recovery example still
+require completion and review. The ordinary default weight route remains
+journaled and unchanged. Qualification assumes the audited native signature,
+nonce and mortality rules; it cannot promise safety under a future runtime that
+deliberately revives expired authorizations or changes those rules. A metadata
+shape match, current spec equality or an RPC's claim cannot attest that protocol.
 
 Local native tests cover publication-before-author, finalized-inner-only
-results, carrier-only uncertainty, stale nonce refresh, retired preparation and
-cancellation of offloaded publication. A separate native-socket weight fixture
+results, carrier-only uncertainty, stale nonce refresh, retired preparation,
+cancellation of offloaded publication, actual journal/session restart, typed
+qualified reseal, missing/unknown historical context, canonical nested calls,
+original budget limits, paused recovery and interrupted certificate publication
+before/after its durable CAS. A separate native-socket weight fixture
 sends a real signed encrypted carrier, models the inner body/events and native
 commitment queue synthetically, discards all client/journal owners before
 handoff, reopens while paused and restores one reveal without resubmission.

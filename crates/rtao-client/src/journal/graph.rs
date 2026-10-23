@@ -200,6 +200,7 @@ impl OperationRecord {
                             return Err(invalid());
                         }
                     }
+                    super::shield::validate_certificate(self, pair)?;
                 }
                 if used.len() != self.attempts.len() {
                     return Err(invalid());
@@ -215,6 +216,30 @@ impl OperationRecord {
             .get(index)
             .filter(|a| a.id == id)
             .ok_or_else(invalid)
+    }
+    pub(super) fn effect_shield(
+        &self,
+        attempt: &SignedAttempt,
+    ) -> Result<Option<crate::ShieldReport>, JournalError> {
+        let AttemptRole::Inner { pair } = attempt.role else {
+            return Ok(None);
+        };
+        let group = self
+            .shield_pairs
+            .get(usize::try_from(pair).map_err(|_| invalid())?)
+            .filter(|group| group.id == pair && group.inner == attempt.id)
+            .ok_or_else(invalid)?;
+        // An externally included inner of never-authorized inner-only
+        // preparation has no known carrier. Never invent one for attribution.
+        group
+            .carrier
+            .map(|id| {
+                self.attempt(id).map(|carrier| crate::ShieldReport {
+                    carrier_hash: carrier.hash,
+                    inner_hash: attempt.hash,
+                })
+            })
+            .transpose()
     }
     /// Finalized physical effect, if unique and uncontradicted. A carrier is excluded.
     /// Presence does not mean success: the historical receipt may report dispatch failure.
@@ -343,6 +368,16 @@ pub(super) fn validate_transition(
                     old.extensions
                         .iter()
                         .any(|(key, value)| new.extensions.get(key) != Some(value))
+                } else if matches!(old.phase, PairPhase::DispatchAuthorized { .. })
+                    && old.phase == new.phase
+                    && !old.extensions.contains_key(super::shield::ABSENCE)
+                    && new.extensions.contains_key(super::shield::ABSENCE)
+                {
+                    new.extensions.len() != old.extensions.len() + 1
+                        || old
+                            .extensions
+                            .iter()
+                            .any(|(key, value)| new.extensions.get(key) != Some(value))
                 } else {
                     old.extensions != new.extensions
                 }

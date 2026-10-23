@@ -1,5 +1,7 @@
 //! Paired preparation/ownership in the existing operation journal.
 use super::*;
+mod negative;
+pub(in crate::journal) use negative::{ABSENCE, replacement_proven, validate_certificate};
 
 /// Trusted adapter qualification for native signed-inner execution semantics.
 ///
@@ -59,7 +61,15 @@ impl JournalBinding {
         let code_hash = crate::parse_hash(&code).map_err(|_| {
             JournalError::Blocked("pinned runtime code identity unavailable".into())
         })?;
-        if let Err(reason) = guard.check(client.genesis(), code_hash) {
+        if let Err(mut reason) = guard.check(client.genesis(), code_hash) {
+            reason
+                .extensions
+                .entry("rtao_runtime_state".into())
+                .or_insert(serde_json::json!(state));
+            reason
+                .extensions
+                .entry("rtao_runtime_code".into())
+                .or_insert(serde_json::json!(code_hash));
             self.journal.update(|image| {
                 image
                     .operations
@@ -123,6 +133,11 @@ impl JournalBinding {
         retries: u32,
         maximum_inner_fee: Option<u64>,
     ) -> Result<ShieldPolicy, JournalError> {
+        if retries >= negative::MAX_PAIRS {
+            return Err(JournalError::Blocked(
+                "shield supports at most 16 total pairs".into(),
+            ));
+        }
         let guard = self.protocol_guard.as_ref().ok_or_else(|| {
             JournalError::Blocked("reinstall trusted shield runtime qualification".into())
         })?;
@@ -185,11 +200,19 @@ impl JournalBinding {
                     PairPhase::Preparing | PairPhase::Prepared => pair.phase = PairPhase::Retired,
                     PairPhase::Retired => {}
                     PairPhase::DispatchAuthorized { .. } => {
-                        return Err(JournalError::Blocked(
-                            "authorized shield pair requires finalized reconciliation".into(),
-                        ));
+                        // Checked below against the complete immutable graph;
+                        // the authorized phase/identity is never erased.
                     }
                 }
+            }
+            if current
+                .shield_pairs
+                .iter()
+                .any(|p| !replacement_proven(current, p))
+            {
+                return Err(JournalError::Blocked(
+                    "authorized shield pair requires finalized reconciliation".into(),
+                ));
             }
             if current.shield_pairs.len() as u64 >= u64::from(policy.maximum_pairs) {
                 return Err(JournalError::Blocked(
@@ -257,6 +280,13 @@ fn admission(
     }) {
         return Err(JournalError::Blocked("conflicting shield evidence".into()));
     }
+    if record.shield_pairs.iter().any(|p| {
+        matches!(p.phase, PairPhase::DispatchAuthorized { .. }) && !replacement_proven(record, p)
+    }) {
+        return Err(JournalError::Blocked(
+            "prior shield pair needs qualified reconciliation".into(),
+        ));
+    }
     Ok(())
 }
 impl ShieldPreparation {
@@ -315,7 +345,7 @@ impl ShieldPreparation {
                     || record
                         .shield_pairs
                         .iter()
-                        .any(|p| p.phase != PairPhase::Retired)
+                        .any(|p| !replacement_proven(record, p))
                 {
                     return Err(JournalError::Blocked(
                         "shield pair budget or pending pair prevents preparation".into(),
@@ -478,6 +508,7 @@ impl ShieldPreparation {
                 }
                 let hash = carrier.hash;
                 record.shield_pairs[index].phase = PairPhase::DispatchAuthorized { revision };
+                record.incompatibility = None;
                 Ok(hash)
             })
         })
