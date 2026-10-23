@@ -33,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         effects: serde_json::json!({"action":"remark","value":"synthetic"}),
         obligation: false,
         semantic_policy: None,
+        extensions: Default::default(),
     })?;
     fake.mutate_state(|state| {
         state.set_handler("author_submitAndWatchExtrinsic", |state, request| {

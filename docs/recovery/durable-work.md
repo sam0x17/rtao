@@ -65,6 +65,52 @@ path remains available without this journal, but a durable carrier/inner adapter
 with separately reconciled identities is still required before claiming shield
 restart support. No shielded dispatch silently ignores the journal option.
 
+## Paired-evidence storage foundation (schema 3)
+
+The native backend migrates supported schema1/2 raw envelopes before typed
+conversion. Signed bytes, prior certainty, checkpoints and unknown nested
+fields remain retained. New graph-field collisions, unsupported variants and
+lossy conversions refuse without replacing the original image. Migration uses
+the same temporary-file sync, atomic rename and directory barriers; an
+interruption may leave a complete old or complete new image, never permission
+to reset. Schema2 readers refuse the new envelope; do not downgrade a journal.
+Injected stores must supply an explicitly migrated, validated schema3 image.
+
+An operation with no signatures starts `Unselected`; its route selects once
+before signing. Legacy signed records migrate to `Ordinary`, without inventing
+shield pairs or per-attempt material generations that were never recorded.
+Every signed attempt has a stable ordinal and Ordinary/Inner/Carrier role.
+Pairs reference those same attempts and retain selected material generation,
+preparation/authorization phase and original pair limit. A stored authorization
+phase is evidence of uncertainty, not a transferable send capability. Revision
+CAS rejects removal or mutation of existing signed identities, intent, route,
+limits or authorizations. Contradictory terminal evidence is retained and blocks
+replacement instead of overwriting one claim with another.
+
+Recovery selects the exact unique finalized effect across retained attempts;
+it never interprets the last vector entry or a carrier as that effect. The
+historical scan allowance is shared across targets/pairs, not renewed for each.
+It bounds strict historical body lookups; historical receipt decoding for a
+found target is additional, and a cached finalized receipt has its own lookup.
+Missing/malformed bodies retain the corresponding target's cursor. This is a
+configured-RPC history trust boundary, not independent consensus or body-root
+verification.
+
+Shield pairs still cannot authorize dispatch or reseal. Even complete expiry
+scans remain `ShieldAdapterRequired` without the actual carrier/inner adapter
+and historical protocol qualification. Signed-pair recovery fixtures test this
+storage/evidence foundation, not a live shield submission pipeline. Ordinary
+default weights remain journaled and do not require enabling shield.
+
+Before durable shield author support can be enabled, the live path must refuse
+nonfinal waits before key preparation and gate effect consumers on exact
+finalized inner receipts. Native queued frames also need explicit ownership
+and write-retirement guarantees: cancellation of an outer RPC future or an
+asynchronous queue Cancel does not prove its captured socket write retired.
+Injected author transports without that capability must refuse. Those hooks,
+writer lifecycle tests, runtime-profile qualification and end-to-end scheduler/
+reveal composition remain work beyond this storage foundation.
+
 ## Weight scheduler use
 
 `NeuronRuntime` opens `weights-journal.json` under its persistent state directory
