@@ -195,11 +195,17 @@ These selected checks do not constitute full workspace or live-chain validation.
 Its correction checkpoint passed 18 journal, 26 weight, 39 submission and 15
 targeted inner-shield tests, plus strict selected all-target Clippy, native
 CLI/neuron all-feature/all-target compilation, the offline restart example,
-matrix consistency and formatting checks. A broader shield run completed 32
-checks before `shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard`
-hung; the same test timed out separately on the untouched initial checkpoint.
-That inherited qualification gap remains open. No full shield-suite pass is
-claimed, and the strict lookup does not enable journaled shield-pair recovery.
+matrix consistency and formatting checks. An earlier bounded shield run stopped
+after 32 checks while
+`shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard` was still
+running; a separate 25-second run on the initial checkpoint also timed out.
+Source investigation identified three sequential 60-second default finality
+waits in that fixture. Those observations did not establish a deadlock.
+The fixture now uses Tokio's paused clock and asserts the full unchanged
+default wait elapsed before each refusal. Its exact test and all 33 shield
+tests passed locally, with zero ignored tests. Production timers and checks
+are unchanged. Journaled shield-pair recovery still requires a dedicated SDK
+adapter; these test results do not complete that implementation requirement.
 Native-chain queue deletion, expired cryptographic windows, registration or
 permission changes and governance actions remain chain behavior. The SDK
 cannot pause emissions, restore a deleted native commitment, guarantee archive
