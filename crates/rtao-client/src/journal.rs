@@ -172,6 +172,9 @@ pub struct OperationRecord {
     pub intent: OperationIntent,
     /// Preparation/reveal material, persisted before signing or network dispatch.
     pub material: Value,
+    /// Monotonic material selection; existing images start at generation zero.
+    #[serde(default)]
+    pub material_generation: u64,
     /// Ordered physical attempts, retained after completion.
     pub attempts: Vec<SignedAttempt>,
     /// Last application semantic refusal, permitting update and resumption.
@@ -325,7 +328,7 @@ impl OperationJournal {
         if intent.id.is_empty() || intent.id.len() > 256 || intent.scope.is_empty() {
             return Err(JournalError::Identity);
         }
-        self.update(|image| {
+        let material_generation = self.update(|image| {
             if let Some(record) = image.operations.get(&intent.id) {
                 if record.intent != intent {
                     return Err(JournalError::Identity);
@@ -339,29 +342,39 @@ impl OperationJournal {
                     OperationRecord {
                         intent: intent.clone(),
                         material: Value::Null,
+                        material_generation: 0,
                         attempts: Vec::new(),
                         incompatibility: None,
                         extensions: BTreeMap::new(),
                     },
                 );
             }
-            Ok(())
+            Ok(image
+                .operations
+                .get(&intent.id)
+                .ok_or(JournalError::Identity)?
+                .material_generation)
         })?;
         Ok(JournalBinding {
             journal: Arc::clone(self),
             id: intent.id,
             guard: None,
+            material_generation,
         })
     }
     /// Bind a persisted ID without changing its effects or authorization.
     pub fn bind(self: &Arc<Self>, id: &str) -> Result<JournalBinding, JournalError> {
-        if !self.snapshot()?.operations.contains_key(id) {
-            return Err(JournalError::Identity);
-        }
+        let material_generation = self
+            .snapshot()?
+            .operations
+            .get(id)
+            .ok_or(JournalError::Identity)?
+            .material_generation;
         Ok(JournalBinding {
             journal: Arc::clone(self),
             id: id.to_owned(),
             guard: None,
+            material_generation,
         })
     }
 }
@@ -385,6 +398,7 @@ pub struct JournalBinding {
     journal: Arc<OperationJournal>,
     id: String,
     guard: Option<Arc<dyn SemanticGuard>>,
+    material_generation: u64,
 }
 impl fmt::Debug for JournalBinding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -411,28 +425,40 @@ impl JournalBinding {
             .remove(&self.id)
             .ok_or(JournalError::Identity)
     }
-    /// Persist required material before signing; only unsubmitted/expired work may change.
-    pub fn material(&self, material: Value) -> Result<(), JournalError> {
-        self.journal.update(|image| {
+    /// Persist and select required material before preparing/signing its attempt.
+    /// Use the returned binding. Old clones fail closed after any replacement,
+    /// including an ABA replacement with identical material bytes.
+    pub fn material(mut self, material: Value) -> Result<Self, JournalError> {
+        self.material_generation = self.journal.update(|image| {
             let record = image
                 .operations
                 .get_mut(&self.id)
                 .ok_or(JournalError::Identity)?;
             dispatchable(record, image.control)?;
+            if record.material_generation != self.material_generation {
+                return Err(JournalError::Conflict);
+            }
+            record.material_generation = record
+                .material_generation
+                .checked_add(1)
+                .ok_or_else(|| JournalError::Storage("material generation exhausted".into()))?;
             record.material = material;
-            Ok(())
-        })
+            Ok(record.material_generation)
+        })?;
+        Ok(self)
     }
     /// Check pause and previous attempt state before obtaining a private signer.
     pub fn can_dispatch(&self) -> Result<(), JournalError> {
         let image = self.journal.snapshot()?;
-        dispatchable(
-            image
-                .operations
-                .get(&self.id)
-                .ok_or(JournalError::Identity)?,
-            image.control,
-        )
+        let record = image
+            .operations
+            .get(&self.id)
+            .ok_or(JournalError::Identity)?;
+        dispatchable(record, image.control)?;
+        if record.material_generation != self.material_generation {
+            return Err(JournalError::Conflict);
+        }
+        Ok(())
     }
     pub(crate) async fn check(
         &self,
@@ -441,6 +467,9 @@ impl JournalBinding {
     ) -> Result<(), JournalError> {
         self.can_dispatch()?;
         let record = self.record()?;
+        if record.material_generation != self.material_generation {
+            return Err(JournalError::Conflict);
+        }
         if record.intent.genesis != unsigned.genesis_hash()
             || record.intent.account != unsigned.address()
         {
@@ -499,6 +528,9 @@ impl JournalBinding {
                     .get_mut(&binding.id)
                     .ok_or(JournalError::Identity)?;
                 dispatchable(record, image.control)?;
+                if record.material_generation != binding.material_generation {
+                    return Err(JournalError::Conflict);
+                }
                 let mut attempt = attempt;
                 attempt.material = record.material.clone();
                 record.attempts.push(attempt);
@@ -686,7 +718,7 @@ impl JournalBinding {
                     ));
                 }
             };
-            match chain.find_extrinsic(attempt.hash, block).await {
+            match chain.find_extrinsic_complete(attempt.hash, block).await {
                 Ok(Some(_)) => {
                     return match client.resolve_extrinsic(attempt.hash, block, true).await {
                         Ok(report) => {

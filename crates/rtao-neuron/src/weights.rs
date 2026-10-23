@@ -1015,6 +1015,13 @@ fn cadence_opportunity(
     state: &WeightPreflight,
     uid: Uid,
 ) -> WeightOpportunity {
+    if let Some(inclusion) = slot.last_attempt_block
+        && state.at.number < inclusion
+    {
+        return WeightOpportunity::AwaitBlock {
+            not_before_block: inclusion,
+        };
+    }
     let last = state
         .last_update(uid)
         .max(slot.last_attempt_block.unwrap_or(0));
@@ -1025,9 +1032,11 @@ fn cadence_opportunity(
     }
     match cadence {
         WeightCadence::OncePerEpoch { offset_blocks } => {
-            if slot.last_attempt_epoch == Some(state.schedule.subnet_epoch_index) {
+            if let Some(last_epoch) = slot.last_attempt_epoch
+                && state.schedule.subnet_epoch_index <= last_epoch
+            {
                 WeightOpportunity::AwaitEpoch {
-                    after_epoch: state.schedule.subnet_epoch_index,
+                    after_epoch: last_epoch,
                     offset_blocks,
                 }
             } else if state

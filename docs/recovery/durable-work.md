@@ -28,7 +28,12 @@ Create an `OperationIntent` with a stable logical ID, optional application
 correlation ID, genesis, signer, scope and intended effects. Reopening the same
 ID and effects is idempotent; changed identity or effects is refused. Bind it
 through `SubmitOptions::journal` or `ExecuteOptions::journal`. Store required
-commit/reveal material with `JournalBinding::material` before dispatch. The
+commit/reveal material before preparing its physical call with
+`let binding = binding.material(material)?`. Retain that returned binding for
+submission. Each material replacement advances a persisted generation and
+invalidates older clones, including A-to-B-to-A replacements. Signed publication
+checks the selected generation atomically before author I/O; concurrent
+preparation cannot attach newer recovery material to older signed bytes. The
 ordinary client still performs its nonce, metadata, signing and policy checks.
 
 The actual signed bytes, hash, nonce, spec/transaction versions, mortality era,
@@ -45,6 +50,9 @@ Only complete history excluding the exact bytes through mortal validity,
 after finality has passed expiry, permits replacement. An immortal attempt
 cannot acquire this expiry proof. Repeated calls continue or return the same
 historical result without sending anything.
+Negative recovery scans require a present extrinsics array and valid entries;
+missing/null/malformed lists retain the same cursor and unresolved attempt.
+The legacy public lookup's tolerant Python behavior is unchanged.
 
 A finalized dispatch failure also blocks automatic replacement: execution can
 have partial effects. The application must inspect the receipt and its own
@@ -79,6 +87,9 @@ A missed timer or changed tempo/rate limit preserves the pending logical input.
 Future opportunities are recomputed by the existing coherent preflight. The
 actual inclusion block and epoch are retained even when the read endpoint lags;
 missing inclusion state blocks handoff rather than reopening a cadence slot.
+Preflights older than the retained inclusion block cannot become ready, even
+with a zero chain rate limit. Once-per-epoch work requires a strictly newer
+observed epoch; a counter reset requires explicit reconciliation/migration.
 The logical operation's explicit version key remains fixed. A policy update cannot
 silently replace that key on pending work. Current surface/version refusals
 pause execution without deleting it.
@@ -128,7 +139,11 @@ an application-work lifetime requirement.
 The native backend uses bounded JSON images, mode 0600 on Unix, synced
 same-directory publication and generation CAS. It requires qualified local
 filesystem locks, atomic rename and directory fsync. It is not a multi-host
-lease service. Images are capped at 64 MiB; exhaustion refuses new writes and
+lease service. Opening also synchronizes the resolved directory ancestry before
+any journal publication, including existing directories left by an interrupted
+first open. An ancestry-sync failure refuses opening and preserves existing
+bytes; process-kill tests do not establish hardware power-loss qualification.
+Images are capped at 64 MiB; exhaustion refuses new writes and
 requires an explicit storage migration. It never deletes retained operation
 idempotency records to regain space. Signed bytes, inputs and ciphertext are
 sensitive: Debug omits them, but authorized storage exports still contain them.
@@ -172,11 +187,19 @@ receipt paths against the maintained FakeChain and actual local files. They
 are not live Finney upgrade, actual target-Mac, disk hardware power-loss or
 remote-filesystem evidence. Free ordinary hosted validation remains the
 repository's authoritative full validation; none is launched by this task.
-The local checkpoint passed 14 journal tests (including its child-process
+The initial `75a764d` checkpoint passed 14 journal tests (including its child-process
 helper), 26 weight tests, three runtime tests, the existing 39 submission and
 24 executor regressions, selected strict all-target Clippy, and native
 CLI/neuron all-feature/all-target compilation. The offline example also ran.
 These selected checks do not constitute full workspace or live-chain validation.
+Its correction checkpoint passed 18 journal, 26 weight, 39 submission and 15
+targeted inner-shield tests, plus strict selected all-target Clippy, native
+CLI/neuron all-feature/all-target compilation, the offline restart example,
+matrix consistency and formatting checks. A broader shield run completed 32
+checks before `shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard`
+hung; the same test timed out separately on the untouched initial checkpoint.
+That inherited qualification gap remains open. No full shield-suite pass is
+claimed, and the strict lookup does not enable journaled shield-pair recovery.
 Native-chain queue deletion, expired cryptographic windows, registration or
 permission changes and governance actions remain chain behavior. The SDK
 cannot pause emissions, restore a deleted native commitment, guarantee archive

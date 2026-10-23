@@ -472,7 +472,11 @@ impl Client {
                     let canonical = chain
                         .shield_finalized_hash(block, interval, max_polls, limits.full)
                         .await?;
-                    if chain.find_extrinsic(hash, canonical).await?.is_none() {
+                    if chain
+                        .find_extrinsic_complete(hash, canonical)
+                        .await?
+                        .is_none()
+                    {
                         carrier_report = self
                             .reconcile(hash, unsigned.submission_head(), unsigned.expiry())
                             .await?;
@@ -583,7 +587,7 @@ impl Client {
                 continue;
             };
             if chain
-                .find_extrinsic(inner_hash, block_hash)
+                .find_extrinsic_complete(inner_hash, block_hash)
                 .await?
                 .is_none()
             {
@@ -606,7 +610,7 @@ impl Client {
                     limit.check(self)?;
                     match tokio::time::timeout(
                         interval.max(Duration::from_millis(100)),
-                        chain.find_extrinsic(inner_hash, resolved_hash),
+                        chain.find_extrinsic_complete(inner_hash, resolved_hash),
                     )
                     .await
                     {
@@ -657,7 +661,11 @@ impl Client {
                     "finalized shield receipt block {height} is unavailable; canonical absence has not been established"
                 ))
             })?;
-            if chain.find_extrinsic(inner_hash, hash).await?.is_some() {
+            if chain
+                .find_extrinsic_complete(inner_hash, hash)
+                .await?
+                .is_some()
+            {
                 let mut inner = chain.resolve_extrinsic(inner_hash, hash, true).await?;
                 inner.shield = outer.shield;
                 return Ok(inner);

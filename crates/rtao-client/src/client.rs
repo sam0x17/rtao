@@ -1093,6 +1093,26 @@ impl Client {
         extrinsic_hash: H256,
         block_hash: H256,
     ) -> Result<Option<u32>, ClientError> {
+        self.lookup_extrinsic(extrinsic_hash, block_hash, false)
+            .await
+    }
+
+    /// Negative transmission evidence requires an explicitly complete body.
+    pub(crate) async fn find_extrinsic_complete(
+        &self,
+        extrinsic_hash: H256,
+        block_hash: H256,
+    ) -> Result<Option<u32>, ClientError> {
+        self.lookup_extrinsic(extrinsic_hash, block_hash, true)
+            .await
+    }
+
+    async fn lookup_extrinsic(
+        &self,
+        extrinsic_hash: H256,
+        block_hash: H256,
+        complete: bool,
+    ) -> Result<Option<u32>, ClientError> {
         let raw: Value = self
             .read_request(
                 rtao_rpc::ReadMethod::ChainGetBlock,
@@ -1101,6 +1121,16 @@ impl Client {
             .await?;
         if raw.is_null() {
             return Err(ClientError::BlockNotFound(block_hash));
+        }
+        if complete
+            && raw
+                .pointer("/block/extrinsics")
+                .and_then(Value::as_array)
+                .is_none()
+        {
+            return Err(ClientError::Protocol(
+                "finalized recovery requires a complete extrinsics array".into(),
+            ));
         }
         rtao_core::ops::extrinsic_lookup::find(&raw, extrinsic_hash.0)
             .map_err(rtao_core::CoreError::from)

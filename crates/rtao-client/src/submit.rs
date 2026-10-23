@@ -960,7 +960,7 @@ impl Client {
             let height = finalized.block().number;
             while next <= height && expiry.is_none_or(|expiry| next <= expiry) {
                 let block = self.at(BlockRef::Number(next)).await?.block().hash;
-                if self.find_extrinsic(hash, block).await?.is_some() {
+                if self.find_extrinsic_complete(hash, block).await?.is_some() {
                     return self.resolve_report(hash, block, true).await;
                 }
                 next = next.checked_add(1).ok_or_else(|| {
