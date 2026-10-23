@@ -1834,3 +1834,51 @@ async fn policy_rpc_during_reconnect_discovery_wait_is_terminal() -> Result {
 async fn policy_close_during_reconnect_discovery_wait_is_terminal() -> Result {
     policy_during_paced_reconnect(1, true).await
 }
+
+#[tokio::test]
+async fn owned_author_disconnect_retires_scope_without_replaying_on_native_reconnect() -> Result {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    struct Guard(Arc<AtomicBool>);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            self.0.store(false, Ordering::SeqCst);
+        }
+    }
+    let node = FakeNode::start().await?;
+    echo(&node);
+    node.queue_reply("author_submitExtrinsic", Reply::silent());
+    let session = connect(&node).await?;
+    let bytes = [31u8; 16];
+    let hash = rtao_rpc::H256::from_slice(&Blake2b::<U32>::digest(bytes));
+    let held = Arc::new(AtomicBool::new(true));
+    let (owner, retired) = rtao_rpc::AuthorOwnership::new(hash, Guard(held.clone()));
+    let submit = {
+        let session = session.clone();
+        tokio::spawn(async move { session.submit_owned(&bytes, owner).await })
+    };
+    wait_method_requests(&node, "author_submitExtrinsic", 1).await?;
+    assert!(held.load(Ordering::SeqCst));
+    node.drop_connection()?;
+    assert!(
+        matches!(timeout(Duration::from_secs(2), submit).await??, Err(SubmitError::FateUnknown { hash: actual }) if actual == hash)
+    );
+    timeout(Duration::from_secs(2), retired.wait()).await??;
+    assert!(
+        !held.load(Ordering::SeqCst),
+        "retirement ACK preceded dropping supplied owner"
+    );
+    let response = session.request::<String>(ReadMethod::SystemChain, json!(["healthy"]));
+    assert_eq!(timeout(Duration::from_secs(3), response).await??, "healthy");
+    assert_eq!(
+        node.requests()
+            .iter()
+            .filter(|r| r.method == "author_submitExtrinsic")
+            .count(),
+        1
+    );
+    session.close().await;
+    Ok(())
+}

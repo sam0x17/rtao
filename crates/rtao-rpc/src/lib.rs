@@ -19,7 +19,7 @@ pub use policy::{PolicyRefusal, RefusalKind};
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub use session::fuzz_json_rpc_frame;
-pub use session::{ArchivePool, Session, tls_config};
+pub use session::{ArchivePool, AuthorOwnership, AuthorRetirement, Session, tls_config};
 pub use subscription::Subscription;
 pub use types::*;
 
