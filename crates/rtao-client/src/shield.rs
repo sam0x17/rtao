@@ -161,6 +161,29 @@ struct ShieldReceiptWindow {
     period: ShieldPeriod,
 }
 
+/// Reconciled logical readiness before resolving a private shield signer.
+/// Neither variant is a reusable author-I/O permit.
+pub enum JournalShieldReadiness {
+    /// Fresh preparation is permitted while this account/operation owner lives.
+    Ready(crate::journal::JournalPreparation),
+    /// An exact historical finalized inner effect already resolves the operation.
+    Finalized(Box<ExtrinsicReport>),
+}
+
+fn recovered_call_result(
+    binding: &crate::journal::JournalBinding,
+    call: &CallBytes,
+    report: Box<ExtrinsicReport>,
+) -> Result<ExtrinsicReport, SubmitFailure> {
+    if let Err(cause) = binding.check_recovered_call(&report, call) {
+        return Err(SubmitFailure::RecoveryContext {
+            receipt: report,
+            cause,
+        });
+    }
+    Ok(*report)
+}
+
 impl Client {
     /// Price the maximum-size carrier with public identity and a fresh nonce.
     pub async fn estimate_shielded_carrier_fee(
@@ -195,10 +218,41 @@ impl Client {
         opts: &ShieldOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         if opts.submit.journal.is_some() {
-            return Err(ClientError::Journal(crate::journal::JournalError::Blocked(
-                "journaled paired shield recovery requires a dedicated adapter".into(),
-            ))
-            .into());
+            self.check_journal_shield_dispatch()?;
+            let limits = SubmissionLimits::new(&opts.submit)?;
+            match self
+                .prepare_journal_shield_with_limits(opts, limits)
+                .await?
+            {
+                JournalShieldReadiness::Finalized(report) => {
+                    let verify = || {
+                        let binding = opts
+                            .submit
+                            .journal
+                            .as_ref()
+                            .ok_or(crate::journal::JournalError::Identity)?;
+                        if binding.record()?.intent.account != signer.account() {
+                            return Err(crate::journal::JournalError::RecoveryContext(
+                                crate::journal::RecoveryContextError::AccountMismatch,
+                            ));
+                        }
+                        binding.check_recovered_call(&report, &call)
+                    };
+                    if let Err(cause) = verify() {
+                        return Err(SubmitFailure::RecoveryContext {
+                            receipt: report,
+                            cause,
+                        });
+                    }
+                    return Ok(*report);
+                }
+                JournalShieldReadiness::Ready(owner) => {
+                    return Box::pin(
+                        self.submit_journal_shield_owned(call, signer, opts, owner, limits),
+                    )
+                    .await;
+                }
+            }
         }
         let mut retries = opts.dropped_inner_retries;
         loop {
@@ -216,11 +270,208 @@ impl Client {
         }
     }
 
+    /// Reconcile a journaled shield operation before a caller unlocks its signer.
+    /// Holds actual account/operation ownership for preparation, or returns the
+    /// exact historical effect. The production dispatch release guard applies.
+    pub async fn prepare_journal_shield(
+        &self,
+        opts: &ShieldOptions,
+    ) -> Result<JournalShieldReadiness, SubmitFailure> {
+        Box::pin(
+            self.prepare_journal_shield_with_limits(opts, SubmissionLimits::new(&opts.submit)?),
+        )
+        .await
+    }
+    async fn prepare_journal_shield_with_limits(
+        &self,
+        opts: &ShieldOptions,
+        limits: SubmissionLimits,
+    ) -> Result<JournalShieldReadiness, SubmitFailure> {
+        self.check_journal_shield_dispatch()?;
+        if opts.wait != Wait::Finalization {
+            return Err(ClientError::Journal(crate::journal::JournalError::Blocked(
+                "durable shield requires finalized inner wait".into(),
+            ))
+            .into());
+        }
+        let binding = opts
+            .submit
+            .journal
+            .as_ref()
+            .ok_or_else(|| ClientError::Journal(crate::journal::JournalError::Identity))?;
+        let owner = binding.reserve().map_err(ClientError::Journal)?;
+        let scoped = owner.binding();
+        let record = scoped.record().map_err(ClientError::Journal)?;
+        if record.intent.genesis != self.genesis() {
+            return Err(ClientError::Journal(crate::journal::JournalError::Identity).into());
+        }
+        limits.full.run(self, self.native_author_session()).await?;
+        if let Some(pair) = record.shield_pairs.iter().rev().find(|p| {
+            matches!(
+                p.phase,
+                crate::journal::PairPhase::DispatchAuthorized { .. }
+            )
+        }) {
+            let inner = record
+                .attempt(pair.inner)
+                .map_err(ClientError::Journal)?
+                .hash;
+            let carrier = record
+                .attempt(
+                    pair.carrier
+                        .ok_or(ClientError::Journal(crate::journal::JournalError::Identity))?,
+                )
+                .map_err(ClientError::Journal)?
+                .hash;
+            let pending = |reason| SubmitFailure::PendingShield {
+                operation: binding.id().to_owned(),
+                pair: pair.id,
+                carrier_hash: carrier,
+                inner_hash: inner,
+                reason,
+            };
+            match limits
+                .full
+                .run(
+                    self,
+                    Box::pin(async {
+                        scoped
+                            .recover(self, 128)
+                            .await
+                            .map_err(ClientError::Journal)
+                    }),
+                )
+                .await
+            {
+                Ok(crate::journal::RecoveryStatus::Finalized(report)) => {
+                    return Ok(JournalShieldReadiness::Finalized(report));
+                }
+                Ok(crate::journal::RecoveryStatus::Rebuildable) => {}
+                Ok(crate::journal::RecoveryStatus::Unresolved(reason)) => {
+                    return Err(pending(reason));
+                }
+                Err(_) => {
+                    return Err(pending(
+                        crate::journal::RecoveryReason::FinalizedUnavailable,
+                    ));
+                }
+            }
+        }
+        limits.admission.check(self)?;
+        let policy = scoped
+            .shield_policy(
+                opts.period.get(),
+                opts.dropped_inner_retries,
+                opts.max_fee.map(|f| f.rao()),
+            )
+            .map_err(ClientError::Journal)?;
+        let preparation = scoped.claim_shield(policy).map_err(ClientError::Journal)?;
+        limits
+            .admission
+            .run(self, async {
+                scoped
+                    .qualify_shield_head(self)
+                    .await
+                    .map_err(ClientError::Journal)
+            })
+            .await?;
+        limits.admission.run(self, self.ensure_signing()).await?;
+        drop(preparation);
+        Ok(JournalShieldReadiness::Ready(owner))
+    }
+    async fn submit_journal_shield_owned(
+        &self,
+        call: CallBytes,
+        signer: &dyn Signer,
+        opts: &ShieldOptions,
+        owner: crate::journal::JournalPreparation,
+        limits: SubmissionLimits,
+    ) -> Result<ExtrinsicReport, SubmitFailure> {
+        let mut scoped = opts.clone();
+        scoped.submit.journal = Some(owner.binding());
+        let mut last = None;
+        // This invocation cannot renew the persisted pair limit or either
+        // original deadline, even when a typed negative result permits reseal.
+        for _ in 0..=opts.dropped_inner_retries {
+            // Bound the parent future and debug-build polling stack across this
+            // large signing/RPC state machine. This does not spawn or detach it.
+            let result =
+                Box::pin(self.submit_shielded_attempt(call.clone(), signer, &scoped, limits)).await;
+            let Err(error @ SubmitFailure::PendingShield { .. }) = result else {
+                return result;
+            };
+            let SubmitFailure::PendingShield {
+                operation,
+                pair,
+                carrier_hash,
+                inner_hash,
+                ..
+            } = &error
+            else {
+                return Err(error);
+            };
+            let pending = |reason| SubmitFailure::PendingShield {
+                operation: operation.clone(),
+                pair: *pair,
+                carrier_hash: *carrier_hash,
+                inner_hash: *inner_hash,
+                reason,
+            };
+            let binding = scoped
+                .submit
+                .journal
+                .as_ref()
+                .ok_or(ClientError::Journal(crate::journal::JournalError::Identity))?;
+            match limits
+                .full
+                .run(
+                    self,
+                    Box::pin(async {
+                        binding
+                            .recover(self, 128)
+                            .await
+                            .map_err(ClientError::Journal)
+                    }),
+                )
+                .await
+            {
+                Ok(crate::journal::RecoveryStatus::Finalized(report)) => {
+                    return recovered_call_result(binding, &call, report);
+                }
+                Ok(crate::journal::RecoveryStatus::Rebuildable) => last = Some(error),
+                Ok(crate::journal::RecoveryStatus::Unresolved(reason)) => {
+                    return Err(pending(reason));
+                }
+                Err(_) => {
+                    return Err(pending(
+                        crate::journal::RecoveryReason::FinalizedUnavailable,
+                    ));
+                }
+            }
+        }
+        Err(last.unwrap_or_else(|| {
+            ClientError::Journal(crate::journal::JournalError::Blocked(
+                "shield invocation exhausted its original attempt budget".into(),
+            ))
+            .into()
+        }))
+    }
+
     async fn submit_shielded_once(
         &self,
         call: CallBytes,
         signer: &dyn Signer,
         opts: &ShieldOptions,
+    ) -> Result<ExtrinsicReport, SubmitFailure> {
+        self.submit_shielded_attempt(call, signer, opts, SubmissionLimits::new(&opts.submit)?)
+            .await
+    }
+    async fn submit_shielded_attempt(
+        &self,
+        call: CallBytes,
+        signer: &dyn Signer,
+        opts: &ShieldOptions,
+        limits: SubmissionLimits,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         let mut submit = opts.submit.clone();
         submit.mortality = Mortality::Mortal(Period::new(opts.period.get()));
@@ -231,7 +482,6 @@ impl Client {
         } else {
             Wait::Inclusion
         };
-        let limits = SubmissionLimits::new(&submit)?;
         let attempted_hash = SubmissionAttempt::default();
         let authorization = std::sync::OnceLock::<(u64, H256, H256)>::new();
         let operation = async {
@@ -295,7 +545,9 @@ impl Client {
                         })
                         .await?
                     {
-                        crate::journal::RecoveryStatus::Finalized(report) => return Ok(*report),
+                        crate::journal::RecoveryStatus::Finalized(report) => {
+                            return recovered_call_result(binding, &call, report);
+                        }
                         crate::journal::RecoveryStatus::Rebuildable => {}
                         crate::journal::RecoveryStatus::Unresolved(reason) => {
                             return Err(SubmitFailure::PendingShield {

@@ -17,7 +17,7 @@ pub use shield::ShieldProtocolGuard;
 pub(crate) use shield::{QualifiedShieldRuntime, ShieldPreparation};
 #[cfg(test)]
 mod tests;
-pub use native::NativeJournalStore;
+pub use native::{MAX_JOURNAL_BYTES, NativeJournalStore};
 
 use crate::{Client, ExtrinsicReport, UnsignedExtrinsic};
 use rtao_primitives::{AccountId, H256};
@@ -31,6 +31,43 @@ use std::{
 
 /// Current storage envelope version. Older supported versions migrate atomically.
 pub const JOURNAL_SCHEMA: u32 = 3;
+/// Why a historical receipt cannot fulfill the current recovery request.
+/// No call bytes, signing material or application values are included.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RecoveryContextError {
+    /// The actual signed call hash was not retained in a supported form.
+    MissingCallHash,
+    /// The supplied raw call differs from the retained signed effect.
+    CallMismatch,
+    /// An explicit reviewed-call constraint differs from the historical effect.
+    ExpectedCallMismatch,
+    /// The requested proxy account or proxy permission constraint differs.
+    OriginMismatch,
+    /// The original executor adapter context is unavailable.
+    MissingExecutorContext,
+    /// Intent, arguments, adapter kind or saved result context differ.
+    ExecutorMismatch,
+    /// The supplied public signer identity differs from the operation account.
+    AccountMismatch,
+}
+impl fmt::Display for RecoveryContextError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::MissingCallHash => "retained signed call identity is unavailable",
+            Self::CallMismatch => "requested raw call differs from the historical effect",
+            Self::ExpectedCallMismatch => {
+                "reviewed call constraint differs from the historical effect"
+            }
+            Self::OriginMismatch => "requested dispatch origin differs from the historical effect",
+            Self::MissingExecutorContext => "retained executor context is unavailable",
+            Self::ExecutorMismatch => {
+                "requested executor context differs from the historical effect"
+            }
+            Self::AccountMismatch => "requested signer differs from the historical operation",
+        })
+    }
+}
 /// A storage, identity, concurrency or recovery refusal. Payloads are never included.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum JournalError {
@@ -50,6 +87,8 @@ pub enum JournalError {
         /// Retained physical identity, without exposing signed bytes/material.
         attempt: u64,
     },
+    /// A known historical effect cannot fulfill this different or unsupported request.
+    RecoveryContext(RecoveryContextError),
     /// The envelope is not a supported storage generation.
     Schema(u32),
 }
@@ -65,6 +104,7 @@ impl fmt::Display for JournalError {
                 f,
                 "signed attempt {attempt} already retained; await a fresh shield signing context"
             ),
+            Self::RecoveryContext(reason) => reason.fmt(f),
             Self::Schema(version) => write!(f, "unsupported journal schema {version}"),
         }
     }
@@ -443,6 +483,7 @@ impl OperationJournal {
             guard: None,
             protocol_guard: None,
             preparation_owner: None,
+            submission_context: None,
             material_generation,
         })
     }
@@ -460,6 +501,7 @@ impl OperationJournal {
             guard: None,
             protocol_guard: None,
             preparation_owner: None,
+            submission_context: None,
             material_generation,
         })
     }
@@ -486,6 +528,7 @@ pub struct JournalBinding {
     guard: Option<Arc<dyn SemanticGuard>>,
     protocol_guard: Option<Arc<dyn ShieldProtocolGuard>>,
     preparation_owner: Option<std::sync::Weak<ownership::SubmissionClaims>>,
+    submission_context: Option<Value>,
     material_generation: u64,
 }
 impl fmt::Debug for JournalBinding {
@@ -507,6 +550,56 @@ impl JournalBinding {
     pub fn with_shield_protocol(mut self, guard: Arc<dyn ShieldProtocolGuard>) -> Self {
         self.protocol_guard = Some(guard);
         self
+    }
+    /// Associate public application/adapter evidence with the next signed
+    /// attempt. It is published atomically with exact signed bytes, not logged,
+    /// and never interpreted as permission. Never supply signing secrets here.
+    pub fn with_submission_context(mut self, context: Value) -> Self {
+        self.submission_context = Some(context);
+        self
+    }
+    pub(super) fn attach_submission_context(&self, attempt: &mut SignedAttempt) {
+        if let Some(context) = &self.submission_context {
+            attempt
+                .extensions
+                .insert("rtao_submission_context_v1".into(), context.clone());
+        }
+    }
+    /// Bind a supplied raw payload to a known historical finalized effect.
+    /// Uses the hash captured from the actual encoded call before signing, not
+    /// caller-supplied adapter JSON. Performs no rebuild, signer or author I/O.
+    /// Runtime stamps do not change the literal payload identity; explicit
+    /// reviewed-stamp constraints are enforced by the higher-level executor.
+    pub fn check_recovered_call(
+        &self,
+        report: &ExtrinsicReport,
+        requested: &crate::CallBytes,
+    ) -> Result<(), JournalError> {
+        let record = self.record()?;
+        let attempt = record
+            .finalized_effect()?
+            .filter(|a| a.hash == report.hash)
+            .ok_or(JournalError::Identity)?;
+        if report.inclusion != crate::Inclusion::Finalized
+            || !matches!(attempt.outcome, AttemptOutcome::Finalized {block,number,success,..}
+            if report.block_hash==Some(block) && report.block_number==Some(number) && report.success==success)
+        {
+            return Err(JournalError::Identity);
+        }
+        let original: [u8; 32] = attempt
+            .extensions
+            .get("call_hash")
+            .cloned()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .ok_or(JournalError::RecoveryContext(
+                RecoveryContextError::MissingCallHash,
+            ))?;
+        if original != requested.hash() {
+            return Err(JournalError::RecoveryContext(
+                RecoveryContextError::CallMismatch,
+            ));
+        }
+        Ok(())
     }
     /// Logical operation identity.
     pub fn id(&self) -> &str {
@@ -608,13 +701,14 @@ impl JournalBinding {
     ) -> Result<(), JournalError> {
         let claims = self.claim_submission()?;
         let binding = self.clone();
-        let attempt = signed_attempt(
+        let mut attempt = signed_attempt(
             unsigned,
             bytes,
             hash,
             AttemptRole::Ordinary,
             self.material_generation,
         );
+        self.attach_submission_context(&mut attempt);
         crate::offload(move || {
             let _claims = claims;
             binding.journal.update(|image| {
@@ -710,6 +804,10 @@ fn signed_attempt(
         outcome: AttemptOutcome::Unresolved,
         evidence_conflicts: Vec::new(),
         extensions: BTreeMap::from([
+            (
+                "call_hash".into(),
+                serde_json::json!(unsigned.call().hash()),
+            ),
             (
                 "signing_payload_hash".into(),
                 serde_json::json!(shield::digest(unsigned.payload())),

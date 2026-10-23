@@ -34,6 +34,50 @@ pub(crate) struct QualifiedShieldRuntime {
 }
 
 impl JournalBinding {
+    /// Inspect journal readiness for shield preparation on the selected route.
+    /// Checks the retained protocol, period, original pair budget, material,
+    /// pause and qualified reconciliation evidence without changing the graph.
+    /// Runtime/semantic qualification, ownership and actual submission policy
+    /// are still checked by preparation; this result grants no author authority.
+    pub fn can_prepare_shield(&self, period: crate::ShieldPeriod) -> Result<(), JournalError> {
+        let image = self.journal.snapshot()?;
+        let record = image
+            .operations
+            .get(&self.id)
+            .ok_or(JournalError::Identity)?;
+        if record.material_generation != self.material_generation {
+            return Err(JournalError::Conflict);
+        }
+        let guard = self.protocol_guard.as_ref().ok_or_else(|| {
+            JournalError::Blocked("reinstall trusted shield runtime qualification".into())
+        })?;
+        if guard.profile().is_empty() || guard.profile().len() > 256 {
+            return Err(JournalError::Identity);
+        }
+        match &record.mode {
+            ExecutionMode::Unselected => {
+                if image.control.submissions_paused {
+                    return Err(JournalError::Blocked(
+                        "new shield authorization paused".into(),
+                    ));
+                }
+                dispatchable(record, &image.control)
+            }
+            ExecutionMode::Shielded(policy) => {
+                if policy.protocol != guard.profile() || policy.period != period.get() {
+                    return Err(JournalError::Identity);
+                }
+                admission(record, self, policy, &image.control)?;
+                if record.shield_pairs.len() as u64 >= u64::from(policy.maximum_pairs) {
+                    return Err(JournalError::Blocked(
+                        "original shield pair budget exhausted".into(),
+                    ));
+                }
+                Ok(())
+            }
+            ExecutionMode::Ordinary => Err(JournalError::Identity),
+        }
+    }
     pub(crate) async fn qualify_shield_runtime(
         &self,
         client: &Client,
@@ -328,6 +372,7 @@ impl ShieldPreparation {
             AttemptRole::Ordinary,
             binding.material_generation,
         );
+        binding.attach_submission_context(&mut attempt);
         crate::offload(move || {
             let _claims = claims;
             binding.journal.update(|image| {
@@ -394,6 +439,7 @@ impl ShieldPreparation {
             AttemptRole::Carrier { pair },
             binding.material_generation,
         );
+        binding.attach_submission_context(&mut attempt);
         crate::offload(move || {
             let _claims = claims;
             binding.journal.update(|image| {

@@ -65,10 +65,12 @@ postconditions before authorizing different logical work. The SDK cannot infer
 business-level idempotency from a transaction hash or nonce alone. Callers must
 not bypass the journal with a second unjournaled submission path.
 
-General journaled MEV shield pairs currently fail closed. The existing shield
-path remains available without this journal, but a durable carrier/inner adapter
-with separately reconciled identities is still required before claiming shield
-restart support. No shielded dispatch silently ignores the journal option.
+General journaled MEV shield pairs still fail closed on production chains.
+The shared durable carrier/inner implementation is exercised through public
+Client and Executor APIs on a fixed synthetic genesis under `test-util`.
+Production enablement needs independent review and native protocol qualification;
+the guard cannot be disabled by an ordinary runtime flag. No shielded dispatch
+silently ignores the journal option.
 
 Journaled client/executor submissions reserve the signing account and logical
 operation before preparing or resolving private keys. The account scope spans
@@ -236,6 +238,62 @@ Injected author transports without that capability must refuse. Those hooks,
 writer lifecycle tests, runtime-profile qualification and end-to-end scheduler/
 reveal composition remain work beyond this storage foundation.
 
+## Public composition under the release guard
+
+`Client::prepare_journal_shield` reconciles before private-key resolution. It
+returns either an exact historical `Finalized` inner receipt or owned `Ready`
+preparation. Hold the preparation while passing its scoped binding to the
+existing `submit_shielded` path. This is neither a transferable author permit
+nor proof of chain consensus. The public release guard remains on; the
+`test-util` latch only accepts the fixed synthetic genesis with explicit native
+Session custody and is not persisted across restart. Public-network genesis
+refuses even in a test build.
+
+Typed, dynamic and raw Executor routes share this readiness and submission
+engine. A pending pair returns `TxError::PendingOperation` before typed output
+decoding, result extras, registration completion or owner-rate replanning.
+Carrier inclusion is never decoded as the intended effect. Exact finalized
+inner failures are retained as executed failures and cannot trigger a replacement.
+The original whole-operation and admission deadlines cover all reseals; the
+persisted pair limit survives further calls and process restart.
+
+Executor signing snapshots its reviewed call hash, runtime stamps, intent/args
+and result extras in the version-2 value of `rtao_submission_context_v1` beside
+each signed attempt. This value also records explicit `proxy_for` and
+`force_proxy_type` options, including their absent values.
+The SDK captures the actual signed call hash separately. Cached recovery checks
+the unique effect, requested raw payload (for raw/direct Client routes),
+explicit expected-call constraints, and matching historical intent/arguments
+and proxy options before restoring extras; it does not rebuild today's intent or unlock a signer. A missing or
+incompatible context retains the historical receipt in a structured
+`PostSubmission` error for adapter review. This extension fits schema3 and
+requires no new destructive migration; older evidence is never fabricated. Version-1 executor values lack explicit
+origin identity and refuse with `MissingExecutorContext`; missing signed-call
+hashes refuse with `MissingCallHash`. A mismatch preserves the original receipt
+in `SubmitFailure::RecoveryContext` or `TxError::PostSubmission` with a typed
+`RecoveryContextError`. None of these checks rebuilds a historical call with
+today's metadata or authorizes a resend.
+`JournalBinding::with_submission_context` is public data, not authorization or
+a place for signer secrets. Existing signed evidence remains immutable.
+
+An embedded `WeightScheduler::with_shielded_submission(period)` explicitly
+selects the same public Executor shield route. Ordinary default weights remain
+ordinary. `with_shield_protocol` reinstalls the trusted code guard after restart;
+neither method bypasses the client release guard. `next_action` checks
+read-only preparation readiness on the selected route, including the retained
+shield protocol, period, original pair budget and qualified absence evidence.
+A `Ready` opportunity neither claims ownership nor changes/renews policy. Live
+runtime and application semantic checks still run during preparation; ordinary
+`can_dispatch` continues refusing shielded records. The composition fixture uses
+the scheduler's actual prepared-weight type/options, public Executor/Client,
+real signatures/TCP/native journal, then `recover_finalized` and the existing
+reveal watcher. A second fixture enters `on_finalized` with an actual native
+fixture wallet, head tracker and metagraph worker; it preserves queued direct
+rows through pause/restart and changed tempo/rate limits without replacing them
+with new callback input. Timelock payload, native queue and execution events in
+the reveal fixture are controlled synthetic evidence; neither fixture exercises
+live decryption or an external validator/scoring campaign.
+
 ## Weight scheduler use
 
 `NeuronRuntime` opens `weights-journal.json` under its persistent state directory
@@ -327,7 +385,7 @@ larger histories or nonblocking storage should supply a separately qualified
 adapter. Recovery trusts the configured RPC's finalized chain view, as the
 existing client does; this journal is not an independent consensus verifier.
 
-The envelope supports atomic v1-to-v2 migration, preserving unresolved attempts
+The envelope supports atomic v1/v2-to-v3 migration, preserving unresolved attempts
 and unknown extension fields. Failed publication leaves the original image
 intact; incomplete temporary files are not adopted as a new generation.
 Unknown schemas and unsupported checkpoint fields refuse recovery without
@@ -348,6 +406,25 @@ It injects an acknowledgment loss after FakeChain inclusion, drops/reopens the
 native storage handles and recovers twice with one submission. This simulates
 caller restart state loss while preserving the external synthetic chain; it
 is not an actual node, process-kill or power-loss test.
+
+The paired executable exercises an actual killed submission process and an
+independent recovery process against one retained synthetic socket peer:
+
+```sh
+umask 022
+export RTAO_TEMP_ROOT="$PWD/.local/paired-recovery"
+export RTAO_TEST_TMPDIR="$RTAO_TEMP_ROOT/tests"
+cargo run --offline --locked -p rtao-testkit --features journal-shield --example durable_shield_restart
+```
+
+The parent kills its child only after observing durable pair authorization and
+an actual author request/inclusion, while the acknowledgment is withheld.
+A fresh recovery process opens the original file, restores the finalized inner
+twice while paused without opening a signer, and verifies there was only one
+author request. The executable creates disposable fixed-seed keys and accepts
+only its owned loopback peer; it never contacts a live chain. Retain its journal
+for inspection under the selected scratch root. Synthetic inclusion/body/events
+remain distinct from real native runtime execution and hardware durability.
 
 One separate fixture kills a child writer after signed-attempt publication,
 then confirms OS-lock release and retained unresolved bytes/material. It does
@@ -375,8 +452,8 @@ waits in that fixture. Those observations did not establish a deadlock.
 The fixture now uses Tokio's paused clock and asserts the full unchanged
 default wait elapsed before each refusal. Its exact test and all 33 shield
 tests passed locally, with zero ignored tests. Production timers and checks
-are unchanged. Journaled shield-pair recovery still requires a dedicated SDK
-adapter; these test results do not complete that implementation requirement.
+are unchanged. Those earlier checks did not include the later guarded public shield
+composition. Production shield release and native qualification remain open.
 Native-chain queue deletion, expired cryptographic windows, registration or
 permission changes and governance actions remain chain behavior. The SDK
 cannot pause emissions, restore a deleted native commitment, guarantee archive

@@ -762,26 +762,31 @@ async fn compatible_upgrade_rebuilds_unsigned_work_but_preserves_submitted_attem
     let call = rtao_runtime::calls::system::remark(vec![3])
         .compose(&runtime)
         .unwrap();
+    let observed = Arc::new(tokio::sync::Notify::new());
+    let signal = observed.clone();
     fake.mutate_state(|state| {
-        state.set_handler("author_submitAndWatchExtrinsic", |state, request| {
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
             state.dispatch(request);
+            signal.notify_one();
             Reply::silent()
         })
     });
-    assert!(
-        client
-            .submit(
-                call,
-                &signer,
-                &SubmitOptions {
-                    journal: Some(b.clone()),
-                    deadline: Some(Duration::from_millis(100)),
-                    ..Default::default()
-                }
-            )
-            .await
-            .is_err()
-    );
+    {
+        // A wall timer could expire after journal publication but before the
+        // fake author actually received the request. Cancel only after actual
+        // inclusion, so this upgrade fixture establishes the claimed boundary.
+        let options = SubmitOptions {
+            journal: Some(b.clone()),
+            ..Default::default()
+        };
+        let submission = client.submit(call, &signer, &options);
+        tokio::pin!(submission);
+        tokio::select! {
+            early=&mut submission=>panic!("submission returned before lost acknowledgment: {early:?}"),
+            _=observed.notified()=>{}
+        }
+    }
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
     let hash = b.record().unwrap().attempts[0].hash;
     assert_eq!(b.record().unwrap().attempts[0].spec_version, 482);
     fake.mutate_state(|state| {
@@ -1923,5 +1928,161 @@ async fn scoped_binding_cannot_reacquire_an_owner_after_its_original_reservation
         )))
     ));
     assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+
+#[tokio::test]
+async fn sr_l1_exact_opposite_receipt_persists_conflict_across_native_reopen() {
+    for initially_failed in [false, true] {
+        let f = Fixture::new();
+        let j = f.journal();
+        let (client, fake, signer) = chain().await;
+        let b = begin(&j, &client, &signer);
+        paired_record(&client, &signer, &b, 1).await;
+        let attempts = b.record().unwrap().attempts;
+        pair_history(&fake, attempts.clone(), true, initially_failed);
+        assert!(matches!(
+            b.recover(&client, 32).await.unwrap(),
+            RecoveryStatus::Finalized(_)
+        ));
+        let before = b.record().unwrap();
+        pair_history(&fake, attempts.clone(), true, !initially_failed);
+        assert!(matches!(
+            b.recover(&client, 32).await.unwrap(),
+            RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)
+        ));
+        drop(b);
+        drop(j);
+        let reopened = f.journal();
+        let b = reopened.bind("logical-op").unwrap();
+        let current = b.record().unwrap();
+        assert_eq!(current.attempts[0].outcome, before.attempts[0].outcome);
+        assert_eq!(
+            current.attempts[0].evidence_conflicts.len(),
+            1,
+            "recognized opposite finalized receipt was lost on reopen"
+        );
+        assert_eq!(current.attempts[0].bytes, before.attempts[0].bytes);
+        assert_eq!(current.attempts[0].material, before.attempts[0].material);
+        assert_eq!(
+            current.attempts[0].extensions,
+            before.attempts[0].extensions
+        );
+        assert_eq!(
+            serde_json::to_value(&current.shield_pairs).unwrap(),
+            serde_json::to_value(&before.shield_pairs).unwrap()
+        );
+        pair_history(&fake, attempts, true, initially_failed);
+        for _ in 0..2 {
+            assert!(matches!(
+                b.recover(&client, 32).await.unwrap(),
+                RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)
+            ));
+        }
+        assert!(b.can_dispatch().is_err());
+        assert!(fake.state().lock().unwrap().submissions.is_empty());
+        client.close().await;
+    }
+}
+
+#[tokio::test]
+async fn sr_l1_suspended_matching_receipt_cannot_escape_a_concurrently_persisted_conflict() {
+    use serde_json::value::RawValue;
+    use subxt_rpcs::client::{RawRpcFuture, RawRpcSubscription, RpcClientT};
+    struct SuspendedReceipt {
+        fake: FakeChain,
+        once: std::sync::atomic::AtomicBool,
+        entered: Arc<tokio::sync::Notify>,
+        release: Arc<tokio::sync::Notify>,
+    }
+    impl RpcClientT for SuspendedReceipt {
+        fn request_raw<'a>(
+            &'a self,
+            method: &'a str,
+            params: Option<Box<RawValue>>,
+        ) -> RawRpcFuture<'a, Box<RawValue>> {
+            Box::pin(async move {
+                let reply = self.fake.request_raw(method, params).await?;
+                if method == "chain_getBlock" && self.once.swap(false, Ordering::SeqCst) {
+                    self.entered.notify_one();
+                    self.release.notified().await;
+                }
+                Ok(reply)
+            })
+        }
+        fn subscribe_raw<'a>(
+            &'a self,
+            method: &'a str,
+            params: Option<Box<RawValue>>,
+            unsubscribe: &'a str,
+        ) -> RawRpcFuture<'a, RawRpcSubscription> {
+            self.fake.subscribe_raw(method, params, unsubscribe)
+        }
+    }
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    paired_record(&client, &signer, &b, 1).await;
+    let attempts = b.record().unwrap().attempts;
+    pair_history(&fake, attempts.clone(), true, false);
+    let RecoveryStatus::Finalized(initial) = b.recover(&client, 32).await.unwrap() else {
+        panic!("initial inner receipt");
+    };
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let stalled = Client::from_rpc(
+        subxt_rpcs::RpcClient::new(SuspendedReceipt {
+            fake: fake.clone(),
+            once: std::sync::atomic::AtomicBool::new(true),
+            entered: entered.clone(),
+            release: release.clone(),
+        }),
+        config,
+    )
+    .await
+    .unwrap();
+    let observe = async {
+        entered.notified().await;
+        pair_history(&fake, attempts.clone(), true, true);
+        let opposite = client
+            .resolve_extrinsic(initial.hash, initial.block_hash.unwrap(), true)
+            .await
+            .unwrap();
+        assert!(!opposite.success);
+        b.observed(&opposite).await.unwrap();
+        assert_eq!(b.record().unwrap().attempts[0].evidence_conflicts.len(), 1);
+        pair_history(&fake, attempts, true, false);
+        // Materialize the matching event view before releasing the already
+        // captured body; replacing the handler alone would leave failed events.
+        let matching = client
+            .resolve_extrinsic(initial.hash, initial.block_hash.unwrap(), true)
+            .await
+            .unwrap();
+        assert!(matching.success);
+        release.notify_one();
+    };
+    let (result, ()) = tokio::join!(b.recover(&stalled, 32), observe);
+    assert!(
+        matches!(
+            result.unwrap(),
+            RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)
+        ),
+        "matching receipt escaped a persisted concurrent conflict"
+    );
+    drop(b);
+    drop(j);
+    let reopened = f.journal();
+    let b = reopened.bind("logical-op").unwrap();
+    assert_eq!(b.record().unwrap().attempts[0].evidence_conflicts.len(), 1);
+    assert!(matches!(
+        b.recover(&client, 32).await.unwrap(),
+        RecoveryStatus::Unresolved(RecoveryReason::EvidenceConflict)
+    ));
+    stalled.close().await;
     client.close().await;
 }

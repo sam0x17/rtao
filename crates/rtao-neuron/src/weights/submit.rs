@@ -19,12 +19,12 @@ pub(super) struct WeightSubmission {
     pub block_number: u64,
 }
 
-struct PreparedWeights {
-    netuid: NetUid,
-    mechanism: MechId,
-    row: (Vec<Uid>, Vec<u16>),
-    version_key: u64,
-    commit: Option<PreparedWeightCommit>,
+pub(super) struct PreparedWeights {
+    pub(super) netuid: NetUid,
+    pub(super) mechanism: MechId,
+    pub(super) row: (Vec<Uid>, Vec<u16>),
+    pub(super) version_key: u64,
+    pub(super) commit: Option<PreparedWeightCommit>,
 }
 impl IntentInterface for PreparedWeights {
     const SPEC: &'static rtao_catalog::IntentSpec =
@@ -87,6 +87,28 @@ enum SubmissionError {
     Rejected(String),
 }
 
+#[derive(Default)]
+pub(super) struct SubmissionOptions {
+    pub journal: Option<rtao_client::journal::JournalBinding>,
+    pub shield_period: Option<rtao_client::ShieldPeriod>,
+}
+impl SubmissionOptions {
+    pub(super) fn execution(self, block_time: f64) -> ExecuteOptions {
+        ExecuteOptions {
+            journal: self.journal,
+            shielded: self.shield_period.is_some(),
+            period: Some(self.shield_period.map_or(128, |p| p.get() as u32)),
+            wait_for_inclusion: true,
+            wait_for_finalization: true,
+            retries: 0,
+            reconcile: true,
+            submit_deadline: Some(Duration::from_secs(30)),
+            deadline: Some(Duration::from_secs_f64(128.0 * block_time + 30.0)),
+            ..Default::default()
+        }
+    }
+}
+
 pub(super) async fn execute(
     cx: &NeuronCx,
     mechanism: MechId,
@@ -94,7 +116,7 @@ pub(super) async fn execute(
     version_key: u64,
     commit: Option<&PreparedWeightCommit>,
     block_time: f64,
-    journal: Option<rtao_client::journal::JournalBinding>,
+    options: SubmissionOptions,
 ) -> anyhow::Result<WeightSubmission> {
     let intent = PreparedWeights {
         netuid: cx.netuid,
@@ -103,17 +125,7 @@ pub(super) async fn execute(
         version_key,
         commit: commit.cloned(),
     };
-    let options = ExecuteOptions {
-        journal,
-        period: Some(128),
-        wait_for_inclusion: true,
-        wait_for_finalization: true,
-        retries: 0,
-        reconcile: true,
-        submit_deadline: Some(Duration::from_secs(30)),
-        deadline: Some(Duration::from_secs_f64(128.0 * block_time + 30.0)),
-        ..Default::default()
-    };
+    let options = options.execution(block_time);
     let result = cx.executor.execute(&intent, &cx.hotkey, &options).await?;
     if let Some(hash) = result.fate_unknown {
         return Err(SubmissionError::Uncertain(format!("0x{}", hex::encode(hash.0))).into());
@@ -163,7 +175,12 @@ pub(super) fn uncertain(error: &anyhow::Error) -> bool {
         .is_some_and(|error| matches!(error, SubmissionError::Uncertain(_)))
         || error
             .downcast_ref::<rtao_tx::TxError>()
-            .is_some_and(|error| matches!(error, rtao_tx::TxError::Rpc(_)))
+            .is_some_and(|error| {
+                matches!(
+                    error.primary_cause(),
+                    rtao_tx::TxError::Rpc(_) | rtao_tx::TxError::PendingOperation { .. }
+                )
+            })
 }
 
 #[cfg(test)]

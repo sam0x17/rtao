@@ -928,3 +928,11 @@ mod handoff_tests {
 #[cfg(test)]
 #[path = "durable_paired_tests.rs"]
 mod paired_tests;
+
+#[cfg(test)]
+#[path = "durable_public_tests.rs"]
+mod public_tests;
+
+#[cfg(test)]
+#[path = "durable_readiness_tests.rs"]
+mod readiness_tests;

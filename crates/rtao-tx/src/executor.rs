@@ -104,7 +104,7 @@ pub struct ExecuteOptions {
     pub deadline: Option<Duration>,
     /// Bound preparation/signing and author RPC admission separately from inclusion.
     pub submit_deadline: Option<Duration>,
-    /// Raw-call shield opt-in, implemented by the shield execution path.
+    /// Explicit typed/raw shield opt-in, implemented by the shield execution path.
     pub shielded: bool,
 }
 impl Default for ExecuteOptions {
@@ -208,6 +208,12 @@ impl Default for ShieldOptions {
             dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
         }
     }
+}
+
+#[derive(Clone, Copy)]
+enum RecoveryRequest<'a> {
+    Raw(&'a CallBytes),
+    Intent(&'a dyn DynIntent),
 }
 
 struct ReviewedIntent {
@@ -612,9 +618,9 @@ impl Executor {
         let budget = TimeBudget::new(opts.deadline)?;
         budget.check(&self.client)?;
         let address = keys.address()?;
-        let result = self
-            .execute_with_keys(intent, keys, address, || keys.signer(), opts, budget)
-            .await?;
+        let result =
+            Box::pin(self.execute_with_keys(intent, keys, address, || keys.signer(), opts, budget))
+                .await?;
         result.with_output::<I::Output>().map_err(TxError::from)
     }
 
@@ -639,16 +645,15 @@ impl Executor {
         check_typed_role(intent)?;
         let budget = TimeBudget::new(opts.execute.deadline)?;
         budget.check(&self.client)?;
-        let result = self
-            .submit_shielded_with_keys(
-                intent,
-                keys,
-                keys.address()?,
-                || keys.signer(),
-                opts,
-                budget,
-            )
-            .await?;
+        let result = Box::pin(self.submit_shielded_with_keys(
+            intent,
+            keys,
+            keys.address()?,
+            || keys.signer(),
+            opts,
+            budget,
+        ))
+        .await?;
         result.with_output::<I::Output>().map_err(TxError::from)
     }
 
@@ -662,14 +667,14 @@ impl Executor {
         let budget = TimeBudget::new(opts.execute.deadline)?;
         budget.check(&self.client)?;
         let role: SignerRole = intent.signer_role_dyn()?;
-        self.submit_shielded_with_keys(
+        Box::pin(self.submit_shielded_with_keys(
             intent,
             keys,
             public_address(intent, keys)?,
             || keys.signer_for(role),
             opts,
             budget,
-        )
+        ))
         .await
     }
 
@@ -687,14 +692,14 @@ impl Executor {
         let admission = TimeBudget::new(opts.submit_deadline)?;
         budget.check(&self.client)?;
         self.enforce_raw_call(opts)?;
-        self.submit_call_with_keys(
+        Box::pin(self.submit_call_with_keys(
             call,
             keys.address()?,
             || keys.signer(),
             opts,
             budget,
             admission,
-        )
+        ))
         .await
     }
 
@@ -711,14 +716,14 @@ impl Executor {
         budget.check(&self.client)?;
         self.enforce_raw_call(opts)?;
         let address = role_address(keys, role, "submit_call")?;
-        self.submit_call_with_keys(
+        Box::pin(self.submit_call_with_keys(
             call,
             address,
             || keys.signer_for(role),
             opts,
             budget,
             admission,
-        )
+        ))
         .await
     }
 
@@ -747,17 +752,60 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
-        let (scoped, _owner) = scoped_journal_execution(opts)?;
-        let opts = &scoped;
-        if opts.journal.is_some() && opts.shielded {
-            return Err(rtao_client::ClientError::Journal(
-                rtao_client::journal::JournalError::Blocked(
-                    "journaled shield author path remains gated for integration review".into(),
-                ),
-            )
-            .into());
-        }
+        let (mut scoped, _owner) = scoped_journal_execution(opts)?;
         let shield_period = opts.shielded.then(|| opts.shield_period()).transpose()?;
+        let max_fee = opts
+            .policy
+            .as_ref()
+            .or(self.policy.as_ref())
+            .and_then(|p| p.max_fee);
+        let mut journal_preparation = None;
+        if let (Some(period), Some(binding)) = (shield_period, scoped.journal.clone()) {
+            if binding
+                .record()
+                .map_err(rtao_client::ClientError::Journal)?
+                .intent
+                .account
+                != address
+            {
+                return Err(rtao_client::ClientError::Journal(
+                    rtao_client::journal::JournalError::Identity,
+                )
+                .into());
+            }
+            let mut submit = scoped.submit_options();
+            submit.deadline = budget.remaining(&self.client)?;
+            submit.submit_deadline = admission.remaining(&self.client)?;
+            let prepare = ClientShieldOptions {
+                period,
+                wait: submit.wait,
+                max_fee,
+                finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
+                dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
+                submit,
+            };
+            match Box::pin(self.client.prepare_journal_shield(&prepare)).await {
+                Ok(rtao_client::JournalShieldReadiness::Ready(owner)) => {
+                    scoped.journal = Some(owner.binding());
+                    journal_preparation = Some(owner);
+                }
+                Ok(rtao_client::JournalShieldReadiness::Finalized(report)) => {
+                    return self.restore_journal_result(
+                        &binding,
+                        *report,
+                        RecoveryRequest::Raw(&call),
+                        &scoped,
+                    );
+                }
+                Err(error) => return self.lift_submission(Err(error), Map::new()),
+            }
+        } else if let Some(binding) = &scoped.journal {
+            binding
+                .can_dispatch()
+                .map_err(rtao_client::ClientError::Journal)?;
+        }
+        let opts = &scoped;
+        let _journal_preparation = journal_preparation;
         budget
             .run(
                 &self.client,
@@ -781,28 +829,39 @@ impl Executor {
             )));
         }
         let mut submit = opts.submit_options();
+        submit.journal = submit
+            .journal
+            .map(|binding| executor_context(binding, &call, &Map::new(), None, opts));
         submit.deadline = budget.remaining(&self.client)?;
         submit.submit_deadline = admission.remaining(&self.client)?;
         let result = match shield_period {
             Some(period) => {
+                Box::pin(self.client.submit_shielded(
+                    call.clone(),
+                    signer.as_ref(),
+                    &ClientShieldOptions {
+                        period,
+                        wait: submit.wait,
+                        max_fee,
+                        finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
+                        dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
+                        submit,
+                    },
+                ))
+                .await
+            }
+            None => {
                 self.client
-                    .submit_shielded(
-                        call,
-                        signer.as_ref(),
-                        &ClientShieldOptions {
-                            period,
-                            wait: submit.wait,
-                            max_fee: None,
-                            finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
-                            dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
-                            submit,
-                        },
-                    )
+                    .submit(call.clone(), signer.as_ref(), &submit)
                     .await
             }
-            None => self.client.submit(call, signer.as_ref(), &submit).await,
         };
-        self.lift_submission(result, Map::new())
+        match (&opts.journal, result) {
+            (Some(binding), Ok(report)) if shield_period.is_some() => {
+                self.restore_journal_result(binding, report, RecoveryRequest::Raw(&call), opts)
+            }
+            (_, result) => self.lift_submission(result, Map::new()),
+        }
     }
 
     async fn submit_shielded_with_keys<F, Fut>(
@@ -820,24 +879,9 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
-        if opts.execute.journal.is_some() {
-            if opts.execute.submit_options().wait != rtao_client::Wait::Finalization {
-                return Err(rtao_client::ClientError::Journal(
-                    rtao_client::journal::JournalError::Blocked(
-                        "durable shield requires finalized inner wait".into(),
-                    ),
-                )
-                .into());
-            }
-            self.client.native_author_session().await?;
-            return Err(rtao_client::ClientError::Journal(
-                rtao_client::journal::JournalError::Blocked(
-                    "journaled shield author path remains gated for integration review".into(),
-                ),
-            )
-            .into());
-        }
-        let mut plan_opts = opts.execute.plan_options();
+        let mut effective = opts.clone();
+        let mut journal_preparation = None;
+        let admission = TimeBudget::new(opts.execute.submit_deadline)?;
         let mut active_policy = opts
             .execute
             .policy
@@ -850,6 +894,61 @@ impl Executor {
                 Balance::from_rao(cap.rao().min(max_fee.rao()))
             }));
         }
+        if let Some(binding) = &opts.execute.journal {
+            if opts.execute.submit_options().wait != rtao_client::Wait::Finalization {
+                return Err(rtao_client::ClientError::Journal(
+                    rtao_client::journal::JournalError::Blocked(
+                        "durable shield requires finalized inner wait".into(),
+                    ),
+                )
+                .into());
+            }
+            self.client.check_journal_shield_dispatch()?;
+            if binding
+                .record()
+                .map_err(rtao_client::ClientError::Journal)?
+                .intent
+                .account
+                != address
+            {
+                return Err(rtao_client::ClientError::Journal(
+                    rtao_client::journal::JournalError::Identity,
+                )
+                .into());
+            }
+            let mut submit = opts.execute.submit_options();
+            submit.deadline = budget.remaining(&self.client)?;
+            submit.submit_deadline = admission.remaining(&self.client)?;
+            let prepare = ClientShieldOptions {
+                period: opts.period,
+                wait: submit.wait,
+                max_fee: active_policy.as_ref().and_then(|p| p.max_fee),
+                finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
+                dropped_inner_retries: opts.dropped_inner_retries,
+                submit,
+            };
+            match Box::pin(self.client.prepare_journal_shield(&prepare)).await {
+                Ok(rtao_client::JournalShieldReadiness::Ready(owner)) => {
+                    effective.execute.journal = Some(owner.binding());
+                    journal_preparation = Some(owner);
+                }
+                Ok(rtao_client::JournalShieldReadiness::Finalized(report)) => {
+                    let result = self.restore_journal_result(
+                        binding,
+                        *report,
+                        RecoveryRequest::Intent(intent),
+                        &opts.execute,
+                    )?;
+                    return self
+                        .complete_intent(intent, keys, result, &opts.execute, true, budget)
+                        .await;
+                }
+                Err(error) => return self.lift_submission(Err(error), Map::new()),
+            }
+        }
+        let opts = &effective;
+        let _journal_preparation = journal_preparation;
+        let mut plan_opts = opts.execute.plan_options();
         plan_opts.policy = active_policy.clone();
         let mut resolved_signer = None;
         let mut replanned = false;
@@ -869,7 +968,6 @@ impl Executor {
                 return Err(TxError::Policy(PolicyError { violations }));
             }
             opts.execute.check_expected_call(&reviewed.built.call)?;
-            let admission = TimeBudget::new(opts.execute.submit_deadline)?;
             let signer = match &resolved_signer {
                 Some(signer) => Arc::clone(signer),
                 None => {
@@ -889,6 +987,15 @@ impl Executor {
                 )));
             }
             let mut submit = opts.execute.submit_options();
+            submit.journal = submit.journal.map(|binding| {
+                executor_context(
+                    binding,
+                    &reviewed.built.call,
+                    &reviewed.built.extras,
+                    Some(intent),
+                    &opts.execute,
+                )
+            });
             submit.deadline = budget.remaining(&self.client)?;
             submit.submit_deadline = admission.remaining(&self.client)?;
             let shield_opts = ClientShieldOptions {
@@ -896,15 +1003,17 @@ impl Executor {
                 wait: submit.wait,
                 // The semantic preflight above owns the exact inner fee model.
                 // The client-level guard is for callers without that review.
-                max_fee: None,
+                max_fee: active_policy.as_ref().and_then(|p| p.max_fee),
                 finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                 dropped_inner_retries: opts.dropped_inner_retries,
                 submit,
             };
-            let result = self
-                .client
-                .submit_shielded(reviewed.built.call, signer.as_ref(), &shield_opts)
-                .await;
+            let result = Box::pin(self.client.submit_shielded(
+                reviewed.built.call,
+                signer.as_ref(),
+                &shield_opts,
+            ))
+            .await;
             if matches!(
                 &result,
                 Err(SubmitFailure::Client(rtao_client::ClientError::Compose(
@@ -923,8 +1032,17 @@ impl Executor {
             }
             // Python's explicit shield path keeps creation coordinates in the
             // receipt; only ordinary execute enriches pure-proxy result data.
-            let result = self.lift_submission(result, reviewed.built.extras)?;
-            if opts.execute.replan_owner_rate_limit
+            let result = match (&opts.execute.journal, result) {
+                (Some(binding), Ok(report)) => self.restore_journal_result(
+                    binding,
+                    report,
+                    RecoveryRequest::Intent(intent),
+                    &opts.execute,
+                )?,
+                (_, result) => self.lift_submission(result, reviewed.built.extras)?,
+            };
+            if opts.execute.journal.is_none()
+                && opts.execute.replan_owner_rate_limit
                 && owner_rate_replan(intent, &result)
                 && !owner_replanned
             {
@@ -935,6 +1053,97 @@ impl Executor {
                 .complete_intent(intent, keys, result, &opts.execute, true, budget)
                 .await;
         }
+    }
+
+    fn restore_journal_result(
+        &self,
+        binding: &rtao_client::journal::JournalBinding,
+        report: rtao_client::ExtrinsicReport,
+        request: RecoveryRequest<'_>,
+        opts: &ExecuteOptions,
+    ) -> Result<ExtrinsicResult, TxError> {
+        let receipt =
+            ExtrinsicResult::from_report(report.clone(), self.client.network().label(), Map::new());
+        let restore = || {
+            let record = binding
+                .record()
+                .map_err(rtao_client::ClientError::Journal)?;
+            let attempt = record
+                .finalized_effect()
+                .map_err(rtao_client::ClientError::Journal)?
+                .filter(|attempt| attempt.hash == report.hash)
+                .ok_or_else(|| {
+                    rtao_client::ClientError::Journal(rtao_client::journal::JournalError::Identity)
+                })?;
+            use rtao_client::journal::{JournalError, RecoveryContextError as Reason};
+            let refuse = |reason| TxError::RecoveryContext { reason };
+            match request {
+                RecoveryRequest::Raw(call) => {
+                    opts.check_expected_call(call)
+                        .map_err(|_| refuse(Reason::ExpectedCallMismatch))?;
+                    binding
+                        .check_recovered_call(&report, call)
+                        .map_err(rtao_client::ClientError::Journal)?;
+                }
+                RecoveryRequest::Intent(_) => {}
+            }
+            if let Some(expected) = &opts.expected_call {
+                binding
+                    .check_recovered_call(&report, expected)
+                    .map_err(|error| match error {
+                        JournalError::RecoveryContext(Reason::CallMismatch) => {
+                            refuse(Reason::ExpectedCallMismatch)
+                        }
+                        error => rtao_client::ClientError::Journal(error).into(),
+                    })?;
+                if expected.stamp().spec_version != attempt.spec_version
+                    || expected.stamp().transaction_version != attempt.transaction_version
+                {
+                    return Err(refuse(Reason::ExpectedCallMismatch));
+                }
+            }
+            let original: [u8; 32] = attempt
+                .extensions
+                .get("call_hash")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .ok_or_else(|| refuse(Reason::MissingCallHash))?;
+            let context = attempt
+                .extensions
+                .get("rtao_submission_context_v1")
+                .ok_or_else(|| refuse(Reason::MissingExecutorContext))?;
+            if context.get("version") != Some(&json!(2))
+                || context.get("proxy_for").is_none()
+                || context.get("force_proxy_type").is_none()
+            {
+                return Err(refuse(Reason::MissingExecutorContext));
+            }
+            if context.get("proxy_for") != Some(&json!(opts.proxy_for))
+                || context.get("force_proxy_type") != Some(&json!(opts.force_proxy_type))
+            {
+                return Err(refuse(Reason::OriginMismatch));
+            }
+            let kind = match request {
+                RecoveryRequest::Intent(_) => "intent",
+                RecoveryRequest::Raw(_) => "raw",
+            };
+            if context.get("version") != Some(&json!(2))
+                || context.get("kind") != Some(&json!(kind))
+                || context.get("call_hash") != Some(&json!(original))
+                || context.get("spec_version") != Some(&json!(attempt.spec_version))
+                || context.get("transaction_version") != Some(&json!(attempt.transaction_version))
+                || matches!(request,RecoveryRequest::Intent(intent) if context.get("intent")!=Some(&json!(intent.semantic_intent_dyn().spec().name)) || context.get("args")!=Some(&intent.to_json_dyn()))
+            {
+                return Err(refuse(Reason::ExecutorMismatch));
+            }
+            let extras = context
+                .get("extras")
+                .and_then(Value::as_object)
+                .cloned()
+                .ok_or_else(|| refuse(Reason::MissingExecutorContext))?;
+            self.lift_submission(Ok(report), extras)
+        };
+        restore().map_err(|error| error.with_submitted_receipt(receipt))
     }
 
     pub(crate) fn lift_submission(
@@ -968,6 +1177,28 @@ impl Executor {
                 ChainError::from_pool(&error),
                 None,
             )),
+            Err(SubmitFailure::RecoveryContext { receipt, cause }) => {
+                let result = ExtrinsicResult::from_report(
+                    *receipt,
+                    self.client.network().label(),
+                    Map::new(),
+                );
+                Err(TxError::from(rtao_client::ClientError::Journal(cause))
+                    .with_submitted_receipt(result))
+            }
+            Err(SubmitFailure::PendingShield {
+                operation,
+                pair,
+                carrier_hash,
+                inner_hash,
+                reason,
+            }) => Err(TxError::PendingOperation {
+                operation,
+                pair,
+                carrier_hash,
+                inner_hash,
+                reason,
+            }),
             Err(error) if error.unknown_fate_hash().is_some() => Ok(ExtrinsicResult::rejected(
                 ChainError::new(error.to_string(), None),
                 error.unknown_fate_hash(),
@@ -1004,14 +1235,14 @@ impl Executor {
     ) -> Result<ExtrinsicResult, TxError> {
         budget.check(&self.client)?;
         let role: SignerRole = intent.signer_role_dyn()?;
-        self.execute_with_keys(
+        Box::pin(self.execute_with_keys(
             intent,
             keys,
             public_address(intent, keys)?,
             || keys.signer_for(role),
             opts,
             budget,
-        )
+        ))
         .await
     }
 
@@ -1050,44 +1281,31 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
+        let required = intent
+            .semantic_intent_dyn()
+            .safety_dyn()?
+            .mev_shield_required;
+        if required || opts.shielded {
+            return Box::pin(self.submit_shielded_with_keys(
+                intent,
+                keys,
+                address,
+                signer,
+                &ShieldOptions {
+                    period: opts.shield_period()?,
+                    execute: opts.clone(),
+                    ..Default::default()
+                },
+                budget,
+            ))
+            .await;
+        }
         let (scoped, _owner) = scoped_journal_execution(opts)?;
         let opts = &scoped;
         if let Some(journal) = &opts.journal {
             journal
                 .can_dispatch()
                 .map_err(rtao_client::ClientError::Journal)?;
-            if opts.shielded
-                || intent
-                    .semantic_intent_dyn()
-                    .safety_dyn()?
-                    .mev_shield_required
-            {
-                return Err(rtao_client::ClientError::Journal(
-                    rtao_client::journal::JournalError::Blocked(
-                        "journaled paired shield recovery requires a dedicated adapter".into(),
-                    ),
-                )
-                .into());
-            }
-        }
-        if intent
-            .semantic_intent_dyn()
-            .safety_dyn()?
-            .mev_shield_required
-        {
-            return self
-                .submit_shielded_with_keys(
-                    intent,
-                    keys,
-                    address,
-                    signer,
-                    &ShieldOptions {
-                        execute: opts.clone(),
-                        ..Default::default()
-                    },
-                    budget,
-                )
-                .await;
         }
         let mut retries = 0;
         let mut replanned = false;
@@ -1135,6 +1353,9 @@ impl Executor {
                 )));
             }
             let mut submit_options = opts.submit_options();
+            submit_options.journal = submit_options.journal.map(|binding| {
+                executor_context(binding, plan.call(), &plan.extras, Some(intent), opts)
+            });
             submit_options.deadline = budget.remaining(&self.client)?;
             submit_options.submit_deadline = admission.remaining(&self.client)?;
             // The Client now owns the remaining deadline and attempted hash.
@@ -1150,7 +1371,8 @@ impl Executor {
                         self.client.network().label(),
                         Map::new(),
                     );
-                    if opts.replan_owner_rate_limit
+                    if opts.journal.is_none()
+                        && opts.replan_owner_rate_limit
                         && owner_rate_replan(intent, &result)
                         && !owner_replanned
                     {
@@ -1329,6 +1551,19 @@ fn transient(error: &PoolRejection) -> bool {
     rtao_catalog::py::TRANSIENT_SUBSTRINGS
         .iter()
         .any(|needle| message.contains(needle))
+}
+
+fn executor_context(
+    binding: rtao_client::journal::JournalBinding,
+    call: &CallBytes,
+    extras: &Map<String, Value>,
+    intent: Option<&dyn DynIntent>,
+    opts: &ExecuteOptions,
+) -> rtao_client::journal::JournalBinding {
+    binding.with_submission_context(json!({"version":2,"kind":if intent.is_some(){"intent"}else{"raw"},
+        "intent":intent.map(|i|i.semantic_intent_dyn().spec().name),"args":intent.map(|i|i.to_json_dyn()),
+        "proxy_for":opts.proxy_for,"force_proxy_type":opts.force_proxy_type,
+        "call_hash":call.hash(),"spec_version":call.stamp().spec_version,"transaction_version":call.stamp().transaction_version,"extras":extras}))
 }
 
 fn scoped_journal_execution(

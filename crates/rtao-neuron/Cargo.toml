@@ -60,7 +60,8 @@ rustls = { workspace = true, optional = true }
 rustls-native-certs = { workspace = true, optional = true }
 
 [dev-dependencies]
-rtao-testkit.workspace = true
+rtao-client = { workspace = true, features = ["test-util"] }
+rtao-testkit = { workspace = true, features = ["journal-shield"] }
 tokio = { workspace = true, features = ["test-util"] }
 
 [[bin]]
