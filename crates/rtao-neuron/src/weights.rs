@@ -494,9 +494,13 @@ impl WeightScheduler {
         let pending = self.pending_work(mechanism)?;
         if self.reveals.pending_for(mechanism) >= 10
             || self.slots.get(&mechanism).is_some_and(|s| s.uncertain)
-            || pending
-                .as_ref()
-                .is_some_and(|(b, _)| b.can_dispatch().is_err())
+            || pending.as_ref().is_some_and(|(binding, _)| {
+                match self.shield_period {
+                    Some(period) => binding.can_prepare_shield(period),
+                    None => binding.can_dispatch(),
+                }
+                .is_err()
+            })
         {
             return Ok(WeightOpportunity::Reconcile);
         }

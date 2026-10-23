@@ -279,7 +279,12 @@ a place for signer secrets. Existing signed evidence remains immutable.
 An embedded `WeightScheduler::with_shielded_submission(period)` explicitly
 selects the same public Executor shield route. Ordinary default weights remain
 ordinary. `with_shield_protocol` reinstalls the trusted code guard after restart;
-neither method bypasses the client release guard. The composition fixture uses
+neither method bypasses the client release guard. `next_action` checks
+read-only preparation readiness on the selected route, including the retained
+shield protocol, period, original pair budget and qualified absence evidence.
+A `Ready` opportunity neither claims ownership nor changes/renews policy. Live
+runtime and application semantic checks still run during preparation; ordinary
+`can_dispatch` continues refusing shielded records. The composition fixture uses
 the scheduler's actual prepared-weight type/options, public Executor/Client,
 real signatures/TCP/native journal, then `recover_finalized` and the existing
 reveal watcher. A second fixture enters `on_finalized` with an actual native
