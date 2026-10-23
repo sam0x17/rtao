@@ -328,6 +328,7 @@ impl ShieldPreparation {
             AttemptRole::Ordinary,
             binding.material_generation,
         );
+        binding.attach_submission_context(&mut attempt);
         crate::offload(move || {
             let _claims = claims;
             binding.journal.update(|image| {
@@ -394,6 +395,7 @@ impl ShieldPreparation {
             AttemptRole::Carrier { pair },
             binding.material_generation,
         );
+        binding.attach_submission_context(&mut attempt);
         crate::offload(move || {
             let _claims = claims;
             binding.journal.update(|image| {

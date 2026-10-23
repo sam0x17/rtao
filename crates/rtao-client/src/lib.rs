@@ -67,8 +67,8 @@ pub(crate) use rpc::{hash_hex, parse_hash, rpc_request};
 pub use rtao_core::offload;
 pub use rtao_runtime::{CallBytes, MetadataLevel, RuntimeHandle, StorageQuery};
 pub use shield::{
-    SHIELD_DROPPED_INNER_RETRIES, SHIELD_FINALITY_WAIT, ShieldCiphertext, ShieldOptions,
-    ShieldPeriod, ShieldReport,
+    JournalShieldReadiness, SHIELD_DROPPED_INNER_RETRIES, SHIELD_FINALITY_WAIT, ShieldCiphertext,
+    ShieldOptions, ShieldPeriod, ShieldReport,
 };
 pub use submit::{
     ExtrinsicReport, Inclusion, Mortality, NoncePolicy, Period, PoolRejection, SubmitFailure,

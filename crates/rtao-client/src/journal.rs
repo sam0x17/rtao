@@ -17,7 +17,7 @@ pub use shield::ShieldProtocolGuard;
 pub(crate) use shield::{QualifiedShieldRuntime, ShieldPreparation};
 #[cfg(test)]
 mod tests;
-pub use native::NativeJournalStore;
+pub use native::{MAX_JOURNAL_BYTES, NativeJournalStore};
 
 use crate::{Client, ExtrinsicReport, UnsignedExtrinsic};
 use rtao_primitives::{AccountId, H256};
@@ -443,6 +443,7 @@ impl OperationJournal {
             guard: None,
             protocol_guard: None,
             preparation_owner: None,
+            submission_context: None,
             material_generation,
         })
     }
@@ -460,6 +461,7 @@ impl OperationJournal {
             guard: None,
             protocol_guard: None,
             preparation_owner: None,
+            submission_context: None,
             material_generation,
         })
     }
@@ -486,6 +488,7 @@ pub struct JournalBinding {
     guard: Option<Arc<dyn SemanticGuard>>,
     protocol_guard: Option<Arc<dyn ShieldProtocolGuard>>,
     preparation_owner: Option<std::sync::Weak<ownership::SubmissionClaims>>,
+    submission_context: Option<Value>,
     material_generation: u64,
 }
 impl fmt::Debug for JournalBinding {
@@ -507,6 +510,20 @@ impl JournalBinding {
     pub fn with_shield_protocol(mut self, guard: Arc<dyn ShieldProtocolGuard>) -> Self {
         self.protocol_guard = Some(guard);
         self
+    }
+    /// Associate public application/adapter evidence with the next signed
+    /// attempt. It is published atomically with exact signed bytes, not logged,
+    /// and never interpreted as permission. Never supply signing secrets here.
+    pub fn with_submission_context(mut self, context: Value) -> Self {
+        self.submission_context = Some(context);
+        self
+    }
+    pub(super) fn attach_submission_context(&self, attempt: &mut SignedAttempt) {
+        if let Some(context) = &self.submission_context {
+            attempt
+                .extensions
+                .insert("rtao_submission_context_v1".into(), context.clone());
+        }
     }
     /// Logical operation identity.
     pub fn id(&self) -> &str {
@@ -608,13 +625,14 @@ impl JournalBinding {
     ) -> Result<(), JournalError> {
         let claims = self.claim_submission()?;
         let binding = self.clone();
-        let attempt = signed_attempt(
+        let mut attempt = signed_attempt(
             unsigned,
             bytes,
             hash,
             AttemptRole::Ordinary,
             self.material_generation,
         );
+        self.attach_submission_context(&mut attempt);
         crate::offload(move || {
             let _claims = claims;
             binding.journal.update(|image| {
@@ -710,6 +728,10 @@ fn signed_attempt(
         outcome: AttemptOutcome::Unresolved,
         evidence_conflicts: Vec::new(),
         extensions: BTreeMap::from([
+            (
+                "call_hash".into(),
+                serde_json::json!(unsigned.call().hash()),
+            ),
             (
                 "signing_payload_hash".into(),
                 serde_json::json!(shield::digest(unsigned.payload())),

@@ -6,6 +6,9 @@
 
 pub mod fakes;
 pub mod fixtures;
+/// Synthetic-genesis native journal/paired-shield lifecycle harness.
+#[cfg(feature = "journal-shield")]
+pub mod journal_shield;
 /// Descriptor observations for catalog read coverage and pinned-block tests.
 pub mod recording;
 /// Upstream synchronous client for dev-only constructor differential tests.

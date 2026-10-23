@@ -38,7 +38,8 @@ rustls-pki-types.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
-rtao-testkit = { workspace = true, features = ["core-policy"] }
+rtao-client = { workspace = true, features = ["test-util"] }
+rtao-testkit = { workspace = true, features = ["core-policy", "journal-shield"] }
 rtao-intents = { workspace = true, features = ["serving", "transfer", "registration", "hyperparameters", "staking", "children", "evm", "proxy"] }
 tokio = { workspace = true, features = ["test-util"] }
 rcgen.workspace = true

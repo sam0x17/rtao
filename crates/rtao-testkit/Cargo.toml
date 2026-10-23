@@ -25,10 +25,12 @@ core-oracle = ["docker", "core-policy"]
 ledger-emu = ["dep:bittensor-core", "bittensor-core/ledger", "rtao-core/ledger", "dep:rtao-signer", "rtao-signer/ledger", "rtao-signer/test-util"]
 rpc-rate-limit = ["rtao-rpc/rate-limit"]
 rpc-metrics = ["rtao-rpc/metrics"]
+journal-shield = ["rtao-client/test-util", "dep:rtao-signer", "dep:url"]
 
 [dependencies]
 bittensor-core = { workspace = true, optional = true, features = ["host"] }
 rtao-client = { workspace = true }
+rtao-rpc.workspace = true
 rtao-signer = { workspace = true, optional = true }
 toml_edit = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
@@ -103,3 +105,7 @@ name = "ledger_replay"
 path = "tests/ledger_replay.rs"
 required-features = ["ledger-emu"]
 
+
+[[example]]
+name = "durable_shield_restart"
+required-features = ["journal-shield"]

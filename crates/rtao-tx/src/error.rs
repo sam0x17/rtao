@@ -284,6 +284,20 @@ pub enum TxError {
     Rpc(RpcError),
     /// Connection closed before the operation.
     ConnectionNotReady,
+    /// A durable logical operation remains held; no typed success output,
+    /// completion hook or replacement may be inferred from its carrier status.
+    PendingOperation {
+        /// Journal logical identity, retained across application restarts.
+        operation: String,
+        /// Stable signed pair ordinal.
+        pair: u64,
+        /// Exact encrypted author request identity.
+        carrier_hash: rtao_primitives::H256,
+        /// Exact intended signed effect identity.
+        inner_hash: rtao_primitives::H256,
+        /// Evidence or authorization still required for this operation.
+        reason: rtao_client::journal::RecoveryReason,
+    },
     /// A submitted operation failed while completing its post-inclusion work.
     PostSubmission {
         /// Original observed receipt, without fabricated completion fields.
@@ -350,7 +364,7 @@ impl TxError {
             Self::Chain(error) => error.code,
             Self::RpcPolicy(policy) => classify(&policy.message, None),
             Self::Rpc(error) => classify(&error.to_string(), None),
-            Self::ConnectionNotReady => ErrorCode::Internal,
+            Self::ConnectionNotReady | Self::PendingOperation { .. } => ErrorCode::Internal,
             Self::PostSubmission { cause, .. } => cause.code(),
             Self::Intent(error) => error.code(),
             Self::Signer(_) => ErrorCode::Internal,
@@ -370,6 +384,9 @@ impl fmt::Display for TxError {
             Self::RpcPolicy(error) => error.fmt(f),
             Self::Rpc(error) => error.fmt(f),
             Self::ConnectionNotReady => f.write_str("connection is not ready"),
+            Self::PendingOperation { pair, .. } => {
+                write!(f, "shield pair {pair} remains unresolved")
+            }
             Self::PostSubmission { cause, .. } => cause.fmt(f),
             Self::Intent(error) => error.fmt(f),
             Self::Signer(error) => error.fmt(f),
