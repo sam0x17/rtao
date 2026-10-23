@@ -6,8 +6,11 @@ The v478 core patch now contains two reviewed changes:
 2. The M2-S02 repair tracked by [RaoFoundation/subtensor#3251](https://github.com/RaoFoundation/subtensor/issues/3251) gives the stored Ed25519 signing key a wiping owner.
 
 The maintained fork branch is `rtao-core-patch/v478` at
-`626f2a4f1f67ab731c1fc3884828751496bc125d`. It is four commits ahead of the
-pinned v478 base `850f2755bb05a3851f948489f0ab27b0645cebce`:
+`5f2477f5290f5f4cb467524754cc025626b52974`. An attribution-only history rewrite replaced
+`626f2a4f1f67ab731c1fc3884828751496bc125d`; both commits have the same source tree and
+the reviewed diff digest below is unchanged. The four historical commit IDs
+listed below identify the original review. The branch remains four commits
+ahead of the pinned v478 base `850f2755bb05a3851f948489f0ab27b0645cebce`:
 
 1. `eafe84e8a97376e7902118ebb204b9c53e3df55e`, the exact Ledger PR commit.
 2. `774cc3ac78e442bfde7ef399b36f79e4bec4d460`, the Ed25519 ownership repair.

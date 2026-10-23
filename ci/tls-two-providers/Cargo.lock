@@ -672,7 +672,7 @@ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 [[package]]
 name = "bittensor-core"
 version = "0.1.0"
-source = "git+https://github.com/sam0x17/subtensor.git?rev=626f2a4f1f67ab731c1fc3884828751496bc125d#626f2a4f1f67ab731c1fc3884828751496bc125d"
+source = "git+https://github.com/sam0x17/subtensor.git?rev=5f2477f5290f5f4cb467524754cc025626b52974#5f2477f5290f5f4cb467524754cc025626b52974"
 dependencies = [
  "ark-serialize 0.4.2",
  "base64 0.22.1",
