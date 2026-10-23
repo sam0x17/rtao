@@ -202,9 +202,9 @@ impl Client {
         }
         let mut retries = opts.dropped_inner_retries;
         loop {
-            let report = self
-                .submit_shielded_once(call.clone(), signer, opts)
-                .await?;
+            // Keep the signing/recovery state machine out of every caller's
+            // future frame. This remains one owned, cancellable operation.
+            let report = Box::pin(self.submit_shielded_once(call.clone(), signer, opts)).await?;
             if retries == 0 || !inner_proven_dropped(&report) {
                 return Ok(report);
             }
@@ -235,7 +235,6 @@ impl Client {
         let attempted_hash = SubmissionAttempt::default();
         let authorization = std::sync::OnceLock::<(u64, H256, H256)>::new();
         let operation = async {
-            limits.admission.run(self, self.ensure_signing()).await?;
             let account = signer.account();
             let crypto_type = signer.crypto_type();
             let mut durable: Option<(
@@ -268,6 +267,47 @@ impl Client {
                         opts.max_fee.map(|fee| fee.rao()),
                     )
                     .map_err(ClientError::Journal)?;
+                let retained = binding.record().map_err(ClientError::Journal)?;
+                if let Some(pair) = retained.shield_pairs.iter().rev().find(|p| {
+                    matches!(
+                        p.phase,
+                        crate::journal::PairPhase::DispatchAuthorized { .. }
+                    )
+                }) {
+                    let inner = retained
+                        .attempt(pair.inner)
+                        .map_err(ClientError::Journal)?
+                        .hash;
+                    let carrier =
+                        retained
+                            .attempt(pair.carrier.ok_or(ClientError::Journal(
+                                crate::journal::JournalError::Identity,
+                            ))?)
+                            .map_err(ClientError::Journal)?
+                            .hash;
+                    match limits
+                        .admission
+                        .run(self, async {
+                            binding
+                                .recover(self, 128)
+                                .await
+                                .map_err(ClientError::Journal)
+                        })
+                        .await?
+                    {
+                        crate::journal::RecoveryStatus::Finalized(report) => return Ok(*report),
+                        crate::journal::RecoveryStatus::Rebuildable => {}
+                        crate::journal::RecoveryStatus::Unresolved(reason) => {
+                            return Err(SubmitFailure::PendingShield {
+                                operation: binding.id().to_owned(),
+                                pair: pair.id,
+                                carrier_hash: carrier,
+                                inner_hash: inner,
+                                reason,
+                            });
+                        }
+                    }
+                }
                 let preparation = binding.claim_shield(policy).map_err(ClientError::Journal)?;
                 let context = limits
                     .admission
@@ -282,6 +322,9 @@ impl Client {
             } else {
                 None
             };
+            // Historical reconciliation above must work even when the current
+            // runtime cannot sign. New preparation still checks signing status.
+            limits.admission.run(self, self.ensure_signing()).await?;
             if let Some(max_fee) = opts.max_fee {
                 let fee = limits
                     .admission

@@ -18,6 +18,13 @@ ahead of the pinned v478 base `850f2755bb05a3851f948489f0ab27b0645cebce`:
 4. `626f2a4f1f67ab731c1fc3884828751496bc125d`, which wipes the hard-derivation
    preimage and the decrypted PKCS8 import copies.
 
+The Ledger PR branch now names `09f40dc4cf0af6668398adf1565358e77e910772`,
+the attribution-only replacement for the first historical commit above.
+`upstream_pr_rev` records this active PR revision, which is an ancestor of the
+rewritten combined patch. Its complete source tree and parent are identical
+to the original Ledger PR revision; the original review identifiers above
+remain historical evidence. The source and ancestry checks continue to apply.
+
 The combined diff is restricted to the six paths recorded in `upstream.toml`
 and has SHA-256
 `8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489`.

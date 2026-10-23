@@ -9,6 +9,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
+mod receipt_conflicts;
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
@@ -1022,6 +1023,13 @@ async fn schema3_actual_signed_pair_recovers_inner_not_vector_tail_or_carrier_re
             assert_ne!(receipt.hash, carrier_hash);
             assert_eq!(receipt.inclusion, crate::Inclusion::Finalized);
             assert_eq!(receipt.success, !failed);
+            assert_eq!(
+                receipt.shield,
+                Some(crate::ShieldReport {
+                    carrier_hash,
+                    inner_hash
+                })
+            );
         }
         assert!(b.can_dispatch().is_err());
         assert!(fake.state().lock().unwrap().submissions.is_empty());

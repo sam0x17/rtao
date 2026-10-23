@@ -169,6 +169,16 @@ impl WeightScheduler {
         self.semantic_guard = Some(guard);
         self
     }
+    /// Install the independently audited signed-inner protocol adapter for
+    /// retained shield recovery. Reinstall after restart; this does not enable
+    /// journaled shield dispatch or establish application economic compatibility.
+    pub fn with_shield_protocol(
+        mut self,
+        guard: Arc<dyn rtao_client::journal::ShieldProtocolGuard>,
+    ) -> Self {
+        self.shield_protocol = Some(guard);
+        self
+    }
     pub(super) fn pending_work(
         &self,
         mechanism: MechId,
@@ -201,6 +211,9 @@ impl WeightScheduler {
                 && let Some(guard) = &self.semantic_guard
             {
                 binding = binding.with_guard(guard.clone());
+            }
+            if let Some(guard) = &self.shield_protocol {
+                binding = binding.with_shield_protocol(guard.clone());
             }
             result = Some((binding, work));
         }

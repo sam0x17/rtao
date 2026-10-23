@@ -6,6 +6,7 @@ use crate::journal::{
 };
 use rtao_signer::{KeypairSigner, Signer};
 use rtao_testkit::{FakeNode, FakeState};
+use serde_json::Value;
 use std::{
     path::PathBuf,
     sync::{
@@ -21,6 +22,8 @@ struct Fixture {
     signer: KeypairSigner,
     journal: Arc<OperationJournal>,
     binding: crate::journal::JournalBinding,
+    config: crate::ClientConfig,
+    include_inner: bool,
 }
 struct TestOnlyProtocol {
     genesis: H256,
@@ -72,7 +75,7 @@ impl Fixture {
         config.config_store = None;
         let session_config = rtao_rpc::SessionConfig::new(url::Url::parse(node.url()).unwrap());
         let session = rtao_rpc::Session::connect(session_config).await.unwrap();
-        let client = Client::from_session(session, config).await.unwrap();
+        let client = Client::from_session(session, config.clone()).await.unwrap();
         let signer = KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap();
         let journal = OperationJournal::open(root.join("journal.json")).unwrap();
         let binding = journal
@@ -93,55 +96,9 @@ impl Fixture {
             }))
             .material(json!({"required":"synthetic-material-marker"}))
             .unwrap();
-        let observing = binding.clone();
-        node.mutate_state(|state| {
-            state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
-                let record = observing.record().unwrap();
-                assert!(matches!(record.mode, ExecutionMode::Shielded(_)));
-                let pair = record.shield_pairs.last().unwrap();
-                let carrier = record.attempt(pair.carrier.unwrap()).unwrap();
-                let inner_attempt = record.attempt(pair.inner).unwrap();
-                assert!(matches!(pair.phase, PairPhase::DispatchAuthorized { .. }));
-                assert_eq!(
-                    request.params[0],
-                    json!(format!("0x{}", hex::encode(&carrier.bytes)))
-                );
-                assert_eq!(
-                    inner_attempt.material,
-                    json!({"required":"synthetic-material-marker"})
-                );
-                assert_eq!(
-                    inner_attempt.material_generation,
-                    Some(record.material_generation)
-                );
-                assert_eq!(carrier.nonce + 1, inner_attempt.nonce);
-                let reply = state.dispatch(request);
-                if !inner {
-                    state.advance(8);
-                }
-                reply
-            });
-        });
+        install_author_observer(&node, binding.clone(), inner);
         if inner {
-            let observing = binding.clone();
-            node.mutate_state(|state| {
-                state.set_handler("chain_getBlock", move |state, request| {
-                    let mut reply = state.dispatch(request);
-                    if let Some(Ok(raw)) = &mut reply.outcome
-                        && let Some(list) = raw["block"]["extrinsics"].as_array_mut()
-                        && !list.is_empty() {
-                        let record = observing.record().unwrap();
-                        if let Some(pair) = record.shield_pairs.last() {
-                            let inner = record.attempt(pair.inner).unwrap();
-                            let index = list.len();
-                            list.push(json!(format!("0x{}", hex::encode(&inner.bytes))));
-                            let events = (0..=index).map(|i| json!({"phase":"ApplyExtrinsic","extrinsic_idx":i,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})).collect::<Vec<_>>();
-                            state.seed_events(request.params[0].as_str().unwrap(), json!(events)).unwrap();
-                        }
-                    }
-                    reply
-                });
-            });
+            install_inner_history(&node, binding.clone());
         }
         Self {
             root,
@@ -150,6 +107,46 @@ impl Fixture {
             signer,
             journal,
             binding,
+            config,
+            include_inner: inner,
+        }
+    }
+    async fn restart(&mut self) {
+        let id = self.binding.id().to_owned();
+        let mut placeholder = self.binding.record().unwrap().intent;
+        placeholder.id = "restart-placeholder".into();
+        self.client.close().await;
+        // Remove server-side test observers' strong journal references too.
+        self.node.mutate_state(|state| {
+            state.set_handler("author_submitAndWatchExtrinsic", |state, request| {
+                state.dispatch(request)
+            });
+            state.set_handler("chain_getBlock", |state, request| state.dispatch(request));
+        });
+        let temporary = OperationJournal::open(self.root.join("restart-placeholder.json")).unwrap();
+        let temporary_binding = temporary.begin(placeholder).unwrap();
+        drop(std::mem::replace(&mut self.binding, temporary_binding));
+        drop(std::mem::replace(&mut self.journal, temporary));
+        // This would refuse if any old native journal owner survived.
+        self.journal = OperationJournal::open(self.root.join("journal.json")).unwrap();
+        self.binding = self
+            .journal
+            .bind(&id)
+            .unwrap()
+            .with_shield_protocol(Arc::new(TestOnlyProtocol {
+                genesis: self.client.genesis(),
+            }));
+        let session = rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(
+            url::Url::parse(self.node.url()).unwrap(),
+        ))
+        .await
+        .unwrap();
+        self.client = Client::from_session(session, self.config.clone())
+            .await
+            .unwrap();
+        install_author_observer(&self.node, self.binding.clone(), self.include_inner);
+        if self.include_inner {
+            install_inner_history(&self.node, self.binding.clone());
         }
     }
     async fn call(&self) -> CallBytes {
@@ -170,6 +167,64 @@ impl Fixture {
             ..Default::default()
         }
     }
+}
+fn install_author_observer(
+    node: &FakeNode,
+    observing: crate::journal::JournalBinding,
+    inner: bool,
+) {
+    node.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+            let record = observing.record().unwrap();
+            assert!(matches!(record.mode, ExecutionMode::Shielded(_)));
+            let pair = record.shield_pairs.last().unwrap();
+            let carrier = record.attempt(pair.carrier.unwrap()).unwrap();
+            let signed_inner = record.attempt(pair.inner).unwrap();
+            assert!(matches!(pair.phase, PairPhase::DispatchAuthorized { .. }));
+            assert_eq!(
+                request.params[0],
+                json!(format!("0x{}", hex::encode(&carrier.bytes)))
+            );
+            assert_eq!(
+                signed_inner.material,
+                json!({"required":"synthetic-material-marker"})
+            );
+            assert_eq!(
+                signed_inner.material_generation,
+                Some(record.material_generation)
+            );
+            assert_eq!(carrier.nonce + 1, signed_inner.nonce);
+            let reply = state.dispatch(request);
+            if !inner {
+                state.advance(8);
+            }
+            reply
+        })
+    });
+}
+fn install_inner_history(node: &FakeNode, observing: crate::journal::JournalBinding) {
+    node.mutate_state(|state|state.set_handler("chain_getBlock",move |state,request| {
+        let mut reply=state.dispatch(request);
+        if let Some(Ok(raw))=&mut reply.outcome {
+            let number=raw.pointer("/block/header/number").and_then(Value::as_str)
+                .and_then(|text|u64::from_str_radix(text.trim_start_matches("0x"),16).ok());
+            let record=observing.record().unwrap();
+            if let Some(pair)=record.shield_pairs.last() {
+                let inner=record.attempt(pair.inner).unwrap();
+                if number.is_some_and(|n|n>=inner.start)
+                    && let Some(list)=raw["block"]["extrinsics"].as_array_mut()
+                    && !list.is_empty() {
+                    let index=list.len();
+                    list.push(json!(format!("0x{}",hex::encode(&inner.bytes))));
+                    let events=(0..=index).map(|i|json!({"phase":"ApplyExtrinsic","extrinsic_idx":i,
+                        "module_id":"System","event_id":"ExtrinsicSuccess",
+                        "attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})).collect::<Vec<_>>();
+                    state.seed_events(request.params[0].as_str().unwrap(),json!(events)).unwrap();
+                }
+            }
+        }
+        reply
+    }));
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -411,12 +466,12 @@ async fn paired_native_inner_only_sealing_failure_retires_without_renewing_pair_
         record.attempt(record.shield_pairs[1].inner).unwrap().hash
     );
     let signs = signer.signs.load(Ordering::SeqCst);
-    assert!(
-        f.client
-            .submit_shielded_once(f.call().await, &signer, &options)
-            .await
-            .is_err()
-    );
+    let repeated = f
+        .client
+        .submit_shielded_once(f.call().await, &signer, &options)
+        .await
+        .unwrap();
+    assert_eq!(repeated.hash, report.hash);
     assert_eq!(signer.signs.load(Ordering::SeqCst), signs);
     assert_eq!(
         f.node
@@ -572,3 +627,6 @@ async fn paired_native_cancelled_publication_retains_actual_account_claim_until_
     );
     f.client.close().await;
 }
+
+#[path = "negative_tests.rs"]
+mod negative_tests;
