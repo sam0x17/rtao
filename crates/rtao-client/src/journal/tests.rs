@@ -1741,3 +1741,179 @@ async fn schema3_magic_material_or_shadow_fields_cannot_publish_an_unreadable_im
     );
     client.close().await;
 }
+
+struct GatedSigner {
+    inner: KeypairSigner,
+    entered: Arc<tokio::sync::Notify>,
+    release: Arc<tokio::sync::Notify>,
+}
+impl Signer for GatedSigner {
+    fn account(&self) -> AccountId {
+        self.inner.account()
+    }
+    fn crypto_type(&self) -> rtao_primitives::CryptoType {
+        self.inner.crypto_type()
+    }
+    fn sign<'a>(
+        &'a self,
+        request: &'a rtao_signer::SigningRequest<'a>,
+    ) -> rtao_signer::BoxFuture<'a, Result<rtao_signer::MultiSignature, rtao_signer::SignerError>>
+    {
+        Box::pin(async move {
+            self.entered.notify_one();
+            self.release.notified().await;
+            self.inner.sign(request).await
+        })
+    }
+}
+async fn another_client(fake: &FakeChain) -> Client {
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    Client::from_rpc(subxt_rpcs::RpcClient::new(fake.clone()), config)
+        .await
+        .unwrap()
+}
+#[tokio::test]
+async fn journal_account_reservation_excludes_other_ids_and_independent_client_nonce_caches() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let other = another_client(&fake).await;
+    let a = begin(&j, &client, &signer);
+    let mut intent = a.record().unwrap().intent;
+    intent.id = "second-logical-id".into();
+    intent.scope = "other-scheduler".into();
+    let b = j.begin(intent).unwrap();
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let slow = GatedSigner {
+        inner: signer,
+        entered: entered.clone(),
+        release: release.clone(),
+    };
+    let call = rtao_runtime::calls::system::remark(vec![4])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap();
+    let options = SubmitOptions {
+        journal: Some(a.clone()),
+        ..Default::default()
+    };
+    let options_b = SubmitOptions {
+        journal: Some(b.clone()),
+        ..Default::default()
+    };
+    let compete = async {
+        entered.notified().await;
+        assert!(matches!(
+            other.submit(call.clone(), &slow.inner, &options_b).await,
+            Err(crate::SubmitFailure::Client(crate::ClientError::Journal(
+                JournalError::Owned
+            )))
+        ));
+        assert!(b.record().unwrap().attempts.is_empty());
+        release.notify_one();
+    };
+    let (first, ()) = tokio::join!(client.submit(call.clone(), &slow, &options), compete);
+    assert!(first.unwrap().success);
+    assert!(
+        other
+            .submit(call, &slow.inner, &options_b)
+            .await
+            .unwrap()
+            .success
+    );
+    let first_nonce = a.record().unwrap().attempts[0].nonce;
+    assert_eq!(b.record().unwrap().attempts[0].nonce, first_nonce + 1);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 2);
+    client.close().await;
+    other.close().await;
+}
+#[tokio::test]
+async fn journal_account_reservation_does_not_block_a_different_signing_account() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let other = another_client(&fake).await;
+    let a = begin(&j, &client, &signer);
+    let key_b = KeypairSigner::from_seed(&[8; 32], rtao_primitives::CryptoType::Ed25519).unwrap();
+    let mut intent = a.record().unwrap().intent;
+    intent.id = "separate-account".into();
+    intent.account = key_b.account();
+    let b = j.begin(intent).unwrap();
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let slow = GatedSigner {
+        inner: signer,
+        entered: entered.clone(),
+        release: release.clone(),
+    };
+    let call = rtao_runtime::calls::system::remark(vec![5])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap();
+    let options = SubmitOptions {
+        journal: Some(a.clone()),
+        ..Default::default()
+    };
+    let independent = async {
+        entered.notified().await;
+        assert!(
+            other
+                .submit(
+                    call.clone(),
+                    &key_b,
+                    &SubmitOptions {
+                        journal: Some(b.clone()),
+                        ..Default::default()
+                    }
+                )
+                .await
+                .unwrap()
+                .success
+        );
+        assert!(a.record().unwrap().attempts.is_empty());
+        release.notify_one();
+    };
+    let (first, ()) = tokio::join!(client.submit(call.clone(), &slow, &options), independent);
+    assert!(first.unwrap().success);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 2);
+    client.close().await;
+    other.close().await;
+}
+#[tokio::test]
+async fn scoped_binding_cannot_reacquire_an_owner_after_its_original_reservation_ends() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let owner = b.reserve().unwrap();
+    let scoped = owner.binding();
+    let nested = scoped.reserve().unwrap();
+    drop(owner);
+    assert!(scoped.reserve().is_ok());
+    drop(nested);
+    assert!(matches!(scoped.reserve(), Err(JournalError::Owned)));
+    let fresh = b.reserve().unwrap();
+    drop(fresh);
+    let call = rtao_runtime::calls::system::remark(vec![6])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap();
+    assert!(matches!(
+        client
+            .submit(
+                call,
+                &signer,
+                &SubmitOptions {
+                    journal: Some(scoped),
+                    ..Default::default()
+                }
+            )
+            .await,
+        Err(crate::SubmitFailure::Client(crate::ClientError::Journal(
+            JournalError::Owned
+        )))
+    ));
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}

@@ -9,7 +9,12 @@
 mod graph;
 mod migration;
 mod native;
+mod ownership;
+pub use ownership::JournalPreparation;
+mod shield;
 pub use graph::{AttemptRole, ExecutionMode, PairPhase, ShieldPair, ShieldPolicy};
+pub use shield::ShieldProtocolGuard;
+pub(crate) use shield::{QualifiedShieldRuntime, ShieldPreparation};
 #[cfg(test)]
 mod tests;
 pub use native::NativeJournalStore;
@@ -39,6 +44,12 @@ pub enum JournalError {
     Identity,
     /// New dispatch is paused or an earlier attempt is unresolved/finished.
     Blocked(String),
+    /// A retired shield preparation has these exact signed bytes already.
+    /// Wait for a fresh signing context; no author I/O or pair-budget renewal.
+    FreshSigningContext {
+        /// Retained physical identity, without exposing signed bytes/material.
+        attempt: u64,
+    },
     /// The envelope is not a supported storage generation.
     Schema(u32),
 }
@@ -50,6 +61,10 @@ impl fmt::Display for JournalError {
             Self::Owned => f.write_str("journal scope is already owned"),
             Self::Identity => f.write_str("journal operation identity differs"),
             Self::Blocked(reason) => write!(f, "journal dispatch blocked: {reason}"),
+            Self::FreshSigningContext { attempt } => write!(
+                f,
+                "signed attempt {attempt} already retained; await a fresh shield signing context"
+            ),
             Self::Schema(version) => write!(f, "unsupported journal schema {version}"),
         }
     }
@@ -426,6 +441,8 @@ impl OperationJournal {
             journal: Arc::clone(self),
             id: intent.id,
             guard: None,
+            protocol_guard: None,
+            preparation_owner: None,
             material_generation,
         })
     }
@@ -441,6 +458,8 @@ impl OperationJournal {
             journal: Arc::clone(self),
             id: id.to_owned(),
             guard: None,
+            protocol_guard: None,
+            preparation_owner: None,
             material_generation,
         })
     }
@@ -465,6 +484,8 @@ pub struct JournalBinding {
     journal: Arc<OperationJournal>,
     id: String,
     guard: Option<Arc<dyn SemanticGuard>>,
+    protocol_guard: Option<Arc<dyn ShieldProtocolGuard>>,
+    preparation_owner: Option<std::sync::Weak<ownership::SubmissionClaims>>,
     material_generation: u64,
 }
 impl fmt::Debug for JournalBinding {
@@ -478,6 +499,13 @@ impl JournalBinding {
     /// Set an application-specific semantic gate; spec changes alone do not reject.
     pub fn with_guard(mut self, guard: Arc<dyn SemanticGuard>) -> Self {
         self.guard = Some(guard);
+        self
+    }
+    /// Install trusted runtime-code qualification for the signed-inner shield
+    /// protocol. It is separate from application meaning and must be reinstalled
+    /// after restart. Peer/RPC claims must never supply this authorization.
+    pub fn with_shield_protocol(mut self, guard: Arc<dyn ShieldProtocolGuard>) -> Self {
+        self.protocol_guard = Some(guard);
         self
     }
     /// Logical operation identity.
@@ -501,7 +529,7 @@ impl JournalBinding {
                 .operations
                 .get_mut(&self.id)
                 .ok_or(JournalError::Identity)?;
-            dispatchable(record, &image.control)?;
+            material_replaceable(record, &image.control)?;
             if record.material_generation != self.material_generation {
                 return Err(JournalError::Conflict);
             }
@@ -533,6 +561,13 @@ impl JournalBinding {
         unsigned: &UnsignedExtrinsic,
     ) -> Result<(), JournalError> {
         self.can_dispatch()?;
+        self.check_context(client, unsigned).await
+    }
+    pub(super) async fn check_context(
+        &self,
+        client: &Client,
+        unsigned: &UnsignedExtrinsic,
+    ) -> Result<(), JournalError> {
         let record = self.record()?;
         if record.material_generation != self.material_generation {
             return Err(JournalError::Conflict);
@@ -571,29 +606,17 @@ impl JournalBinding {
         bytes: &[u8],
         hash: H256,
     ) -> Result<(), JournalError> {
+        let claims = self.claim_submission()?;
         let binding = self.clone();
-        let attempt = SignedAttempt {
-            id: 0, // Assigned under the durable CAS, never by a signing task.
-            role: AttemptRole::Ordinary,
-            material_generation: Some(self.material_generation),
+        let attempt = signed_attempt(
+            unsigned,
+            bytes,
             hash,
-            bytes: bytes.to_vec(),
-            nonce: unsigned.nonce(),
-            spec_version: unsigned.call().stamp().spec_version,
-            transaction_version: unsigned.call().stamp().transaction_version,
-            start: unsigned.submission_head(),
-            expiry: unsigned.expiry(),
-            era_anchor: unsigned.era_block_hash(),
-            era: rtao_core::codec::value::to_corpus_json(unsigned.era()),
-            metadata_hash: unsigned.metadata_hash(),
-            material: Value::Null,
-            next: unsigned.submission_head(),
-            finalized: None,
-            outcome: AttemptOutcome::Unresolved,
-            evidence_conflicts: Vec::new(),
-            extensions: BTreeMap::new(),
-        };
+            AttemptRole::Ordinary,
+            self.material_generation,
+        );
         crate::offload(move || {
+            let _claims = claims;
             binding.journal.update(|image| {
                 let record = image
                     .operations
@@ -660,6 +683,76 @@ impl JournalBinding {
         .map_err(|_| JournalError::Storage("journal worker stopped".into()))?
     }
 }
+fn signed_attempt(
+    unsigned: &UnsignedExtrinsic,
+    bytes: &[u8],
+    hash: H256,
+    role: AttemptRole,
+    material_generation: u64,
+) -> SignedAttempt {
+    SignedAttempt {
+        id: 0, // Assigned under the durable CAS.
+        role,
+        material_generation: Some(material_generation),
+        hash,
+        bytes: bytes.to_vec(),
+        nonce: unsigned.nonce(),
+        spec_version: unsigned.call().stamp().spec_version,
+        transaction_version: unsigned.call().stamp().transaction_version,
+        start: unsigned.submission_head(),
+        expiry: unsigned.expiry(),
+        era_anchor: unsigned.era_block_hash(),
+        era: rtao_core::codec::value::to_corpus_json(unsigned.era()),
+        metadata_hash: unsigned.metadata_hash(),
+        material: Value::Null,
+        next: unsigned.submission_head(),
+        finalized: None,
+        outcome: AttemptOutcome::Unresolved,
+        evidence_conflicts: Vec::new(),
+        extensions: BTreeMap::from([
+            (
+                "signing_payload_hash".into(),
+                serde_json::json!(shield::digest(unsigned.payload())),
+            ),
+            (
+                "signing_metadata_hash".into(),
+                serde_json::json!(shield::digest(&unsigned.context().metadata_bytes)),
+            ),
+            ("tip_rao".into(), serde_json::json!(unsigned.tip())),
+            (
+                "tip_asset_id".into(),
+                serde_json::json!(unsigned.tip_asset_id()),
+            ),
+        ]),
+    }
+}
+
+fn material_replaceable(
+    record: &OperationRecord,
+    control: &JournalControl,
+) -> Result<(), JournalError> {
+    if !matches!(record.mode, ExecutionMode::Shielded(_)) {
+        return dispatchable(record, control);
+    }
+    if control.submissions_paused && !(control.allow_obligations && record.intent.obligation) {
+        return Err(JournalError::Blocked("material replacement paused".into()));
+    }
+    if record
+        .shield_pairs
+        .iter()
+        .any(|pair| matches!(pair.phase, PairPhase::DispatchAuthorized { .. }))
+        || record.attempts.iter().any(|a| {
+            !a.evidence_conflicts.is_empty()
+                || matches!(a.outcome, AttemptOutcome::Finalized { .. })
+        })
+    {
+        return Err(JournalError::Blocked(
+            "reconcile authorized shield material before replacement".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn dispatchable(record: &OperationRecord, control: &JournalControl) -> Result<(), JournalError> {
     if matches!(record.mode, ExecutionMode::Shielded(_)) {
         return Err(JournalError::Blocked(
@@ -692,6 +785,8 @@ pub enum RecoveryReason {
     EvidenceConflict,
     /// Paired dispatch and historical protocol qualification are not enabled.
     ShieldAdapterRequired,
+    /// An authorized carrier has not established a finalized inner effect.
+    InnerUnresolved,
     /// A concurrent writer published this still-unresolved physical attempt.
     PendingAttempt {
         /// Stable current attempt ordinal; inspect the operation for its role/hash.

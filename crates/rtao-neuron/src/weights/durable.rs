@@ -327,6 +327,18 @@ impl WeightScheduler {
                     );
                 }
                 RecoveryStatus::Finalized(report) => {
+                    // A paired journal's vector tail is the carrier, whose
+                    // receipt and material never establish the weight effect.
+                    // Resolve the unique physical effect before mutating the
+                    // scheduler or handing any commitment to RevealWatcher.
+                    let record = binding.record()?;
+                    let attempt = record
+                        .finalized_effect()?
+                        .filter(|attempt| attempt.hash == report.hash)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("finalized weight effect identity differs")
+                        })?;
+                    let material: Material = serde_json::from_value(attempt.material.clone())?;
                     let inclusion = super::submit::inclusion(
                         client,
                         report
@@ -335,29 +347,23 @@ impl WeightScheduler {
                     )
                     .await?;
                     self.record_inclusion(client, mech, &inclusion).await?;
-                    if report.success {
-                        let record = binding.record()?;
-                        let attempt = record
-                            .attempts
-                            .last()
-                            .ok_or_else(|| anyhow::anyhow!("finalized operation has no attempt"))?;
-                        let material: Material = serde_json::from_value(attempt.material.clone())?;
-                        if let Some(commit) = material.commit {
-                            self.reveals
-                                .record_prepared(
-                                    client,
-                                    work.netuid,
-                                    mech,
-                                    record.intent.account,
-                                    material.row,
-                                    work.version_key,
-                                    material.preparation,
-                                    commit,
-                                    &inclusion,
-                                    metrics,
-                                )
-                                .await?;
-                        }
+                    if report.success
+                        && let Some(commit) = material.commit
+                    {
+                        self.reveals
+                            .record_prepared(
+                                client,
+                                work.netuid,
+                                mech,
+                                record.intent.account,
+                                material.row,
+                                work.version_key,
+                                material.preparation,
+                                commit,
+                                &inclusion,
+                                metrics,
+                            )
+                            .await?;
                     }
                     self.slots.entry(mech).or_default().uncertain = false;
                     self.persist(Some(binding.id()))?;
@@ -905,3 +911,7 @@ mod handoff_tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "durable_paired_tests.rs"]
+mod paired_tests;
