@@ -31,3 +31,10 @@ The crate has no default features.
 Configuration and cache paths can use local files; callers can disable the
 optional disk caches in `ClientConfig`. Constructing configuration does not
 start a node or a network connection.
+
+`journal::OperationJournal` records logical operations and signed attempts
+before dispatch, with a versioned storage interface and exclusive native
+atomic-file backend. Supply a binding through `SubmitOptions::journal`, then
+use finite recovery before replacement. Missing history remains unresolved;
+Debug omits signed bytes/material. See `docs/recovery/durable-work.md` for the
+storage contract, pause controls, semantic guards, limits and offline example.

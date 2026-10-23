@@ -13,7 +13,7 @@ use rtao_tx::{
 use serde_json::json;
 use std::time::Duration;
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub(super) struct WeightSubmission {
     pub block_hash: H256,
     pub block_number: u64,
@@ -94,6 +94,7 @@ pub(super) async fn execute(
     version_key: u64,
     commit: Option<&PreparedWeightCommit>,
     block_time: f64,
+    journal: Option<rtao_client::journal::JournalBinding>,
 ) -> anyhow::Result<WeightSubmission> {
     let intent = PreparedWeights {
         netuid: cx.netuid,
@@ -103,6 +104,7 @@ pub(super) async fn execute(
         commit: commit.cloned(),
     };
     let options = ExecuteOptions {
+        journal,
         period: Some(128),
         wait_for_inclusion: true,
         wait_for_finalization: true,
